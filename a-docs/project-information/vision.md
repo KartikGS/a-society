@@ -14,7 +14,7 @@ This is a solvable problem. And it is solved before the agent ever arrives.
 
 **A-Society is a reusable, portable framework for making any project agentic-friendly — before agents are deployed.**
 
-It is not a product. It is not a tool. It is a library of patterns, instructions, and standards that any project owner can apply to structure their project so that agents can operate within it confidently, from day one.
+It is a library of patterns and instructions, and a set of active agents that together do the work of making a project ready. A project owner does not manually build the structure — an A-Society agent does it with them, asking only what cannot be inferred, and handing off a verified, agent-ready project.
 
 The framework is:
 - **Project-agnostic** — it applies to software, writing, legal, research, design, and any other domain.
@@ -49,15 +49,13 @@ These conditions are not hard to create. They require deliberate, upfront struct
 
 ## What A-Society Is
 
-A-Society is organized as a library of general instructions, each answering the question: "When setting up a new project for agents, how do you create [X]?"
+A-Society has two layers:
 
-Each instruction document:
-- Explains **what** the artifact is
-- Explains **why** it is needed
-- Explains **how** to create it
-- Is written for any project type, not just software
+**The library layer** — a collection of general instructions, templates, and role archetypes, each answering the question: "When setting up a new project for agents, how do you create [X]?" Each instruction explains what the artifact is, why it is needed, and how to build it. The library lives under `a-society/general/` and is project-agnostic — applicable to software, writing, legal, research, and any other domain.
 
-The instructions live under `a-society/general/instructions/`. As the library grows, it becomes a complete playbook for standing up a new project that agents can operate in from the first session.
+**The active layer** — a set of agents that use the library to do the actual work. The primary active agent is the **Initializer**: given a project, it reads what exists, drafts the foundational agent-docs, resolves ambiguity with the human through targeted questions, and produces a complete `a-docs/` ready for agents to operate in. The human reviews and approves; they do not build manually.
+
+The library defines what good looks like. The active agents produce it.
 
 ---
 
@@ -65,7 +63,7 @@ The instructions live under `a-society/general/instructions/`. As the library gr
 
 A-Society is a **standalone repository** that users pull alongside their projects. It is not embedded inside a project — it is a peer to it.
 
-A project adopting the framework places its code in its own folder and runs an initialization process that creates an `a-docs/` folder inside it. That `a-docs/` folder is the project's instantiation of the framework — containing the agents.md, roles, indexes, and project-specific documentation that agents need to operate.
+A project adopting the framework places its code in its own folder and points the A-Society Initializer agent at it. The Initializer reads the project, drafts the foundational documents, asks targeted questions, and creates an `a-docs/` folder — the project's instantiation of the framework, containing the agents.md, roles, indexes, and project-specific documentation that agents need to operate. The human reviews and approves before the project is considered ready.
 
 The result is a clean separation at the filesystem level:
 
@@ -101,8 +99,9 @@ The current state of the framework is tracked in the project index. Consult `$A_
 
 ## Direction for Agents Reading This
 
-If you are an agent reading this document, your job is to extend the framework — not to build features.
+If you are an agent reading this document, determine which layer you are operating in:
 
-When you encounter a pattern that would benefit any project: propose it as an addition to `a-society/general/`. When you encounter a decision that is project-specific: keep it in that project's `a-docs/`. When you are unsure which layer something belongs to: ask.
+- **Initializer** — your job is to bootstrap a specific project's `a-docs/`. Read the project, draft the documents, resolve ambiguity with the human, hand off a verified result. Do not modify A-Society itself.
+- **Owner or Curator** — your job is to extend or maintain the framework. When you encounter a pattern that would benefit any project: propose it as an addition to `a-society/general/`. When you encounter a decision that is project-specific: keep it in that project's `a-docs/`. When unsure which layer something belongs to: ask.
 
 The framework grows by abstraction, not accumulation. Every addition should make the next project easier to set up — not just this one better documented.

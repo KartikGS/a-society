@@ -63,9 +63,8 @@ my-project/         ← your project
 
 ## Getting Started
 
-1. Clone this repo alongside your project
-2. Read `general/instructions/agents.md` — start here to understand what to build
-3. Create an `a-docs/` folder in your project using the instructions as your guide
-4. Assign roles, declare tools, register key files in an index
+Clone this repo alongside your project. Point the A-Society **Initializer** agent at your project — it reads what exists, asks only what it cannot infer, and builds your `a-docs/` for you. You review and approve.
 
-Your project is now agentic-friendly.
+The Initializer role file is at [`a-docs/roles/initializer.md`](a-docs/roles/initializer.md).
+
+If you prefer to build `a-docs/` manually, the instruction library is in [`general/instructions/`](general/instructions/).

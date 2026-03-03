@@ -52,3 +52,4 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `/a-society/general/improvement/reports/template-findings.md` | Per-agent findings report template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_SYNTHESIS` | `/a-society/general/improvement/reports/template-synthesis.md` | Synthesis report template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_BACKLOG` | `/a-society/general/improvement/reports/template-backlog.md` | Alignment backlog template |
+| `$A_SOCIETY_INITIALIZER_ROLE` | `/a-society/a-docs/roles/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
