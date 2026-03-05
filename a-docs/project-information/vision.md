@@ -49,13 +49,15 @@ These conditions are not hard to create. They require deliberate, upfront struct
 
 ## What A-Society Is
 
-A-Society has two layers:
+A-Society has two work product layers:
 
 **The library layer** — a collection of general instructions, templates, and role archetypes, each answering the question: "When setting up a new project for agents, how do you create [X]?" Each instruction explains what the artifact is, why it is needed, and how to build it. The library lives under `a-society/general/` and is project-agnostic — applicable to software, writing, legal, research, and any other domain.
 
-**The active layer** — a set of agents that use the library to do the actual work. The primary active agent is the **Initializer**: given a project, it reads what exists, drafts the foundational agent-docs, resolves ambiguity with the human through targeted questions, and produces a complete `a-docs/` ready for agents to operate in. The human reviews and approves; they do not build manually.
+**The active layer** — a set of agents that use the library to do the actual work. These agents live under `a-society/agents/`. The primary active agent is the **Initializer**: given a project, it reads what exists, drafts the foundational agent-docs, resolves ambiguity with the human through targeted questions, and produces a complete `a-docs/` ready for agents to operate in. The human reviews and approves; they do not build manually.
 
 The library defines what good looks like. The active agents produce it.
+
+Like any project using this framework, A-Society also maintains its own `a-docs/` — the agent documentation for agents working on A-Society itself. This is not part of the distributable framework; it is A-Society's own operational layer.
 
 ---
 
@@ -70,6 +72,7 @@ The result is a clean separation at the filesystem level:
 ```
 a-society/          ← the framework (pulled from this repo)
   general/          ← reusable instructions, templates, archetypes
+  agents/           ← a-society's active agents (e.g., the Initializer)
   a-docs/           ← a-society's own project documentation
 
 my-project/         ← the user's project

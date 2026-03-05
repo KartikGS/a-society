@@ -4,14 +4,25 @@ This document explains why each folder in `a-society/` exists — the principle 
 
 ---
 
-## The Two-Layer Structure
+## The Three-Folder Structure
 
-A-Society is organized around a single separation:
+A-Society is a project like any other. As with any project using this framework, `a-docs/` sits alongside the project's actual work product — it is not above it or inside it.
 
-- **`project-information/`** — documents about this project (A-Society itself)
-- **`general/`** — patterns, instructions, and standards that apply to any project
+A-Society's work product occupies two folders:
 
-Everything in `project-information/` is specific to A-Society. Everything in `general/` is reusable across any project that adopts this framework. When you are unsure where something belongs, ask: "Is this true only of A-Society, or would it be true of a legal project, a writing project, and a software project equally?" If the latter — it belongs in `general/`.
+- **`general/`** — the library: distributable instructions, templates, and patterns that any project can adopt
+- **`agents/`** — the active agents: A-Society's deployed products that run on other projects
+
+A-Society's agent documentation occupies one folder:
+
+- **`a-docs/`** — operational documentation for agents working on A-Society itself
+
+The key placement question is: what kind of thing is this?
+- Content any project can take and use directly → `general/`
+- An A-Society agent deployed to work on other projects → `agents/`
+- Documentation for agents working on A-Society itself → `a-docs/`
+
+When you are unsure whether something belongs in `general/` vs another project's folder, ask: "Is this true only of A-Society, or would it be true of a legal project, a writing project, and a software project equally?" If the latter — it belongs in `general/`.
 
 ---
 
@@ -31,6 +42,24 @@ Everything in `project-information/` is specific to A-Society. Everything in `ge
 - Content specific to a project using the framework (e.g., LLM Journey) — that belongs in its own project folder
 
 **Principle:** Documents here are about A-Society, not produced by it.
+
+---
+
+### `agents/`
+
+**Purpose:** A-Society's active agents — the products A-Society deploys to work on other projects. These are not templates for other projects to adopt; they are A-Society's own agents that operate externally.
+
+**What belongs here:**
+- Agent role files for A-Society-deployed agents (e.g., the Initializer)
+- Any future A-Society agent that runs on a target project rather than on A-Society itself
+
+**What does not belong here:**
+- Internal operational roles for agents working on A-Society — those live in `a-docs/roles/`
+- Distributable role templates for other projects to adopt — those live in `general/roles/`
+
+**Principle:** Files here are A-Society's work product deployed externally. An agent in `agents/` serves other projects; an agent in `a-docs/roles/` serves A-Society.
+
+**The key test:** Does this agent work *on A-Society* (maintaining, extending, or operating the framework)? → `a-docs/roles/`. Does this agent work *for other projects* on behalf of A-Society? → `agents/`.
 
 ---
 

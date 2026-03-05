@@ -24,7 +24,6 @@ Key file locations are registered in [`a-society/indexes/main.md`](/a-society/a-
 |---|---|---|
 | **Owner** | [`roles/owner.md`](/a-society/a-docs/roles/owner.md) | Vision keeper, quality gatekeeper, structure guardian for the A-Society framework |
 | **Curator** | [`roles/curator.md`](/a-society/a-docs/roles/curator.md) | Agent-docs steward — maintenance, migration, and pattern distillation into `general/` |
-| **Initializer** | [`roles/initializer.md`](/a-society/a-docs/roles/initializer.md) | One-time bootstrapper — reads a new project and creates its `a-docs/` with human approval |
 
 Additional roles will be added here as the project grows. Do not assume a role exists unless it appears in this table.
 

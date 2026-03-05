@@ -40,6 +40,7 @@ A-Society is a standalone repository that sits alongside your project. You initi
 ```
 a-society/          ← this repo (the framework)
   general/          ← reusable instructions, templates, role archetypes
+  agents/           ← a-society's active agents (e.g., the Initializer)
   a-docs/           ← a-society's own agent documentation
 
 my-project/         ← your project
@@ -53,6 +54,7 @@ my-project/         ← your project
 
 | Folder | Contents |
 |---|---|
+| `agents/` | A-Society's active agents — start here to initialize your project |
 | `general/instructions/` | How to create each agent-doc artifact for any project |
 | `general/roles/` | Ready-made role templates (Owner, Curator) |
 | `general/thinking/` | Reasoning frameworks and operational principles for agents |
@@ -63,8 +65,31 @@ my-project/         ← your project
 
 ## Getting Started
 
-Clone this repo alongside your project. Point the A-Society **Initializer** agent at your project — it reads what exists, asks only what it cannot infer, and builds your `a-docs/` for you. You review and approve.
+**1. Clone A-Society alongside your project**
 
-The Initializer role file is at [`a-docs/roles/initializer.md`](a-docs/roles/initializer.md).
+Both should live in the same parent directory:
 
-If you prefer to build `a-docs/` manually, the instruction library is in [`general/instructions/`](general/instructions/).
+```
+your-workspace/
+├── your-project/     ← your existing project
+└── a-society/        ← this repo
+```
+
+**2. Run the Initializer**
+
+Using any agentic tool that can read files (Claude Code, Cursor, Copilot, etc.), run this prompt — replacing `your-project` with your project's folder name:
+
+```
+You are an A-Society Initializer Agent.
+Read @a-society/agents/initializer.md and initialize a-docs/ for your-project.
+```
+
+The Initializer will read your project, ask only what it cannot infer, and build your `a-docs/`. You review and approve.
+
+**3. Done**
+
+Once approved, your project has a structured agent layer. Any agent you assign a role to can load context from `a-docs/` and operate confidently from the first session.
+
+---
+
+*Prefer to build manually? The instruction library is in [`general/instructions/`](general/instructions/).*

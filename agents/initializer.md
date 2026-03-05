@@ -65,6 +65,8 @@ Build the `a-docs/` folder and populate all five foundational documents in this 
 4. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
 5. `agents.md` — the agent entry point, referencing all of the above
 
+Before drafting each document, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. The instructions explain what each artifact is, why it exists, and how to build it well.
+
 Write to populate, not to template. Agents who read these documents should find real answers, not placeholders.
 
 ### Phase 4 — Review
@@ -90,14 +92,13 @@ When done, state clearly: *"Initialization complete. This project's `a-docs/` is
 
 Before beginning any initialization session, read:
 
-1. `a-society/a-docs/agents.md` — orientation for all A-Society agents
-2. `$A_SOCIETY_VISION` — what the framework is and what agentic-friendly means
-3. `$A_SOCIETY_STRUCTURE` — what belongs in each layer
-4. This role file
+1. `a-society/index.md` — the public index; resolve all `$INSTRUCTION_*` and `$GENERAL_*` paths from here
+2. `$INSTRUCTION_AGENT_DOCS_GUIDE` — what each a-docs artifact is, why it exists, and how to build it well
+3. This role file
 
 Then read the target project's existing files to begin Phase 1.
 
-**Context confirmation:** *"Context loaded: agents.md, vision, structure, initializer role. Target project: [project name/path]. Beginning reconnaissance."*
+**Context confirmation:** *"Context loaded: index, agent-docs-guide, initializer role. Target project: [project name/path]. Beginning reconnaissance."*
 
 ---
 
