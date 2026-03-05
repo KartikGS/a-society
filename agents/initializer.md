@@ -65,7 +65,7 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 3. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
 4. `agents.md` — the agent entry point, referencing all of the above
 5. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
-6. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles
+6. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. The general protocol assumes a planning role, a requirements role, and a dedicated improvement agent. Most projects will not have all three. When the project has fewer roles than the protocol assumes: explicitly name which role maps to each protocol phase, state which phases are dropped and why, and document these decisions in the project's `improvement/protocol.md` so future agents do not have to re-derive them.
 7. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
 
 Before drafting documents 1–6, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. Documents 6 are initialized from the general templates directly — read them via `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`.
@@ -73,7 +73,12 @@ Before drafting documents 1–6, read the corresponding instruction from `a-soci
 Write to populate, not to template. Agents who read these documents should find real answers, not placeholders.
 
 ### Phase 4 — Review
-Present the completed `a-docs/` to the human. State what was inferred and what was confirmed through questions. Invite review.
+Before presenting to the human, self-review each document produced:
+- Does any statement contradict what you know about this project from reconnaissance and clarification?
+- Is any section a template adaptation that was carried forward without being grounded in this project's actual reality? (Placeholder language, generic naming conventions, or principles that reference a structure this project doesn't have are signs of insufficient adaptation.)
+- Are all cross-references using `$VARIABLE_NAME` rather than hardcoded paths?
+
+Fix what you find, then present the completed `a-docs/` to the human. State what was inferred and what was confirmed through questions. Invite review.
 
 Iterate on feedback. When the human confirms approval, proceed to Phase 5.
 

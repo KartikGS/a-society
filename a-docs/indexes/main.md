@@ -55,3 +55,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_IMPROVEMENT_TEMPLATE_SYNTHESIS` | `/a-society/general/improvement/reports/template-synthesis.md` | Synthesis report template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_BACKLOG` | `/a-society/general/improvement/reports/template-backlog.md` | Alignment backlog template |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `/a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
+| `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow — phases, handoffs, invariants, and escalation rules for framework work |
+| `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy — principles governing documentation improvement decisions |
+| `$A_SOCIETY_IMPROVEMENT_PROTOCOL` | `/a-society/a-docs/improvement/protocol.md` | A-Society meta improvement protocol — phases, roles, and guardrails for improvement cycles |
+| `$A_SOCIETY_IMPROVEMENT_REPORTS` | `/a-society/a-docs/improvement/reports/main.md` | A-Society improvement reports index — naming conventions and template references |

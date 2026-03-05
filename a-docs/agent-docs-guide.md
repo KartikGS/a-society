@@ -96,6 +96,58 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+## `workflow/`
+
+### `workflow/main.md` — `$A_SOCIETY_WORKFLOW`
+
+**Why it exists:** A-Society has a non-obvious workflow constraint: the Curator cannot write to `general/` without Owner approval. Without a workflow document, agents must infer this constraint from role files — and may miss it. The workflow document is the single place where all phases, handoffs, invariants, and escalation rules are declared explicitly for any agent operating in this project.
+
+**What it owns:** The five-phase workflow (Observation → Proposal → Owner Review → Implementation → Registration), all handoff protocols, the four framework invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation triggers.
+
+**What breaks without it:** Agents improvise process. The Approval Invariant is discoverable only by reading the Curator role file — which not all agents load. Cross-role work has no shared playbook.
+
+**Do not consolidate with:** `roles/owner.md` or `roles/curator.md` — role documents describe what each role owns; the workflow document describes what happens to work as it moves through phases, regardless of which role is involved.
+
+---
+
+## `improvement/`
+
+### `improvement/main.md` — `$A_SOCIETY_IMPROVEMENT`
+
+**Why it exists:** Improvement decisions — when to split a file, when to add a protocol, when to cross-reference rather than duplicate — require principled reasoning not captured in any role document. Without an improvement philosophy document, improvement sessions default to intuition rather than consistent principles.
+
+**What it owns:** The five improvement principles and the decision framework for applying them during meta-synthesis.
+
+**What breaks without it:** Improvement sessions reinvent principles each time. Agents making doc maintenance decisions have no principled baseline, leading to inconsistent results.
+
+**Do not consolidate with:** `improvement/protocol.md` — the philosophy governs *what* decisions to make; the protocol governs *how* the improvement process runs. These are categorically different.
+
+---
+
+### `improvement/protocol.md` — `$A_SOCIETY_IMPROVEMENT_PROTOCOL`
+
+**Why it exists:** Without a protocol, improvement cycles are ad-hoc — findings are lost, synthesis is inconsistent, and implementation may happen without human approval. The protocol standardizes the three-phase meta cycle so every improvement session runs the same way.
+
+**What it owns:** The hybrid operating model (Mode A task-linked, Mode B alignment), three-phase meta flow with role assignments (Curator findings, Owner synthesis), decision ownership table, role health indicators, and guardrails.
+
+**What breaks without it:** Improvement cycles lack a standard structure. The Owner may synthesize without Curator findings, or implement without human approval. Role health degradation goes undetected.
+
+**Do not consolidate with:** `improvement/main.md` — the protocol is the process; the philosophy is the reasoning behind decisions within that process.
+
+---
+
+### `improvement/reports/` — `$A_SOCIETY_IMPROVEMENT_REPORTS`
+
+**Why it exists:** Improvement artifacts (lightweight summaries, per-agent findings, synthesis documents, alignment backlogs) need a dedicated, stable location. Without it, reports scatter and the improvement protocol's output paths are unresolvable.
+
+**What it owns:** All improvement output artifacts and the reports index (`main.md`) with naming conventions and template references.
+
+**What breaks without it:** The protocol's output paths point nowhere. Historical improvement findings are lost. The alignment backlog has no home.
+
+**Do not consolidate with:** `workflow/` — improvement artifacts are meta-level (about the docs); workflow artifacts are execution-level (about framework work).
+
+---
+
 ## `general/`
 
 ### `general/instructions/` — folder

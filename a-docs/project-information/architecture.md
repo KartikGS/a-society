@@ -17,6 +17,21 @@ Two indexes govern path resolution:
 
 ---
 
+## Feedback Signal Architecture
+
+A-Society grows from real-world usage. Two feedback streams feed the framework:
+
+**Stream 1 — Initializer signal reports**
+Every time the Initializer completes an initialization run, it generates a signal report and writes it to `a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`. These reports capture: what was inferable vs. what required questions, how each `general/` instruction performed, adversity encountered, and concrete recommendations for improving the library. The Owner and Curator consume these reports to identify gaps and drive improvements to `general/` and `agents/`.
+
+**Stream 2 — Curator signals from adopting projects**
+Projects using the framework run their own improvement protocols. Their Curators observe patterns, friction, and gaps that A-Society's own agents cannot see. These observations are high-value signal for evolving the general library. The mechanism for communicating these signals back to A-Society — format, submission path, receiving role — is not yet defined. This is a deliberate open problem: the right solution depends on how the framework is distributed and how many projects are using it. A future role (provisionally: a signal-receiving or integration role) will own this stream.
+
+**What this means for agents initializing new projects:**
+When initializing a project that uses the A-Society framework, the project's `a-docs/` should acknowledge that the project's Curator is a source of feedback signal for A-Society. The Curator role for that project should include: identifying reusable patterns and surfacing them via the A-Society signal mechanism (once defined). Do not invent a specific mechanism — reference the open problem and note that the Curator should watch for guidance from A-Society on how to submit.
+
+---
+
 ## Architectural Invariants
 
 The following constraints are non-negotiable. An agent that violates one has made a structural mistake, even if the immediate task appears to succeed.
