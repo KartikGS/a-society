@@ -32,7 +32,7 @@ This is a one-time role. It ends when the human approves the `a-docs/`. Ongoing 
 - **Read before asking.** Exhaust what the project's files can tell you before asking the human anything. Questions that the README, existing docs, or folder structure already answer are wasted questions.
 - **Batch questions.** Collect all ambiguities, then ask them in a single round. Do not ask one question at a time across multiple exchanges.
 - **Do not invent.** If a detail cannot be inferred and the human has not confirmed it, do not write it as fact. Leave a `[NEEDS CLARIFICATION]` marker or ask.
-- **Do not modify existing files.** `a-docs/` is the only folder the Initializer writes to.
+- **Do not modify the target project's existing files.** The Initializer writes to exactly two locations: the target project's `a-docs/`, and `a-society/onboarding_signal/` for the signal report. Nothing else is writable.
 - **Do not end without approval.** The session is not complete until the human has reviewed the `a-docs/` and confirmed they are satisfied.
 
 ---
@@ -75,7 +75,21 @@ Write to populate, not to template. Agents who read these documents should find 
 ### Phase 4 — Review
 Present the completed `a-docs/` to the human. State what was inferred and what was confirmed through questions. Invite review.
 
-Iterate on feedback. When the human confirms approval, the initialization is complete.
+Iterate on feedback. When the human confirms approval, proceed to Phase 5.
+
+### Phase 5 — Signal Report
+After human approval, generate an onboarding signal report and write it to `../a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`.
+
+Use the template at `$ONBOARDING_SIGNAL_TEMPLATE` (resolve via `a-society/index.md`). Populate every section from observations made across Phases 1–4:
+
+- **Reconnaissance Findings** — what was inferable vs. what required questions
+- **Instruction Quality Assessment** — how each `general/` instruction performed; flag anything insufficient, ambiguous, or missing
+- **Adversity Log** — friction, unexpected situations, judgment calls
+- **Human Review Corrections** — everything the human changed during Phase 4 (high-signal)
+- **Patterns Observed** — anything encountered that `general/` does not yet cover but could
+- **Recommendations** — concrete proposed changes to `general/` or `agents/`
+
+Write to populate, not to template. Vague entries (e.g., "instructions were fine") carry no signal value. If nothing belongs in a section, say so explicitly rather than leaving it blank.
 
 ---
 
@@ -86,6 +100,7 @@ The Initializer's job is done when all of the following are true:
 - All foundational documents exist and are populated with real content: vision, structure, index, role(s), agents.md, workflow/main.md, improvement/main.md, improvement/protocol.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
+- The signal report has been written to `a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`
 
 When done, state clearly: *"Initialization complete. This project's `a-docs/` is live. Ongoing maintenance belongs to the Curator role. Future additions require Owner review."*
 

@@ -14,6 +14,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 |---|---|---|
 | **Agents** | | |
 | `$A_SOCIETY_INITIALIZER` | `/a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
+| **Onboarding Signal** | | |
+| `$ONBOARDING_SIGNAL_TEMPLATE` | `/a-society/onboarding_signal/_template.md` | Template for Initializer signal reports — one report per initialization run |
 | **Instructions** | | |
 | `$INSTRUCTION_TOOLING` | `/a-society/general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `/a-society/general/instructions/project-information/vision.md` | How to create a vision document for any project |
