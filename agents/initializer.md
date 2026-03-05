@@ -48,6 +48,7 @@ Determine:
 - What is the existing folder structure and why does it exist?
 - Who contributes to it and in what capacity?
 - Are there existing conventions, tools, or constraints already in use?
+- How does work happen? What triggers new work, how is it decided, and how is it delivered or completed?
 
 Log what is clear and what is ambiguous. Move to Phase 2 only if ambiguities remain.
 
@@ -57,15 +58,17 @@ Present all ambiguities to the human in a single message. Frame each question sp
 Do not proceed to Phase 3 until the human has answered.
 
 ### Phase 3 — Draft
-Build the `a-docs/` folder and populate all five foundational documents in this order:
+Build the `a-docs/` folder and populate all foundational documents in this order:
 
 1. `project-information/vision.md` — what this project is, why it exists, what success looks like
 2. `project-information/structure.md` — why each folder exists, what belongs where
-3. `indexes/main.md` — register vision, structure, this index, and all role files
-4. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
-5. `agents.md` — the agent entry point, referencing all of the above
+3. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
+4. `agents.md` — the agent entry point, referencing all of the above
+5. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
+6. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles
+7. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
 
-Before drafting each document, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. The instructions explain what each artifact is, why it exists, and how to build it well.
+Before drafting documents 1–6, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. Documents 6 are initialized from the general templates directly — read them via `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`.
 
 Write to populate, not to template. Agents who read these documents should find real answers, not placeholders.
 
@@ -80,7 +83,7 @@ Iterate on feedback. When the human confirms approval, the initialization is com
 
 The Initializer's job is done when all of the following are true:
 
-- All five foundational documents exist and are populated with real content
+- All foundational documents exist and are populated with real content: vision, structure, index, role(s), agents.md, workflow/main.md, improvement/main.md, improvement/protocol.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 

@@ -30,7 +30,7 @@ A vision document is the fix for all of these at once. It gives every agent — 
 
 ## What Belongs in a Vision Document
 
-A vision document has three mandatory components and one optional one.
+A vision document has four mandatory components and one optional one.
 
 ### 1. The Problem (mandatory)
 What situation exists that this project is responding to? State it plainly. This is not a sales pitch — it is a diagnosis. A well-written problem statement makes it immediately clear why the project exists and what would be worse if it did not.
@@ -40,7 +40,19 @@ What is the fundamental claim or hypothesis the project is built on? This is usu
 
 The core bet is the most important sentence in the document. An agent that has only read this sentence should be able to make better decisions than an agent that has read nothing.
 
-### 3. Direction for Agents (mandatory)
+### 3. Who This Is For and How They Use It (mandatory)
+Who is the primary user of this project, and what does a typical interaction look like? This section gives every agent a mental model of the human they are ultimately serving — their context, their goals, and their usage pattern.
+
+Include:
+- Who the user is (not a demographic, but a context: "a researcher who needs to..." or "a solo developer who...")
+- What a typical session looks like — how they engage with the project day to day
+- Any critical insight about their context that shapes what agents should prioritize
+
+This is distinct from the problem statement (which diagnoses a situation) and the core bet (which states a hypothesis). This section answers: *who shows up, and what are they trying to do?*
+
+An agent who has read this section can ask, before making any decision: "Does this serve the person I just read about, in the way they actually use this project?" That question catches a large class of mistakes that no amount of technical correctness prevents.
+
+### 4. Direction for Agents (mandatory)
 What should an agent do when they encounter a decision that is not covered by any other document? The vision document is the final filter. This section tells agents explicitly how to apply the vision — not as a rule, but as a compass.
 
 Include:
@@ -48,7 +60,7 @@ Include:
 - What "aligned with the vision" looks like in practice
 - What to do when uncertain (ask? defer? apply the core bet and proceed?)
 
-### 4. What Already Exists (optional, recommended for early-stage projects)
+### 5. What Already Exists (optional, recommended for early-stage projects)
 A brief inventory of the artifacts that already exist, so an agent reading the vision can immediately orient to the current state of the project. This section becomes less necessary as the project matures and other index documents take over this function.
 
 ---
@@ -73,10 +85,13 @@ Resist the urge to soften or qualify it. A clear problem statement is one where 
 **Step 2 — Write the core bet in one or two sentences.**
 Ask: "If this project succeeds completely, what was the claim that turned out to be true?" That claim, stated up front as a bet, is the core bet.
 
-**Step 3 — Write the direction for agents.**
+**Step 3 — Write who this is for and how they use it.**
+Name the primary user specifically — not a persona, but a context. Then describe what a typical session or interaction looks like. Ask: "What does this person do with this project on a normal day, and what does success look like for them in that moment?" Keep it short — two to four sentences is enough. The goal is a vivid enough picture that an agent can check any decision against it.
+
+**Step 4 — Write the direction for agents.**
 Think about the decisions that are most likely to be ambiguous — additions that seem reasonable but might not belong, trade-offs between quality and scope, choices about what to defer. The direction section pre-answers the most common versions of these.
 
-**Step 4 — Add the optional inventory if the project is new.**
+**Step 5 — Add the optional inventory if the project is new.**
 List what already exists. Keep it as a table: artifact name and one-line purpose. This section should be updated or removed as the project matures and other indexes take over.
 
 **Step 5 — Cut everything that is not one of the above.**

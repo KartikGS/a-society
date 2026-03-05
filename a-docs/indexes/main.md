@@ -15,6 +15,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_PUBLIC_INDEX` | `/a-society/index.md` | Public-facing index — all `general/` and `agents/` paths; used by external agents and project owners |
 | `$A_SOCIETY_VISION` | `/a-society/a-docs/project-information/vision.md` | A-Society project vision — the core bet, what the framework is, and direction for agents |
 | `$A_SOCIETY_STRUCTURE` | `/a-society/a-docs/project-information/structure.md` | A-Society folder structure — governing principle and placement rules for each folder |
+| `$A_SOCIETY_ARCHITECTURE` | `/a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
 | `$A_SOCIETY_INDEX` | `/a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
 | `$INSTRUCTION_TOOLING` | `/a-society/general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `/a-society/general/instructions/project-information/vision.md` | How to create a vision document for any project |

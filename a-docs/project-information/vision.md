@@ -33,6 +33,21 @@ The investment is in the project setup — not in the agent itself.
 
 ---
 
+## Who This Is For and How They Use It
+
+A-Society is for project owners who work with AI agents regularly — not as a one-off experiment, but as a normal part of how their project gets done. They may be building software, writing content, conducting research, or running any other kind of project. What they share is this: they assign agents to sessions, and they want those agents to work reliably without constant re-briefing.
+
+The critical context is session memory. AI agents do not retain memory between sessions. Every time a new agent session starts, the agent arrives fresh — with no knowledge of what was decided last week, what conventions the project has established, or what work is already in progress. Without a structured context layer, the human must re-establish all of this at the start of every session. With a-docs, orientation takes minutes, not conversations.
+
+The typical usage pattern:
+1. **Once:** Run the Initializer to bootstrap the project's `a-docs/`
+2. **Each session:** Assign an agent a role, point it at `agents.md` — it loads context and works
+3. **Periodically:** Run the Curator to keep `a-docs/` current as the project evolves
+
+A-Society's value is not in initialization. Initialization is the entry cost. The value accumulates in every session after — agents that arrive oriented, work aligned, and leave the project better than they found it.
+
+---
+
 ## What "Agentic-Friendly" Means
 
 A project is agentic-friendly when an agent can be given a role and a task, and immediately know:

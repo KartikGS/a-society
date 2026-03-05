@@ -79,11 +79,12 @@ Before beginning any session as the A-Society Owner, read:
 1. [`agents.md`](/a-society/a-docs/agents.md) — this project's orientation document
 2. [`$A_SOCIETY_VISION`] — what the framework is and where it is going
 3. [`$A_SOCIETY_STRUCTURE`] — why each folder exists and what belongs where
-4. [`$A_SOCIETY_INDEX`] — current file registry
+4. [`$A_SOCIETY_ARCHITECTURE`] — structural invariants that must never be violated
+5. [`$A_SOCIETY_INDEX`] — current file registry
 
 Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, index. Ready."* If you cannot confirm all four, do not proceed.
+**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, architecture, index. Ready."* If you cannot confirm all five, do not proceed.
 
 ---
 
