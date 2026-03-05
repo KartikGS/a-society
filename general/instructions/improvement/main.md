@@ -4,15 +4,29 @@ This document explains how to create an `improvement/` folder for a project's ag
 
 ---
 
+## The Forward Pass and the Backward Pass
+
+Every execution cycle in a project has two directions.
+
+**The forward pass** is agents executing their roles: receiving work, producing artifacts, handing off to the next stage. This is the project's normal workflow.
+
+**The backward pass** is agents reflecting on that execution: each agent who participated in the forward pass produces a structured analysis of their experience — what was clear, what was ambiguous, what was missing from their role or context documents, what they had to infer that they shouldn't have had to. These are per-agent findings. The Curator (or equivalent synthesis role) receives all findings, synthesizes them into proposed a-docs changes, and brings approved changes through the standard review cycle.
+
+**The backward pass is not periodic — it is coupled to every forward pass.** The Curator does not independently observe friction and "notice" things to fix. The backward pass is what generates the raw material the Curator synthesizes. Without a deliberate backward pass, the improvement protocol has nothing to work from.
+
+This is what "running the improvement protocol" means in practice: after each forward pass, each participating agent produces their findings, the Curator synthesizes, and the result is a-docs that reflect how the project actually works — not how it worked at initialization.
+
+---
+
 ## What Is an `improvement/` Folder?
 
 An `improvement/` folder contains three components:
 
 1. **Philosophy** (`main.md`) — the principles that govern how improvement decisions are made
-2. **Protocol** (`protocol.md`) — the step-by-step process for running meta-analysis cycles
+2. **Protocol** (`protocol.md`) — the step-by-step process for running a backward pass and synthesizing findings into a-docs changes
 3. **Reports** (`reports/`) — the folder where all improvement output artifacts are stored
 
-Together they answer: "How does this project get better at using agents?"
+Together they answer: "How does this project's a-docs stay aligned with how the project actually works?"
 
 ---
 

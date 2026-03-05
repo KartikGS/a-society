@@ -84,6 +84,21 @@ New files are registered in the appropriate index. The agent-docs-guide is updat
 
 ---
 
+### Phase 6 — Backward Pass
+
+After a change is registered, each agent who participated in the forward pass (Phases 1–5) produces a findings artifact reflecting on their experience of that execution. This is the backward pass: structured per-agent reflection on what the a-docs got right, what was missing, what was ambiguous, and what would have made the execution smoother.
+
+The Owner and Curator each produce findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`. The Curator synthesizes all findings into proposed a-docs improvements. Approved changes re-enter as Phase 1 observations in a new cycle.
+
+**Entry condition:** Phase 5 complete.
+**Owner:** Owner (synthesis); Curator (findings collection and implementation).
+**Output:** Per-agent findings files stored in `$A_SOCIETY_IMPROVEMENT_REPORTS`. Approved changes enter the next forward pass cycle as Phase 1 observations.
+**Cadence:** For lightweight changes (single file, minimal scope), a lightweight pass is sufficient. For substantive changes (new artifacts, structural modifications, authority boundary decisions), run the full three-phase chain per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`.
+
+The backward pass is not optional. The Curator does not independently observe friction — the backward pass is what generates the raw material the Curator synthesizes. Skipping it means the a-docs drift from how the project actually works.
+
+---
+
 ## Handoffs
 
 | Transition | What carries it | What the receiver checks |
@@ -92,6 +107,7 @@ New files are registered in the appropriate index. The agent-docs-guide is updat
 | Proposal → Review | Draft content + rationale from Curator | All three proposal elements present (what, where observed, why it generalizes) |
 | Review → Implementation | Owner's explicit approval | Approval stated — absence of objection is not approval |
 | Implementation → Registration | File exists at correct path | Correct index is updated before session closes |
+| Registration → Backward Pass | Phase 5 complete | All agents who participated in forward pass have produced findings |
 
 ---
 
