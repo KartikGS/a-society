@@ -44,6 +44,8 @@ The typical usage pattern:
 2. **Each session:** Assign an agent a role, point it at `agents.md` — it loads context and works
 3. **Periodically:** Run the Curator to keep `a-docs/` current as the project evolves
 
+`a-docs/` are not a snapshot of a finished project. They are a living layer that starts wherever the project starts — including rough or early-stage — and improves alongside it. A project with a vague vision produces rough a-docs; as the vision sharpens, the Curator brings the a-docs in line. The improvement protocol is the mechanism by which agent documentation catches up to reality.
+
 A-Society's value is not in initialization. Initialization is the entry cost. The value accumulates in every session after — agents that arrive oriented, work aligned, and leave the project better than they found it.
 
 ---

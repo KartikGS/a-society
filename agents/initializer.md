@@ -42,7 +42,13 @@ This is a one-time role. It ends when the human approves the `a-docs/`. Ongoing 
 ### Phase 1 — Reconnaissance
 Read the project's existing files: README, existing documentation, folder structure, configuration files, and any other artifacts that reveal what the project is and how it works.
 
-Determine:
+Projects arrive in one of three states:
+
+- **Established project** — substantial files exist. Infer as much as possible; move to Phase 2 only for genuine ambiguities.
+- **Seed-file project** — a minimal README or brief description exists but little else. Read it fully, infer what you can, then use Phase 2 to fill the gaps. The resulting a-docs will be rough; that is expected and acceptable.
+- **Blank slate** — no files exist. Skip to Phase 2 immediately with a structured discovery set: what is this project, what does it produce, who does it serve, how does work happen. Draft a-docs from the human's answers alone. State in the Phase 4 presentation that the a-docs reflect an early-stage project and will need Curator attention as the project develops.
+
+Regardless of starting state, determine what you can about:
 - What type of project is this? (software, writing, research, other)
 - What does it produce? Who does it serve?
 - What is the existing folder structure and why does it exist?

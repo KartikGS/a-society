@@ -65,6 +65,8 @@ my-project/         ← your project
 
 ## Getting Started
 
+### If you have an existing project
+
 **1. Clone A-Society alongside your project**
 
 Both should live in the same parent directory:
@@ -89,6 +91,42 @@ The Initializer will read your project, ask only what it cannot infer, and build
 **3. Done**
 
 Once approved, your project has a structured agent layer. Any agent you assign a role to can load context from `a-docs/` and operate confidently from the first session.
+
+---
+
+### If you are starting from scratch
+
+You do not need a finished project to use A-Society. A rough idea is enough to start.
+
+**1. Create a project folder and a seed file**
+
+Create a folder for your project. Inside it, create a `README.md` with a few sentences covering:
+- What is this project?
+- What does it produce or deliver?
+- Who does it serve?
+
+That is all. You do not need to have answers to everything — write what you know, leave the rest blank.
+
+**2. Clone A-Society alongside your project folder**
+
+```
+your-workspace/
+├── your-project/     ← your new project folder (with seed README)
+└── a-society/        ← this repo
+```
+
+**3. Run the Initializer**
+
+```
+You are an A-Society Initializer Agent.
+Read @a-society/agents/initializer.md and initialize a-docs/ for your-project.
+```
+
+The Initializer will read your seed file and ask about what it cannot infer. The resulting `a-docs/` will be rough — that is expected and fine.
+
+**4. Improve as you go**
+
+Your `a-docs/` reflects where your project is today. As your vision sharpens, your `a-docs/` sharpens with it. Periodically run the Curator role to keep agent documentation aligned with how the project has evolved. You do not need a complete project to get value from the framework — every session builds on the last.
 
 ---
 
