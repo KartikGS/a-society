@@ -71,10 +71,11 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 3. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
 4. `agents.md` — the agent entry point, referencing all of the above
 5. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
-6. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. The general protocol assumes a planning role, a requirements role, and a dedicated improvement agent. Most projects will not have all three. When the project has fewer roles than the protocol assumes: explicitly name which role maps to each protocol phase, state which phases are dropped and why, and document these decisions in the project's `improvement/protocol.md` so future agents do not have to re-derive them.
-7. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
+6. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
+7. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. The general protocol assumes a planning role, a requirements role, and a dedicated improvement agent. Most projects will not have all three. When the project has fewer roles than the protocol assumes: explicitly name which role maps to each protocol phase, state which phases are dropped and why, and document these decisions in the project's `improvement/protocol.md` so future agents do not have to re-derive them.
+8. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
 
-Before drafting documents 1–6, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. Documents 6 are initialized from the general templates directly — read them via `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`.
+Before drafting documents 1–7, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. Documents 7 are initialized from the general templates directly — read them via `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`.
 
 Write to populate, not to template. Agents who read these documents should find real answers, not placeholders.
 
@@ -108,7 +109,7 @@ Write to populate, not to template. Vague entries (e.g., "instructions were fine
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, index, role(s), agents.md, workflow/main.md, improvement/main.md, improvement/protocol.md
+- All foundational documents exist and are populated with real content: vision, structure, index, role(s), agents.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The signal report has been written to `a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`

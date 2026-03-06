@@ -59,3 +59,17 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy — principles governing documentation improvement decisions |
 | `$A_SOCIETY_IMPROVEMENT_PROTOCOL` | `/a-society/a-docs/improvement/protocol.md` | A-Society meta improvement protocol — phases, roles, and guardrails for improvement cycles |
 | `$A_SOCIETY_IMPROVEMENT_REPORTS` | `/a-society/a-docs/improvement/reports/main.md` | A-Society improvement reports index — naming conventions and template references |
+| `$A_SOCIETY_UPDATES_PROTOCOL` | `/a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |
+| `$A_SOCIETY_UPDATES_TEMPLATE` | `/a-society/a-docs/updates/template.md` | Framework update report template — structure for outbound change notifications to adopting projects |
+| `$A_SOCIETY_COMM` | `/a-society/a-docs/communication/main.md` | A-Society communication — entry point for conversation and coordination layers |
+| `$A_SOCIETY_COMM_CONVERSATION` | `/a-society/a-docs/communication/conversation/main.md` | A-Society conversation artifacts — live handoffs, templates, and lifecycle |
+| `$A_SOCIETY_COMM_BRIEF` | `/a-society/a-docs/communication/conversation/owner-to-curator-brief.md` | Live: current Owner → Curator briefing |
+| `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator-brief.md` | Template: Owner → Curator briefing format |
+| `$A_SOCIETY_COMM_CURATOR_TO_OWNER` | `/a-society/a-docs/communication/conversation/curator-to-owner.md` | Live: current Curator → Owner proposal or submission |
+| `$A_SOCIETY_COMM_OWNER_TO_CURATOR` | `/a-society/a-docs/communication/conversation/owner-to-curator.md` | Live: current Owner → Curator decision |
+| `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER` | `/a-society/a-docs/communication/conversation/TEMPLATE-curator-to-owner.md` | Template: Curator → Owner proposal / submission format |
+| `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator.md` | Template: Owner → Curator decision format |
+| `$A_SOCIETY_COMM_COORDINATION` | `/a-society/a-docs/communication/coordination/main.md` | A-Society coordination protocols — entry point |
+| `$A_SOCIETY_COMM_HANDOFF_PROTOCOL` | `/a-society/a-docs/communication/coordination/handoff-protocol.md` | Status vocabulary, handoff requirements, clarification rules, pre-replacement checks |
+| `$A_SOCIETY_COMM_FEEDBACK_PROTOCOL` | `/a-society/a-docs/communication/coordination/feedback-protocol.md` | What to do when a discrepancy or blocker is discovered in prior work |
+| `$A_SOCIETY_COMM_CONFLICT_RESOLUTION` | `/a-society/a-docs/communication/coordination/conflict-resolution.md` | Authority matrix, escalation path, human escalation threshold |

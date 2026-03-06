@@ -47,6 +47,8 @@ How does work pass from one role to the next? For each handoff:
 
 Handoff protocols prevent work from disappearing between roles. A phase without a defined handoff is a gap where things go silent.
 
+**For multi-role projects:** the workflow document carries a lightweight summary of handoffs only — who passes to whom and what the receiver checks. Artifact formats, status models, and detailed coordination protocols belong in a communication folder, not here. Embedding protocol detail in the workflow document conflates process sequencing with coordination rules and makes both harder to maintain. See `$INSTRUCTION_COMMUNICATION`. Create the communication folder alongside the workflow document for any project with two or more roles.
+
 ### 3. Invariants (mandatory)
 What rules are true for every unit of work, regardless of phase? Invariants are non-negotiable — they do not bend for speed, convenience, or unusual CRs. Examples:
 - Every closed artifact must have a corresponding open artifact.

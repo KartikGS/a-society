@@ -78,9 +78,11 @@ New files are registered in the appropriate index. The agent-docs-guide is updat
 - Content in `a-docs/` → register in `$A_SOCIETY_INDEX`
 - New `a-docs/` files → add a rationale entry to `$A_SOCIETY_AGENT_DOCS_GUIDE`
 
+If the registered changes qualify for a framework update report (see `$A_SOCIETY_UPDATES_PROTOCOL` for trigger conditions), the Curator drafts the report and submits it to the Owner for review before publishing to `a-society/updates/`. This is outbound communication to adopting projects — it requires Owner approval before publication and is separate from the backward pass.
+
 **Entry condition:** Implementation complete.
 **Owner:** Curator.
-**Output:** Updated index row(s); updated agent-docs-guide entry if applicable. The session is not complete until registration is done.
+**Output:** Updated index row(s); updated agent-docs-guide entry if applicable; framework update report published to `a-society/updates/` if triggered. The session is not complete until registration is done.
 
 ---
 
@@ -103,7 +105,7 @@ The backward pass is not optional. The Curator does not independently observe fr
 
 | Transition | What carries it | What the receiver checks |
 |---|---|---|
-| Observation → Proposal | Conversational description of the need | Need is specific enough to act on |
+| Observation → Proposal | `$A_SOCIETY_COMM_BRIEF` — Owner fills from template after aligning with human | Briefing contains Agreed Change and Scope; Curator acknowledges before drafting |
 | Proposal → Review | Draft content + rationale from Curator | All three proposal elements present (what, where observed, why it generalizes) |
 | Review → Implementation | Owner's explicit approval | Approval stated — absence of objection is not approval |
 | Implementation → Registration | File exists at correct path | Correct index is updated before session closes |

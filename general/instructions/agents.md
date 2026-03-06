@@ -36,7 +36,13 @@ One paragraph: what is this project? Not the vision in full — a one-paragraph 
 State where the project's index lives and explain the `$VARIABLE_NAME` convention. Every agent must know: when they see `$VAR` in a doc, they look up the index. This should appear early — before the required reading list.
 
 ### 3. Roles table (mandatory)
-A table with three columns: Role name, file path, one-line primary focus. Every role available in this project appears here. Roles not in this table do not exist in this project. Include a note: roles are assigned by the human; do not assume a role or shift roles without explicit instruction.
+A table with three columns: Role name, file path, one-line primary focus. Every role available in this project appears here. Roles not in this table do not exist in this project.
+
+**Minimum role set:** Every project must declare at minimum an Owner and a Curator at initialization. See `$INSTRUCTION_ROLES` — Minimum Role Set.
+
+**Role assignment rules:** Include these two rules explicitly in the roles table section of every `agents.md`:
+- Roles are assigned by the human before a session begins.
+- An agent operates in exactly one role per session. An agent may not assume a role or shift to a different role mid-session without explicit human instruction.
 
 ### 4. Required reading list (mandatory)
 An ordered list of documents every agent must read before starting work, regardless of role. Typically: this file → vision → structure → index → role file. The role file is listed last because it may specify additional readings of its own.
@@ -73,7 +79,7 @@ One paragraph. What is this project? What does it produce? Who does it serve? Cl
 State the index location and explain `$VAR` convention in two to three sentences. Agents see this early, before they encounter any `$VAR` references in the required reading list.
 
 **Step 3 — Build the roles table.**
-List every role. If only one role exists, the table still has one row. Include: role name, file path, one-line primary focus. Add the role assignment note.
+List every role. Include: role name, file path, one-line primary focus. Confirm that Owner and Curator are both present — a project missing either is not initialized. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
 
 **Step 4 — Write the required reading list.**
 Order matters. Start with `agents.md` itself (agents confirm they have read it), then vision, then structure, then index, then role file. If your project has additional universal required readings (e.g., a standards document every agent needs), insert them before the role file.

@@ -20,6 +20,20 @@ Role documents prevent both. They push authority to the right level, reduce unne
 
 ---
 
+## Minimum Role Set
+
+Every project using the A-Society framework must declare at minimum two roles at initialization:
+
+**1. Owner** — mandatory from the first session. The Owner holds the project vision, governs structure, and is the quality gate for all contributions. A project with no declared Owner has no authority structure — nothing prevents scope drift and nothing resolves disputes.
+
+**2. Curator** — mandatory at initialization, even if not yet active. The Curator keeps agent-docs accurate as the project evolves. A project that initializes without a Curator has no maintenance mechanism — its agent-docs will drift from reality with every change.
+
+Both roles must be registered in `agents.md` and indexed before the project is considered initialized. Ready-made templates for both are in `$GENERAL_OWNER_ROLE` and `$GENERAL_CURATOR_ROLE`.
+
+A project may add roles beyond these two. It may not operate without them.
+
+---
+
 ## What Every Role Document Must Contain
 
 ### 1. Primary Focus (mandatory)
