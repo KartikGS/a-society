@@ -17,6 +17,9 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_STRUCTURE` | `/a-society/a-docs/project-information/structure.md` | A-Society folder structure — governing principle and placement rules for each folder |
 | `$A_SOCIETY_ARCHITECTURE` | `/a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
 | `$A_SOCIETY_INDEX` | `/a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
+| `$GENERAL_FEEDBACK_CONSENT` | `/a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
+| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `/a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
+| `$INSTRUCTION_CONSENT` | `/a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
 | `$INSTRUCTION_TOOLING` | `/a-society/general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `/a-society/general/instructions/project-information/vision.md` | How to create a vision document for any project |
 | `$INSTRUCTION_STRUCTURE` | `/a-society/general/instructions/project-information/structure.md` | How to create a structure document for any project |
@@ -54,11 +57,16 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `/a-society/general/improvement/reports/template-findings.md` | Per-agent findings report template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_SYNTHESIS` | `/a-society/general/improvement/reports/template-synthesis.md` | Synthesis report template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_BACKLOG` | `/a-society/general/improvement/reports/template-backlog.md` | Alignment backlog template |
+| `$A_SOCIETY_PRINCIPLES` | `/a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `/a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
 | `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow — phases, handoffs, invariants, and escalation rules for framework work |
 | `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy — principles governing documentation improvement decisions |
 | `$A_SOCIETY_IMPROVEMENT_PROTOCOL` | `/a-society/a-docs/improvement/protocol.md` | A-Society meta improvement protocol — phases, roles, and guardrails for improvement cycles |
 | `$A_SOCIETY_IMPROVEMENT_REPORTS` | `/a-society/a-docs/improvement/reports/main.md` | A-Society improvement reports index — naming conventions and template references |
+| `$A_SOCIETY_FEEDBACK_DIR` | `/a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
+| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `/a-society/feedback/onboarding/` | Initializer signal reports — filed after initialization runs with project consent |
+| `$A_SOCIETY_FEEDBACK_MIGRATION` | `/a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
+| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `/a-society/feedback/curator-signal/` | Curator signals from adopting projects — mechanism TBD |
 | `$A_SOCIETY_UPDATES_DIR` | `/a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `/a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |
 | `$A_SOCIETY_UPDATES_TEMPLATE` | `/a-society/a-docs/updates/template.md` | Framework update report template — structure for outbound change notifications to adopting projects |

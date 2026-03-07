@@ -51,7 +51,7 @@ All six questions were necessary. The README was genuinely thin on operational d
 | `$INSTRUCTION_AGENTS` | Sufficient | Clear and complete. The invariants section was the right home for the three gate rules that needed to be visible to all agents. |
 | `$INSTRUCTION_WORKFLOW` | Sufficient | The phase structure (entry condition, owner, exit artifact, gate) worked well. The invariants naming convention ("Brief Gate Invariant" etc.) was directly usable. No adaptation friction. |
 | `$INSTRUCTION_COMMUNICATION` | Sufficient | The two-sub-folder structure (conversation / coordination) was appropriate for this project's four-role, five-handoff-type complexity. The scaling guidance ("Two roles, simple handoff" vs. "Three or more roles") was helpful — this project landed in the middle and the instruction gave sufficient signal for judgment. |
-| `$INSTRUCTION_COMMUNICATION_CONVERSATION` | Sufficient | Template structure and lifecycle lifecycle were clear. The multi-engagement naming convention (per-engagement live artifacts) was not explicitly addressed in the instruction — judgment was required. See Adversity Log. |
+| `$INSTRUCTION_COMMUNICATION_CONVERSATION` | Sufficient | Template structure and lifecycle were clear. The multi-engagement naming convention (per-engagement live artifacts) was not explicitly addressed in the instruction — judgment was required. See Adversity Log. |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | Sufficient | Three-document structure (handoff protocol, feedback protocol, conflict resolution) was appropriate. The instruction to define status vocabulary first was good sequencing guidance. |
 | `$GENERAL_IMPROVEMENT` | Sufficient | Principles translated well. Added a fifth principle specific to BrightLaunch (three failure modes come first) without conflicting with the general five. |
 | `$GENERAL_IMPROVEMENT_PROTOCOL` | Sufficient with adaptation required | The three-role assumption (planning, requirements, improvement agent) required explicit mapping. BrightLaunch has no requirements role — Account Manager covers both. The protocol's instruction to document dropped phases and role mappings explicitly was present and was followed; the resulting protocol.md is more readable for it. |
@@ -98,4 +98,4 @@ No corrections — human approved as drafted.
 
 - [x] All foundational documents created and populated
 - [x] Human approval received
-- [x] Signal report written and filed at `a-society/onboarding_signal/promo-agency-2026-03-06.md`
+- [x] Report filed at `a-society/feedback/onboarding/promo-agency-2026-03-06.md`

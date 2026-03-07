@@ -133,6 +133,22 @@ Project-information documents form a coherent category: they are all read at ori
 
 ---
 
+### `general/feedback/`
+
+**Purpose:** Ready-made templates for feedback artifacts that adopting projects produce and file back to A-Society. These are the counterpart to `a-society/feedback/` — the templates live in `general/` so adopting project agents can use them directly.
+
+**What belongs here:**
+- The consent file template — instantiated per feedback type in a project's `a-docs/feedback/[type]/consent.md`
+- Report templates for each feedback stream (e.g., migration feedback report)
+
+**What does not belong here:**
+- Actual feedback reports filed by adopting projects — those go to `a-society/feedback/[type]/`
+- Instructions for setting up the consent system — those live in `general/instructions/consent.md`
+
+**Principle:** Files here are ready-made artifacts that adopting project agents copy and instantiate. They are not instructions for how to build something — they are the thing itself, ready to use.
+
+---
+
 ## How This Structure Grows
 
 New instruction types are added to `general/instructions/` (or a sub-folder if they form a coherent category with existing instructions).

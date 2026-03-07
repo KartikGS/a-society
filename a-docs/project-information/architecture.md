@@ -19,19 +19,22 @@ Two indexes govern path resolution:
 
 ## Feedback Signal Architecture
 
-A-Society grows from real-world usage. Two feedback streams feed the framework:
+A-Society grows from real-world usage. All inbound feedback signal is collected under `a-society/feedback/`, organized by signal type. All feedback writing requires recorded consent from the adopting project — see the Consent Invariant below.
 
-**Stream 1 — Initializer signal reports**
-Every time the Initializer completes an initialization run, it generates a signal report and writes it to `a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`. These reports capture: what was inferable vs. what required questions, how each `general/` instruction performed, adversity encountered, and concrete recommendations for improving the library. The Owner and Curator consume these reports to identify gaps and drive improvements to `general/` and `agents/`.
+**Stream 1 — Initializer signal reports** (`$A_SOCIETY_FEEDBACK_ONBOARDING`)
+Every time the Initializer completes an initialization run, it generates a signal report (with the project's consent) and writes it to `a-society/feedback/onboarding/[project-name]-[YYYY-MM-DD].md`. These reports capture: what was inferable vs. what required questions, how each `general/` instruction performed, adversity encountered, and concrete recommendations for improving the library. The Owner and Curator consume these reports to identify gaps and drive improvements to `general/` and `agents/`.
 
-**Stream 2 — Curator signals from adopting projects**
+**Stream 2 — Migration feedback reports** (`$A_SOCIETY_FEEDBACK_MIGRATION`)
+After an adopting project's Curator implements a framework update report, it produces a migration feedback report (with consent) and files it to `a-society/feedback/migration/[project-name]-[update-report-date].md`. These reports capture: which changes applied, the clarity of migration guidance, friction encountered, and recommendations for improving future update reports. Use `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` when producing these reports.
+
+**Stream 3 — Curator signals from adopting projects** (`$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL`)
 Projects using the framework run their own improvement protocols. Their Curators observe patterns, friction, and gaps that A-Society's own agents cannot see. These observations are high-value signal for evolving the general library. The mechanism for communicating these signals back to A-Society — format, submission path, receiving role — is not yet defined. This is a deliberate open problem: the right solution depends on how the framework is distributed and how many projects are using it. A future role (provisionally: a signal-receiving or integration role) will own this stream.
 
 **Outbound communication — Framework update reports**
-The inverse of Stream 2: A-Society pushing change notifications out to adopting projects. When `general/` or `agents/` changes in ways that require adopting projects to review their own `a-docs/`, the A-Society Curator produces a framework update report and publishes it to `a-society/updates/`. Each report classifies changes by impact (Breaking / Recommended / Optional) and includes migration guidance for each adopting project's Curator. The delivery mechanism — how Curators of adopting projects discover these reports — remains an open problem until A-Society's distribution model is defined. See `$A_SOCIETY_UPDATES_PROTOCOL`.
+The inverse of inbound streams: A-Society pushing change notifications out to adopting projects. When `general/` or `agents/` changes in ways that require adopting projects to review their own `a-docs/`, the A-Society Curator produces a framework update report and publishes it to `a-society/updates/`. Each report classifies changes by impact (Breaking / Recommended / Optional) and includes migration guidance for each adopting project's Curator. The delivery mechanism — how Curators of adopting projects discover these reports — remains an open problem until A-Society's distribution model is defined. See `$A_SOCIETY_UPDATES_PROTOCOL`.
 
 **What this means for agents initializing new projects:**
-When initializing a project that uses the A-Society framework, the project's `a-docs/` should acknowledge that the project's Curator is a source of feedback signal for A-Society. The Curator role for that project should include: identifying reusable patterns and surfacing them via the A-Society signal mechanism (once defined). Do not invent a specific mechanism — reference the open problem and note that the Curator should watch for guidance from A-Society on how to submit.
+When initializing a project that uses the A-Society framework, establish the consent system using `$INSTRUCTION_CONSENT`. Ask the human about onboarding signal consent before closing initialization. The project's Curator role should reference checking `a-docs/feedback/migration/consent.md` before filing migration feedback, and checking `a-docs/feedback/curator-signal/consent.md` before submitting patterns.
 
 ---
 
@@ -88,3 +91,13 @@ An agent's context loading contains only what is directly necessary for its spec
 - The test: "Would removing this document from context loading cause this agent to make a worse decision?" If no, remove it
 
 Violation: The Initializer loading A-Society's internal vision and structure documents when its job is to initialize a different project entirely.
+
+### Consent Before Signal
+
+A-Society never writes feedback signal from a project without explicit, recorded consent from that project's owner. Consent is stored in the project's `a-docs/feedback/[type]/consent.md` — one file per feedback type.
+
+- Every feedback-producing agent checks its consent file before writing. If the file is absent or `Consented: No`, the agent skips and notes it in session output
+- Consent files are loaded on-demand at the moment feedback is about to be written — they are not part of any role's session-start required reading
+- Every new feedback mechanism must define its consent type and agent behavior before shipping — see `$A_SOCIETY_PRINCIPLES`
+
+Violation: An agent writing to `a-society/feedback/` without first reading the project's consent file for that feedback type.

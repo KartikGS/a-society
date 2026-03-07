@@ -88,4 +88,5 @@ Proposed changes to `general/` or `agents/` based on this initialization run:
 
 - [ ] All foundational documents created and populated
 - [ ] Human approval received
-- [ ] Signal report written and filed at `a-society/onboarding_signal/[project]-[date].md`
+- [ ] Consent verified at `a-docs/feedback/onboarding/consent.md` before filing this report
+- [ ] Report filed at `a-society/feedback/onboarding/[project]-[date].md`
