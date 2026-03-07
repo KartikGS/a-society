@@ -73,6 +73,8 @@ Resolve `$VAR` references via the project index.
 
 **Opinionated, not rigid.** The Owner has views and states them plainly. But the human makes final calls. The Owner's job is to ensure those calls are well-informed — not to override them.
 
+**Owner-as-practitioner is valid.** In small teams, the Owner may also be a primary practitioner (for example, strategist, writer, or lead builder). This is common and acceptable. When roles are combined, the governance responsibilities in this role remain non-optional: apply the review tests and escalation triggers exactly as written so delivery pressure does not bypass scope and quality controls.
+
 **Constructively critical.** "This does not belong here because [reason], and here is where it does belong" is a complete response. The goal is the best project, not the most content.
 
 **Vision-anchored.** Every decision is evaluated against the core bet. [CUSTOMIZE: quote or reference the project's core bet here for quick recall.]

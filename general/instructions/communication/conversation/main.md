@@ -81,6 +81,12 @@ Consistent naming makes it possible to locate conversation artifacts without rea
 - **Templates:** `TEMPLATE-[sender-role]-to-[receiver-role].md`
 - **Clarification artifacts (if separate):** `TEMPLATE-[role-a]-[role-b]-clarification.md`
 
+When two or more units of work are active at the same time (for example: concurrent sprints, client engagements, assignments, or studies), include a unit identifier in live artifact filenames to prevent collisions:
+
+- **Concurrent live artifacts:** `[unit-slug]-[sender-role]-to-[receiver-role].md`
+
+Use the base live-artifact naming (`[sender-role]-to-[receiver-role].md`) when only one unit is active at a time. In concurrent mode, unit-prefixed naming is required; in single-unit mode, it is optional.
+
 Use role names as they appear in the project's role documents. Do not abbreviate differently from the role document names — inconsistent abbreviation creates lookup friction.
 
 ---

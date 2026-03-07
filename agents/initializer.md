@@ -68,14 +68,17 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 
 1. `project-information/vision.md` — what this project is, why it exists, what success looks like
 2. `project-information/structure.md` — why each folder exists, what belongs where
-3. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
-4. `agents.md` — the agent entry point, referencing all of the above
-5. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
-6. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
-7. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. The general protocol assumes a planning role, a requirements role, and a dedicated improvement agent. Most projects will not have all three. When the project has fewer roles than the protocol assumes: explicitly name which role maps to each protocol phase, state which phases are dropped and why, and document these decisions in the project's `improvement/protocol.md` so future agents do not have to re-derive them.
-8. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
+3. `project-information/log.md` — current state, recent focus, and next priorities for the Owner's first session
+4. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
+5. `agents.md` — the agent entry point, referencing all of the above
+6. `agent-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`
+7. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
+8. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
+9. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. The general protocol assumes a planning role, a requirements role, and a dedicated improvement agent. Most projects will not have all three. When the project has fewer roles than the protocol assumes: explicitly name which role maps to each protocol phase, state which phases are dropped and why, and document these decisions in the project's `improvement/protocol.md` so future agents do not have to re-derive them.
+10. `improvement/reports/main.md`, `template-lightweight.md`, `template-findings.md`, `template-synthesis.md`, `template-backlog.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_*` so all indexed improvement-report paths resolve to real files
+11. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
 
-Before drafting documents 1–7, read the corresponding instruction from `a-society/general/instructions/`. Resolve instruction paths via `$INSTRUCTION_*` variables in `a-society/index.md`. Documents 7 are initialized from the general templates directly — read them via `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`.
+Before drafting documents 1–10, read the corresponding instruction by resolving `$INSTRUCTION_*` variables via `$A_SOCIETY_PUBLIC_INDEX`. Documents in steps 9–10 are initialized from `$GENERAL_IMPROVEMENT*` templates.
 
 Write to populate, not to template. Agents who read these documents should find real answers, not placeholders.
 
@@ -89,19 +92,30 @@ Fix what you find, then present the completed `a-docs/` to the human. State what
 
 Iterate on feedback. When the human confirms approval, proceed to Phase 5.
 
-### Phase 5 — Signal Report
-After human approval, generate an onboarding signal report and write it to `../a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`.
+### Phase 5 — Completion, Onboarding, and Signal Report Consent
+After human approval:
 
-Use the template at `$ONBOARDING_SIGNAL_TEMPLATE` (resolve via `a-society/index.md`). Populate every section from observations made across Phases 1–4:
+1. State completion clearly:
+   *"Initialization complete. This project's `a-docs/` is live."*
 
-- **Reconnaissance Findings** — what was inferable vs. what required questions
-- **Instruction Quality Assessment** — how each `general/` instruction performed; flag anything insufficient, ambiguous, or missing
-- **Adversity Log** — friction, unexpected situations, judgment calls
-- **Human Review Corrections** — everything the human changed during Phase 4 (high-signal)
-- **Patterns Observed** — anything encountered that `general/` does not yet cover but could
-- **Recommendations** — concrete proposed changes to `general/` or `agents/`
+2. Provide this onboarding message template (fill placeholders):
+   > "Your project's agent documentation is live.
+   > To get started, begin a new session with your AI assistant and use this prompt:
+   > 'You are an Owner agent for [PROJECT_NAME]. Read [PATH_TO_AGENTS_MD].'
+   > The Owner agent will orient itself and help you decide what to work on first."
 
-Write to populate, not to template. Vague entries (e.g., "instructions were fine") carry no signal value. If nothing belongs in a section, say so explicitly rather than leaving it blank.
+3. Request informed consent for onboarding signal reporting:
+   - Briefly explain the report's purpose: improving the A-Society framework using initialization feedback.
+   - Ask permission before writing any report.
+
+4. If permission is granted:
+   - Generate the onboarding signal report using `$ONBOARDING_SIGNAL_TEMPLATE`.
+   - Write it to the onboarding signal directory using the existing `[project-name]-[YYYY-MM-DD].md` naming convention.
+   - Confirm that the report was produced.
+
+5. If permission is denied:
+   - Acknowledge and close without writing a report.
+   - State explicitly in completion messaging that the signal report was not produced.
 
 ---
 
@@ -109,10 +123,10 @@ Write to populate, not to template. Vague entries (e.g., "instructions were fine
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, index, role(s), agents.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md
+- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, agent-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, and improvement/reports templates
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
-- The signal report has been written to `a-society/onboarding_signal/[project-name]-[YYYY-MM-DD].md`
+- The onboarding signal report outcome is explicit: either written with user consent, or declined by the user and recorded in the completion statement
 
 When done, state clearly: *"Initialization complete. This project's `a-docs/` is live. Ongoing maintenance belongs to the Curator role. Future additions require Owner review."*
 

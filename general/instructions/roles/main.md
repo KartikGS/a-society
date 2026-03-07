@@ -39,6 +39,12 @@ A project may add roles beyond these two. It may not operate without them.
 ### 1. Primary Focus (mandatory)
 One paragraph. What does this role fundamentally do? Not a list — a statement. If you cannot summarize the role in a paragraph, the role may be too broad.
 
+If the role is part-time or active only during specific workflow phases, state both lifecycle boundaries in Primary Focus:
+- **Activation condition** — what event, handoff, or phase transition starts this role's authority for a unit of work
+- **Closure condition** — what outcome marks this role as done for that unit
+
+Without explicit activation and closure conditions, agents in phase-scoped roles cannot reliably determine when they should act or stand down.
+
 ### 2. Authority & Responsibilities (mandatory)
 Two lists:
 - What the role **owns** — decisions they make, artifacts they control, quality they are responsible for

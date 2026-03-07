@@ -212,6 +212,20 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+## `todo/`
+
+### `todo/1-graph-workflow.md` — `$A_SOCIETY_TODO_GRAPH_WORKFLOW`
+
+**Why it exists:** To record deferred requirements that are too large or complex to enter the standard workflow immediately. The todo folder holds detailed notes on direction decisions, open questions, and scope analysis for work items that have been decided but not yet scheduled for implementation.
+
+**What it owns:** Per-item files, each containing: the observation that triggered the requirement, the problem statement, the direction decision made by the human, open questions to resolve before implementation begins, and scope/impact analysis.
+
+**What breaks without it:** Deferred direction decisions exist only in conversation history. When the human or Owner returns to the item in a future session, the rationale, open questions, and scope analysis must be reconstructed from memory.
+
+**Do not consolidate with:** `improvement/reports/` — improvement reports are backward-looking (what happened in a past cycle); todo items are forward-looking (what has been decided but not yet implemented). Do not consolidate with `workflow/main.md` — the workflow describes how active work moves through phases; the todo folder holds work that has not yet entered Phase 1.
+
+---
+
 ## `general/`
 
 ### `general/instructions/` — folder
