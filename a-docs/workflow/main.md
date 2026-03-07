@@ -11,7 +11,7 @@ A-Society's work is framework development: growing, maintaining, and quality-gat
 Work is triggered by one of three sources:
 - The human identifies a need or direction change
 - The Curator observes a reusable pattern in a project using the framework
-- A meta-improvement cycle produces a recommendation (see `$A_SOCIETY_IMPROVEMENT_PROTOCOL`)
+- A backward pass produces a recommendation (see `$A_SOCIETY_IMPROVEMENT_PROTOCOL`)
 
 ---
 
@@ -88,14 +88,20 @@ If the registered changes qualify for a framework update report (see `$A_SOCIETY
 
 ### Phase 6 — Backward Pass
 
-After a change is registered, each agent who participated in the forward pass (Phases 1–5) produces a findings artifact reflecting on their experience of that execution. This is the backward pass: structured per-agent reflection on what the a-docs got right, what was missing, what was ambiguous, and what would have made the execution smoother.
+After a change is registered, each agent who participated in the forward pass (Phases 1–5) produces a findings artifact reflecting on their experience. This is the backward pass: structured reflection on what the a-docs got right, what was missing, what was ambiguous, and what would have made the execution smoother.
 
-The Owner and Curator each produce findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`. The Curator synthesizes all findings into proposed a-docs improvements. Approved changes re-enter as Phase 1 observations in a new cycle.
+**How it works:**
+1. **Curator produces findings first** — closest to implementation friction.
+2. **Owner produces findings second** — reviews Curator findings and adds strategic observations.
+3. **Output:** `$A_SOCIETY_IMPROVEMENT_REPORTS/META-YYYYMMDD-<task-id>-<role>-findings.md` (template: `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`).
+4. **Curator synthesizes** actionable items from both findings files and proposes them as new Phase 1 observations through `$A_SOCIETY_COMM_CURATOR_TO_OWNER`.
+5. **Approved changes** proceed through the standard forward pass: Proposal → Owner Review → Implementation → Registration.
 
 **Entry condition:** Phase 5 complete.
-**Owner:** Owner (synthesis); Curator (findings collection and implementation).
-**Output:** Per-agent findings files stored in `$A_SOCIETY_IMPROVEMENT_REPORTS`. Approved changes enter the next forward pass cycle as Phase 1 observations.
-**Cadence:** For lightweight changes (single file, minimal scope), a lightweight pass is sufficient. For substantive changes (new artifacts, structural modifications, authority boundary decisions), run the full three-phase chain per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`.
+**Owner:** Curator (findings first, synthesis, implementation); Owner (findings second, review).
+**Output:** Per-agent findings files stored in `$A_SOCIETY_IMPROVEMENT_REPORTS`. Actionable items enter the next forward pass cycle as Phase 1 observations.
+
+**Depth:** Proportional to the work. For routine single-file changes with no friction, 1–3 top findings is sufficient. For substantive changes (new artifacts, structural modifications, authority boundary decisions), produce full structured findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`.
 
 The backward pass is not optional. The Curator does not independently observe friction — the backward pass is what generates the raw material the Curator synthesizes. Skipping it means the a-docs drift from how the project actually works.
 

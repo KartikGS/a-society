@@ -1,10 +1,10 @@
 # Improvement Reports
 
-This folder holds all improvement reports produced during meta-analysis cycles for this project.
+This folder holds all backward pass findings produced during improvement cycles for this project.
 
 > [CUSTOMIZE] Update the variable references below with `$VARIABLE_NAME` values from your project's index once it is set up.
 
-See `[IMPROVEMENT_PROTOCOL]` for the full protocol that governs how these reports are created, structured, and used.
+See `[IMPROVEMENT_PROTOCOL]` for the backward pass protocol that governs how these reports are produced.
 
 ---
 
@@ -12,28 +12,17 @@ See `[IMPROVEMENT_PROTOCOL]` for the full protocol that governs how these report
 
 | Report Type | Naming Convention | Produced By |
 |---|---|---|
-| Lightweight synthesis | `META-YYYYMMDD-<CR-ID>-lightweight.md` | Synthesis owner (post-task) |
-| Per-agent findings | `META-YYYYMMDD-<CR-ID>-<role>-findings.md` | Each agent in Phase 1 |
-| Synthesis | `META-YYYYMMDD-<CR-ID>-synthesis.md` | Improvement Agent (Phase 2) |
-| Alignment backlog | `ALIGN-YYYYMMDD-backlog.md` | Planning role (Mode B) |
+| Per-agent findings | `META-YYYYMMDD-<TASK-ID>-<role>-findings.md` | Each participating agent (backward pass) |
 
 ---
 
-## Templates
+## Template
 
-Standalone template files for each report type:
-
-- `[TEMPLATE_LIGHTWEIGHT]` — lightweight synthesis template
-- `[TEMPLATE_FINDINGS]` — per-agent findings template
-- `[TEMPLATE_SYNTHESIS]` — synthesis template
-- `[TEMPLATE_BACKLOG]` — alignment backlog template
-
-Templates are also embedded inline in the protocol document for reference.
+- `[TEMPLATE_FINDINGS]` — backward pass findings template
 
 ---
 
 ## Conventions
 
 - Report files are **not** edited after creation. They are historical artifacts once produced.
-- Synthesis files may be updated with implementation notes after Phase 3 completes (per protocol).
-- Do not add non-report files to this folder. Templates and protocol documents live at `[IMPROVEMENT_MAIN]` and `[IMPROVEMENT_PROTOCOL]`.
+- Do not add non-report files to this folder. Philosophy and protocol documents live at `[IMPROVEMENT_MAIN]` and `[IMPROVEMENT_PROTOCOL]`.

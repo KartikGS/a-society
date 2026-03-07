@@ -74,8 +74,8 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 6. `agent-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`
 7. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
 8. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
-9. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. The general protocol assumes a planning role, a requirements role, and a dedicated improvement agent. Most projects will not have all three. When the project has fewer roles than the protocol assumes: explicitly name which role maps to each protocol phase, state which phases are dropped and why, and document these decisions in the project's `improvement/protocol.md` so future agents do not have to re-derive them.
-10. `improvement/reports/main.md`, `template-lightweight.md`, `template-findings.md`, `template-synthesis.md`, `template-backlog.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_*` so all indexed improvement-report paths resolve to real files
+9. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items.
+10. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files
 11. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
 
 Before drafting documents 1–10, read the corresponding instruction by resolving `$INSTRUCTION_*` variables via `$A_SOCIETY_PUBLIC_INDEX`. Documents in steps 9–10 are initialized from `$GENERAL_IMPROVEMENT*` templates.
@@ -123,7 +123,7 @@ After human approval:
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, agent-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, and improvement/reports templates
+- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, agent-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, and improvement/reports/template-findings.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The onboarding signal report outcome is explicit: either written with user consent, or declined by the user and recorded in the completion statement

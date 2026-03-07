@@ -1,6 +1,6 @@
 # Instruction: How to Create an `improvement/` Folder
 
-This document explains how to create an `improvement/` folder for a project's agent-docs. An improvement folder gives the project a structured, repeatable system for evolving its own documentation — capturing agent friction, synthesizing fixes, and implementing changes without disrupting normal work.
+This document explains how to create an `improvement/` folder for a project's agent-docs. An improvement folder gives the project a structured, repeatable system for evolving its own documentation — capturing agent friction during execution and feeding it back into the workflow.
 
 ---
 
@@ -10,13 +10,13 @@ Every execution cycle in a project has two directions.
 
 **The forward pass** is agents executing their roles: receiving work, producing artifacts, handing off to the next stage. This is the project's normal workflow.
 
-**The backward pass** is agents reflecting on that execution: each agent who participated in the forward pass produces a structured analysis of their experience — what was clear, what was ambiguous, what was missing from their role or context documents, what they had to infer that they shouldn't have had to. These are per-agent findings. The Curator (or equivalent synthesis role) receives all findings, synthesizes them into proposed a-docs changes, and brings approved changes through the standard review cycle.
+**The backward pass** is agents reflecting on that execution: each agent who participated in the forward pass produces a structured analysis of their experience — what was clear, what was ambiguous, what was missing from their role or context documents, what they had to infer that they shouldn't have had to. The synthesis role (typically the Curator) receives all findings, identifies actionable items, and proposes them through the standard workflow.
 
-In a graph-based workflow, the backward pass traverses the **path actually taken** by the instance under review — walking from the terminal node back to the entry node. In a branching graph, only the edges that fired during this instance are reviewed; not every possible path in the graph definition. Each node's agent reviews its output against the input it received on the traversed path.
+In a graph-based workflow, the backward pass traverses the **path actually taken** by the instance under review — walking from the terminal node back to the entry node. Only the edges that fired during this instance are reviewed.
 
-**The backward pass is not periodic — it is coupled to every forward pass.** The Curator does not independently observe friction and "notice" things to fix. The backward pass is what generates the raw material the Curator synthesizes. Without a deliberate backward pass, the improvement protocol has nothing to work from.
+**The backward pass is not periodic — it is coupled to every forward pass.** The Curator does not independently observe friction and "notice" things to fix. The backward pass is what generates the raw material the Curator synthesizes. Without it, the improvement system has nothing to work from.
 
-This is what "running the improvement protocol" means in practice: after each forward pass, each participating agent produces their findings, the Curator synthesizes, and the result is a-docs that reflect how the project actually works — not how it worked at initialization.
+**The key insight:** findings that warrant action re-enter the workflow as standard observations (Phase 1). They proceed through the same proposal, review, and implementation phases as any other work. There is no separate improvement workflow.
 
 ---
 
@@ -25,8 +25,8 @@ This is what "running the improvement protocol" means in practice: after each fo
 An `improvement/` folder contains three components:
 
 1. **Philosophy** (`main.md`) — the principles that govern how improvement decisions are made
-2. **Protocol** (`protocol.md`) — the step-by-step process for running a backward pass and synthesizing findings into a-docs changes
-3. **Reports** (`reports/`) — the folder where all improvement output artifacts are stored
+2. **Protocol** (`protocol.md`) — how to run a backward pass: who produces findings, in what format, and how findings flow back into the workflow
+3. **Reports** (`reports/`) — the folder where all backward pass findings are stored
 
 Together they answer: "How does this project's a-docs stay aligned with how the project actually works?"
 
@@ -36,7 +36,7 @@ Together they answer: "How does this project's a-docs stay aligned with how the 
 
 Without a dedicated improvement folder:
 - Improvement philosophy gets buried in role files or lost in conversation history
-- Meta-analysis reports scatter across the project without a clear home
+- Backward pass findings scatter across the project without a clear home
 - Each improvement cycle reinvents how to run it
 
 A dedicated folder separates improvement infrastructure from normal execution infrastructure. The process of improving the docs does not pollute the docs used for execution.
@@ -64,16 +64,15 @@ A dedicated folder separates improvement infrastructure from normal execution in
 
 ---
 
-### `protocol.md` — Improvement Protocol
+### `protocol.md` — Backward Pass Protocol
 
-**What it is:** The step-by-step process for running a meta-analysis cycle — from capturing per-agent findings, to synthesizing them, to implementing approved fixes.
+**What it is:** The step-by-step process for running a backward pass — from capturing per-agent findings to feeding actionable items back into the workflow.
 
 **What belongs here:**
-- The hybrid operating model (task-linked meta vs. alignment cycles)
-- Phase definitions (Phase 1: findings, Phase 2: synthesis, Phase 3: implementation)
-- Role assignments for each phase
-- Decision ownership table
-- Role health indicators and escalation thresholds
+- Who produces findings first and why (typically the role closest to implementation)
+- The findings output format and location
+- How findings flow back into the workflow (as Phase 1 observations)
+- Reflection categories to guide agents
 - Guardrails
 
 **What does not belong here:**
@@ -84,19 +83,17 @@ A dedicated folder separates improvement infrastructure from normal execution in
 **Starting point:** Use `$GENERAL_IMPROVEMENT_PROTOCOL` as the template. Customize:
 - Replace `[PROJECT_*]` placeholders with `$VARIABLE_NAME` values from your index
 - Update role names to match your project's roles
-- Adjust the cadence (e.g., "every 3 completed tasks") to fit your project's pace
-- Update output paths to point to your `reports/` folder
+- Specify who produces findings first (typically the role closest to implementation friction)
 
 ---
 
 ### `reports/` — Reports Folder
 
-**What it is:** The storage location for all improvement artifacts — lightweight summaries, per-agent findings, synthesis documents, and alignment backlogs.
+**What it is:** The storage location for all backward pass findings.
 
 **What belongs here:**
 - `main.md` — index of the reports folder with naming conventions and template references
-- One file per report, following the naming convention from the protocol
-- Template files for each report type (standalone starting points for new reports)
+- One file per backward pass findings report, following the naming convention from the protocol
 
 **What does not belong here:**
 - Protocol or philosophy documents (those go in `main.md` and `protocol.md`)
@@ -106,10 +103,7 @@ A dedicated folder separates improvement infrastructure from normal execution in
 **Starting point for `reports/main.md`:** Use `$GENERAL_IMPROVEMENT_REPORTS` as the template.
 
 **Starting point for template files:**
-- Lightweight summary: `$GENERAL_IMPROVEMENT_TEMPLATE_LIGHTWEIGHT`
-- Per-agent findings: `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-- Synthesis: `$GENERAL_IMPROVEMENT_TEMPLATE_SYNTHESIS`
-- Alignment backlog: `$GENERAL_IMPROVEMENT_TEMPLATE_BACKLOG`
+- Backward pass findings: `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
 
 ---
 
@@ -120,22 +114,21 @@ Add all key files to the project's file path index. At minimum:
 | Variable | Path | Description |
 |---|---|---|
 | `$[PROJECT]_IMPROVEMENT` | `/[project]/a-docs/improvement/main.md` | Improvement philosophy — principles for doc improvement decisions |
-| `$[PROJECT]_IMPROVEMENT_PROTOCOL` | `/[project]/a-docs/improvement/protocol.md` | Meta improvement protocol — phases, roles, and guardrails |
+| `$[PROJECT]_IMPROVEMENT_PROTOCOL` | `/[project]/a-docs/improvement/protocol.md` | Backward pass protocol — how findings are produced and flow back into the workflow |
 | `$[PROJECT]_IMPROVEMENT_REPORTS` | `/[project]/a-docs/improvement/reports/main.md` | Improvement reports index — naming conventions and template links |
-| `$[PROJECT]_IMPROVEMENT_TEMPLATE_LIGHTWEIGHT` | `/[project]/a-docs/improvement/reports/template-lightweight.md` | Lightweight synthesis template |
-| `$[PROJECT]_IMPROVEMENT_TEMPLATE_FINDINGS` | `/[project]/a-docs/improvement/reports/template-findings.md` | Per-agent findings template |
-| `$[PROJECT]_IMPROVEMENT_TEMPLATE_SYNTHESIS` | `/[project]/a-docs/improvement/reports/template-synthesis.md` | Synthesis template |
-| `$[PROJECT]_IMPROVEMENT_TEMPLATE_BACKLOG` | `/[project]/a-docs/improvement/reports/template-backlog.md` | Alignment backlog template |
 
 ---
 
-## Integration with the Improvement Agent Role
+## Integration with the Workflow
 
-If the project has an Improvement Agent role, that role's context loading must include:
-- `$[PROJECT]_IMPROVEMENT` — the philosophy governing improvement decisions
-- `$[PROJECT]_IMPROVEMENT_PROTOCOL` — the process the agent executes
+The backward pass should be declared as a phase in the project's workflow document. It is the structured counterpart to the forward pass — not a separate system.
 
-The role file should cross-reference both with the exact `$VARIABLE_NAME`.
+The workflow should specify:
+- When the backward pass runs (after which phase)
+- Who produces findings and in what order
+- How actionable findings re-enter as standard workflow observations
+
+The improvement protocol (`protocol.md`) provides the detailed how; the workflow declares the backward pass as part of the project's execution cycle.
 
 ---
 
@@ -143,7 +136,6 @@ The role file should cross-reference both with the exact `$VARIABLE_NAME`.
 
 Create an `improvement/` folder when:
 - The project has run at least a few task cycles and has accumulated real friction observations
-- The project has an Improvement Agent role (or plans to have one)
 - Ad-hoc improvement sessions have happened and need to be standardized
 
 A new project with no execution history can defer this folder until friction has been observed. The protocol is most useful when it has real findings to apply to.

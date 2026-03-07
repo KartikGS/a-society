@@ -1,50 +1,38 @@
-# Meta Findings: <Role> — <Task-ID>
+# Backward Pass Findings: <Role> — <Task-ID>
 
 **Date:** YYYY-MM-DD
 **Task Reference:** <Task-ID>
 **Role:** <role>
-**Prior findings reviewed:** [list files, or "none" if first agent]
+**Depth:** Lightweight / Full
 
 ---
 
-## Conflicting Instructions
+## Findings
+
+### Conflicting Instructions
 - [Finding or "none"]
 
-## Redundant Information
+### Missing Information
 - [Finding or "none"]
 
-## Missing Information
+### Unclear Instructions
 - [Finding or "none"]
 
-## Unclear Instructions
+### Redundant Information
 - [Finding or "none"]
 
-## Responsibility / Scope Concerns
+### Scope Concerns
 - [Finding or "none"]
 
-## Engineering Philosophy Concerns
+### Workflow Friction
 - [Finding or "none"]
 
-## Redundant Workflow Steps
-- [Finding or "none"]
+---
 
-## Other Observations
-- [Finding or "none"]
+## Top Findings (Ranked)
 
-## Lens Coverage (Mandatory)
-- Portability Boundary: [summary of reusable vs project-specific placement gaps]
-- Collaboration Throughput: [summary of serialization/parallelism friction]
-- Evolvability: [summary of canonical-source and edit-surface implications]
+1. [one-line summary] — [affected doc / section]
+2. [one-line summary] — [affected doc / section]
+3. [one-line summary] — [affected doc / section]
 
-## Prior Findings: Assessment
-(Only present if prior findings files were provided)
-- [Prior finding ID or summary] → Validated / Refuted / Extended — [one-line rationale]
-
-## Top 5 Findings (Ranked)
-1. [ID] | [one-line summary] | [affected doc / section] | [lens tags]
-2. [ID] | [one-line summary] | [affected doc / section] | [lens tags]
-3. [ID] | [one-line summary] | [affected doc / section] | [lens tags]
-4. [ID] | [one-line summary] | [affected doc / section] | [lens tags]
-5. [ID] | [one-line summary] | [affected doc / section] | [lens tags]
-
-(Max 5. Rank by impact. Phase 2 synthesis reads this section only — not the full file.)
+(Max 5. Rank by impact on future agent effectiveness.)

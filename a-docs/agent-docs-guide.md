@@ -102,7 +102,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** A-Society has a non-obvious workflow constraint: the Curator cannot write to `general/` without Owner approval. Without a workflow document, agents must infer this constraint from role files — and may miss it. The workflow document is the single place where all phases, handoffs, invariants, and escalation rules are declared explicitly for any agent operating in this project.
 
-**What it owns:** The five-phase workflow (Observation → Proposal → Owner Review → Implementation → Registration), all handoff protocols, the four framework invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation triggers.
+**What it owns:** The six-phase workflow (Observation → Proposal → Owner Review → Implementation → Registration → Backward Pass), all handoff protocols, the four framework invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation triggers.
 
 **What breaks without it:** Agents improvise process. The Approval Invariant is discoverable only by reading the Curator role file — which not all agents load. Cross-role work has no shared playbook.
 
@@ -126,11 +126,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/protocol.md` — `$A_SOCIETY_IMPROVEMENT_PROTOCOL`
 
-**Why it exists:** Without a protocol, improvement cycles are ad-hoc — findings are lost, synthesis is inconsistent, and implementation may happen without human approval. The protocol standardizes the three-phase meta cycle so every improvement session runs the same way.
+**Why it exists:** Without a protocol, the backward pass (Phase 6 of the workflow) is ad-hoc — findings are lost, reflection depth varies arbitrarily, and actionable items may not re-enter the workflow. The protocol standardizes how backward pass findings are produced, what categories to reflect on, and how findings flow back into the forward pass.
 
-**What it owns:** The hybrid operating model (Mode A task-linked, Mode B alignment), three-phase meta flow with role assignments (Curator findings, Owner synthesis), decision ownership table, role health indicators, and guardrails.
+**What it owns:** The backward pass execution model (who produces findings first, output format, how findings re-enter the workflow), reflection categories, useful evaluation lenses, and guardrails.
 
-**What breaks without it:** Improvement cycles lack a standard structure. The Owner may synthesize without Curator findings, or implement without human approval. Role health degradation goes undetected.
+**What breaks without it:** Backward passes lack a standard structure. Agents produce inconsistent findings. Actionable items are lost instead of re-entering as Phase 1 observations.
 
 **Do not consolidate with:** `improvement/main.md` — the protocol is the process; the philosophy is the reasoning behind decisions within that process.
 
@@ -138,11 +138,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/reports/` — `$A_SOCIETY_IMPROVEMENT_REPORTS`
 
-**Why it exists:** Improvement artifacts (lightweight summaries, per-agent findings, synthesis documents, alignment backlogs) need a dedicated, stable location. Without it, reports scatter and the improvement protocol's output paths are unresolvable.
+**Why it exists:** Backward pass findings need a dedicated, stable location. Without it, findings scatter and the improvement protocol's output paths are unresolvable.
 
-**What it owns:** All improvement output artifacts and the reports index (`main.md`) with naming conventions and template references.
+**What it owns:** All backward pass findings files and the reports index (`main.md`) with naming conventions and the template reference.
 
-**What breaks without it:** The protocol's output paths point nowhere. Historical improvement findings are lost. The alignment backlog has no home.
+**What breaks without it:** The protocol's output paths point nowhere. Historical findings are lost.
 
 **Do not consolidate with:** `workflow/` — improvement artifacts are meta-level (about the docs); workflow artifacts are execution-level (about framework work).
 

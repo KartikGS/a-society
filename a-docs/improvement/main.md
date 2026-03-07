@@ -1,6 +1,6 @@
 # Improvement Principles
 
-This document captures the improvement philosophy for A-Society's agent documentation system. It guides how future process gaps are evaluated and resolved — not what the current rules are. These principles govern any agent or human making decisions about the A-Society docs, and they are applied during meta-analysis cycles (see `$A_SOCIETY_IMPROVEMENT_PROTOCOL`).
+This document captures the improvement philosophy for A-Society's agent documentation system. It guides how future process gaps are evaluated and resolved — not what the current rules are. These principles govern any agent or human making decisions about the A-Society docs, and they are applied during the backward pass (see `$A_SOCIETY_IMPROVEMENT_PROTOCOL`).
 
 All principles below are drawn from the project-agnostic framework in `$GENERAL_IMPROVEMENT`. They apply here without modification; no A-Society-specific exceptions exist.
 
