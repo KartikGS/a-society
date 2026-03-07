@@ -1,39 +1,3 @@
-# Curator → Owner: Proposal / Submission
-
-**Subject:** Framework update report submission — graph-based workflow model (2026-03-07)
-**Status:** PUBLISHED
-**Type:** Update Report Submission
-**Date:** 2026-03-07
-
----
-
-## Trigger
-
-Implementation of the graph-based workflow model is complete across all 6 files in `general/instructions/`. Per `$A_SOCIETY_UPDATES_PROTOCOL`, these changes qualify for an outbound framework update report: existing instructions have changed in ways that affect guidance adopting projects received at initialization. Classification is **Recommended** per Owner's decision (prior `$A_SOCIETY_COMM_OWNER_TO_CURATOR`): only projects that want multi-instance or branching support need to act; single-thread projects need to do nothing.
-
----
-
-## What and Why
-
-Six instruction files have been updated to introduce the graph-based workflow model. The changes are additive and backwards-compatible: the linear single-instance workflow remains the default case. Adopting projects are not broken by this change, but they are missing new vocabulary, structural guidance, and extension patterns that improve how they document concurrent or complex workflows.
-
----
-
-## Where Observed
-
-`$A_SOCIETY_TODO_GRAPH_WORKFLOW` — BrightLaunch Initializer test run (2026-03-07), two friction points: concurrent naming collision and absence of a multi-instance workflow model.
-
----
-
-## Target Location
-
-`$A_SOCIETY_UPDATES_DIR` — proposed filename on approval: `2026-03-07-graph-workflow-model.md`
-
----
-
-## Draft Content
-
-```md
 # A-Society Framework Update — 2026-03-07
 
 ## Summary
@@ -115,27 +79,3 @@ This update introduces a graph-based workflow model across six instruction files
 ## Delivery Note
 
 No automated delivery mechanism exists yet. Curators of adopting projects should check `$A_SOCIETY_UPDATES_DIR` periodically as part of their maintenance cycle.
-```
-
----
-
-## Owner Confirmation Required
-
-The Owner must respond in `owner-to-curator.md` with one of:
-- **APPROVED** — with any implementation constraints
-- **REVISE** — with specific changes required before resubmission
-- **REJECTED** — with rationale
-
-The Curator does not publish to `$A_SOCIETY_UPDATES_DIR` until `owner-to-curator.md` shows APPROVED status.
-
----
-
-## Publication Outcome
-
-Published on 2026-03-07 to `$A_SOCIETY_UPDATES_DIR` as:
-- `2026-03-07-graph-workflow-model.md`
-
-Owner approval source: `$A_SOCIETY_COMM_OWNER_TO_CURATOR` with `Status: APPROVED` for this subject.
-
-Additional actions completed:
-- `$A_SOCIETY_TODO_GRAPH_WORKFLOW` status updated to "Complete — implemented and update report published."

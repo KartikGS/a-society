@@ -12,6 +12,8 @@ Every execution cycle in a project has two directions.
 
 **The backward pass** is agents reflecting on that execution: each agent who participated in the forward pass produces a structured analysis of their experience — what was clear, what was ambiguous, what was missing from their role or context documents, what they had to infer that they shouldn't have had to. These are per-agent findings. The Curator (or equivalent synthesis role) receives all findings, synthesizes them into proposed a-docs changes, and brings approved changes through the standard review cycle.
 
+In a graph-based workflow, the backward pass traverses the **path actually taken** by the instance under review — walking from the terminal node back to the entry node. In a branching graph, only the edges that fired during this instance are reviewed; not every possible path in the graph definition. Each node's agent reviews its output against the input it received on the traversed path.
+
 **The backward pass is not periodic — it is coupled to every forward pass.** The Curator does not independently observe friction and "notice" things to fix. The backward pass is what generates the raw material the Curator synthesizes. Without a deliberate backward pass, the improvement protocol has nothing to work from.
 
 This is what "running the improvement protocol" means in practice: after each forward pass, each participating agent produces their findings, the Curator synthesizes, and the result is a-docs that reflect how the project actually works — not how it worked at initialization.

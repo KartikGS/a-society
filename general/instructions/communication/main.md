@@ -29,7 +29,7 @@ communication/
 
 ### `conversation/`
 
-Covers the actual artifacts agents exchange: what files carry handoffs, what fields they must contain, what the lifecycle of a conversation artifact is (when it is created, replaced, or archived). In practice, this folder holds live handoff files and the permanent templates that define their format.
+Covers the actual artifacts agents exchange: what files carry handoffs, what fields they must contain, what the lifecycle of a conversation artifact is (when it is created, replaced, or archived). In practice, this folder holds live handoff files and the permanent templates that define their format. In projects with concurrent workflow instances, live artifacts are scoped to their instance via the unit-of-work ID. See `$INSTRUCTION_COMMUNICATION_CONVERSATION` for naming conventions.
 
 See the sub-instruction: `conversation/main.md`.
 

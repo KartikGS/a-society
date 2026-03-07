@@ -40,8 +40,10 @@ A project may add roles beyond these two. It may not operate without them.
 One paragraph. What does this role fundamentally do? Not a list — a statement. If you cannot summarize the role in a paragraph, the role may be too broad.
 
 If the role is part-time or active only during specific workflow phases, state both lifecycle boundaries in Primary Focus:
-- **Activation condition** — what event, handoff, or phase transition starts this role's authority for a unit of work
-- **Closure condition** — what outcome marks this role as done for that unit
+- **Activation condition** — what event, handoff, or phase transition starts this role's authority for a unit of work. In a graph-based workflow, this corresponds to the incoming edge firing at the role's entry node.
+- **Closure condition** — what outcome marks this role as done for that unit. In a graph-based workflow, this corresponds to the outgoing edge being ready to fire from the role's exit node.
+
+When activation and closure map to graph edge conditions, an agent can determine from the handoff artifact alone whether it should act — the unit-of-work ID in the artifact's subject field confirms which instance it is responsible for.
 
 Without explicit activation and closure conditions, agents in phase-scoped roles cannot reliably determine when they should act or stand down.
 

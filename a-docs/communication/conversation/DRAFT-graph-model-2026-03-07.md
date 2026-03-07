@@ -1,3 +1,14 @@
+# Draft: Graph Model — All 6 Files
+# For Owner review. Referenced from curator-to-owner.md.
+# Do not implement until owner-to-curator.md shows APPROVED.
+
+---
+
+## FILE 1 OF 6: general/instructions/workflow/main.md
+### Change type: Large (full rewrite shown)
+
+---
+
 # How to Create a Workflow Document
 
 ## What Is a Workflow Document?
@@ -157,7 +168,7 @@ A workflow document that describes role responsibilities, vision, or tool choice
 - **Process-first, not role-first.** Describe what happens to work, not what roles do. Roles are described in role documents.
 - **Numbered phases.** Use numbered lists for ordered processes. Readers must be able to say "we are in phase 3" without ambiguity.
 - **Named invariants.** Each invariant should have a short name (e.g., "Traceability Invariant") so agents can reference it precisely in handoffs and reports.
-- **Instance-scoped references.** In multi-instance workflows only: every artifact reference (handoff files, status tokens, pre-replacement checks) must include the unit-of-work ID so that artifacts from concurrent instances do not collide. Single-instance workflows do not need unit-of-work IDs.
+- **Instance-scoped references.** In multi-instance workflows, every artifact reference (handoff files, status tokens, pre-replacement checks) must include the unit-of-work ID so that artifacts from concurrent instances do not collide.
 - **Stable by design.** A workflow document that changes every week is a sign the process has not been decided — not a sign it is being maintained. Decide the process, then write it down.
 
 ---
@@ -214,3 +225,105 @@ These patterns are not separate complexity tiers. They are all graph traversal w
 **No invariants.** Without explicit invariants, every edge case becomes a negotiation. The first time a constraint is challenged, the team discovers they never actually agreed on it.
 
 **Updated reactively.** Workflow documents should be updated when the process is deliberately changed — not after every CR that exposed a gap. Reactive updates produce a patchwork of special cases rather than a coherent process.
+
+---
+---
+
+## FILE 2 OF 6: general/instructions/communication/conversation/main.md
+### Change type: Small — Naming Conventions section only
+### All other sections unchanged.
+
+REPLACE the current Naming Conventions section (lines 79–90 in the baseline) with:
+
+---
+
+## Naming Conventions
+
+Consistent naming makes it possible to locate conversation artifacts without reading every file:
+
+- **Live artifacts:** `[sender-role]-to-[receiver-role].md` (e.g., `tech-lead-to-backend.md`)
+- **Templates:** `TEMPLATE-[sender-role]-to-[receiver-role].md`
+- **Clarification artifacts (if separate):** `TEMPLATE-[role-a]-[role-b]-clarification.md`
+
+When two or more units of work are active at the same time (for example: concurrent sprints, client engagements, assignments, or studies), prefix live artifact filenames with the unit-of-work ID to prevent collisions:
+
+- **Concurrent live artifacts:** `[unit-of-work-id]-[sender-role]-to-[receiver-role].md` (e.g., `acme-001-ba-to-tech-lead.md`)
+
+The unit-of-work ID follows the format defined in the project's workflow document: `[short-slug]-[sequential-number]`. The slug is a human-readable label for the unit of work; the number disambiguates across time. The project's workflow document defines the slug vocabulary.
+
+Use the base live-artifact naming (`[sender-role]-to-[receiver-role].md`) when only one unit is active at a time. In concurrent mode, unit-prefixed naming is required; in single-unit mode, it is optional.
+
+Use role names as they appear in the project's role documents. Do not abbreviate differently from the role document names — inconsistent abbreviation creates lookup friction.
+
+---
+---
+
+## FILE 3 OF 6: general/instructions/communication/coordination/main.md
+### Change type: Small — three targeted additions
+### All other content unchanged.
+
+### ADDITION A — in Core Documents > Handoff Protocol, after the status vocabulary bullet
+
+INSERT AFTER: "...and agents must be able to apply the right token without deliberation."
+
+> In projects with multiple concurrent workflow instances, status tokens apply per instance: each instance's artifacts carry their own status, identified by the unit-of-work ID. The status of instance `acme-001` is independent of the status of `acme-002`. Status tokens do not aggregate across instances.
+
+### ADDITION B — in Core Documents > Handoff Protocol, after the pre-replacement checks bullet
+
+INSERT AFTER: "...Define the check procedure."
+
+> In multi-instance workflows, the pre-replacement check must confirm that the specific instance being replaced has reached a terminal status — not merely that any prior instance was closed.
+
+### ADDITION C — in How to Create Coordination Protocols > Step 1
+
+INSERT AFTER: "...Keep the set minimal — every token must be distinguishable from all others, and agents must be able to apply the right token without deliberation."
+
+> In projects with concurrent workflow instances, decide whether status is tracked globally (one status per handoff type) or per-instance (one status per unit-of-work ID per handoff type). For any project running multiple instances simultaneously, per-instance status tracking is required.
+
+---
+---
+
+## FILE 4 OF 6: general/instructions/roles/main.md
+### Change type: Small — one targeted addition in Primary Focus section
+### All other content unchanged.
+
+### ADDITION — in What Every Role Document Must Contain > Primary Focus, after the activation/closure condition bullets
+
+REPLACE the two existing bullets plus the following sentence with:
+
+```
+- **Activation condition** — what event, handoff, or phase transition starts this role's authority for a unit of work. In a graph-based workflow, this corresponds to the incoming edge firing at the role's entry node.
+- **Closure condition** — what outcome marks this role as done for that unit. In a graph-based workflow, this corresponds to the outgoing edge being ready to fire from the role's exit node.
+
+When activation and closure map to graph edge conditions, an agent can determine from the handoff artifact alone whether it should act — the unit-of-work ID on the incoming artifact confirms which instance it is responsible for.
+
+Without explicit activation and closure conditions, agents in phase-scoped roles cannot reliably determine when they should act or stand down.
+```
+
+(The final sentence "Without explicit activation and closure conditions..." is preserved from the original; only the bullets and one new paragraph are changed.)
+
+---
+---
+
+## FILE 5 OF 6: general/instructions/communication/main.md
+### Change type: Minimal — one sentence added to conversation/ description
+### All other content unchanged.
+
+### ADDITION — in Structure > conversation/ description
+
+INSERT AFTER: "In practice, this folder holds live handoff files and the permanent templates that define their format."
+
+> In projects with concurrent workflow instances, live artifacts are scoped to their instance via the unit-of-work ID. See `$INSTRUCTION_COMMUNICATION_CONVERSATION` for naming conventions.
+
+---
+---
+
+## FILE 6 OF 6: general/instructions/improvement/main.md
+### Change type: Minimal — one paragraph added in backward pass section
+### All other content unchanged.
+
+### ADDITION — in The Forward Pass and the Backward Pass, after "These are per-agent findings."
+
+INSERT AFTER: "These are per-agent findings."
+
+> In a graph-based workflow, the backward pass traverses the **path actually taken** by the instance under review — walking from the terminal node back to the entry node. In a branching graph, only the edges that fired during this instance are reviewed; not every possible path in the graph definition. Each node's agent reviews its output against the input it received on the traversed path.

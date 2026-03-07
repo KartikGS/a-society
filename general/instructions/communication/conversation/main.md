@@ -81,9 +81,11 @@ Consistent naming makes it possible to locate conversation artifacts without rea
 - **Templates:** `TEMPLATE-[sender-role]-to-[receiver-role].md`
 - **Clarification artifacts (if separate):** `TEMPLATE-[role-a]-[role-b]-clarification.md`
 
-When two or more units of work are active at the same time (for example: concurrent sprints, client engagements, assignments, or studies), include a unit identifier in live artifact filenames to prevent collisions:
+When two or more units of work are active at the same time (for example: concurrent sprints, client engagements, assignments, or studies), prefix live artifact filenames with the unit-of-work ID to prevent collisions:
 
-- **Concurrent live artifacts:** `[unit-slug]-[sender-role]-to-[receiver-role].md`
+- **Concurrent live artifacts:** `[unit-of-work-id]-[sender-role]-to-[receiver-role].md` (e.g., `acme-001-ba-to-tech-lead.md`)
+
+The unit-of-work ID follows the format defined in the project's workflow document: `[short-slug]-[sequential-number]`. The slug is a human-readable label for the unit of work; the number disambiguates across time. The project's workflow document defines the slug vocabulary.
 
 Use the base live-artifact naming (`[sender-role]-to-[receiver-role].md`) when only one unit is active at a time. In concurrent mode, unit-prefixed naming is required; in single-unit mode, it is optional.
 
