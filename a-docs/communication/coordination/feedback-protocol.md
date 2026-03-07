@@ -34,7 +34,7 @@ Minor issues (typos, formatting inconsistencies, unclear phrasing that does not 
 The Owner issues a `REVISE` decision in `owner-to-curator.md` with the specific issue named in the Required Changes section. A REVISE decision is the reporting path for issues found during review — the Owner does not work around or silently fix them.
 
 ### Outside active work (either role discovering a stale or incorrect document)
-Raise it as a Phase 1 Observation in the next session. Do not modify a document unilaterally if the correction implies a direction or scope decision — that requires the full workflow cycle.
+Raise it as a trigger input for the next Phase 1 (Proposal). Do not modify a document unilaterally if the correction implies a direction or scope decision — that requires the full workflow cycle.
 
 ---
 

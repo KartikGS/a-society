@@ -48,9 +48,30 @@ The simplest workflow — a linear sequence of phases, running once at a time �
 
 ---
 
+## Sessions and the Human Orchestrator
+
+A graph defines what work looks like. Sessions define how the work is executed.
+
+**Session** — a continuous interaction between the human and an agent in a specific role. A session can span multiple phases of the graph. It can be paused while another role's session runs and resumed when the workflow returns to that role. The session is where context lives — an agent in a session remembers what it did earlier in that session and why.
+
+**The human as orchestrator** — the human decides when to start sessions, when to pause and resume them, which artifacts to point agents at, and maintains continuity between sessions that agents cannot. The human is not a passive approver at the end of a pipeline — they are the runtime that executes the graph.
+
+In the current operational model, agents do not persist memory between sessions. This creates two realities:
+
+- **Within a session**, an agent has full context: its role, the work it has done, and the reasoning behind its decisions.
+- **Between sessions**, continuity lives in two places: the human's memory and the communication artifacts that carry state between roles.
+
+**Session reuse** is the default. When the workflow returns to a role that already has an active session, the human resumes that session rather than starting a new one. The agent retains its earlier context and reads any new artifacts to catch up on what happened while it was paused. A new session is warranted only when the context window is exhausted or the previous session's accumulated context would be more noise than signal.
+
+**Transition behavior:** When an agent finishes a phase and the next phase belongs to a different role, the agent should acknowledge the pause point and tell the human what to do next — which session to switch to, which artifact to point the next agent at, and what to expect. The agent knows it is talking to the human who will carry the work forward.
+
+**Future automation:** By explicitly modeling the human's orchestration role, the framework creates a specification for what automation would need to replace: session lifecycle management, artifact routing, role switching, and continuity maintenance. A project that automates orchestration replaces the human at this layer — the graph structure, node contracts, and edge conditions remain unchanged.
+
+---
+
 ## What Belongs in a Workflow Document
 
-A workflow document for any project must cover four things:
+A workflow document for any project must cover these sections:
 
 ### 1. Phases (Nodes) (mandatory)
 
@@ -88,6 +109,16 @@ When does an agent stop and ask rather than proceed? Define explicit conditions:
 - What constitutes a blocker vs. a manageable uncertainty?
 - Who receives the escalation?
 - What information must the escalation include?
+
+### 5. Session Model (recommended)
+
+How are phases mapped to sessions? For multi-role workflows, describe:
+- Which roles run in which sessions
+- Where the natural pause points are (edges that cross session boundaries)
+- What the human does at each transition (which session to switch to, which artifact to route)
+- When to start a new session vs. resume an existing one
+
+A session model makes the human's orchestration role visible and gives agents the information they need to guide the human at pause points. For single-role workflows or projects where the entire graph runs in one session, a session model is unnecessary.
 
 ---
 
@@ -144,10 +175,13 @@ What rules apply to all work in this project, regardless of phase? Write them as
 **Step 5 — Define escalation.**
 For each phase, describe what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note."
 
-**Step 6 — Identify sub-documents.**
+**Step 6 — Describe the session model (if multi-role).**
+For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition. Skip this step for single-role or single-session workflows.
+
+**Step 7 — Identify sub-documents.**
 What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow `main.md`.
 
-**Step 7 — Cut what does not belong.**
+**Step 8 — Cut what does not belong.**
 A workflow document that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files.
 
 ---

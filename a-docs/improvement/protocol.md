@@ -10,9 +10,9 @@ This protocol is A-Society's instantiation of `$GENERAL_IMPROVEMENT_PROTOCOL`. A
 
 ## The Idea
 
-Every forward pass (Phases 1–5 of `$A_SOCIETY_WORKFLOW`) is followed by a backward pass. Each agent who participated produces a findings artifact reflecting on their experience — what the a-docs got right, what was missing, what was ambiguous, what would have made the execution smoother.
+Every forward pass (Phases 1–4 of `$A_SOCIETY_WORKFLOW`) is followed by a backward pass. Each agent who participated produces a findings artifact reflecting on their experience — what the a-docs got right, what was missing, what was ambiguous, what would have made the execution smoother.
 
-Findings that warrant action re-enter the workflow as Phase 1 observations. They are proposed, reviewed, implemented, and registered through the same phases as any other framework work. There is no separate improvement workflow.
+Findings that warrant action re-enter the workflow as new trigger inputs for Phase 1 (Proposal). They are proposed, reviewed, implemented, and registered through the same phases as any other framework work. There is no separate improvement workflow.
 
 ---
 
@@ -34,7 +34,7 @@ The agent decides which depth is appropriate. If unsure, default to lightweight.
 2. **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
 3. **Output:** `$A_SOCIETY_IMPROVEMENT_REPORTS/META-YYYYMMDD-<task-id>-<role>-findings.md`
 4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-5. **Curator synthesizes** actionable items from both findings files and proposes them through `$A_SOCIETY_COMM_CURATOR_TO_OWNER` as a standard workflow observation (Phase 1).
+5. **Curator synthesizes** actionable items from both findings files and proposes them through `$A_SOCIETY_COMM_CURATOR_TO_OWNER` as new trigger inputs for Phase 1 (Proposal).
 6. **Approved changes** proceed through the workflow: Proposal → Owner Review → Implementation → Registration.
 
 ---

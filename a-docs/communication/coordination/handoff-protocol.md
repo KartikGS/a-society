@@ -23,7 +23,7 @@ All agents use exactly these tokens to describe the state of a work item. Natura
 
 ## Handoff Format Requirements
 
-### Owner → Curator (Phase 1 → 2: Briefing)
+### Owner → Curator (Trigger → Phase 1: Briefing)
 The `owner-to-curator-brief.md` artifact must contain all mandatory fields from `TEMPLATE-owner-to-curator-brief.md`:
 - Subject / identifier
 - Status: `BRIEFED`
@@ -34,7 +34,7 @@ The `owner-to-curator-brief.md` artifact must contain all mandatory fields from 
 
 A briefing missing the Agreed Change or Scope fields is malformed. The Curator must not begin drafting until those fields are present.
 
-### Curator → Owner (Phases 2 and 5)
+### Curator → Owner (Phases 1 and 4)
 The `curator-to-owner.md` artifact must contain all mandatory fields from `TEMPLATE-curator-to-owner.md`:
 - Subject / identifier
 - Status: `PENDING_REVIEW`
@@ -47,7 +47,7 @@ The `curator-to-owner.md` artifact must contain all mandatory fields from `TEMPL
 
 A submission missing any mandatory field is malformed. The Owner must not issue a decision on a malformed submission — return it as `REVISE` with the missing fields named.
 
-### Owner → Curator (Phase 3)
+### Owner → Curator (Phase 2)
 The `owner-to-curator.md` artifact must contain all mandatory fields from `TEMPLATE-owner-to-curator.md`:
 - Subject (must match the corresponding `curator-to-owner.md`)
 - Status: `APPROVED`, `REVISE`, or `REJECTED`
@@ -59,7 +59,7 @@ The `owner-to-curator.md` artifact must contain all mandatory fields from `TEMPL
 
 ## Receiver Confirmation
 
-**Curator receiving an Owner briefing:** Before beginning Phase 2, the Curator must state in the session:
+**Curator receiving an Owner briefing:** Before beginning Phase 1, the Curator must state in the session:
 - "Briefing acknowledged. Beginning proposal for [Subject]."
 
 **Curator receiving an Owner decision:** Before acting, the Curator must state in the session:

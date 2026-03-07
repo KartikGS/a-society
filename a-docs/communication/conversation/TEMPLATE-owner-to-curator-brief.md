@@ -37,7 +37,7 @@
 
 ## Curator Confirmation Required
 
-Before beginning Phase 2, the Curator must acknowledge this briefing in the session:
+Before beginning Phase 1, the Curator must acknowledge this briefing in the session:
 
 > "Briefing acknowledged. Beginning proposal for [Subject]."
 

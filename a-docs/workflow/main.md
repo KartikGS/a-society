@@ -2,120 +2,176 @@
 
 This document describes how work moves through the A-Society project — from a need being surfaced to content existing in the right place, registered, and ready for adopters. Read this when you need to know what happens next, who owns a step, or when to escalate.
 
+**Graph:** A-Society Framework Development. Single-instance — one unit of work at a time.
+
 ---
 
 ## What A-Society Work Is
 
 A-Society's work is framework development: growing, maintaining, and quality-gating a reusable library of agent-documentation patterns. Unlike software projects, there is no user-facing deliverable to ship per change request — the deliverables are improvements to `general/` and `agents/`, which adopting projects consume directly.
 
-Work is triggered by one of three sources:
-- The human identifies a need or direction change
-- The Curator observes a reusable pattern in a project using the framework
-- A backward pass produces a recommendation (see `$A_SOCIETY_IMPROVEMENT_PROTOCOL`)
+---
+
+## Trigger Sources
+
+Work enters the graph when any of the following surfaces a specific need:
+
+1. **Human direction** — the human identifies a need, direction change, or new requirement
+2. **Backward pass findings** — actionable items from Phase 5 re-enter as new trigger inputs
+3. **Feedback signal** — an inbound feedback stream (onboarding, migration, curator signal) surfaces a gap
+
+These are not workflow phases. They are what creates the input for Phase 1.
 
 ---
 
 ## Phases
 
-### Phase 1 — Observation
+### Phase 1 — Proposal
 
-A need is surfaced. No formal artifact is required. The Curator or human names a specific gap, proposed addition, or maintenance problem.
+The entry node. A proposed change is formulated with rationale.
 
-**Entry condition:** Any of the trigger sources above identifies a specific need.
-**Owner:** Human or Curator.
-**Output:** A stated need — described in conversation or in a Curator observation note.
+**Input:** A stated need from a trigger source. For Curator-led proposals, the Owner writes `$A_SOCIETY_COMM_BRIEF` to define the agreed change and scope. For human-directed changes, the human provides the direction directly.
 
----
+**Owner:** Curator (for `general/` additions and maintenance); Human (for direction changes).
 
-### Phase 2 — Proposal
-
-The Curator (for `general/` additions and maintenance) or human (for direction decisions) formulates a proposed change with rationale.
-
-For `general/` additions, the proposal must include:
+**Work:** Formulate a proposed change. For `general/` additions, the proposal must include:
 1. What the artifact is and what problem it solves
 2. Which project(s) the pattern was observed in
 3. Why it generalizes — the case that it applies equally to a software project, a writing project, and a research project
 
-**Entry condition:** A stated need from Phase 1.
-**Owner:** Curator for `general/` and maintenance proposals; Human for direction changes.
-**Output:** Draft content and written rationale, presented to the Owner.
+**Output:** Draft content and written rationale, submitted to the Owner via `$A_SOCIETY_COMM_CURATOR_TO_OWNER`.
 
 ---
 
-### Phase 3 — Owner Review
+### Phase 2 — Review
 
-The Owner applies the five review tests to any proposed `general/` addition:
+The Owner evaluates the proposal against the five review tests.
 
+**Input:** Draft content + rationale from Phase 1.
+
+**Owner:** Owner.
+
+**Work:** Apply the review tests:
 1. **Generalizability test** — Does this apply equally to software, writing, and research projects?
 2. **Abstraction level test** — Is this the right level? Not so specific it assumes a domain; not so vague it is unactionable?
 3. **Duplication test** — Does this overlap with existing content? If so, extend rather than create.
 4. **Placement test** — Does the target folder's governing principle (per `$A_SOCIETY_STRUCTURE`) include this?
 5. **Quality test** — Is this written so an unfamiliar agent can read it and produce a correct artifact?
 
-**Decision:** Approved / Rejected / Revise.
-
-**Entry condition:** A proposal from Phase 2.
-**Owner:** Owner.
-**Output:** An explicit decision — stated in conversation. No approval means no implementation.
+**Output:** An explicit decision via `$A_SOCIETY_COMM_OWNER_TO_CURATOR`:
+- **Approved** → proceeds to Phase 3
+- **Revise** → returns to Phase 1 with required changes (branching edge)
+- **Rejected** → terminal; item closed
 
 ---
 
-### Phase 4 — Implementation
+### Phase 3 — Implementation
 
-Approved content is created or modified. The Curator writes the content at the correct location per `$A_SOCIETY_STRUCTURE`.
+Approved content is created or modified at the correct location.
 
-**Entry condition:** Owner approval from Phase 3.
+**Input:** Owner approval from Phase 2.
+
 **Owner:** Curator.
+
+**Work:** Write the content at the correct location per `$A_SOCIETY_STRUCTURE`.
+
 **Output:** File(s) created or updated at correct locations.
 
 ---
 
-### Phase 5 — Registration
+### Phase 4 — Registration
 
-New files are registered in the appropriate index. The agent-docs-guide is updated if a new `a-docs/` file was created.
+New or updated files are registered in the appropriate index.
 
+**Input:** Implementation complete from Phase 3.
+
+**Owner:** Curator.
+
+**Work:**
 - Content in `general/` or `agents/` → register in `$A_SOCIETY_PUBLIC_INDEX`
 - Content in `a-docs/` → register in `$A_SOCIETY_INDEX`
 - New `a-docs/` files → add a rationale entry to `$A_SOCIETY_AGENT_DOCS_GUIDE`
+- If the registered changes qualify for a framework update report (see `$A_SOCIETY_UPDATES_PROTOCOL`), the Curator drafts the report and submits it to the Owner for review before publishing to `$A_SOCIETY_UPDATES_DIR`
 
-If the registered changes qualify for a framework update report (see `$A_SOCIETY_UPDATES_PROTOCOL` for trigger conditions), the Curator drafts the report and submits it to the Owner for review before publishing to `a-society/updates/`. This is outbound communication to adopting projects — it requires Owner approval before publication and is separate from the backward pass.
-
-**Entry condition:** Implementation complete.
-**Owner:** Curator.
-**Output:** Updated index row(s); updated agent-docs-guide entry if applicable; framework update report published to `a-society/updates/` if triggered. The session is not complete until registration is done.
+**Output:** Updated index row(s); updated agent-docs-guide entry if applicable; framework update report published if triggered. The session is not complete until registration is done.
 
 ---
 
-### Phase 6 — Backward Pass
+### Phase 5 — Backward Pass
 
-After a change is registered, each agent who participated in the forward pass (Phases 1–5) produces a findings artifact reflecting on their experience. This is the backward pass: structured reflection on what the a-docs got right, what was missing, what was ambiguous, and what would have made the execution smoother.
+Each agent who participated in the forward pass (Phases 1–4) reflects on their experience.
 
-**How it works:**
-1. **Curator produces findings first** — closest to implementation friction.
-2. **Owner produces findings second** — reviews Curator findings and adds strategic observations.
-3. **Output:** `$A_SOCIETY_IMPROVEMENT_REPORTS/META-YYYYMMDD-<task-id>-<role>-findings.md` (template: `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`).
-4. **Curator synthesizes** actionable items from both findings files and proposes them as new Phase 1 observations through `$A_SOCIETY_COMM_CURATOR_TO_OWNER`.
-5. **Approved changes** proceed through the standard forward pass: Proposal → Owner Review → Implementation → Registration.
+**Input:** Phase 4 complete.
 
-**Entry condition:** Phase 5 complete.
-**Owner:** Curator (findings first, synthesis, implementation); Owner (findings second, review).
-**Output:** Per-agent findings files stored in `$A_SOCIETY_IMPROVEMENT_REPORTS`. Actionable items enter the next forward pass cycle as Phase 1 observations.
+**Owner:** Curator (findings first), Owner (findings second), Curator (synthesis).
+
+**Work:** Produce findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`. Actionable findings re-enter the workflow as new trigger inputs.
+
+**Output:** Findings files in `$A_SOCIETY_IMPROVEMENT_REPORTS`. Actionable items surface as triggers for future graph traversals.
 
 **Depth:** Proportional to the work. For routine single-file changes with no friction, 1–3 top findings is sufficient. For substantive changes (new artifacts, structural modifications, authority boundary decisions), produce full structured findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`.
 
-The backward pass is not optional. The Curator does not independently observe friction — the backward pass is what generates the raw material the Curator synthesizes. Skipping it means the a-docs drift from how the project actually works.
+The backward pass is not optional. Skipping it means the a-docs drift from how the project actually works.
 
 ---
 
 ## Handoffs
 
-| Transition | What carries it | What the receiver checks |
+For detailed artifact formats, status vocabulary, and coordination rules, see `$A_SOCIETY_COMM_COORDINATION`.
+
+| Edge | Transition Condition | What Carries It | Receiver Checks |
+|---|---|---|---|
+| Trigger → Phase 1 | Owner briefing written (Curator-led) or human direction given | `$A_SOCIETY_COMM_BRIEF` or conversation | Briefing contains Agreed Change and Scope; Curator acknowledges |
+| Phase 1 → Phase 2 | Draft + rationale submitted | `$A_SOCIETY_COMM_CURATOR_TO_OWNER` | All three proposal elements present |
+| Phase 2 → Phase 3 | Decision = Approved | `$A_SOCIETY_COMM_OWNER_TO_CURATOR` | Approval stated explicitly |
+| Phase 2 → Phase 1 | Decision = Revise | `$A_SOCIETY_COMM_OWNER_TO_CURATOR` with required changes | Curator acknowledges; revises and resubmits |
+| Phase 2 → ∅ | Decision = Rejected | `$A_SOCIETY_COMM_OWNER_TO_CURATOR` | Curator acknowledges; item closed |
+| Phase 3 → Phase 4 | Files exist at correct paths | File existence verification | Correct index identified |
+| Phase 4 → Phase 5 | Index updated; update report published if triggered | Registration confirmation | All forward-pass participants identified |
+
+---
+
+## Session Model
+
+The workflow runs across two concurrent sessions, with the human switching between them.
+
+| Session | Role | Phases |
 |---|---|---|
-| Observation → Proposal | `$A_SOCIETY_COMM_BRIEF` — Owner fills from template after aligning with human | Briefing contains Agreed Change and Scope; Curator acknowledges before drafting |
-| Proposal → Review | Draft content + rationale from Curator | All three proposal elements present (what, where observed, why it generalizes) |
-| Review → Implementation | Owner's explicit approval | Approval stated — absence of objection is not approval |
-| Implementation → Registration | File exists at correct path | Correct index is updated before session closes |
-| Registration → Backward Pass | Phase 5 complete | All agents who participated in forward pass have produced findings |
+| **Session A** | Owner | Trigger input (briefing) → *pause* → Phase 2 (review) → *pause* → Phase 5 (findings) |
+| **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register) → Phase 5 (findings, synthesis) |
+
+### How it flows
+
+1. **Session A starts.** The human and Owner align on a need. The Owner writes `$A_SOCIETY_COMM_BRIEF`. The Owner tells the human: *"Briefing written. Switch to your Curator session and point it at the briefing artifact."* Session A pauses.
+
+2. **Session B starts.** The human opens a Curator session, points it at the briefing. The Curator acknowledges, drafts the proposal, and writes `$A_SOCIETY_COMM_CURATOR_TO_OWNER`. The Curator tells the human: *"Proposal submitted. Return to your Owner session and point it at the proposal artifact."* Session B pauses.
+
+3. **Session A resumes.** The human returns to the Owner session and points it at the proposal. The Owner reviews it and writes a decision to `$A_SOCIETY_COMM_OWNER_TO_CURATOR`. The Owner tells the human what to do next:
+   - **Approved:** *"Switch to the Curator session and point it at the approval."*
+   - **Revise:** *"Switch to the Curator session and point it at the revision request."*
+   - **Rejected:** *"Item closed. No further action needed."*
+   
+   Session A pauses.
+
+4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings. Session B may end here or pause for Owner findings.
+
+5. **Session A resumes.** The Owner produces backward pass findings. Session A ends.
+
+6. **Session B resumes (if needed).** The Curator synthesizes both findings files and proposes any actionable items as new trigger inputs.
+
+### The human's role at each transition
+
+The human is the orchestrator — they maintain continuity between sessions and route artifacts. At each pause point, the active agent should:
+1. Name the artifact it produced and where it lives
+2. Tell the human which session to switch to
+3. State what the receiving agent needs to read
+
+### When to start a new session
+
+Resume the existing session by default. Start a new session only when:
+- The existing session's context window is full or approaching limits
+- The accumulated context from earlier phases would be more noise than signal
+- Significant time has passed and the session may have expired
 
 ---
 

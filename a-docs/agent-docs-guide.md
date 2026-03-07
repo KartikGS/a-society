@@ -126,11 +126,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/protocol.md` — `$A_SOCIETY_IMPROVEMENT_PROTOCOL`
 
-**Why it exists:** Without a protocol, the backward pass (Phase 6 of the workflow) is ad-hoc — findings are lost, reflection depth varies arbitrarily, and actionable items may not re-enter the workflow. The protocol standardizes how backward pass findings are produced, what categories to reflect on, and how findings flow back into the forward pass.
+**Why it exists:** Without a protocol, the backward pass (Phase 5 of the workflow) is ad-hoc — findings are lost, reflection depth varies arbitrarily, and actionable items may not re-enter the workflow. The protocol standardizes how backward pass findings are produced, what categories to reflect on, and how findings flow back into the forward pass.
 
 **What it owns:** The backward pass execution model (who produces findings first, output format, how findings re-enter the workflow), reflection categories, useful evaluation lenses, and guardrails.
 
-**What breaks without it:** Backward passes lack a standard structure. Agents produce inconsistent findings. Actionable items are lost instead of re-entering as Phase 1 observations.
+**What breaks without it:** Backward passes lack a standard structure. Agents produce inconsistent findings. Actionable items are lost instead of re-entering as trigger inputs for Phase 1 (Proposal).
 
 **Do not consolidate with:** `improvement/main.md` — the protocol is the process; the philosophy is the reasoning behind decisions within that process.
 

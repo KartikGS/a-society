@@ -10,7 +10,7 @@ Standardize how agents reflect on completed work and turn that reflection into d
 
 ## The Idea
 
-Every forward pass (agents executing work through the workflow) is followed by a backward pass (agents reflecting on what worked and what didn't in the a-docs). The backward pass generates findings. Findings that warrant action re-enter the workflow as new observations (Phase 1), where they are proposed, reviewed, implemented, and registered through the same phases as any other work.
+Every forward pass (agents executing work through the workflow) is followed by a backward pass (agents reflecting on what worked and what didn't in the a-docs). The backward pass generates findings. Findings that warrant action re-enter the workflow as new trigger inputs, where they are proposed, reviewed, implemented, and registered through the same phases as any other work.
 
 There is no separate improvement workflow. The improvement loop *is* the workflow.
 
@@ -38,7 +38,7 @@ The agent decides which depth is appropriate. If unsure, default to lightweight.
 
 4. **The synthesis role** (typically the Curator or equivalent) reviews all findings and identifies which warrant action.
 
-5. **Actionable findings re-enter the workflow as Phase 1 observations.** They are proposed, reviewed, and implemented through the standard workflow — no parallel process.
+5. **Actionable findings re-enter the workflow as new trigger inputs.** They are proposed, reviewed, and implemented through the standard workflow — no parallel process.
 
 ---
 

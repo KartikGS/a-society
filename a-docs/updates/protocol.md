@@ -38,9 +38,9 @@ Every change in an update report must be classified:
 
 ## Who Produces It and When
 
-The A-Society Curator drafts the report after a significant change cycle completes — once Phase 5 (Registration) is done and the changes qualify under the trigger conditions above. The Owner reviews and approves before the report is finalized and placed in `a-society/updates/`.
+The A-Society Curator drafts the report after a significant change cycle completes — once Phase 4 (Registration) is done and the changes qualify under the trigger conditions above. The Owner reviews and approves before the report is finalized and placed in `a-society/updates/`.
 
-This is a publication step, not an internal retrospective. The backward pass (Phase 6) and the update report are separate artifacts serving different purposes: the backward pass is internal reflection on the process; the update report is outbound communication to the ecosystem.
+This is a publication step, not an internal retrospective. The backward pass (Phase 5) and the update report are separate artifacts serving different purposes: the backward pass is internal reflection on the process; the update report is outbound communication to the ecosystem.
 
 Both may happen after the same change cycle, but they are produced independently.
 

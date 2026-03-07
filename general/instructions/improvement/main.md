@@ -16,7 +16,7 @@ In a graph-based workflow, the backward pass traverses the **path actually taken
 
 **The backward pass is not periodic — it is coupled to every forward pass.** The Curator does not independently observe friction and "notice" things to fix. The backward pass is what generates the raw material the Curator synthesizes. Without it, the improvement system has nothing to work from.
 
-**The key insight:** findings that warrant action re-enter the workflow as standard observations (Phase 1). They proceed through the same proposal, review, and implementation phases as any other work. There is no separate improvement workflow.
+**The key insight:** findings that warrant action re-enter the workflow as new trigger inputs. They proceed through the same proposal, review, and implementation phases as any other work. There is no separate improvement workflow.
 
 ---
 
@@ -71,7 +71,7 @@ A dedicated folder separates improvement infrastructure from normal execution in
 **What belongs here:**
 - Who produces findings first and why (typically the role closest to implementation)
 - The findings output format and location
-- How findings flow back into the workflow (as Phase 1 observations)
+- How findings flow back into the workflow (as new trigger inputs)
 - Reflection categories to guide agents
 - Guardrails
 
