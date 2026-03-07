@@ -46,6 +46,17 @@ Both may happen after the same change cycle, but they are produced independently
 
 ---
 
+## Migration Guidance Format
+
+Update reports are addressed to all adopting project Curators. Migration guidance must be written generically — it describes what any Curator should check and do, regardless of which project they are maintaining.
+
+- Use `$[PROJECT]_*` as a placeholder wherever a project-specific index variable is referenced. Each Curator maps this to their own project's variable names.
+- Do not address a specific known adopter by name in migration guidance. Listing known adopters in the Summary for awareness is acceptable; targeting them in the guidance is not.
+- Project-specific migration analysis is the responsibility of each project's Curator, not A-Society's. A-Society provides the what and the generic how; the Curator maps it to their project's actual structure.
+- On special request, A-Society may produce a project-specific migration addendum — but the base report must always be generic.
+
+---
+
 ## Report Naming Convention
 
 ```

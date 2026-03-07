@@ -22,7 +22,7 @@
 **Affected artifacts:** [`general/instructions/X.md`] / [`agents/X.md`]
 **What changed:** [Description of the change made to the framework.]
 **Why:** [The problem this change solves.]
-**Migration guidance:** [What a Curator of an adopting project should check and potentially update in their own `a-docs/`. Name the specific documents to inspect and the condition to look for. Do not be vague — a Curator reading this should know exactly what to do.]
+**Migration guidance:** [What a Curator of an adopting project should check and potentially update in their own `a-docs/`. Write generically — this report is addressed to all adopters, not a specific project. Use `$[PROJECT]_*` as a placeholder where a project-specific index variable is needed. Name the specific documents to inspect and the condition to look for. Do not be vague — a Curator reading this should know exactly what to do. Do not address a specific known project by name in migration guidance.]
 
 ---
 

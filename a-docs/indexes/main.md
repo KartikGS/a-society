@@ -59,6 +59,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy — principles governing documentation improvement decisions |
 | `$A_SOCIETY_IMPROVEMENT_PROTOCOL` | `/a-society/a-docs/improvement/protocol.md` | A-Society meta improvement protocol — phases, roles, and guardrails for improvement cycles |
 | `$A_SOCIETY_IMPROVEMENT_REPORTS` | `/a-society/a-docs/improvement/reports/main.md` | A-Society improvement reports index — naming conventions and template references |
+| `$A_SOCIETY_UPDATES_DIR` | `/a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `/a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |
 | `$A_SOCIETY_UPDATES_TEMPLATE` | `/a-society/a-docs/updates/template.md` | Framework update report template — structure for outbound change notifications to adopting projects |
 | `$A_SOCIETY_COMM` | `/a-society/a-docs/communication/main.md` | A-Society communication — entry point for conversation and coordination layers |
