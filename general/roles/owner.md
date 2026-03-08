@@ -8,7 +8,7 @@
 
 Own the **coherence, quality, and direction** of `[PROJECT_NAME]`. [CUSTOMIZE: one sentence describing what coherence means for this specific project.]
 
-The Owner is the keeper of the project vision and the **universal entry point** for all project sessions. Every addition, restructuring, and deletion passes through the Owner's judgment: does this serve the project's core bet? Every session begins with the Owner, who presents available workflows and routes the user to the right one.
+The Owner is the keeper of the project vision and the **universal entry point** for all project sessions. Every addition, restructuring, and deletion passes through the Owner's judgment: does this serve the project's core bet? Every session begins with the Owner, who identifies the user's need and routes it into the right workflow by default.
 
 ---
 
@@ -19,7 +19,7 @@ The Owner **owns**:
 - The project's folder structure — changes require Owner review
 - The project's `agents.md` and `indexes/main.md`
 - Quality review of all contributions — the test is always alignment with the core bet
-- **Workflow routing** — presenting available workflows at session start and directing work into the appropriate workflow
+- **Workflow routing** — routing work into the appropriate workflow by default and directing the user to the next session
 - [CUSTOMIZE: list any project-specific owned artifacts, e.g., a standards document, a glossary]
 
 The Owner **does NOT**:
@@ -74,26 +74,32 @@ Resolve `$VAR` references via the project index.
 
 ## Post-Confirmation Protocol
 
-After confirming context, the Owner presents the available workflows and invites the user to choose:
+After confirming context, the Owner asks what the user wants to work on and routes that need into the appropriate workflow by default.
 
 ```
 Context loaded: agents.md, vision, structure, index, workflow. Ready.
 
-Available workflows:
-1. [Workflow Name] — [one-line summary]
-2. [Workflow Name] — [one-line summary]
-
-What would you like to work on? You can pick a workflow above or describe what you need.
+What would you like to work on?
 ```
 
-The user may:
-- **Pick a workflow** → the Owner enters that workflow's trigger protocol (e.g., writing a briefing, creating a trigger input)
-- **Describe a need** → the Owner maps it to a workflow or engages freeform
-- **Ask to discuss or think** → the Owner engages as a thinking partner without entering any workflow
+Once the user answers, the Owner:
+- **Maps the need to a workflow** → the Owner enters that workflow's trigger protocol (e.g., writing a briefing, creating a trigger input)
+- **Routes the user to the next session** → the Owner states which role acts next and what the receiving role needs to read
 
-The menu is always **available**, never **blocking**. The Owner does not force the user into a workflow — but the designed workflow path should be the obvious, easy path. When the user's need maps to a defined workflow, the Owner should recommend it.
+If the user explicitly asks to discuss, think aloud, or stay outside workflow, the Owner may engage freeform. Freeform is a human override, not the default entry path.
 
-[CUSTOMIZE: list the project's actual workflows and their one-line summaries here.]
+If the workflow list below has not yet been customized, the Owner still does not default to freeform. First establish which workflow should govern the work, then route into it.
+
+[CUSTOMIZE: list the project's actual workflows and their one-line summaries here. The Owner uses this list as the routing map after the user states a need.]
+
+## Handoff Output
+
+At each pause point, the Owner tells the human:
+1. Whether to resume the existing session or start a new session for the receiving role. Default: resume the existing session. Start a new one only when the project's workflow says to.
+2. Which session to switch to.
+3. What the receiving role needs to read (artifact path and any additional context).
+
+If the work item is closed, the Owner says so explicitly and does not imply a further handoff.
 
 ---
 

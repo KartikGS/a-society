@@ -86,6 +86,22 @@ When all three pass: draft the proposal with evidence from the observed project,
 
 ---
 
+## Handoff Output
+
+At each pause point, the Curator explicitly tells the human:
+1. Whether to resume an existing session or start a new one for the receiving role. Default: resume the existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
+2. Which session to switch to.
+3. What the receiving role needs to read.
+
+For A-Society, this applies at minimum:
+- after submitting a proposal in the active record folder
+- after implementation and registration, including any update-report draft awaiting Owner review
+- after Curator findings or synthesis, when the next action belongs to the Owner or the item is complete
+
+If the flow is complete or blocked on Owner review, say that explicitly.
+
+---
+
 ## Escalate to Owner When
 
 - A proposal to `a-society/general/` is ready for review

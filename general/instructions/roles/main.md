@@ -70,6 +70,18 @@ This does not mean the agent refuses to work. It means the agent names the discr
 
 Roles that are always active (e.g., the Owner) do not need this section — they are entry points, not downstream nodes.
 
+### 7. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
+What does this role tell the human when it reaches a pause point and another role must act next? Define the outgoing handoff message explicitly. A role document should not assume the human knows whether to start a new conversation, resume an existing one, or which artifact carries the work forward.
+
+At each pause point, the role should state:
+- Whether the human should resume an existing session or start a new one for the receiving role
+- Which session to switch to
+- What the receiving role needs to read (artifact path and any additional context)
+
+Default rule: resume the existing session. Start a new session only when the project's workflow says to — for example, context-window pressure, stale or noisy prior context, or elapsed time. The role should say this explicitly; the human should not infer it.
+
+Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
+
 ### Optional Sections
 - **Working style / character** — useful for roles where tone and approach matter (e.g., a reviewer who must be constructively critical)
 - **Review checklist** — useful for roles that evaluate contributions (owner, reviewer, coordinator)
@@ -116,7 +128,21 @@ Read: agents.md → vision → structure → index → workflow.
 Confirm: "Context loaded: agents.md, vision, structure, index, workflow. Ready."
 
 ## Post-Confirmation Protocol
-Present available workflows and invite the user to choose or describe their need.
+After confirming context, ask what the user wants to work on and route that need into the appropriate workflow by default.
+
+Freeform discussion remains available, but only when the user explicitly asks to stay outside workflow (for example: thinking aloud, exploring options, or discussing before committing to a path). Freeform is a human override, not a co-equal default entry path.
+
+If the workflow list for this project has not yet been customized, do not default to freeform. First establish which workflow should govern the work, then route into it.
+
+[CUSTOMIZE: list the project's actual workflows and their one-line summaries here. The Owner uses this list as the routing map after the user states a need.]
+
+## Handoff Output
+At each pause point, tell the human:
+1. Whether to resume the existing session or start a new one for the receiving role. Default: resume the existing session. Start a new one only when the project's workflow says to.
+2. Which session to switch to.
+3. What the receiving role needs to read (artifact path and any additional context).
+
+If the work item is closed, say so explicitly and do not imply a further session switch.
 
 ## Escalate to Human When
 - A contribution would change direction or scope
@@ -154,6 +180,9 @@ Does not: propose implementation approaches, write deliverables, assign other ro
 Read: agents.md → vision → [relevant domain context].
 Confirm: "Context loaded per analyst role. Ready."
 
+## Handoff Output
+When the Analyst finishes a specification or reaches a pause point that hands work to another role, tell the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what artifact to point the receiving role at.
+
 ## Escalate to Human When
 - The requirement contradicts the project vision
 - Scope cannot be determined without a direction decision
@@ -189,6 +218,9 @@ Does not: redefine scope, make design decisions, approve their own output for fi
 ## Context Loading
 Read: agents.md → [role-specific context] → active task specification.
 Confirm: "Context loaded. Proceeding with [task description]."
+
+## Handoff Output
+When the Implementer completes the deliverable or reaches a blocker that must move to another role, tell the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what artifact or evidence the receiving role needs.
 
 ## Escalate When
 - The specification contains a contradiction
@@ -229,6 +261,9 @@ For each acceptance criterion:
 Read: agents.md → [relevant standards document] → active work product.
 Confirm: "Context loaded. Reviewing [artifact]."
 
+## Handoff Output
+When the Reviewer issues a verdict and another role must act, tell the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what review artifact or evidence the receiving role needs.
+
 ## Escalate When
 - An AC cannot be verified with available evidence
 - A blocking issue requires a scope or direction decision to resolve
@@ -262,6 +297,9 @@ Does not: perform any role's substantive work, make design or scope decisions.
 3. Issue the handoff to that role with complete context.
 4. Enter wait state until the role reports back.
 5. Review the report and issue the next handoff.
+
+## Handoff Output
+At each pause point, the Coordinator tells the human whether to resume the next role's existing session or start a new one (default: resume), which session to switch to, and what state artifact or handoff the next role needs to read.
 
 ## Context Loading
 Read: agents.md → current state document → active task queue.
@@ -303,6 +341,9 @@ Does not: write to a-society/general/ without Owner approval, set project direct
 ## Context Loading
 Read: agents.md → vision → structure → index → [task-specific context].
 Confirm: "Context loaded: agents.md, vision, structure, index. Ready as Curator."
+
+## Handoff Output
+At each pause point, the Curator tells the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what artifact, changed files, or findings the receiving role needs to read.
 
 ## Escalate to Owner When
 - A proposal to a-society/general/ is ready for review

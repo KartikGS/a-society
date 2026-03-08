@@ -142,31 +142,34 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 | **Session A** | Owner | Trigger input (briefing) → *pause* → Phase 2 (review) → *pause* → Phase 5 (findings) |
 | **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register) → Phase 5 (findings, synthesis) |
 
+**Default routing rule:** Resume the existing session by default. Start a new session only when the criteria in "When to start a new session" below apply. The active role must say this explicitly at each pause point; the human does not infer it.
+
 ### How it flows
 
-1. **Session A starts.** The human and Owner align on a need. The Owner creates a record folder and writes `01-owner-to-curator-brief.md`. The Owner tells the human: *"Briefing written at [record folder path]. Switch to your Curator session and point it at the briefing."* Session A pauses.
+1. **Session A starts.** The human and Owner align on a need. The Owner creates a record folder and writes `01-owner-to-curator-brief.md`. The Owner tells the human whether to resume the existing Curator session or start a new one, and points it at the briefing. If no Curator session exists yet, the Owner says to start Session B; otherwise the default is resume. Session A pauses.
 
-2. **Session B starts.** The human opens a Curator session, points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human: *"Proposal submitted. Return to your Owner session and point it at the proposal."* Session B pauses.
+2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human whether to resume the existing Owner session or start a new one, and points it at the proposal. Session B pauses.
 
 3. **Session A resumes.** The human returns to the Owner session and points it at the proposal. The Owner reviews it and writes a decision as the next sequenced artifact in the active record folder. The Owner tells the human what to do next:
-   - **Approved:** *"Switch to the Curator session and point it at the approval."*
-   - **Revise:** *"Switch to the Curator session and point it at the revision request."*
-   - **Rejected:** *"Item closed. No further action needed."*
+   - **Approved:** resume the existing Curator session unless the new-session criteria apply; point it at the approval.
+   - **Revise:** resume the existing Curator session unless the new-session criteria apply; point it at the revision request.
+   - **Rejected:** item closed; no further session switch needed.
    
    Session A pauses.
 
-4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings in the active record folder. Session B may end here or pause for Owner findings.
+4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings in the active record folder. If the next action belongs to the Owner, the Curator tells the human whether to resume Session A or start a new Owner session, and points it at the changed files, findings, and any update-report submission awaiting review. Session B then pauses.
 
-5. **Session A resumes.** The Owner produces backward pass findings in the active record folder. Session A ends.
+5. **Session A resumes.** The Owner reviews any pending update-report submission, produces backward pass findings in the active record folder, and tells the human whether to resume the Curator session for synthesis or publication follow-through. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
 
-6. **Session B resumes (if needed).** The Curator synthesizes both findings artifacts and proposes any actionable items as new trigger inputs.
+6. **Session B resumes (if needed).** The Curator synthesizes both findings artifacts, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs. The Curator tells the human explicitly whether the flow is now complete or whether another Owner session is required.
 
 ### The human's role at each transition
 
 The human is the orchestrator — they maintain continuity between sessions and route artifacts. At each pause point, the active agent should:
-1. Name the artifact it produced and where it lives (the active record folder)
-2. Tell the human which session to switch to
-3. State what the receiving agent needs to read
+1. State whether the human should resume an existing session or start a new one
+2. Name the artifact it produced and where it lives (the active record folder)
+3. Tell the human which session to switch to
+4. State what the receiving agent needs to read
 
 ### When to start a new session
 

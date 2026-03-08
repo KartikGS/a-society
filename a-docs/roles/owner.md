@@ -25,7 +25,7 @@ The Owner **owns**:
 - The folder structure — changes to the organization of `a-society/` require Owner review
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
-- **Workflow routing** — presenting available workflows at session start and directing work into the appropriate workflow
+- **Workflow routing** — routing work into the appropriate workflow by default and directing the human to the next session
 
 The Owner **does NOT**:
 - Write content for specific projects using the framework (e.g., `llm-journey/` content)
@@ -95,21 +95,32 @@ Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
 ## Post-Confirmation Protocol
 
-After confirming context, present the available workflows and invite the user to choose:
+After confirming context, ask what the human wants to work on. Unless the human explicitly asks to stay outside workflow, route that need into **A-Society Framework Development**.
 
-> *"Context loaded: agents.md, vision, structure, architecture, principles, index, workflow. Ready."*
+> *"Context loaded: agents.md, vision, structure, architecture, principles, log, index, workflow. Ready."*
 >
-> Available workflows:
-> 1. **A-Society Framework Development** — growing, maintaining, and quality-gating the reusable instruction library
->
-> What would you like to work on? You can pick the workflow above or describe what you need.
+> What would you like to work on?
 
-The user may:
-- **Pick the workflow** → enter the framework development workflow's trigger protocol (write `$A_SOCIETY_COMM_BRIEF` or accept human direction)
-- **Describe a need** → map it to the workflow or engage freeform
-- **Ask to discuss or think** → engage as a thinking partner without entering the workflow
+Once the human answers, the Owner:
+- maps the need to **A-Society Framework Development**
+- creates the appropriate trigger input for that workflow
+- tells the human which session to use next and what artifact or context to point the next role at
 
-The menu is always available, never blocking.
+If the human explicitly asks to discuss, think aloud, or stay outside the workflow, the Owner may do so. Freeform is a human override, not the default entry path.
+
+## Handoff Output
+
+At each pause point, the Owner explicitly tells the human:
+1. Whether to resume an existing session or start a new one. Default: resume the existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
+2. Which session to switch to.
+3. What the receiving role needs to read.
+
+For A-Society, this applies at minimum:
+- after writing `01-owner-to-curator-brief.md`
+- after issuing a review decision in the active record folder
+- after Owner findings, when the Curator still needs to synthesize or publish follow-up artifacts
+
+If the decision is terminal, say so explicitly and do not imply an additional session switch.
 
 ---
 

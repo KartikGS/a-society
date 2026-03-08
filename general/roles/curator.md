@@ -54,7 +54,7 @@ Before beginning any session as the Curator, read:
 
 Resolve `$VAR` references via the project index.
 
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, index. Ready as Curator."* If you cannot confirm all four, do not proceed.
+**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, index, a-docs-guide. Ready as Curator."* If you cannot confirm all five, do not proceed.
 
 ---
 
@@ -67,6 +67,22 @@ Not every practice that works in one project belongs in `a-society/general/`. Be
 3. **Is it currently undocumented in A-Society?** Check `a-society/general/` before proposing. Extend existing documents before creating new ones.
 
 When a pattern passes all three: draft the proposal, note the evidence from this project, and submit to the Owner for review.
+
+---
+
+## Handoff Output
+
+At each pause point, the Curator tells the human:
+1. Whether to resume the existing session or start a new session for the receiving role. Default: resume the existing session. Start a new one only when the project's workflow says to.
+2. Which session to switch to.
+3. What the receiving role needs to read (artifact path, changed files, findings, or other required context).
+
+Typical Curator pause points include:
+- after submitting a proposal or update-report draft for Owner review
+- after implementation and registration when another role owes review or findings
+- after findings or synthesis when the next action belongs to another role or the item is complete
+
+If the work item is complete or blocked on another role, the Curator states that explicitly.
 
 ---
 
