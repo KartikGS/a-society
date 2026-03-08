@@ -22,11 +22,11 @@ In a graph-based workflow, the backward pass traverses the **path actually taken
 
 ## What Is an `improvement/` Folder?
 
-An `improvement/` folder contains three components:
+An `improvement/` folder contains two required components and one optional:
 
-1. **Philosophy** (`main.md`) — the principles that govern how improvement decisions are made
-2. **Protocol** (`protocol.md`) — how to run a backward pass: who produces findings, in what format, and how findings flow back into the workflow
-3. **Reports** (`reports/`) — the folder where all backward pass findings are stored
+1. **Philosophy** (`main.md`) — required: the principles that govern how improvement decisions are made
+2. **Protocol** (`protocol.md`) — required: how to run a backward pass: who produces findings, in what format, and how findings flow back into the workflow
+3. **Reports** (`reports/`) — optional: the storage location for backward pass findings, for projects that do not use a records structure
 
 Together they answer: "How does this project's a-docs stay aligned with how the project actually works?"
 
@@ -43,7 +43,7 @@ A dedicated folder separates improvement infrastructure from normal execution in
 
 ---
 
-## The Three Components
+## The Components
 
 ### `main.md` — Improvement Philosophy
 
@@ -87,11 +87,15 @@ A dedicated folder separates improvement infrastructure from normal execution in
 
 ---
 
-### `reports/` — Reports Folder
+### `reports/` — Reports Folder (Optional)
 
-**What it is:** The storage location for all backward pass findings.
+**What it is:** The storage location for backward pass findings in projects that do not use a records structure.
 
-**What belongs here:**
+If the project uses a records structure (see `$INSTRUCTION_RECORDS`), backward pass findings are sequenced artifacts within the record folder — not files in `reports/`. In that case, this folder may be omitted or repurposed for non-flow-specific improvement artifacts (e.g., a periodic synthesis that spans multiple flows).
+
+If the project does not use records, `reports/` is the required storage location for all backward pass findings.
+
+**What belongs here (when used):**
 - `main.md` — index of the reports folder with naming conventions and template references
 - One file per backward pass findings report, following the naming convention from the protocol
 
@@ -111,11 +115,11 @@ A dedicated folder separates improvement infrastructure from normal execution in
 
 Add all key files to the project's file path index. At minimum:
 
-| Variable | Path | Description |
-|---|---|---|
-| `$[PROJECT]_IMPROVEMENT` | `/[project]/a-docs/improvement/main.md` | Improvement philosophy — principles for doc improvement decisions |
-| `$[PROJECT]_IMPROVEMENT_PROTOCOL` | `/[project]/a-docs/improvement/protocol.md` | Backward pass protocol — how findings are produced and flow back into the workflow |
-| `$[PROJECT]_IMPROVEMENT_REPORTS` | `/[project]/a-docs/improvement/reports/main.md` | Improvement reports index — naming conventions and template links |
+| Variable | Path | Description | Required? |
+|---|---|---|---|
+| `$[PROJECT]_IMPROVEMENT` | `/[project]/a-docs/improvement/main.md` | Improvement philosophy — principles for doc improvement decisions | Required |
+| `$[PROJECT]_IMPROVEMENT_PROTOCOL` | `/[project]/a-docs/improvement/protocol.md` | Backward pass protocol — how findings are produced and flow back into the workflow | Required |
+| `$[PROJECT]_IMPROVEMENT_REPORTS` | `/[project]/a-docs/improvement/reports/main.md` | Improvement reports index — naming conventions and template links | Optional: include only if the project uses `reports/` rather than a records structure for findings |
 
 ---
 

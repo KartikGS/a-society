@@ -1,6 +1,6 @@
 # Owner → Curator: Briefing
 
-> **Template** — do not modify this file. Fill `owner-to-curator-brief.md` (the live artifact) from this template.
+> **Template** — do not modify this file. Create from this template into the active record folder as `01-owner-to-curator-brief.md` (or the next available sequence position if `01-` is taken).
 
 ---
 

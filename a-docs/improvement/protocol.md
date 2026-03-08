@@ -32,9 +32,9 @@ The agent decides which depth is appropriate. If unsure, default to lightweight.
 
 1. **Curator produces findings first** (closest to implementation friction).
 2. **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
-3. **Output:** `$A_SOCIETY_IMPROVEMENT_REPORTS/META-YYYYMMDD-<task-id>-<role>-findings.md`
+3. **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
 4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-5. **Curator synthesizes** actionable items from both findings files and proposes them through `$A_SOCIETY_COMM_CURATOR_TO_OWNER` as new trigger inputs for Phase 1 (Proposal).
+5. **Curator synthesizes** actionable items from both findings artifacts and, if actionable items exist, initiates a new trigger input for Phase 1 (Proposal). A new flow begins with a new record folder.
 6. **Approved changes** proceed through the workflow: Proposal → Owner Review → Implementation → Registration.
 
 ---

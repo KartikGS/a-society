@@ -1,6 +1,6 @@
 # Curator → Owner: Proposal / Submission
 
-> **Template** — do not modify this file. Fill `curator-to-owner.md` (the live artifact) from this template.
+> **Template** — do not modify this file. Create from this template into the active record folder at the next sequenced position (e.g., `02-curator-to-owner.md`).
 
 ---
 

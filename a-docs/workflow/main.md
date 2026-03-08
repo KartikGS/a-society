@@ -32,7 +32,7 @@ These are not workflow phases. They are what creates the input for Phase 1.
 
 The entry node. A proposed change is formulated with rationale.
 
-**Input:** A stated need from a trigger source. For Curator-led proposals, the Owner writes `$A_SOCIETY_COMM_BRIEF` to define the agreed change and scope. For human-directed changes, the human provides the direction directly.
+**Input:** A stated need from a trigger source. For Curator-led proposals, the Owner creates a record folder (see `$A_SOCIETY_RECORDS`) and writes `01-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`. For human-directed changes, the human provides the direction directly.
 
 **Owner:** Curator (for `general/` additions and maintenance); Human (for direction changes).
 
@@ -41,7 +41,7 @@ The entry node. A proposed change is formulated with rationale.
 2. Which project(s) the pattern was observed in
 3. Why it generalizes — the case that it applies equally to a software project, a writing project, and a research project
 
-**Output:** Draft content and written rationale, submitted to the Owner via `$A_SOCIETY_COMM_CURATOR_TO_OWNER`.
+**Output:** Draft content and written rationale, submitted to the Owner as the next sequenced artifact in the active record folder (e.g., `02-curator-to-owner.md`), using `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER`.
 
 ---
 
@@ -60,7 +60,7 @@ The Owner evaluates the proposal against the five review tests.
 4. **Placement test** — Does the target folder's governing principle (per `$A_SOCIETY_STRUCTURE`) include this?
 5. **Quality test** — Is this written so an unfamiliar agent can read it and produce a correct artifact?
 
-**Output:** An explicit decision via `$A_SOCIETY_COMM_OWNER_TO_CURATOR`:
+**Output:** An explicit decision written as the next sequenced artifact in the active record folder (e.g., `03-owner-to-curator.md`), using `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`:
 - **Approved** → proceeds to Phase 3
 - **Revise** → returns to Phase 1 with required changes (branching edge)
 - **Rejected** → terminal; item closed
@@ -109,7 +109,7 @@ Each agent who participated in the forward pass (Phases 1–4) reflects on their
 
 **Work:** Produce findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`. Actionable findings re-enter the workflow as new trigger inputs.
 
-**Output:** Findings files in `$A_SOCIETY_IMPROVEMENT_REPORTS`. Actionable items surface as triggers for future graph traversals.
+**Output:** Findings artifacts in the active record folder at the next sequenced positions (e.g., `04-curator-findings.md`, `05-owner-findings.md`). See `$A_SOCIETY_RECORDS` for the naming convention. Actionable items surface as triggers for future graph traversals.
 
 **Depth:** Proportional to the work. For routine single-file changes with no friction, 1–3 top findings is sufficient. For substantive changes (new artifacts, structural modifications, authority boundary decisions), produce full structured findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`.
 
@@ -123,11 +123,11 @@ For detailed artifact formats, status vocabulary, and coordination rules, see `$
 
 | Edge | Transition Condition | What Carries It | Receiver Checks |
 |---|---|---|---|
-| Trigger → Phase 1 | Owner briefing written (Curator-led) or human direction given | `$A_SOCIETY_COMM_BRIEF` or conversation | Briefing contains Agreed Change and Scope; Curator acknowledges |
-| Phase 1 → Phase 2 | Draft + rationale submitted | `$A_SOCIETY_COMM_CURATOR_TO_OWNER` | All three proposal elements present |
-| Phase 2 → Phase 3 | Decision = Approved | `$A_SOCIETY_COMM_OWNER_TO_CURATOR` | Approval stated explicitly |
-| Phase 2 → Phase 1 | Decision = Revise | `$A_SOCIETY_COMM_OWNER_TO_CURATOR` with required changes | Curator acknowledges; revises and resubmits |
-| Phase 2 → ∅ | Decision = Rejected | `$A_SOCIETY_COMM_OWNER_TO_CURATOR` | Curator acknowledges; item closed |
+| Trigger → Phase 1 | Owner briefing written (Curator-led) or human direction given | `01-owner-to-curator-brief.md` in the active record folder, or conversation | Briefing contains Agreed Change and Scope; Curator acknowledges |
+| Phase 1 → Phase 2 | Draft + rationale submitted | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER`) | All three proposal elements present |
+| Phase 2 → Phase 3 | Decision = Approved | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Approval stated explicitly |
+| Phase 2 → Phase 1 | Decision = Revise | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Curator acknowledges; revises and resubmits |
+| Phase 2 → ∅ | Decision = Rejected | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Curator acknowledges; item closed |
 | Phase 3 → Phase 4 | Files exist at correct paths | File existence verification | Correct index identified |
 | Phase 4 → Phase 5 | Index updated; update report published if triggered | Registration confirmation | All forward-pass participants identified |
 
@@ -144,27 +144,27 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 ### How it flows
 
-1. **Session A starts.** The human and Owner align on a need. The Owner writes `$A_SOCIETY_COMM_BRIEF`. The Owner tells the human: *"Briefing written. Switch to your Curator session and point it at the briefing artifact."* Session A pauses.
+1. **Session A starts.** The human and Owner align on a need. The Owner creates a record folder and writes `01-owner-to-curator-brief.md`. The Owner tells the human: *"Briefing written at [record folder path]. Switch to your Curator session and point it at the briefing."* Session A pauses.
 
-2. **Session B starts.** The human opens a Curator session, points it at the briefing. The Curator acknowledges, drafts the proposal, and writes `$A_SOCIETY_COMM_CURATOR_TO_OWNER`. The Curator tells the human: *"Proposal submitted. Return to your Owner session and point it at the proposal artifact."* Session B pauses.
+2. **Session B starts.** The human opens a Curator session, points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human: *"Proposal submitted. Return to your Owner session and point it at the proposal."* Session B pauses.
 
-3. **Session A resumes.** The human returns to the Owner session and points it at the proposal. The Owner reviews it and writes a decision to `$A_SOCIETY_COMM_OWNER_TO_CURATOR`. The Owner tells the human what to do next:
+3. **Session A resumes.** The human returns to the Owner session and points it at the proposal. The Owner reviews it and writes a decision as the next sequenced artifact in the active record folder. The Owner tells the human what to do next:
    - **Approved:** *"Switch to the Curator session and point it at the approval."*
    - **Revise:** *"Switch to the Curator session and point it at the revision request."*
    - **Rejected:** *"Item closed. No further action needed."*
    
    Session A pauses.
 
-4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings. Session B may end here or pause for Owner findings.
+4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings in the active record folder. Session B may end here or pause for Owner findings.
 
-5. **Session A resumes.** The Owner produces backward pass findings. Session A ends.
+5. **Session A resumes.** The Owner produces backward pass findings in the active record folder. Session A ends.
 
-6. **Session B resumes (if needed).** The Curator synthesizes both findings files and proposes any actionable items as new trigger inputs.
+6. **Session B resumes (if needed).** The Curator synthesizes both findings artifacts and proposes any actionable items as new trigger inputs.
 
 ### The human's role at each transition
 
 The human is the orchestrator — they maintain continuity between sessions and route artifacts. At each pause point, the active agent should:
-1. Name the artifact it produced and where it lives
+1. Name the artifact it produced and where it lives (the active record folder)
 2. Tell the human which session to switch to
 3. State what the receiving agent needs to read
 

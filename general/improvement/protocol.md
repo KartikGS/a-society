@@ -1,6 +1,6 @@
 # Backward Pass Protocol
 
-> [CUSTOMIZE] Replace all `[PROJECT_*]` placeholders with the appropriate `$VARIABLE_NAME` values from your project's index. Update role names to match your project's structure.
+> [CUSTOMIZE] Replace all `[PROJECT_*]` placeholders with the appropriate `$VARIABLE_NAME` values from your project's index. Update role names to match your project's structure. Declare which output location applies (records or reports/) in step 2.
 
 ## Purpose
 
@@ -32,7 +32,11 @@ The agent decides which depth is appropriate. If unsure, default to lightweight.
 
 1. **Each agent who participated in the forward pass** produces a findings artifact reflecting on their experience — what was clear, what was ambiguous, what was missing, what conflicted.
 
-2. **Output location:** `[PROJECT_IMPROVEMENT_REPORTS]/META-YYYYMMDD-<TASK-ID>-<role>-findings.md`
+2. **Output location:**
+   - *If the project uses records:* `[PROJECT_RECORDS]/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder
+   - *If the project does not use records:* `[PROJECT_IMPROVEMENT_REPORTS]/META-YYYYMMDD-<TASK-ID>-<role>-findings.md`
+
+   The project's `improvement/protocol.md` declares which path applies.
 
 3. **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
 

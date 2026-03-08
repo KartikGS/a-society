@@ -114,7 +114,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** A-Society has a non-obvious workflow constraint: the Curator cannot write to `general/` without Owner approval. Without a workflow document, agents must infer this constraint from role files — and may miss it. The workflow document is the single place where all phases, handoffs, invariants, and escalation rules are declared explicitly for any agent operating in this project.
 
-**What it owns:** The six-phase workflow (Observation → Proposal → Owner Review → Implementation → Registration → Backward Pass), all handoff protocols, the four framework invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation triggers.
+**What it owns:** The five-phase workflow (Proposal → Review → Implementation → Registration → Backward Pass), all handoffs, the four framework invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation triggers.
 
 **What breaks without it:** Agents improvise process. The Approval Invariant is discoverable only by reading the Curator role file — which not all agents load. Cross-role work has no shared playbook.
 
@@ -148,18 +148,6 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-### `improvement/reports/` — `$A_SOCIETY_IMPROVEMENT_REPORTS`
-
-**Why it exists:** Backward pass findings need a dedicated, stable location. Without it, findings scatter and the improvement protocol's output paths are unresolvable.
-
-**What it owns:** All backward pass findings files and the reports index (`main.md`) with naming conventions and the template reference.
-
-**What breaks without it:** The protocol's output paths point nowhere. Historical findings are lost.
-
-**Do not consolidate with:** `workflow/` — improvement artifacts are meta-level (about the docs); workflow artifacts are execution-level (about framework work).
-
----
-
 ## `communication/`
 
 ### `communication/main.md` — `$A_SOCIETY_COMM`
@@ -176,13 +164,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `communication/conversation/` — `$A_SOCIETY_COMM_CONVERSATION`
 
-**Why it exists:** Every proposal the Curator submits and every decision the Owner issues must pass through a structured artifact. Without templates, handoff formats vary by session. Without live files at stable paths, artifacts are not findable.
+**Why it exists:** Every proposal the Curator submits and every decision the Owner issues follows a defined format. Without templates, handoff formats vary by session. The conversation folder is the stable home for those templates.
 
-**What it owns:** The live `curator-to-owner.md` and `owner-to-curator.md` files (current active handoffs), the permanent templates for each, and the artifact lifecycle documentation.
+**What it owns:** The permanent templates for each artifact type (briefing, proposal, decision). Artifacts themselves are created in the active record folder (see `$A_SOCIETY_RECORDS`), not here.
 
-**What breaks without it:** Proposals and decisions are made informally in conversation. There is no auditable record of what was submitted, what decision was issued, or what constraints were placed on implementation.
+**What breaks without it:** Agents writing handoffs have no canonical format reference. Templates become scattered or are recreated inconsistently.
 
-**Do not consolidate with:** `communication/coordination/` — conversation is about the artifacts; coordination is about the rules governing those artifacts. They are separate layers for the same reason role documents and workflow documents are separate.
+**Do not consolidate with:** `communication/coordination/` — conversation is about artifact formats; coordination is about the rules governing those artifacts. Do not consolidate with `records/` — records hold the produced artifacts; this folder holds the templates they are produced from.
 
 ---
 
@@ -195,6 +183,20 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Agents apply different status tokens, have no shared procedure for reporting blockers, and escalate conflicts inconsistently. The coordination failures that emerge look like execution failures but are actually structural gaps.
 
 **Do not consolidate the three sub-documents:** Each answers a distinct question — handoff format, discrepancy response, and dispute resolution. Merging them makes the relevant rule harder to find under pressure.
+
+---
+
+## `records/`
+
+### `records/main.md` — `$A_SOCIETY_RECORDS`
+
+**Why it exists:** Every workflow traversal produces multiple artifacts: a briefing, a proposal, a decision, and backward pass findings. Without a dedicated structure, these artifacts either scatter across folders or overwrite each other between flows. The records structure ties all artifacts for one flow into one folder, in chronological sequence. The record folder name *is* the flow identifier — no separate `<task-id>` field is needed anywhere.
+
+**What it owns:** A-Society's records convention: the identifier format (`YYYYMMDD-slug`), the canonical artifact sequence within a record folder, the sequencing prefix convention (`01-`, `02-`, ...), and the rule for what belongs in a record versus what does not.
+
+**What breaks without it:** Agents creating flow artifacts have no canonical convention for naming or locating them. The record folder identifier is undefined. Flow artifacts scatter or overwrite between flows.
+
+**Do not consolidate with:** `workflow/main.md` — the workflow describes phase sequencing; records describes artifact storage within a flow. Do not consolidate with `communication/conversation/main.md` — the conversation folder holds templates; records holds the artifacts produced from those templates.
 
 ---
 
@@ -234,7 +236,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Deferred direction decisions exist only in conversation history. When the human or Owner returns to the item in a future session, the rationale, open questions, and scope analysis must be reconstructed from memory.
 
-**Do not consolidate with:** `improvement/reports/` — improvement reports are backward-looking (what happened in a past cycle); todo items are forward-looking (what has been decided but not yet implemented). Do not consolidate with `workflow/main.md` — the workflow describes how active work moves through phases; the todo folder holds work that has not yet entered Phase 1.
+**Do not consolidate with:** `records/` — records hold all flow artifacts including backward pass findings (backward-looking); todo items are forward-looking (what has been decided but not yet entered a flow). Do not consolidate with `workflow/main.md` — the workflow describes how active work moves through phases; the todo folder holds work that has not yet entered Phase 1.
 
 ---
 

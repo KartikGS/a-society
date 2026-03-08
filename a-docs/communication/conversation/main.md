@@ -1,46 +1,21 @@
-# A-Society: Conversation Artifacts
+# A-Society: Conversation Templates
 
-This folder contains the live handoff files and the permanent templates that define their format. Every inter-agent exchange in the A-Society workflow passes through one of these artifacts.
-
----
-
-## Artifacts
-
-| File | Type | Direction | Trigger |
-|---|---|---|---|
-| `TEMPLATE-owner-to-curator-brief.md` | Template | Owner → Curator | Owner and human have aligned on a change; Curator session about to begin |
-| `TEMPLATE-curator-to-owner.md` | Template | Curator → Owner | Any proposal submission or update report submission |
-| `TEMPLATE-owner-to-curator.md` | Template | Owner → Curator | Any review decision (approved / revise / rejected) |
-| `owner-to-curator-brief.md` | Live | Owner → Curator | Current active briefing for Curator |
-| `curator-to-owner.md` | Live | Curator → Owner | Current active proposal or update report |
-| `owner-to-curator.md` | Live | Owner → Curator | Current active decision |
-
-**Templates** are never modified during use. Agents fill a copy; the template stays unchanged.
-
-**Live artifacts** hold the current unit of work. They are replaced when a new unit of work begins — after a pre-replacement check confirms the prior unit is closed (see `$A_SOCIETY_COMM_HANDOFF_PROTOCOL`).
+This folder contains the permanent templates for all A-Society inter-agent conversation artifacts. Artifacts are not created here — they are created in the active record folder (see `$A_SOCIETY_RECORDS`) using these templates as format references.
 
 ---
 
-## Lifecycle
+## Templates
 
-```
-Owner and human align on a change (Phase 1)
-    ↓
-Owner fills owner-to-curator-brief.md from template → status: BRIEFED
-    ↓
-Curator reads brief, acknowledges → status: DRAFT
-    ↓
-Curator drafts proposal, fills curator-to-owner.md from template → status: PENDING_REVIEW
-    ↓
-Owner reads, issues decision in owner-to-curator.md → status: APPROVED / REVISE / REJECTED
-    ↓
-If REVISE: Curator updates curator-to-owner.md and resubmits → status: PENDING_REVIEW
-    ↓
-If APPROVED: Curator acknowledges, begins implementation
-    ↓
-Implementation complete → Curator registers files → status: REGISTERED
-    ↓
-If update report triggered: Curator drafts report, submits via curator-to-owner.md → Owner approves
-    ↓
-Pre-replacement check passes → live artifacts replaced for next unit of work
-```
+| File | Direction | Use When |
+|---|---|---|
+| `TEMPLATE-owner-to-curator-brief.md` | Owner → Curator | Creating the briefing artifact for a new flow |
+| `TEMPLATE-curator-to-owner.md` | Curator → Owner | Submitting a proposal, update report, or maintenance change |
+| `TEMPLATE-owner-to-curator.md` | Owner → Curator | Issuing a review decision (approved / revise / rejected) |
+
+Templates are never modified during use. Create from a template into the active record folder at the next sequenced position; the template stays unchanged.
+
+---
+
+## Artifact Lifecycle
+
+All conversation artifacts for a flow are created in that flow's record folder under `$A_SOCIETY_RECORDS`. See `$A_SOCIETY_RECORDS` for the identifier format, sequencing convention, and the canonical artifact sequence for A-Society flows.

@@ -47,6 +47,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `/a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols — status models, handoff rules, feedback, and conflict resolution |
 | `$INSTRUCTION_THINKING` | `/a-society/general/instructions/thinking/main.md` | How to create a thinking/ folder for any project |
 | `$INSTRUCTION_IMPROVEMENT` | `/a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
+| `$INSTRUCTION_RECORDS` | `/a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | `$GENERAL_THINKING` | `/a-society/general/thinking/main.md` | Ready-made general principles template — cross-role operational rules |
 | `$GENERAL_THINKING_REASONING` | `/a-society/general/thinking/reasoning.md` | Ready-made reasoning framework template — cognitive heuristics for agents |
 | `$GENERAL_THINKING_KEEP_IN_MIND` | `/a-society/general/thinking/keep-in-mind.md` | Ready-made keep-in-mind template — operational reminders and hard stops |
@@ -59,7 +60,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow — phases, handoffs, invariants, and escalation rules for framework work |
 | `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy — principles governing documentation improvement decisions |
 | `$A_SOCIETY_IMPROVEMENT_PROTOCOL` | `/a-society/a-docs/improvement/protocol.md` | A-Society backward pass protocol — how findings are produced and flow back into the workflow |
-| `$A_SOCIETY_IMPROVEMENT_REPORTS` | `/a-society/a-docs/improvement/reports/main.md` | A-Society improvement reports index — naming conventions and template references |
+| `$A_SOCIETY_RECORDS` | `/a-society/a-docs/records/main.md` | A-Society records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking |
 | `$A_SOCIETY_FEEDBACK_DIR` | `/a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
 | `$A_SOCIETY_FEEDBACK_ONBOARDING` | `/a-society/feedback/onboarding/` | Initializer signal reports — filed after initialization runs with project consent |
 | `$A_SOCIETY_FEEDBACK_MIGRATION` | `/a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
@@ -68,11 +69,8 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `/a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |
 | `$A_SOCIETY_UPDATES_TEMPLATE` | `/a-society/a-docs/updates/template.md` | Framework update report template — structure for outbound change notifications to adopting projects |
 | `$A_SOCIETY_COMM` | `/a-society/a-docs/communication/main.md` | A-Society communication — entry point for conversation and coordination layers |
-| `$A_SOCIETY_COMM_CONVERSATION` | `/a-society/a-docs/communication/conversation/main.md` | A-Society conversation artifacts — live handoffs, templates, and lifecycle |
-| `$A_SOCIETY_COMM_BRIEF` | `/a-society/a-docs/communication/conversation/owner-to-curator-brief.md` | Live: current Owner → Curator briefing |
+| `$A_SOCIETY_COMM_CONVERSATION` | `/a-society/a-docs/communication/conversation/main.md` | A-Society conversation templates — permanent format references for all inter-agent handoff artifacts |
 | `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator-brief.md` | Template: Owner → Curator briefing format |
-| `$A_SOCIETY_COMM_CURATOR_TO_OWNER` | `/a-society/a-docs/communication/conversation/curator-to-owner.md` | Live: current Curator → Owner proposal or submission |
-| `$A_SOCIETY_COMM_OWNER_TO_CURATOR` | `/a-society/a-docs/communication/conversation/owner-to-curator.md` | Live: current Owner → Curator decision |
 | `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER` | `/a-society/a-docs/communication/conversation/TEMPLATE-curator-to-owner.md` | Template: Curator → Owner proposal / submission format |
 | `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator.md` | Template: Owner → Curator decision format |
 | `$A_SOCIETY_COMM_COORDINATION` | `/a-society/a-docs/communication/coordination/main.md` | A-Society coordination protocols — entry point |
