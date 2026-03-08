@@ -70,6 +70,18 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `project-information/principles.md` — `$A_SOCIETY_PRINCIPLES`
+
+**Why it exists:** When an agent proposes a new feature, reviews an addition, or designs a feedback mechanism, it needs to know what A-Society values beyond vision and structure. The principles document captures design-level constraints — context efficiency, consent requirements, feedback as a design requirement, and structural scope discipline — that shape how the framework is extended. Without it, agents apply generic engineering judgment where project-specific policy exists.
+
+**What it owns:** The named design principles that govern how A-Society itself is extended: what to check before proposing a feature, what consent obligations exist for feedback mechanisms, and what structural commitments a new folder implies.
+
+**What breaks without it:** Agents propose features that waste context budget, ship feedback mechanisms without consent models, or create folders that imply maintenance commitments nobody agreed to. These are principled constraints that cannot be derived from vision or structure alone.
+
+**Do not consolidate with:** `vision.md` — the vision defines what A-Society is and its scope; principles define how to make design decisions within that scope. Do not consolidate with `architecture.md` — architecture defines structural invariants (what must never be violated); principles define design values (what should guide choices when multiple valid options exist).
+
+---
+
 ## `roles/`
 
 ### `roles/owner.md` — `$A_SOCIETY_OWNER_ROLE`

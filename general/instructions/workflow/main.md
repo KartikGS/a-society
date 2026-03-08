@@ -69,6 +69,29 @@ In the current operational model, agents do not persist memory between sessions.
 
 ---
 
+## The Owner as Session Entry Point
+
+The **Owner** is the universal entry point for all project sessions. Users always begin by assigning the Owner role and pointing the agent at `agents.md`. After loading context (which includes the workflow document), the Owner presents the available workflows and helps the user decide what to work on.
+
+This means:
+- **Only the Owner reads the full workflow map.** Other agents receive well-formed input artifacts at their nodes — they see their node contract (input, work, output), not the entire graph.
+- **The Owner routes work into workflows.** When the user picks a workflow or describes a need, the Owner creates the trigger input and tells the human which session to switch to next.
+- **Freeform work is valid.** The Owner can engage in discussion, direction-setting, or exploratory thinking without entering any workflow. Not every session needs a workflow.
+
+Every workflow document should include a **one-line summary** suitable for the Owner to present at session start. This summary is how users discover what workflows are available without reading the full workflow document.
+
+### Routing means routing, not doing
+
+The Owner routes work into the workflow. The Owner does not collapse all phases into itself.
+
+When the human directs a change — even a small one — that change should enter the workflow at the appropriate trigger point so that the designed role separation is preserved. The Owner receives the human's direction, formulates it as a trigger input, and hands it off to the role that owns the first phase. Each subsequent phase brings its own expertise and perspective.
+
+An Owner that receives direction and immediately implements it has bypassed every downstream perspective the workflow was designed to include. The result may be fast, but it is not structurally verified — no second role checked the work, no node contract validated the handoff, no expert other than the Owner applied their judgment.
+
+The workflow exists because the project decided that completeness requires multiple perspectives. Human-directed work is not exempt from that decision.
+
+---
+
 ## What Belongs in a Workflow Document
 
 A workflow document for any project must cover these sections:
@@ -189,6 +212,7 @@ A workflow document that describes role responsibilities, vision, or tool choice
 ## Format Rules
 
 - **Process-first, not role-first.** Describe what happens to work, not what roles do. Roles are described in role documents.
+- **One-line summary at the top.** Every workflow document should begin with a one-line summary of the workflow — what kind of work it processes, stated in one sentence. The Owner reads this to present the workflow menu at session start. Without a summary, the Owner must read and synthesize the full workflow to describe it, which wastes context.
 - **Numbered phases.** Use numbered lists for ordered processes. Readers must be able to say "we are in phase 3" without ambiguity.
 - **Named invariants.** Each invariant should have a short name (e.g., "Traceability Invariant") so agents can reference it precisely in handoffs and reports.
 - **Instance-scoped references.** In multi-instance workflows only: every artifact reference (handoff files, status tokens, pre-replacement checks) must include the unit-of-work ID so that artifacts from concurrent instances do not collide. Single-instance workflows do not need unit-of-work IDs.

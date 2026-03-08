@@ -33,6 +33,22 @@ The investment is in the project setup — not in the agent itself.
 
 ---
 
+## Why Roles and Workflows Exist
+
+A single agent can do many things. But a single agent doing everything produces work that is complete by its own assessment — not by structural verification. It plans, implements, and reviews its own work without friction, without a second perspective, without anyone checking whether something was missed. The work feels done. It may not be done.
+
+Roles exist because **different types of expertise produce different perspectives**. An Owner evaluating whether an addition belongs is applying different judgment than a Curator who drafted it. A reviewer checking work against acceptance criteria is thinking differently than the implementer who produced it. Each role brings a perspective the others cannot — and it is the combination of perspectives that makes the output reliable.
+
+Workflows exist because **expertise alone is not enough — experts must communicate effectively**. A workflow is the designed process by which agents with completely different expertise collaborate: each node receives well-formed input, does its specialized work, and produces output for the next node. When every phase runs, completeness is structural — not a matter of one agent's self-assessment.
+
+**Human-directed work is not exempt from this.** When the human identifies a need and directs the work, that direction enters the workflow — it does not bypass it. The Owner receives the direction, routes it into the appropriate workflow, and the designed role separation ensures completeness. An Owner that collapses all phases into itself — proposing, implementing, registering, and self-reviewing — has removed the perspectives that the workflow was designed to include. The result may be fast, but it is not structurally verified.
+
+The framework's recommendation to every project: **follow your designed workflows**. They exist because you decided that completeness and quality require multiple expert perspectives. Bypassing them means losing those perspectives — and the quality guarantee they provide.
+
+The investment is in the project setup — not in the agent itself.
+
+---
+
 ## Who This Is For and How They Use It
 
 A-Society is for project owners who work with AI agents regularly — not as a one-off experiment, but as a normal part of how their project gets done. They may be building software, writing content, conducting research, or running any other kind of project. What they share is this: they assign agents to sessions, and they want those agents to work reliably without constant re-briefing.

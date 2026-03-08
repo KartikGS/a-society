@@ -2,6 +2,8 @@
 
 This document describes how work moves through the A-Society project — from a need being surfaced to content existing in the right place, registered, and ready for adopters. Read this when you need to know what happens next, who owns a step, or when to escalate.
 
+**Summary:** Growing, maintaining, and quality-gating the reusable instruction library.
+
 **Graph:** A-Society Framework Development. Single-instance — one unit of work at a time.
 
 ---

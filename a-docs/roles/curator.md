@@ -50,12 +50,13 @@ Before beginning any session as the A-Society Curator, read:
 1. [`agents.md`](/a-society/a-docs/agents.md) — this project's orientation document
 2. [`$A_SOCIETY_VISION`] — what the framework is and where it is going
 3. [`$A_SOCIETY_STRUCTURE`] — why each folder exists and what belongs where
-4. [`$A_SOCIETY_INDEX`] — current file registry
-5. [`$A_SOCIETY_AGENT_DOCS_GUIDE`] — why each file in this project's agent-docs exists; read before maintaining any file
+4. [`$A_SOCIETY_PRINCIPLES`] — design principles that govern how the framework is extended
+5. [`$A_SOCIETY_INDEX`] — current file registry
+6. [`$A_SOCIETY_AGENT_DOCS_GUIDE`] — why each file in this project's agent-docs exists; read before maintaining any file
 
 Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, index. Ready as Curator."* If you cannot confirm all four, do not proceed.
+**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, principles, index, agent-docs-guide. Ready as Curator."* If you cannot confirm all six, do not proceed.
 
 ---
 

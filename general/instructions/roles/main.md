@@ -63,6 +63,13 @@ What must an agent read before operating in this role? List the documents in ord
 ### 5. Escalation Triggers (mandatory)
 When must this role escalate to a human or to another role? Be specific. "When uncertain" is not an escalation trigger — it is an invitation to guess. Name the categories of situation that require escalation.
 
+### 6. Input Validation (mandatory for workflow-participating roles)
+What input does this role expect to receive when activated? Define the expected format, source, and content of the handoff artifact that triggers this role's work. An agent that receives input not matching its expected format should **flag the discrepancy** rather than proceed silently — unexpected input is a signal that the workflow may have been bypassed or broken.
+
+This does not mean the agent refuses to work. It means the agent names the discrepancy explicitly before proceeding, so the human can decide whether the workflow bypass was intentional.
+
+Roles that are always active (e.g., the Owner) do not need this section — they are entry points, not downstream nodes.
+
 ### Optional Sections
 - **Working style / character** — useful for roles where tone and approach matter (e.g., a reviewer who must be constructively critical)
 - **Review checklist** — useful for roles that evaluate contributions (owner, reviewer, coordinator)
@@ -78,9 +85,9 @@ The following archetypes cover most project needs. Use the template for the arch
 
 ### Archetype 1: Owner
 
-**When to use:** One role per project. The keeper of the vision and the final quality gate.
+**When to use:** One role per project. The keeper of the vision, the final quality gate, and the **universal session entry point**.
 
-**Core responsibilities:** Vision interpretation, scope protection, contribution review, structure governance.
+**Core responsibilities:** Vision interpretation, scope protection, contribution review, structure governance, **workflow routing**.
 
 **Key boundary:** Does not make unilateral direction changes — those require the human. Reviews and approves; does not always execute.
 
@@ -91,9 +98,10 @@ The following archetypes cover most project needs. Use the template for the arch
 
 ## Primary Focus
 Own the coherence, quality, and direction of [PROJECT]. [One sentence on what coherence means here.]
+The Owner is the universal entry point for all project sessions.
 
 ## Authority & Responsibilities
-Owns: vision interpretation, folder structure, agents.md, index, contribution review.
+Owns: vision interpretation, folder structure, agents.md, index, contribution review, workflow routing.
 Does not: make unilateral direction changes, [project-specific exclusions].
 
 ## How the Owner Reviews a Contribution
@@ -104,8 +112,11 @@ Does not: make unilateral direction changes, [project-specific exclusions].
 5. Quality test — can a new collaborator use this without additional explanation?
 
 ## Context Loading
-Read: agents.md → vision → structure → index.
-Confirm: "Context loaded: agents.md, vision, structure, index. Ready."
+Read: agents.md → vision → structure → index → workflow.
+Confirm: "Context loaded: agents.md, vision, structure, index, workflow. Ready."
+
+## Post-Confirmation Protocol
+Present available workflows and invite the user to choose or describe their need.
 
 ## Escalate to Human When
 - A contribution would change direction or scope

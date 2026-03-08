@@ -34,14 +34,15 @@ Other agents (owners, analysts, implementers) do not need this level of file-by-
 
 Cover every file and folder that a Curator might touch, modify, or make a placement decision about. Do not cover every file mechanically — use judgment. A temporary working file does not need a rationale entry. A core structural document does.
 
-### For each entry, answer four questions:
+### For each entry, answer five questions:
 
 1. **Why it exists** — what problem does this file solve? What would an agent not know without it?
 2. **What it owns** — what is this file responsible for? What content belongs here and nowhere else?
 3. **What breaks without it** — if this file were removed or absorbed into another, what specifically fails?
 4. **What not to consolidate it with** — name the adjacent files that look similar but must remain separate, and explain why.
+5. **Who reads it** — which role loads this file, and when? Agent-docs exist for agents. An artifact that no role is assigned to read is an orphan — it occupies index space and maintenance burden without influencing any agent's behavior. Every artifact must appear in at least one role's required reading or be loaded on-demand by a specific role during a specific operation.
 
-Not every entry needs all four. Short files with obvious purpose can be brief. Files at risk of being misunderstood or consolidated need more.
+Not every entry needs all five. Short files with obvious purpose can be brief. Files at risk of being misunderstood or consolidated need more. But question 5 should always have an answer — if it does not, the artifact's value is in question.
 
 ---
 
@@ -94,5 +95,7 @@ The agent-docs guide must be updated whenever:
 - A new file is added to the project's agent-docs
 - A file is removed or relocated
 - A file's purpose changes materially
+
+When adding a new file, the Curator must verify that it is assigned to at least one role's required reading or on-demand loading. An artifact with a rationale entry but no assigned reader is an orphan — it is documented but functionally invisible to every agent in the project. Catching this at creation time is easier than discovering it later.
 
 This is the Curator's responsibility. An outdated agent-docs guide is worse than none — it gives the Curator false confidence about a file's purpose.
