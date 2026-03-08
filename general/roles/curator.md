@@ -49,7 +49,7 @@ Before beginning any session as the Curator, read:
 2. The project vision document
 3. The project structure document
 4. The project index (`indexes/main.md`)
-5. `agent-docs-guide.md` (`$[PROJECT]_AGENT_DOCS_GUIDE`) — why each file in this project's agent-docs exists; read before maintaining any file
+5. `a-docs-guide.md` (`$[PROJECT]_AGENT_DOCS_GUIDE`) — why each file in this project's agent-docs exists; read before maintaining any file
 6. [CUSTOMIZE: any additional project-specific context documents relevant to the current task]
 
 Resolve `$VAR` references via the project index.

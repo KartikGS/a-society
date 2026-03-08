@@ -71,7 +71,7 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 3. `project-information/log.md` — current state, recent focus, and next priorities for the Owner's first session
 4. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
 5. `agents.md` — the agent entry point, referencing all of the above
-6. `agent-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`
+6. `a-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`
 7. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
 8. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
 9. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items.
@@ -123,7 +123,7 @@ After human approval:
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, agent-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, and improvement/reports/template-findings.md
+- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, and improvement/reports/template-findings.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The onboarding signal report outcome is explicit: either written with user consent, or declined by the user and recorded in the completion statement
@@ -142,7 +142,7 @@ Before beginning any initialization session, read:
 
 Then read the target project's existing files to begin Phase 1.
 
-**Context confirmation:** *"Context loaded: index, agent-docs-guide, initializer role. Target project: [project name/path]. Beginning reconnaissance."*
+**Context confirmation:** *"Context loaded: index, a-docs-guide, initializer role. Target project: [project name/path]. Beginning reconnaissance."*
 
 ---
 

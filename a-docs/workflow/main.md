@@ -95,7 +95,7 @@ New or updated files are registered in the appropriate index.
 - New `a-docs/` files → add a rationale entry to `$A_SOCIETY_AGENT_DOCS_GUIDE`
 - If the registered changes qualify for a framework update report (see `$A_SOCIETY_UPDATES_PROTOCOL`), the Curator drafts the report and submits it to the Owner for review before publishing to `$A_SOCIETY_UPDATES_DIR`
 
-**Output:** Updated index row(s); updated agent-docs-guide entry if applicable; framework update report published if triggered. The session is not complete until registration is done.
+**Output:** Updated index row(s); updated a-docs-guide entry if applicable; framework update report published if triggered. The session is not complete until registration is done.
 
 ---
 

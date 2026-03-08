@@ -20,7 +20,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-### `agent-docs-guide.md` — `$A_SOCIETY_AGENT_DOCS_GUIDE`
+### `a-docs-guide.md` — `$A_SOCIETY_AGENT_DOCS_GUIDE`
 
 **Why it exists:** The Curator cannot maintain files it does not understand. This document ensures the Curator knows not just where files are (that is the index's job) but *why each file exists* — so it can maintain them correctly, avoid consolidating things that must stay separate, and recognize when a file's purpose has drifted.
 
@@ -79,6 +79,20 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Agents propose features that waste context budget, ship feedback mechanisms without consent models, or create folders that imply maintenance commitments nobody agreed to. These are principled constraints that cannot be derived from vision or structure alone.
 
 **Do not consolidate with:** `vision.md` — the vision defines what A-Society is and its scope; principles define how to make design decisions within that scope. Do not consolidate with `architecture.md` — architecture defines structural invariants (what must never be violated); principles define design values (what should guide choices when multiple valid options exist).
+
+---
+
+### `project-information/log.md` — `$A_SOCIETY_LOG`
+
+**Why it exists:** Without a project log, the Owner must reconstruct current state at every session start by scanning record folders, todo files, and backward pass findings. The log surfaces current status, recently completed flows, and ordered next priorities in one read. It is the answer to "where did we leave off?" and "what should I work on next?"
+
+**What it owns:** Current project status label, the rolling window of completed flows (one Recent Focus, up to three Previous), the ordered next priorities list with scope tags and source references, and the archive of older completed entries.
+
+**What breaks without it:** The Owner reconstructs state from scattered artifacts every session — slow, error-prone, and inconsistent. Next priorities buried in backward pass findings are easy to miss or re-discover as new.
+
+**Who reads it:** The Owner loads it at every session start. The Curator loads it at the start of maintenance sessions. Not universal required reading for all roles.
+
+**Do not consolidate with:** `project-information/vision.md` — the vision describes what A-Society is and its strategic direction; the log describes current execution state and next concrete steps. Do not consolidate with `a-docs/records/` — records contain the full artifact history of completed flows; the log is a current-state summary for orientation.
 
 ---
 

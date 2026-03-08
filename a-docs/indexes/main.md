@@ -16,6 +16,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_VISION` | `/a-society/a-docs/project-information/vision.md` | A-Society project vision — the core bet, what the framework is, and direction for agents |
 | `$A_SOCIETY_STRUCTURE` | `/a-society/a-docs/project-information/structure.md` | A-Society folder structure — governing principle and placement rules for each folder |
 | `$A_SOCIETY_ARCHITECTURE` | `/a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
+| `$A_SOCIETY_LOG` | `/a-society/a-docs/project-information/log.md` | A-Society project log — current state and next priorities for agents orienting at session start |
 | `$A_SOCIETY_INDEX` | `/a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
 | `$GENERAL_FEEDBACK_CONSENT` | `/a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
 | `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `/a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
@@ -25,12 +26,12 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_STRUCTURE` | `/a-society/general/instructions/project-information/structure.md` | How to create a structure document for any project |
 | `$INSTRUCTION_INDEX` | `/a-society/general/instructions/indexes/main.md` | How to create a file path index for any project |
 | `$A_SOCIETY_AGENTS` | `/a-society/a-docs/agents.md` | A-Society agent orientation — entry point for all agents working on this project |
-| `$A_SOCIETY_AGENT_DOCS_GUIDE` | `/a-society/a-docs/agent-docs-guide.md` | Why each file in A-Society's agent-docs exists — required reading for the Curator |
+| `$A_SOCIETY_AGENT_DOCS_GUIDE` | `/a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's agent-docs exists — required reading for the Curator |
 | `$A_SOCIETY_OWNER_ROLE` | `/a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, responsibilities, and context loading |
 | `$A_SOCIETY_CURATOR_ROLE` | `/a-society/a-docs/roles/curator.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
-| `$INSTRUCTION_AGENT_DOCS_GUIDE` | `/a-society/general/instructions/agent-docs-guide.md` | How to create an agent-docs guide for any project |
+| `$INSTRUCTION_AGENT_DOCS_GUIDE` | `/a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_AGENTS` | `/a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `/a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
 | `$INSTRUCTION_ARCHITECTURE` | `/a-society/general/instructions/project-information/architecture.md` | How to create an architecture document for any project |

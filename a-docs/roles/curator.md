@@ -56,7 +56,7 @@ Before beginning any session as the A-Society Curator, read:
 
 Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, principles, index, agent-docs-guide. Ready as Curator."* If you cannot confirm all six, do not proceed.
+**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, principles, index, a-docs-guide. Ready as Curator."* If you cannot confirm all six, do not proceed.
 
 ---
 

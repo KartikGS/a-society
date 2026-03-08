@@ -83,12 +83,13 @@ Before beginning any session as the A-Society Owner, read:
 3. [`$A_SOCIETY_STRUCTURE`] — why each folder exists and what belongs where
 4. [`$A_SOCIETY_ARCHITECTURE`] — structural invariants that must never be violated
 5. [`$A_SOCIETY_PRINCIPLES`] — design principles that govern how the framework is extended
-6. [`$A_SOCIETY_INDEX`] — current file registry
-7. [`$A_SOCIETY_WORKFLOW`] — the full workflow map; the Owner is the only role that reads this
+6. [`$A_SOCIETY_LOG`] — current project state and next priorities
+7. [`$A_SOCIETY_INDEX`] — current file registry
+8. [`$A_SOCIETY_WORKFLOW`] — the full workflow map; the Owner is the only role that reads this
 
 Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, architecture, principles, index, workflow. Ready."* If you cannot confirm all seven, do not proceed.
+**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, architecture, principles, log, index, workflow. Ready."* If you cannot confirm all eight, do not proceed.
 
 ---
 

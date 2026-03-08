@@ -81,7 +81,7 @@ Example entry:
 
 Place this file at the root of the project folder, as a peer of `project-information/`, `roles/`, and `indexes/`. It is not a subfolder — it is a single document.
 
-Name it `agent-docs-guide.md`.
+Name it `a-docs-guide.md`.
 
 Register it in the project index as `$[PROJECT]_AGENT_DOCS_GUIDE`.
 
