@@ -86,10 +86,23 @@ When all three pass: draft the proposal with evidence from the observed project,
 
 ---
 
+## Version-Aware Migration
+
+The A-Society Curator's migration responsibility (restructuring agent-docs in any project to conform to current standards) requires version-aware behavior:
+
+1. Read the target project's `a-docs/a-society-version.md` to determine its recorded version (last row of Applied Updates, or baseline if none applied)
+2. Apply update reports from `$A_SOCIETY_UPDATES_DIR` in version order, from the project's recorded version to A-Society's current version (`$A_SOCIETY_VERSION`)
+3. After implementing each report, update the project's `a-docs/a-society-version.md` Applied Updates log
+4. Do not mark migration complete until the project's version record matches `$A_SOCIETY_VERSION`
+
+**If the project has no `a-society-version.md`** (initialized before versioning was introduced): create one at `a-docs/a-society-version.md` with baseline `v1.0`, leave Applied Updates empty, and apply reports from v1.0 forward. See `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` (via `$A_SOCIETY_PUBLIC_INDEX`) for the file format.
+
+---
+
 ## Handoff Output
 
 At each pause point, the Curator explicitly tells the human:
-1. Whether to resume an existing session or start a new one for the receiving role. Default: resume the existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
+1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
 

@@ -69,6 +69,17 @@ Example: `a-society/updates/2026-03-06-minimum-role-set.md`
 
 ---
 
+## Version Requirements
+
+Every update report must declare two version fields in the report header, before the Summary section:
+
+- **Framework Version:** The version A-Society is at *after* this update is applied (e.g., `v1.1`). Increment per the scheme in `$A_SOCIETY_VERSION`: MAJOR for Breaking changes, MINOR for Recommended or Optional.
+- **Previous Version:** The version A-Society was at *before* this update (e.g., `v1.0`). Curators of adopting projects use this field to determine their position in the update sequence — they apply all reports whose Previous Version ≥ their project's recorded version.
+
+The Curator updates `$A_SOCIETY_VERSION` as part of Phase 4 (Registration), at the same time the report is published. These two writes are a single atomic registration step.
+
+---
+
 ## Delivery
 
 How adopting projects discover update reports is an open problem. The distribution mechanism depends on how A-Society is deployed and how many projects are using it. Until a mechanism is defined:

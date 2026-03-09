@@ -76,9 +76,10 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 8. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
 9. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items.
 10. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files
-11. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
+11. `a-society-version.md` — read A-Society's current version from `$A_SOCIETY_VERSION` and create `a-docs/a-society-version.md` stamping the baseline version and initialization date. Use `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the format.
+12. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
 
-Before drafting documents 1–10, read the corresponding instruction by resolving `$INSTRUCTION_*` variables via `$A_SOCIETY_PUBLIC_INDEX`. Documents in steps 9–10 are initialized from `$GENERAL_IMPROVEMENT*` templates.
+Before drafting documents 1–11, read the corresponding instruction by resolving `$INSTRUCTION_*` variables via `$A_SOCIETY_PUBLIC_INDEX`. Documents in steps 9–10 are initialized from `$GENERAL_IMPROVEMENT*` templates.
 
 Write to populate, not to template. Agents who read these documents should find real answers, not placeholders.
 
@@ -123,7 +124,7 @@ After human approval:
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, and improvement/reports/template-findings.md
+- All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, improvement/reports/template-findings.md, and a-society-version.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The onboarding signal report outcome is explicit: either written with user consent, or declined by the user and recorded in the completion statement

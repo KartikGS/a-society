@@ -20,6 +20,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_INDEX` | `/a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
 | `$GENERAL_FEEDBACK_CONSENT` | `/a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
 | `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `/a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
+| `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `/a-society/general/instructions/a-society-version-record.md` | How to create and maintain an A-Society version record in any initialized project |
 | `$INSTRUCTION_CONSENT` | `/a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
 | `$INSTRUCTION_TOOLING` | `/a-society/general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `/a-society/general/instructions/project-information/vision.md` | How to create a vision document for any project |
@@ -66,6 +67,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_FEEDBACK_ONBOARDING` | `/a-society/feedback/onboarding/` | Initializer signal reports — filed after initialization runs with project consent |
 | `$A_SOCIETY_FEEDBACK_MIGRATION` | `/a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
 | `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `/a-society/feedback/curator-signal/` | Curator signals from adopting projects — mechanism TBD |
+| `$A_SOCIETY_VERSION` | `/a-society/VERSION.md` | A-Society's current framework version — single source of truth for the vMAJOR.MINOR version stamp |
 | `$A_SOCIETY_UPDATES_DIR` | `/a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `/a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |
 | `$A_SOCIETY_UPDATES_TEMPLATE` | `/a-society/a-docs/updates/template.md` | Framework update report template — structure for outbound change notifications to adopting projects |
