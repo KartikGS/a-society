@@ -34,6 +34,8 @@ The `owner-to-curator-brief.md` artifact must contain all mandatory fields from 
 
 A briefing missing the Agreed Change or Scope fields is malformed. The Curator must not begin drafting until those fields are present.
 
+A briefing cannot substitute for a Phase 2 decision artifact — pre-approval language in a briefing does not authorize implementation. The Curator must not begin implementation without an explicit `APPROVED` status in a Phase 2 decision artifact.
+
 ### Curator → Owner (Phases 1 and 4)
 The `curator-to-owner.md` artifact must contain all mandatory fields from `TEMPLATE-curator-to-owner.md`:
 - Subject / identifier
