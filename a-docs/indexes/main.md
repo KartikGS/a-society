@@ -80,5 +80,3 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_COMM_HANDOFF_PROTOCOL` | `/a-society/a-docs/communication/coordination/handoff-protocol.md` | Status vocabulary, handoff requirements, clarification rules, pre-replacement checks |
 | `$A_SOCIETY_COMM_FEEDBACK_PROTOCOL` | `/a-society/a-docs/communication/coordination/feedback-protocol.md` | What to do when a discrepancy or blocker is discovered in prior work |
 | `$A_SOCIETY_COMM_CONFLICT_RESOLUTION` | `/a-society/a-docs/communication/coordination/conflict-resolution.md` | Authority matrix, escalation path, human escalation threshold |
-| `$A_SOCIETY_TODO_GRAPH_WORKFLOW` | `/a-society/a-docs/todo/1-graph-workflow.md` | Graph-based workflow model requirement — single-thread assumption gap, direction decision, and open questions for implementation |
-| `$A_SOCIETY_TODO_OWNER_ENTRY_POINT` | `/a-society/a-docs/todo/2-owner-as-entry-point.md` | Owner as universal session entry point — workflow discovery, routing, and session entry protocol |

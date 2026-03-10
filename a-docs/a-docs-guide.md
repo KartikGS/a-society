@@ -84,7 +84,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `project-information/log.md` — `$A_SOCIETY_LOG`
 
-**Why it exists:** Without a project log, the Owner must reconstruct current state at every session start by scanning record folders, todo files, and backward pass findings. The log surfaces current status, recently completed flows, and ordered next priorities in one read. It is the answer to "where did we leave off?" and "what should I work on next?"
+**Why it exists:** Without a project log, the Owner must reconstruct current state at every session start by scanning record folders and backward pass findings. The log surfaces current status, recently completed flows, and ordered next priorities in one read. It is the answer to "where did we leave off?" and "what should I work on next?"
 
 **What it owns:** Current project status label, the rolling window of completed flows (one Recent Focus, up to three Previous), the ordered next priorities list with scope tags and source references, and the archive of older completed entries.
 
@@ -237,20 +237,6 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Reports are written free-form. Consuming Curators must infer structure. Migration guidance is inconsistently provided. The impact classification model is applied inconsistently.
 
 **Do not consolidate with:** `updates/protocol.md` — the protocol governs when and how to produce reports; the template is the artifact the report fills. Process document vs. format document.
-
----
-
-## `todo/`
-
-### `todo/1-graph-workflow.md` — `$A_SOCIETY_TODO_GRAPH_WORKFLOW`
-
-**Why it exists:** To record deferred requirements that are too large or complex to enter the standard workflow immediately. The todo folder holds detailed notes on direction decisions, open questions, and scope analysis for work items that have been decided but not yet scheduled for implementation.
-
-**What it owns:** Per-item files, each containing: the observation that triggered the requirement, the problem statement, the direction decision made by the human, open questions to resolve before implementation begins, and scope/impact analysis.
-
-**What breaks without it:** Deferred direction decisions exist only in conversation history. When the human or Owner returns to the item in a future session, the rationale, open questions, and scope analysis must be reconstructed from memory.
-
-**Do not consolidate with:** `records/` — records hold all flow artifacts including backward pass findings (backward-looking); todo items are forward-looking (what has been decided but not yet entered a flow). Do not consolidate with `workflow/main.md` — the workflow describes how active work moves through phases; the todo folder holds work that has not yet entered Phase 1.
 
 ---
 
