@@ -33,6 +33,8 @@ Within each record folder, artifacts are named with a zero-padded two-digit sequ
 
 If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `04-curator-to-owner.md`), the Owner re-decides at `05-owner-to-curator.md`, and backward pass findings shift to `06-` and `07-`. The sequence continues as long as the flow requires.
 
+If a flow includes an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence. Example: main flow closes at `03-owner-to-curator.md`; update report submission takes `04-curator-to-owner.md` and Owner decision takes `05-owner-to-curator.md`; backward-pass findings then start at `06-`.
+
 ---
 
 ## What Belongs in a Record

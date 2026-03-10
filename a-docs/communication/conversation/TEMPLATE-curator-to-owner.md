@@ -41,6 +41,14 @@
 
 ---
 
+## Implementation Status *(Update Report Submissions only — omit for Proposals and Maintenance Changes)*
+
+**Implementation complete:** [Yes / No — if No, state what remains]
+**Files changed:** [List the files modified during implementation, using `$VAR` references where registered. If implementation is not yet complete, list files expected to change.]
+**Publication condition outstanding:** [Yes / No — if Yes, state what condition and what is blocking]
+
+---
+
 ## Owner Confirmation Required
 
 The Owner must respond in `owner-to-curator.md` with one of:

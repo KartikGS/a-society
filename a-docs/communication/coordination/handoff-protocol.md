@@ -44,6 +44,7 @@ The `curator-to-owner.md` artifact must contain all mandatory fields from `TEMPL
 - Where observed
 - Target location (using `$VAR` references)
 - Draft content — complete enough for the Owner to evaluate quality and correctness
+- **Implementation Status** *(Update Report Submissions only)* — whether implementation is complete, which files were changed, and whether any publication condition remains outstanding
 
 A submission missing any mandatory field is malformed. The Owner must not issue a decision on a malformed submission — return it as `REVISE` with the missing fields named.
 
@@ -79,6 +80,14 @@ Clarification rounds are permitted before the Owner issues a decision. Rules:
 2. The Owner may request clarification on any field of the submission in the session — not by issuing a premature REVISE decision.
 3. Clarification that changes the substance of the proposal must be reflected in an updated `curator-to-owner.md` before the Owner issues a final decision.
 4. Clarification that only confirms intent (no substantive change) does not require an artifact update.
+
+---
+
+## Within-Flow Additional Submissions
+
+When a flow requires an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — the additional submission takes the next available sequence slot in the record folder, **before** backward-pass findings.
+
+Backward-pass findings always occupy the final positions in the sequence. The standard positions (`04-curator-findings.md`, `05-owner-findings.md`) shift forward to accommodate any additional submissions. This is a specific instance of the general rule in `$A_SOCIETY_RECORDS`: "the sequence continues as long as the flow requires."
 
 ---
 

@@ -89,6 +89,18 @@ How adopting projects discover update reports is an open problem. The distributi
 
 ---
 
+## Submission Requirements
+
+When the Curator submits an update report draft to the Owner for review, the submission artifact (`curator-to-owner.md`) must declare:
+
+1. **Implementation status** — whether the underlying implementation (Phases 3 and 4) is complete or still in progress.
+2. **Files changed** — a list of files modified during implementation, using `$VAR` references where registered.
+3. **Publication condition** — whether any condition for publication remains outstanding (e.g., version increment pending, delivery note incomplete), and if so, what is blocking.
+
+The Owner reviews the report against these declared statuses. A submission that omits implementation status is malformed — the Owner should return it as `REVISE` with this field named.
+
+---
+
 ## Template
 
 See `$A_SOCIETY_UPDATES_TEMPLATE`.
