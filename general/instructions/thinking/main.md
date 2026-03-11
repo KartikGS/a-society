@@ -110,9 +110,8 @@ Add all three files to the project's file path index before referencing them any
 
 ## When to Create This Folder
 
-Create a `thinking/` folder when:
-- The project has more than one agent role
-- Agents have shown a tendency to repeat the same reasoning errors across sessions
-- The project's `agents.md` has grown a long "universal standards" section that deserves dedicated homes
+Create the `thinking/` folder for every project during initialization. It is a default initialization artifact — not a conditional one.
 
-A project with a single agent role and minimal documented process can defer this folder. The need becomes clear when drift starts appearing.
+The thinking folder's documents are the behavioral foundation layer, designed to be read by every agent regardless of role. The three general templates (`$GENERAL_THINKING`, `$GENERAL_THINKING_REASONING`, `$GENERAL_THINKING_KEEP_IN_MIND`) require minimal project-specific knowledge to populate. The cost of creating them at initialization is low; the cost of operating without them is reasoning drift and repeated errors across sessions.
+
+Do not defer this folder. Create it with every initialization.

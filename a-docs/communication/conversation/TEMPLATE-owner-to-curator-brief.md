@@ -4,6 +4,8 @@
 
 > **Authorization scope:** A briefing establishes scope and direction alignment only. It does not authorize implementation. A Phase 2 Owner decision artifact (`APPROVED` status) is required before the Curator begins implementation. A briefing may state that a direction is acceptable in principle; it must not state or imply that implementation may proceed without that decision.
 
+> **Update report classification:** If this change may trigger a framework update report, do not state an expected classification in this brief. Classification is Curator-determined post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Pre-specifying it creates framing the Curator must override.
+
 ---
 
 **Subject:** [Brief identifier for the work item — e.g., "Minimum role set — explicit declaration"]

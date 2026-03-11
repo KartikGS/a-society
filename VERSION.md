@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v3.0
+**Version:** v4.0
 
 ---
 
@@ -30,3 +30,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v2.0 | 2026-03-11 | 2026-03-11-feedback-consent-infrastructure.md — Feedback consent infrastructure wired |
 | v2.1 | 2026-03-11 | 2026-03-11-initializer-consent-registration.md — Initializer Phase 5 consent file index registration |
 | v3.0 | 2026-03-11 | 2026-03-11-agents-md-reading-order.md — agents.md reading order corrected (index second) and authority hierarchy specified |
+| v4.0 | 2026-03-11 | 2026-03-11-thinking-folder-required.md — thinking/ folder required at initialization |
