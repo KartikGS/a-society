@@ -56,6 +56,12 @@ Tags may be combined: `[M][LIB]`, `[S][MAINT]`, `[L][LIB][ADR]`.
 
 5. `[S][MAINT]` — **Self-consistency Curator practice** — Add a standing check to the Curator role document: when working in `general/instructions/`, verify the corresponding A-Society `a-docs/` artifact aligns, and vice versa. Surfaced from backward pass finding that `$INSTRUCTION_AGENTS` specified the wrong reading order while A-Society's own `agents.md` had the correct one. Source: `$A_SOCIETY_RECORDS/20260311-initializer-quality-hardening/`. *Curator-authority; no Owner briefing needed.*
 
+6. `[S]` — **Hardcoded paths in Initializer output** — Phase 4 self-review check ("Are all cross-references using `$VARIABLE_NAME`?") does not catch: (a) absolute paths in the roles table of agents.md — role file paths should use `$VAR` references, not hardcoded filesystem paths; (b) the absolute path used in the Phase 5 onboarding prompt — the agents.md pointer should be a relative path, not machine-specific. Needs explicit guidance in Phase 4 self-review covering role table paths, and a note in Phase 5 to use a relative path for the agents.md pointer. Batch-eligible with item 7. Source: promo-agency test run (second). *Requires Owner briefing.*
+
+7. `[S]` — **Onboarding signal report quality gaps** — Two gaps in how the report is produced: (1) Phase 4 invented design decisions are not prompted as adversity log entries — the Initializer surfaced these correctly in the Phase 4 review but did not carry them into the adversity log, which is exactly where they belong; (2) the patterns section has no guard against "None observed" entries that immediately contain an observation — the format allows self-contradictory entries. Either the report template or Initializer Phase 5 guidance needs strengthening on both points. Batch-eligible with item 6. Source: promo-agency test run (second). *Requires Owner briefing.*
+
+8. `[S]` — **Duplicate completion statement in Phase 5** — "Initialization complete. This project's `a-docs/` is live." is stated at the start of Phase 5 (step 1) and again at the end (Handoff Criteria). Both are specified in the protocol, but they stack as a confusing repeat for real users. The two statements serve different purposes (orientation vs. formal close) but should be consolidated or sequenced so the fuller Handoff Criteria statement appears only once, at the end. Source: promo-agency test run (second). *Requires Owner briefing.*
+
 ---
 
 ## Archive
