@@ -45,13 +45,13 @@ A table with three columns: Role name, file path, one-line primary focus. Every 
 - An agent operates in exactly one role per session. An agent may not assume a role or shift to a different role mid-session without explicit human instruction.
 
 ### 4. Required reading list (mandatory)
-An ordered list of documents every agent must read before starting work, regardless of role. Typically: this file → vision → structure → index → role file. The role file is listed last because it may specify additional readings of its own.
+An ordered list of documents every agent must read before starting work, regardless of role. Typically: this file → index → vision → structure → role file. **The index must come second** — before vision and structure — because those documents use `$VAR` references that cannot be resolved until the index is loaded. The role file is listed last because it may specify additional readings of its own.
 
 ### 5. Context confirmation statement (mandatory)
 The exact text an agent must output to confirm they have loaded required context. State it verbatim — agents copy it. Include a note that an agent which skips this step has not loaded context, even if they claim otherwise.
 
 ### 6. Authority and conflict resolution (mandatory)
-When two documents give conflicting guidance, which takes precedence? State the resolution order explicitly. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
+When two documents give conflicting guidance, which takes precedence? **The expected authority hierarchy is: project vision (highest precedence) → project structure → role document → agents.md.** State this order explicitly. Do not invert it — placing the role document above the vision or structure inverts the intended hierarchy. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
 
 ### 7. Project invariants (mandatory)
 Rules that apply across all roles and all sessions, regardless of task. These are the non-negotiable constraints of the project that no role document can override. Keep this list short — if it grows long, some invariants belong in role documents or the vision instead.
@@ -82,13 +82,13 @@ State the index location and explain `$VAR` convention in two to three sentences
 List every role. Include: role name, file path, one-line primary focus. Confirm that Owner and Curator are both present — a project missing either is not initialized. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
 
 **Step 4 — Write the required reading list.**
-Order matters. Start with `agents.md` itself (agents confirm they have read it), then vision, then structure, then index, then role file. If your project has additional universal required readings (e.g., a standards document every agent needs), insert them before the role file.
+Order matters. Start with `agents.md` itself (agents confirm they have read it), then the index, then vision, then structure, then role file. **The index must come second** — before vision and structure — so that `$VAR` references in those documents can be resolved as agents read them. If your project has additional universal required readings (e.g., a standards document every agent needs), insert them before the role file.
 
 **Step 5 — Write the context confirmation statement.**
 State it exactly as agents should output it. Use a blockquote so it is visually distinct. Include the enforcement note.
 
 **Step 6 — Write authority and conflict resolution.**
-List the documents in precedence order. Three to five items is typical. End with the escalation to human.
+List the documents in precedence order. **The expected hierarchy is: project vision → project structure → role document → agents.md.** Three to five items is typical. End with the escalation to human.
 
 **Step 7 — Write the invariants.**
 Three to seven short rules. These are the project-level constraints that apply to every agent, every session. If you find yourself writing more than seven, some belong in role documents.
