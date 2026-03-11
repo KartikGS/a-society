@@ -1,6 +1,6 @@
 # Owner → Curator: Decision
 
-> **Template** — do not modify this file. Create from this template into the active record folder at the next sequenced position (e.g., `03-owner-to-curator.md`).
+> **Template** — do not modify this file. When instantiating, omit this header. Create from this template into the active record folder at the next sequenced position (e.g., `03-owner-to-curator.md`).
 
 ---
 

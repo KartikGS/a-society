@@ -43,6 +43,12 @@ The Curator **does NOT**:
 
 ---
 
+## Standing Checks
+
+**Cross-layer consistency.** When working on a file in `a-society/general/instructions/`, verify that the corresponding A-Society `a-docs/` artifact aligns with any change made — and vice versa. When a change in one layer implies a change in the other, apply both in the same flow. Do not close a flow with known drift between the two layers.
+
+---
+
 ## Context Loading
 
 Before beginning any session as the A-Society Curator, read:
