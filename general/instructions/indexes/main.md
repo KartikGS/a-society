@@ -103,6 +103,29 @@ Look up the variable in the index to get the current path, then open the file. D
 
 ---
 
+## Variable Retirement
+
+When a registered variable is removed — because the file it pointed to has been deleted, merged into another document, or is otherwise no longer referenced — retire the variable using this sequence, in order:
+
+**Step 1 — Identify all consumers.**
+Grep all active documents for the `$VARIABLE_NAME` before touching anything. This produces the definitive list of references that must be resolved. Do not skip this step on the assumption that you know all the references.
+
+**Step 2 — Update or remove each reference.**
+For each consuming document: if the content was relocated rather than removed, replace the variable reference with the new variable name. If the content was removed entirely, remove the reference from the document. Do not leave dangling variable names in active documents.
+
+**Step 3 — Check guide-type documents.**
+If the project maintains a document that catalogs the purpose or rationale of its files (e.g., an agent-docs guide), check it for entries that reference the retired content. Remove or update those entries. These documents are not always caught by a variable-name grep because they may describe the file by purpose rather than by variable.
+
+**Step 4 — Remove the variable row from the index.**
+Only after all consumer references are resolved. Removing the row before updating consumers leaves documents with unresolvable variable names.
+
+**Step 5 — Post-removal scan.**
+Grep all active documents for both the `$VARIABLE` form *and* the prose concept name of the retired content (e.g., if `$TODO_FOLDER` pointed to a to-do folder, also grep for "to-do folder" and "todo folder"). A section removal and an index-row deletion are not a sufficient retirement — stale prose references survive both.
+
+This sequence is the inverse of Index-Before-Reference: where creation requires registration before reference, retirement requires reference cleanup before removal.
+
+---
+
 ## Examples Across Project Types
 
 ### Software project

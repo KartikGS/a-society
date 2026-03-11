@@ -192,7 +192,7 @@ The Curator does not write to `general/` without Owner approval. Every addition 
 Information lives in exactly one file. Cross-references use `$VARIABLE_NAME` from the relevant index. Hardcoded paths are not permitted in any document. When the same information would belong in two places, make one the source and the other a reference.
 
 **4. Index-Before-Reference Invariant**
-A file must be registered in the relevant index before any document references it by variable name. Register first, then write the reference.
+A file must be registered in the relevant index before any document references it by variable name. Register first, then write the reference. The inverse — retiring a variable — requires all consumer references to be resolved before the row is removed from the index; the Variable Retirement protocol in `$INSTRUCTION_INDEX` governs this sequence.
 
 ---
 
