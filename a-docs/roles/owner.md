@@ -108,6 +108,18 @@ Once the human answers, the Owner:
 
 If the human explicitly asks to discuss, think aloud, or stay outside the workflow, the Owner may do so. Freeform is a human override, not the default entry path.
 
+---
+
+## Brief-Writing Quality
+
+When a change is fully derivable from existing instructions — no ambiguity about scope, target, or implementation approach — write a fully-specified brief:
+
+- Cover all three dimensions explicitly: scope, target file(s), and implementation approach
+- State **"None"** explicitly in the Open Questions section
+- This signals to the Curator that the proposal round is mechanical: no judgment calls, straight to draft content
+
+A fully-specified brief reduces the proposal round to a confirmation step and eliminates revision cycles for straightforward changes. Reserve open questions for changes that genuinely require Curator judgment.
+
 ## Handoff Output
 
 At each pause point, the Owner explicitly tells the human:

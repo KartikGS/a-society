@@ -34,6 +34,16 @@
 
 ---
 
+## If APPROVED — Follow-Up Actions
+
+After implementation is complete:
+
+1. **Update report:** Assess whether this change requires a framework update report. Check trigger conditions in `$A_SOCIETY_UPDATES_PROTOCOL` — do not assume required or not required before checking.
+2. **Backward pass:** Backward pass findings are required from both roles unless the Owner explicitly waives them (e.g., for trivial cosmetic changes).
+3. **Version increment:** If an update report is produced, version increment is handled by the Curator as part of Phase 4 registration.
+
+---
+
 ## Curator Confirmation Required
 
 The Curator must acknowledge this decision before acting:

@@ -25,6 +25,10 @@
 
 ---
 
+> **Responsibility transfer note:** If this brief moves a responsibility from one role to another, list here any instruction that currently names the prior owner as responsible. This converts a post-proposal staleness discovery into an in-scope item from the start.
+
+---
+
 ## Likely Target
 
 [Where the change likely belongs — file path(s) or folder(s). Use `$VARIABLE_NAME` references. This is a starting point for the Curator, not a binding constraint — the Curator should verify placement against `$A_SOCIETY_STRUCTURE` during proposal formulation.]
@@ -33,7 +37,7 @@
 
 ## Open Questions for the Curator
 
-[Things the Curator should research or decide during proposal formulation. If none, state "None — the scope and target are clear."]
+[Things the Curator should research or decide during proposal formulation. If none, state "None" explicitly — this tells the Curator that no judgment calls are required and the proposal round is mechanical, not that questions were forgotten.]
 
 ---
 

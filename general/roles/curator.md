@@ -68,6 +68,8 @@ Not every practice that works in one project belongs in `a-society/general/`. Be
 
 When a pattern passes all three: draft the proposal, note the evidence from this project, and submit to the Owner for review.
 
+After submitting, independently of whether the Owner approves the proposal, check `a-docs/feedback/curator-signal/consent.md` (see `$INSTRUCTION_CONSENT`). If `Consented: Yes`, file a curator-signal report using `$GENERAL_FEEDBACK_CURATOR_SIGNAL_TEMPLATE` at `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL/[project]-[YYYY-MM-DD].md`. The report captures observations regardless of approval outcome. If consent is absent or `No`, note "Curator-signal feedback skipped — consent not recorded" and continue.
+
 ---
 
 ## Version-Aware Migration
@@ -79,6 +81,7 @@ When performing migration tasks — bringing a project's agent-docs into conform
 3. Apply update reports sequentially from the project's recorded version to A-Society's current version (`$A_SOCIETY_VERSION`)
 4. After implementing each report, add a row to the project's `a-docs/a-society-version.md` Applied Updates log
 5. Do not mark migration complete until the project's recorded version matches `$A_SOCIETY_VERSION`
+6. After marking migration complete, check `a-docs/feedback/migration/consent.md` (see `$INSTRUCTION_CONSENT` for the consent check procedure). If `Consented: Yes`, generate a migration feedback report using `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` and file it at `$A_SOCIETY_FEEDBACK_MIGRATION/[project]-[update-report-date].md`. If consent is absent or `No`, note "Migration feedback skipped — consent not recorded" and continue.
 
 **If the project has no `a-society-version.md`** (initialized before versioning was introduced): create one, set the baseline to `v1.0`, leave Applied Updates empty, and apply reports from v1.0 forward. See `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the file format.
 

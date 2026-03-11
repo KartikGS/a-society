@@ -19,8 +19,8 @@ Consent files are created when a feedback-producing agent is first set up for th
 | Feedback type | Created by | When |
 |---|---|---|
 | `onboarding-signal` | Initializer | During initialization (Phase 5), before closing |
-| `migration` | Owner Agent | When the Curator role is established or the first update report is received |
-| `curator-signal` | Owner Agent | When the Curator role is established |
+| `migration` | Initializer | During initialization (Phase 5), if a Curator role was created |
+| `curator-signal` | Initializer | During initialization (Phase 5), if a Curator role was created |
 
 Do not create consent files for feedback types that are not yet active in the project.
 

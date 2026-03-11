@@ -32,7 +32,7 @@ This is a one-time role. It ends when the human approves the `a-docs/`. Ongoing 
 - **Read before asking.** Exhaust what the project's files can tell you before asking the human anything. Questions that the README, existing docs, or folder structure already answer are wasted questions.
 - **Batch questions.** Collect all ambiguities, then ask them in a single round. Do not ask one question at a time across multiple exchanges.
 - **Do not invent.** If a detail cannot be inferred and the human has not confirmed it, do not write it as fact. Leave a `[NEEDS CLARIFICATION]` marker or ask.
-- **Do not modify the target project's existing files.** The Initializer writes to exactly two locations: the target project's `a-docs/`, and `a-society/onboarding_signal/` for the signal report. Nothing else is writable.
+- **Do not modify the target project's existing files.** The Initializer writes to exactly two locations: the target project's `a-docs/`, and `$A_SOCIETY_FEEDBACK_ONBOARDING` for the signal report. Nothing else is writable.
 - **Do not end without approval.** The session is not complete until the human has reviewed the `a-docs/` and confirmed they are satisfied.
 
 ---
@@ -93,7 +93,7 @@ Fix what you find, then present the completed `a-docs/` to the human. State what
 
 Iterate on feedback. When the human confirms approval, proceed to Phase 5.
 
-### Phase 5 — Completion, Onboarding, and Signal Report Consent
+### Phase 5 — Completion, Onboarding, and Feedback Consent
 After human approval:
 
 1. State completion clearly:
@@ -105,18 +105,29 @@ After human approval:
    > 'You are an Owner agent for [PROJECT_NAME]. Read [PATH_TO_AGENTS_MD].'
    > The Owner agent will orient itself and help you decide what to work on first."
 
-3. Request informed consent for onboarding signal reporting:
-   - Briefly explain the report's purpose: improving the A-Society framework using initialization feedback.
-   - Ask permission before writing any report.
+3. Feedback Consent
 
-4. If permission is granted:
-   - Generate the onboarding signal report using `$ONBOARDING_SIGNAL_TEMPLATE`.
-   - Write it to the onboarding signal directory using the existing `[project-name]-[YYYY-MM-DD].md` naming convention.
-   - Confirm that the report was produced.
+   Before beginning this step, read `$INSTRUCTION_CONSENT`.
 
-5. If permission is denied:
-   - Acknowledge and close without writing a report.
-   - State explicitly in completion messaging that the signal report was not produced.
+   **Onboarding signal** (always):
+   - Explain: "A-Society uses initialization data to improve the framework. A signal report summarizes how this initialization went and what could be clearer."
+   - Ask: "May A-Society write an onboarding signal report to `a-society/feedback/onboarding/`?"
+   - Create `a-docs/feedback/onboarding/consent.md` using `$GENERAL_FEEDBACK_CONSENT`, recording the answer.
+   - Add `$[PROJECT]_FEEDBACK_ONBOARDING_CONSENT` → `a-docs/feedback/onboarding/consent.md` to `indexes/main.md`.
+   - If `Consented: Yes`: generate the report using `$ONBOARDING_SIGNAL_TEMPLATE`, file it at `$A_SOCIETY_FEEDBACK_ONBOARDING/[project-name]-[YYYY-MM-DD].md`, confirm report produced.
+   - If `Consented: No`: state explicitly in completion messaging that the onboarding signal report was not produced.
+
+   **Migration feedback** *(only if a Curator role was created in Phase 3)*:
+   - Explain: "When A-Society releases updates to its framework, the Curator applies those changes to your project. A migration report captures how clearly that guidance worked, helping A-Society improve its update process."
+   - Ask: "May A-Society write a migration feedback report to `a-society/feedback/migration/` after each update is applied?"
+   - Create `a-docs/feedback/migration/consent.md` using `$GENERAL_FEEDBACK_CONSENT`, recording the answer.
+   - Add `$[PROJECT]_FEEDBACK_MIGRATION_CONSENT` → `a-docs/feedback/migration/consent.md` to `indexes/main.md`.
+
+   **Curator-signal feedback** *(only if a Curator role was created in Phase 3)*:
+   - Explain: "During backward improvement passes, your Curator identifies practices worth generalizing across projects. A curator-signal report captures those observations as structured data for A-Society's library."
+   - Ask: "May A-Society write a curator-signal report to `a-society/feedback/curator-signal/` after each backward pass?"
+   - Create `a-docs/feedback/curator-signal/consent.md` using `$GENERAL_FEEDBACK_CONSENT`, recording the answer.
+   - Add `$[PROJECT]_FEEDBACK_CURATOR_SIGNAL_CONSENT` → `a-docs/feedback/curator-signal/consent.md` to `indexes/main.md`.
 
 ---
 
@@ -127,7 +138,7 @@ The Initializer's job is done when all of the following are true:
 - All foundational documents exist and are populated with real content: vision, structure, log, index, role(s), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, improvement/reports/template-findings.md, and a-society-version.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
-- The onboarding signal report outcome is explicit: either written with user consent, or declined by the user and recorded in the completion statement
+- The feedback consent outcome is explicit for each applicable type: onboarding signal (always), migration feedback (if a Curator role was created), and curator-signal feedback (if a Curator role was created). Each consent is recorded in `a-docs/feedback/[type]/consent.md`. The onboarding signal report outcome is stated in the completion message.
 
 When done, state clearly: *"Initialization complete. This project's `a-docs/` is live. Ongoing maintenance belongs to the Curator role. Future additions require Owner review."*
 

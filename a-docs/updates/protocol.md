@@ -28,7 +28,7 @@ Do NOT publish for:
 
 Every change in an update report must be classified:
 
-**Breaking** — Adopting projects are currently operating with a gap or contradiction introduced by this change. The Curator must review their project's `a-docs/` and determine whether to adopt the change. Examples: a new mandatory section was added to a template; a protocol was corrected that projects may have implemented incorrectly.
+**Breaking** — Adopting projects are currently operating with a gap or contradiction introduced by this change. The Curator must review their project's `a-docs/` and determine whether to adopt the change. Examples: a new mandatory section was added to a template; a protocol was corrected that projects may have implemented incorrectly. This includes additive changes that make existing instantiations incomplete — for example, a new mandatory step added to a role template creates a gap in any project that instantiated the template before the addition.
 
 **Recommended** — The change improves clarity, completeness, or consistency. Projects would benefit from adopting it, but the absence does not create a gap or contradiction. The Curator should review and make a judgment call.
 
