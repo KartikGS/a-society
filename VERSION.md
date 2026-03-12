@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v4.1
+**Version:** v5.0
 
 ---
 
@@ -32,3 +32,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v3.0 | 2026-03-11 | 2026-03-11-agents-md-reading-order.md — agents.md reading order corrected (index second) and authority hierarchy specified |
 | v4.0 | 2026-03-11 | 2026-03-11-thinking-folder-required.md — thinking/ folder required at initialization |
 | v4.1 | 2026-03-11 | 2026-03-11-variable-retirement-protocol.md — Variable retirement protocol added to index instruction |
+| v5.0 | 2026-03-12 | 2026-03-12-handoff-copyable-inputs.md — Handoff Output item 4 (copyable session inputs) added to all role templates |

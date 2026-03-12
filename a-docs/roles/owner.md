@@ -131,6 +131,7 @@ At each pause point, the Owner explicitly tells the human:
 1. Whether to resume an existing session or start a new one. Default: resume the existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
+4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`
 
 For A-Society, this applies at minimum:
 - after writing `01-owner-to-curator-brief.md`
