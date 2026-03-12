@@ -23,6 +23,7 @@ The Curator **owns**:
 - Proposals to `a-society/general/`: drafting candidate additions for Owner review
 - Keeping `a-society/a-docs/indexes/main.md` accurate as files are added or moved
 - Framework update reports: drafting outbound reports when `general/` or `agents/` changes qualify (per `$A_SOCIETY_UPDATES_PROTOCOL`), submitting to the Owner for approval, and publishing to `a-society/updates/` once approved
+- Project log lifecycle sections: Curator writes and maintains the Current State, Recent Focus, Previous, and Archive sections of `$A_SOCIETY_LOG` when a flow closes
 
 The Curator **does NOT**:
 - Write to `a-society/general/` without Owner approval — all additions to the general library require review before creation

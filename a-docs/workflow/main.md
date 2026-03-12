@@ -43,6 +43,19 @@ The entry node. A proposed change is formulated with rationale.
 
 **Output:** Draft content and written rationale, submitted to the Owner as the next sequenced artifact in the active record folder (e.g., `02-curator-to-owner.md`), using `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER`.
 
+#### Backward-Pass Streamlined Entry
+
+A Curator may initiate directly at `01-curator-to-owner.md` (without a preceding Owner brief) when ALL of the following are true:
+
+1. The trigger is a backward pass finding from a completed flow
+2. The Owner's findings artifact in that flow explicitly names: the target file(s) AND the fix type (not just the problem)
+3. The Curator's findings are aligned — same or consistent root cause and direction
+4. No direction decision is involved — the change is clearly within Curator execution scope
+
+When all four conditions are met, the findings artifacts from the prior flow serve as the shared direction record. The Curator creates the record folder and initiates at `01-curator-to-owner.md`. The sequence from that point is unchanged.
+
+If any condition is not met, the standard path applies: Owner creates the record folder and writes `01-owner-to-curator-brief.md` first.
+
 ---
 
 ### Phase 2 — Review
