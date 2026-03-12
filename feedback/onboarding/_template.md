@@ -68,7 +68,7 @@ Changes the human requested during Phase 4 review. High-signal: these are places
 
 Patterns or structures encountered in this project that don't exist in `general/` but could generalize across project types:
 
-[List, or "None observed."]
+[List observations, one per entry. If none exist, write "None observed." Do not write both: "None observed" followed by an observation is a contradiction and must not appear in a filed report. Choose one — list observations, or state "None observed." — not both.]
 
 ---
 

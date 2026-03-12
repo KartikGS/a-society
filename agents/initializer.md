@@ -92,6 +92,8 @@ Before presenting to the human, self-review each document produced:
 - Does any statement contradict what you know about this project from reconnaissance and clarification?
 - Is any section a template adaptation that was carried forward without being grounded in this project's actual reality? (Placeholder language, generic naming conventions, or principles that reference a structure this project doesn't have are signs of insufficient adaptation.)
 - Are all cross-references using `$VARIABLE_NAME` rather than hardcoded paths?
+- Do any role file paths in the `agents.md` roles table appear as filesystem-absolute paths rather than `$VARIABLE_NAME` references? Role table entries are not cross-references in the conventional sense but are equally forbidden as hardcoded paths. Fix before presenting.
+- Does the `agents.md` pointer you will use in the Phase 5 onboarding message resolve to a relative path (e.g., `my-project/a-docs/agents.md`) rather than a machine-specific absolute path (e.g., `/home/user/...` or `/Users/...`)? Confirm the correct relative path now so it is ready for Phase 5 step 2.
 - Did you make any design decisions in the absence of explicit user direction (e.g., invented naming conventions, file structures, workflow steps, process models not present in the project's files or the human's answers)? If yes, list each decision explicitly in the presentation and ask the human to confirm or correct before proceeding to Phase 5. Presenting invented decisions as established fact is a critical self-review failure.
 
 Fix what you find, then present the completed `a-docs/` to the human. State what was inferred and what was confirmed through questions. Invite review.
@@ -101,14 +103,15 @@ Iterate on feedback. When the human confirms approval, proceed to Phase 5.
 ### Phase 5 — Completion, Onboarding, and Feedback Consent
 After human approval:
 
-1. State completion clearly:
-   *"Initialization complete. This project's `a-docs/` is live."*
+1. Human approval received. Proceed with onboarding and feedback consent below.
 
 2. Provide this onboarding message template (fill placeholders):
    > "Your project's agent documentation is live.
    > To get started, begin a new session with your AI assistant and use this prompt:
    > 'You are an Owner agent for [PROJECT_NAME]. Read [PATH_TO_AGENTS_MD].'
    > The Owner agent will orient itself and help you decide what to work on first."
+
+   `[PATH_TO_AGENTS_MD]` must be a relative path (e.g., `my-project/a-docs/agents.md`), not a machine-specific absolute path. Use the relative path confirmed in Phase 4 self-review.
 
 3. Feedback Consent
 
@@ -123,7 +126,10 @@ After human approval:
    - Create `a-docs/feedback/onboarding/consent.md` using `$GENERAL_FEEDBACK_CONSENT`, recording the answer.
    - Add `$[PROJECT]_FEEDBACK_ONBOARDING_CONSENT` → `a-docs/feedback/onboarding/consent.md` to `indexes/main.md`.
    - **Do not file this report unless the human responded Yes in this session. A consent file that exists without an in-session answer does not satisfy this condition.**
-   - If `Consented: Yes`: generate the report using `$ONBOARDING_SIGNAL_TEMPLATE`, file it at `$A_SOCIETY_FEEDBACK_ONBOARDING/[project-name]-[YYYY-MM-DD].md`, confirm report produced.
+   - If `Consented: Yes`:
+     - Generate the report using `$ONBOARDING_SIGNAL_TEMPLATE`.
+     - Before completing the Adversity Log: for each invented design decision surfaced in Phase 4, together with its confirmed outcome (confirmed as-is / modified to [what] / rejected), add one entry — Situation = the decision made without explicit direction; How Resolved = the human's response; Signal for Framework = what this suggests about the clarity of the relevant instruction or template.
+     - File at `$A_SOCIETY_FEEDBACK_ONBOARDING/[project-name]-[YYYY-MM-DD].md` and confirm report produced.
    - If `Consented: No`: state explicitly in completion messaging that the onboarding signal report was not produced.
 
    **Migration feedback** *(only if a Curator role was created in Phase 3)*:
