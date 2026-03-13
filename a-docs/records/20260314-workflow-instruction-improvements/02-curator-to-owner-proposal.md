@@ -1,3 +1,80 @@
+---
+
+**Subject:** Workflow instruction — nine targeted improvements
+**Status:** PENDING_REVIEW
+**Type:** Proposal
+**Date:** 2026-03-14
+
+---
+
+## Trigger
+
+Owner-directed briefing (`01-owner-to-curator-brief.md`) identified nine gaps or errors in `$INSTRUCTION_WORKFLOW` surfaced during a review session. The brief's subject line says "eight" improvements; the numbered list in the Agreed Change section contains nine items. The Curator treats all nine numbered items as in scope — the discrepancy appears to be a drafting artifact.
+
+---
+
+## What and Why
+
+`$INSTRUCTION_WORKFLOW` is a general instruction consumed by any project adopting the framework. The nine changes correct structural gaps (missing backward pass, missing parallel execution semantics, Owner not described as terminal node), framing errors (session criteria conflated, failure mode misdescribed), and consistency issues (mandatory/recommended classification incorrect, stale terminology, copyable handoff prompt absent). All changes apply equally to a software project, a writing project, and a research project — none are domain-specific.
+
+---
+
+## Open Questions — Curator Recommendations
+
+**Q1 — Owner-as-terminal for delegated-authority flows.**
+
+Recommendation: **(b) — delegated-authority flows are an explicit named exception** to the bookend principle.
+
+Rationale: The Owner-as-terminal principle derives from the need for oversight on flows that produce library-level changes or direction decisions. Delegated-authority flows (e.g., `[MAINT]` in A-Society) are precisely the flows where the project has pre-authorized a specific role to close without that oversight — because the scope has been bounded in advance to exclude direction and library decisions. Making such flows an explicit named exception preserves the principle without undermining the delegation mechanism. The instruction should require that any delegated-authority flow designation be declared and scoped in the workflow document itself, so it cannot silently expand to absorb decisions it was not authorized to handle.
+
+This is reflected in the draft content below: the Owner section states the bookend principle, then names delegated-authority as an explicit exception with a scope constraint.
+
+**Q2 — Placement of parallel fork / join.**
+
+Recommendation: **single-source the explanatory prose in Extended Patterns; add only one-line term definitions in the core graph model section.**
+
+Rationale: The core graph model section is definitional — it defines the vocabulary of the graph model. Adding "Parallel fork" and "Join" there as short definitional entries (one paragraph each, naming the concept and what it means structurally) is appropriate and low-maintenance. The Extended Patterns / Branching section is usage-oriented — it is where agents look when they need to apply a pattern. The full explanation of when and how to use parallel forks and joins belongs there. This avoids duplicating explanatory prose across two sections while still making the terms findable in the definitional layer. The draft content below follows this approach.
+
+---
+
+## Where Observed
+
+A-Society — internal. The gaps were identified during a review session of the framework's own instruction library.
+
+---
+
+## Target Location
+
+`$INSTRUCTION_WORKFLOW` — `/a-society/general/instructions/workflow/main.md`
+
+---
+
+## Draft Content
+
+Full revised document follows. Changes are applied inline; unchanged sections are reproduced in full to show exact proposed state.
+
+---
+
+### Change summary by item
+
+| # | Change | Location in document |
+|---|---|---|
+| 1 | Add backward pass as section 6 (recommended) | "What Belongs in a Workflow Document"; "How to Write One" (new Step 7) |
+| 2 | Split session reuse into within-flow and at-flow-close rules | "Sessions and the Human Orchestrator" |
+| 3 | Add copyable artifact path and session-start prompt to transition behavior | "Sessions and the Human Orchestrator"; "How to Write One" Step 6 |
+| 4 | Rename "The Owner as Session Entry Point" | Section title (combined with item 9 below) |
+| 5 | Session model mandatory for two or more roles | Section 5 heading; Step 6; end-of-section rule |
+| 6 | Add parallel fork and join — definitions in graph model; usage in Extended Patterns branching | "The Workflow as a Graph"; "Extended Workflow Patterns / Branching" |
+| 7 | Replace "phase sequence" → "workflow"; fix "Graphs run independently" | "Extended Workflow Patterns / Multiple instances"; "Extended Workflow Patterns / Multiple distinct workflows" |
+| 8 | Rewrite "Merged with role documents" failure mode | "What Makes a Workflow Document Fail" |
+| 9 | Add Owner-as-terminal principle, backward pass ordering, delegated-authority exception | Renamed Owner section; "Sessions and the Human Orchestrator" session model note |
+
+---
+
+### Full revised document
+
+---
+
 # How to Create a Workflow Document
 
 ## What Is a Workflow Document?
@@ -41,9 +118,9 @@ A workflow is a **graph**: a named set of nodes connected by edges.
 - **Unidirectional** (default) — work passes in one direction only. The downstream node completes its phase and the edge fires to the next node.
 - **Bidirectional** — the downstream node may send a message upstream and receive a response without exiting the current phase. The downstream node enters a waiting state (not complete) until the response arrives, then resumes. Designate an edge as bidirectional when the downstream node may need clarification from the upstream node during execution — information it cannot resolve independently and that the upstream node must provide.
 
-**Parallel fork** — a node may have multiple outgoing edges that fire simultaneously, producing parallel execution branches. Use when work can proceed concurrently across different roles or instances before converging downstream.
+**Parallel fork** — a node may have multiple outgoing edges that fire simultaneously, producing parallel execution branches. Use when work can proceed concurrently across different roles or instances before converging downstream. [Change 6]
 
-**Join** — a node that requires inputs from multiple incoming edges before it can proceed. The node waits until all required inputs have arrived. Partial arrival is a waiting state, not a transition. Join nodes are the downstream convergence point for parallel forks.
+**Join** — a node that requires inputs from multiple incoming edges before it can proceed. The node waits until all required inputs have arrived. Partial arrival is a waiting state, not a transition. Join nodes are the downstream convergence point for parallel forks. [Change 6]
 
 **Graph** — the complete workflow definition: the named set of nodes and edges describing how work moves from entry to completion.
 
@@ -51,7 +128,7 @@ A workflow is a **graph**: a named set of nodes connected by edges.
 
 **Unit-of-work ID format:** `[short-slug]-[sequential-number]` (e.g., `acme-001`, `rebrand-003`). The slug is a human-readable label for the unit of work; the number disambiguates across time. The project defines its own slug vocabulary. In single-instance workflows, the unit-of-work ID is optional.
 
-The simplest workflow — a linear sequence of phases, running once at a time — is a linear graph with a single active instance. It is the default case. Most of what follows describes how to build that case. Extended patterns (concurrent instances, branching, multiple graphs) are described at the end of this document.
+The simplest workflow — a linear sequence of phases, running once at a time — is a linear graph with a single active instance. It is the default case. Most of what follows describes how to build that case. Extended patterns (concurrent instances, branching, parallel execution, multiple graphs) are described at the end of this document.
 
 ---
 
@@ -68,11 +145,11 @@ In the current operational model, agents do not persist memory between sessions.
 - **Within a session**, an agent has full context: its role, the work it has done, and the reasoning behind its decisions.
 - **Between sessions**, continuity lives in two places: the human's memory and the communication artifacts that carry state between roles.
 
-**Session reuse — within a flow:** resume existing sessions by default. When the workflow returns to a role that already has an active session, the human resumes that session rather than starting a new one. The agent retains its earlier context and reads any new artifacts to catch up on what happened while it was paused. A new session is warranted within a flow only when the context window is exhausted or the accumulated context would be more noise than signal.
+**Session reuse — within a flow:** resume existing sessions by default. When the workflow returns to a role that already has an active session, the human resumes that session rather than starting a new one. The agent retains its earlier context and reads any new artifacts to catch up on what happened while it was paused. A new session is warranted within a flow only when the context window is exhausted or the accumulated context would be more noise than signal. [Change 2]
 
-**Session reuse — at flow close:** when a flow completes, start fresh sessions for the next flow. The accumulated context from a completed flow is almost always noise for a new one — reasoning about a closed unit of work, artifacts that are no longer active, context that was relevant only to what just finished. The default at every new flow start is a fresh session for each role involved.
+**Session reuse — at flow close:** when a flow completes, start fresh sessions for the next flow. The accumulated context from a completed flow is almost always noise for a new one — reasoning about a closed unit of work, artifacts that are no longer active, context that was relevant only to what just finished. The default at every new flow start is a fresh session for each role involved. [Change 2]
 
-**Transition behavior:** When an agent finishes a phase and the next phase belongs to a different role, the agent should acknowledge the pause point and tell the human what to do next. At each pause point, the agent produces:
+**Transition behavior:** When an agent finishes a phase and the next phase belongs to a different role, the agent should acknowledge the pause point and tell the human what to do next. At each pause point, the agent produces: [Change 3]
 - A **copyable artifact path** — always. The next role's agent must be pointed at the right artifact.
 - A **copyable session-start prompt** — when a new session is required. Format: *"You are a [Role] agent for [Project Name]. Read [path to agents.md]."*
 
@@ -84,7 +161,7 @@ The agent knows it is talking to the human who will carry the work forward.
 
 ---
 
-## The Owner as Workflow Entry and Terminal Node
+## The Owner as Workflow Entry and Terminal Node [Changes 4 and 9]
 
 The **Owner** is both the universal entry point and the terminal node for every workflow.
 
@@ -92,14 +169,14 @@ The **Owner** is both the universal entry point and the terminal node for every 
 
 **Terminal:** every workflow surfaces back to the Owner on completion. The closing role in a workflow does not silently close — it hands the result to the Owner. The Owner acknowledges completion, logs it, and determines whether any follow-up is needed. This closed loop ensures the Owner is always aware of what has been finished.
 
-**Backward pass ordering:** the Owner, having received terminal confirmation, directs the backward pass. The backward pass starts with the role closest to implementation and moves back toward the Owner — each role reflects on its own phase in sequence. The Owner produces findings last, informed by the full arc from trigger to completion.
+**Backward pass ordering:** the Owner, having received terminal confirmation, directs the backward pass. The backward pass starts with the role closest to implementation and moves back toward the Owner — each role reflects on its own phase in sequence. The Owner produces findings last, informed by the full arc from trigger to completion. [Change 9]
 
 This means:
 - **Only the Owner reads the full workflow map.** Other agents receive well-formed input artifacts at their nodes — they see their node contract (input, work, output), not the entire graph.
 - **The Owner routes work into workflows.** When the user picks a workflow or describes a need, the Owner creates the trigger input and tells the human which session to switch to next.
 - **Freeform work is valid.** The Owner can engage in discussion, direction-setting, or exploratory thinking without entering any workflow. Not every session needs a workflow.
 
-**Exception: delegated-authority flows.** A project may designate certain flow types as delegated-authority — where a specific role has standing authority to close without Owner terminal confirmation. For these flows, that role serves as the terminal node. The scope of delegated-authority flows must be explicitly bounded in the workflow document itself: direction decisions, library-level additions, and structural changes may not fall within them. The Owner-as-terminal principle applies to all other flows.
+**Exception: delegated-authority flows.** A project may designate certain flow types as delegated-authority — where a specific role has standing authority to close without Owner terminal confirmation. For these flows, that role serves as the terminal node. The scope of delegated-authority flows must be explicitly bounded in the workflow document itself: direction decisions, library-level additions, and structural changes may not fall within them. The Owner-as-terminal principle applies to all other flows. [Change 9]
 
 Every workflow document should include a **one-line summary** suitable for the Owner to present at session start. This summary is how users discover what workflows are available without reading the full workflow document.
 
@@ -162,7 +239,7 @@ When does an agent stop and ask rather than proceed? Define explicit conditions:
 - Who receives the escalation?
 - What information must the escalation include?
 
-### 5. Session Model (mandatory for two or more roles)
+### 5. Session Model (mandatory for two or more roles) [Change 5]
 
 How are phases mapped to sessions? For multi-role workflows, describe:
 - Which roles run in which sessions
@@ -172,7 +249,7 @@ How are phases mapped to sessions? For multi-role workflows, describe:
 
 A session model makes the human's orchestration role visible and gives agents the information they need to guide the human at pause points. A session model is mandatory for any workflow with two or more roles. It is optional only for genuinely single-role workflows.
 
-### 6. Backward Pass (recommended)
+### 6. Backward Pass (recommended) [Change 1]
 
 What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own phase for what worked, what failed, and what should change. Findings re-enter the workflow as proposals for the next iteration.
 
@@ -237,10 +314,10 @@ What rules apply to all work in this project, regardless of phase? Write them as
 **Step 5 — Define escalation.**
 For each phase, describe what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note."
 
-**Step 6 — Describe the session model (mandatory for two or more roles).**
+**Step 6 — Describe the session model (mandatory for two or more roles).** [Changes 3 and 5]
 For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition — including a copyable artifact path (always) and a copyable session-start prompt when a new session is required. Define when sessions are resumed within a flow versus started fresh at flow close. Skip this step only for single-role workflows.
 
-**Step 7 — Define the backward pass (if warranted).**
+**Step 7 — Define the backward pass (if warranted).** [Change 1]
 If the workflow runs repeatedly: describe the backward pass — which roles participate, in what order, and where findings go. Reference `$INSTRUCTION_IMPROVEMENT` if the project has an improvement folder. Skip for one-time or experimental workflows.
 
 **Step 8 — Identify sub-documents.**
@@ -285,23 +362,23 @@ A workflow document that describes role responsibilities, vision, or tool choice
 
 The linear, single-instance workflow is the default case. When your project's needs grow beyond it:
 
-### Multiple instances of the same workflow
+### Multiple instances of the same workflow [Change 7]
 
 When the same workflow runs N times simultaneously — parallel client engagements, concurrent assignments, simultaneous studies — each run is a separate instance of the same graph. Define the unit-of-work ID slug vocabulary in the workflow document. Scope all handoff artifacts, status tokens, and pre-replacement checks to the instance via the unit-of-work ID. See `$INSTRUCTION_COMMUNICATION_CONVERSATION` for concurrent artifact naming.
 
 ### Branching
 
-**Conditional branching:** when a node has multiple possible outgoing edges, define the transition condition for each. At runtime, the condition determines which edge fires — one edge fires per decision. Converging branches — multiple incoming edges leading to the same downstream node — use the same mechanics: each edge has its own condition; the downstream node defines what input it accepts from any arriving edge.
+When a node has multiple possible outgoing edges: define the transition condition for each. At runtime, the condition determines which edge fires. Converging branches — multiple incoming edges leading to the same downstream node — use the same mechanics: each edge has its own condition; the downstream node defines what input it accepts from any arriving edge.
 
-**Parallel fork and join:** a parallel fork fires multiple outgoing edges simultaneously — work continues in parallel branches without waiting for the other branches to complete. A join node waits for all required incoming edges before proceeding — partial arrival is a waiting state, not a transition condition. Use parallel forks when independent work can run concurrently and must be synchronized before the workflow continues. Define at the join node exactly what constitutes "all required inputs."
+**Parallel fork and join** extend the branching model to concurrent execution. A parallel fork fires multiple outgoing edges simultaneously: work continues in parallel branches without waiting for the other branches to complete. A join node waits for all required incoming edges before proceeding — partial arrival is a waiting state, not a transition condition. Use parallel forks when independent work can run concurrently and must be synchronized before the workflow continues. Define at the join node exactly what constitutes "all required inputs." [Change 6]
 
-### Multiple distinct workflows
+### Multiple distinct workflows [Change 7]
 
 When the project has more than one workflow — a setup workflow and an ongoing execution workflow, for example — define each as a separate named graph with its own entry node and terminal node. Each workflow surfaces back to the Owner on completion; the Owner is the cross-workflow routing layer, deciding what to trigger next. Workflows do not hand off directly to each other.
 
 ### Cross-workflow handoffs
 
-When a terminal node in one graph hands off to an entry node in another: use the same edge mechanics as within a single graph. Define the artifact, the transition condition, and the receiving node's input contract. The edge crosses graph boundaries; the mechanics do not change. Cross-workflow handoffs surface to the Owner before the next workflow is triggered.
+When a terminal node in one graph hands off to an entry node in another: use the same edge mechanics as within a single graph. Define the artifact, the transition condition, and the receiving node's input contract. The edge crosses graph boundaries; the mechanics do not change. Cross-workflow handoffs surface to the Owner before the next workflow is triggered. [Change 7]
 
 These patterns are not separate complexity tiers. They are all graph traversal with decision points at edges. A project that starts with a linear graph can extend to any of these patterns without changing the underlying model — only the graph definition expands.
 
@@ -311,8 +388,23 @@ These patterns are not separate complexity tiers. They are all graph traversal w
 
 **Too abstract.** A workflow that says "work proceeds through phases" without naming the phases or the handoffs between them gives agents nothing to act on.
 
-**Merged with role documents.** When *process rules* — invariants, transition conditions, escalation paths — are embedded in role documents, they diverge. Each role file holds its own version of the process, updated independently. The assembled process can only be reconstructed by reading every role document in sequence — and even then, the versions may conflict. Role documents should reference the workflow document for process rules; they should not contain them.
+**Merged with role documents.** When *process rules* — invariants, transition conditions, escalation paths — are embedded in role documents, they diverge. Each role file holds its own version of the process, updated independently. The assembled process can only be reconstructed by reading every role document in sequence — and even then, the versions may conflict. Role documents should reference the workflow document for process rules; they should not contain them. [Change 8]
 
 **No invariants.** Without explicit invariants, every edge case becomes a negotiation. The first time a constraint is challenged, the team discovers they never actually agreed on it.
 
 **Updated reactively.** Workflow documents should be updated when the process is deliberately changed — not after every CR that exposed a gap. Reactive updates produce a patchwork of special cases rather than a coherent process.
+
+---
+
+*End of draft content.*
+
+---
+
+## Owner Confirmation Required
+
+The Owner must respond in `03-owner-to-curator.md` with one of:
+- **APPROVED** — with any implementation constraints
+- **REVISE** — with specific changes required before resubmission
+- **REJECTED** — with rationale
+
+The Curator does not begin implementation until `03-owner-to-curator.md` shows APPROVED status.
