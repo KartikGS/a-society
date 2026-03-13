@@ -36,7 +36,10 @@ A workflow is a **graph**: a named set of nodes connected by edges.
 - **Work** — what the agent does (defined by its role and task instructions)
 - **Output** — what the agent produces (the work product departing on the outgoing edge)
 
-**Edge** — a handoff between nodes. Every edge has a **transition condition**: the criterion that determines when work passes from one node to the next.
+**Edge** — a handoff between nodes. Every edge has a **transition condition**: the criterion that determines when work passes from one node to the next. Edges also have a **direction property**:
+
+- **Unidirectional** (default) — work passes in one direction only. The downstream node completes its phase and the edge fires to the next node.
+- **Bidirectional** — the downstream node may send a message upstream and receive a response without exiting the current phase. The downstream node enters a waiting state (not complete) until the response arrives, then resumes. Designate an edge as bidirectional when the downstream node may need clarification from the upstream node during execution — information it cannot resolve independently and that the upstream node must provide.
 
 **Graph** — the complete workflow definition: the named set of nodes and edges describing how work moves from entry to completion.
 
@@ -64,6 +67,8 @@ In the current operational model, agents do not persist memory between sessions.
 **Session reuse** is the default. When the workflow returns to a role that already has an active session, the human resumes that session rather than starting a new one. The agent retains its earlier context and reads any new artifacts to catch up on what happened while it was paused. A new session is warranted only when the context window is exhausted or the previous session's accumulated context would be more noise than signal.
 
 **Transition behavior:** When an agent finishes a phase and the next phase belongs to a different role, the agent should acknowledge the pause point and tell the human what to do next — which session to switch to, which artifact to point the next agent at, and what to expect. The agent knows it is talking to the human who will carry the work forward.
+
+**Bidirectional mid-phase exchanges** are a special case. When a downstream node invokes a back-channel, the human switches to the upstream session, delivers the question artifact, retrieves the response, and resumes the downstream session from its waiting state. Unlike a normal phase transition, the downstream session is paused — not complete. The downstream agent should tell the human its waiting state, what question was sent, and what it needs to continue.
 
 **Future automation:** By explicitly modeling the human's orchestration role, the framework creates a specification for what automation would need to replace: session lifecycle management, artifact routing, role switching, and continuity maintenance. A project that automates orchestration replaces the human at this layer — the graph structure, node contracts, and edge conditions remain unchanged.
 
@@ -114,6 +119,12 @@ How does work pass from one node to the next? Each handoff is an edge in the wor
 - What does the receiver confirm before starting?
 
 Handoff protocols prevent work from disappearing between roles. A node without a defined outgoing edge is a gap where things go silent.
+
+**For bidirectional edges**, define additionally:
+- Under what condition the downstream node may invoke the back-channel — what constitutes a genuine blocker vs. something the downstream node should resolve independently
+- What artifact carries the question upstream and the response downstream
+- What the downstream node's state is while waiting (paused, not complete — distinct from a normal phase completion)
+- How the exchange terminates and the downstream node resumes
 
 **For multi-role projects:** the workflow document carries a lightweight summary of handoffs only — who passes to whom and what the receiver checks. Artifact formats, status models, and detailed coordination protocols belong in a communication folder, not here. Embedding protocol detail in the workflow document conflates process sequencing with coordination rules and makes both harder to maintain. See `$INSTRUCTION_COMMUNICATION`. Create the communication folder alongside the workflow document for any project with two or more roles.
 
