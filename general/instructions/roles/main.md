@@ -2,7 +2,7 @@
 
 ## What Is a Role Document?
 
-A role document is a behavioral contract for a specific kind of contributor — human or agent. It defines what that contributor owns, what they are responsible for, what they must not do, and how they should handle situations not explicitly covered by other documents.
+A role document is a behavioral contract for an agent. It defines what that agent owns, what it is responsible for, what it must not do, and how it should handle situations not explicitly covered by other documents.
 
 It is not a job description. A job description lists tasks. A role document defines **decision authority** — who can say yes, who can say no, and who must be consulted. An agent that has read a role document should be able to operate within that role without asking "am I allowed to do this?" for every decision.
 
@@ -12,9 +12,9 @@ It is not a job description. A job description lists tasks. A role document defi
 
 Without explicit roles, two failure modes emerge:
 
-**Overreach:** An agent or collaborator does things outside their appropriate scope because no boundary was declared. A note-taker starts making editorial decisions. A reviewer starts rewriting content. The project loses coherence.
+**Overreach:** An agent does things outside its appropriate scope because no boundary was declared. A note-taker starts making editorial decisions. A reviewer starts rewriting content. The project loses coherence.
 
-**Paralysis:** An agent or collaborator stops at every ambiguous decision because they are not sure if they are authorized to proceed. They ask questions that should already be answered. Work slows.
+**Paralysis:** An agent stops at every ambiguous decision because it is not sure if it is authorized to proceed. It asks questions that should already be answered. Work slows.
 
 Role documents prevent both. They push authority to the right level, reduce unnecessary escalation, and make clear where escalation is genuinely required.
 

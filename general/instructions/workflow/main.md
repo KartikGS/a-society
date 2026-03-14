@@ -31,10 +31,11 @@ A workflow document converts implicit process knowledge into explicit, reference
 
 A workflow is a **graph**: a named set of nodes connected by edges.
 
-**Node** — an agent performing a task. Every node has a three-part contract:
+**Node** — an agent performing a task. Every node has a contract with the following fields:
 - **Input** — what the agent receives (the work product arriving on the incoming edge)
 - **Work** — what the agent does (defined by its role and task instructions)
 - **Output** — what the agent produces (the work product departing on the outgoing edge)
+- **Human-collaborative** *(when applicable)* — the nature of human contribution to this node. Presence of this field indicates the assigned agent acts as the human interface for this work; see the Human-Collaborative Phase Pattern in Section 1.
 
 **Edge** — a handoff between nodes. Every edge has a **transition condition**: the criterion that determines when work passes from one node to the next. Edges also have a **direction property**:
 
@@ -123,8 +124,23 @@ A workflow document for any project must cover these sections:
 
 What are the named stages that every unit of work passes through? Each phase is a node in the workflow graph. Every node must define:
 - **Input** — what arrives from the prior node (the entry condition for this phase)
-- **Owner** — which role runs this node
+- **Owner** — which role runs this node. The phase owner is always an agent role — never a human. Human involvement is encoded via the `Human-collaborative` field.
 - **Output** — what artifact or state this node produces (the exit condition; what fires the outgoing edge)
+- **Human-collaborative** *(when applicable)* — the nature of human contribution to this phase. Presence of this field indicates the assigned agent acts as the human interface for this work; see the Human-Collaborative Phase Pattern below.
+
+#### Human-Collaborative Phase Pattern
+
+When a phase carries a `Human-collaborative` field, the agent assigned to that phase acts as the interface between the human and the workflow. The agent has three obligations:
+
+1. **Surface context** — present the relevant context to the human so they can contribute effectively.
+2. **Elicit contribution** — draw out the decisions, direction, or work the human provides.
+3. **Author the artifact** — write the outgoing handoff artifact, encoding the human's contribution in the correct format.
+
+The agent authors every artifact regardless of how much of the underlying work or decision came from the human. This preserves workflow structural integrity: every artifact is agent-authored, every handoff format is correct, and no artifact quality depends on the human's willingness or ability to produce structured output.
+
+**Value format:** The `Human-collaborative` field value is a brief phrase naming the nature of the human's contribution — `direction`, `decision`, `content`, `approval`, or similar. A descriptive value tells the agent what to surface and elicit.
+
+**Structural rule:** Phase 1 of every workflow carries the `Human-collaborative` field. The direction source is always the human — the human identifies the need, direction change, or trigger that initiates the flow. Phase 1's assigned agent (typically the Owner) is always the interface for this initiation. No other phases carry this field by default; add it to a phase only when the human must actively contribute content, decisions, or direction within that phase.
 
 Typical phases in a project with multi-role execution: intake → planning → implementation → verification → closure. The names and count will vary by project type.
 
@@ -222,7 +238,7 @@ Do not create sub-folders preemptively. If a project has no requirements artifac
 Give the workflow a name. Decide whether it runs once at a time (single-instance) or may have multiple traversals running simultaneously (multi-instance). If multi-instance, define the unit-of-work ID slug vocabulary the project will use.
 
 **Step 2 — Name the phases (nodes).**
-List every stage that a unit of work passes through. For each node: name it, assign an owner role, define its input (what arrives), and define its output (what it produces). If a stage has no owner, it is not a stage — it is a gap.
+List every stage that a unit of work passes through. For each node: name it, assign an owner role, define its input (what arrives), define its output (what it produces), and note whether the phase requires human collaboration (see the Human-Collaborative Phase Pattern in Section 1). Phase 1 always carries the `Human-collaborative` field as a structural rule. If a stage has no owner, it is not a stage — it is a gap.
 
 **Step 3 — Define handoffs (edges).**
 For each transition between nodes, define: the transition condition (when does the edge fire), the artifact that carries the handoff, what it must contain, and what the receiving role checks before acting.

@@ -34,7 +34,8 @@ The entry node. A proposed change is formulated with rationale.
 
 **Input:** A stated need from a trigger source. For Curator-led proposals, the Owner creates a record folder (see `$A_SOCIETY_RECORDS`) and writes `01-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`. For human-directed changes, the human provides the direction directly. The briefing establishes scope and direction alignment only — a Phase 2 decision artifact is a separate, subsequent step and may not be substituted by the briefing.
 
-**Owner:** Curator (for `general/` additions and maintenance); Human (for direction changes).
+**Owner:** Curator (for `general/` additions and maintenance); Owner (for direction changes).
+**Human-collaborative:** direction — the human provides the need, direction change, or feedback signal that initiates the flow.
 
 **Work:** Formulate a proposed change. For `general/` additions, the proposal must include:
 1. What the artifact is and what problem it solves

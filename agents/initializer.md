@@ -82,7 +82,7 @@ Build the `a-docs/` folder and populate all foundational documents in this order
 7. `a-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`
 8. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
 9. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
-10. `improvement/main.md` and `improvement/protocol.md` — from `$GENERAL_IMPROVEMENT` and `$GENERAL_IMPROVEMENT_PROTOCOL`; adapt the protocol's role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items.
+10. `improvement/main.md` — from `$GENERAL_IMPROVEMENT`; adapt role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items.
 11. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files
 12. `a-society-version.md` — read A-Society's current version from `$A_SOCIETY_VERSION` and create `a-docs/a-society-version.md` stamping the baseline version and initialization date. Use `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the format.
 13. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
@@ -156,7 +156,7 @@ After human approval:
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, log, role(s), thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/protocol.md, improvement/reports/template-findings.md, and a-society-version.md
+- All foundational documents exist and are populated with real content: vision, structure, log, role(s), thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/reports/template-findings.md, and a-society-version.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The feedback consent outcome is explicit for each applicable type: onboarding signal (always), migration feedback (if a Curator role was created), and curator-signal feedback (if a Curator role was created). Each consent is recorded in `a-docs/feedback/[type]/consent.md`. **Consent is verified only when the human's Yes or No was received and recorded in this session — the existence of a consent file does not constitute verified consent.** The onboarding signal report outcome is stated in the completion message.
