@@ -121,6 +121,8 @@ When a change is fully derivable from existing instructions — no ambiguity abo
 
 A fully-specified brief reduces the proposal round to a confirmation step and eliminates revision cycles for straightforward changes. Reserve open questions for changes that genuinely require Curator judgment.
 
+**Output-format changes are not mechanical.** Any change that introduces a new required field, a new template section, or a new required structural element in the output carries design decisions about what the output should look like — those decisions belong in the brief, not left to the Curator. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
+
 **Do not pre-specify update report classification.** If the change described in a brief may trigger a framework update report, do not state an expected impact classification. Classification is determined by the Curator post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Stating a classification in the brief creates framing the Curator must override — which adds a correction round rather than eliminating one.
 
 The same applies to approval rationale for main decisions: do not comment on expected classification when approving a content change. The Follow-Up Actions section directing the Curator to check `$A_SOCIETY_UPDATES_PROTOCOL` is the correct mechanism — no anticipation needed.

@@ -60,7 +60,11 @@ Regardless of starting state, determine what you can about:
 Log what is clear and what is ambiguous. Move to Phase 2 only if ambiguities remain.
 
 ### Phase 2 — Clarification
-Present all ambiguities to the human in a single message. Frame each question specifically — not "tell me about your project" but "I can see this is a [type] project. I could not determine [X] and [Y] from the existing files. Please clarify."
+Present all ambiguities to the human in a single message. Frame each question as a confirmation of an inference, not an open-ended request for description — not "describe your folder structure" but "Based on what I read, I inferred [X] — is that correct, or should I revise it?" Where the set of reasonable answers is bounded, offer options rather than inviting free-form prose.
+
+For each ambiguity: state what you inferred (or that nothing could be inferred), then ask the human to confirm, correct, or select. Do not ask the human to describe what the project's files already showed.
+
+Always include a tooling question. If tools were identifiable during reconnaissance, present them for confirmation: "I observed [X] in use for [purpose]. What does this project use for task management, version control, and communication — confirm or correct?" If tools were not identifiable, offer common options for each category.
 
 Questions are for understanding what exists or what the human has already decided — not for offering design decisions. If a design gap exists (e.g., no established workflow, no file naming convention), surface it as a gap and ask the human how they want to address it. Do not offer to design it: "Should I establish a naming convention for you?" is out of scope. "Do you have an existing file naming convention?" is correct. The Initializer documents what the human has decided or can confirm; it does not design what the human has not yet decided.
 

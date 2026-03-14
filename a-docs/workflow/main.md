@@ -159,30 +159,33 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 ### How it flows
 
-1. **Session A starts.** The human and Owner align on a need. The Owner creates a record folder and writes `01-owner-to-curator-brief.md`. The Owner tells the human whether to resume the existing Curator session or start a new one, and points it at the briefing. If no Curator session exists yet, the Owner says to start Session B; otherwise the default is resume. Session A pauses.
+1. **Session A starts.** The human and Owner align on a need. The Owner creates a record folder and writes `01-owner-to-curator-brief.md`. The Owner tells the human whether to resume the existing Curator session or start a new one, provides a copyable path to `01-owner-to-curator-brief.md`, and — if a new session is required — provides a copyable session-start prompt for the Curator. If no Curator session exists yet, the Owner says to start Session B; otherwise the default is resume. Session A pauses.
 
-2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human whether to resume the existing Owner session or start a new one, and points it at the proposal. Session B pauses.
+2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human whether to resume the existing Owner session or start a new one, provides a copyable path to the proposal artifact, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B pauses.
 
 3. **Session A resumes.** The human returns to the Owner session and points it at the proposal. The Owner reviews it and writes a decision as the next sequenced artifact in the active record folder. The Owner tells the human what to do next:
-   - **Approved:** resume the existing Curator session unless the new-session criteria apply; point it at the approval.
-   - **Revise:** resume the existing Curator session unless the new-session criteria apply; point it at the revision request.
+   - **Approved:** resume the existing Curator session unless the new-session criteria apply; provide a copyable path to the approval artifact and, if a new session is required, a copyable session-start prompt for the Curator.
+   - **Revise:** resume the existing Curator session unless the new-session criteria apply; provide a copyable path to the revision request and, if a new session is required, a copyable session-start prompt for the Curator.
    - **Rejected:** item closed; no further session switch needed.
    
    Session A pauses.
 
-4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings in the active record folder. If the next action belongs to the Owner, the Curator tells the human whether to resume Session A or start a new Owner session, and points it at the changed files, findings, and any update-report submission awaiting review. Session B then pauses.
+4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings in the active record folder. If the next action belongs to the Owner, the Curator tells the human whether to resume Session A or start a new Owner session, provides a copyable path to the findings artifact and any update-report submission awaiting review, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B then pauses.
 
-5. **Session A resumes.** The Owner reviews any pending update-report submission, produces backward pass findings in the active record folder, and tells the human whether to resume the Curator session for synthesis or publication follow-through. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
+5. **Session A resumes.** The Owner reviews any pending update-report submission, produces backward pass findings in the active record folder, and tells the human whether to resume the Curator session for synthesis or publication follow-through. The Owner provides a copyable path to the findings artifact and — if a new Curator session is required — a copyable session-start prompt. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
 
-6. **Session B resumes (if needed).** The Curator synthesizes both findings artifacts, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs. The Curator tells the human explicitly whether the flow is now complete or whether another Owner session is required.
+6. **Session B resumes (if needed).** The Curator synthesizes both findings artifacts, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs. The Curator tells the human explicitly whether the flow is now complete or whether another Owner session is required. If another Owner session is needed, the Curator provides a copyable path to the relevant artifact and a copyable session-start prompt.
+
+**Owner as terminal node.** The Owner is the structural endpoint of each flow. Every flow closes at Step 5 — the Owner receives the implementation output and any pending submissions, produces backward pass findings, and explicitly acknowledges whether the flow is complete or Curator follow-up remains. A flow that has not cleared the Owner has not closed.
 
 ### The human's role at each transition
 
 The human is the orchestrator — they maintain continuity between sessions and route artifacts. At each pause point, the active agent should:
 1. State whether the human should resume an existing session or start a new one
-2. Name the artifact it produced and where it lives (the active record folder)
+2. Provide a copyable path to the artifact it produced
 3. Tell the human which session to switch to
 4. State what the receiving agent needs to read
+5. If a new session is required, provide a copyable session-start prompt for the receiving role
 
 ### When to start a new session
 
@@ -190,6 +193,7 @@ Resume the existing session by default. Start a new session only when:
 - The existing session's context window is full or approaching limits
 - The accumulated context from earlier phases would be more noise than signal
 - Significant time has passed and the session may have expired
+- A new flow is beginning — start a fresh session for each new flow by default
 
 ---
 

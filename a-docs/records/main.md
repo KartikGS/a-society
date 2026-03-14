@@ -33,7 +33,13 @@ Within each record folder, artifacts are named with a zero-padded two-digit sequ
 
 If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `04-curator-to-owner.md`), the Owner re-decides at `05-owner-to-curator.md`, and backward pass findings shift to `06-` and `07-`. The sequence continues as long as the flow requires.
 
-If a flow includes an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence. Example: main flow closes at `03-owner-to-curator.md`; update report submission takes `04-curator-to-owner.md` and Owner decision takes `05-owner-to-curator.md`; backward-pass findings then start at `06-`. Before filing findings, confirm that all submissions in this flow are resolved — meaning the Owner has responded to every Curator → Owner artifact that followed the main decision.
+If a flow includes an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
+
+**Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-update-report.md`, `owner-update-report.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
+
+**Example:** Main flow closes at `03-owner-to-curator.md`; update report submission takes `04-curator-update-report.md` and Owner decision takes `05-owner-update-report.md`; backward-pass findings then start at `06-`.
+
+**Prerequisite before filing findings:** Confirm all submissions in this flow are resolved — meaning the Owner has responded to every Curator → Owner artifact produced after the main decision. Do not begin backward-pass findings until this check passes.
 
 ---
 

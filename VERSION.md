@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v6.0
+**Version:** v7.0
 
 ---
 
@@ -34,3 +34,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v4.1 | 2026-03-11 | 2026-03-11-variable-retirement-protocol.md — Variable retirement protocol added to index instruction |
 | v5.0 | 2026-03-12 | 2026-03-12-handoff-copyable-inputs.md — Handoff Output item 4 (copyable session inputs) added to all role templates |
 | v6.0 | 2026-03-14 | 2026-03-14-workflow-instruction-improvements.md — Workflow instruction updated: session model mandatory for two or more roles; Owner as entry and terminal node; session reuse rules; backward pass section; parallel fork/join patterns |
+| v7.0 | 2026-03-14 | 2026-03-14-brief-writing-quality.md — Brief-Writing Quality section added to general Owner role template; output-format changes flagged as non-mechanical |

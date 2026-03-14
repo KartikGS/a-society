@@ -12,6 +12,8 @@
 **Status:** BRIEFED
 **Date:** [YYYY-MM-DD]
 
+> **Count verify:** If the Subject line states a number of changes, confirm it matches the count of numbered items in the Agreed Change section before sending.
+
 ---
 
 ## Agreed Change

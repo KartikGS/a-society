@@ -46,7 +46,11 @@ The Curator **does NOT**:
 
 ## Standing Checks
 
-**Cross-layer consistency.** When working on a file in `a-society/general/instructions/`, verify that the corresponding A-Society `a-docs/` artifact aligns with any change made — and vice versa. When a change in one layer implies a change in the other, apply both in the same flow. Do not close a flow with known drift between the two layers.
+**Cross-layer consistency.** When working on a file in `a-society/general/instructions/`, verify that the corresponding A-Society `a-docs/` artifact aligns with any change made — and vice versa. When cross-layer drift is found, apply the following rule based on scope:
+- **Within current brief's scope:** Apply both layers in the same flow. Do not close the flow with known in-scope drift.
+- **Outside current brief's scope:** Flag the drift explicitly — in backward-pass findings or a note to the Owner — as a candidate for a future flow. Do not act on out-of-scope drift in the current flow.
+
+Do not expand the current flow's scope to address out-of-scope drift, and do not silently skip flagging it.
 
 ---
 

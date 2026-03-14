@@ -38,7 +38,7 @@
 
 After implementation is complete:
 
-1. **Update report:** Assess whether this change requires a framework update report. Check trigger conditions in `$A_SOCIETY_UPDATES_PROTOCOL` — do not assume required or not required before checking.
+1. **Update report:** Assess whether this change requires a framework update report. Check trigger conditions in `$A_SOCIETY_UPDATES_PROTOCOL` — do not assume required or not required before checking. If the assessment concludes no report is needed, record the determination and rationale in the Curator's backward-pass findings. No separate submission artifact is required.
 2. **Backward pass:** Backward pass findings are required from both roles unless the Owner explicitly waives them (e.g., for trivial cosmetic changes).
 3. **Version increment:** If an update report is produced, version increment is handled by the Curator as part of Phase 4 registration.
 
