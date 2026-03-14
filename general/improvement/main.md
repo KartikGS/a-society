@@ -1,15 +1,16 @@
-# Improvement Principles
+# Improvement Principles and Backward Pass Protocol
 
-This document captures the meta-improvement philosophy for a project's agent documentation system.
-It is intended to guide how future process gaps are evaluated and resolved — not what the current rules are.
-All principles here are **project-agnostic** and apply to any project that uses this agent-docs structure.
+> [CUSTOMIZE] Replace all `[PROJECT_*]` placeholders with the appropriate `$VARIABLE_NAME` values from your project's index. Update role names to match your project's structure. Declare which output location applies (records or reports/) in the "How It Works" section.
+
+This document combines the improvement philosophy and the backward pass protocol for a project's agent documentation system. It guides how future process gaps are evaluated and resolved, and standardizes how agents reflect on completed work and turn that reflection into documentation improvements.
+
+All principles below are project-agnostic and apply to any project that uses this agent-docs structure.
 
 ---
 
 ## Core Philosophy
 
-When a meta-improvement is proposed, evaluate it against these principles before deciding how to implement it.
-The goal is not to add more process — it is to reduce future agent confusion at the lowest structural cost.
+When a meta-improvement is proposed, evaluate it against these principles before deciding how to implement it. The goal is not to add more process — it is to reduce future agent confusion at the lowest structural cost.
 
 ---
 
@@ -93,3 +94,103 @@ When evaluating a proposed fix during meta-synthesis:
 2. **Before deciding "add a new protocol"** — ask whether user consultation adequately handles the edge case. Reject the protocol if the informal path is sufficient.
 3. **Before deciding "add a cross-reference"** — ensure the cross-reference uses a `$VARIABLE_NAME`. The implementing agent must be able to follow it without interpretation.
 4. **When creating new content** — decide first whether it is project-specific or cross-project. Place it accordingly.
+
+---
+
+## Backward Pass Protocol
+
+### Purpose
+
+Standardize how agents reflect on completed work and turn that reflection into documentation improvements. This is the backward pass — the structured counterpart to the forward pass of the project's workflow.
+
+---
+
+### When to Run
+
+Run the backward pass after every substantive forward pass — any work that involved multiple phases or touched structural decisions. For trivial edits with no friction, the backward pass can be minimal — a single sentence noting that no friction was observed is sufficient. The backward pass is always done; depth varies.
+
+The depth of the backward pass should be proportional to the work:
+- **Lightweight:** 1–3 top findings, brief rationale. Use for routine work.
+- **Full:** Structured per-agent findings using the findings template. Use when blocking friction, ambiguity, or contradictions were encountered during the forward pass.
+
+The agent decides which depth is appropriate. If unsure, default to lightweight.
+
+---
+
+### Backward Pass Traversal
+
+Order the backward pass as follows:
+
+1. **Identify first occurrences.** Take each role's *first occurrence* in the forward pass. Subsequent appearances of the same role are ignored — that role's backward-pass findings cover all their forward-pass phases.
+2. **Reverse the sequence.** Reverse the first-occurrence sequence to get the backward order.
+3. **Owner is always second-to-last.** Owner is the entry point for every workflow — its first occurrence is always first in the forward pass, placing it second-to-last in the backward sequence.
+4. **Synthesis role is always last.** The synthesis role synthesizes all findings and produces the final backward-pass output. It is always the final node in the backward pass.
+5. **Parallel forks produce concurrent backward-pass nodes.** Roles whose first occurrences are at the same forward-pass position (parallel fork) produce findings concurrently, not sequentially.
+
+Only the nodes and edges that fired during this instance are included. Dead branches are excluded.
+
+---
+
+### How It Works
+
+1. **Each agent who participated in the forward pass** produces a findings artifact reflecting on their experience — what was clear, what was ambiguous, what was missing, what conflicted. Follow the traversal order above.
+
+2. **Output location:**
+   - *If the project uses records:* `[PROJECT_RECORDS]/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder
+   - *If the project does not use records:* `[PROJECT_IMPROVEMENT_REPORTS]/META-YYYYMMDD-<TASK-ID>-<role>-findings.md`
+
+   The project's `improvement/main.md` declares which path applies.
+
+3. **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
+
+4. **The synthesis role** reviews all findings and identifies which warrant action.
+
+5. **Actionable items are routed based on scope:**
+   - Changes within synthesis role authority: implement directly to a-docs without a formal proposal.
+   - Changes requiring Owner judgment: submit to the Owner for approval; implement after approval.
+
+   Do not re-route improvement items through the project's main execution workflow.
+
+---
+
+### What to Reflect On
+
+Use these categories to guide your reflection (not all will apply to every task):
+
+1. **Conflicting instructions** — two documents said different things
+2. **Missing information** — something you needed wasn't documented
+3. **Unclear instructions** — you had to guess at the intended meaning
+4. **Redundant information** — the same thing was said in multiple places
+5. **Scope concerns** — a role boundary or responsibility was ambiguous
+6. **Workflow friction** — a step felt unnecessary or a handoff was unclear
+
+Ground every finding in a specific moment from your execution. Vague findings ("the docs could be better") are not useful.
+
+---
+
+### Generalizable Findings
+
+When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential framework contribution. Note it in the findings artifact so it is not lost.
+
+The submission mechanism is defined separately — flag the finding explicitly in your findings artifact so it is not silently lost when the mechanism becomes available.
+
+---
+
+### Useful Lenses
+
+When evaluating whether a finding warrants action, consider:
+
+- **Portability:** Is the fix specific to this project, or should it propagate to the general library?
+- **Evolvability:** Does the fix reduce future edit cost (e.g., canonical source + cross-reference instead of duplication)?
+- **Proportionality:** Is the fix worth the disruption? Small friction in a rare edge case may not warrant a doc change.
+
+These are judgment aids, not mandatory per-finding assessments.
+
+---
+
+### Guardrails
+
+- Do not silently mutate role authority boundaries during improvement implementation.
+- Do not rewrite historical reports to match newer conventions. Reports are immutable once produced.
+- If two documents conflict, resolve by updating one source-of-truth and adding a cross-reference — never duplicate.
+- The backward pass is not an execution session. Agents reflecting should not produce plans, implementations, or new artifacts beyond their findings file.

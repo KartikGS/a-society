@@ -92,7 +92,7 @@ The **Owner** is both the universal entry point and the terminal node for every 
 
 **Terminal:** every workflow surfaces back to the Owner on completion. The closing role in a workflow does not silently close — it hands the result to the Owner. The Owner acknowledges completion, logs it, and determines whether any follow-up is needed. This closed loop ensures the Owner is always aware of what has been finished.
 
-**Backward pass ordering:** the Owner, having received terminal confirmation, directs the backward pass. The backward pass starts with the role closest to implementation and moves back toward the Owner — each role reflects on its own phase in sequence. The Owner produces findings last, informed by the full arc from trigger to completion.
+**Backward pass ordering:** the Owner, having received terminal confirmation, directs the backward pass. For traversal order, see `$INSTRUCTION_IMPROVEMENT` — ordering is defined there and is not restated here.
 
 This means:
 - **Only the Owner reads the full workflow map.** Other agents receive well-formed input artifacts at their nodes — they see their node contract (input, work, output), not the entire graph.
@@ -172,15 +172,11 @@ How are phases mapped to sessions? For multi-role workflows, describe:
 
 A session model makes the human's orchestration role visible and gives agents the information they need to guide the human at pause points. A session model is mandatory for any workflow with two or more roles. It is optional only for genuinely single-role workflows.
 
-### 6. Backward Pass (recommended)
+### 6. Backward Pass (mandatory)
 
-What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own phase for what worked, what failed, and what should change. Findings re-enter the workflow as proposals for the next iteration.
+What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own phase for what worked, what failed, and what should change.
 
-Include a backward pass description when:
-- The workflow runs repeatedly and accumulated learning should improve it.
-- Roles benefit from structured reflection on their phase before session context is cleared.
-
-A backward pass entry in the workflow document names the roles involved, the ordering (start closest to implementation, end with Owner), and where findings go. Reference `$INSTRUCTION_IMPROVEMENT` for the backward pass protocol.
+A backward pass entry in the workflow document names the roles involved and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT` — do not specify ordering locally. The improvement file is the authoritative source for the backward pass algorithm.
 
 ---
 
@@ -240,8 +236,8 @@ For each phase, describe what causes an agent to stop and ask. The escalation de
 **Step 6 — Describe the session model (mandatory for two or more roles).**
 For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition — including a copyable artifact path (always) and a copyable session-start prompt when a new session is required. Define when sessions are resumed within a flow versus started fresh at flow close. Skip this step only for single-role workflows.
 
-**Step 7 — Define the backward pass (if warranted).**
-If the workflow runs repeatedly: describe the backward pass — which roles participate, in what order, and where findings go. Reference `$INSTRUCTION_IMPROVEMENT` if the project has an improvement folder. Skip for one-time or experimental workflows.
+**Step 7 — Define the backward pass.**
+Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
 
 **Step 8 — Identify sub-documents.**
 What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow `main.md`.

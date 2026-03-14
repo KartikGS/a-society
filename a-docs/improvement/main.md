@@ -1,8 +1,8 @@
-# Improvement Principles
+# A-Society: Improvement Principles and Backward Pass Protocol
 
-This document captures the improvement philosophy for A-Society's agent documentation system. It guides how future process gaps are evaluated and resolved — not what the current rules are. These principles govern any agent or human making decisions about the A-Society docs, and they are applied during the backward pass (see `$A_SOCIETY_IMPROVEMENT_PROTOCOL`).
+This document combines the improvement philosophy and the backward pass protocol for A-Society's agent documentation system. It guides how framework improvement decisions are evaluated and resolved, and standardizes how Owner and Curator reflect on completed work and turn that reflection into documentation improvements.
 
-All principles below are drawn from the project-agnostic framework in `$GENERAL_IMPROVEMENT`. They apply here without modification; no A-Society-specific exceptions exist.
+All principles are drawn from the project-agnostic framework in `$GENERAL_IMPROVEMENT`. They apply here without modification; no A-Society-specific exceptions exist.
 
 ---
 
@@ -92,3 +92,94 @@ When evaluating a proposed fix during meta-synthesis:
 2. **Before deciding "add a new protocol"** — ask whether user consultation adequately handles the edge case. Reject the protocol if the informal path is sufficient.
 3. **Before deciding "add a cross-reference"** — ensure the cross-reference uses a `$VARIABLE_NAME`. The implementing agent must be able to follow it without interpretation.
 4. **When creating new content** — decide first whether it is project-specific or cross-project. Place it accordingly.
+
+---
+
+## Backward Pass Protocol
+
+### Purpose
+
+Standardize how Owner and Curator reflect on completed framework work and turn that reflection into documentation improvements.
+
+This protocol is A-Society's instantiation of `$GENERAL_IMPROVEMENT`. A-Society has two roles: Owner and Curator. The Curator is both a forward-pass participant (implementation) and the synthesis role (backward-pass last).
+
+---
+
+### When to Run
+
+Run after every substantive forward pass — work that involved multiple phases or touched structural decisions. For trivial edits with no friction, the backward pass can be minimal — a single sentence noting that no friction was observed is sufficient. The backward pass is always done; depth varies.
+
+**Depth:**
+- **Lightweight:** 1–3 top findings, brief rationale. Use for routine work.
+- **Full:** Structured findings using the template. Use when blocking friction, ambiguity, or contradictions were encountered.
+
+The agent decides which depth is appropriate. If unsure, default to lightweight.
+
+---
+
+### Backward Pass Traversal
+
+A-Society's forward pass: Owner enters first (Phase 1 briefing), Curator follows (Phases 2–3 proposal and implementation), Owner re-enters for review (Phase 4). First occurrences in order: Owner first, Curator second. Reversed: Curator first, Owner second. Curator also acts as synthesis role and is always last.
+
+Backward pass order:
+1. **Curator produces findings first** — as the role closest to implementation, Curator's first forward-pass occurrence reverses to first in the backward pass.
+2. **Owner produces findings second** — Owner's first occurrence (entry point) reverses to second-to-last.
+3. **Curator synthesizes last** — as the synthesis role, Curator produces synthesis after all finding artifacts are complete.
+
+Only nodes that fired during this instance are included.
+
+---
+
+### How It Works
+
+1. **Curator produces findings first** (closest to implementation friction).
+2. **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
+3. **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
+4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
+5. **Curator synthesizes** actionable items from both findings artifacts and routes them:
+   - Changes within Curator authority (maintenance, corrections, clarifications Curator owns): implement directly to a-docs.
+   - Changes requiring Owner judgment (structural decisions, additions to `general/`, direction changes): submit to Owner for approval; implement after approval.
+
+---
+
+### Reflection Categories
+
+Use these to guide your reflection (not all will apply every time):
+
+1. **Conflicting instructions** — two documents said different things
+2. **Missing information** — something you needed wasn't documented
+3. **Unclear instructions** — you had to guess at the intended meaning
+4. **Redundant information** — the same thing was said in multiple places
+5. **Scope concerns** — a role boundary or responsibility was ambiguous
+6. **Workflow friction** — a step felt unnecessary or a handoff was unclear
+
+Ground every finding in a specific moment from your execution.
+
+---
+
+### Generalizable Findings
+
+When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential A-Society contribution. Note it in the findings artifact so it is not lost.
+
+The submission mechanism is defined separately — flag the finding explicitly in your findings artifact so it is not silently lost when the mechanism becomes available.
+
+---
+
+### Useful Lenses
+
+When evaluating whether a finding warrants action:
+
+- **Portability:** Should the fix propagate to `general/`, or is it A-Society-specific?
+- **Evolvability:** Does the fix reduce future edit cost?
+- **Proportionality:** Is the fix worth the disruption?
+
+These are judgment aids, not mandatory per-finding assessments.
+
+---
+
+### Guardrails
+
+- Do not silently mutate role authority boundaries during improvement implementation.
+- Do not rewrite historical reports. They are immutable once produced.
+- If two documents conflict, resolve by updating one source-of-truth and adding a cross-reference — never duplicate.
+- The backward pass is not an execution session. Agents reflecting should not produce plans, implementations, or new artifacts beyond their findings file.

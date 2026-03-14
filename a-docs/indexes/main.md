@@ -53,15 +53,13 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_THINKING` | `/a-society/general/thinking/main.md` | Ready-made general principles template — cross-role operational rules |
 | `$GENERAL_THINKING_REASONING` | `/a-society/general/thinking/reasoning.md` | Ready-made reasoning framework template — cognitive heuristics for agents |
 | `$GENERAL_THINKING_KEEP_IN_MIND` | `/a-society/general/thinking/keep-in-mind.md` | Ready-made keep-in-mind template — operational reminders and hard stops |
-| `$GENERAL_IMPROVEMENT` | `/a-society/general/improvement/main.md` | Ready-made improvement philosophy template — principles for doc improvement decisions |
-| `$GENERAL_IMPROVEMENT_PROTOCOL` | `/a-society/general/improvement/protocol.md` | Ready-made backward pass protocol template |
+| `$GENERAL_IMPROVEMENT` | `/a-society/general/improvement/main.md` | Ready-made improvement philosophy and backward pass protocol template |
 | `$GENERAL_IMPROVEMENT_REPORTS` | `/a-society/general/improvement/reports/main.md` | Ready-made improvement reports index template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `/a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |
 | `$A_SOCIETY_PRINCIPLES` | `/a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `/a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
 | `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow — phases, handoffs, invariants, and escalation rules for framework work |
-| `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy — principles governing documentation improvement decisions |
-| `$A_SOCIETY_IMPROVEMENT_PROTOCOL` | `/a-society/a-docs/improvement/protocol.md` | A-Society backward pass protocol — how findings are produced and flow back into the workflow |
+| `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
 | `$A_SOCIETY_RECORDS` | `/a-society/a-docs/records/main.md` | A-Society records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking |
 | `$A_SOCIETY_FEEDBACK_DIR` | `/a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
 | `$A_SOCIETY_FEEDBACK_ONBOARDING` | `/a-society/feedback/onboarding/` | Initializer signal reports — filed after initialization runs with project consent |

@@ -154,25 +154,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/main.md` — `$A_SOCIETY_IMPROVEMENT`
 
-**Why it exists:** Improvement decisions — when to split a file, when to add a protocol, when to cross-reference rather than duplicate — require principled reasoning not captured in any role document. Without an improvement philosophy document, improvement sessions default to intuition rather than consistent principles.
+**Why it exists:** Improvement decisions require both principled reasoning (when to split a file, when to add a protocol, when to cross-reference) and a standardized backward pass protocol (who produces findings, in what order, how findings route to action). Without a single dedicated file, improvement philosophy gets buried in role files, backward passes are ad-hoc, and each cycle reinvents the process.
 
-**What it owns:** The five improvement principles and the decision framework for applying them during meta-synthesis.
+**What it owns:** The five improvement principles, the decision framework for applying them during meta-synthesis, the backward pass traversal algorithm, and the protocol for producing and routing findings.
 
-**What breaks without it:** Improvement sessions reinvent principles each time. Agents making doc maintenance decisions have no principled baseline, leading to inconsistent results.
+**What breaks without it:** Improvement sessions reinvent principles each time. Backward passes lack a standard structure. Findings are lost or misrouted instead of flowing through the correct approval path.
 
-**Do not consolidate with:** `improvement/protocol.md` — the philosophy governs *what* decisions to make; the protocol governs *how* the improvement process runs. These are categorically different.
-
----
-
-### `improvement/protocol.md` — `$A_SOCIETY_IMPROVEMENT_PROTOCOL`
-
-**Why it exists:** Without a protocol, the backward pass (Phase 5 of the workflow) is ad-hoc — findings are lost, reflection depth varies arbitrarily, and actionable items may not re-enter the workflow. The protocol standardizes how backward pass findings are produced, what categories to reflect on, and how findings flow back into the forward pass.
-
-**What it owns:** The backward pass execution model (who produces findings first, output format, how findings re-enter the workflow), reflection categories, useful evaluation lenses, and guardrails.
-
-**What breaks without it:** Backward passes lack a standard structure. Agents produce inconsistent findings. Actionable items are lost instead of re-entering as trigger inputs for Phase 1 (Proposal).
-
-**Do not consolidate with:** `improvement/main.md` — the protocol is the process; the philosophy is the reasoning behind decisions within that process.
+**Do not consolidate with:** `agents.md` or role files — this document is improvement infrastructure; the others are execution infrastructure.
 
 ---
 
