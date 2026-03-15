@@ -50,6 +50,8 @@ An ordered list of documents every agent must read before starting work, regardl
 ### 5. Context confirmation statement (mandatory)
 The exact text an agent must output to confirm they have loaded required context. State it verbatim — agents copy it. Include a note that an agent which skips this step has not loaded context, even if they claim otherwise.
 
+The confirmation must enumerate every item in the required reading list by name. A fixed string that omits items in the list is a confirmation failure — even if those items were loaded. When a project's required reading list includes items beyond the standard set, those items must appear by name in the confirmation statement template. An `agents.md` whose confirmation template does not match its required reading list is incomplete.
+
 ### 6. Authority and conflict resolution (mandatory)
 When two documents give conflicting guidance, which takes precedence? **The expected authority hierarchy is: project vision (highest precedence) → project structure → role document → agents.md.** State this order explicitly. Do not invert it — placing the role document above the vision or structure inverts the intended hierarchy. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
 
@@ -85,7 +87,7 @@ List every role. Include: role name, file path, one-line primary focus. Confirm 
 Order matters. Start with `agents.md` itself (agents confirm they have read it), then the index, then vision, then structure, then role file. **The index must come second** — before vision and structure — so that `$VAR` references in those documents can be resolved as agents read them. If your project has additional universal required readings (e.g., a standards document every agent needs), insert them before the role file.
 
 **Step 5 — Write the context confirmation statement.**
-State it exactly as agents should output it. Use a blockquote so it is visually distinct. Include the enforcement note.
+State it exactly as agents should output it. Use a blockquote so it is visually distinct. Include the enforcement note. The confirmation must list every item in the required reading list by name — not a generic placeholder. If you added items to the required reading list in Step 4, update the confirmation statement to match. A confirmation template that does not match the required reading list is a documentation failure.
 
 **Step 6 — Write authority and conflict resolution.**
 List the documents in precedence order. **The expected hierarchy is: project vision → project structure → role document → agents.md.** Three to five items is typical. End with the escalation to human.

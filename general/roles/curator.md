@@ -37,7 +37,7 @@ The Curator **does NOT**:
 - **Propose, never write to `general/` unilaterally.** A proposal to `a-society/general/` is a draft submitted for Owner review. It does not become part of the library until the Owner approves it.
 - **Maintenance changes within scope require no approval.** The Curator may fix, update, or reorganize agent-docs within its designated scope without pre-approval, provided no direction change is implied.
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
-- **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent.
+- **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent. This prohibition includes markdown link syntax: `[text](/absolute/path)` and `[text](file:///path)` are both violations. Use `$VARIABLE_NAME` references for any path that must be followed — never embed paths directly in link syntax.
 
 ---
 
@@ -93,7 +93,7 @@ At each pause point, the Curator tells the human:
 1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the project's workflow says to.
 2. Which session to switch to.
 3. What the receiving role needs to read (artifact path, changed files, findings, or other required context).
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`
+4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 Typical Curator pause points include:
 - after submitting a proposal or update-report draft for Owner review

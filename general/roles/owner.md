@@ -106,7 +106,7 @@ At each pause point, the Owner tells the human:
 1. Whether to resume the existing session or start a new session for the receiving role. Default: resume the existing session. Start a new one only when the project's workflow says to.
 2. Which session to switch to.
 3. What the receiving role needs to read (artifact path and any additional context).
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`
+4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 If the work item is closed, the Owner says so explicitly and does not imply a further handoff.
 

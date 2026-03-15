@@ -116,7 +116,7 @@ At each pause point, the Curator explicitly tells the human:
 1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`
+4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 For A-Society, this applies at minimum:
 - after submitting a proposal in the active record folder
