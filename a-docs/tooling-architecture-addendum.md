@@ -283,7 +283,7 @@ Backward pass:
 | Session A | Owner | Phase 0 gate, Phase 3 gate, Phase 6 final approval, Phase 7 backward pass |
 | Session B | Curator | Phase 0 docs, Phase 3 docs, Phase 7 registration + backward pass |
 | Session C | Tooling Developer | Phases 1, 2, 4, 5, 6 |
-| TA sessions | Technical Architect | On-demand — invoked when Developer escalates or at Owner's request for Phase 6 gate |
+| TA sessions | Technical Architect | On-demand — invoked when Developer escalates or at Owner's request for Phase 6 gate. When reviewing a tooling change or deviation, the TA also checks `$A_SOCIETY_TOOLING_COUPLING_MAP`'s invocation gap column for the affected component. If the gap is open, the TA notes it as a standing open item in the advisory output. This is not a hard stop — it is a gap-surfacing obligation. |
 
 The existing session model conventions apply: resume existing sessions by default; start a new session only when context limits, elapsed time, or flow boundaries warrant it. Each role explicitly tells the human whether to resume or start new at each pause point.
 

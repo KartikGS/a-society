@@ -101,6 +101,9 @@ Look up the variable in the index to get the current path, then open the file. D
 2. Grep for the variable name across all active documents to confirm no hardcoded paths remain.
 3. No other updates are needed.
 
+**When validating the index:**
+Run `$A_SOCIETY_TOOLING_PATH_VALIDATOR` to confirm every path in the index resolves to an existing file. Pass the index file path as the argument. A zero-failure result confirms all registered paths are accessible. Run after any index update: adding entries, updating paths after a file move, or retiring rows. A failing result names the specific entries to fix.
+
 ---
 
 ## Variable Retirement

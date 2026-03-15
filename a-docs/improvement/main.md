@@ -128,6 +128,8 @@ Backward pass order:
 
 Only nodes that fired during this instance are included.
 
+**Tooling:** `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` computes the traversal order programmatically from a workflow graph. Pass the path to `workflow/main.md`. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance. When available, use the orderer rather than computing the order manually. When unavailable, apply the rules above.
+
 ---
 
 ### How It Works

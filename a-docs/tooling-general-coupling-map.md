@@ -1,0 +1,58 @@
+# A-Society: Tooling/General Coupling Map
+
+This document is the standing reference for the coupling surface between `a-society/tooling/` and `a-society/general/`. It records two things:
+
+1. **Format dependencies** — which `general/` elements each tooling component parses programmatically, such that a format change would break the component
+2. **Invocation status** — whether a `general/` instruction currently directs agents to invoke each component
+
+Updated as part of Phase 7 (Registration) in the tooling workflow after any change classified as Type A, B, C, D, E, or F in the taxonomy section below.
+
+**Who uses this document:**
+- **Owner** — checks the format dependency table at Phase 2 (Coupling Test) before approving any `general/` proposal
+- **Technical Architect** — checks the invocation gap column when reviewing any tooling deviation or change; notes open gaps as standing open items in advisory output
+
+---
+
+## Format Dependencies
+
+| `general/` element | Format dependency | Component that depends on it |
+|---|---|---|
+| Index table format (3-col markdown, `` `$VAR` `` in col 1, path in col 2) | Yes | Component 5: Path Validator |
+| `VERSION.md` format (`**Version:** vX.Y`, 3-col history table, `YYYY-MM-DD-slug.md` filenames) | Yes | Component 6: Version Comparator |
+| `a-society-version.md` format (`**Baseline Version:** vX.Y`, `Version After` column) | Yes | Component 6: Version Comparator |
+| `$GENERAL_FEEDBACK_CONSENT` template format (`**Consented:**` field, section headers) | Yes | Component 2: Consent Utility (`renderConsentFile`, `checkConsent` parser) |
+| Feedback type identifiers and directory names (`onboarding`, `migration`, `curator-signal`) | Yes | Component 2: Consent Utility (`FEEDBACK_TYPES` constant) |
+| Workflow graph YAML frontmatter schema (per `$INSTRUCTION_WORKFLOW_GRAPH`) | Yes | Component 3: Workflow Graph Validator (enforces it); Component 4: Backward Pass Orderer (consumes it) |
+| Backward pass ordering rule (per `$GENERAL_IMPROVEMENT`) | Yes | Component 4: Backward Pass Orderer (encodes the rule) |
+| `$GENERAL_MANIFEST` file format (`files` array, `path`/`scaffold`/`source_path`/`required` fields) | Yes | Component 1: Scaffolding System |
+| All `copy`-type `source_path` files in the manifest | Yes | Component 1: Scaffolding System (reads them at scaffold time) |
+
+---
+
+## Invocation Status
+
+| `general/` instruction | Component that should be mentioned | Invocation Status |
+|---|---|---|
+| `$INSTRUCTION_INDEX` (index maintenance context) | Component 5: Path Validator | Closed (2026-03-15) |
+| `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | Component 6: Version Comparator | Closed (2026-03-15) |
+| `$INSTRUCTION_CONSENT` | Component 2: Consent Utility | Closed (2026-03-15) |
+| `$INSTRUCTION_WORKFLOW_GRAPH` | Component 3: Workflow Graph Validator | Closed (2026-03-15) |
+| `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15) |
+| Initializer context (`$A_SOCIETY_INITIALIZER`, Phase 3) | Component 1: Scaffolding System | Closed (2026-03-15) |
+
+---
+
+## Change Taxonomy
+
+This document is updated after any of the following change types. The change type determines which rows are affected.
+
+| Type | Description | Initiating side | What the other side must produce |
+|---|---|---|---|
+| **A** | A `general/` format changes that a tool parses | `general/` | Affected tooling component updated to parse or produce the new format |
+| **B** | A new tool is built that agents should invoke | Tooling | A `general/` instruction update (or new instruction) naming the tool and directing agents to invoke it |
+| **C** | An existing tool's interface or behavior changes | Tooling | `$A_SOCIETY_TOOLING_INVOCATION` updated; any `general/` instructions referencing the old interface updated |
+| **D** | A `general/` document changes structure in a way the Scaffolding System must reflect | `general/` | `$GENERAL_MANIFEST` updated (new entry or corrected `source_path`) |
+| **E** | A new consent type is added | Either (Owner/human decides) | All five items: `$GENERAL_FEEDBACK_CONSENT` confirmed compatible; `$A_SOCIETY_ARCHITECTURE` updated; Consent Utility `FEEDBACK_TYPES` constant updated; `$GENERAL_MANIFEST` updated; `$INSTRUCTION_CONSENT` updated |
+| **F** | The backward pass protocol rule changes | `general/` | Backward Pass Orderer algorithm updated and verified against the updated rule |
+
+**Maintenance instruction:** When a Type A–F change completes, the Curator updates this document in Phase 7 (Registration): add, remove, or revise rows in the format dependency table and invocation status table as appropriate. The change type column above identifies which table(s) are affected.

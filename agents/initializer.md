@@ -71,7 +71,9 @@ Questions are for understanding what exists or what the human has already decide
 Do not proceed to Phase 3 until the human has answered.
 
 ### Phase 3 — Draft
-Build the `a-docs/` folder and populate all foundational documents in this order:
+Before populating documents manually, run `$A_SOCIETY_TOOLING_SCAFFOLDING` to scaffold the target project's `a-docs/` structure. Pass the project root path and the manifest path (`$GENERAL_MANIFEST`). The scaffold creates all required `a-docs/` folders and stub files — including consent file stubs via `$A_SOCIETY_TOOLING_CONSENT_UTILITY` — in the correct locations. After scaffolding, customize each file with the project's actual content using the steps below. Do not create files the scaffold has already created.
+
+Populate all foundational documents in this order:
 
 1. `project-information/vision.md` — what this project is, why it exists, what success looks like
 2. `project-information/structure.md` — why each folder exists, what belongs where

@@ -33,6 +33,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `/a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the programmatic tooling layer |
 | `$A_SOCIETY_TOOLING_DEVELOPER_ROLE` | `/a-society/a-docs/roles/tooling-developer.md` | A-Society Tooling Developer Agent role — implementation scope, hard rules, and escalation triggers |
 | `$A_SOCIETY_TOOLING_PROPOSAL` | `/a-society/a-docs/tooling-architecture-proposal.md` | Technical Architect's component designs and automation boundary evaluation — binding specification for all six tooling components |
+| `$A_SOCIETY_TOOLING_COUPLING_MAP` | `/a-society/a-docs/tooling-general-coupling-map.md` | Standing reference for tooling/general coupling — format dependencies per component and invocation gap status; updated at Phase 7 after any Type A–F change |
 | `$A_SOCIETY_TOOLING_ADDENDUM` | `/a-society/a-docs/tooling-architecture-addendum.md` | Tooling implementation workflow, roles, and phase sequencing — companion to the proposal |
 | `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2` | `/a-society/a-docs/tooling-ta-assessment-phase1-2.md` | Technical Architect's Phase 1-2 deviation assessment — formal ruling on two implementation deviations and required spec updates |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |

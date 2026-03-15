@@ -268,7 +268,25 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ## Tooling Documentation
 
-These three files live at the `a-docs/` root (not in a subfolder). They are the design, specification, and assessment artifacts for A-Society's programmatic tooling layer — produced by the Technical Architect and referenced by the Tooling Developer.
+These files live at the `a-docs/` root (not in a subfolder). They are the design, specification, assessment, and coupling governance artifacts for A-Society's programmatic tooling layer.
+
+### `tooling-general-coupling-map.md` — `$A_SOCIETY_TOOLING_COUPLING_MAP`
+
+**Why it exists:** The tooling components depend on `general/` formats — if a format changes, a component breaks. Conversely, when a tool is built, a `general/` instruction should direct agents to invoke it. Without a standing reference for these two dependency types, both can drift silently: format changes break tools without warning, and tools go unused because no instruction points agents to them.
+
+**What it owns:** Two tables — the format dependency table (which `general/` elements each component parses) and the invocation status table (whether each component has a `general/` instruction directing agents to invoke it, and whether that gap is Open or Closed). Also a change taxonomy (Types A–F) defining which change types require this document to be updated.
+
+**Who uses it:** The Owner checks the format dependency table at Phase 2 (Coupling Test) before approving any `general/` proposal. The TA checks the invocation gap column when reviewing tooling deviations. The Curator updates it at Phase 7 (Registration) after any Type A–F change.
+
+**What breaks without it:** Format changes are approved without scoping the tooling update — tools break after `general/` changes. Invocation gaps accumulate invisibly — tools exist but no agent knows to use them. The Coupling Test and Manifest Check in Phase 2 have no reference to check against.
+
+**Do not consolidate with:** `tooling-architecture-proposal.md` — the proposal is the component spec; this document is the coupling state. Do not consolidate with `tooling-architecture-addendum.md` — the addendum is the implementation workflow; this document is a standing operational reference updated after each cross-layer change.
+
+---
+
+### Tooling design and implementation artifacts
+
+The following three files are the design, specification, and assessment artifacts produced by the Technical Architect and referenced by the Tooling Developer.
 
 ### `tooling-architecture-proposal.md` — `$A_SOCIETY_TOOLING_PROPOSAL`
 

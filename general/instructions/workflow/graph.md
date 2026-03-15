@@ -110,7 +110,7 @@ For branching (e.g., an Approved branch and a Revise branch from the same review
 
 **Step 4 — List the edges.** For each handoff in your workflow document, add an edge. Add the artifact name if the handoff is carried by a named artifact type. Add branching edges where the workflow branches.
 
-**Step 5 — Verify backward pass order.** Sort distinct roles by `first_occurrence_position` ascending. Reverse the list. The synthesis role moves to the end. This should match the backward pass order in your workflow document. Correct the graph if it does not.
+**Step 5 — Validate and verify.** Run `$A_SOCIETY_TOOLING_WORKFLOW_GRAPH_VALIDATOR` to confirm the frontmatter schema is valid. Then run `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` to compute the backward pass order from the graph. Verify the computed order matches the backward pass order in your workflow prose document. Correct the graph if it does not. If the tools are unavailable: sort distinct roles by `first_occurrence_position` ascending, reverse the list, and move the synthesis role to the end — this should match the backward pass order in your workflow document.
 
 ---
 
