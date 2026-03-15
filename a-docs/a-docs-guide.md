@@ -336,6 +336,18 @@ The following three files are the design, specification, and assessment artifact
 
 ---
 
+### `general/instructions/workflow/modify.md` — `$INSTRUCTION_WORKFLOW_MODIFY`
+
+**Why it exists:** When an existing workflow needs to change, agents need more than the creation instruction — they need a model for what kind of operation they are performing and the constraints that govern it. Without this document, agents either apply changes ad-hoc (violating traceability) or re-derive evaluation criteria from scratch each time. The document establishes the single-graph model (there is one operation: graph modification), the five evaluative principles, and the seven hard rules that every node, edge, and phase in a modified graph must satisfy.
+
+**What it owns:** The single-graph model, the five principles, the seven hard rules, and the six-step procedure for routing, drafting, validating, and implementing a workflow modification.
+
+**What breaks without it:** Agents facing workflow changes have no principled framework. Modifications bypass approval (violating traceability), collapse role separation (violating the core bet), or remove approval gates (removing quality checks). The false binary between "add a workflow" and "modify a workflow" resurfaces, producing inconsistent graph structures across sessions.
+
+**Do not consolidate with:** `$INSTRUCTION_WORKFLOW` — the creation instruction tells you how to build a workflow; this document tells you how to change one. Distinct operations with distinct constraints. Do not consolidate with `$A_SOCIETY_WORKFLOW` — that document describes A-Society's own workflow; this is a general instruction applicable to any project.
+
+---
+
 ### `general/roles/` — folder
 
 **Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers. A project adopting the framework takes a template, fills in the marked sections, and has a working role — without starting from a blank page.

@@ -36,6 +36,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_TOOLING_COUPLING_MAP` | `/a-society/a-docs/tooling-general-coupling-map.md` | Standing reference for tooling/general coupling — format dependencies per component and invocation gap status; updated at Phase 7 after any Type A–F change |
 | `$A_SOCIETY_TOOLING_ADDENDUM` | `/a-society/a-docs/tooling-architecture-addendum.md` | Tooling implementation workflow, roles, and phase sequencing — companion to the proposal |
 | `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2` | `/a-society/a-docs/tooling-ta-assessment-phase1-2.md` | Technical Architect's Phase 1-2 deviation assessment — formal ruling on two implementation deviations and required spec updates |
+| `$GENERAL_MANIFEST` | `/a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `/a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
@@ -46,6 +47,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_PRINCIPLES` | `/a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |
 | `$INSTRUCTION_WORKFLOW` | `/a-society/general/instructions/workflow/main.md` | How to create a workflow document for any project |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | `/a-society/general/instructions/workflow/graph.md` | How to create and maintain a machine-readable workflow graph representation (YAML frontmatter) — enables programmatic backward pass ordering |
+| `$INSTRUCTION_WORKFLOW_MODIFY` | `/a-society/general/instructions/workflow/modify.md` | How to modify an existing workflow — single-graph model, evaluative principles, hard rules, and six-step modification procedure |
 | `$INSTRUCTION_WORKFLOW_PLANS` | `/a-society/general/instructions/workflow/plans/main.md` | How to create a plans structure for any project |
 | `$INSTRUCTION_WORKFLOW_REPORTS` | `/a-society/general/instructions/workflow/reports/main.md` | How to create a reports structure for any project |
 | `$INSTRUCTION_WORKFLOW_REQUIREMENTS` | `/a-society/general/instructions/workflow/requirements/main.md` | How to create a requirements structure for any project |

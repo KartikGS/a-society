@@ -263,6 +263,14 @@ A workflow document that describes role responsibilities, vision, or tool choice
 
 ---
 
+## Modifying an Existing Workflow
+
+When an existing workflow needs to change — adding a new flow type, modifying a phase, changing a handoff, or adjusting an invariant — do not edit the workflow document directly. A workflow modification is a structured operation: it must be proposed, reviewed, and approved before implementation.
+
+For the complete modification procedure, the single-graph model, evaluative principles, and hard rules: see `$INSTRUCTION_WORKFLOW_MODIFY`.
+
+---
+
 ## Format Rules
 
 - **Process-first, not role-first.** Describe what happens to work, not what roles do. Roles are described in role documents.

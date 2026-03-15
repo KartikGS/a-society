@@ -103,7 +103,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 ### `general/instructions/`
 
-**Purpose:** The instruction library. Each file answers the question: "How do you create [X] for a new project?"
+**Purpose:** The instruction library. Each file answers the question: "How do you create [X] for a new project?" — and, where applicable, how to work with it once created (e.g., how to modify an existing workflow).
 
 **What belongs here:**
 - One instruction document per artifact type (tooling document, vision document, structure document, etc.)
