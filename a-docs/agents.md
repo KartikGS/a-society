@@ -24,6 +24,8 @@ Key file locations are registered in [`a-society/indexes/main.md`](/a-society/a-
 |---|---|---|
 | **Owner** | [`roles/owner.md`](/a-society/a-docs/roles/owner.md) | Vision keeper, quality gatekeeper, structure guardian for the A-Society framework |
 | **Curator** | [`roles/curator.md`](/a-society/a-docs/roles/curator.md) | Agent-docs steward — maintenance, migration, and pattern distillation into `general/` |
+| **Technical Architect** | [`roles/technical-architect.md`](/a-society/a-docs/roles/technical-architect.md) | Scoping and planning the programmatic tooling layer — automation boundaries, component design, open questions |
+| **Tooling Developer** | [`roles/tooling-developer.md`](/a-society/a-docs/roles/tooling-developer.md) | Implementing approved tooling components in Node.js — spec-faithful execution within `tooling/` |
 
 Additional roles will be added here as the project grows. Do not assume a role exists unless it appears in this table.
 

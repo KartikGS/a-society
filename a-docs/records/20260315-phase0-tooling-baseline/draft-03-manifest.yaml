@@ -1,0 +1,211 @@
+# A-Society: Minimum Necessary Files Manifest
+#
+# Machine-readable source of truth for what a complete a-docs/ contains.
+# Primary input to the Scaffolding System (Component 1, Phase 5).
+#
+# Fields per entry:
+#   path        — file path relative to the project's a-docs/ root
+#   description — what the artifact is and why it exists
+#   required    — true: created in every initialization; false: conditional on explicit request
+#   scaffold    — copy: Scaffolding System copies from source_path and fills in project name
+#                 stub: Scaffolding System creates an empty titled file (agent fills content)
+#   source_path — path within a-society/ to the template (copy) or instruction (stub) the
+#                 Scaffolding System uses as the basis; relative to a-society/ root
+#
+# Maintainer: update this file when a new artifact type is added to general/instructions/ or
+# when a general/ template is added or retired. The manifest and the instruction set must stay
+# in sync. The manifest governs what the Scaffolding System creates; the instructions govern
+# how agents fill the content. These are not the same thing and must not be merged.
+#
+# Variable: $GENERAL_MANIFEST
+# Framework version this manifest was introduced: [to be filled at registration]
+
+manifest_version: "1.0"
+
+files:
+
+  # ── Entry point ──────────────────────────────────────────────────────────────
+
+  - path: agents.md
+    description: "Agent orientation — entry point for all agents working on this project; roles table, required reading sequence, context confirmation protocol, and project-wide invariants"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/agents.md
+
+  - path: a-docs-guide.md
+    description: "Why each file in this project's agent-docs exists — required reading for the Curator; prevents incorrect consolidation and documents rationale for every significant file"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/a-docs-guide.md
+
+  # ── Indexes ───────────────────────────────────────────────────────────────────
+
+  - path: indexes/main.md
+    description: "File path index — single source of truth for key file locations; all $VAR references in agent-docs resolve here"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/indexes/main.md
+
+  # ── Project information ───────────────────────────────────────────────────────
+
+  - path: project-information/vision.md
+    description: "Project vision — what the project is, the problem it solves, the core bet, and direction for agents"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/project-information/vision.md
+
+  - path: project-information/structure.md
+    description: "Folder structure — governing principle and placement rules for each folder in the project"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/project-information/structure.md
+
+  - path: project-information/log.md
+    description: "Project log — current status, recent focus, next priorities; the answer to 'where did we leave off?' for any agent orienting at session start"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/project-information/log.md
+
+  - path: project-information/architecture.md
+    description: "Architecture — system overview and structural invariants; for projects with a defined technical or organizational system"
+    required: false
+    scaffold: stub
+    source_path: general/instructions/project-information/architecture.md
+
+  - path: project-information/principles.md
+    description: "Design principles — what governs extension and design decisions within the project, beyond vision and structure"
+    required: false
+    scaffold: stub
+    source_path: general/instructions/project-information/principles.md
+
+  # ── Roles ─────────────────────────────────────────────────────────────────────
+
+  - path: roles/owner.md
+    description: "Owner role — vision keeper, quality gatekeeper, and structure guardian for this project"
+    required: true
+    scaffold: copy
+    source_path: general/roles/owner.md
+
+  - path: roles/curator.md
+    description: "Curator role — agent-docs steward; maintenance, migration, and pattern distillation"
+    required: true
+    scaffold: copy
+    source_path: general/roles/curator.md
+
+  # ── Workflow ──────────────────────────────────────────────────────────────────
+
+  - path: workflow/main.md
+    description: "Workflow — phases, handoffs, invariants, and escalation rules for work done in this project"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/workflow/main.md
+
+  # ── Thinking ──────────────────────────────────────────────────────────────────
+
+  - path: thinking/main.md
+    description: "Thinking — cross-role operational principles; applies to every agent regardless of role"
+    required: true
+    scaffold: copy
+    source_path: general/thinking/main.md
+
+  - path: thinking/reasoning.md
+    description: "Reasoning — cognitive framework and decision heuristics for working through problems"
+    required: true
+    scaffold: copy
+    source_path: general/thinking/reasoning.md
+
+  - path: thinking/keep-in-mind.md
+    description: "Keep in mind — operational reminders and hard stops every agent must carry"
+    required: true
+    scaffold: copy
+    source_path: general/thinking/keep-in-mind.md
+
+  # ── Improvement ───────────────────────────────────────────────────────────────
+
+  - path: improvement/main.md
+    description: "Improvement — philosophy, backward pass protocol, traversal algorithm, and synthesis path"
+    required: true
+    scaffold: copy
+    source_path: general/improvement/main.md
+
+  - path: improvement/reports/main.md
+    description: "Improvement reports index — entry point for all backward pass findings and synthesis reports in this project"
+    required: true
+    scaffold: copy
+    source_path: general/improvement/reports/main.md
+
+  # ── Communication ─────────────────────────────────────────────────────────────
+
+  - path: communication/main.md
+    description: "Communication — entry point for conversation and coordination layers; which layer to consult for which question"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/communication/main.md
+
+  - path: communication/conversation/main.md
+    description: "Conversation templates — permanent format references for all inter-agent handoff artifacts"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/communication/conversation/main.md
+
+  - path: communication/conversation/TEMPLATE-owner-to-curator-brief.md
+    description: "Template: Owner → Curator briefing format"
+    required: true
+    scaffold: copy
+    source_path: general/instructions/communication/conversation/TEMPLATE-owner-to-curator-brief.md
+
+  - path: communication/conversation/TEMPLATE-curator-to-owner.md
+    description: "Template: Curator → Owner proposal and submission format"
+    required: true
+    scaffold: copy
+    source_path: general/instructions/communication/conversation/TEMPLATE-curator-to-owner.md
+
+  - path: communication/conversation/TEMPLATE-owner-to-curator.md
+    description: "Template: Owner → Curator decision format"
+    required: true
+    scaffold: copy
+    source_path: general/instructions/communication/conversation/TEMPLATE-owner-to-curator.md
+
+  - path: communication/coordination/main.md
+    description: "Coordination protocols — status vocabulary, handoff requirements, feedback protocol, and conflict resolution"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/communication/coordination/main.md
+
+  # ── Records ───────────────────────────────────────────────────────────────────
+
+  - path: records/main.md
+    description: "Records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/records/main.md
+
+  # ── Feedback consent ──────────────────────────────────────────────────────────
+  # Each consent file is instantiated from the same template; feedback type is filled in at
+  # scaffold time. The Consent Utility (Component 2) may also be used to create these files.
+
+  - path: feedback/onboarding/consent.md
+    description: "Onboarding feedback consent — records whether this project consents to Initializer signal reports being filed to a-society/feedback/onboarding/"
+    required: true
+    scaffold: copy
+    source_path: general/feedback/consent.md
+
+  - path: feedback/migration/consent.md
+    description: "Migration feedback consent — records whether this project consents to migration feedback reports being filed to a-society/feedback/migration/"
+    required: true
+    scaffold: copy
+    source_path: general/feedback/consent.md
+
+  - path: feedback/curator-signal/consent.md
+    description: "Curator signal consent — records whether this project consents to curator signal submissions being filed to a-society/feedback/curator-signal/"
+    required: true
+    scaffold: copy
+    source_path: general/feedback/consent.md
+
+  # ── Version record ────────────────────────────────────────────────────────────
+
+  - path: a-society-version.md
+    description: "A-Society version record — tracks which framework version this project was initialized at and which update reports have been applied; used by the Version Comparator (Component 6)"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/a-society-version-record.md

@@ -4,16 +4,32 @@
 
 A-Society is a documentation framework, not a software application. Its "system" is a set of folders and files that agents read and write. Understanding the structure is understanding the architecture.
 
-A-Society has three top-level folders, each with a distinct role:
+A-Society has four top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
 - **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal tooling.
+- **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in Node.js; invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
+
+The tooling layer comprises six components, each covering a distinct deterministic operation:
+
+| Component | What it does |
+|---|---|
+| Path Validator (5) | Checks that every path registered in an index table resolves to an existing file |
+| Version Comparator (6) | Identifies which framework update reports an adopting project has not yet applied |
+| Consent Utility (2) | Creates consent files from template and checks consent status |
+| Workflow Graph Schema Validator (3) | Validates that a workflow graph document matches the approved YAML frontmatter format |
+| Backward Pass Orderer (4) | Computes correct backward pass traversal order from a workflow graph |
+| Scaffolding System (1) | Creates the folder structure and stub files for a new project's `a-docs/` |
+
+Component numbers reflect the implementation phase order (phases 1–5 in the approved proposal). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
+
+**Node.js project initialization:** The `tooling/` directory is initialized with Node.js project scaffolding (`package.json`, directory structure) by the Tooling Developer after the Owner approves this architecture document update. This is a Developer responsibility — the Curator does not write to `tooling/`.
 
 Two indexes govern path resolution:
 
-- **`a-society/index.md`** — the public index. Covers all paths in `general/` and `agents/`. External agents and project owners resolve paths here.
-- **`a-society/a-docs/indexes/main.md`** — the internal index. Covers paths within `a-docs/`. Internal agents (Owner, Curator) resolve paths here.
+- **`a-society/index.md`** — the public index. Covers all paths in `general/`, `agents/`, and `tooling/`. External agents and project owners resolve paths here.
+- **`a-society/a-docs/indexes/main.md`** — the internal index. Covers paths within `a-docs/`. Internal agents (Owner, Curator, Tooling Developer) resolve paths here.
 
 ---
 
@@ -44,13 +60,15 @@ The following constraints are non-negotiable. An agent that violates one has mad
 
 ### Layer Isolation
 
-`a-docs/` is documentation about A-Society. `general/` and `agents/` are A-Society's work product. These are categorically different things and must not be mixed.
+`a-docs/` is documentation about A-Society. `general/`, `agents/`, and `tooling/` are A-Society's work product. These are categorically different things and must not be mixed.
 
-- Content that is part of A-Society's deliverable (instructions, templates, active agents) belongs in `general/` or `agents/`, never in `a-docs/`
-- Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/` or `agents/`
-- The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/` or `agents/`
+- Content that is part of A-Society's deliverable (instructions, templates, active agents, executable utilities) belongs in `general/`, `agents/`, or `tooling/`, never in `a-docs/`
+- Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/`, `agents/`, or `tooling/`
+- The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/`, `agents/`, or `tooling/`
+- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; deterministic executable utilities → `tooling/`
 
 Violation: Placing an A-Society agent role file in `a-docs/roles/` when the agent works for other projects, not on A-Society.
+Violation: Placing tooling implementation code in `a-docs/` or `general/`.
 
 ### Boundary Respect
 

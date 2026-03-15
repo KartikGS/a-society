@@ -30,6 +30,11 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_AGENT_DOCS_GUIDE` | `/a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's agent-docs exists — required reading for the Curator |
 | `$A_SOCIETY_OWNER_ROLE` | `/a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, responsibilities, and context loading |
 | `$A_SOCIETY_CURATOR_ROLE` | `/a-society/a-docs/roles/curator.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
+| `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `/a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the programmatic tooling layer |
+| `$A_SOCIETY_TOOLING_DEVELOPER_ROLE` | `/a-society/a-docs/roles/tooling-developer.md` | A-Society Tooling Developer Agent role — implementation scope, hard rules, and escalation triggers |
+| `$A_SOCIETY_TOOLING_PROPOSAL` | `/a-society/a-docs/tooling-architecture-proposal.md` | Technical Architect's component designs and automation boundary evaluation — binding specification for all six tooling components |
+| `$A_SOCIETY_TOOLING_ADDENDUM` | `/a-society/a-docs/tooling-architecture-addendum.md` | Tooling implementation workflow, roles, and phase sequencing — companion to the proposal |
+| `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2` | `/a-society/a-docs/tooling-ta-assessment-phase1-2.md` | Technical Architect's Phase 1-2 deviation assessment — formal ruling on two implementation deviations and required spec updates |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `/a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
@@ -39,6 +44,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_LOG` | `/a-society/general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `/a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |
 | `$INSTRUCTION_WORKFLOW` | `/a-society/general/instructions/workflow/main.md` | How to create a workflow document for any project |
+| `$INSTRUCTION_WORKFLOW_GRAPH` | `/a-society/general/instructions/workflow/graph.md` | How to create and maintain a machine-readable workflow graph representation (YAML frontmatter) — enables programmatic backward pass ordering |
 | `$INSTRUCTION_WORKFLOW_PLANS` | `/a-society/general/instructions/workflow/plans/main.md` | How to create a plans structure for any project |
 | `$INSTRUCTION_WORKFLOW_REPORTS` | `/a-society/general/instructions/workflow/reports/main.md` | How to create a reports structure for any project |
 | `$INSTRUCTION_WORKFLOW_REQUIREMENTS` | `/a-society/general/instructions/workflow/requirements/main.md` | How to create a requirements structure for any project |

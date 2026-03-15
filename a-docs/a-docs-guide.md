@@ -122,6 +122,30 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `roles/technical-architect.md` — `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE`
+
+**Why it exists:** The Technical Architect role has a narrow, pre-implementation mandate that is not covered by Owner or Curator: producing the automation boundary evaluation, component designs, and open question surfaces that must exist before any programmatic tooling is built. Without a dedicated role file, this work either collapses into the Owner (adding implementation-planning scope that the Owner does not own) or proceeds without a behavioral contract, risking implementation before design is verified.
+
+**What it owns:** The Technical Architect's authority, hard rules, primary work output definition, context loading, and escalation triggers for the programmatic tooling layer design phase.
+
+**What breaks without it:** A Technical Architect agent has no behavioral contract. The boundary between design and implementation is undefined. Proposals may bypass Owner review. Direction decisions may be absorbed into technical decisions without escalation.
+
+**Do not consolidate with:** `roles/owner.md` — the Owner reviews and approves technical proposals; they do not produce them. Do not consolidate with `roles/curator.md` — the Curator maintains existing documentation; the Technical Architect designs new technical infrastructure that does not yet exist.
+
+---
+
+### `roles/tooling-developer.md` — `$A_SOCIETY_TOOLING_DEVELOPER_ROLE`
+
+**Why it exists:** The Tooling Developer role has a narrow implementation mandate: executing the six approved tooling components in Node.js, within `tooling/` only, with blocking escalation for any deviation from the approved spec. Without a dedicated role file, implementation either collapses into the Curator (who owns documentation, not Node.js code) or proceeds without a behavioral contract — risking scope creep, unapproved workarounds, and components that diverge from the TA's approved designs.
+
+**What it owns:** The Developer's authority (implementation choices, Node.js project initialization), hard rules (no implementation without Phase 0 cleared, no writes outside `tooling/`, no workarounds without TA resolution), minimal context loading (five documents only), and escalation triggers (design deviation, scope ambiguity, documentation gap, Phase 0 incomplete).
+
+**What breaks without it:** A Tooling Developer agent has no behavioral contract. The boundary between implementation and design is undefined. Deviations from the approved spec may be absorbed into implementation decisions without escalation. The Phase 0 gate — which requires this file to be indexed before any Developer session opens — cannot be satisfied.
+
+**Do not consolidate with:** `roles/technical-architect.md` — the TA scopes and designs; the Developer implements. Do not consolidate with `roles/curator.md` — the Curator maintains a-docs; the Developer writes Node.js code in `tooling/`. These are different layers with different authority boundaries.
+
+---
+
 ## `thinking/`
 
 ### `thinking/` — folder
@@ -239,6 +263,46 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Reports are written free-form. Consuming Curators must infer structure. Migration guidance is inconsistently provided. The impact classification model is applied inconsistently.
 
 **Do not consolidate with:** `updates/protocol.md` — the protocol governs when and how to produce reports; the template is the artifact the report fills. Process document vs. format document.
+
+---
+
+## Tooling Documentation
+
+These three files live at the `a-docs/` root (not in a subfolder). They are the design, specification, and assessment artifacts for A-Society's programmatic tooling layer — produced by the Technical Architect and referenced by the Tooling Developer.
+
+### `tooling-architecture-proposal.md` — `$A_SOCIETY_TOOLING_PROPOSAL`
+
+**Why it exists:** The Tooling Developer's primary authority for implementation decisions. The proposal contains the automation boundary evaluation, all six component designs (interfaces, data flow, open questions resolved), and the co-maintenance dependency declarations added after Phase 1-2. Without it, the Developer has no binding specification — implementation would proceed from memory or inference, producing components that diverge from what the Owner approved.
+
+**What it owns:** The definitive record of what each component does, what its interface is, what it depends on, and what was ruled in or out of automation scope. Any post-implementation spec update (accepted deviations) is recorded here; the proposal is the living spec, not a snapshot.
+
+**What breaks without it:** The Developer has no authoritative design reference. Components may be implemented inconsistently or revised without a documented basis. Deviations from this document are the trigger for TA escalation — without the document, there is nothing to deviate from.
+
+**Do not consolidate with:** `tooling-architecture-addendum.md` — the proposal is the WHAT (component designs); the addendum is the WHO/WHEN (phases, roles, session routing). Do not consolidate with `tooling-ta-assessment-phase1-2.md` — the assessment records deviation rulings; the proposal records the authoritative spec.
+
+---
+
+### `tooling-architecture-addendum.md` — `$A_SOCIETY_TOOLING_ADDENDUM`
+
+**Why it exists:** The proposal defines the components but not who implements them, in what phase, in what order, or how deviations are handled. The addendum is the implementation workflow: it defines Phase 0 gate requirements, the Developer's role in initializing the Node.js project, phase sequencing, session routing, and the backward pass order for the tooling implementation flow.
+
+**What it owns:** The complete implementation workflow — phases (0 through 7), role responsibilities per phase, Phase 0 gate requirements (four documentation artifacts must be approved and indexed before Developer opens), deviation escalation path, and the backward pass traversal order for this specific workflow (TA → Developer → Owner → Curator synthesis).
+
+**What breaks without it:** Phases and implementation order are undefined. The Phase 0 gate has no definition. The Developer's responsibility for Node.js project initialization (not the Curator's) is undocumented. The backward pass order for the tooling workflow cannot be derived from the main A-Society workflow document.
+
+**Do not consolidate with:** `tooling-architecture-proposal.md` — these answer different questions. The proposal tells the Developer what to build; the addendum tells everyone how the build process works.
+
+---
+
+### `tooling-ta-assessment-phase1-2.md` — `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2`
+
+**Why it exists:** During Phases 1 and 2, the Developer identified two implementation deviations from the approved spec and escalated to the Technical Architect per the deviation protocol. The TA's formal rulings on those deviations — and the required spec updates — are recorded here. This creates a traceable audit trail: deviation → ruling → spec update → implementation.
+
+**What it owns:** The description of each Phase 1-2 deviation, the TA's ruling (both ruled "Accept with spec update"), and the required change to `$A_SOCIETY_TOOLING_PROPOSAL` for each deviation.
+
+**What breaks without it:** The basis for the post-Phase 2 spec updates to the proposal is undiscoverable. The ruling that accepted hardcoded rendering in Component 2 and the VERSION.md history table approach in Component 6 cannot be verified. Future agents maintaining the tooling layer cannot trace why those two components diverge from an implementation-neutral reading of the spec.
+
+**Do not consolidate with:** `tooling-architecture-proposal.md` — the proposal is the authoritative spec; the assessment records the process by which the spec was revised. Merging them would obscure the deviation-ruling-update chain.
 
 ---
 

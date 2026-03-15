@@ -90,6 +90,8 @@ A-Society has two work product layers:
 
 The library defines what good looks like. The active agents produce it.
 
+**The programmatic tooling layer** — a planned layer that will sit alongside the documentation layer. Where the documentation layer enables agents to operate correctly by giving them structured context, the tooling layer will enable consistent, reliable execution of repeatable framework operations programmatically — scaffolding, validation, and similar. Tooling extends the framework's reach: it does not replace agent judgment, it makes the well-defined parts of the framework dependable regardless of which agent or human runs them. The scope and components of this layer are being defined and have not yet been implemented.
+
 Like any project using this framework, A-Society also maintains its own `a-docs/` — the agent documentation for agents working on A-Society itself. This is not part of the distributable framework; it is A-Society's own operational layer.
 
 ---

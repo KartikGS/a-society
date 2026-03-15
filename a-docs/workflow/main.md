@@ -1,3 +1,81 @@
+---
+workflow:
+  name: A-Society Framework Development
+  phases:
+    - id: phase-1
+      name: Proposal
+    - id: phase-2
+      name: Review
+    - id: phase-3
+      name: Implementation
+    - id: phase-4
+      name: Registration
+    - id: phase-5
+      name: Backward Pass
+  nodes:
+    - id: owner-phase-1-briefing
+      role: Owner
+      phase: phase-1
+      first_occurrence_position: 1
+      is_synthesis_role: false
+    - id: curator-phase-1-proposal
+      role: Curator
+      phase: phase-1
+      first_occurrence_position: 2
+      is_synthesis_role: false
+    - id: owner-phase-2-review
+      role: Owner
+      phase: phase-2
+      first_occurrence_position: 1
+      is_synthesis_role: false
+    - id: curator-phase-3-implementation
+      role: Curator
+      phase: phase-3
+      first_occurrence_position: 2
+      is_synthesis_role: false
+    - id: curator-phase-4-registration
+      role: Curator
+      phase: phase-4
+      first_occurrence_position: 2
+      is_synthesis_role: false
+    - id: curator-phase-5-findings
+      role: Curator
+      phase: phase-5
+      first_occurrence_position: 2
+      is_synthesis_role: false
+    - id: owner-phase-5-findings
+      role: Owner
+      phase: phase-5
+      first_occurrence_position: 1
+      is_synthesis_role: false
+    - id: curator-phase-5-synthesis
+      role: Curator
+      phase: phase-5
+      first_occurrence_position: 2
+      is_synthesis_role: true
+  edges:
+    - from: owner-phase-1-briefing
+      to: curator-phase-1-proposal
+      artifact: owner-to-curator-brief
+    - from: curator-phase-1-proposal
+      to: owner-phase-2-review
+      artifact: curator-to-owner
+    - from: owner-phase-2-review
+      to: curator-phase-3-implementation
+      artifact: owner-to-curator
+    - from: owner-phase-2-review
+      to: curator-phase-1-proposal
+      artifact: owner-to-curator
+    - from: curator-phase-3-implementation
+      to: curator-phase-4-registration
+    - from: curator-phase-4-registration
+      to: curator-phase-5-findings
+    - from: curator-phase-5-findings
+      to: owner-phase-5-findings
+    - from: owner-phase-5-findings
+      to: curator-phase-5-synthesis
+---
+
 # A-Society: Workflow
 
 This document describes how work moves through the A-Society project — from a need being surfaced to content existing in the right place, registered, and ready for adopters. Read this when you need to know what happens next, who owns a step, or when to escalate.

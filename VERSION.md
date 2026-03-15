@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v9.0
+**Version:** v10.0
 
 ---
 
@@ -37,3 +37,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v7.0 | 2026-03-14 | 2026-03-14-brief-writing-quality.md — Brief-Writing Quality section added to general Owner role template; output-format changes flagged as non-mechanical |
 | v8.0 | 2026-03-14 | 2026-03-14-improvement-folder-redesign.md — Improvement folder redesigned: synthesis path corrected, protocol.md retired into single main.md, improvement/ folder mandatory, traversal algorithm added, generalizable findings guidance added |
 | v9.0 | 2026-03-14 | 2026-03-14-fully-agentic-role-model.md — Fully agentic role model: Human-collaborative phase field added to workflow instruction; Phase 1 structural rule; role document framing updated to agents-only |
+| v10.0 | 2026-03-15 | 2026-03-15-communication-templates-and-workflow-graph.md — Communication templates added to general/ (Breaking); workflow graph instruction added (Recommended) |

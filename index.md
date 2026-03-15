@@ -14,6 +14,14 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 |---|---|---|
 | **Agents** | | |
 | `$A_SOCIETY_INITIALIZER` | `/a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
+| **Tooling** | | |
+| `$A_SOCIETY_TOOLING_INVOCATION` | `/a-society/tooling/INVOCATION.md` | Invocation reference for all six tooling components — quick start, entry points, and error conventions |
+| `$A_SOCIETY_TOOLING_SCAFFOLDING_SYSTEM` | `/a-society/tooling/src/scaffolding-system.js` | Component 1: Scaffolding System — creates a-docs/ folder structure and stub files from the manifest |
+| `$A_SOCIETY_TOOLING_CONSENT_UTILITY` | `/a-society/tooling/src/consent-utility.js` | Component 2: Consent Utility — creates and checks feedback consent files |
+| `$A_SOCIETY_TOOLING_WORKFLOW_GRAPH_VALIDATOR` | `/a-society/tooling/src/workflow-graph-validator.js` | Component 3: Workflow Graph Validator — validates YAML frontmatter schema in workflow/main.md |
+| `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` | `/a-society/tooling/src/backward-pass-orderer.js` | Component 4: Backward Pass Orderer — computes backward pass role traversal order from a workflow graph |
+| `$A_SOCIETY_TOOLING_PATH_VALIDATOR` | `/a-society/tooling/src/path-validator.js` | Component 5: Path Validator — checks whether every path in an index table resolves to an existing file |
+| `$A_SOCIETY_TOOLING_VERSION_COMPARATOR` | `/a-society/tooling/src/version-comparator.js` | Component 6: Version Comparator — identifies framework update reports an adopting project has not yet applied |
 | **Feedback** | | |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `/a-society/feedback/onboarding/_template.md` | Template for Initializer signal reports — one report per initialization run |
 | `$INSTRUCTION_CONSENT` | `/a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
@@ -39,6 +47,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_LOG` | `/a-society/general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `/a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |
 | `$INSTRUCTION_WORKFLOW` | `/a-society/general/instructions/workflow/main.md` | How to create a workflow document for any project |
+| `$INSTRUCTION_WORKFLOW_GRAPH` | `/a-society/general/instructions/workflow/graph.md` | How to create and maintain a machine-readable workflow graph representation (YAML frontmatter) — enables programmatic backward pass ordering |
 | `$INSTRUCTION_WORKFLOW_PLANS` | `/a-society/general/instructions/workflow/plans/main.md` | How to create a plans structure for any project |
 | `$INSTRUCTION_WORKFLOW_REPORTS` | `/a-society/general/instructions/workflow/reports/main.md` | How to create a reports structure for any project |
 | `$INSTRUCTION_WORKFLOW_REQUIREMENTS` | `/a-society/general/instructions/workflow/requirements/main.md` | How to create a requirements structure for any project |
@@ -50,6 +59,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_THINKING` | `/a-society/general/instructions/thinking/main.md` | How to create a thinking/ folder for any project |
 | `$INSTRUCTION_IMPROVEMENT` | `/a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `/a-society/general/instructions/records/main.md` | How to create a records structure for any project |
+| **Manifests** | | |
+| `$GENERAL_MANIFEST` | `/a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | **Role Templates** | | |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
