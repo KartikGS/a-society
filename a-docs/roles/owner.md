@@ -25,7 +25,7 @@ The Owner **owns**:
 - The folder structure — changes to the organization of `a-society/` require Owner review
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
-- **Workflow routing** — routing work into the appropriate workflow by default and directing the human to the next session
+- **Workflow routing** — routing work into the appropriate workflow by default, including complexity analysis at intake to determine the proportional path through the workflow (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the human to the next session
 - The Next Priorities section of `$A_SOCIETY_LOG` — adding new items surfaced from backward pass findings and removing items when their flows close
 
 The Owner **does NOT**:

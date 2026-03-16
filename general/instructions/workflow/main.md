@@ -263,6 +263,12 @@ A workflow document that describes role responsibilities, vision, or tool choice
 
 ---
 
+## Routing Complexity at Intake
+
+When routing incoming work into an existing workflow, the Owner determines the proportional path through the graph — not all work warrants the full pipeline. For the five complexity axes, the three-tier routing model, and the intake routing procedure: see `$INSTRUCTION_WORKFLOW_COMPLEXITY`.
+
+---
+
 ## Modifying an Existing Workflow
 
 When an existing workflow needs to change — adding a new flow type, modifying a phase, changing a handoff, or adjusting an invariant — do not edit the workflow document directly. A workflow modification is a structured operation: it must be proposed, reviewed, and approved before implementation.

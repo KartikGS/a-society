@@ -129,4 +129,5 @@ After implementation, verify:
 
 - **`$INSTRUCTION_WORKFLOW`** — how to create a workflow from scratch. Read before this document if you are creating rather than modifying.
 - **`$INSTRUCTION_WORKFLOW_GRAPH`** — how to create and maintain the machine-readable graph representation. Required reading if the workflow being modified has YAML frontmatter.
+- **`$INSTRUCTION_WORKFLOW_COMPLEXITY`** — how to construct a complexity-proportional workflow path for a given task at intake. This document governs design-time structural modification; `$INSTRUCTION_WORKFLOW_COMPLEXITY` governs intake-time path selection. These are distinct operations.
 - **`$INSTRUCTION_IMPROVEMENT`** — the backward pass protocol. After a workflow modification flows through to closure, backward pass traversal order is defined there.

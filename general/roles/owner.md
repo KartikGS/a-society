@@ -19,7 +19,7 @@ The Owner **owns**:
 - The project's folder structure — changes require Owner review
 - The project's `agents.md` and `indexes/main.md`
 - Quality review of all contributions — the test is always alignment with the core bet
-- **Workflow routing** — routing work into the appropriate workflow by default and directing the user to the next session
+- **Workflow routing** — routing work into the appropriate workflow by default, including complexity analysis at intake to determine the proportional path through the workflow (see the workflow complexity instruction), and directing the user to the next session
 - [CUSTOMIZE: list any project-specific owned artifacts, e.g., a standards document, a glossary]
 
 The Owner **does NOT**:

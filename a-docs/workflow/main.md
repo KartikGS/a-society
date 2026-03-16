@@ -102,6 +102,8 @@ Work enters the graph when any of the following surfaces a specific need:
 
 These are not workflow phases. They are what creates the input for Phase 1.
 
+**Complexity at intake:** Before creating a Phase 1 briefing, the Owner assesses the complexity of the triggered work to determine the appropriate workflow path. See `$INSTRUCTION_WORKFLOW_COMPLEXITY` for the intake analysis framework — complexity determines the tier of workflow path required and what record artifacts are expected.
+
 ---
 
 ## Phases
