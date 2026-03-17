@@ -60,6 +60,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_THINKING` | `/a-society/general/instructions/thinking/main.md` | How to create a thinking/ folder for any project |
 | `$INSTRUCTION_IMPROVEMENT` | `/a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `/a-society/general/instructions/records/main.md` | How to create a records structure for any project |
+| `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `/a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
 | `$GENERAL_THINKING` | `/a-society/general/thinking/main.md` | Ready-made general principles template — cross-role operational rules |
 | `$GENERAL_THINKING_REASONING` | `/a-society/general/thinking/reasoning.md` | Ready-made reasoning framework template — cognitive heuristics for agents |
 | `$GENERAL_THINKING_KEEP_IN_MIND` | `/a-society/general/thinking/keep-in-mind.md` | Ready-made keep-in-mind template — operational reminders and hard stops |
@@ -84,6 +85,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator-brief.md` | Template: Owner → Curator briefing format |
 | `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER` | `/a-society/a-docs/communication/conversation/TEMPLATE-curator-to-owner.md` | Template: Curator → Owner proposal / submission format |
 | `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator.md` | Template: Owner → Curator decision format |
+| `$A_SOCIETY_COMM_TEMPLATE_PLAN` | `/a-society/a-docs/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Template: Owner workflow plan — Phase 0 artifact; produced at intake for every flow, before any brief is written |
 | `$A_SOCIETY_COMM_COORDINATION` | `/a-society/a-docs/communication/coordination/main.md` | A-Society coordination protocols — entry point |
 | `$A_SOCIETY_COMM_HANDOFF_PROTOCOL` | `/a-society/a-docs/communication/coordination/handoff-protocol.md` | Status vocabulary, handoff requirements, clarification rules, pre-replacement checks |
 | `$A_SOCIETY_COMM_FEEDBACK_PROTOCOL` | `/a-society/a-docs/communication/coordination/feedback-protocol.md` | What to do when a discrepancy or blocker is discovered in prior work |

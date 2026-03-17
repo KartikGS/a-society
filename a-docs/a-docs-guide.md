@@ -206,7 +206,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Every proposal the Curator submits and every decision the Owner issues follows a defined format. Without templates, handoff formats vary by session. The conversation folder is the stable home for those templates.
 
-**What it owns:** The permanent templates for each artifact type (briefing, proposal, decision). Artifacts themselves are created in the active record folder (see `$A_SOCIETY_RECORDS`), not here.
+**What it owns:** The permanent templates for each artifact type (workflow plan, briefing, proposal, decision). Artifacts themselves are created in the active record folder (see `$A_SOCIETY_RECORDS`), not here.
 
 **What breaks without it:** Agents writing handoffs have no canonical format reference. Templates become scattered or are recreated inconsistently.
 

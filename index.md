@@ -66,6 +66,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | **Role Templates** | | |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
+| **Communication Templates** | | |
+| `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `/a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
 | **Thinking Templates** | | |
 | `$GENERAL_THINKING` | `/a-society/general/thinking/main.md` | Ready-made general principles template |
 | `$GENERAL_THINKING_REASONING` | `/a-society/general/thinking/reasoning.md` | Ready-made reasoning framework template |

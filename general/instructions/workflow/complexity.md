@@ -46,7 +46,7 @@ Each axis is a signal, not a binary threshold. The Owner reads the combination t
 
 ## Producing a Workflow Plan
 
-The workflow plan is the Owner's intake artifact. It is placed in the record folder as the first sequenced artifact (e.g., `01-owner-workflow-plan.md`). When a full Owner-to-Curator brief is warranted for multi-role flows, the plan may be embedded in that brief rather than produced as a separate file.
+The workflow plan is the Owner's intake artifact. Use `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` as the base; place the instantiated plan in the record folder as `01-owner-workflow-plan.md`. When a full Owner-to-Curator brief is warranted for multi-role flows, the plan may be embedded in that brief rather than produced as a separate file.
 
 A workflow plan must specify:
 

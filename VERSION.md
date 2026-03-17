@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v11.1
+**Version:** v12.0
 
 ---
 
@@ -40,3 +40,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v10.0 | 2026-03-15 | 2026-03-15-communication-templates-and-workflow-graph.md — Communication templates added to general/ (Breaking); workflow graph instruction added (Recommended) |
 | v11.0 | 2026-03-15 | 2026-03-15-agent-reliability-gaps.md — Handoff Output path portability required (Breaking); Curator deep-link prohibition added (Breaking); context confirmation completeness required (Recommended) |
 | v11.1 | 2026-03-16 | 2026-03-16-complexity-analysis-references.md — Complexity analysis at intake added to Owner role template; intake routing section added to workflow instruction (both Recommended) |
+| v12.0 | 2026-03-17 | 2026-03-17-owner-phase0-gate.md — Phase 0 gate added to Owner role template; workflow plan template added to general library (both Breaking) |

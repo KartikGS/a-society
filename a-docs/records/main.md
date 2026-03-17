@@ -10,7 +10,7 @@ See `$INSTRUCTION_RECORDS` for the general pattern this instantiates.
 
 `YYYYMMDD-slug`
 
-- `YYYYMMDD` — the date the flow begins (when the Owner writes the briefing)
+- `YYYYMMDD` — the date the flow begins (when the Owner creates the record folder at intake)
 - `slug` — a short, descriptive kebab-case label for the flow (e.g., `records-infrastructure`, `role-minimum-set`)
 
 If two flows begin on the same calendar date: append a disambiguating suffix to the slug (e.g., `20260308-records-infrastructure`, `20260308-tooling-update`).
@@ -25,19 +25,22 @@ Within each record folder, artifacts are named with a zero-padded two-digit sequ
 
 | Position | Artifact | Produced By | Trigger |
 |---|---|---|---|
-| `01-` | `owner-to-curator-brief.md` | Owner | Human/Owner align on a change |
-| `02-` | `curator-to-owner.md` | Curator | Proposal drafted |
-| `03-` | `owner-to-curator.md` | Owner | Review decision issued |
-| `04-` | `curator-findings.md` | Curator | Backward pass (Phase 5) |
-| `05-` | `owner-findings.md` | Owner | Backward pass (Phase 5) |
+| `01-` | `owner-workflow-plan.md` | Owner | Flow intake — Phase 0 gate; all tiers |
+| `02-` | `owner-to-curator-brief.md` | Owner | Tier 2/3: plan exists; brief follows |
+| `03-` | `curator-to-owner.md` | Curator | Proposal drafted |
+| `04-` | `owner-to-curator.md` | Owner | Review decision issued |
+| `05-` | `curator-findings.md` | Curator | Backward pass (Phase 5) |
+| `06-` | `owner-findings.md` | Owner | Backward pass (Phase 5) |
 
-If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `04-curator-to-owner.md`), the Owner re-decides at `05-owner-to-curator.md`, and backward pass findings shift to `06-` and `07-`. The sequence continues as long as the flow requires.
+**Tier 1 flows** use a shortened sequence: `01-owner-workflow-plan.md` (Phase 0 gate) followed by `02-owner-backward-pass.md` (findings). No brief, proposal, or decision artifacts are produced.
+
+If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `05-curator-to-owner.md`), the Owner re-decides at `06-owner-to-curator.md`, and backward pass findings shift to `07-` and `08-`. The sequence continues as long as the flow requires.
 
 If a flow includes an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
 
 **Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-update-report.md`, `owner-update-report.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
 
-**Example:** Main flow closes at `03-owner-to-curator.md`; update report submission takes `04-curator-update-report.md` and Owner decision takes `05-owner-update-report.md`; backward-pass findings then start at `06-`.
+**Example:** Main flow closes at `04-owner-to-curator.md`; update report submission takes `05-curator-update-report.md` and Owner decision takes `06-owner-update-report.md`; backward-pass findings then start at `07-`.
 
 **Prerequisite before filing findings:** Confirm all submissions in this flow are resolved — meaning the Owner has responded to every Curator → Owner artifact produced after the main decision. Do not begin backward-pass findings until this check passes.
 
@@ -56,10 +59,11 @@ Not in a record:
 
 ## Creating a Record Folder
 
-The Owner creates the record folder when writing the briefing:
+The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
-2. Create `01-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
-3. Point the Curator at `01-owner-to-curator-brief.md`
+2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
+3. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
+4. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 
 Each subsequent artifact is created at the next available sequence position by the role responsible for it.

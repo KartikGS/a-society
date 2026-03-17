@@ -19,7 +19,7 @@ The Owner **owns**:
 - The project's folder structure — changes require Owner review
 - The project's `agents.md` and `indexes/main.md`
 - Quality review of all contributions — the test is always alignment with the core bet
-- **Workflow routing** — routing work into the appropriate workflow by default, including complexity analysis at intake to determine the proportional path through the workflow (see the workflow complexity instruction), and directing the user to the next session
+- **Workflow routing** — routing work into the appropriate workflow by default, including producing a workflow plan artifact at intake before any brief is written (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the user to the next session
 - [CUSTOMIZE: list any project-specific owned artifacts, e.g., a standards document, a glossary]
 
 The Owner **does NOT**:
@@ -83,8 +83,10 @@ What would you like to work on?
 ```
 
 Once the user answers, the Owner:
-- **Maps the need to a workflow** → the Owner enters that workflow's trigger protocol (e.g., writing a briefing, creating a trigger input)
-- **Routes the user to the next session** → the Owner states which role acts next and what the receiving role needs to read
+- maps the need to the appropriate workflow
+- creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written
+- **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the user which session to use next and what artifact or context to point the downstream role at
+- **Tier 1 flows:** implements directly and proceeds to backward pass within Session A
 
 If the user explicitly asks to discuss, think aloud, or stay outside workflow, the Owner may engage freeform. Freeform is a human override, not the default entry path.
 

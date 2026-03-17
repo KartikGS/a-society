@@ -166,6 +166,12 @@ files:
     scaffold: copy
     source_path: general/communication/conversation/TEMPLATE-owner-to-curator.md
 
+  - path: communication/conversation/TEMPLATE-owner-workflow-plan.md
+    description: "Workflow plan template — instantiated by the Owner at intake as `01-owner-workflow-plan.md`; five complexity axes, tier, path, and known unknowns"
+    required: true
+    scaffold: copy
+    source_path: general/communication/conversation/TEMPLATE-owner-workflow-plan.md
+
   - path: communication/coordination/main.md
     description: "Coordination protocols — status vocabulary, handoff requirements, feedback protocol, and conflict resolution"
     required: true

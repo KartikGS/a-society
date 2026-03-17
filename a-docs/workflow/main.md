@@ -2,6 +2,8 @@
 workflow:
   name: A-Society Framework Development
   phases:
+    - id: phase-0
+      name: Intake
     - id: phase-1
       name: Proposal
     - id: phase-2
@@ -13,6 +15,11 @@ workflow:
     - id: phase-5
       name: Backward Pass
   nodes:
+    - id: owner-phase-0-plan
+      role: Owner
+      phase: phase-0
+      first_occurrence_position: 1
+      is_synthesis_role: false
     - id: owner-phase-1-briefing
       role: Owner
       phase: phase-1
@@ -54,6 +61,9 @@ workflow:
       first_occurrence_position: 2
       is_synthesis_role: true
   edges:
+    - from: owner-phase-0-plan
+      to: owner-phase-1-briefing
+      artifact: owner-workflow-plan
     - from: owner-phase-1-briefing
       to: curator-phase-1-proposal
       artifact: owner-to-curator-brief
@@ -102,17 +112,33 @@ Work enters the graph when any of the following surfaces a specific need:
 
 These are not workflow phases. They are what creates the input for Phase 1.
 
-**Complexity at intake:** Before creating a Phase 1 briefing, the Owner assesses the complexity of the triggered work to determine the appropriate workflow path. See `$INSTRUCTION_WORKFLOW_COMPLEXITY` for the intake analysis framework — complexity determines the tier of workflow path required and what record artifacts are expected.
+**Phase 0 — Intake (required):** Every flow begins with Phase 0 — see the Phase 0 section below. The Owner produces `01-owner-workflow-plan.md` before any other artifact. For Tier 2 and 3 flows, the Owner-to-Curator brief follows immediately as the next sequenced artifact.
 
 ---
 
 ## Phases
 
+### Phase 0 — Intake
+
+Every flow begins here, before any other artifact is produced.
+
+**Owner:** Owner.
+
+**Work:** Assess the complexity of the triggered work against the five axes from `$INSTRUCTION_WORKFLOW_COMPLEXITY`. Select the appropriate tier. Define the known path and surface known unknowns.
+
+**Output:** `01-owner-workflow-plan.md` in the record folder (see `$A_SOCIETY_RECORDS`), produced using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. All five complexity axis fields, the tier field, and the path field must be non-null — a plan missing any required field is incomplete and does not satisfy this gate.
+
+For **Tier 1 flows:** the plan is the approval gate; the Owner implements directly within Session A and proceeds to backward pass. No brief is written. No Session B is needed.
+
+For **Tier 2 and 3 flows:** the plan gates the brief. The Owner writes the Owner-to-Curator brief as the next sequenced artifact (e.g., `02-owner-to-curator-brief.md`) immediately after, then initiates Session B.
+
+---
+
 ### Phase 1 — Proposal
 
 The entry node. A proposed change is formulated with rationale.
 
-**Input:** A stated need from a trigger source. For Curator-led proposals, the Owner creates a record folder (see `$A_SOCIETY_RECORDS`) and writes `01-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`. For human-directed changes, the human provides the direction directly. The briefing establishes scope and direction alignment only — a Phase 2 decision artifact is a separate, subsequent step and may not be substituted by the briefing.
+**Input:** A completed Phase 0 workflow plan and, for Curator-led proposals, an Owner-to-Curator brief written from `$A_SOCIETY_COMM_TEMPLATE_BRIEF` as the next sequenced artifact after the plan. For human-directed changes, the human provides the direction directly. The briefing establishes scope and direction alignment only — a Phase 2 decision artifact is a separate, subsequent step and may not be substituted by the briefing.
 
 **Owner:** Curator (for `general/` additions and maintenance); Owner (for direction changes).
 **Human-collaborative:** direction — the human provides the need, direction change, or feedback signal that initiates the flow.
@@ -219,7 +245,8 @@ For detailed artifact formats, status vocabulary, and coordination rules, see `$
 
 | Edge | Transition Condition | What Carries It | Receiver Checks |
 |---|---|---|---|
-| Trigger → Phase 1 | Owner briefing written (Curator-led) or human direction given | `01-owner-to-curator-brief.md` in the active record folder, or conversation | Briefing contains Agreed Change and Scope; Curator acknowledges |
+| Trigger → Phase 0 | Owner identifies need and creates record folder | `01-owner-workflow-plan.md` in the active record folder | All frontmatter fields non-null; tier and path specified |
+| Phase 0 → Phase 1 | Plan complete; Tier 2 or 3 confirmed | Next sequenced artifact in the active record folder, from `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | Briefing contains Agreed Change and Scope; Curator acknowledges |
 | Phase 1 → Phase 2 | Draft + rationale submitted | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER`) | All three proposal elements present |
 | Phase 2 → Phase 3 | Decision = Approved | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Approval stated explicitly |
 | Phase 2 → Phase 1 | Decision = Revise | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Curator acknowledges; revises and resubmits |
@@ -235,14 +262,14 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 | Session | Role | Phases |
 |---|---|---|
-| **Session A** | Owner | Trigger input (briefing) → *pause* → Phase 2 (review) → *pause* → Phase 5 (findings) |
+| **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review) → *pause* → Phase 5 (findings) |
 | **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register) → Phase 5 (findings, synthesis) |
 
 **Default routing rule:** Resume the existing session by default. Start a new session only when the criteria in "When to start a new session" below apply. The active role must say this explicitly at each pause point; the human does not infer it.
 
 ### How it flows
 
-1. **Session A starts.** The human and Owner align on a need. The Owner creates a record folder and writes `01-owner-to-curator-brief.md`. The Owner tells the human whether to resume the existing Curator session or start a new one, provides a copyable path to `01-owner-to-curator-brief.md`, and — if a new session is required — provides a copyable session-start prompt for the Curator. If no Curator session exists yet, the Owner says to start Session B; otherwise the default is resume. Session A pauses.
+1. **Session A starts.** The human and Owner align on a need. The Owner creates the record folder and produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. **For Tier 1 flows:** the plan is the approval gate; the Owner implements and closes the flow within Session A — no brief is written and Session B is not needed. **For Tier 2 and 3 flows:** the Owner writes the Owner-to-Curator brief as the next sequenced artifact immediately after the plan. The Owner tells the human whether to resume the existing Curator session or start a new one, provides a copyable path to the brief, and — if a new session is required — provides a copyable session-start prompt for the Curator. If no Curator session exists yet, the Owner says to start Session B; otherwise the default is resume. Session A pauses.
 
 2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human whether to resume the existing Owner session or start a new one, provides a copyable path to the proposal artifact, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B pauses.
 
