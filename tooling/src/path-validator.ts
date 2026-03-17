@@ -1,7 +1,11 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const fs = require('fs');
-const path = require('path');
+export interface PathValidationResult {
+  variable: string;
+  path: string;
+  status: 'ok' | 'missing' | 'parse-error';
+}
 
 /**
  * Parses a markdown index table and checks whether each registered path exists.
@@ -11,22 +15,18 @@ const path = require('path');
  *
  * Section-header rows (e.g. | **Agents** | | |) and separator rows are skipped.
  * Paths are resolved relative to repoRoot.
- *
- * @param {string} indexFilePath - Path to the index file (absolute or relative to cwd)
- * @param {string} repoRoot - Root directory to resolve index paths against
- * @returns {{ variable: string, path: string, status: 'ok' | 'missing' | 'parse-error' }[]}
  */
-function validatePaths(indexFilePath, repoRoot) {
+export function validatePaths(indexFilePath: string, repoRoot: string): PathValidationResult[] {
   if (!repoRoot) throw new Error('repoRoot is required');
 
-  let content;
+  let content: string;
   try {
     content = fs.readFileSync(indexFilePath, 'utf8');
   } catch (err) {
-    throw new Error(`Cannot read index file: ${indexFilePath} — ${err.message}`);
+    throw new Error(`Cannot read index file: ${indexFilePath} — ${(err as Error).message}`);
   }
 
-  const results = [];
+  const results: PathValidationResult[] = [];
 
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
@@ -62,5 +62,3 @@ function validatePaths(indexFilePath, repoRoot) {
 
   return results;
 }
-
-module.exports = { validatePaths };

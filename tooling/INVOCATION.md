@@ -1,7 +1,7 @@
 # A-Society Tooling — Invocation Reference
 
 This document describes how agents and humans invoke each tooling component.
-All components are Node.js modules. Runtime requirement: **Node ≥ 16**.
+All components are TypeScript modules (tsx runtime, ESM). Runtime requirement: **Node ≥ 16**.
 
 ---
 
@@ -9,15 +9,17 @@ All components are Node.js modules. Runtime requirement: **Node ≥ 16**.
 
 ```bash
 cd a-society/tooling
-npm install        # installs js-yaml (only external dependency)
+npm install        # installs js-yaml, tsx, and TypeScript
 npm test           # runs the full test suite
 ```
+
+> **Running note:** All scripts that invoke the tooling must be run with `tsx` (e.g., `tsx your-script.ts`). There is no compiled output — source files are `.ts` and executed directly at runtime.
 
 ---
 
 ## Component 1 — Scaffolding System
 
-**File:** `src/scaffolding-system.js`
+**File:** `src/scaffolding-system.ts`
 
 Creates the `a-docs/` folder structure and stub files for a new project.
 Consent files are routed through the Consent Utility automatically.
@@ -25,7 +27,7 @@ Consent files are routed through the Consent Utility automatically.
 ### Primary entry point: `scaffoldFromManifestFile`
 
 ```js
-const { scaffoldFromManifestFile } = require('./src/scaffolding-system');
+import { scaffoldFromManifestFile } from './src/scaffolding-system.ts';
 
 const result = scaffoldFromManifestFile(
   '/absolute/path/to/my-project',          // project root — a-docs/ is created here
@@ -49,7 +51,7 @@ const result = scaffoldFromManifestFile(
 For callers that construct their own entry list (e.g. a subset of manifest entries):
 
 ```js
-const { scaffold } = require('./src/scaffolding-system');
+import { scaffold } from './src/scaffolding-system.ts';
 
 const entries = [
   { path: 'project-information/vision.md', scaffold: 'stub',
@@ -72,14 +74,14 @@ const result = scaffold(projectRoot, projectName, aSocietyRoot, entries, options
 
 ## Component 2 — Consent Utility
 
-**File:** `src/consent-utility.js`
+**File:** `src/consent-utility.ts`
 
 Two operations: create a consent file from template, and check whether consent has been given.
 
 ### Create
 
 ```js
-const { createConsentFile } = require('./src/consent-utility');
+import { createConsentFile } from './src/consent-utility.ts';
 
 const result = createConsentFile(
   '/path/to/project/a-docs',   // a-docs/ root of the target project
@@ -95,7 +97,7 @@ const result = createConsentFile(
 ### Check
 
 ```js
-const { checkConsent } = require('./src/consent-utility');
+import { checkConsent } from './src/consent-utility.ts';
 
 const result = checkConsent(
   '/path/to/project/a-docs',
@@ -115,7 +117,7 @@ const result = checkConsent(
 
 ## Component 3 + 4 — Workflow Graph Validator and Backward Pass Orderer
 
-**Files:** `src/workflow-graph-validator.js`, `src/backward-pass-orderer.js`
+**Files:** `src/workflow-graph-validator.ts`, `src/backward-pass-orderer.ts`
 
 Component 3 validates YAML frontmatter in a `workflow/main.md` file.
 Component 4 consumes a validated graph to produce backward pass order.
@@ -123,7 +125,7 @@ Component 4 consumes a validated graph to produce backward pass order.
 ### Validate a workflow file
 
 ```js
-const { validateWorkflowFile } = require('./src/workflow-graph-validator');
+import { validateWorkflowFile } from './src/workflow-graph-validator.ts';
 
 const { valid, errors } = validateWorkflowFile('/path/to/workflow/main.md');
 // valid: boolean
@@ -133,7 +135,7 @@ const { valid, errors } = validateWorkflowFile('/path/to/workflow/main.md');
 ### Compute backward pass order
 
 ```js
-const { orderFromFile } = require('./src/backward-pass-orderer');
+import { orderFromFile } from './src/backward-pass-orderer.ts';
 
 // Full workflow — all nodes
 const order = orderFromFile('/path/to/workflow/main.md');
@@ -156,7 +158,7 @@ const order = orderFromFile('/path/to/workflow/main.md', ['node-id-1', 'node-id-
 For callers that have already parsed the YAML:
 
 ```js
-const { orderFromGraph } = require('./src/backward-pass-orderer');
+import { orderFromGraph } from './src/backward-pass-orderer.ts';
 const order = orderFromGraph(parsedGraphDoc, optionalFiredNodeIds);
 ```
 
@@ -191,12 +193,12 @@ workflow:
 
 ## Component 5 — Path Validator
 
-**File:** `src/path-validator.js`
+**File:** `src/path-validator.ts`
 
 Checks whether every path registered in an index table resolves to an existing file.
 
 ```js
-const { validatePaths } = require('./src/path-validator');
+import { validatePaths } from './src/path-validator.ts';
 
 const results = validatePaths(
   '/path/to/index.md',          // index file with Variable | Path | Description table
@@ -225,12 +227,12 @@ validatePaths('/a-society/a-docs/indexes/main.md', '/repo/root');
 
 ## Component 6 — Version Comparator
 
-**File:** `src/version-comparator.js`
+**File:** `src/version-comparator.ts`
 
 Identifies which framework update reports an adopting project has not yet applied.
 
 ```js
-const { compareVersions } = require('./src/version-comparator');
+import { compareVersions } from './src/version-comparator.ts';
 
 const result = compareVersions(
   '/path/to/project/a-docs/a-society-version.md',  // project's version record
@@ -266,13 +268,13 @@ Tests are in `test/`. Each component has a dedicated unit test file plus a share
 
 | File | What it covers |
 |---|---|
-| `test/path-validator.test.js` | Unit — Component 5 |
-| `test/version-comparator.test.js` | Unit — Component 6 |
-| `test/consent-utility.test.js` | Unit — Component 2 |
-| `test/workflow-graph-validator.test.js` | Unit — Component 3 |
-| `test/backward-pass-orderer.test.js` | Unit — Component 4 |
-| `test/scaffolding-system.test.js` | Unit — Component 1 |
-| `test/integration.test.js` | Integration — all components composing |
+| `test/path-validator.test.ts` | Unit — Component 5 |
+| `test/version-comparator.test.ts` | Unit — Component 6 |
+| `test/consent-utility.test.ts` | Unit — Component 2 |
+| `test/workflow-graph-validator.test.ts` | Unit — Component 3 |
+| `test/backward-pass-orderer.test.ts` | Unit — Component 4 |
+| `test/scaffolding-system.test.ts` | Unit — Component 1 |
+| `test/integration.test.ts` | Integration — all components composing |
 
 Tests use Node's built-in `assert` module — no test framework required. Framework state failures (index drift, missing source files) are printed as `[info]` warnings and do not fail the suite.
 

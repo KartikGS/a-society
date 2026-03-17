@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Integration test — Phase 6
  *
@@ -15,29 +13,34 @@
  * informational warnings and do not fail the suite, consistent with prior phases.
  */
 
-const assert = require('assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+import assert from 'node:assert';
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const { scaffold, scaffoldFromManifestFile } = require('../src/scaffolding-system');
-const { checkConsent }                       = require('../src/consent-utility');
-const { validatePaths }                      = require('../src/path-validator');
-const { validateWorkflowFile }               = require('../src/workflow-graph-validator');
-const { orderFromFile }                      = require('../src/backward-pass-orderer');
-const { compareVersions }                    = require('../src/version-comparator');
+import { scaffold, scaffoldFromManifestFile } from '../src/scaffolding-system.js';
+import { checkConsent }                        from '../src/consent-utility.js';
+import { validatePaths }                       from '../src/path-validator.js';
+import { validateWorkflowFile }                from '../src/workflow-graph-validator.js';
+import { orderFromFile }                       from '../src/backward-pass-orderer.js';
+import { compareVersions }                     from '../src/version-comparator.js';
+import type { BackwardPassEntry }              from '../src/backward-pass-orderer.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log(`  ✓ ${name}`);
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${(err as Error).message}`);
     failed++;
   }
 }
@@ -53,11 +56,11 @@ const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/main.md');
 const VERSION_MD        = path.join(SOCIETY_ROOT, 'VERSION.md');
 
 // Temp directory for the simulated project
-const TEMP_BASE     = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-integration-'));
+const TEMP_BASE     = fs.mkdtempSync(path.join(tmpdir(), 'a-society-integration-'));
 const PROJECT_ROOT  = path.join(TEMP_BASE, 'test-project');
 const ADOCS_ROOT    = path.join(PROJECT_ROOT, 'a-docs');
 
-function cleanup() { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
+function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
 
 console.log('\nintegration');
 
@@ -65,7 +68,8 @@ console.log('\nintegration');
 // Scaffold → Consent Utility chain: scaffoldFromManifestFile creates consent
 // files via the Consent Utility; checkConsent then reads each of the three back.
 
-let scaffoldResult;
+import type { ScaffoldResult } from '../src/scaffolding-system.js';
+let scaffoldResult: ScaffoldResult | undefined;
 
 test('Scenario 1 — scaffold runs against live manifest without throwing', () => {
   assert.doesNotThrow(() => {
@@ -74,7 +78,7 @@ test('Scenario 1 — scaffold runs against live manifest without throwing', () =
       'Integration Test Project',
       SOCIETY_ROOT,
       MANIFEST_PATH,
-      { consentValue: 'pending', consentRecordedBy: 'Integration Test' }
+      { consentValue: 'pending', consentRecordedBy: 'Integration Test' },
     );
   });
 });
@@ -128,7 +132,7 @@ test('Scenario 3 — second scaffold run skips all existing files (no overwrites
     PROJECT_ROOT,
     'Integration Test Project',
     SOCIETY_ROOT,
-    MANIFEST_PATH
+    MANIFEST_PATH,
   );
   assert.strictEqual(second.created.length, 0, `Expected 0 created, got ${second.created.length}`);
   assert.ok(second.skipped.length > 0, 'Expected some skipped entries');
@@ -142,7 +146,7 @@ test('Scenario 4 — path validator runs against public index without throwing',
     results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
   });
   assert.ok(Array.isArray(results));
-  assert.ok(results.length > 0);
+  assert.ok(results!.length > 0);
 });
 
 test('Scenario 4 — public index: all results have required fields', () => {
@@ -173,7 +177,7 @@ test('Scenario 4 — internal index: any failures are framework drift, not tool 
 
 // ── Scenario 5: Workflow Graph Validator → Backward Pass Orderer ──────────────
 
-let backwardOrder;
+let backwardOrder: BackwardPassEntry[] | undefined;
 
 test('Scenario 5 — workflow graph validator passes on live workflow', () => {
   const { valid, errors } = validateWorkflowFile(WORKFLOW_FILE);

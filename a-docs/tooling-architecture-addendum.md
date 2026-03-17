@@ -15,7 +15,7 @@ Four roles are involved in implementing the tooling layer. Three are existing A-
 
 | Role | Type | Primary function in this work |
 |---|---|---|
-| Tooling Developer | **New** | Implement approved tooling components in Node.js |
+| Tooling Developer | **New** | Implement approved tooling components in TypeScript |
 | Technical Architect | Existing (advisory mode) | Review implementations against approved designs; surface deviations |
 | Curator | Existing | All documentation changes — architecture doc, workflow frontmatter, general/ instructions, indexes |
 | Owner | Existing | Approval gates; final authority |
@@ -24,7 +24,7 @@ Four roles are involved in implementing the tooling layer. Three are existing A-
 
 ### Tooling Developer (new role)
 
-**Primary function:** Implement the six approved tooling components in Node.js, following the Technical Architect's component designs as binding specifications. This is a pure execution role — the designs are given, not open for re-interpretation.
+**Primary function:** Implement the six approved tooling components in TypeScript, following the Technical Architect's component designs as binding specifications. This is a pure execution role — the designs are given, not open for re-interpretation.
 
 **Authority scope:**
 

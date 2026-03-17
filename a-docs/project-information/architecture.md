@@ -8,7 +8,7 @@ A-Society has four top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
 - **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal tooling.
-- **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in Node.js; invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
+- **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in TypeScript (tsx runtime, ESM); invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
 The tooling layer comprises six components, each covering a distinct deterministic operation:

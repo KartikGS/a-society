@@ -1,16 +1,46 @@
-'use strict';
+import fs from 'node:fs';
+import yaml from 'js-yaml';
 
-const fs = require('fs');
-const yaml = require('js-yaml');
+export interface WorkflowPhase {
+  id: string;
+  name: string;
+}
+
+export interface WorkflowNode {
+  id: string;
+  role: string;
+  phase: string;
+  first_occurrence_position: number;
+  is_synthesis_role: boolean;
+}
+
+export interface WorkflowEdge {
+  from: string;
+  to: string;
+  artifact?: string;
+}
+
+export interface WorkflowGraph {
+  name: string;
+  phases: WorkflowPhase[];
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+}
+
+export interface WorkflowDocument {
+  workflow: WorkflowGraph;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+}
 
 /**
  * Extracts YAML frontmatter from a markdown file.
  * Frontmatter is the content between the first pair of "---" delimiters.
- *
- * @param {string} content - Full file content
- * @returns {string | null} YAML string, or null if no frontmatter found
  */
-function extractFrontmatter(content) {
+export function extractFrontmatter(content: string): string | null {
   // Must start with "---" (optionally preceded by a BOM or whitespace-only lines)
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   return match ? match[1] : null;
@@ -19,23 +49,27 @@ function extractFrontmatter(content) {
 /**
  * Validates a parsed workflow graph object against the approved schema.
  *
- * @param {unknown} doc - The parsed YAML document
- * @returns {string[]} List of validation errors; empty if valid
+ * Uses runtime type checks; accepts unknown input and reports all violations.
  */
-function validateGraph(doc) {
-  const errors = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function validateGraph(doc: unknown): string[] {
+  const errors: string[] = [];
 
   if (!doc || typeof doc !== 'object') {
     errors.push('Document is not an object');
     return errors;
   }
 
-  if (!('workflow' in doc)) {
+  // Use any for internal traversal of this runtime-validated structure
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = doc as any;
+
+  if (!('workflow' in d)) {
     errors.push('Missing required field: workflow');
     return errors;
   }
 
-  const wf = doc.workflow;
+  const wf = d.workflow;
 
   if (!wf || typeof wf !== 'object') {
     errors.push('workflow must be an object');
@@ -51,8 +85,9 @@ function validateGraph(doc) {
   if (!Array.isArray(wf.phases) || wf.phases.length === 0) {
     errors.push('workflow.phases must be a non-empty array');
   } else {
-    const phaseIds = new Set();
-    wf.phases.forEach((phase, i) => {
+    const phaseIds = new Set<string>();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    wf.phases.forEach((phase: any, i: number) => {
       if (!phase || typeof phase !== 'object') {
         errors.push(`workflow.phases[${i}] must be an object`);
         return;
@@ -70,15 +105,19 @@ function validateGraph(doc) {
     });
 
     // workflow.nodes
-    const phaseIdSet = new Set(wf.phases.filter(p => p && typeof p.id === 'string').map(p => p.id));
+    const phaseIdSet = new Set<string>(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      wf.phases.filter((p: any) => p && typeof p === 'object' && typeof p.id === 'string').map((p: any) => p.id),
+    );
 
     if (!Array.isArray(wf.nodes) || wf.nodes.length === 0) {
       errors.push('workflow.nodes must be a non-empty array');
     } else {
-      const nodeIds = new Set();
+      const nodeIds = new Set<string>();
       let synthesisCount = 0;
 
-      wf.nodes.forEach((node, i) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      wf.nodes.forEach((node: any, i: number) => {
         if (!node || typeof node !== 'object') {
           errors.push(`workflow.nodes[${i}] must be an object`);
           return;
@@ -123,7 +162,8 @@ function validateGraph(doc) {
       if (!Array.isArray(wf.edges)) {
         errors.push('workflow.edges must be an array');
       } else {
-        wf.edges.forEach((edge, i) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        wf.edges.forEach((edge: any, i: number) => {
           if (!edge || typeof edge !== 'object') {
             errors.push(`workflow.edges[${i}] must be an object`);
             return;
@@ -153,16 +193,13 @@ function validateGraph(doc) {
  * Validates a workflow document file against the approved workflow graph schema.
  *
  * Parses the YAML frontmatter from the file and runs all schema checks.
- *
- * @param {string} filePath - Path to the workflow document (must contain YAML frontmatter)
- * @returns {{ valid: boolean, errors: string[] }}
  */
-function validateWorkflowFile(filePath) {
-  let content;
+export function validateWorkflowFile(filePath: string): ValidationResult {
+  let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
   } catch (err) {
-    return { valid: false, errors: [`Cannot read file: ${filePath} — ${err.message}`] };
+    return { valid: false, errors: [`Cannot read file: ${filePath} — ${(err as Error).message}`] };
   }
 
   const yamlStr = extractFrontmatter(content);
@@ -170,15 +207,13 @@ function validateWorkflowFile(filePath) {
     return { valid: false, errors: ['No YAML frontmatter found (expected content between --- delimiters at start of file)'] };
   }
 
-  let doc;
+  let doc: unknown;
   try {
     doc = yaml.load(yamlStr);
   } catch (err) {
-    return { valid: false, errors: [`YAML parse error: ${err.message}`] };
+    return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }
 
   const errors = validateGraph(doc);
   return { valid: errors.length === 0, errors };
 }
-
-module.exports = { validateWorkflowFile, validateGraph, extractFrontmatter };

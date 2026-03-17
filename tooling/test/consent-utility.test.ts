@@ -1,29 +1,27 @@
-'use strict';
-
-const assert = require('assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { createConsentFile, checkConsent, FEEDBACK_TYPES } = require('../src/consent-utility');
+import assert from 'node:assert';
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { createConsentFile, checkConsent, FEEDBACK_TYPES } from '../src/consent-utility.js';
 
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log(`  ✓ ${name}`);
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${(err as Error).message}`);
     failed++;
   }
 }
 
 // Set up a temp a-docs directory for this test run; clean up after
-const TEMP_ADOCS = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
-function cleanup() { fs.rmSync(TEMP_ADOCS, { recursive: true, force: true }); }
+const TEMP_ADOCS = fs.mkdtempSync(path.join(tmpdir(), 'a-society-test-'));
+function cleanup(): void { fs.rmSync(TEMP_ADOCS, { recursive: true, force: true }); }
 
 console.log('\nconsent-utility');
 
@@ -101,21 +99,22 @@ test('all three feedback types produce files at correct paths', () => {
 test('throws on unknown feedback type', () => {
   assert.throws(
     () => createConsentFile(TEMP_ADOCS, 'unknown-type', 'proj', 'yes'),
-    /Unknown feedback type/
+    /Unknown feedback type/,
   );
 });
 
 test('throws on invalid consent value', () => {
   assert.throws(
     () => createConsentFile(TEMP_ADOCS, 'onboarding', 'proj', 'maybe'),
-    /Invalid consent value/
+    /Invalid consent value/,
   );
 });
 
 test('throws when adocsPath is omitted', () => {
   assert.throws(
+    // @ts-expect-error intentional wrong-type call to test runtime guard
     () => createConsentFile(undefined, 'onboarding', 'proj', 'yes'),
-    /adocsPath is required/
+    /adocsPath is required/,
   );
 });
 
@@ -164,7 +163,7 @@ test('check: path_checked is the resolved consent file path', () => {
 test('check: throws on unknown feedback type', () => {
   assert.throws(
     () => checkConsent(TEMP_ADOCS, 'bad-type'),
-    /Unknown feedback type/
+    /Unknown feedback type/,
   );
 });
 

@@ -1,20 +1,47 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'js-yaml';
+import { createConsentFile, FEEDBACK_TYPES } from './consent-utility.js';
 
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
-const { createConsentFile, FEEDBACK_TYPES } = require('./consent-utility');
+interface ManifestEntry {
+  path: string;
+  scaffold: string;
+  source_path: string;
+  required?: boolean;
+  description?: string;
+}
+
+interface ScaffoldOptions {
+  overwrite?: boolean;
+  consentValue?: string;
+  consentRecordedBy?: string;
+  includeOptional?: boolean;
+}
+
+interface ScaffoldCreatedItem {
+  path: string;
+  scaffold: string;
+  source: string;
+}
+
+interface ScaffoldSkippedItem {
+  path: string;
+  reason: string;
+}
+
+export interface ScaffoldResult {
+  created: ScaffoldCreatedItem[];
+  skipped: ScaffoldSkippedItem[];
+  failed: ScaffoldSkippedItem[];
+}
 
 /**
  * Detects whether a manifest entry path is a feedback consent file.
  * Returns the feedback type key (e.g. 'onboarding') or null.
  *
  * Matches paths of the form: feedback/[type]/consent.md
- *
- * @param {string} entryPath - The manifest entry's path field
- * @returns {string|null}
  */
-function detectFeedbackConsentType(entryPath) {
+export function detectFeedbackConsentType(entryPath: string): string | null {
   const parts = entryPath.replace(/\\/g, '/').split('/');
   if (parts.length === 3 && parts[0] === 'feedback' && parts[2] === 'consent.md') {
     const feedbackType = parts[1];
@@ -26,11 +53,8 @@ function detectFeedbackConsentType(entryPath) {
 /**
  * Derives a human-readable title from a manifest entry's file path.
  * Used when generating stub file content.
- *
- * @param {string} entryPath - e.g. "project-information/vision.md"
- * @returns {string} - e.g. "Vision"
  */
-function titleFromPath(entryPath) {
+export function titleFromPath(entryPath: string): string {
   const base = path.basename(entryPath, '.md');
   return base
     .replace(/^TEMPLATE-/, 'Template: ')
@@ -40,11 +64,8 @@ function titleFromPath(entryPath) {
 
 /**
  * Renders the content for a stub file.
- *
- * @param {object} entry - A manifest entry with { path, description, source_path }
- * @returns {string}
  */
-function renderStub(entry) {
+export function renderStub(entry: ManifestEntry): string {
   const title = titleFromPath(entry.path);
   return `# ${title}\n\n<!-- Stub — fill in per ${entry.source_path} -->\n`;
 }
@@ -58,22 +79,14 @@ function renderStub(entry) {
  *   - scaffold: 'stub'  → writes a minimal titled stub pointing to the instruction source
  *
  * Does not overwrite existing files unless options.overwrite is true.
- *
- * @param {string} projectRoot   - Absolute path to the target project root
- * @param {string} projectName   - Display name for the project (used in consent files)
- * @param {string} aSocietyRoot  - Absolute path to the a-society/ directory (template source)
- * @param {object[]} entries     - Array of manifest file entries to create
- * @param {object}  [options]
- * @param {boolean} [options.overwrite=false]         - Overwrite existing files
- * @param {string}  [options.consentValue='pending']  - Consent value for feedback consent files
- * @param {string}  [options.consentRecordedBy]       - Role recorded in consent files
- * @returns {{
- *   created: Array<{ path: string, scaffold: string, source: string }>,
- *   skipped: Array<{ path: string, reason: string }>,
- *   failed:  Array<{ path: string, reason: string }>
- * }}
  */
-function scaffold(projectRoot, projectName, aSocietyRoot, entries, options = {}) {
+export function scaffold(
+  projectRoot: string,
+  projectName: string,
+  aSocietyRoot: string,
+  entries: ManifestEntry[],
+  options: ScaffoldOptions = {},
+): ScaffoldResult {
   if (!projectRoot) throw new Error('projectRoot is required');
   if (!projectName) throw new Error('projectName is required');
   if (!aSocietyRoot) throw new Error('aSocietyRoot is required');
@@ -82,9 +95,9 @@ function scaffold(projectRoot, projectName, aSocietyRoot, entries, options = {})
   const { overwrite = false, consentValue = 'pending', consentRecordedBy } = options;
   const aDocsRoot = path.join(projectRoot, 'a-docs');
 
-  const created = [];
-  const skipped = [];
-  const failed = [];
+  const created: ScaffoldCreatedItem[] = [];
+  const skipped: ScaffoldSkippedItem[] = [];
+  const failed: ScaffoldSkippedItem[] = [];
 
   for (const entry of entries) {
     if (!entry.path || !entry.scaffold) {
@@ -104,7 +117,7 @@ function scaffold(projectRoot, projectName, aSocietyRoot, entries, options = {})
     try {
       fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     } catch (err) {
-      failed.push({ path: targetPath, reason: `Cannot create directory: ${err.message}` });
+      failed.push({ path: targetPath, reason: `Cannot create directory: ${(err as Error).message}` });
       continue;
     }
 
@@ -133,7 +146,7 @@ function scaffold(projectRoot, projectName, aSocietyRoot, entries, options = {})
         fs.writeFileSync(targetPath, content, 'utf8');
         created.push({ path: targetPath, scaffold: 'copy', source: sourcePath });
       } catch (err) {
-        failed.push({ path: targetPath, reason: `Cannot copy from ${sourcePath}: ${err.message}` });
+        failed.push({ path: targetPath, reason: `Cannot copy from ${sourcePath}: ${(err as Error).message}` });
       }
 
     } else if (entry.scaffold === 'stub') {
@@ -142,7 +155,7 @@ function scaffold(projectRoot, projectName, aSocietyRoot, entries, options = {})
         fs.writeFileSync(targetPath, renderStub(entry), 'utf8');
         created.push({ path: targetPath, scaffold: 'stub', source: entry.source_path || '' });
       } catch (err) {
-        failed.push({ path: targetPath, reason: `Cannot write stub: ${err.message}` });
+        failed.push({ path: targetPath, reason: `Cannot write stub: ${(err as Error).message}` });
       }
 
     } else {
@@ -158,42 +171,38 @@ function scaffold(projectRoot, projectName, aSocietyRoot, entries, options = {})
  *
  * Filters to required-only entries by default. Pass `options.includeOptional: true`
  * to include entries with `required: false`.
- *
- * @param {string} projectRoot
- * @param {string} projectName
- * @param {string} aSocietyRoot
- * @param {string} manifestFilePath - Absolute path to the manifest YAML (e.g. general/manifest.yaml)
- * @param {object} [options]
- * @param {boolean} [options.includeOptional=false] - Include non-required manifest entries
- * @param {boolean} [options.overwrite=false]
- * @param {string}  [options.consentValue='pending']
- * @param {string}  [options.consentRecordedBy]
- * @returns {ReturnType<typeof scaffold>}
  */
-function scaffoldFromManifestFile(projectRoot, projectName, aSocietyRoot, manifestFilePath, options = {}) {
+export function scaffoldFromManifestFile(
+  projectRoot: string,
+  projectName: string,
+  aSocietyRoot: string,
+  manifestFilePath: string,
+  options: ScaffoldOptions = {},
+): ScaffoldResult {
   const { includeOptional = false } = options;
 
-  let content;
+  let content: string;
   try {
     content = fs.readFileSync(manifestFilePath, 'utf8');
   } catch (err) {
-    throw new Error(`Cannot read manifest file: ${err.message}`);
+    throw new Error(`Cannot read manifest file: ${(err as Error).message}`);
   }
 
-  let doc;
+  let doc: unknown;
   try {
     doc = yaml.load(content);
   } catch (err) {
-    throw new Error(`Cannot parse manifest YAML: ${err.message}`);
+    throw new Error(`Cannot parse manifest YAML: ${(err as Error).message}`);
   }
 
-  if (!doc || !Array.isArray(doc.files)) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = doc as any;
+  if (!d || !Array.isArray(d.files)) {
     throw new Error('Manifest must contain a "files" array');
   }
 
-  const entries = includeOptional ? doc.files : doc.files.filter(f => f.required === true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entries: ManifestEntry[] = includeOptional ? d.files : d.files.filter((f: any) => f.required === true);
 
   return scaffold(projectRoot, projectName, aSocietyRoot, entries, options);
 }
-
-module.exports = { scaffold, scaffoldFromManifestFile, renderStub, detectFeedbackConsentType };

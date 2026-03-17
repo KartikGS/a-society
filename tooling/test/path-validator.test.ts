@@ -1,8 +1,10 @@
-'use strict';
+import assert from 'node:assert';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { validatePaths } from '../src/path-validator.js';
 
-const assert = require('assert');
-const path = require('path');
-const { validatePaths } = require('../src/path-validator');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const INTERNAL_INDEX = path.join(REPO_ROOT, 'a-society', 'a-docs', 'indexes', 'main.md');
@@ -12,14 +14,14 @@ const FIXTURE_INDEX = path.join(__dirname, 'fixtures', 'index-sample.md');
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log(`  ✓ ${name}`);
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${(err as Error).message}`);
     failed++;
   }
 }
@@ -85,14 +87,15 @@ test('strips backticks from path values', () => {
 test('throws on unreadable index file', () => {
   assert.throws(
     () => validatePaths('/nonexistent/path/index.md', REPO_ROOT),
-    /Cannot read index file/
+    /Cannot read index file/,
   );
 });
 
 test('throws when repoRoot is omitted', () => {
   assert.throws(
+    // @ts-expect-error intentional wrong-arity call to test runtime guard
     () => validatePaths(FIXTURE_INDEX),
-    /repoRoot is required/
+    /repoRoot is required/,
   );
 });
 
@@ -100,12 +103,12 @@ test('throws when repoRoot is omitted', () => {
 
 console.log('\n  Framework state (informational):');
 
-function report(indexName, indexPath) {
+function report(indexName: string, indexPath: string): void {
   let results;
   try {
     results = validatePaths(indexPath, REPO_ROOT);
   } catch (err) {
-    console.error(`  ! ${indexName}: failed to parse — ${err.message}`);
+    console.error(`  ! ${indexName}: failed to parse — ${(err as Error).message}`);
     return;
   }
   const missing = results.filter(r => r.status !== 'ok');

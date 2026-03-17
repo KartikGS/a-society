@@ -1,39 +1,41 @@
-'use strict';
-
-const assert = require('assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const {
+import assert from 'node:assert';
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
   scaffold,
   scaffoldFromManifestFile,
   renderStub,
   detectFeedbackConsentType,
-} = require('../src/scaffolding-system');
+} from '../src/scaffolding-system.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log(`  ✓ ${name}`);
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${(err as Error).message}`);
     failed++;
   }
 }
 
 // Temp directories: one as project root, one as fake a-society root with source templates
-const TEMP_BASE = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-scaffold-'));
+const TEMP_BASE = fs.mkdtempSync(path.join(tmpdir(), 'a-society-scaffold-'));
 const PROJECT_ROOT = path.join(TEMP_BASE, 'my-project');
 const SOCIETY_ROOT = path.join(TEMP_BASE, 'a-society-src');
-function cleanup() { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
+function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
 
 // Seed the fake a-society source tree with copy templates used in tests
-function seedSourceFile(relativePath, content) {
+function seedSourceFile(relativePath: string, content: string): void {
   const full = path.join(SOCIETY_ROOT, relativePath);
   fs.mkdirSync(path.dirname(full), { recursive: true });
   fs.writeFileSync(full, content, 'utf8');
@@ -70,17 +72,17 @@ test('detectFeedbackConsentType: returns null for unknown feedback type', () => 
 // ── renderStub ────────────────────────────────────────────────────────────────
 
 test('renderStub: produces a heading derived from file basename', () => {
-  const content = renderStub({ path: 'project-information/vision.md', source_path: 'general/instructions/project-information/vision.md' });
+  const content = renderStub({ path: 'project-information/vision.md', scaffold: 'stub', source_path: 'general/instructions/project-information/vision.md' });
   assert.ok(content.startsWith('# Vision\n'), `Expected heading "# Vision", got: ${content.slice(0, 40)}`);
 });
 
 test('renderStub: includes stub comment pointing to source_path', () => {
-  const content = renderStub({ path: 'indexes/main.md', source_path: 'general/instructions/indexes/main.md' });
+  const content = renderStub({ path: 'indexes/main.md', scaffold: 'stub', source_path: 'general/instructions/indexes/main.md' });
   assert.ok(content.includes('general/instructions/indexes/main.md'));
 });
 
 test('renderStub: handles TEMPLATE- prefix in filename', () => {
-  const content = renderStub({ path: 'communication/conversation/TEMPLATE-owner-to-curator-brief.md', source_path: 'general/instructions/communication/conversation/TEMPLATE-owner-to-curator-brief.md' });
+  const content = renderStub({ path: 'communication/conversation/TEMPLATE-owner-to-curator-brief.md', scaffold: 'stub', source_path: 'general/instructions/communication/conversation/TEMPLATE-owner-to-curator-brief.md' });
   assert.ok(content.startsWith('# Template:'), `Expected "# Template:" heading, got: ${content.slice(0, 50)}`);
 });
 
@@ -197,6 +199,7 @@ test('scaffold: overwrites existing files when overwrite is true', () => {
 
 test('scaffold: fails entry with missing path field', () => {
   const projectRoot = path.join(TEMP_BASE, 'invalid-entry-test');
+  // @ts-expect-error intentional missing field to test runtime guard
   const entries = [{ scaffold: 'stub', source_path: 'general/instructions/something.md' }];
   const result = scaffold(projectRoot, 'Test', SOCIETY_ROOT, entries);
   assert.strictEqual(result.failed.length, 1);
@@ -212,6 +215,7 @@ test('scaffold: fails entry with unknown scaffold type', () => {
 });
 
 test('scaffold: throws if projectRoot is missing', () => {
+  // @ts-expect-error intentional null call to test runtime guard
   assert.throws(() => scaffold(null, 'Test', SOCIETY_ROOT, []), /projectRoot is required/);
 });
 
@@ -233,9 +237,9 @@ if (fs.existsSync(MANIFEST_PATH)) {
     assert.doesNotThrow(() => {
       result = scaffoldFromManifestFile(projectRoot, 'Live Test Project', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH);
     });
-    assert.ok(Array.isArray(result.created));
-    assert.ok(Array.isArray(result.skipped));
-    assert.ok(Array.isArray(result.failed));
+    assert.ok(Array.isArray(result!.created));
+    assert.ok(Array.isArray(result!.skipped));
+    assert.ok(Array.isArray(result!.failed));
   });
 
   test('scaffoldFromManifestFile: creates required entries, no unexpected failures', () => {
@@ -269,7 +273,7 @@ if (fs.existsSync(MANIFEST_PATH)) {
     const withOptional = scaffoldFromManifestFile(projectRootOptional, 'Opt Test', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH, { includeOptional: true });
     assert.ok(
       withOptional.created.length + withOptional.failed.length >= required.created.length + required.failed.length,
-      'includeOptional run should process at least as many entries as required-only run'
+      'includeOptional run should process at least as many entries as required-only run',
     );
   });
 } else {
@@ -281,7 +285,7 @@ if (fs.existsSync(MANIFEST_PATH)) {
 test('scaffoldFromManifestFile: throws on missing manifest file', () => {
   assert.throws(
     () => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, '/nonexistent/manifest.yaml'),
-    /Cannot read manifest file/
+    /Cannot read manifest file/,
   );
 });
 
@@ -290,7 +294,7 @@ test('scaffoldFromManifestFile: throws on invalid YAML', () => {
   fs.writeFileSync(badManifest, 'files: [\ninvalid yaml{{{', 'utf8');
   assert.throws(
     () => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, badManifest),
-    /Cannot parse manifest YAML/
+    /Cannot parse manifest YAML/,
   );
 });
 
@@ -299,7 +303,7 @@ test('scaffoldFromManifestFile: throws if manifest has no files array', () => {
   fs.writeFileSync(badManifest, 'manifest_version: "1.0"\n', 'utf8');
   assert.throws(
     () => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, badManifest),
-    /Manifest must contain a "files" array/
+    /Manifest must contain a "files" array/,
   );
 });
 

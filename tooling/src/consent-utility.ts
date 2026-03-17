@@ -1,10 +1,14 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const fs = require('fs');
-const path = require('path');
+interface FeedbackTypeMeta {
+  displayName: string;
+  dirName: string;
+  description: string;
+}
 
 // Enumerated feedback types: input key → file/display metadata
-const FEEDBACK_TYPES = {
+export const FEEDBACK_TYPES: Record<string, FeedbackTypeMeta> = {
   'onboarding': {
     displayName: 'onboarding-signal',
     dirName: 'onboarding',
@@ -22,31 +26,34 @@ const FEEDBACK_TYPES = {
   },
 };
 
-const VALID_CONSENT_VALUES = ['yes', 'no', 'pending'];
+const VALID_CONSENT_VALUES = ['yes', 'no', 'pending'] as const;
+type ConsentValue = typeof VALID_CONSENT_VALUES[number];
+type ConsentStatus = ConsentValue | 'unknown';
 
-/**
- * Returns the path to a project's consent file for a given feedback type.
- *
- * @param {string} adocsPath - Path to the project's a-docs/ directory
- * @param {string} feedbackType - 'onboarding' | 'migration' | 'curator-signal'
- * @returns {string}
- */
-function consentFilePath(adocsPath, feedbackType) {
+export interface CreateConsentResult {
+  status: 'created' | 'already-existed' | 'failed';
+  path: string;
+  reason?: string;
+}
+
+export interface CheckConsentResult {
+  consented: ConsentStatus;
+  file_status: 'present' | 'absent';
+  path_checked: string;
+}
+
+interface CreateConsentOptions {
+  overwrite?: boolean;
+  recordedBy?: string;
+}
+
+function consentFilePath(adocsPath: string, feedbackType: string): string {
   const meta = FEEDBACK_TYPES[feedbackType];
   if (!meta) throw new Error(`Unknown feedback type: "${feedbackType}". Valid types: ${Object.keys(FEEDBACK_TYPES).join(', ')}`);
   return path.join(adocsPath, 'feedback', meta.dirName, 'consent.md');
 }
 
-/**
- * Renders the consent file content from the template.
- *
- * @param {string} feedbackType - 'onboarding' | 'migration' | 'curator-signal'
- * @param {string} projectName
- * @param {string} consentValue - 'yes' | 'no' | 'pending'
- * @param {string} recordedBy - Role that recorded consent (optional)
- * @returns {string}
- */
-function renderConsentFile(feedbackType, projectName, consentValue, recordedBy) {
+function renderConsentFile(feedbackType: string, projectName: string, consentValue: string, recordedBy?: string): string {
   const meta = FEEDBACK_TYPES[feedbackType];
   const today = new Date().toISOString().slice(0, 10);
   const consentDisplay = consentValue.charAt(0).toUpperCase() + consentValue.slice(1);
@@ -77,23 +84,20 @@ function renderConsentFile(feedbackType, projectName, consentValue, recordedBy) 
  * Creates a consent file for a given feedback type in the target project.
  *
  * Does NOT overwrite an existing file unless overwrite is explicitly true.
- *
- * @param {string} adocsPath - Path to the project's a-docs/ directory
- * @param {string} feedbackType - 'onboarding' | 'migration' | 'curator-signal'
- * @param {string} projectName
- * @param {string} consentValue - 'yes' | 'no' | 'pending'
- * @param {object} [options]
- * @param {boolean} [options.overwrite=false] - If true, overwrite an existing file
- * @param {string} [options.recordedBy] - Role that recorded consent
- * @returns {{ status: 'created' | 'already-existed' | 'failed', path: string, reason?: string }}
  */
-function createConsentFile(adocsPath, feedbackType, projectName, consentValue, options = {}) {
+export function createConsentFile(
+  adocsPath: string,
+  feedbackType: string,
+  projectName: string,
+  consentValue: string,
+  options: CreateConsentOptions = {},
+): CreateConsentResult {
   if (!adocsPath) throw new Error('adocsPath is required');
   if (!projectName) throw new Error('projectName is required');
   if (!FEEDBACK_TYPES[feedbackType]) {
     throw new Error(`Unknown feedback type: "${feedbackType}". Valid types: ${Object.keys(FEEDBACK_TYPES).join(', ')}`);
   }
-  if (!VALID_CONSENT_VALUES.includes(consentValue)) {
+  if (!(VALID_CONSENT_VALUES as readonly string[]).includes(consentValue)) {
     throw new Error(`Invalid consent value: "${consentValue}". Valid values: ${VALID_CONSENT_VALUES.join(', ')}`);
   }
 
@@ -110,7 +114,7 @@ function createConsentFile(adocsPath, feedbackType, projectName, consentValue, o
   try {
     fs.mkdirSync(dir, { recursive: true });
   } catch (err) {
-    return { status: 'failed', path: filePath, reason: `Cannot create directory: ${err.message}` };
+    return { status: 'failed', path: filePath, reason: `Cannot create directory: ${(err as Error).message}` };
   }
 
   // Write the file
@@ -119,7 +123,7 @@ function createConsentFile(adocsPath, feedbackType, projectName, consentValue, o
     fs.writeFileSync(filePath, content, 'utf8');
     return { status: 'created', path: filePath };
   } catch (err) {
-    return { status: 'failed', path: filePath, reason: `Cannot write file: ${err.message}` };
+    return { status: 'failed', path: filePath, reason: `Cannot write file: ${(err as Error).message}` };
   }
 }
 
@@ -128,16 +132,8 @@ function createConsentFile(adocsPath, feedbackType, projectName, consentValue, o
  *
  * Reads the consent file at the expected path and parses the Consented field.
  * Does not modify any files.
- *
- * @param {string} adocsPath - Path to the project's a-docs/ directory
- * @param {string} feedbackType - 'onboarding' | 'migration' | 'curator-signal'
- * @returns {{
- *   consented: 'yes' | 'no' | 'pending' | 'unknown',
- *   file_status: 'present' | 'absent',
- *   path_checked: string
- * }}
  */
-function checkConsent(adocsPath, feedbackType) {
+export function checkConsent(adocsPath: string, feedbackType: string): CheckConsentResult {
   if (!adocsPath) throw new Error('adocsPath is required');
   if (!FEEDBACK_TYPES[feedbackType]) {
     throw new Error(`Unknown feedback type: "${feedbackType}". Valid types: ${Object.keys(FEEDBACK_TYPES).join(', ')}`);
@@ -149,10 +145,10 @@ function checkConsent(adocsPath, feedbackType) {
     return { consented: 'unknown', file_status: 'absent', path_checked: filePath };
   }
 
-  let content;
+  let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
-  } catch (err) {
+  } catch (_err) {
     return { consented: 'unknown', file_status: 'present', path_checked: filePath };
   }
 
@@ -163,9 +159,9 @@ function checkConsent(adocsPath, feedbackType) {
   }
 
   const raw = match[1].toLowerCase();
-  const consented = VALID_CONSENT_VALUES.includes(raw) ? raw : 'unknown';
+  const consented: ConsentStatus = (VALID_CONSENT_VALUES as readonly string[]).includes(raw)
+    ? (raw as ConsentValue)
+    : 'unknown';
 
   return { consented, file_status: 'present', path_checked: filePath };
 }
-
-module.exports = { createConsentFile, checkConsent, FEEDBACK_TYPES };

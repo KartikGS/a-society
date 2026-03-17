@@ -1,8 +1,18 @@
-'use strict';
+import fs from 'node:fs';
+import yaml from 'js-yaml';
+import { validateWorkflowFile, extractFrontmatter, WorkflowDocument } from './workflow-graph-validator.js';
 
-const fs = require('fs');
-const yaml = require('js-yaml');
-const { validateWorkflowFile, extractFrontmatter } = require('./workflow-graph-validator');
+export interface BackwardPassEntry {
+  backward_pass_position: number;
+  role: string;
+  node_ids: string[];
+  is_synthesis: boolean;
+}
+
+interface RoleMapEntry {
+  min_position: number;
+  node_ids: string[];
+}
 
 /**
  * Computes the backward pass traversal order from a parsed workflow graph.
@@ -14,21 +24,8 @@ const { validateWorkflowFile, extractFrontmatter } = require('./workflow-graph-v
  *   3. Sort deduplicated roles by first_occurrence_position ascending (forward pass order).
  *   4. Reverse — this is the findings order.
  *   5. Append the synthesis role last.
- *
- * The synthesis role appears in the output twice if it has non-synthesis nodes that fired:
- * once in findings position (step 4), and once as the synthesis entry (step 5).
- *
- * @param {object} graph - Parsed workflow graph object (workflow: { phases, nodes, edges })
- * @param {string[]} [firedNodeIds] - Optional list of node ids that fired in this instance.
- *   When provided, only roles with at least one fired node (or the synthesis node) are included.
- * @returns {{
- *   backward_pass_position: number,
- *   role: string,
- *   node_ids: string[],
- *   is_synthesis: boolean
- * }[]}
  */
-function orderFromGraph(graph, firedNodeIds) {
+export function orderFromGraph(graph: WorkflowDocument, firedNodeIds?: string[]): BackwardPassEntry[] {
   const nodes = graph.workflow.nodes;
   const fired = firedNodeIds ? new Set(firedNodeIds) : null;
 
@@ -44,7 +41,7 @@ function orderFromGraph(graph, firedNodeIds) {
     : nonSynthesisNodes;
 
   // Deduplicate by role: track min first_occurrence_position and all node ids per role
-  const roleMap = new Map(); // role → { min_position, node_ids }
+  const roleMap = new Map<string, RoleMapEntry>();
   for (const node of activeNonSynthesis) {
     const existing = roleMap.get(node.role);
     if (!existing) {
@@ -69,7 +66,7 @@ function orderFromGraph(graph, firedNodeIds) {
   const includeSynthesis = !fired || fired.has(synthesisNode.id);
 
   // Build output
-  const result = [];
+  const result: BackwardPassEntry[] = [];
   let position = 1;
 
   for (const entry of reversed) {
@@ -97,17 +94,8 @@ function orderFromGraph(graph, firedNodeIds) {
  * Reads, validates, and computes the backward pass traversal order from a workflow file.
  *
  * Throws if the file cannot be read, has no frontmatter, or fails schema validation.
- *
- * @param {string} filePath - Path to the workflow document
- * @param {string[]} [firedNodeIds] - Optional list of node ids that fired in this instance
- * @returns {{
- *   backward_pass_position: number,
- *   role: string,
- *   node_ids: string[],
- *   is_synthesis: boolean
- * }[]}
  */
-function orderFromFile(filePath, firedNodeIds) {
+export function orderFromFile(filePath: string, firedNodeIds?: string[]): BackwardPassEntry[] {
   const { valid, errors } = validateWorkflowFile(filePath);
   if (!valid) {
     throw new Error(`Workflow graph validation failed:\n${errors.map(e => `  - ${e}`).join('\n')}`);
@@ -115,9 +103,7 @@ function orderFromFile(filePath, firedNodeIds) {
 
   const content = fs.readFileSync(filePath, 'utf8');
   const yamlStr = extractFrontmatter(content);
-  const graph = yaml.load(yamlStr);
+  const graph = yaml.load(yamlStr!) as WorkflowDocument;
 
   return orderFromGraph(graph, firedNodeIds);
 }
-
-module.exports = { orderFromGraph, orderFromFile };

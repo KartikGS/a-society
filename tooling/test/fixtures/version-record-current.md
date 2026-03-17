@@ -19,3 +19,6 @@
 | v7.0 | 2026-03-14-brief-writing-quality.md | 2026-03-14 | — |
 | v8.0 | 2026-03-14-improvement-folder-redesign.md | 2026-03-14 | — |
 | v9.0 | 2026-03-14-fully-agentic-role-model.md | 2026-03-15 | — |
+| v10.0 | 2026-03-15-communication-templates-and-workflow-graph.md | 2026-03-15 | — |
+| v11.0 | 2026-03-15-agent-reliability-gaps.md | 2026-03-15 | — |
+| v11.1 | 2026-03-16-complexity-analysis-references.md | 2026-03-16 | — |

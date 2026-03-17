@@ -2,13 +2,20 @@
   "name": "a-society-tooling",
   "version": "0.1.0",
   "description": "Programmatic tooling layer for the A-Society framework",
+  "type": "module",
   "scripts": {
-    "test": "node test/path-validator.test.js && node test/version-comparator.test.js && node test/consent-utility.test.js && node test/workflow-graph-validator.test.js && node test/backward-pass-orderer.test.js && node test/scaffolding-system.test.js && node test/integration.test.js"
+    "test": "tsx test/path-validator.test.ts && tsx test/version-comparator.test.ts && tsx test/consent-utility.test.ts && tsx test/workflow-graph-validator.test.ts && tsx test/backward-pass-orderer.test.ts && tsx test/scaffolding-system.test.ts && tsx test/integration.test.ts"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "dependencies": {
     "js-yaml": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
   }
 }

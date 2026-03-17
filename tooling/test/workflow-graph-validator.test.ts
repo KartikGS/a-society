@@ -1,8 +1,10 @@
-'use strict';
+import assert from 'node:assert';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { validateWorkflowFile, validateGraph, extractFrontmatter } from '../src/workflow-graph-validator.js';
 
-const assert = require('assert');
-const path = require('path');
-const { validateWorkflowFile, validateGraph, extractFrontmatter } = require('../src/workflow-graph-validator');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const LIVE_WORKFLOW = path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'main.md');
@@ -11,14 +13,14 @@ const FIXTURES = path.join(__dirname, 'fixtures');
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log(`  ✓ ${name}`);
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${(err as Error).message}`);
     failed++;
   }
 }

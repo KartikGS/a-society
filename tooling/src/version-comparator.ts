@@ -1,15 +1,26 @@
-'use strict';
+import fs from 'node:fs';
 
-const fs = require('fs');
+export interface Version {
+  major: number;
+  minor: number;
+}
+
+interface VersionHistoryEntry {
+  version: string;
+  filename: string | null;
+}
+
+export interface CompareVersionsResult {
+  projectVersion: string;
+  currentVersion: string;
+  unappliedReports: { filename: string; version: string }[];
+}
 
 /**
  * Parses a "vMAJOR.MINOR" string into { major, minor }.
  * Throws if the format does not match.
- *
- * @param {string} str
- * @returns {{ major: number, minor: number }}
  */
-function parseVersion(str) {
+export function parseVersion(str: string): Version {
   const m = (str || '').trim().match(/^v(\d+)\.(\d+)$/);
   if (!m) throw new Error(`Invalid version format: "${str}"`);
   return { major: parseInt(m[1], 10), minor: parseInt(m[2], 10) };
@@ -17,12 +28,8 @@ function parseVersion(str) {
 
 /**
  * Returns true if version a is strictly greater than version b.
- *
- * @param {{ major: number, minor: number }} a
- * @param {{ major: number, minor: number }} b
- * @returns {boolean}
  */
-function isGreaterThan(a, b) {
+export function isGreaterThan(a: Version, b: Version): boolean {
   if (a.major !== b.major) return a.major > b.major;
   return a.minor > b.minor;
 }
@@ -37,23 +44,20 @@ function isGreaterThan(a, b) {
  * match the YYYY-MM-DD-slug.md naming convention. Rows without a parseable
  * filename (e.g. the v1.0 baseline entry) produce a null filename and are
  * excluded from the unapplied-reports list.
- *
- * @param {string} filePath
- * @returns {{ currentVersion: string, history: { version: string, filename: string | null }[] }}
  */
-function parseFrameworkVersionFile(filePath) {
-  let content;
+function parseFrameworkVersionFile(filePath: string): { currentVersion: string; history: VersionHistoryEntry[] } {
+  let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
   } catch (err) {
-    throw new Error(`Cannot read VERSION.md: ${filePath} — ${err.message}`);
+    throw new Error(`Cannot read VERSION.md: ${filePath} — ${(err as Error).message}`);
   }
 
   const versionMatch = content.match(/^\*\*Version:\*\*\s*(v\d+\.\d+)/m);
   if (!versionMatch) throw new Error(`Cannot find "**Version:**" in: ${filePath}`);
   const currentVersion = versionMatch[1];
 
-  const history = [];
+  const history: VersionHistoryEntry[] = [];
   let inTable = false;
 
   for (const line of content.split('\n')) {
@@ -88,16 +92,13 @@ function parseFrameworkVersionFile(filePath) {
  * The recorded version is the "Version After" value from the last applied-updates
  * row. If no updates have been applied (placeholder row with "—"), falls back to
  * the Baseline Version.
- *
- * @param {string} filePath
- * @returns {string} e.g. "v5.0"
  */
-function parseProjectVersionFile(filePath) {
-  let content;
+function parseProjectVersionFile(filePath: string): string {
+  let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
   } catch (err) {
-    throw new Error(`Cannot read project version file: ${filePath} — ${err.message}`);
+    throw new Error(`Cannot read project version file: ${filePath} — ${(err as Error).message}`);
   }
 
   const baselineMatch = content.match(/^\*\*Baseline Version:\*\*\s*(v\d+\.\d+)/m);
@@ -105,7 +106,7 @@ function parseProjectVersionFile(filePath) {
   const baselineVersion = baselineMatch[1];
 
   let inTable = false;
-  let lastVersion = null;
+  let lastVersion: string | null = null;
 
   for (const line of content.split('\n')) {
     const trimmed = line.trim();
@@ -132,16 +133,15 @@ function parseProjectVersionFile(filePath) {
  * Compares a project's recorded framework version against A-Society's current
  * version and returns the list of update reports that have not yet been applied.
  *
- * @param {string} projectVersionPath - Path to the project's a-docs/a-society-version.md
- * @param {string} frameworkVersionPath - Path to A-Society's VERSION.md
- * @param {string} _updatesDir - Path to a-society/updates/ (reserved; reports are identified via VERSION.md history)
- * @returns {{
- *   projectVersion: string,
- *   currentVersion: string,
- *   unappliedReports: { filename: string, version: string }[]
- * }}
+ * @param projectVersionPath - Path to the project's a-docs/a-society-version.md
+ * @param frameworkVersionPath - Path to A-Society's VERSION.md
+ * @param _updatesDir - Path to a-society/updates/ (reserved; reports are identified via VERSION.md history)
  */
-function compareVersions(projectVersionPath, frameworkVersionPath, _updatesDir) {
+export function compareVersions(
+  projectVersionPath: string,
+  frameworkVersionPath: string,
+  _updatesDir?: string,
+): CompareVersionsResult {
   const projectVersion = parseProjectVersionFile(projectVersionPath);
   const { currentVersion, history } = parseFrameworkVersionFile(frameworkVersionPath);
 
@@ -156,9 +156,7 @@ function compareVersions(projectVersionPath, frameworkVersionPath, _updatesDir) 
         return false;
       }
     })
-    .map(entry => ({ filename: entry.filename, version: entry.version }));
+    .map(entry => ({ filename: entry.filename as string, version: entry.version }));
 
   return { projectVersion, currentVersion, unappliedReports };
 }
-
-module.exports = { compareVersions, parseVersion, isGreaterThan };

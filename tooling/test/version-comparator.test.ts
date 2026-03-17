@@ -1,8 +1,10 @@
-'use strict';
+import assert from 'node:assert';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { compareVersions, parseVersion, isGreaterThan } from '../src/version-comparator.js';
 
-const assert = require('assert');
-const path = require('path');
-const { compareVersions, parseVersion, isGreaterThan } = require('../src/version-comparator');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const FRAMEWORK_VERSION = path.join(REPO_ROOT, 'a-society', 'VERSION.md');
@@ -12,14 +14,14 @@ const FIXTURES = path.join(__dirname, 'fixtures');
 let passed = 0;
 let failed = 0;
 
-function test(name, fn) {
+function test(name: string, fn: () => void): void {
   try {
     fn();
     console.log(`  ✓ ${name}`);
     passed++;
   } catch (err) {
     console.error(`  ✗ ${name}`);
-    console.error(`    ${err.message}`);
+    console.error(`    ${(err as Error).message}`);
     failed++;
   }
 }
@@ -66,10 +68,10 @@ test('project at current version: no unapplied reports', () => {
   const result = compareVersions(
     path.join(FIXTURES, 'version-record-current.md'),
     FRAMEWORK_VERSION,
-    UPDATES_DIR
+    UPDATES_DIR,
   );
-  assert.strictEqual(result.projectVersion, 'v9.0');
-  assert.strictEqual(result.currentVersion, 'v9.0');
+  assert.strictEqual(result.projectVersion, 'v11.1');
+  assert.strictEqual(result.currentVersion, 'v11.1');
   assert.strictEqual(result.unappliedReports.length, 0);
 });
 
@@ -79,10 +81,10 @@ test('project behind current version: returns unapplied reports', () => {
   const result = compareVersions(
     path.join(FIXTURES, 'version-record-behind.md'),
     FRAMEWORK_VERSION,
-    UPDATES_DIR
+    UPDATES_DIR,
   );
   assert.strictEqual(result.projectVersion, 'v4.1');
-  assert.strictEqual(result.currentVersion, 'v9.0');
+  assert.strictEqual(result.currentVersion, 'v11.1');
   assert.ok(result.unappliedReports.length > 0, 'expected unapplied reports');
 });
 
@@ -90,7 +92,7 @@ test('project behind: unapplied reports are in ascending version order', () => {
   const result = compareVersions(
     path.join(FIXTURES, 'version-record-behind.md'),
     FRAMEWORK_VERSION,
-    UPDATES_DIR
+    UPDATES_DIR,
   );
   const versions = result.unappliedReports.map(r => parseVersion(r.version));
   for (let i = 1; i < versions.length; i++) {
@@ -98,7 +100,7 @@ test('project behind: unapplied reports are in ascending version order', () => {
     const curr = versions[i];
     assert.ok(
       isGreaterThan(curr, prev) || (curr.major === prev.major && curr.minor === prev.minor),
-      `expected ascending order at index ${i}: v${prev.major}.${prev.minor} then v${curr.major}.${curr.minor}`
+      `expected ascending order at index ${i}: v${prev.major}.${prev.minor} then v${curr.major}.${curr.minor}`,
     );
   }
 });
@@ -107,7 +109,7 @@ test('project behind: unapplied reports have filename and version fields', () =>
   const result = compareVersions(
     path.join(FIXTURES, 'version-record-behind.md'),
     FRAMEWORK_VERSION,
-    UPDATES_DIR
+    UPDATES_DIR,
   );
   for (const r of result.unappliedReports) {
     assert.ok(typeof r.filename === 'string' && r.filename.endsWith('.md'), `filename: ${r.filename}`);
@@ -119,12 +121,12 @@ test('project behind: v5.0 report is in unapplied list', () => {
   const result = compareVersions(
     path.join(FIXTURES, 'version-record-behind.md'),
     FRAMEWORK_VERSION,
-    UPDATES_DIR
+    UPDATES_DIR,
   );
   const filenames = result.unappliedReports.map(r => r.filename);
   assert.ok(
     filenames.includes('2026-03-12-handoff-copyable-inputs.md'),
-    `expected 2026-03-12-handoff-copyable-inputs.md in ${JSON.stringify(filenames)}`
+    `expected 2026-03-12-handoff-copyable-inputs.md in ${JSON.stringify(filenames)}`,
   );
 });
 
@@ -134,9 +136,9 @@ test('project initialized at current version: no unapplied reports', () => {
   const result = compareVersions(
     path.join(FIXTURES, 'version-record-no-updates.md'),
     FRAMEWORK_VERSION,
-    UPDATES_DIR
+    UPDATES_DIR,
   );
-  assert.strictEqual(result.projectVersion, 'v9.0');
+  assert.strictEqual(result.projectVersion, 'v11.1');
   assert.strictEqual(result.unappliedReports.length, 0);
 });
 
@@ -145,7 +147,7 @@ test('project initialized at current version: no unapplied reports', () => {
 test('throws on unreadable project version file', () => {
   assert.throws(
     () => compareVersions('/nonexistent/version.md', FRAMEWORK_VERSION, UPDATES_DIR),
-    /Cannot read project version file/
+    /Cannot read project version file/,
   );
 });
 
@@ -154,9 +156,9 @@ test('throws on unreadable framework version file', () => {
     () => compareVersions(
       path.join(FIXTURES, 'version-record-current.md'),
       '/nonexistent/VERSION.md',
-      UPDATES_DIR
+      UPDATES_DIR,
     ),
-    /Cannot read VERSION\.md/
+    /Cannot read VERSION\.md/,
   );
 });
 
