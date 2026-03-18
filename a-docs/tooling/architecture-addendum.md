@@ -281,6 +281,7 @@ Registration:
 - Register all new `tooling/` paths in `$A_SOCIETY_PUBLIC_INDEX` (tooling is part of A-Society's work product, accessible to external agents via the public index)
 - Register any new `a-docs/` artifacts in `$A_SOCIETY_INDEX`
 - Add entries to `$A_SOCIETY_AGENT_DOCS_GUIDE` for any new `a-docs/` files created in this flow
+- Update `$A_SOCIETY_TOOLING_INVOCATION` with any new component's invocation entry (required for every new component — Component 5 validates all entries in `$A_SOCIETY_TOOLING_INVOCATION` and will fail on components not registered there)
 
 Framework update report assessment:
 - Curator checks `$A_SOCIETY_UPDATES_PROTOCOL`: does the tooling layer's completion (new `tooling/` folder, new `general/` instruction, workflow frontmatter format) require adopting projects to review their `a-docs/`?
@@ -293,6 +294,8 @@ Backward pass:
 - Backward pass order: TA, Developer, Owner — then Curator (synthesis, always last)
 - TA and Developer are included only if they fired; if TA was not consulted in any phase, TA is excluded
 - Depth: full structured findings — this is a substantive multi-phase flow with structural decisions
+
+**Component 4 invocation:** If Component 4 (Backward Pass Orderer) is available and this flow had more than two participating roles, invoke Component 4 rather than computing the traversal order manually. Pass `$A_SOCIETY_WORKFLOW`. The orderer returns roles in backward pass order, excluding non-firing roles. The manual ordering above is provided as a reference; when Component 4 is available, it takes precedence.
 
 **Output:** Indexes updated; update report published if warranted; backward pass findings and synthesis produced.
 
@@ -358,6 +361,32 @@ Phases 4 and 5 are sequential (Scaffold depends on Consent Utility from Phase 2)
 ### Open dependency (carried forward)
 
 The framework update report discovery problem — how Curators in adopting projects learn that new update reports exist — remains an open problem documented in `$A_SOCIETY_ARCHITECTURE`. The completion of the tooling layer may warrant a new update report. Curator checks the protocol at Phase 7; the discovery mechanism question is not resolved by this work and is not in scope for the Technical Architect.
+
+---
+
+---
+
+## 4. Post-Phase-6 Component Additions
+
+The phase structure above (Phases 0–7) was designed for the initial launch of six components. When a new component is added after the original launch, the following conditions apply.
+
+**Phase 0 gate conditions for a new post-Phase-6 component:**
+
+Before any Developer session opens for the new component:
+- (a) The Tooling Developer role document is updated (or confirmed unchanged) to cover the new component's implementation scope — Owner approval required.
+- (b) `$A_SOCIETY_ARCHITECTURE` is updated if the new component changes the system overview — Owner approval required.
+- (c) `$GENERAL_MANIFEST` is updated if the new component creates or reads `a-docs/` files at scaffold time — Owner approval required.
+- (d) The naming convention parsing contract is updated if the component reads a new path pattern not covered by existing contracts — Owner approval required. If unchanged, confirm explicitly.
+
+All four conditions must be confirmed before the Developer session opens. A Developer session that opens before this gate clears has violated the Approval Invariant.
+
+**Advisory mode:**
+
+The Technical Architect reviews the new component's design and confirms its Phase 0 gate conditions before any Developer session begins. The TA operates in advisory mode during implementation, as defined in Section 1.
+
+**Phase numbering:**
+
+Post-Phase-6 components use a phase label that extends the original sequence (e.g., "Phase 1A" for a Phase 1-class component added after launch, or a descriptive label for a new sequential phase). The Phase 0 gate for a new component is the same gate — a new numbered "Phase 0" is not created. Update the phase dependency diagram in Section 2 when a new component adds a dependency to the diagram.
 
 ---
 

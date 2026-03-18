@@ -81,6 +81,16 @@ At each pause point, the role should state:
 
 Default rule: resume the existing session. Start a new session only when the project's workflow says to — for example, context-window pressure, stale or noisy prior context, or elapsed time. The role should say this explicitly; the human should not infer it.
 
+When resuming an existing session, use the following named format:
+
+```
+Next action: [what the receiving role should do]
+Read: [path to artifact(s)]
+Expected response: [what the receiving role produces next]
+```
+
+No role-assignment prompt is included — the session is already running under the correct role. The new-session format (session-start prompt followed by artifact path) applies only when the project's workflow criteria for a new session are met.
+
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
 ### Optional Sections

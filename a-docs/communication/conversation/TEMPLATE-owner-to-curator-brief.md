@@ -6,6 +6,8 @@
 
 > **Update report classification:** If this change may trigger a framework update report, do not state an expected classification in this brief. Classification is Curator-determined post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Pre-specifying it creates framing the Curator must override.
 
+> **Handoff language:** State gate conditions ("return to Owner when X is complete"), not next-role-session instructions ("switch to Session A and point it at Y"). The Owner provides session routing at the point of decision, not in the brief. A brief that routes sessions directly enables the Curator to bypass the Owner-as-waypoint.
+
 ---
 
 **Subject:** [Brief identifier for the work item — e.g., "Minimum role set — explicit declaration"]
@@ -17,6 +19,8 @@
 ---
 
 ## Agreed Change
+
+> **Item authority marking:** Each item in this section must be marked with its authority level — either `[Requires Owner approval]` or `[Curator authority — implement directly]`. This marking makes the Approval Invariant's scope unambiguous for every item in the brief without requiring the Curator to infer it. An item without a marking is assumed to require Owner approval.
 
 [What the Owner and human aligned on. Describe the change clearly enough that the Curator can draft a proposal without needing to re-derive the rationale from scratch. Include: what is changing, what problem it solves, and why it is worth doing.]
 

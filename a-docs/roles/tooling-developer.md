@@ -41,6 +41,8 @@ The Tooling Developer does **NOT** own:
 - **Never implement a workaround for a design deviation without TA resolution.** When the approved design cannot be implemented as specified, stop implementation on that component and escalate to the TA. Do not build a workaround and report it afterward. Deviations that require design changes must clear Owner approval before implementation of the affected component resumes.
 - **Write to `tooling/` only.** The Developer has no write authority over `a-docs/`, `general/`, `agents/`, or any other A-Society folder. If a documentation change is needed as a consequence of implementation (e.g., a discovered discrepancy, a new path to register), flag it to the Curator — do not make it.
 - **Do not open a Developer session before Phase 0 clears.** The Phase 0 gate is not optional. The following must exist before the first Developer session begins: (a) this role document is approved and indexed; (b) `$A_SOCIETY_ARCHITECTURE` is updated and approved; (c) `$GENERAL_MANIFEST` is approved; (d) the naming convention parsing contract is approved. A Developer session that opens before Phase 0 clears has violated the Approval Invariant.
+
+  **Post-Phase-6 additions:** For components added after the original launch, the Phase 0 gate conditions are defined in `$A_SOCIETY_TOOLING_ADDENDUM` Section 4. The same gate applies: no Developer session opens before those conditions are met.
 - **Never hardcode a file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_PUBLIC_INDEX`, use its variable name. If a path is not yet indexed and you need to reference it in documentation or in code that reads framework files, flag this to the Curator for registration before proceeding.
 
 ---
@@ -68,12 +70,21 @@ At each pause point, the Developer explicitly tells the human:
 1. Whether to switch to an existing session or start a new one. Default: switch to existing. Start new only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for A-Society. Read $A_SOCIETY_AGENTS."`
+4. Handoff inputs for the receiving role:
+   - **Existing session (default):** use this format:
+     ```
+     Next action: [what the receiving role should do]
+     Read: [path to artifact(s)]
+     Expected response: [what the receiving role produces next]
+     ```
+   - **New session (criteria apply):** provide first: `"You are a [Role] agent for A-Society. Read $A_SOCIETY_AGENTS."` — then the artifact path.
 
 Pause points for this role:
 - After completing a phase and before beginning the next phase — handoff status to the human for orchestration
 - When a deviation is identified — immediately escalate to TA; include the specific deviation, the component affected, and what decision is needed
 - After integration testing passes — handoff to Owner for Phase 6 approval gate; include the integration test record and the TA assessment
+
+**Completion report:** Upon completing a phase's implementation work, the Developer produces `NN-developer-completion.md` in the active record folder at the next available sequence position. The completion report must include: (1) what was implemented in this phase; (2) any deviations from the approved spec and their resolution status (escalated to TA / resolved / pending); (3) whether the spec requires an update as a result of accepted deviations. This creates a first-party implementation record that the Owner and Curator can cite.
 
 ---
 

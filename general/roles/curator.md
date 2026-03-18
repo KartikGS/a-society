@@ -93,7 +93,14 @@ At each pause point, the Curator tells the human:
 1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the project's workflow says to.
 2. Which session to switch to.
 3. What the receiving role needs to read (artifact path, changed files, findings, or other required context).
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+4. Handoff inputs for the receiving role:
+   - **Existing session (default):** use this format:
+     ```
+     Next action: [what the receiving role should do]
+     Read: [path to artifact(s)]
+     Expected response: [what the receiving role produces next]
+     ```
+   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 Typical Curator pause points include:
 - after submitting a proposal or update-report draft for Owner review

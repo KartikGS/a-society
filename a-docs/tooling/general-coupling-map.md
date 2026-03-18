@@ -53,7 +53,7 @@ This document is updated after any of the following change types. The change typ
 | Type | Description | Initiating side | What the other side must produce |
 |---|---|---|---|
 | **A** | A `general/` format changes that a tool parses | `general/` | Affected tooling component updated to parse or produce the new format |
-| **B** | A new tool is built that agents should invoke | Tooling | A `general/` instruction update (or new instruction) naming the tool and directing agents to invoke it |
+| **B** | A new tool is built that agents should invoke | Tooling | (1) `$A_SOCIETY_TOOLING_INVOCATION` updated with the new component's invocation entry; (2) a `general/` instruction updated or created naming the tool and directing agents to invoke it. Note: Component 5 (Path Validator) validates all entries in `$A_SOCIETY_TOOLING_INVOCATION` — a component not registered there will fail Path Validator checks. |
 | **C** | An existing tool's interface or behavior changes | Tooling | `$A_SOCIETY_TOOLING_INVOCATION` updated; any `general/` instructions referencing the old interface updated |
 | **D** | A `general/` document changes structure in a way the Scaffolding System must reflect | `general/` | `$GENERAL_MANIFEST` updated (new entry or corrected `source_path`) |
 | **E** | A new consent type is added | Either (Owner/human decides) | All five items: `$GENERAL_FEEDBACK_CONSENT` confirmed compatible; `$A_SOCIETY_ARCHITECTURE` updated; Consent Utility `FEEDBACK_TYPES` constant updated; `$GENERAL_MANIFEST` updated; `$INSTRUCTION_CONSENT` updated |

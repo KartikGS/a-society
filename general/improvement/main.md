@@ -129,7 +129,7 @@ Order the backward pass as follows:
 
 Only the nodes and edges that fired during this instance are included. Dead branches are excluded.
 
-**Tooling:** `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` computes the traversal order programmatically from a workflow graph. Pass the path to `workflow/main.md`. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance. When available, use the orderer rather than computing the order manually. When unavailable, apply the rules above.
+**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), invoke it rather than computing the order manually when the flow has more than two participating roles. Pass the project's workflow document path. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance. Consult the project's tooling documentation for the specific invocation path. When no such tool is available, apply the rules above manually.
 
 ---
 

@@ -51,12 +51,15 @@ Files within a record folder are named with a zero-padded two-digit prefix: `01-
 
 The project's `records/main.md` defines which artifact types appear at which sequence positions (e.g., `01-` is always the briefing, `02-` is always the proposal). Revise/resubmit cycles append artifacts at the next available sequence position — they do not overwrite prior artifacts.
 
+The first sequence position (`01-`) is reserved for the workflow plan — the Phase 0 gate artifact produced by the Owner at flow intake, before any other artifact is created. Projects using the A-Society framework should declare this position explicitly in their `records/main.md` sequence table. See `$INSTRUCTION_WORKFLOW_COMPLEXITY` for the workflow plan format and its role as the Phase 0 gate.
+
 ---
 
 ## What Goes in a Record
 
 A record contains all artifacts produced for one flow traversal:
 
+- **Phase 0 gate artifact** — the Owner's workflow plan, produced at intake before any other artifact. This is always the first artifact in the record folder.
 - **Conversation artifacts** — briefings, proposals, decisions (the handoffs between roles as the flow progresses)
 - **Findings** — backward pass findings from each participating role
 
@@ -96,7 +99,7 @@ For projects that do not use records, `improvement/reports/` remains the default
 Write `a-docs/records/main.md`. Declare the identifier format, slug vocabulary, and what happens when two flows begin on the same calendar date.
 
 **Step 2 — Declare the artifact sequence.**
-List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time.
+List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time. The first position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder.
 
 **Step 3 — Update the conversation layer.**
 Remove live artifact files from `communication/conversation/`. Update template header notes to say artifacts are created into the active record folder.

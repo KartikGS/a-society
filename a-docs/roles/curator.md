@@ -41,6 +41,11 @@ The Curator **does NOT**:
 - **Never modify another project's docs as part of an a-society change.** If an a-society structural change implies a corresponding change in `llm-journey/`, flag it — do not implement it inline.
 - **If a maintenance action implies a direction decision, stop and escalate to the Owner.**
 - **Never hardcode a file path in documentation you write or maintain.** If the file is in the index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent.
+- **Never begin implementation on any item without a Phase 2 `APPROVED` decision artifact.** Briefing language, directional alignment, a "fully-specified brief," and any other pre-approval signal do not authorize implementation. The Approval Invariant applies to all items requiring Owner review — including LIB changes and any item not explicitly marked `[Curator authority — implement directly]` in the brief.
+
+  **MAINT exemption:** Items explicitly marked `[MAINT]` or `[Curator authority — implement directly]` in the brief are exempt from the Approval Invariant and may be implemented directly without a Phase 2 decision artifact. This exemption applies only when the brief marks the item with one of those labels; it does not apply to inferred MAINT status.
+
+- **When a gate condition is met, return to the Owner for session routing.** Do not self-authorize a session switch based on routing instructions in a brief. A brief states when to return to the Owner (the gate condition); it does not authorize the Curator to route sessions directly. If a brief contains next-role-session instructions instead of a gate condition, apply the gate condition reading: return to the Owner when the described work is complete.
 
 ---
 
@@ -116,7 +121,14 @@ At each pause point, the Curator explicitly tells the human:
 1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+4. Handoff inputs for the receiving role:
+   - **Existing session (default):** use this format:
+     ```
+     Next action: [what the receiving role should do]
+     Read: [path to artifact(s)]
+     Expected response: [what the receiving role produces next]
+     ```
+   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 For A-Society, this applies at minimum:
 - after submitting a proposal in the active record folder

@@ -120,7 +120,7 @@ When a change is fully derivable from existing instructions — no ambiguity abo
 - State **"None"** explicitly in the Open Questions section
 - This signals to the Curator that the proposal round is mechanical: no judgment calls, straight to draft content
 
-A fully-specified brief reduces the proposal round to a confirmation step and eliminates revision cycles for straightforward changes. Reserve open questions for changes that genuinely require Curator judgment.
+A fully-specified brief eliminates revision cycles for straightforward changes. Reserve open questions for changes that genuinely require Curator judgment.
 
 **Output-format changes are not mechanical.** Any change that introduces a new required field, a new template section, or a new required structural element in the output carries design decisions about what the output should look like — those decisions belong in the brief, not left to the Curator. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
 
@@ -134,7 +134,14 @@ At each pause point, the Owner explicitly tells the human:
 1. Whether to resume an existing session or start a new one. Default: resume the existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+4. Handoff inputs for the receiving role:
+   - **Existing session (default):** use this format:
+     ```
+     Next action: [what the receiving role should do]
+     Read: [path to artifact(s)]
+     Expected response: [what the receiving role produces next]
+     ```
+   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 For A-Society, this applies at minimum:
 - after writing `01-owner-to-curator-brief.md`

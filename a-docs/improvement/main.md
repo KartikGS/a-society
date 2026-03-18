@@ -119,16 +119,28 @@ The agent decides which depth is appropriate. If unsure, default to lightweight.
 
 ### Backward Pass Traversal
 
-A-Society's forward pass: Owner enters first (Phase 1 briefing), Curator follows (Phases 2–3 proposal and implementation), Owner re-enters for review (Phase 4). First occurrences in order: Owner first, Curator second. Reversed: Curator first, Owner second. Curator also acts as synthesis role and is always last.
+#### Generalizable ordering rule
 
-Backward pass order:
-1. **Curator produces findings first** — as the role closest to implementation, Curator's first forward-pass occurrence reverses to first in the backward pass.
-2. **Owner produces findings second** — Owner's first occurrence (entry point) reverses to second-to-last.
-3. **Curator synthesizes last** — as the synthesis role, Curator produces synthesis after all finding artifacts are complete.
+For any flow with two or more participating roles:
 
-Only nodes that fired during this instance are included.
+1. **Identify first occurrences.** Take each role's *first occurrence* in the forward pass. Subsequent appearances of the same role do not add a new backward-pass node — that role's findings cover all their forward-pass phases.
+2. **Reverse the sequence.** Reverse the first-occurrence order to get the backward order.
+3. **Owner is always second-to-last.** The Owner is the entry point for every A-Society workflow — its first occurrence is always first in the forward pass, placing it second-to-last in the backward sequence.
+4. **Synthesis role (Curator) is always last.** The Curator synthesizes all findings and is always the final node.
+5. **Parallel forks produce concurrent backward-pass nodes.** Roles whose first occurrences are at the same forward-pass position produce findings concurrently, not sequentially.
 
-**Tooling:** `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` computes the traversal order programmatically from a workflow graph. Pass the path to `workflow/main.md`. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance. When available, use the orderer rather than computing the order manually. When unavailable, apply the rules above.
+Only nodes that fired during this instance are included. Dead branches are excluded.
+
+#### Standard two-role case (Owner + Curator only)
+
+A-Society's standard two-role flow: Owner first, Curator second.
+Backward pass order: Curator first, Owner second, Curator synthesizes last.
+
+#### Component 4 mandate
+
+When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available **and** the flow has more than two participating roles, invoke Component 4 to compute the traversal order — do not compute manually. Pass `$A_SOCIETY_WORKFLOW`. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance.
+
+For flows with only two roles (Owner + Curator), manual application of the standard order above is sufficient.
 
 ---
 

@@ -74,6 +74,19 @@ Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
 ---
 
+## a-docs/ Format Dependencies
+
+The coupling map change taxonomy (Types A–F) covers `general/` format dependencies. When a component design requires reading from `a-docs/` content, the taxonomy does not apply — but the co-maintenance obligation does.
+
+For each `a-docs/` format dependency in a component design:
+
+1. **Identify the dependency explicitly.** State which `a-docs/` file the component reads, which fields or sections it parses, and what format it expects.
+2. **Document it in the component design.** Add a co-maintenance dependency declaration: "This component reads `$[FILE]` and parses [field names]. If those fields change, this component must be updated."
+3. **Recommend handling.** Evaluate whether the component should read the `a-docs/` file directly (appropriate when the format is stable and the parse is simple) or whether a more stable interface is available — such as a `general/` format that encodes the same information. If reading `a-docs/` directly, state in the design that the dependency is not tracked by the coupling map taxonomy and requires manual co-maintenance discipline.
+4. **Flag to Owner.** An `a-docs/` format dependency creates a co-maintenance obligation that may not be visible to future Curators maintaining the referenced file. Flag it explicitly in the proposal so the Owner can decide whether the coupling map taxonomy should be extended to cover `a-docs/` dependencies, or whether the manual co-maintenance declaration in the design is sufficient.
+
+---
+
 ## Escalate to Owner When
 
 - An automation boundary decision implies a change to what A-Society is or does
@@ -90,6 +103,13 @@ At each pause point, the Technical Architect explicitly tells the human:
 1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
 2. Which session to switch to.
 3. What the receiving role needs to read.
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for A-Society. Read [path to agents.md]."`
+4. Handoff inputs for the receiving role:
+   - **Existing session (default):** use this format:
+     ```
+     Next action: [what the receiving role should do]
+     Read: [path to artifact(s)]
+     Expected response: [what the receiving role produces next]
+     ```
+   - **New session (criteria apply):** provide first: `"You are a [Role] agent for A-Society. Read [path to agents.md]."` — then the artifact path.
 
 If the output is ready for Owner review, say that explicitly and provide the artifact path(s).
