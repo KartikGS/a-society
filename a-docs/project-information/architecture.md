@@ -20,7 +20,7 @@ The tooling layer comprises seven components, each covering a distinct determini
 | Plan Artifact Validator (7) | Confirms a plan artifact exists in a given record folder and that its YAML frontmatter satisfies all required field constraints |
 | Consent Utility (2) | Creates consent files from template and checks consent status |
 | Workflow Graph Schema Validator (3) | Validates that a workflow graph document matches the approved YAML frontmatter format |
-| Backward Pass Orderer (4) | Computes correct backward pass traversal order from a workflow graph |
+| Backward Pass Orderer (4) | Computes correct backward pass traversal order from a workflow graph and generates per-role session trigger prompts |
 | Scaffolding System (1) | Creates the folder structure and stub files for a new project's `a-docs/` |
 
 Component numbers reflect the implementation phase order (Phases 1–5 in the approved proposal; Component 7 is in Phase 1A, concurrent with Phases 1–3). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.

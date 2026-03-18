@@ -162,6 +162,60 @@ import { orderFromGraph } from './src/backward-pass-orderer.ts';
 const order = orderFromGraph(parsedGraphDoc, optionalFiredNodeIds);
 ```
 
+### Interfaces: `TriggerPromptOptions` and `BackwardPassTriggerEntry`
+
+```typescript
+interface TriggerPromptOptions {
+  recordFolderPath?: string;  // Embedded in prompt text; receiving agent knows where to
+                              // read prior artifacts and write findings. Not read by the component.
+  flowName?: string;          // Human-readable description of the flow for agent context.
+}
+
+interface BackwardPassTriggerEntry extends BackwardPassEntry {
+  trigger_prompt: string;     // Copyable session-start prompt for the receiving agent.
+}
+```
+
+### Generate trigger prompts: `generateTriggerPrompts`
+
+```js
+import { generateTriggerPrompts } from './src/backward-pass-orderer.ts';
+
+// Generate trigger prompts from a pre-computed order
+const order = orderFromFile('/path/to/workflow/main.md', ['node-id-1', 'node-id-2']);
+const entries = generateTriggerPrompts(order, {
+  recordFolderPath: 'a-society/a-docs/records/20260318-example',
+  flowName: 'Example flow description',
+});
+
+// entries: BackwardPassTriggerEntry[]
+// All BackwardPassEntry fields are preserved; each entry gains:
+// trigger_prompt: string  — copyable session-start prompt for the receiving agent
+```
+
+**Notes:**
+- Pure function — performs no file I/O. The caller provides the order and optional context to embed in the prompts.
+- `recordFolderPath` and `flowName` are embedded in the prompt text when provided. When omitted, those lines are absent from the prompt entirely — no empty lines rendered.
+
+### Order and generate trigger prompts: `orderWithPromptsFromFile`
+
+```js
+import { orderWithPromptsFromFile } from './src/backward-pass-orderer.ts';
+
+// Single-call convenience: order + trigger prompts in one step
+const entries = orderWithPromptsFromFile(
+  '/path/to/workflow/main.md',
+  ['node-id-1', 'node-id-2'],   // optional: only nodes that fired; omit for full workflow
+  {
+    recordFolderPath: 'a-society/a-docs/records/20260318-example',
+    flowName: 'Example flow description',
+  }
+);
+
+// Equivalent to:
+// generateTriggerPrompts(orderFromFile(filePath, firedNodeIds), options)
+```
+
 ### Workflow graph YAML frontmatter schema
 
 ```yaml

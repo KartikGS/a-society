@@ -40,7 +40,7 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | Component 6: Version Comparator | Closed (2026-03-15) |
 | `$INSTRUCTION_CONSENT` | Component 2: Consent Utility | Closed (2026-03-15) |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Component 3: Workflow Graph Validator | Closed (2026-03-15) |
-| `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15) |
+| `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15); Type C update processed 2026-03-18 |
 | Initializer context (`$A_SOCIETY_INITIALIZER`, Phase 3) | Component 1: Scaffolding System | Closed (2026-03-15) |
 | `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Component 7: Plan Artifact Validator | Closed (2026-03-18) |
 

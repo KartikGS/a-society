@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import yaml from 'js-yaml';
-import { validateWorkflowFile, extractFrontmatter, WorkflowDocument } from './workflow-graph-validator.js';
+import { validateWorkflowFile, WorkflowDocument } from './workflow-graph-validator.js';
+import { extractFrontmatter } from './utils.js';
 
 export interface BackwardPassEntry {
   backward_pass_position: number;
@@ -106,4 +107,79 @@ export function orderFromFile(filePath: string, firedNodeIds?: string[]): Backwa
   const graph = yaml.load(yamlStr!) as WorkflowDocument;
 
   return orderFromGraph(graph, firedNodeIds);
+}
+
+export interface TriggerPromptOptions {
+  recordFolderPath?: string;  // Embedded in prompt text; receiving agent knows where to read
+                              // prior artifacts and write findings. Not read by the component.
+  flowName?: string;          // Human-readable description of the flow for agent context.
+}
+
+export interface BackwardPassTriggerEntry extends BackwardPassEntry {
+  trigger_prompt: string;     // Copyable session-start prompt for the receiving agent.
+}
+
+/**
+ * Generates per-role trigger prompts from a computed backward pass order.
+ *
+ * Pure function — performs no file I/O. The caller provides the order (from orderFromFile
+ * or orderFromGraph) and optional context to embed in the prompts.
+ *
+ * Each entry in the input order receives a trigger_prompt field. Order is preserved.
+ */
+export function generateTriggerPrompts(
+  order: BackwardPassEntry[],
+  options?: TriggerPromptOptions,
+): BackwardPassTriggerEntry[] {
+  const total = order.length;
+
+  return order.map((entry) => {
+    const N = entry.backward_pass_position;
+    let trigger_prompt: string;
+
+    if (entry.is_synthesis) {
+      const parts: string[] = [];
+      parts.push(`You are the ${entry.role} agent for A-Society. Read a-society/a-docs/agents.md.`);
+      parts.push(`You are performing backward pass synthesis (position ${N} of ${total} — final step).`);
+
+      const contextLines: string[] = [];
+      if (options?.flowName) contextLines.push(`Flow: ${options.flowName}`);
+      if (options?.recordFolderPath) contextLines.push(`Record folder: ${options.recordFolderPath}`);
+      if (contextLines.length > 0) parts.push(contextLines.join('\n'));
+
+      parts.push('Read all findings artifacts in the record folder and produce the synthesis at the next available sequence position.');
+      trigger_prompt = parts.join('\n\n');
+    } else {
+      const parts: string[] = [];
+      parts.push(`You are the ${entry.role} agent for A-Society. Read a-society/a-docs/agents.md.`);
+      parts.push('You are performing a backward pass findings review.');
+
+      const contextLines = [`Backward pass position: ${N} of ${total}`];
+      if (options?.flowName) contextLines.push(`Flow: ${options.flowName}`);
+      if (options?.recordFolderPath) contextLines.push(`Record folder: ${options.recordFolderPath}`);
+      parts.push(contextLines.join('\n'));
+
+      // order[N] is the next entry: N is 1-based, so index N (0-based) is the next item
+      const nextEntry = order[N];
+      const synthesisSuffix = nextEntry.is_synthesis ? ' (synthesis)' : '';
+      parts.push(`Read the prior artifacts in the record folder. Produce your findings at the next available sequence position. When complete, hand off to ${nextEntry.role}${synthesisSuffix}.`);
+      trigger_prompt = parts.join('\n\n');
+    }
+
+    return { ...entry, trigger_prompt };
+  });
+}
+
+/**
+ * Reads and validates the workflow file, computes the backward pass order, and generates
+ * trigger prompts — a single-call convenience wrapper.
+ *
+ * Equivalent to: generateTriggerPrompts(orderFromFile(filePath, firedNodeIds), options)
+ */
+export function orderWithPromptsFromFile(
+  filePath: string,
+  firedNodeIds?: string[],
+  options?: TriggerPromptOptions,
+): BackwardPassTriggerEntry[] {
+  return generateTriggerPrompts(orderFromFile(filePath, firedNodeIds), options);
 }

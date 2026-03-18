@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import { extractFrontmatter } from './utils.js';
 
 const PLAN_FILENAME = '01-owner-workflow-plan.md';
 
@@ -30,16 +31,6 @@ export interface PlanValidationResult {
   file_status: 'present' | 'absent';
   path_checked: string;
   errors: PlanValidationError[];
-}
-
-/**
- * Extracts YAML frontmatter from markdown content.
- * Returns the raw YAML string between the first pair of "---" delimiters, or null
- * if no frontmatter block is found.
- */
-function extractFrontmatter(content: string): string | null {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return match ? match[1] : null;
 }
 
 /**

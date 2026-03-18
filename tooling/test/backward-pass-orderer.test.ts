@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { orderFromGraph, orderFromFile } from '../src/backward-pass-orderer.js';
+import { orderFromGraph, orderFromFile, generateTriggerPrompts, orderWithPromptsFromFile } from '../src/backward-pass-orderer.js';
 import type { WorkflowDocument } from '../src/workflow-graph-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -203,6 +203,121 @@ test('live workflow: synthesis entry is Curator', () => {
   const synthesis = result.find(e => e.is_synthesis);
   assert.ok(synthesis, 'synthesis entry not found');
   assert.strictEqual(synthesis!.role, 'Curator');
+});
+
+// --- generateTriggerPrompts ---
+
+test('generateTriggerPrompts: returns array with trigger_prompt on each entry', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  assert.ok(Array.isArray(result));
+  assert.strictEqual(result.length, order.length);
+  for (const entry of result) {
+    assert.ok(typeof entry.trigger_prompt === 'string');
+    assert.ok(entry.trigger_prompt.length > 0);
+  }
+});
+
+test('generateTriggerPrompts: non-synthesis prompt uses "the" not "a"', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  const nonSynthesis = result.find(e => !e.is_synthesis)!;
+  assert.ok(nonSynthesis.trigger_prompt.startsWith('You are the '));
+  assert.ok(!nonSynthesis.trigger_prompt.includes('You are a '));
+});
+
+test('generateTriggerPrompts: synthesis prompt uses "the" not "a"', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  const synthesis = result.find(e => e.is_synthesis)!;
+  assert.ok(synthesis.trigger_prompt.startsWith('You are the '));
+  assert.ok(!synthesis.trigger_prompt.includes('You are a '));
+});
+
+test('generateTriggerPrompts: path has no leading slash', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  for (const entry of result) {
+    assert.ok(entry.trigger_prompt.includes('a-society/a-docs/agents.md'));
+    assert.ok(!entry.trigger_prompt.includes('/a-society/a-docs/agents.md'));
+  }
+});
+
+test('generateTriggerPrompts: non-synthesis with options includes flow and record folder', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order, { flowName: 'Test Flow', recordFolderPath: 'records/test' });
+  const nonSynthesis = result.find(e => !e.is_synthesis)!;
+  assert.ok(nonSynthesis.trigger_prompt.includes('Flow: Test Flow'));
+  assert.ok(nonSynthesis.trigger_prompt.includes('Record folder: records/test'));
+});
+
+test('generateTriggerPrompts: synthesis with options includes flow and record folder', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order, { flowName: 'Test Flow', recordFolderPath: 'records/test' });
+  const synthesis = result.find(e => e.is_synthesis)!;
+  assert.ok(synthesis.trigger_prompt.includes('Flow: Test Flow'));
+  assert.ok(synthesis.trigger_prompt.includes('Record folder: records/test'));
+});
+
+test('generateTriggerPrompts: options omission — no consecutive empty lines', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  for (const entry of result) {
+    assert.ok(!entry.trigger_prompt.includes('\n\n\n'),
+      `Prompt for ${entry.role} contains consecutive empty lines`);
+  }
+});
+
+test('generateTriggerPrompts: non-synthesis handoff names the next role', () => {
+  const order = orderFromGraph(FOUR_ROLE_GRAPH);
+  // Expected order: [TA, Developer, Owner, Curator(synthesis)]
+  const result = generateTriggerPrompts(order);
+  assert.ok(result[0].trigger_prompt.includes('hand off to Tooling Developer'));
+  assert.ok(result[1].trigger_prompt.includes('hand off to Owner'));
+  assert.ok(result[2].trigger_prompt.includes('hand off to Curator (synthesis)'));
+});
+
+test('generateTriggerPrompts: synthesis prompt contains synthesis-specific text', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  const synthesis = result.find(e => e.is_synthesis)!;
+  assert.ok(synthesis.trigger_prompt.includes('backward pass synthesis'));
+  assert.ok(synthesis.trigger_prompt.includes('final step'));
+});
+
+test('generateTriggerPrompts: preserves all BackwardPassEntry fields', () => {
+  const order = orderFromGraph(TWO_ROLE_GRAPH);
+  const result = generateTriggerPrompts(order);
+  for (let i = 0; i < order.length; i++) {
+    assert.strictEqual(result[i].backward_pass_position, order[i].backward_pass_position);
+    assert.strictEqual(result[i].role, order[i].role);
+    assert.deepStrictEqual(result[i].node_ids, order[i].node_ids);
+    assert.strictEqual(result[i].is_synthesis, order[i].is_synthesis);
+  }
+});
+
+// --- orderWithPromptsFromFile ---
+
+test('orderWithPromptsFromFile: returns trigger entries from valid file', () => {
+  const result = orderWithPromptsFromFile(path.join(FIXTURES, 'workflow-valid.md'));
+  assert.ok(Array.isArray(result));
+  assert.ok(result.length > 0);
+  for (const entry of result) {
+    assert.ok(typeof entry.trigger_prompt === 'string');
+    assert.ok(entry.trigger_prompt.length > 0);
+  }
+  assert.strictEqual(result[result.length - 1].is_synthesis, true);
+});
+
+test('orderWithPromptsFromFile: with options passes through to prompts', () => {
+  const result = orderWithPromptsFromFile(
+    path.join(FIXTURES, 'workflow-valid.md'),
+    undefined,
+    { flowName: 'My Flow' },
+  );
+  for (const entry of result) {
+    assert.ok(entry.trigger_prompt.includes('My Flow'));
+  }
 });
 
 // --- Summary ---

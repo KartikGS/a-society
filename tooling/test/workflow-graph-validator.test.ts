@@ -1,7 +1,8 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateWorkflowFile, validateGraph, extractFrontmatter } from '../src/workflow-graph-validator.js';
+import { validateWorkflowFile, validateGraph } from '../src/workflow-graph-validator.js';
+import { extractFrontmatter } from '../src/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import yaml from 'js-yaml';
+import { extractFrontmatter } from './utils.js';
 
 export interface WorkflowPhase {
   id: string;
@@ -34,16 +35,6 @@ export interface WorkflowDocument {
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
-}
-
-/**
- * Extracts YAML frontmatter from a markdown file.
- * Frontmatter is the content between the first pair of "---" delimiters.
- */
-export function extractFrontmatter(content: string): string | null {
-  // Must start with "---" (optionally preceded by a BOM or whitespace-only lines)
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  return match ? match[1] : null;
 }
 
 /**
