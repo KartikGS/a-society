@@ -266,11 +266,23 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-## Tooling Documentation
+## `tooling/`
 
-These files live at the `a-docs/` root (not in a subfolder). They are the design, specification, assessment, and coupling governance artifacts for A-Society's programmatic tooling layer.
+These files live in `a-docs/tooling/`. They are the design, specification, assessment, and coupling governance artifacts for A-Society's programmatic tooling layer.
 
-### `tooling-general-coupling-map.md` — `$A_SOCIETY_TOOLING_COUPLING_MAP`
+### `tooling/main.md` — `$A_SOCIETY_TOOLING`
+
+**Why it exists:** The tooling folder contains four related documents — component spec, implementation workflow, coupling map, and TA deviation assessment — that together govern A-Society's programmatic tooling layer. Without an entry point, agents must open all four documents to determine which is relevant to their task. The main.md lists each document, its purpose, and who reads it.
+
+**What it owns:** Orientation to the tooling subfolder — one-paragraph description of each document and its intended reader(s).
+
+**What breaks without it:** The tooling folder has no navigable entry point. Agents must scan all four documents to understand which to consult.
+
+**Do not consolidate with:** Any of the four tooling documents — each answers a distinct question (what to build, how to build it, format dependencies, deviation rulings). The main.md is an orientation layer, not a summary of those documents.
+
+---
+
+### `tooling/general-coupling-map.md` — `$A_SOCIETY_TOOLING_COUPLING_MAP`
 
 **Why it exists:** The tooling components depend on `general/` formats — if a format changes, a component breaks. Conversely, when a tool is built, a `general/` instruction should direct agents to invoke it. Without a standing reference for these two dependency types, both can drift silently: format changes break tools without warning, and tools go unused because no instruction points agents to them.
 
@@ -280,15 +292,11 @@ These files live at the `a-docs/` root (not in a subfolder). They are the design
 
 **What breaks without it:** Format changes are approved without scoping the tooling update — tools break after `general/` changes. Invocation gaps accumulate invisibly — tools exist but no agent knows to use them. The Coupling Test and Manifest Check in Phase 2 have no reference to check against.
 
-**Do not consolidate with:** `tooling-architecture-proposal.md` — the proposal is the component spec; this document is the coupling state. Do not consolidate with `tooling-architecture-addendum.md` — the addendum is the implementation workflow; this document is a standing operational reference updated after each cross-layer change.
+**Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the component spec; this document is the coupling state. Do not consolidate with `tooling/architecture-addendum.md` — the addendum is the implementation workflow; this document is a standing operational reference updated after each cross-layer change.
 
 ---
 
-### Tooling design and implementation artifacts
-
-The following three files are the design, specification, and assessment artifacts produced by the Technical Architect and referenced by the Tooling Developer.
-
-### `tooling-architecture-proposal.md` — `$A_SOCIETY_TOOLING_PROPOSAL`
+### `tooling/architecture-proposal.md` — `$A_SOCIETY_TOOLING_PROPOSAL`
 
 **Why it exists:** The Tooling Developer's primary authority for implementation decisions. The proposal contains the automation boundary evaluation, all six component designs (interfaces, data flow, open questions resolved), and the co-maintenance dependency declarations added after Phase 1-2. Without it, the Developer has no binding specification — implementation would proceed from memory or inference, producing components that diverge from what the Owner approved.
 
@@ -296,11 +304,11 @@ The following three files are the design, specification, and assessment artifact
 
 **What breaks without it:** The Developer has no authoritative design reference. Components may be implemented inconsistently or revised without a documented basis. Deviations from this document are the trigger for TA escalation — without the document, there is nothing to deviate from.
 
-**Do not consolidate with:** `tooling-architecture-addendum.md` — the proposal is the WHAT (component designs); the addendum is the WHO/WHEN (phases, roles, session routing). Do not consolidate with `tooling-ta-assessment-phase1-2.md` — the assessment records deviation rulings; the proposal records the authoritative spec.
+**Do not consolidate with:** `tooling/architecture-addendum.md` — the proposal is the WHAT (component designs); the addendum is the WHO/WHEN (phases, roles, session routing). Do not consolidate with `tooling/ta-assessment-phase1-2.md` — the assessment records deviation rulings; the proposal records the authoritative spec.
 
 ---
 
-### `tooling-architecture-addendum.md` — `$A_SOCIETY_TOOLING_ADDENDUM`
+### `tooling/architecture-addendum.md` — `$A_SOCIETY_TOOLING_ADDENDUM`
 
 **Why it exists:** The proposal defines the components but not who implements them, in what phase, in what order, or how deviations are handled. The addendum is the implementation workflow: it defines Phase 0 gate requirements, the Developer's role in initializing the Node.js project, phase sequencing, session routing, and the backward pass order for the tooling implementation flow.
 
@@ -308,11 +316,11 @@ The following three files are the design, specification, and assessment artifact
 
 **What breaks without it:** Phases and implementation order are undefined. The Phase 0 gate has no definition. The Developer's responsibility for Node.js project initialization (not the Curator's) is undocumented. The backward pass order for the tooling workflow cannot be derived from the main A-Society workflow document.
 
-**Do not consolidate with:** `tooling-architecture-proposal.md` — these answer different questions. The proposal tells the Developer what to build; the addendum tells everyone how the build process works.
+**Do not consolidate with:** `tooling/architecture-proposal.md` — these answer different questions. The proposal tells the Developer what to build; the addendum tells everyone how the build process works.
 
 ---
 
-### `tooling-ta-assessment-phase1-2.md` — `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2`
+### `tooling/ta-assessment-phase1-2.md` — `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2`
 
 **Why it exists:** During Phases 1 and 2, the Developer identified two implementation deviations from the approved spec and escalated to the Technical Architect per the deviation protocol. The TA's formal rulings on those deviations — and the required spec updates — are recorded here. This creates a traceable audit trail: deviation → ruling → spec update → implementation.
 
@@ -320,7 +328,7 @@ The following three files are the design, specification, and assessment artifact
 
 **What breaks without it:** The basis for the post-Phase 2 spec updates to the proposal is undiscoverable. The ruling that accepted hardcoded rendering in Component 2 and the VERSION.md history table approach in Component 6 cannot be verified. Future agents maintaining the tooling layer cannot trace why those two components diverge from an implementation-neutral reading of the spec.
 
-**Do not consolidate with:** `tooling-architecture-proposal.md` — the proposal is the authoritative spec; the assessment records the process by which the spec was revised. Merging them would obscure the deviation-ruling-update chain.
+**Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the authoritative spec; the assessment records the process by which the spec was revised. Merging them would obscure the deviation-ruling-update chain.
 
 ---
 
