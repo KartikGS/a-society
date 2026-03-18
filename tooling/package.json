@@ -4,7 +4,7 @@
   "description": "Programmatic tooling layer for the A-Society framework",
   "type": "module",
   "scripts": {
-    "test": "tsx test/path-validator.test.ts && tsx test/version-comparator.test.ts && tsx test/consent-utility.test.ts && tsx test/workflow-graph-validator.test.ts && tsx test/backward-pass-orderer.test.ts && tsx test/scaffolding-system.test.ts && tsx test/integration.test.ts"
+    "test": "tsx test/path-validator.test.ts && tsx test/version-comparator.test.ts && tsx test/plan-artifact-validator.test.ts && tsx test/consent-utility.test.ts && tsx test/workflow-graph-validator.test.ts && tsx test/backward-pass-orderer.test.ts && tsx test/scaffolding-system.test.ts && tsx test/integration.test.ts"
   },
   "engines": {
     "node": ">=18"

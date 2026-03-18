@@ -11,18 +11,19 @@ A-Society has four top-level folders, each with a distinct role:
 - **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in TypeScript (tsx runtime, ESM); invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
-The tooling layer comprises six components, each covering a distinct deterministic operation:
+The tooling layer comprises seven components, each covering a distinct deterministic operation:
 
 | Component | What it does |
 |---|---|
 | Path Validator (5) | Checks that every path registered in an index table resolves to an existing file |
 | Version Comparator (6) | Identifies which framework update reports an adopting project has not yet applied |
+| Plan Artifact Validator (7) | Confirms a plan artifact exists in a given record folder and that its YAML frontmatter satisfies all required field constraints |
 | Consent Utility (2) | Creates consent files from template and checks consent status |
 | Workflow Graph Schema Validator (3) | Validates that a workflow graph document matches the approved YAML frontmatter format |
 | Backward Pass Orderer (4) | Computes correct backward pass traversal order from a workflow graph |
 | Scaffolding System (1) | Creates the folder structure and stub files for a new project's `a-docs/` |
 
-Component numbers reflect the implementation phase order (phases 1–5 in the approved proposal). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
+Component numbers reflect the implementation phase order (Phases 1–5 in the approved proposal; Component 7 is in Phase 1A, concurrent with Phases 1–3). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
 
 **Node.js project initialization:** The `tooling/` directory is initialized with Node.js project scaffolding (`package.json`, directory structure) by the Tooling Developer after the Owner approves this architecture document update. This is a Developer responsibility — the Curator does not write to `tooling/`.
 

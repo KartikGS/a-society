@@ -57,6 +57,8 @@ A workflow plan must specify:
 
 The workflow plan is the approval gate for the flow. Implementation does not begin until the plan exists.
 
+**Plan artifact validation:** After the plan is drafted and before writing the brief, invoke `$A_SOCIETY_TOOLING_PLAN_ARTIFACT_VALIDATOR` with the record folder path. Exit code 0 confirms the YAML frontmatter is present and all required fields are valid. A non-zero result identifies what to fix before proceeding. This step is required for the Owner before issuing a brief; it is not required for other roles reading the plan.
+
 ---
 
 ## Workflow Tiers

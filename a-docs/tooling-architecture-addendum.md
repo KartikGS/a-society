@@ -139,7 +139,29 @@ This workflow extends the existing model rather than replacing it. The existing 
 
 **Gate:** None beyond Phase 0. TA confirms no deviations if the Developer escalated anything. Owner is not required between Phase 1 and Phase 2 unless a deviation escalated past the TA.
 
+**Known test suite state (as of 2026-03-18):** The version-comparator test suite has 3 pre-existing failures caused by fixture drift — fixtures record v11.1 as the current version, but `VERSION.md` has since moved to v12.0. These failures pre-date Phase 1A and are unrelated to Component 5 or 6 implementation work. When running `npm test` to verify an implementation, confirm that any failures are limited to these version-comparator fixture assertions before declaring the implementation clean. Phase 6 Integration Validation cannot produce a fully clean `npm test` run until the fixture drift is resolved. Update this note when the fixtures are brought current.
+
 **Output:** Working Path Validator and Version Comparator in `tooling/`.
+
+---
+
+#### Phase 1A — Plan Artifact Validator
+
+**Purpose:** Implement Plan Artifact Validator (Component 7). Phase 1-class dependency profile: no cross-component dependencies, read-only (no file writes), validates a stable artifact format.
+
+**Role:** Tooling Developer (primary). TA on-demand if spec questions arise.
+
+**Work:**
+- Implement Component 7: Plan Artifact Validator
+- Test against: a record folder with a valid plan artifact (exit code 0), an absent plan artifact (exit code 1), a plan with one or more invalid field values (exit code 1), a file with malformed YAML frontmatter (exit code 2)
+
+**TA involvement:** On-demand. Developer escalates to TA if the component design is ambiguous during implementation. TA is not required at phase completion if no deviations occurred.
+
+**Gate:** None beyond Phase 0. TA confirms no deviations if the Developer escalated anything. Owner is not required between Phase 1A and subsequent phases unless a deviation escalated past the TA.
+
+**Parallelism note:** Phase 1A may run concurrently with Phases 1–3. It has no dependency on any other component and no other component depends on it. It may be implemented as soon as Phase 0 clears.
+
+**Output:** Working Plan Artifact Validator in `tooling/`.
 
 ---
 
@@ -266,7 +288,7 @@ Framework update report assessment:
 
 Backward pass:
 - Follows `$A_SOCIETY_IMPROVEMENT` protocol
-- Forward-pass node order: Owner (Phase 0 gate) → Curator (Phase 0 docs) → Tooling Developer (Phases 1–2) → Curator (Phase 3 docs) → Tooling Developer (Phases 4–5–6) → TA (Phase 6 review) → Owner (Phase 6 gate) → Curator (Phase 7)
+- Forward-pass node order: Owner (Phase 0 gate) → Curator (Phase 0 docs) → Tooling Developer (Phases 1, 1A, 2) → Curator (Phase 3 docs) → Tooling Developer (Phases 4–5–6) → TA (Phase 6 review) → Owner (Phase 6 gate) → Curator (Phase 7)
 - First occurrences: Owner first, Curator second, Developer third, TA fourth
 - Backward pass order: TA, Developer, Owner — then Curator (synthesis, always last)
 - TA and Developer are included only if they fired; if TA was not consulted in any phase, TA is excluded
@@ -282,7 +304,7 @@ Backward pass:
 |---|---|---|
 | Session A | Owner | Phase 0 gate, Phase 3 gate, Phase 6 final approval, Phase 7 backward pass |
 | Session B | Curator | Phase 0 docs, Phase 3 docs, Phase 7 registration + backward pass |
-| Session C | Tooling Developer | Phases 1, 2, 4, 5, 6 |
+| Session C | Tooling Developer | Phases 1, 1A, 2, 4, 5, 6 |
 | TA sessions | Technical Architect | On-demand — invoked when Developer escalates or at Owner's request for Phase 6 gate. When reviewing a tooling change or deviation, the TA also checks `$A_SOCIETY_TOOLING_COUPLING_MAP`'s invocation gap column for the affected component. If the gap is open, the TA notes it as a standing open item in the advisory output. This is not a hard stop — it is a gap-surfacing obligation. |
 
 The existing session model conventions apply: resume existing sessions by default; start a new session only when context limits, elapsed time, or flow boundaries warrant it. Each role explicitly tells the human whether to resume or start new at each pause point.
@@ -296,6 +318,7 @@ The human orchestrates across three standing sessions (A, B, C) rather than two.
 ```
 Phase 0 (Owner gate)
   ├── Phase 1 (Developer) ─── Phase 2 (Developer)
+  ├── Phase 1A (Developer) [concurrent with Phases 1–3; no inter-phase dependencies]
   └── Phase 3 (Curator/Owner gate)                 ─── Phase 4 (Developer)
                                                                 └── Phase 5 (Developer)
                                                                           └── Phase 6 (Developer + TA + Owner gate)

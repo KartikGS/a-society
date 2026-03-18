@@ -2,7 +2,7 @@
 
 This document is the standing reference for the coupling surface between `a-society/tooling/` and `a-society/general/`. It records two things:
 
-1. **Format dependencies** — which `general/` elements each tooling component parses programmatically, such that a format change would break the component
+1. **Format dependencies** — which framework elements (in `general/` or `a-docs/`) each tooling component parses programmatically, such that a format change would break the component
 2. **Invocation status** — whether a `general/` instruction currently directs agents to invoke each component
 
 Updated as part of Phase 7 (Registration) in the tooling workflow after any change classified as Type A, B, C, D, E, or F in the taxonomy section below.
@@ -15,7 +15,9 @@ Updated as part of Phase 7 (Registration) in the tooling workflow after any chan
 
 ## Format Dependencies
 
-| `general/` element | Format dependency | Component that depends on it |
+Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs/` files rather than `general/` elements. These are tracked in this table because they require the same update discipline: when the referenced `a-docs/` artifact changes its schema or field structure, the dependent tooling component's validation constants must be updated to match.
+
+| `general/` or `[a-docs]` element | Format dependency | Component that depends on it |
 |---|---|---|
 | Index table format (3-col markdown, `` `$VAR` `` in col 1, path in col 2) | Yes | Component 5: Path Validator |
 | `VERSION.md` format (`**Version:** vX.Y`, 3-col history table, `YYYY-MM-DD-slug.md` filenames) | Yes | Component 6: Version Comparator |
@@ -26,6 +28,7 @@ Updated as part of Phase 7 (Registration) in the tooling workflow after any chan
 | Backward pass ordering rule (per `$GENERAL_IMPROVEMENT`) | Yes | Component 4: Backward Pass Orderer (encodes the rule) |
 | `$GENERAL_MANIFEST` file format (`files` array, `path`/`scaffold`/`source_path`/`required` fields) | Yes | Component 1: Scaffolding System |
 | All `copy`-type `source_path` files in the manifest | Yes | Component 1: Scaffolding System (reads them at scaffold time) |
+| `$A_SOCIETY_COMM_TEMPLATE_PLAN` frontmatter schema `[a-docs]`: `type`, `date`, `complexity.*` (five sub-fields: `domain_spread`, `shared_artifact_impact`, `step_dependency`, `reversibility`, `scope_size`), `tier`, `path`, `known_unknowns` | Yes | Component 7: Plan Artifact Validator |
 
 ---
 
@@ -39,6 +42,7 @@ Updated as part of Phase 7 (Registration) in the tooling workflow after any chan
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Component 3: Workflow Graph Validator | Closed (2026-03-15) |
 | `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15) |
 | Initializer context (`$A_SOCIETY_INITIALIZER`, Phase 3) | Component 1: Scaffolding System | Closed (2026-03-15) |
+| `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Component 7: Plan Artifact Validator | Closed (2026-03-18) |
 
 ---
 
