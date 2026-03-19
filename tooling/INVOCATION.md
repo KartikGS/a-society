@@ -222,26 +222,19 @@ const entries = orderWithPromptsFromFile(
 ---
 workflow:
   name: "Workflow Name"
-  phases:
-    - id: phase-1
-      name: Phase One
   nodes:
-    - id: owner-phase-1
+    - id: owner-intake
       role: Owner
-      phase: phase-1
-      first_occurrence_position: 1   # 1-based; 1 = first to fire in forward pass
-      is_synthesis_role: false
-    - id: curator-phase-1-synthesis
+    - id: curator-proposal
       role: Curator
-      phase: phase-1
-      first_occurrence_position: 2
-      is_synthesis_role: true        # exactly one node per graph must be true
   edges:
-    - from: owner-phase-1
-      to: curator-phase-1-synthesis
+    - from: owner-intake
+      to: curator-proposal
       artifact: "Handoff brief"      # optional
 ---
 ```
+
+**Implementation note:** The example above reflects the approved framework schema in `$INSTRUCTION_WORKFLOW_GRAPH`. Component 3 and 4 implementation alignment is tracked separately in `$A_SOCIETY_TOOLING_COUPLING_MAP`.
 
 ---
 

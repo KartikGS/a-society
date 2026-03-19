@@ -6,7 +6,7 @@
 
 ## What This Is
 
-A workflow graph representation is a machine-readable encoding of the same workflow your `workflow/main.md` already describes in prose. It captures the structure of the workflow — phases, nodes (role firings), edges (handoffs), first-occurrence order, and which role is the synthesis role — in a YAML format that programmatic tools can process without reading prose.
+A workflow graph representation is a machine-readable encoding of the same workflow your `workflow/main.md` already describes in prose. It captures the structure of the workflow's forward pass — structural nodes (role-owned work blocks) and edges (handoffs) — in a YAML format that programmatic tools can process without reading prose.
 
 This is a companion to the workflow prose document, not a replacement. The prose explains the workflow to agents and humans; the graph enables tools to compute derived facts (such as backward pass traversal order) deterministically and consistently.
 
@@ -14,9 +14,9 @@ This is a companion to the workflow prose document, not a replacement. The prose
 
 ## Why It Exists
 
-**1. Deterministic backward pass ordering.** The backward pass protocol (see `$INSTRUCTION_IMPROVEMENT`) requires computing traversal order from a workflow's role structure: roles in reverse first-occurrence order, synthesis role always last. In simple two-role workflows this is easy to derive by inspection. In complex multi-role workflows, the order is non-obvious and error-prone to derive by reading prose. The graph representation makes backward pass order computable without agent judgment.
+**1. Deterministic backward pass ordering.** The backward pass protocol (see `$GENERAL_IMPROVEMENT`) requires computing traversal order from workflow structure. In simple two-role workflows this is easy to derive by inspection. In complex multi-role workflows, the order is non-obvious and error-prone to derive by reading prose. The graph representation makes that order derivable from nodes and edges without storing backward-pass-only metadata in the schema.
 
-**2. Structural legibility.** A YAML representation of the workflow structure is readable at a glance — what phases exist, what roles fire, in what order, and how they connect. It complements the prose without replacing it.
+**2. Structural legibility.** A YAML representation of the workflow structure is readable at a glance — what structural nodes exist, which roles own them, and how they connect. It complements the prose without replacing it.
 
 ---
 
@@ -45,15 +45,9 @@ The workflow graph representation uses the following schema:
 ```yaml
 workflow:
   name: [string — the graph name; copy from workflow/main.md "Graph:" line, or use the document title]
-  phases:
-    - id: [string — lowercase-hyphenated identifier, e.g. phase-1, review, registration]
-      name: [string — human-readable phase name matching workflow/main.md]
   nodes:
-    - id: [string — unique identifier; combine role and phase, e.g. owner-phase-1, curator-phase-3]
+    - id: [string — unique identifier for this structural node]
       role: [string — role name exactly as declared in agents.md]
-      phase: [string — the phase id this firing belongs to]
-      first_occurrence_position: [integer — 1-based; position at which this role first fires in the forward pass]
-      is_synthesis_role: [boolean — true for exactly one node: the synthesis role's final firing]
   edges:
     - from: [string — node id]
       to: [string — node id]
@@ -68,29 +62,13 @@ workflow:
 
 The graph name. Use the value from the "Graph:" line in your `workflow/main.md` if present, or the document title if not. This is a human-readable label, not a machine key.
 
-### `workflow.phases`
-
-One entry per phase in the workflow, in forward-pass order. `id` is a lowercase-hyphenated machine identifier; `name` is the human-readable phase name from the workflow document.
-
 ### `workflow.nodes`
 
-One entry per role firing — each distinct occurrence of a role performing work in a specific phase. Multiple firings of the same role in different phases are separate nodes.
+One entry per structural node in the forward pass. A structural node is one contiguous block of work owned by one role. If the same role performs adjacent work with no intervening handoff, model it as one node.
 
-**`id`** — a unique identifier for this node. Convention: combine the role (lowercase) and the phase id, hyphenated. If a role fires multiple times within the same phase (e.g., once for findings and once for synthesis), append a suffix to distinguish them (e.g., `curator-phase-5-findings`, `curator-phase-5-synthesis`).
+**`id`** — a unique identifier for this node. Convention: combine the role (lowercase) and the structural step, hyphenated (e.g., `owner-intake`, `curator-proposal`, `owner-review`).
 
 **`role`** — the role name as declared in `agents.md`, exactly.
-
-**`phase`** — the `id` of the phase this node belongs to.
-
-**`first_occurrence_position`** — the 1-based integer position at which this role *first* appears in the forward pass sequence of the workflow. Count distinct roles in the order they first fire:
-
-- The role that first fires in the workflow gets position 1.
-- The next new role to fire gets position 2.
-- And so on.
-
-A role that fires multiple times in different phases retains its original position value in all its nodes — the position is the first-occurrence position, not the position of this specific firing.
-
-**`is_synthesis_role`** — set to `true` on exactly one node: the synthesis role's final firing. The synthesis role always produces backward pass synthesis last, regardless of its `first_occurrence_position`. All other nodes set this to `false`. See `$INSTRUCTION_IMPROVEMENT` for the definition of synthesis role and the backward pass ordering rule.
 
 ### `workflow.edges`
 
@@ -102,15 +80,11 @@ For branching (e.g., an Approved branch and a Revise branch from the same review
 
 ## How to Fill It In
 
-**Step 1 — List the phases.** Copy from your workflow document, in forward-pass order. Assign each a lowercase-hyphenated `id`.
+**Step 1 — List the nodes.** Read the workflow in forward-pass order. Create one node per structural handoff unit. If the same role performs adjacent work with no intervening handoff, keep that work in one node.
 
-**Step 2 — List the nodes.** Read each phase in forward-pass order. For each phase, identify which role(s) fire. Create one node per role firing per phase. Assign `first_occurrence_position` values by counting: the first role to fire across the whole workflow gets 1, the next new role gets 2, and so on.
+**Step 2 — List the edges.** For each handoff in your workflow document, add an edge. Add the artifact name if the handoff is carried by a named artifact type. Add branching edges where the workflow branches.
 
-**Step 3 — Designate the synthesis role.** Identify the role that produces synthesis in the backward pass (always fires last). Set `is_synthesis_role: true` on that role's final firing node. A workflow has exactly one synthesis role. Set to `false` on all others.
-
-**Step 4 — List the edges.** For each handoff in your workflow document, add an edge. Add the artifact name if the handoff is carried by a named artifact type. Add branching edges where the workflow branches.
-
-**Step 5 — Validate and verify.** Run `$A_SOCIETY_TOOLING_WORKFLOW_GRAPH_VALIDATOR` to confirm the frontmatter schema is valid. Then run `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` to compute the backward pass order from the graph. Verify the computed order matches the backward pass order in your workflow prose document. Correct the graph if it does not. If the tools are unavailable: sort distinct roles by `first_occurrence_position` ascending, reverse the list, and move the synthesis role to the end — this should match the backward pass order in your workflow document.
+**Step 3 — Validate and verify.** If your project has a workflow graph validator, run it to confirm the frontmatter schema is valid. If your project has a Backward Pass Orderer, use it to confirm the backward pass order implied by the graph matches the backward pass order stated in your workflow prose. If no such tooling exists, compare the backward pass section of your workflow document against `$GENERAL_IMPROVEMENT` and confirm the prose order is consistent with the graph structure.
 
 ---
 
@@ -119,13 +93,12 @@ For branching (e.g., an Approved branch and a Revise branch from the same review
 The following rules govern the graph frontmatter you created following this instruction. When updating your workflow prose, consult this section to determine whether the graph requires a corresponding update.
 
 **Update the graph when:**
-- A phase is added, removed, or renamed
-- A role's participation in the workflow changes (new role added, role removed, or phase assignment changes)
-- The synthesis role changes
+- A structural node is added, removed, renamed, or reassigned to a different role
+- A handoff path is added, removed, or redirected
 - A significant handoff artifact type is added or renamed
 
 **Do not update the graph for:**
-- Prose edits that do not change the structural shape of the workflow (adding explanation, clarifying invariants, updating escalation rules)
+- Prose phase names or explanatory text that do not change the node/edge structure
 - Invariants, session model details, or escalation rules — these are not captured in the graph
 
 When you update the workflow prose in a way that changes the graph structure, update the frontmatter in the same edit. They are a co-maintained pair: a prose change that restructures the workflow without updating the graph leaves them out of sync.
@@ -137,7 +110,7 @@ When you update the workflow prose in a way that changes the graph structure, up
 The graph frontmatter and the prose document describe the same workflow from different angles:
 
 - The prose explains what happens at each phase, what decisions are made, and why.
-- The graph captures structure: what phases exist, who fires in each, in what order, and how nodes connect.
+- The graph captures structure: what structural nodes exist, which role owns each, and how they connect.
 
 If they disagree, the prose governs — it was written first and carries explanatory context the graph cannot. Update the graph to match the prose, not the reverse.
 
@@ -148,6 +121,7 @@ If they disagree, the prose governs — it was written first and carries explana
 The graph captures structure, not behavior or rationale:
 
 - Not captured: invariants, escalation rules, session model details, artifact content requirements
+- Not captured: backward-pass-only rules such as synthesis responsibility or traversal policy
 - Not captured: the reasoning behind the workflow design
 - Not captured: conditional branching logic beyond the bare existence of the branch edge
 

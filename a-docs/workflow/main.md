@@ -1,89 +1,28 @@
 ---
 workflow:
   name: A-Society Framework Development
-  phases:
-    - id: phase-0
-      name: Intake
-    - id: phase-1
-      name: Proposal
-    - id: phase-2
-      name: Review
-    - id: phase-3
-      name: Implementation
-    - id: phase-4
-      name: Registration
-    - id: phase-5
-      name: Backward Pass
   nodes:
-    - id: owner-phase-0-plan
+    - id: owner-intake-briefing
       role: Owner
-      phase: phase-0
-      first_occurrence_position: 1
-      is_synthesis_role: false
-    - id: owner-phase-1-briefing
+    - id: curator-proposal
+      role: Curator
+    - id: owner-review
       role: Owner
-      phase: phase-1
-      first_occurrence_position: 1
-      is_synthesis_role: false
-    - id: curator-phase-1-proposal
+    - id: curator-implementation-registration
       role: Curator
-      phase: phase-1
-      first_occurrence_position: 2
-      is_synthesis_role: false
-    - id: owner-phase-2-review
-      role: Owner
-      phase: phase-2
-      first_occurrence_position: 1
-      is_synthesis_role: false
-    - id: curator-phase-3-implementation
-      role: Curator
-      phase: phase-3
-      first_occurrence_position: 2
-      is_synthesis_role: false
-    - id: curator-phase-4-registration
-      role: Curator
-      phase: phase-4
-      first_occurrence_position: 2
-      is_synthesis_role: false
-    - id: curator-phase-5-findings
-      role: Curator
-      phase: phase-5
-      first_occurrence_position: 2
-      is_synthesis_role: false
-    - id: owner-phase-5-findings
-      role: Owner
-      phase: phase-5
-      first_occurrence_position: 1
-      is_synthesis_role: false
-    - id: curator-phase-5-synthesis
-      role: Curator
-      phase: phase-5
-      first_occurrence_position: 2
-      is_synthesis_role: true
   edges:
-    - from: owner-phase-0-plan
-      to: owner-phase-1-briefing
-      artifact: owner-workflow-plan
-    - from: owner-phase-1-briefing
-      to: curator-phase-1-proposal
+    - from: owner-intake-briefing
+      to: curator-proposal
       artifact: owner-to-curator-brief
-    - from: curator-phase-1-proposal
-      to: owner-phase-2-review
+    - from: curator-proposal
+      to: owner-review
       artifact: curator-to-owner
-    - from: owner-phase-2-review
-      to: curator-phase-3-implementation
+    - from: owner-review
+      to: curator-implementation-registration
       artifact: owner-to-curator
-    - from: owner-phase-2-review
-      to: curator-phase-1-proposal
+    - from: owner-review
+      to: curator-proposal
       artifact: owner-to-curator
-    - from: curator-phase-3-implementation
-      to: curator-phase-4-registration
-    - from: curator-phase-4-registration
-      to: curator-phase-5-findings
-    - from: curator-phase-5-findings
-      to: owner-phase-5-findings
-    - from: owner-phase-5-findings
-      to: curator-phase-5-synthesis
 ---
 
 # A-Society: Workflow
@@ -107,7 +46,7 @@ A-Society's work is framework development: growing, maintaining, and quality-gat
 Work enters the graph when any of the following surfaces a specific need:
 
 1. **Human direction** — the human identifies a need, direction change, or new requirement
-2. **Backward pass findings** — actionable items from Phase 5 re-enter as new trigger inputs
+2. **Backward pass findings requiring Owner judgment** — Curator-authority findings are implemented directly per `$A_SOCIETY_IMPROVEMENT`; findings requiring Owner judgment surface as new trigger inputs to the standard workflow
 3. **Feedback signal** — an inbound feedback stream (onboarding, migration, curator signal) surfaces a gap
 
 These are not workflow phases. They are what creates the input for Phase 1.
@@ -217,25 +156,11 @@ New or updated files are registered in the appropriate index.
 - New `a-docs/` files → add a rationale entry to `$A_SOCIETY_AGENT_DOCS_GUIDE`
 - If the registered changes qualify for a framework update report (see `$A_SOCIETY_UPDATES_PROTOCOL`), the Curator drafts the report and submits it to the Owner for review before publishing to `$A_SOCIETY_UPDATES_DIR`
 
-**Output:** Updated index row(s); updated a-docs-guide entry if applicable; framework update report published if triggered. The session is not complete until registration is done.
+**Output:** Updated index row(s); updated a-docs-guide entry if applicable; framework update report draft submitted if triggered. The session is not complete until registration is done.
 
 ---
 
-### Phase 5 — Backward Pass
-
-Each agent who participated in the forward pass (Phases 1–4) reflects on their experience.
-
-**Input:** Phase 4 complete.
-
-**Owner:** Curator (findings first), Owner (findings second), Curator (synthesis).
-
-**Work:** Produce findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`. Actionable findings re-enter the workflow as new trigger inputs.
-
-**Output:** Findings artifacts in the active record folder at the next sequenced positions (e.g., `04-curator-findings.md`, `05-owner-findings.md`). See `$A_SOCIETY_RECORDS` for the naming convention. Actionable items surface as triggers for future graph traversals.
-
-**Depth:** Proportional to the work. For routine single-file changes with no friction, 1–3 top findings is sufficient. For substantive changes (new artifacts, structural modifications, authority boundary decisions), produce full structured findings per `$A_SOCIETY_IMPROVEMENT_PROTOCOL`.
-
-The backward pass is not optional. Skipping it means the a-docs drift from how the project actually works.
+Backward pass is mandatory after forward-pass completion and is governed by `$A_SOCIETY_IMPROVEMENT`; it is not a workflow phase and is not represented as workflow graph nodes.
 
 ---
 
@@ -252,7 +177,6 @@ For detailed artifact formats, status vocabulary, and coordination rules, see `$
 | Phase 2 → Phase 1 | Decision = Revise | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Curator acknowledges; revises and resubmits |
 | Phase 2 → ∅ | Decision = Rejected | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Curator acknowledges; item closed |
 | Phase 3 → Phase 4 | Files exist at correct paths | File existence verification | Correct index identified |
-| Phase 4 → Phase 5 | Index updated; update report published if triggered | Registration confirmation | All forward-pass participants identified |
 
 ---
 
@@ -262,8 +186,8 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 | Session | Role | Phases |
 |---|---|---|
-| **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review) → *pause* → Phase 5 (findings) |
-| **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register) → Phase 5 (findings, synthesis) |
+| **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
+| **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
 
 **Default routing rule:** Resume the existing session by default. Start a new session only when the criteria in "When to start a new session" below apply. The active role must say this explicitly at each pause point; the human does not infer it.
 
@@ -280,13 +204,13 @@ The workflow runs across two concurrent sessions, with the human switching betwe
    
    Session A pauses.
 
-4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and produces backward pass findings in the active record folder. If the next action belongs to the Owner, the Curator tells the human whether to resume Session A or start a new Owner session, provides a copyable path to the findings artifact and any update-report submission awaiting review, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B then pauses.
+4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements, registers, and drafts any required update-report submission in the active record folder. After forward-pass work is complete, backward pass proceeds per `$A_SOCIETY_IMPROVEMENT`. If the next action belongs to the Owner, the Curator tells the human whether to resume Session A or start a new Owner session, provides a copyable path to any update-report submission awaiting review and any other relevant artifact, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B then pauses.
 
-5. **Session A resumes.** The Owner reviews any pending update-report submission, produces backward pass findings in the active record folder, and tells the human whether to resume the Curator session for synthesis or publication follow-through. The Owner provides a copyable path to the findings artifact and — if a new Curator session is required — a copyable session-start prompt. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
+5. **Session A resumes.** The Owner reviews any pending update-report submission. Once all forward-pass submissions in the flow are resolved, the Owner performs backward-pass work per `$A_SOCIETY_IMPROVEMENT` and tells the human whether to resume the Curator session for synthesis, publication follow-through, or both. The Owner provides a copyable path to the relevant artifact and — if a new Curator session is required — a copyable session-start prompt. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
 
-6. **Session B resumes (if needed).** The Curator synthesizes both findings artifacts, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs. The Curator tells the human explicitly whether the flow is now complete or whether another Owner session is required. If another Owner session is needed, the Curator provides a copyable path to the relevant artifact and a copyable session-start prompt.
+6. **Session B resumes (if needed).** The Curator completes any Owner-requested follow-through, performs backward-pass work or synthesis when due per `$A_SOCIETY_IMPROVEMENT`, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs when required. The Curator tells the human explicitly whether the flow is now complete or whether another Owner session is required. If another Owner session is needed, the Curator provides a copyable path to the relevant artifact and a copyable session-start prompt.
 
-**Owner as terminal node.** The Owner is the structural endpoint of each flow. Every flow closes at Step 5 — the Owner receives the implementation output and any pending submissions, produces backward pass findings, and explicitly acknowledges whether the flow is complete or Curator follow-up remains. A flow that has not cleared the Owner has not closed.
+**Owner as terminal node.** The Owner is the structural endpoint of the forward pass. Every flow reaches Step 5 before closure — the Owner receives the implementation output and any pending submissions, clears or redirects them, and explicitly acknowledges whether Curator follow-up remains. A flow that has not cleared the Owner has not closed.
 
 ### The human's role at each transition
 
