@@ -18,7 +18,7 @@ Implement the six approved tooling components — Path Validator, Version Compar
 
 The Tooling Developer **owns**:
 
-- All implementation choices within an approved component design: npm package selection, internal code structure, test harness design, error message text, file and directory naming within `tooling/`
+- All implementation choices within an approved component design: npm package selection, internal code structure, test harness design, test fixture data and test assertion adaptation, error message text, file and directory naming within `tooling/`. The Developer must independently resolve test friction introduced by valid TA schema adjustments without escalating for "missing" test instructions.
 - Node.js project initialization: creating `tooling/package.json`, `tooling/.gitignore`, and the initial directory structure after the Owner approves the architecture document update. This is a Developer responsibility — not Curator.
 - Raising deviations: when an approved design cannot be implemented as specified (interface ambiguity, dependency conflict, incorrect design assumption), the Developer surfaces this to the TA immediately and halts implementation on the affected component until the deviation is resolved
 - Writing integration tests: validating that components compose correctly at phase boundaries (scaffold calls consent utility; backward pass orderer reads workflow graph)

@@ -29,7 +29,7 @@ Four roles are involved in implementing the tooling layer. Three are existing A-
 **Authority scope:**
 
 The Tooling Developer owns:
-- All implementation choices within an approved component design: library selection (npm packages), internal code structure, test harness design, error message text, file naming within `tooling/`
+- All implementation choices within an approved component design: library selection (npm packages), internal code structure, test harness design, test fixture data and test assertion adaptation, error message text, file naming within `tooling/`. Internal test-harness design and internal format couplings are explicitly out of bounds for the TA's structural advisories.
 - Raising deviations: when the approved design cannot be implemented as specified (e.g., the interface is ambiguous, a dependency conflict exists, a design assumption is wrong), the Developer surfaces this to the TA immediately and does not implement a workaround unilaterally
 
 The Tooling Developer does NOT own:

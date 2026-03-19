@@ -2,17 +2,9 @@ import fs from 'node:fs';
 import yaml from 'js-yaml';
 import { extractFrontmatter } from './utils.js';
 
-export interface WorkflowPhase {
-  id: string;
-  name: string;
-}
-
 export interface WorkflowNode {
   id: string;
   role: string;
-  phase: string;
-  first_occurrence_position: number;
-  is_synthesis_role: boolean;
 }
 
 export interface WorkflowEdge {
@@ -23,7 +15,6 @@ export interface WorkflowEdge {
 
 export interface WorkflowGraph {
   name: string;
-  phases: WorkflowPhase[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 }
@@ -72,108 +63,70 @@ export function validateGraph(doc: unknown): string[] {
     errors.push('workflow.name must be a non-empty string');
   }
 
-  // workflow.phases
-  if (!Array.isArray(wf.phases) || wf.phases.length === 0) {
-    errors.push('workflow.phases must be a non-empty array');
+  // workflow.nodes
+  if (!Array.isArray(wf.nodes) || wf.nodes.length === 0) {
+    errors.push('workflow.nodes must be a non-empty array');
   } else {
-    const phaseIds = new Set<string>();
+    const nodeIds = new Set<string>();
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    wf.phases.forEach((phase: any, i: number) => {
-      if (!phase || typeof phase !== 'object') {
-        errors.push(`workflow.phases[${i}] must be an object`);
+    wf.nodes.forEach((node: any, i: number) => {
+      if (!node || typeof node !== 'object') {
+        errors.push(`workflow.nodes[${i}] must be an object`);
         return;
       }
-      if (typeof phase.id !== 'string' || phase.id.trim() === '') {
-        errors.push(`workflow.phases[${i}].id must be a non-empty string`);
-      } else if (phaseIds.has(phase.id)) {
-        errors.push(`workflow.phases[${i}].id "${phase.id}" is not unique`);
-      } else {
-        phaseIds.add(phase.id);
+      
+      const keys = Object.keys(node);
+      const invalidKeys = keys.filter((k) => k !== 'id' && k !== 'role');
+      if (invalidKeys.length > 0) {
+        errors.push(`workflow.nodes[${i}] contains invalid keys: ${invalidKeys.join(', ')}`);
       }
-      if (typeof phase.name !== 'string' || phase.name.trim() === '') {
-        errors.push(`workflow.phases[${i}].name must be a non-empty string`);
+
+      // id
+      if (typeof node.id !== 'string' || node.id.trim() === '') {
+        errors.push(`workflow.nodes[${i}].id must be a non-empty string`);
+      } else if (nodeIds.has(node.id)) {
+        errors.push(`workflow.nodes[${i}].id "${node.id}" is not unique`);
+      } else {
+        nodeIds.add(node.id);
+      }
+      // role
+      if (typeof node.role !== 'string' || node.role.trim() === '') {
+        errors.push(`workflow.nodes[${i}].role must be a non-empty string`);
       }
     });
 
-    // workflow.nodes
-    const phaseIdSet = new Set<string>(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      wf.phases.filter((p: any) => p && typeof p === 'object' && typeof p.id === 'string').map((p: any) => p.id),
-    );
-
-    if (!Array.isArray(wf.nodes) || wf.nodes.length === 0) {
-      errors.push('workflow.nodes must be a non-empty array');
+    // workflow.edges
+    if (!Array.isArray(wf.edges)) {
+      errors.push('workflow.edges must be an array');
     } else {
-      const nodeIds = new Set<string>();
-      let synthesisCount = 0;
-
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      wf.nodes.forEach((node: any, i: number) => {
-        if (!node || typeof node !== 'object') {
-          errors.push(`workflow.nodes[${i}] must be an object`);
+      wf.edges.forEach((edge: any, i: number) => {
+        if (!edge || typeof edge !== 'object') {
+          errors.push(`workflow.edges[${i}] must be an object`);
           return;
         }
-        // id
-        if (typeof node.id !== 'string' || node.id.trim() === '') {
-          errors.push(`workflow.nodes[${i}].id must be a non-empty string`);
-        } else if (nodeIds.has(node.id)) {
-          errors.push(`workflow.nodes[${i}].id "${node.id}" is not unique`);
-        } else {
-          nodeIds.add(node.id);
+
+        const keys = Object.keys(edge);
+        const invalidKeys = keys.filter((k) => k !== 'from' && k !== 'to' && k !== 'artifact');
+        if (invalidKeys.length > 0) {
+          errors.push(`workflow.edges[${i}] contains invalid keys: ${invalidKeys.join(', ')}`);
         }
-        // role
-        if (typeof node.role !== 'string' || node.role.trim() === '') {
-          errors.push(`workflow.nodes[${i}].role must be a non-empty string`);
+
+        if (typeof edge.from !== 'string' || edge.from.trim() === '') {
+          errors.push(`workflow.edges[${i}].from must be a non-empty string`);
+        } else if (!nodeIds.has(edge.from)) {
+          errors.push(`workflow.edges[${i}].from "${edge.from}" does not match any node id`);
         }
-        // phase
-        if (typeof node.phase !== 'string' || node.phase.trim() === '') {
-          errors.push(`workflow.nodes[${i}].phase must be a non-empty string`);
-        } else if (!phaseIdSet.has(node.phase)) {
-          errors.push(`workflow.nodes[${i}].phase "${node.phase}" does not match any phase id`);
+        if (typeof edge.to !== 'string' || edge.to.trim() === '') {
+          errors.push(`workflow.edges[${i}].to must be a non-empty string`);
+        } else if (!nodeIds.has(edge.to)) {
+          errors.push(`workflow.edges[${i}].to "${edge.to}" does not match any node id`);
         }
-        // first_occurrence_position
-        if (!Number.isInteger(node.first_occurrence_position) || node.first_occurrence_position < 1) {
-          errors.push(`workflow.nodes[${i}].first_occurrence_position must be a positive integer`);
-        }
-        // is_synthesis_role
-        if (typeof node.is_synthesis_role !== 'boolean') {
-          errors.push(`workflow.nodes[${i}].is_synthesis_role must be a boolean`);
-        } else if (node.is_synthesis_role) {
-          synthesisCount++;
+        if ('artifact' in edge && typeof edge.artifact !== 'string') {
+          errors.push(`workflow.edges[${i}].artifact must be a string if present`);
         }
       });
-
-      if (synthesisCount === 0) {
-        errors.push('Exactly one node must have is_synthesis_role: true (found 0)');
-      } else if (synthesisCount > 1) {
-        errors.push(`Exactly one node must have is_synthesis_role: true (found ${synthesisCount})`);
-      }
-
-      // workflow.edges
-      if (!Array.isArray(wf.edges)) {
-        errors.push('workflow.edges must be an array');
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        wf.edges.forEach((edge: any, i: number) => {
-          if (!edge || typeof edge !== 'object') {
-            errors.push(`workflow.edges[${i}] must be an object`);
-            return;
-          }
-          if (typeof edge.from !== 'string' || edge.from.trim() === '') {
-            errors.push(`workflow.edges[${i}].from must be a non-empty string`);
-          } else if (!nodeIds.has(edge.from)) {
-            errors.push(`workflow.edges[${i}].from "${edge.from}" does not match any node id`);
-          }
-          if (typeof edge.to !== 'string' || edge.to.trim() === '') {
-            errors.push(`workflow.edges[${i}].to must be a non-empty string`);
-          } else if (!nodeIds.has(edge.to)) {
-            errors.push(`workflow.edges[${i}].to "${edge.to}" does not match any node id`);
-          }
-          if ('artifact' in edge && typeof edge.artifact !== 'string') {
-            errors.push(`workflow.edges[${i}].artifact must be a string if present`);
-          }
-        });
-      }
     }
   }
 

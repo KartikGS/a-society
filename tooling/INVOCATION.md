@@ -134,87 +134,33 @@ const { valid, errors } = validateWorkflowFile('/path/to/workflow/main.md');
 
 ### Compute backward pass order
 
-```js
-import { orderFromFile } from './src/backward-pass-orderer.ts';
+```ts
+import { backwardPassOrderer } from './src/backward-pass-orderer.ts';
 
-// Full workflow — all nodes
-const order = orderFromFile('/path/to/workflow/main.md');
+// graph must be previously read and validated (e.g. via Component 3)
+const order = backwardPassOrderer.computeBackwardPassOrder(graph);
 
-// Filtered — only nodes that fired in this instance
-const order = orderFromFile('/path/to/workflow/main.md', ['node-id-1', 'node-id-2']);
-
-// order: Array<{
-//   backward_pass_position: number,  // 1-based
-//   role: string,
-//   node_ids: string[],
-//   is_synthesis: boolean
-// }>
+// order: string[] (array of roles in deterministic backward pass order)
 ```
 
-**Algorithm:** Non-synthesis roles are sorted by `first_occurrence_position` ascending, then reversed. The synthesis role is appended last regardless of its position value. If the synthesis role also has non-synthesis nodes in the graph (e.g. A-Society's Curator), it appears twice — once at its reversed findings position, once as the final synthesis entry.
+**Algorithm:** The algorithm uses node-list position derivation. Roles are recorded at their first appearance in the forward-pass array, and the resulting list is sorted descending by their first occurrence index (equivalent to reversing the array of first-occurrences).
 
-### Lower-level: `orderFromGraph`
+### Generate trigger prompts
 
-For callers that have already parsed the YAML:
+```ts
+import { backwardPassOrderer } from './src/backward-pass-orderer.ts';
 
-```js
-import { orderFromGraph } from './src/backward-pass-orderer.ts';
-const order = orderFromGraph(parsedGraphDoc, optionalFiredNodeIds);
+// Generate literal trigger prompts for the backward pass protocol
+const prompts = backwardPassOrderer.generateTriggerPrompts(graph);
+
+// Provide `synthesisRole` if the workflow uses a synthesis aggregation step
+const promptsWithSynthesis = backwardPassOrderer.generateTriggerPrompts(graph, 'Curator');
+
+// prompts: Record<string, string>
+// e.g. { 'Owner': 'You are the Owner agent...', 'Curator': '...' }
 ```
 
-### Interfaces: `TriggerPromptOptions` and `BackwardPassTriggerEntry`
-
-```typescript
-interface TriggerPromptOptions {
-  recordFolderPath?: string;  // Embedded in prompt text; receiving agent knows where to
-                              // read prior artifacts and write findings. Not read by the component.
-  flowName?: string;          // Human-readable description of the flow for agent context.
-}
-
-interface BackwardPassTriggerEntry extends BackwardPassEntry {
-  trigger_prompt: string;     // Copyable session-start prompt for the receiving agent.
-}
-```
-
-### Generate trigger prompts: `generateTriggerPrompts`
-
-```js
-import { generateTriggerPrompts } from './src/backward-pass-orderer.ts';
-
-// Generate trigger prompts from a pre-computed order
-const order = orderFromFile('/path/to/workflow/main.md', ['node-id-1', 'node-id-2']);
-const entries = generateTriggerPrompts(order, {
-  recordFolderPath: 'a-society/a-docs/records/20260318-example',
-  flowName: 'Example flow description',
-});
-
-// entries: BackwardPassTriggerEntry[]
-// All BackwardPassEntry fields are preserved; each entry gains:
-// trigger_prompt: string  — copyable session-start prompt for the receiving agent
-```
-
-**Notes:**
-- Pure function — performs no file I/O. The caller provides the order and optional context to embed in the prompts.
-- `recordFolderPath` and `flowName` are embedded in the prompt text when provided. When omitted, those lines are absent from the prompt entirely — no empty lines rendered.
-
-### Order and generate trigger prompts: `orderWithPromptsFromFile`
-
-```js
-import { orderWithPromptsFromFile } from './src/backward-pass-orderer.ts';
-
-// Single-call convenience: order + trigger prompts in one step
-const entries = orderWithPromptsFromFile(
-  '/path/to/workflow/main.md',
-  ['node-id-1', 'node-id-2'],   // optional: only nodes that fired; omit for full workflow
-  {
-    recordFolderPath: 'a-society/a-docs/records/20260318-example',
-    flowName: 'Example flow description',
-  }
-);
-
-// Equivalent to:
-// generateTriggerPrompts(orderFromFile(filePath, firedNodeIds), options)
-```
+**Implementation note:** The `synthesisRole` parameter identifies which role receives terminal synthesis instructions instead of standard findings handoff instructions. If omitted, all roles receive standard handoff instructions. This logic is decoupled from the workflow graph structure itself.
 
 ### Workflow graph YAML frontmatter schema
 
