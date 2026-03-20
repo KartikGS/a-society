@@ -325,6 +325,30 @@ When the same workflow runs N times simultaneously — parallel client engagemen
 
 When the project has more than one workflow — a setup workflow and an ongoing execution workflow, for example — define each as a separate named graph with its own entry node and terminal node. Each workflow surfaces back to the Owner on completion; the Owner is the cross-workflow routing layer, deciding what to trigger next. Workflows do not hand off directly to each other.
 
+#### Index-based routing
+
+When a project maintains two or more **permanent, distinct execution loops** — each with its own ongoing operational cadence, distinct phase sequence, and distinct role composition — organize them using an index-based structure:
+
+1. Define each workflow as its own named file in `workflow/` (e.g., `workflow/[name].md`), each with its own YAML frontmatter graph.
+2. Convert `workflow/main.md` into a **routing index**: a lightweight file that names each workflow, provides a one-line summary, and links to its file.
+3. Register each workflow file in the project's file path index with its own variable name.
+4. Place any rules that apply universally across all of the project's workflows — particularly session routing rules (when to start new vs. resume) — in the routing index, not duplicated in each workflow file.
+
+**When to use this structure:**
+- Two or more distinct workflow types exist simultaneously and are both active
+- Each represents a permanent, ongoing cadence (not a one-off, setup, or temporary process)
+- The workflows are structurally distinct enough that a single `main.md` would force agents to read irrelevant material to reach the workflow governing their current work
+
+**When not to use this structure:**
+- Only one workflow exists (a workflow with conditional branching is not "multiple workflows")
+- The second workflow is transient — a one-time setup or initialization workflow does not warrant an index structure
+
+**Routing index format:** The index is not a summary of each workflow — it gives the Owner exactly what they need to present the available workflows and route work: the workflow name, a one-line summary, a file reference, and any universal cross-workflow rules. It does not duplicate phase definitions, handoffs, or invariants from the workflow files.
+
+**Variable naming:** When registering multiple workflows, use a naming convention that makes the role of each variable clear (e.g., `$PROJECT_WORKFLOW` for the index, `$PROJECT_WORKFLOW_[NAME]` for each workflow file).
+
+**Cross-reference updates:** When splitting a single `workflow/main.md` into an index plus workflow files, audit all existing references to the original variable (e.g., `$PROJECT_WORKFLOW`) for section citations (e.g., *"See `$PROJECT_WORKFLOW` 'When to start a new session'"*). Determine whether the cited section moves to a specific workflow file or belongs in the index. Update references accordingly, or ensure the index owns the cited content so existing references remain valid.
+
 ### Cross-workflow handoffs
 
 When a terminal node in one graph hands off to an entry node in another: use the same edge mechanics as within a single graph. Define the artifact, the transition condition, and the receiving node's input contract. The edge crosses graph boundaries; the mechanics do not change. Cross-workflow handoffs surface to the Owner before the next workflow is triggered.

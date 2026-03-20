@@ -46,7 +46,9 @@ Tags may be combined: `[M][LIB]`, `[S][MAINT]`, `[L][LIB][ADR]`.
 
 ## Next Priorities
 
-*(No immediate priorities queued.)*
+1. `[S][MAINT]` — **`$A_SOCIETY_IMPROVEMENT` Component 4 reference update:** `improvement/main.md` passes `$A_SOCIETY_WORKFLOW` to Component 4 (Backward Pass Orderer). After the workflow directory realignment, `$A_SOCIETY_WORKFLOW` points to the routing index, which contains no YAML graph. The reference must be updated to pass the specific workflow variable (`$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV` or `$A_SOCIETY_WORKFLOW_TOOLING_DEV`) based on which workflow closed. Source: Curator out-of-scope drift flag, `$A_SOCIETY_RECORDS/20260320-workflow-directory-realignment/`.
+
+2. `[M]` — **Component 4 Owner-second-to-last rule not implemented:** Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) implements a simple reversal of first-occurrence roles. For the standard 2-role case this coincidentally satisfies the "Owner second-to-last" rule in `$A_SOCIETY_IMPROVEMENT`. For multi-role flows where Owner appears first in the forward pass and the synthesis role (Curator) appears before other roles, simple reversal places Owner last rather than second-to-last. Verified against `$A_SOCIETY_WORKFLOW_TOOLING_DEV`: Component 4 returns `[TA, Developer, Curator, Owner]`; correct order per the improvement protocol is `[TA, Developer, Owner, Curator]`. Fix requires TA advisory + Developer implementation. Source: Component 4 smoke test during workflow directory realignment, `$A_SOCIETY_RECORDS/20260320-workflow-directory-realignment/`.
 
 ---
 

@@ -164,13 +164,37 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `workflow/main.md` — `$A_SOCIETY_WORKFLOW`
 
-**Why it exists:** A-Society has a non-obvious workflow constraint: the Curator cannot write to `general/` without Owner approval. Without a workflow document, agents must infer this constraint from role files — and may miss it. The workflow document is the single place where all phases, handoffs, invariants, and escalation rules are declared explicitly for any agent operating in this project.
+**Why it exists:** A-Society maintains two permanent execution workflows (framework development and tooling development), each with distinct phase sequences and role compositions. Without a routing index, agents arriving at the workflow folder must read both workflow files to determine which governs their current work. The index gives every agent a single load point: load it, identify the relevant workflow, then load that workflow file.
 
-**What it owns:** The five-phase workflow (Proposal → Review → Implementation → Registration → Backward Pass), all handoffs, the four framework invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation triggers.
+**What it owns:** The workflow routing directory — one entry per permanent A-Society workflow (name, one-line summary, file reference), and the universal session routing rules that apply across all A-Society workflows.
 
-**What breaks without it:** Agents improvise process. The Approval Invariant is discoverable only by reading the Curator role file — which not all agents load. Cross-role work has no shared playbook.
+**What breaks without it:** Agents have no single entry point to the workflow directory. The session routing rules — which all four role files reference via `$A_SOCIETY_WORKFLOW` — have no home. Each workflow would need to duplicate these rules, violating the Single-Source Invariant.
 
-**Do not consolidate with:** `roles/owner.md` or `roles/curator.md` — role documents describe what each role owns; the workflow document describes what happens to work as it moves through phases, regardless of which role is involved.
+**Do not consolidate with:** `workflow/framework-development.md` or `workflow/tooling-development.md` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
+
+---
+
+### `workflow/framework-development.md` — `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV`
+
+**Why it exists:** A-Society's primary ongoing work is framework development: growing, maintaining, and quality-gating the reusable instruction library. This workflow governs that cadence — the Proposal → Review → Implementation → Registration loop that every library addition or a-docs change passes through. Extracting it from the routing index into its own file allows agents working on framework development to load only the workflow they need without reading tooling workflow material.
+
+**What it owns:** The complete framework development workflow — the YAML graph (four nodes: Owner intake, Curator proposal, Owner review, Curator implementation/registration), all phases (0–4), handoffs table, session model, invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation rules.
+
+**What breaks without it:** The framework development workflow has no dedicated home. Agents cannot load only the framework workflow without also loading tooling workflow content. The Approval Invariant — the core constraint that prevents the Curator from writing to `general/` without Owner approval — is not discoverable except through role files.
+
+**Do not consolidate with:** `workflow/main.md` (the routing index) — that file routes agents to workflows; this file defines one. Do not consolidate with `workflow/tooling-development.md` — the two workflows have different phase sequences, different role compositions, and serve different operational cadences; merging them would force every agent to read irrelevant workflow material.
+
+---
+
+### `workflow/tooling-development.md` — `$A_SOCIETY_WORKFLOW_TOOLING_DEV`
+
+**Why it exists:** A-Society's programmatic tooling layer has its own implementation workflow — multi-phase, multi-role, with a Tooling Developer session, TA advisory reviews, and phase-gated documentation prerequisites. This workflow is structurally different from the framework development workflow (more phases, more roles, concurrent phase tracks, three standing sessions). Defining it in its own file keeps the framework development workflow clean and gives tooling-related sessions a dedicated, unambiguous workflow reference.
+
+**What it owns:** The complete tooling development workflow — the YAML graph (nine nodes across four roles), role definitions for this workflow (Tooling Developer, Technical Architect, Curator, Owner), all phases (0–7 including Phase 1A), session model (Sessions A, B, C, plus on-demand TA sessions), and the phase dependency diagram.
+
+**What breaks without it:** The tooling implementation workflow has no dedicated home. Role files for the Tooling Developer and Technical Architect reference `$A_SOCIETY_WORKFLOW_TOOLING_DEV` for session routing; without this file, those references are unresolvable. Component 4 (Backward Pass Orderer) cannot be correctly invoked for tooling flows without the YAML graph.
+
+**Do not consolidate with:** `workflow/framework-development.md` — same reasoning as above; different cadence, different role set. Do not consolidate with `a-docs/tooling/architecture-addendum.md` — that file retains structural constraints and the post-Phase-6 addition protocol; this file owns the executable workflow (phases, roles, session routing).
 
 ---
 
@@ -310,13 +334,13 @@ These files live in `a-docs/tooling/`. They are the design, specification, asses
 
 ### `tooling/architecture-addendum.md` — `$A_SOCIETY_TOOLING_ADDENDUM`
 
-**Why it exists:** The proposal defines the components but not who implements them, in what phase, in what order, or how deviations are handled. The addendum is the implementation workflow: it defines Phase 0 gate requirements, the Developer's role in initializing the Node.js project, phase sequencing, session routing, and the backward pass order for the tooling implementation flow.
+**Why it exists:** The proposal defines the components. The addendum complements it with the structural constraints, dependency rules, and post-Phase-6 addition protocol that govern the tooling layer's ongoing maintenance. These are architectural and governance rules — distinct from the executable workflow phases, which live in `$A_SOCIETY_WORKFLOW_TOOLING_DEV`.
 
-**What it owns:** The complete implementation workflow — phases (0 through 7), role responsibilities per phase, Phase 0 gate requirements (four documentation artifacts must be approved and indexed before Developer opens), deviation escalation path, and the backward pass traversal order for this specific workflow (TA → Developer → Owner → Curator synthesis).
+**What it owns:** Section 3 (Constraints and Dependencies) — the hard rules governing role boundaries (TA does not implement, Developer writes to `tooling/` only), the four inherited workflow invariants, and the open dependency on the update report discovery problem. Section 4 (Post-Phase-6 Component Additions) — the Phase 0 gate conditions for adding new components after the original launch, the TA advisory mode definition for new components, and the phase numbering convention.
 
-**What breaks without it:** Phases and implementation order are undefined. The Phase 0 gate has no definition. The Developer's responsibility for Node.js project initialization (not the Curator's) is undocumented. The backward pass order for the tooling workflow cannot be derived from the main A-Society workflow document.
+**What breaks without it:** The structural constraints — particularly the Phase 3 gate before Phase 4 and the deviation escalation rule — have no documented home. The protocol for adding post-Phase-6 components is undefined. Future Technical Architects and Developers working on new components have no governance reference.
 
-**Do not consolidate with:** `tooling/architecture-proposal.md` — these answer different questions. The proposal tells the Developer what to build; the addendum tells everyone how the build process works.
+**Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the component spec; the addendum is the governance and constraints layer. Do not consolidate with `$A_SOCIETY_WORKFLOW_TOOLING_DEV` — that document owns the executable workflow (phases, roles, session routing); this document owns the structural constraints that govern the build process regardless of phase.
 
 ---
 

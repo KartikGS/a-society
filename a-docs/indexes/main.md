@@ -72,7 +72,9 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `/a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |
 | `$A_SOCIETY_PRINCIPLES` | `/a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `/a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
-| `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow — phases, handoffs, invariants, and escalation rules for framework work |
+| `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow directory — routing index for all permanent A-Society workflows; universal session routing rules |
+| `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV` | `/a-society/a-docs/workflow/framework-development.md` | A-Society framework development workflow — phases, handoffs, invariants, session model, and YAML graph for the documentation and library maintenance loop |
+| `$A_SOCIETY_WORKFLOW_TOOLING_DEV` | `/a-society/a-docs/workflow/tooling-development.md` | A-Society tooling development workflow — phases, roles, session model, constraints, and YAML graph for the programmatic tooling implementation loop |
 | `$A_SOCIETY_IMPROVEMENT` | `/a-society/a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
 | `$A_SOCIETY_RECORDS` | `/a-society/a-docs/records/main.md` | A-Society records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking |
 | `$A_SOCIETY_FEEDBACK_DIR` | `/a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
