@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v14.1
+**Version:** v15.0
 
 ---
 
@@ -44,3 +44,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v13.0 | 2026-03-18 | 2026-03-18-process-gap-bundle.md — Records structure Phase 0 gate artifact declared as first required position (Breaking); confirmation step framing removed from Owner role template (Recommended); existing-session handoff format added to Handoff Output sections (Recommended); improvement tooling note generalized (Optional) |
 | v14.0 | 2026-03-19 | 2026-03-19-graph-schema-simplification.md — Workflow graph schema simplified to nodes-and-edges only; backward pass removed from workflow graph model (Breaking) |
 | v14.1 | 2026-03-20 | 2026-03-20-briefing-records-refinements.md — Added multi-file scope guidance to Owner template; functional referencing for trailing artifacts required in Records instruction (Recommended) |
+| v15.0 | 2026-03-20 | 2026-03-20-synthesis-backlog-fix.md — Synthesis role expressly prohibited from generating maintenance backlogs (Breaking) |

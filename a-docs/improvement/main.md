@@ -151,8 +151,10 @@ For flows with only two roles (Owner + Curator), manual application of the stand
 3. **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
 4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
 5. **Curator synthesizes** actionable items from both findings artifacts and routes them:
-   - Changes within Curator authority (maintenance, corrections, clarifications Curator owns): implement directly to a-docs.
+   - Changes within Curator authority (maintenance, corrections, clarifications Curator owns): implement directly to a-docs. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets for the Owner. If the Curator has the authority to make the change, they must make it during synthesis—never queue it.
    - Changes requiring Owner judgment (structural decisions, additions to `general/`, direction changes): submit to Owner for approval; implement after approval.
+
+   Do not re-route improvement items through the project's main execution workflow.
 
 ---
 

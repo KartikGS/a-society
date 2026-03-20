@@ -148,7 +148,7 @@ Only the nodes and edges that fired during this instance are included. Dead bran
 4. **The synthesis role** reviews all findings and identifies which warrant action.
 
 5. **Actionable items are routed based on scope:**
-   - Changes within synthesis role authority: implement directly to a-docs without a formal proposal.
+   - Changes within synthesis role authority: implement directly to a-docs without a formal proposal. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets for the Owner. If the synthesis role has the authority to make the change, they must make it during synthesis—never queue it.
    - Changes requiring Owner judgment: submit to the Owner for approval; implement after approval.
 
    Do not re-route improvement items through the project's main execution workflow.

@@ -38,6 +38,7 @@ The Curator **does NOT**:
 - **Maintenance changes within scope require no approval.** The Curator may fix, update, or reorganize agent-docs within its designated scope without pre-approval, provided no direction change is implied.
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
 - **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent. This prohibition includes markdown link syntax: `[text](/absolute/path)` and `[text](file:///path)` are both violations. Use `$VARIABLE_NAME` references for any path that must be followed — never embed paths directly in link syntax.
+- **Never queue synthesis-authority items.** During a backward pass synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
 ---
 
