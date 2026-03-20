@@ -50,6 +50,41 @@ If a flow includes an additional Curator → Owner submission after the main dec
 
 ---
 
+## workflow.md — Forward Pass Path
+
+`workflow.md` is a structured YAML file that lives in the record folder alongside the sequenced artifacts. It is not sequenced — it has no `NN-` prefix and does not appear in the artifact sequence table.
+
+**Schema:**
+
+```yaml
+workflow:
+  synthesis_role: <string>   # The role that performs backward pass synthesis
+  path:
+    - role: <string>         # Role name (parsed by Component 4)
+      phase: <string>        # Phase descriptor (human orientation; not parsed by Component 4)
+```
+
+**Who creates it:** The Owner, at flow intake, alongside `01-owner-workflow-plan.md`.
+
+**Who can edit it:** The Owner and any role explicitly designated as workflow-authority for this flow. Standard implementer roles do not edit `workflow.md`.
+
+**When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
+
+**What Component 4 reads from it:** `workflow.synthesis_role` and `workflow.path[].role`. The `phase` field is present for human orientation and is not parsed by Component 4.
+
+**Relationship to the plan's `path` field:** `01-owner-workflow-plan.md` also contains a `path` field — a flat string list combining role and phase descriptor (e.g., `- Owner - Intake & Briefing`). These two representations coexist and serve distinct consumers:
+
+- **Plan `path`** — human-oriented planning reference used for complexity assessment and routing decisions at intake. Not machine-parsed. Combined role + phase strings.
+- **`workflow.md` path** — machine-readable schema parsed by Component 4. Structured `role` and `phase` fields. Used to compute backward pass traversal order.
+
+When creating `workflow.md` at intake, populate it from the plan's `path`. The roles listed must be consistent between the two. `workflow.md` is the authoritative source for programmatic backward pass ordering; the plan's `path` governs human-oriented planning only.
+
+**Pre-convention record folders:** Record folders created before the `workflow.md` requirement was established are exempt from that requirement. The absence of `workflow.md` in a pre-convention folder is not a convention violation — it is expected. Component 4 cannot be invoked for these folders; use manual backward pass ordering. Future agents encountering a record folder without `workflow.md` should verify whether the folder predates this requirement before treating the absence as an error.
+
+**Bootstrapping exemption:** When a flow establishes a new record-folder requirement (such as the introduction of `workflow.md` itself), the current flow's record folder is exempt-by-origin from that requirement. The flow that creates a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts — it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
+
+---
+
 ## What Belongs in a Record
 
 - All conversation artifacts for this flow (briefing, proposal, decision, revisions)
@@ -67,7 +102,8 @@ The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
 2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
-4. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
+3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.synthesis_role` and `workflow.path` from the plan's `path` field. `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
+4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
+5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 
 Each subsequent artifact is created at the next available sequence position by the role responsible for it.

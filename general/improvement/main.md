@@ -129,7 +129,7 @@ Order the backward pass as follows:
 
 Only the nodes and edges that fired during this instance are included. Dead branches are excluded.
 
-**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), invoke it rather than computing the order manually when the flow has more than two participating roles. Pass the project's workflow document path. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance. Consult the project's tooling documentation for the specific invocation path. When no such tool is available, apply the rules above manually.
+**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), invoke it for every flow regardless of role count. The orderer reads `workflow.md` from the active record folder; invoke it using `orderWithPromptsFromFile` with the record folder path. The orderer returns a structured backward pass plan: an ordered list of entries, each containing a role, step type (`meta-analysis` | `synthesis`), session instruction (`existing-session` | `new-session`), and prompt. The synthesis entry is always the final entry in the list and is produced by the algorithm — do not append it manually. Consult the project's tooling documentation for the specific invocation path. When no such tool is available, apply the traversal rules above manually.
 
 ---
 

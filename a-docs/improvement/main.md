@@ -138,9 +138,17 @@ Backward pass order: Curator first, Owner second, Curator synthesizes last.
 
 #### Component 4 mandate
 
-When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available **and** the flow has more than two participating roles, invoke Component 4 to generate the trigger prompts and order them. Use `generateTriggerPrompts` and `orderWithPromptsFromFile`, passing `$A_SOCIETY_WORKFLOW`. The orderer will programmatically assemble the roles in their backward-pass sequence based on their presence in the workflow.
+When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available, invoke it for every flow regardless of role count. The invocation is `orderWithPromptsFromFile(recordFolderPath)`, where `recordFolderPath` is the path to the active record folder. Component 4 reads `workflow.md` from that folder directly — do not pass a workflow document path.
 
-For flows with only two roles (Owner + Curator), manual application of the standard order above is sufficient.
+Component 4 returns a `BackwardPassPlan`: an ordered list of entries, each containing:
+- `role` — the role name
+- `stepType` — `meta-analysis` | `synthesis`
+- `sessionInstruction` — `existing-session` | `new-session`
+- `prompt` — the generated trigger prompt for that role
+
+The synthesis entry is always the final entry in the list and is produced by the algorithm — do not append it manually.
+
+**Bootstrapping exemption:** When a flow establishes a new record-folder requirement that the current folder cannot conform to (exempt-by-origin), Component 4 cannot be invoked for that flow's backward pass. This exemption must be acknowledged explicitly — never handled by silence. The Curator must either (a) note the exemption-by-origin in the backward pass initiation artifact, state the reason Component 4 is not being invoked, and proceed with manual ordering; or (b) create the required file manually for the current folder if conformance is achievable without contradiction. The protocol requirement to invoke Component 4 when available does not override a genuine bootstrapping constraint — but the constraint must be declared.
 
 ---
 
@@ -199,3 +207,4 @@ These are judgment aids, not mandatory per-finding assessments.
 - Do not rewrite historical reports. They are immutable once produced.
 - If two documents conflict, resolve by updating one source-of-truth and adding a cross-reference — never duplicate.
 - The backward pass is not an execution session. Agents reflecting should not produce plans, implementations, or new artifacts beyond their findings file.
+- **Forward pass closure boundary:** Do not begin the backward pass before the forward pass is explicitly closed by the Owner as a distinct step. The Owner is the terminal node of every forward pass. Issuing a single instruction that collapses "complete registration" and "proceed to backward pass" into one step removes the boundary. The correct sequence: (1) the final forward-pass role completes its work and returns to the Owner; (2) the Owner reviews the completed work, confirms the forward pass is closed, and issues a separate backward pass initiation. Findings produced before the forward pass is confirmed closed may be based on incomplete work.

@@ -57,6 +57,20 @@ Before any implementation begins, the Technical Architect produces:
 
 ---
 
+## Advisory Standards
+
+These rules apply whenever the Technical Architect produces an advisory or component design.
+
+**Textual output fields must be specified or explicitly delegated.** When an advisory or component design introduces a type or interface that includes a field whose value is a string presented to or parsed by agents (e.g., a `prompt` field, a message template, a generated label), the advisory must either:
+- Specify the content format or template for that field, OR
+- Explicitly delegate content authorship to the Developer with a concrete reference implementation (e.g., "follow the existing `generateX` function's language pattern")
+
+Implicit delegation — leaving the field underspecified and expecting the Developer to determine content — is a spec gap. It produces approval-stage corrections that should have been in the advisory.
+
+**Record-folder requirements must note the bootstrapping exemption.** When an advisory establishes a new requirement for record folders (e.g., a new required file, a new schema requirement), the advisory must explicitly note that the current flow's record folder is exempt-by-origin from that requirement. State why the current folder cannot conform and what consequence follows (e.g., Component 4 cannot be invoked for this flow). Future agents encountering the folder need this context to distinguish an expected non-conformance from an error.
+
+---
+
 ## Context Loading
 
 Before beginning any session as the A-Society Technical Architect, read:
@@ -99,17 +113,12 @@ For each `a-docs/` format dependency in a component design:
 
 ## Handoff Output
 
-At each pause point, the Technical Architect explicitly tells the human:
-1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
-2. Which session to switch to.
-3. What the receiving role needs to read.
-4. Handoff inputs for the receiving role:
-   - **Existing session (default):** use this format:
-     ```
-     Next action: [what the receiving role should do]
-     Read: [path to artifact(s)]
-     Expected response: [what the receiving role produces next]
-     ```
-   - **New session (criteria apply):** provide first: `"You are a [Role] agent for A-Society. Read [path to agents.md]."` — then the artifact path.
+At each pause point, the Technical Architect submits its output to the Owner and provides:
 
-If the output is ready for Owner review, say that explicitly and provide the artifact path(s).
+1. The artifact path(s) to review.
+2. What the Owner needs to evaluate or decide.
+3. Any open questions that require Owner resolution before the next phase can begin.
+
+**Session routing is the Owner's responsibility.** The Technical Architect does not prescribe which session to switch to, whether to start a new session, or what the receiving role should do next. The TA's handoff output ends with the artifact path and review context — the Owner routes from there.
+
+If the output is ready for Owner review, state that explicitly and provide the artifact path(s).

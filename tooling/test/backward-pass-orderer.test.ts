@@ -1,11 +1,12 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { backwardPassOrderer } from '../src/backward-pass-orderer.js';
-import type { WorkflowGraph } from '../src/backward-pass-orderer.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import {
+  computeBackwardPassOrder,
+  orderWithPromptsFromFile,
+} from '../src/backward-pass-orderer.js';
+import type { WorkflowPathEntry } from '../src/backward-pass-orderer.js';
 
 let passed = 0;
 let failed = 0;
@@ -24,66 +25,89 @@ function test(name: string, fn: () => void): void {
 
 console.log('\nbackward-pass-orderer');
 
-const TWO_ROLE_GRAPH: WorkflowGraph = {
-  workflow: {
-    name: 'Two Role',
-    nodes: [
-      { id: 'owner-phase-1', role: 'Owner' },
-      { id: 'curator-phase-1', role: 'Curator' },
-      { id: 'curator-phase-2-findings', role: 'Curator' },
-      { id: 'owner-phase-2-findings', role: 'Owner' },
-      { id: 'curator-phase-2-synthesis', role: 'Curator' },
+const TWO_ROLE_PATH: WorkflowPathEntry[] = [
+  { role: 'Owner', phase: 'Intake' },
+  { role: 'Curator', phase: 'Phase 1' },
+  { role: 'Curator', phase: 'Phase 2 Findings' },
+  { role: 'Owner', phase: 'Phase 2 Review' },
+];
+
+const FOUR_ROLE_PATH: WorkflowPathEntry[] = [
+  { role: 'Owner', phase: 'Intake' },
+  { role: 'Tooling Developer', phase: 'Implementation' },
+  { role: 'Technical Architect', phase: 'Review' },
+  { role: 'Curator', phase: 'Registration' },
+];
+
+test('computeBackwardPassOrder: reverses first-occurrence roles and appends synthesis', () => {
+  const result = computeBackwardPassOrder(TWO_ROLE_PATH, 'Curator');
+  assert.deepStrictEqual(
+    result.map((entry) => [entry.role, entry.stepType, entry.sessionInstruction]),
+    [
+      ['Curator', 'meta-analysis', 'existing-session'],
+      ['Owner', 'meta-analysis', 'existing-session'],
+      ['Curator', 'synthesis', 'new-session'],
     ],
-    edges: [],
+  );
+});
+
+test('four-role workflow matches order: Curator, TA, Developer, Owner, Curator', () => {
+  const result = computeBackwardPassOrder(FOUR_ROLE_PATH, 'Curator');
+  assert.deepStrictEqual(
+    result.map((entry) => entry.role),
+    ['Curator', 'Technical Architect', 'Tooling Developer', 'Owner', 'Curator'],
+  );
+});
+
+test('computeBackwardPassOrder: prompts preserve findings and synthesis patterns', () => {
+  const result = computeBackwardPassOrder(TWO_ROLE_PATH, 'Curator');
+  const firstEntry = result[0];
+  const lastMetaEntry = result[1];
+  const synthesisEntry = result[2];
+
+  assert.ok(firstEntry.prompt.includes('backward pass findings review'));
+  assert.ok(firstEntry.prompt.includes('hand off to Owner'));
+  assert.ok(lastMetaEntry.prompt.includes('hand off to Curator (synthesis)'));
+  assert.ok(synthesisEntry.prompt.includes('backward pass synthesis'));
+  assert.ok(synthesisEntry.prompt.includes('Read all findings artifacts in the record folder'));
+});
+
+test('orderWithPromptsFromFile: reads workflow.md from a record folder', () => {
+  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'backward-pass-orderer-'));
+  const workflowFile = path.join(recordFolder, 'workflow.md');
+
+  fs.writeFileSync(
+    workflowFile,
+    `---
+workflow:
+  synthesis_role: Curator
+  path:
+    - role: Owner
+      phase: Intake
+    - role: Curator
+      phase: Phase 1
+    - role: Owner
+      phase: Review
+---
+
+# Workflow
+`,
+    'utf8',
+  );
+
+  try {
+    const result = orderWithPromptsFromFile(recordFolder);
+    assert.deepStrictEqual(
+      result.map((entry) => [entry.role, entry.stepType]),
+      [
+        ['Curator', 'meta-analysis'],
+        ['Owner', 'meta-analysis'],
+        ['Curator', 'synthesis'],
+      ],
+    );
+  } finally {
+    fs.rmSync(recordFolder, { recursive: true, force: true });
   }
-};
-
-const FOUR_ROLE_GRAPH: WorkflowGraph = {
-  workflow: {
-    name: 'Four Role',
-    nodes: [
-      { id: 'owner-1', role: 'Owner' },
-      { id: 'developer-1', role: 'Tooling Developer' },
-      { id: 'ta-1', role: 'Technical Architect' },
-      { id: 'curator-synthesis', role: 'Curator' },
-    ],
-    edges: [],
-  }
-};
-
-test('computeBackwardPassOrder: array index derivation reverses first occurrences', () => {
-  const result = backwardPassOrderer.computeBackwardPassOrder(TWO_ROLE_GRAPH);
-  // Expected first occurrences: Owner, Curator.
-  // Reversed: Curator, Owner
-  assert.deepStrictEqual(result, ['Curator', 'Owner']);
-});
-
-test('four-role workflow matches order: TA, Developer, Owner, Curator', () => {
-  const result = backwardPassOrderer.computeBackwardPassOrder(FOUR_ROLE_GRAPH);
-  // Expected first occurrences: Owner, Tooling Developer, Technical Architect, Curator.
-  // Reversed: Curator, Technical Architect, Tooling Developer, Owner.
-  assert.deepStrictEqual(result, ['Curator', 'Technical Architect', 'Tooling Developer', 'Owner']);
-});
-
-test('generateTriggerPrompts: handles synthesis present', () => {
-  const prompts = backwardPassOrderer.generateTriggerPrompts(TWO_ROLE_GRAPH, 'Curator');
-  const curationPrompt = prompts['Curator'];
-  const ownerPrompt = prompts['Owner'];
-  
-  assert.ok(curationPrompt.includes('backward pass synthesis'), 'Curator prompt should include synthesis wording');
-  assert.ok(ownerPrompt.includes('findings review'), 'Owner prompt should include findings wording');
-  assert.ok(ownerPrompt.includes('process is complete'), 'Owner prompt should include process is complete');
-});
-
-test('generateTriggerPrompts: handles synthesis absent', () => {
-  const prompts = backwardPassOrderer.generateTriggerPrompts(TWO_ROLE_GRAPH);
-  const curationPrompt = prompts['Curator'];
-  const ownerPrompt = prompts['Owner'];
-  
-  assert.ok(!curationPrompt.includes('backward pass synthesis'), 'Curator prompt should NOT include synthesis wording');
-  assert.ok(!ownerPrompt.includes('backward pass synthesis'), 'Owner prompt should NOT include synthesis wording');
-  assert.ok(curationPrompt.includes('hand off to Owner'), "Curator handoff is correct");
-  assert.ok(ownerPrompt.includes('process is complete'), "Owner handoff is correct");
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

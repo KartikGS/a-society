@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v15.1
+**Version:** v16.0
 
 ---
 
@@ -46,3 +46,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v14.1 | 2026-03-20 | 2026-03-20-briefing-records-refinements.md — Added multi-file scope guidance to Owner template; functional referencing for trailing artifacts required in Records instruction (Recommended) |
 | v15.0 | 2026-03-20 | 2026-03-20-synthesis-backlog-fix.md — Synthesis role expressly prohibited from generating maintenance backlogs (Breaking) |
 | v15.1 | 2026-03-20 | 2026-03-20-session-startup-logic.md — Session startup hedging removed from workflow and role templates (Recommended) |
+| v16.0 | 2026-03-20 | 2026-03-20-backward-pass-orderer-interface.md — Backward Pass Orderer invocation model changed: reads workflow.md from record folder, always-invoke, BackwardPassPlan output (Breaking); workflow.md documented in records instruction (Recommended) |

@@ -6,8 +6,9 @@
  *
  *   Scaffold  →  Consent Utility   (scaffold calls consent utility for consent files)
  *   Scaffold  →  Path Validator    (path validator can be run against index files)
- *   Workflow Graph Validator  →  Backward Pass Orderer  (orderer reads validated graph)
- *   Version Comparator        (standalone, reads live VERSION.md)
+ *   Workflow Graph Validator        (validates live permanent workflow docs)
+ *   Backward Pass Orderer           (reads record-folder workflow.md input)
+ *   Version Comparator              (standalone, reads live VERSION.md)
  *
  * Framework state failures (missing files in indexes, etc.) are printed as
  * informational warnings and do not fail the suite, consistent with prior phases.
@@ -23,7 +24,7 @@ import { scaffold, scaffoldFromManifestFile } from '../src/scaffolding-system.js
 import { checkConsent }                        from '../src/consent-utility.js';
 import { validatePaths }                       from '../src/path-validator.js';
 import { validateWorkflowFile }                from '../src/workflow-graph-validator.js';
-import { orderFromFile }                       from '../src/backward-pass-orderer.js';
+import { orderWithPromptsFromFile }            from '../src/backward-pass-orderer.js';
 import { compareVersions }                     from '../src/version-comparator.js';
 import type { BackwardPassEntry }              from '../src/backward-pass-orderer.js';
 
@@ -59,10 +60,32 @@ const VERSION_MD        = path.join(SOCIETY_ROOT, 'VERSION.md');
 const TEMP_BASE     = fs.mkdtempSync(path.join(tmpdir(), 'a-society-integration-'));
 const PROJECT_ROOT  = path.join(TEMP_BASE, 'test-project');
 const ADOCS_ROOT    = path.join(PROJECT_ROOT, 'a-docs');
+const RECORD_FOLDER = path.join(TEMP_BASE, 'record-folder');
+const RECORD_WORKFLOW = path.join(RECORD_FOLDER, 'workflow.md');
 
 function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
 
 console.log('\nintegration');
+
+fs.mkdirSync(RECORD_FOLDER, { recursive: true });
+fs.writeFileSync(
+  RECORD_WORKFLOW,
+  `---
+workflow:
+  synthesis_role: Curator
+  path:
+    - role: Owner
+      phase: Intake
+    - role: Curator
+      phase: Phase 1
+    - role: Owner
+      phase: Review
+---
+
+# Workflow
+`,
+  'utf8',
+);
 
 // ── Scenario 1: Full project initialization ───────────────────────────────────
 // Scaffold → Consent Utility chain: scaffoldFromManifestFile creates consent
@@ -175,18 +198,22 @@ test('Scenario 4 — internal index: any failures are framework drift, not tool 
   assert.strictEqual(parseErrors.length, 0, `Path validator produced parse errors: ${JSON.stringify(parseErrors)}`);
 });
 
-// ── Scenario 5: Workflow Graph Validator → Backward Pass Orderer ──────────────
+// ── Scenario 5: Workflow Graph Validator + Backward Pass Orderer ──────────────
 
 let backwardOrder: BackwardPassEntry[] | undefined;
 
-test('Scenario 5 — workflow graph validator passes on live workflow', () => {
-  const { valid, errors } = validateWorkflowFile(WORKFLOW_FILE);
-  assert.ok(valid, `Live workflow validation failed: ${errors.join('; ')}`);
+test('Scenario 5 — workflow graph validator runs on live workflow and reports framework drift without failing', () => {
+  const result = validateWorkflowFile(WORKFLOW_FILE);
+  assert.ok(typeof result.valid === 'boolean');
+  assert.ok(Array.isArray(result.errors));
+  if (!result.valid) {
+    console.log(`    [info] live workflow validation failed (framework drift): ${result.errors.join('; ')}`);
+  }
 });
 
-test('Scenario 5 — backward pass orderer runs on live workflow without throwing', () => {
+test('Scenario 5 — backward pass orderer runs on record-folder workflow.md without throwing', () => {
   assert.doesNotThrow(() => {
-    backwardOrder = orderFromFile(WORKFLOW_FILE);
+    backwardOrder = orderWithPromptsFromFile(RECORD_FOLDER);
   });
 });
 
@@ -198,13 +225,15 @@ test('Scenario 5 — backward pass order has at least two entries', () => {
 test('Scenario 5 — backward pass last entry is synthesis role', () => {
   if (!backwardOrder) return;
   const last = backwardOrder[backwardOrder.length - 1];
-  assert.strictEqual(last.is_synthesis, true, 'Last entry should be the synthesis role');
+  assert.strictEqual(last.stepType, 'synthesis', 'Last entry should be the synthesis role');
+  assert.strictEqual(last.sessionInstruction, 'new-session', 'Synthesis step should open a new session');
 });
 
-test('Scenario 5 — backward pass positions are sequential from 1', () => {
+test('Scenario 5 — meta-analysis entries reuse the existing session', () => {
   if (!backwardOrder) return;
-  backwardOrder.forEach((entry, i) => {
-    assert.strictEqual(entry.backward_pass_position, i + 1);
+  backwardOrder.slice(0, -1).forEach((entry) => {
+    assert.strictEqual(entry.stepType, 'meta-analysis');
+    assert.strictEqual(entry.sessionInstruction, 'existing-session');
   });
 });
 

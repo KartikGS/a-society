@@ -115,12 +115,11 @@ const result = checkConsent(
 
 ---
 
-## Component 3 + 4 — Workflow Graph Validator and Backward Pass Orderer
+## Component 3 — Workflow Graph Validator
 
-**Files:** `src/workflow-graph-validator.ts`, `src/backward-pass-orderer.ts`
+**File:** `src/workflow-graph-validator.ts`
 
-Component 3 validates YAML frontmatter in a `workflow/main.md` file.
-Component 4 consumes a validated graph to produce backward pass order.
+Component 3 validates YAML frontmatter in a permanent workflow document such as `a-docs/workflow/main.md`.
 
 ### Validate a workflow file
 
@@ -131,36 +130,6 @@ const { valid, errors } = validateWorkflowFile('/path/to/workflow/main.md');
 // valid: boolean
 // errors: string[] — empty when valid
 ```
-
-### Compute backward pass order
-
-```ts
-import { backwardPassOrderer } from './src/backward-pass-orderer.ts';
-
-// graph must be previously read and validated (e.g. via Component 3)
-const order = backwardPassOrderer.computeBackwardPassOrder(graph);
-
-// order: string[] (array of roles in deterministic backward pass order)
-```
-
-**Algorithm:** The algorithm uses node-list position derivation. Roles are recorded at their first appearance in the forward-pass array, and the resulting list is sorted descending by their first occurrence index (equivalent to reversing the array of first-occurrences).
-
-### Generate trigger prompts
-
-```ts
-import { backwardPassOrderer } from './src/backward-pass-orderer.ts';
-
-// Generate literal trigger prompts for the backward pass protocol
-const prompts = backwardPassOrderer.generateTriggerPrompts(graph);
-
-// Provide `synthesisRole` if the workflow uses a synthesis aggregation step
-const promptsWithSynthesis = backwardPassOrderer.generateTriggerPrompts(graph, 'Curator');
-
-// prompts: Record<string, string>
-// e.g. { 'Owner': 'You are the Owner agent...', 'Curator': '...' }
-```
-
-**Implementation note:** The `synthesisRole` parameter identifies which role receives terminal synthesis instructions instead of standard findings handoff instructions. If omitted, all roles receive standard handoff instructions. This logic is decoupled from the workflow graph structure itself.
 
 ### Workflow graph YAML frontmatter schema
 
@@ -180,7 +149,82 @@ workflow:
 ---
 ```
 
-**Implementation note:** The example above reflects the approved framework schema in `$INSTRUCTION_WORKFLOW_GRAPH`. Component 3 and 4 implementation alignment is tracked separately in `$A_SOCIETY_TOOLING_COUPLING_MAP`.
+**Implementation note:** The example above reflects the approved framework schema in `$INSTRUCTION_WORKFLOW_GRAPH`. Component 3 validates this permanent workflow format only.
+
+## Component 4 — Backward Pass Orderer
+
+**File:** `src/backward-pass-orderer.ts`
+
+Component 4 reads `workflow.md` from a record folder and returns an enriched backward pass plan with prompts.
+
+### Primary entry point: `orderWithPromptsFromFile`
+
+```ts
+import { orderWithPromptsFromFile } from './src/backward-pass-orderer.ts';
+
+const plan = orderWithPromptsFromFile('/path/to/a-docs/records/20260320-some-flow');
+
+// plan: Array<{
+//   role: string,
+//   stepType: 'meta-analysis' | 'synthesis',
+//   sessionInstruction: 'existing-session' | 'new-session',
+//   prompt: string
+// }>
+```
+
+### Lower-level entry point: `computeBackwardPassOrder`
+
+For unit tests or callers that already have parsed `workflow.path` entries:
+
+```yaml
+---
+workflow:
+  synthesis_role: Curator
+  path:
+    - role: Owner
+      phase: Intake
+    - role: Curator
+      phase: Phase 1
+    - role: Owner
+      phase: Review
+---
+```
+
+```ts
+import { computeBackwardPassOrder } from './src/backward-pass-orderer.ts';
+
+const plan = computeBackwardPassOrder(
+  [
+    { role: 'Owner', phase: 'Intake' },
+    { role: 'Curator', phase: 'Phase 1' },
+    { role: 'Owner', phase: 'Review' },
+  ],
+  'Curator',
+);
+```
+
+**Algorithm:** The orderer deduplicates roles by first occurrence in `workflow.path`, reverses that role list for meta-analysis traversal, then appends one final synthesis entry for `workflow.synthesis_role`.
+
+### Record-folder `workflow.md` schema
+
+```yaml
+---
+workflow:
+  synthesis_role: Curator
+  path:
+    - role: Owner
+      phase: Intake
+    - role: Curator
+      phase: Phase 1
+    - role: Owner
+      phase: Review
+---
+```
+
+**Notes:**
+- `workflow.synthesis_role` is required and is read from `workflow.md`; callers do not supply it separately.
+- `workflow.path[].phase` is stored for readability and future use; Component 4 currently computes order from `role` values only.
+- Output entries may repeat a role: once as a `meta-analysis` step and again as the final `synthesis` step.
 
 ---
 

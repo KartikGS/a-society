@@ -57,6 +57,34 @@ The first sequence position (`01-`) is reserved for the workflow plan — the Ph
 
 ---
 
+## workflow.md — Forward Pass Path
+
+Some projects using this framework maintain a `workflow.md` file in each record folder alongside the sequenced artifacts. This is a structured YAML file representing the flow's forward-pass path in machine-readable form. It is not a sequenced artifact — it has no `NN-` prefix.
+
+**When to use `workflow.md`:** When the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order), `workflow.md` is the input that tool reads. Projects without such tooling do not need `workflow.md`.
+
+**Schema:**
+
+```yaml
+workflow:
+  synthesis_role: <string>   # The role that performs backward pass synthesis
+  path:
+    - role: <string>         # Role name
+      phase: <string>        # Phase descriptor (human orientation only)
+```
+
+**Who creates it:** The role that performs flow intake, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
+
+**Who can edit it:** The intake role and any role the project designates as workflow-authority for this flow. Regular implementer roles do not edit it.
+
+**When it is appended:** When a workflow-authority role defines their portion of the path that the intake role could not specify at intake.
+
+**What the orderer reads from it:** The `synthesis_role` field and the `role` entries in the `path` list. The `phase` field is for human orientation and is not parsed programmatically.
+
+**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.md` is for programmatic backward pass ordering. When creating `workflow.md`, populate it from the plan's `path`. `workflow.md` is authoritative for programmatic ordering; the plan's `path` governs human-oriented planning only.
+
+---
+
 ## What Goes in a Record
 
 A record contains all artifacts produced for one flow traversal:
@@ -101,7 +129,7 @@ For projects that do not use records, `improvement/reports/` remains the default
 Write `a-docs/records/main.md`. Declare the identifier format, slug vocabulary, and what happens when two flows begin on the same calendar date.
 
 **Step 2 — Declare the artifact sequence.**
-List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time. The first position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder.
+List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time. The first position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use a Backward Pass Orderer tool, also declare `workflow.md` as a non-sequenced artifact created at intake alongside the workflow plan. Document its schema, authoring authority, and the tool that reads it in the project's `records/main.md`.
 
 **Step 3 — Update the conversation layer.**
 Remove live artifact files from `communication/conversation/`. Update template header notes to say artifacts are created into the active record folder.

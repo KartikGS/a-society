@@ -1,94 +1,171 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import yaml from 'js-yaml';
+import { extractFrontmatter } from './utils.js';
 
-export interface WorkflowGraphNode {
-  id: string;
+export interface WorkflowPathEntry {
   role: string;
+  phase: string;
 }
 
-export interface WorkflowGraphEdge {
-  from: string;
-  to: string;
-  artifact?: string;
-}
-
-export interface WorkflowGraph {
+export interface RecordWorkflowFrontmatter {
   workflow: {
-    name: string;
-    nodes: WorkflowGraphNode[];
-    edges: WorkflowGraphEdge[];
+    synthesis_role: string;
+    path: WorkflowPathEntry[];
   };
 }
 
-export interface BackwardPassOrderer {
-  /**
-   * Computes the backward pass execution order using node-list position derivation.
-   */
-  computeBackwardPassOrder(graph: WorkflowGraph): string[];
-
-  /**
-   * Generates trigger prompts for the backward pass protocol.
-   * @param graph The validated workflow graph.
-   * @param synthesisRole Optional. If provided, injects synthesis-specific instructions for this role.
-   */
-  generateTriggerPrompts(graph: WorkflowGraph, synthesisRole?: string): Record<string, string>;
+export interface BackwardPassEntry {
+  role: string;
+  stepType: 'meta-analysis' | 'synthesis';
+  sessionInstruction: 'existing-session' | 'new-session';
+  prompt: string;
 }
 
-export const backwardPassOrderer: BackwardPassOrderer = {
-  computeBackwardPassOrder(graph: WorkflowGraph): string[] {
-    const rolesSet = new Set<string>();
-    const orderedRoles: string[] = [];
+export type BackwardPassPlan = BackwardPassEntry[];
 
-    // Array index implicitly represents first occurrence.
-    // We iterate sequentially, keeping the first appearance.
-    for (const node of graph.workflow.nodes) {
-      if (!rolesSet.has(node.role)) {
-        rolesSet.add(node.role);
-        orderedRoles.push(node.role);
-      }
-    }
+function createMetaAnalysisPrompt(
+  role: string,
+  position: number,
+  total: number,
+  nextRole: string,
+  nextStepType: 'meta-analysis' | 'synthesis',
+): string {
+  const handoff = nextStepType === 'synthesis'
+    ? `hand off to ${nextRole} (synthesis)`
+    : `hand off to ${nextRole}`;
 
-    // Sort descending by first appearance index is equivalent to reversing the array.
-    return orderedRoles.reverse();
-  },
+  return [
+    `You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`,
+    'You are performing a backward pass findings review.',
+    `Backward pass position: ${position} of ${total}`,
+    `Read the prior artifacts in the record folder. Produce your findings at the next available sequence position. When complete, ${handoff}.`,
+  ].join('\n\n');
+}
 
-  generateTriggerPrompts(graph: WorkflowGraph, synthesisRole?: string): Record<string, string> {
-    const order = this.computeBackwardPassOrder(graph);
-    const prompts: Record<string, string> = {};
-    const total = order.length;
+function createSynthesisPrompt(role: string, position: number, total: number): string {
+  return [
+    `You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`,
+    `You are performing backward pass synthesis (position ${position} of ${total} - final step).`,
+    'Read all findings artifacts in the record folder and produce the synthesis at the next available sequence position.',
+  ].join('\n\n');
+}
 
-    for (let i = 0; i < order.length; i++) {
-      const position = i + 1; // 1-based index in the reversed order
-      const role = order[i];
-      const isSynthesis = role === synthesisRole;
-      const nextRole = order[i + 1]; // Undefined for the last role
-
-      const parts: string[] = [];
-      parts.push(`You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`);
-
-      if (isSynthesis) {
-        parts.push(`You are performing backward pass synthesis (position ${position} of ${total} — final step).`);
-        parts.push('Read all findings artifacts in the record folder and produce the synthesis at the next available sequence position.');
-      } else {
-        parts.push('You are performing a backward pass findings review.');
-        parts.push(`Backward pass position: ${position} of ${total}`);
-        
-        let handoff = '';
-        if (nextRole) {
-          handoff = `hand off to ${nextRole}`;
-          if (nextRole === synthesisRole) {
-            handoff += ' (synthesis)';
-          }
-        } else {
-          handoff = 'process is complete'; // Default when there's no next role
-        }
-
-        parts.push(`Read the prior artifacts in the record folder. Produce your findings at the next available sequence position. When complete, ${handoff}.`);
-      }
-
-      prompts[role] = parts.join('\n\n');
-    }
-
-    return prompts;
+function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter {
+  if (!doc || typeof doc !== 'object') {
+    throw new Error('workflow.md frontmatter must parse to an object');
   }
-};
+
+  const rawWorkflow = (doc as Record<string, unknown>).workflow;
+  if (!rawWorkflow || typeof rawWorkflow !== 'object') {
+    throw new Error('workflow.md frontmatter must contain a workflow object');
+  }
+
+  const synthesisRole = (rawWorkflow as Record<string, unknown>).synthesis_role;
+  if (typeof synthesisRole !== 'string' || synthesisRole.trim() === '') {
+    throw new Error('workflow.synthesis_role must be a non-empty string');
+  }
+
+  const rawPath = (rawWorkflow as Record<string, unknown>).path;
+  if (!Array.isArray(rawPath)) {
+    throw new Error('workflow.path must be an array');
+  }
+
+  const normalizedPath = rawPath.map((entry, index) => {
+    if (!entry || typeof entry !== 'object') {
+      throw new Error(`workflow.path[${index}] must be an object`);
+    }
+
+    const role = (entry as Record<string, unknown>).role;
+    const phase = (entry as Record<string, unknown>).phase;
+
+    if (typeof role !== 'string' || role.trim() === '') {
+      throw new Error(`workflow.path[${index}].role must be a non-empty string`);
+    }
+
+    if (typeof phase !== 'string' || phase.trim() === '') {
+      throw new Error(`workflow.path[${index}].phase must be a non-empty string`);
+    }
+
+    return { role, phase };
+  });
+
+  return {
+    workflow: {
+      synthesis_role: synthesisRole,
+      path: normalizedPath,
+    },
+  };
+}
+
+export function computeBackwardPassOrder(
+  pathEntries: WorkflowPathEntry[],
+  synthesisRole: string,
+): BackwardPassPlan {
+  const seenRoles = new Set<string>();
+  const firstOccurrenceRoles: string[] = [];
+
+  for (const entry of pathEntries) {
+    if (!seenRoles.has(entry.role)) {
+      seenRoles.add(entry.role);
+      firstOccurrenceRoles.push(entry.role);
+    }
+  }
+
+  const traversalRoles = firstOccurrenceRoles.reverse();
+  const totalSteps = traversalRoles.length + 1;
+
+  const plan: BackwardPassPlan = traversalRoles.map((role, index) => {
+    const nextRole = index < traversalRoles.length - 1
+      ? traversalRoles[index + 1]
+      : synthesisRole;
+    const nextStepType = index < traversalRoles.length - 1
+      ? 'meta-analysis'
+      : 'synthesis';
+
+    return {
+      role,
+      stepType: 'meta-analysis' as const,
+      sessionInstruction: 'existing-session' as const,
+      prompt: createMetaAnalysisPrompt(role, index + 1, totalSteps, nextRole, nextStepType),
+    };
+  });
+
+  plan.push({
+    role: synthesisRole,
+    stepType: 'synthesis',
+    sessionInstruction: 'new-session',
+    prompt: createSynthesisPrompt(synthesisRole, totalSteps, totalSteps),
+  });
+
+  return plan;
+}
+
+export function orderWithPromptsFromFile(recordFolderPath: string): BackwardPassPlan {
+  const workflowFilePath = path.join(recordFolderPath, 'workflow.md');
+
+  let content: string;
+  try {
+    content = fs.readFileSync(workflowFilePath, 'utf8');
+  } catch (err) {
+    throw new Error(`Cannot read workflow.md at ${workflowFilePath}: ${(err as Error).message}`);
+  }
+
+  const yamlStr = extractFrontmatter(content);
+  if (yamlStr === null) {
+    throw new Error(`No YAML frontmatter found in ${workflowFilePath}`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(yamlStr);
+  } catch (err) {
+    throw new Error(`Invalid YAML in ${workflowFilePath}: ${(err as Error).message}`);
+  }
+
+  const frontmatter = parseRecordWorkflowFrontmatter(parsed);
+  return computeBackwardPassOrder(
+    frontmatter.workflow.path,
+    frontmatter.workflow.synthesis_role,
+  );
+}
