@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v15.0
+**Version:** v15.1
 
 ---
 
@@ -45,3 +45,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v14.0 | 2026-03-19 | 2026-03-19-graph-schema-simplification.md — Workflow graph schema simplified to nodes-and-edges only; backward pass removed from workflow graph model (Breaking) |
 | v14.1 | 2026-03-20 | 2026-03-20-briefing-records-refinements.md — Added multi-file scope guidance to Owner template; functional referencing for trailing artifacts required in Records instruction (Recommended) |
 | v15.0 | 2026-03-20 | 2026-03-20-synthesis-backlog-fix.md — Synthesis role expressly prohibited from generating maintenance backlogs (Breaking) |
+| v15.1 | 2026-03-20 | 2026-03-20-session-startup-logic.md — Session startup hedging removed from workflow and role templates (Recommended) |

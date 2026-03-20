@@ -119,7 +119,7 @@ The A-Society Curator's migration responsibility (restructuring agent-docs in an
 ## Handoff Output
 
 At each pause point, the Curator explicitly tells the human:
-1. Whether to switch to the receiving role's existing session or start a new one. Default: switch to the receiving role's existing session. Start a new one only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
+1. Whether to switch to the receiving role's existing session or start a fresh one. Do not hedge or ask the human if a session exists — declare the instruction explicitly based on whether this is a new flow (start new) or within an active flow (resume). See `$A_SOCIETY_WORKFLOW` "When to start a new session" for exceptions.
 2. Which session to switch to.
 3. What the receiving role needs to read.
 4. Handoff inputs for the receiving role:

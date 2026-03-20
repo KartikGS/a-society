@@ -189,11 +189,11 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 | **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
 | **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
 
-**Default routing rule:** Resume the existing session by default. Start a new session only when the criteria in "When to start a new session" below apply. The active role must say this explicitly at each pause point; the human does not infer it.
+**Session routing rule:** If the workflow is beginning a completely new flow, instruct the human to start a fresh session for the receiving role. If the workflow is within an active flow, instruct the human to resume the existing session for the receiving role. Do not hedge or ask the human if a session exists — state the instruction explicitly based on flow status.
 
 ### How it flows
 
-1. **Session A starts.** The human and Owner align on a need. The Owner creates the record folder and produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. **For Tier 1 flows:** the plan is the approval gate; the Owner implements and closes the flow within Session A — no brief is written and Session B is not needed. **For Tier 2 and 3 flows:** the Owner writes the Owner-to-Curator brief as the next sequenced artifact immediately after the plan. The Owner tells the human whether to resume the existing Curator session or start a new one, provides a copyable path to the brief, and — if a new session is required — provides a copyable session-start prompt for the Curator. If no Curator session exists yet, the Owner says to start Session B; otherwise the default is resume. Session A pauses.
+1. **Session A starts.** The human and Owner align on a need. The Owner creates the record folder and produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. **For Tier 1 flows:** the plan is the approval gate; the Owner implements and closes the flow within Session A — no brief is written and Session B is not needed. **For Tier 2 and 3 flows:** the Owner writes the Owner-to-Curator brief as the next sequenced artifact immediately after the plan. Because this is the start of a completely new flow, the Owner explicitly instructs the human to start a fresh Curator session (Session B), provides a copyable path to the brief, and provides a copyable session-start prompt for the Curator. Session A pauses.
 
 2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human whether to resume the existing Owner session or start a new one, provides a copyable path to the proposal artifact, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B pauses.
 
@@ -215,7 +215,7 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 ### The human's role at each transition
 
 The human is the orchestrator — they maintain continuity between sessions and route artifacts. At each pause point, the active agent should:
-1. State whether the human should resume an existing session or start a new one
+1. Instruct the human to either start a fresh session (if entering a new flow) or resume the existing session (if within an active flow). Do not pass a conditional ("if none exists, start new") to the human.
 2. Provide a copyable path to the artifact it produced
 3. Tell the human which session to switch to
 4. State what the receiving agent needs to read
@@ -223,11 +223,11 @@ The human is the orchestrator — they maintain continuity between sessions and 
 
 ### When to start a new session
 
-Resume the existing session by default. Start a new session only when:
+Resume the existing session by default when within an active flow. Start a new session only when:
+- A completely new flow is beginning (start fresh sessions for each new flow by default)
 - The existing session's context window is full or approaching limits
 - The accumulated context from earlier phases would be more noise than signal
 - Significant time has passed and the session may have expired
-- A new flow is beginning — start a fresh session for each new flow by default
 
 ---
 

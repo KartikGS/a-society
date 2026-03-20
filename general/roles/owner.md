@@ -107,7 +107,7 @@ Output-format changes are an exception. Any change that introduces a new require
 ## Handoff Output
 
 At each pause point, the Owner tells the human:
-1. Whether to resume the existing session or start a new session for the receiving role. Default: resume the existing session. Start a new one only when the project's workflow says to.
+1. Whether to resume the existing session or start a fresh session for the receiving role. Do not hedge or ask the human if a session exists — declare the instruction explicitly based on whether this is a new flow (start new) or within an active flow (resume).
 2. Which session to switch to.
 3. What the receiving role needs to read (artifact path and any additional context).
 4. Handoff inputs for the receiving role:

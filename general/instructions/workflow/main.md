@@ -184,7 +184,7 @@ How are phases mapped to sessions? For multi-role workflows, describe:
 - Which roles run in which sessions
 - Where the natural pause points are (edges that cross session boundaries)
 - What the human does at each transition (which session to switch to, which artifact to route)
-- When to start a new session vs. resume an existing one (see session reuse rules in "Sessions and the Human Orchestrator")
+- When to start a new session vs. resume an existing one (see session reuse rules in "Sessions and the Human Orchestrator"). Agents must never pass conditional language to the human (e.g., "Resume, but start new if none exist") — they must assert the rule explicitly based on flow state.
 
 A session model makes the human's orchestration role visible and gives agents the information they need to guide the human at pause points. A session model is mandatory for any workflow with two or more roles. It is optional only for genuinely single-role workflows.
 
@@ -250,7 +250,7 @@ What rules apply to all work in this project, regardless of phase? Write them as
 For each phase, describe what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note."
 
 **Step 6 — Describe the session model (mandatory for two or more roles).**
-For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition — including a copyable artifact path (always) and a copyable session-start prompt when a new session is required. Define when sessions are resumed within a flow versus started fresh at flow close. Skip this step only for single-role workflows.
+For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition — including a copyable artifact path (always) and a copyable session-start prompt when a new session is required. Define when sessions are resumed within a flow versus started fresh at flow close. Agents must state explicitly whether to start fresh or resume, without hedging based on session existence. Skip this step only for single-role workflows.
 
 **Step 7 — Define the backward pass.**
 Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
