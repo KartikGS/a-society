@@ -138,7 +138,7 @@ Backward pass order: Curator first, Owner second, Curator synthesizes last.
 
 #### Component 4 mandate
 
-When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available **and** the flow has more than two participating roles, invoke Component 4 to compute the traversal order — do not compute manually. Pass `$A_SOCIETY_WORKFLOW`. The orderer returns roles in backward pass order, excluding roles that did not fire in this instance.
+When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available **and** the flow has more than two participating roles, invoke Component 4 to generate the trigger prompts and order them. Use `generateTriggerPrompts` and `orderWithPromptsFromFile`, passing `$A_SOCIETY_WORKFLOW`. The orderer will programmatically assemble the roles in their backward-pass sequence based on their presence in the workflow.
 
 For flows with only two roles (Owner + Curator), manual application of the standard order above is sufficient.
 

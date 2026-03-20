@@ -1,7 +1,7 @@
 # A-Society Framework Update — [YYYY-MM-DD]
 
-**Framework Version:** v[X.Y] *(A-Society's version after this update is applied)*
-**Previous Version:** v[X.Y-1] *(A-Society's version before this update)*
+**Framework Version:** v[X.Y]
+**Previous Version:** v[X.Y-1]
 
 ## Summary
 

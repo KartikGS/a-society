@@ -51,6 +51,8 @@ Files within a record folder are named with a zero-padded two-digit prefix: `01-
 
 The project's `records/main.md` defines which artifact types appear at which sequence positions (e.g., `01-` is always the briefing, `02-` is always the proposal). Revise/resubmit cycles append artifacts at the next available sequence position — they do not overwrite prior artifacts.
 
+**Reference stability:** Do not use hardcoded sequence IDs (e.g., `05-findings.md`) in standing instructions or templates to refer to trailing artifacts like backward-pass findings. Intermediate submissions or revisions will shift their sequence position. Always refer to them by function (e.g., "the backward-pass findings artifact after all submissions have resolved").
+
 The first sequence position (`01-`) is reserved for the workflow plan — the Phase 0 gate artifact produced by the Owner at flow intake, before any other artifact is created. Projects using the A-Society framework should declare this position explicitly in their `records/main.md` sequence table. See `$INSTRUCTION_WORKFLOW_COMPLEXITY` for the workflow plan format and its role as the Phase 0 gate.
 
 ---

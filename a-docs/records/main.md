@@ -44,6 +44,8 @@ If a flow includes an additional Curator → Owner submission after the main dec
 
 **Example:** Main flow closes at `04-owner-to-curator.md`; update report submission takes `05-curator-update-report.md` and Owner decision takes `06-owner-update-report.md`; backward-pass findings then start at `07-`.
 
+**Reference stability:** Do not use hardcoded sequence IDs (e.g., `05-findings.md`) in standing instructions or templates to refer to trailing artifacts like backward-pass findings. Intermediate submissions or revisions will shift their sequence position. Always refer to them by function (e.g., "the backward-pass findings artifact after all submissions have resolved").
+
 **Prerequisite before filing findings:** Confirm all submissions in this flow are resolved — meaning the Owner has responded to every Curator → Owner artifact produced after the main decision. Do not begin backward-pass findings until this check passes.
 
 ---

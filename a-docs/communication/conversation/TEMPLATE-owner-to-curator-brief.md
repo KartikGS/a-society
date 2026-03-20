@@ -14,13 +14,21 @@
 **Status:** BRIEFED
 **Date:** [YYYY-MM-DD]
 
+> **Pre-send check (Variables):** Verify that every `$VAR` referenced in the proposed content below is already registered in the relevant index. Unregistered variables must not be used.
+
 > **Count verify:** If the Subject line states a number of changes, confirm it matches the count of numbered items in the Agreed Change section before sending.
 
 ---
 
 ## Agreed Change
 
+**Files Changed:**
+| Target | Action |
+|---|---|
+| `$[VAR]` | [additive / replace / insert / modify] |
+
 > **Item authority marking:** Each item in this section must be marked with its authority level — either `[Requires Owner approval]` or `[Curator authority — implement directly]`. This marking makes the Approval Invariant's scope unambiguous for every item in the brief without requiring the Curator to infer it. An item without a marking is assumed to require Owner approval.
+> **Edit-mode marking:** Where applicable, tag the requested change with its expected edit mode (e.g., `[additive]`, `[replace target X]`, `[insert before X]`) to streamline implementation.
 
 [What the Owner and human aligned on. Describe the change clearly enough that the Curator can draft a proposal without needing to re-derive the rationale from scratch. Include: what is changing, what problem it solves, and why it is worth doing.]
 

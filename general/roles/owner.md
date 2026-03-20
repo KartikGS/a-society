@@ -98,6 +98,8 @@ If the workflow list below has not yet been customized, the Owner still does not
 
 When a change is fully derivable — no ambiguity about scope, target, or implementation approach — write a fully-specified brief. Cover all three dimensions explicitly and state **"Open Questions: None"** when there are none. This signals to the downstream role that no judgment calls are required.
 
+**Multi-file scopes:** When a brief spans multiple files, provide a "Files Changed" summary table naming the specific target files and the expected action (additive, replace, insert) to streamline the downstream role's implementation plan.
+
 Output-format changes are an exception. Any change that introduces a new required field, a new template section, or a new required structural element in the output is not mechanical — design decisions about what the output should look like are involved. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
 
 ---
