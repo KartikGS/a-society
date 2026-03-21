@@ -59,12 +59,16 @@ If a flow includes an additional Curator → Owner submission after the main dec
 **Schema:**
 
 ```yaml
+---
 workflow:
   synthesis_role: <string>   # The role that performs backward pass synthesis
   path:
     - role: <string>         # Role name (parsed by Component 4)
       phase: <string>        # Phase descriptor (human orientation; not parsed by Component 4)
+---
 ```
+
+The YAML content must be wrapped in `---` frontmatter delimiters as shown. The Backward Pass Orderer reads `workflow.md` as YAML frontmatter — a file missing the opening or closing `---` delimiter will cause a parse failure.
 
 **Who creates it:** The Owner, at flow intake, alongside `01-owner-workflow-plan.md`.
 
@@ -106,7 +110,7 @@ The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
 2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.synthesis_role` and `workflow.path` from the plan's `path` field. `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
+3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.synthesis_role` and `workflow.path` from the plan's `path` field. Wrap the YAML content in `---` frontmatter delimiters (opening `---` on line 1, closing `---` after the final field). `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
 4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
 5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 

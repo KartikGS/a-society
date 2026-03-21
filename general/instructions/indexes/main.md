@@ -5,9 +5,9 @@
 A file path index is a single table that maps variable names to the current locations of key files in a project. It is the only place in the project where file paths are declared as facts. Everywhere else, files are referenced by their variable name.
 
 ```
-| Variable           | Current Path                          | Description          |
-|--------------------|---------------------------------------|----------------------|
-| $TOOLING_STANDARD  | /project/docs/tooling/standard.md     | Canonical tool rules |
+| Variable           | Current Path                         | Description          |
+|--------------------|--------------------------------------|----------------------|
+| $TOOLING_STANDARD  | project/docs/tooling/standard.md     | Canonical tool rules |
 ```
 
 When a file moves, one cell in this table changes. Every reference throughout the project — in every document, in every agent session — resolves correctly through the variable. Nothing else needs updating.
@@ -83,7 +83,7 @@ Agents need to know the index exists. Add a one-line reference to it in the docu
 - **Three columns only:** Variable, Current Path, Description. Do not add columns for owner, status, or last-updated — those belong elsewhere.
 - **One row per file.** Do not group or nest entries. The table is a flat registry.
 - **Description is one clause.** Enough to identify the file's purpose without opening it. Not a full sentence, not a paragraph.
-- **Paths are absolute from the project root.** Relative paths break when the index is read from a different directory. Use `/project-root/...` notation consistently.
+- **Paths must be repo-relative, not machine-specific.** Use paths relative to the repository root (e.g., `project-name/a-docs/agents.md`). Machine-specific absolute paths (e.g., `/home/user/...`, `/Users/...`) are prohibited — they break when the project moves to a different machine or account. When populating an index from file operations that return absolute paths, strip the machine-specific prefix and write only the repo-relative portion.
 - **The index is a declaration, not documentation.** It does not explain why files exist or how they relate to each other. Those explanations belong in the structure document or the files themselves.
 
 ---
@@ -103,6 +103,9 @@ Look up the variable in the index to get the current path, then open the file. D
 
 **When validating the index:**
 Run `$A_SOCIETY_TOOLING_PATH_VALIDATOR` to confirm every path in the index resolves to an existing file. Pass the index file path as the argument. A zero-failure result confirms all registered paths are accessible. Run after any index update: adding entries, updating paths after a file move, or retiring rows. A failing result names the specific entries to fix.
+
+**When referencing a file not in the index:**
+For files that do not belong in the index — per-flow artifacts, active working files, or any file only referenced once — use the repo-relative path directly in handoffs and artifacts. Do not invent an unregistered `$VARIABLE_NAME` to anchor it. An invented variable that is not registered in the index resolves to nothing: it gives the appearance of indirection without the benefit. If an unregistered variable appears in a handoff, it is a signal that a plain repo-relative path should have been used instead.
 
 ---
 
@@ -134,23 +137,23 @@ This sequence is the inverse of Index-Before-Reference: where creation requires 
 ### Software project
 | Variable | Current Path | Description |
 |---|---|---|
-| `$TOOLING_STANDARD` | `/docs/project/tooling/standard.md` | Package manager, runtime version, lint and test commands |
-| `$API_CONTRACTS` | `/docs/api/contracts.md` | Route definitions, request/response shapes, versioning policy |
-| `$TESTING_STRATEGY` | `/docs/testing/strategy.md` | Test classification, coverage requirements, mock policy |
+| `$TOOLING_STANDARD` | `project/docs/tooling/standard.md` | Package manager, runtime version, lint and test commands |
+| `$API_CONTRACTS` | `project/docs/api/contracts.md` | Route definitions, request/response shapes, versioning policy |
+| `$TESTING_STRATEGY` | `project/docs/testing/strategy.md` | Test classification, coverage requirements, mock policy |
 
 ### Editorial / writing project
 | Variable | Current Path | Description |
 |---|---|---|
-| `$STYLE_GUIDE` | `/project-docs/style/guide.md` | Voice, tone, formatting, and citation standards |
-| `$EDITORIAL_WORKFLOW` | `/project-docs/process/workflow.md` | Stages from draft to publication, roles at each stage |
-| `$GLOSSARY` | `/project-docs/reference/glossary.md` | Defined terms used consistently throughout the project |
+| `$STYLE_GUIDE` | `project/docs/style/guide.md` | Voice, tone, formatting, and citation standards |
+| `$EDITORIAL_WORKFLOW` | `project/docs/process/workflow.md` | Stages from draft to publication, roles at each stage |
+| `$GLOSSARY` | `project/docs/reference/glossary.md` | Defined terms used consistently throughout the project |
 
 ### Research project
 | Variable | Current Path | Description |
 |---|---|---|
-| `$RESEARCH_PROTOCOL` | `/docs/protocol.md` | Data collection method, inclusion criteria, analysis approach |
-| `$DATA_DICTIONARY` | `/docs/reference/data-dictionary.md` | Variable definitions, units, and coding conventions |
-| `$FINDINGS_SUMMARY` | `/docs/findings/summary.md` | Current state of conclusions — updated as analysis progresses |
+| `$RESEARCH_PROTOCOL` | `project/docs/protocol.md` | Data collection method, inclusion criteria, analysis approach |
+| `$DATA_DICTIONARY` | `project/docs/reference/data-dictionary.md` | Variable definitions, units, and coding conventions |
+| `$FINDINGS_SUMMARY` | `project/docs/findings/summary.md` | Current state of conclusions — updated as analysis progresses |
 
 ---
 
