@@ -68,12 +68,16 @@ Some projects using this framework maintain a `workflow.md` file in each record 
 **Schema:**
 
 ```yaml
+---
 workflow:
   synthesis_role: <string>   # The role that performs backward pass synthesis
   path:
     - role: <string>         # Role name
       phase: <string>        # Phase descriptor (human orientation only)
+---
 ```
+
+The YAML content must be wrapped in `---` frontmatter delimiters: an opening `---` on line 1, and a closing `---` after the final field. A `workflow.md` file missing either delimiter will cause a Component 4 parse failure.
 
 **Who creates it:** The role that performs flow intake, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
 

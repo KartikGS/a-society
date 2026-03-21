@@ -98,6 +98,89 @@ test('extra keys on node produces error', () => {
   assert.ok(errors.some((e: string) => e.includes('invalid keys: invalid')));
 });
 
+test('valid node with human-collaborative passes', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': 'direction' }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.deepStrictEqual(errors, []);
+});
+
+test('non-string human-collaborative value is rejected', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': 42 }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.ok(
+    errors.some((e: string) =>
+      e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
+    )
+  );
+});
+
+test('empty or whitespace human-collaborative value is rejected', () => {
+  const emptyValueGraph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': '' }],
+      edges: [],
+    },
+  };
+  const whitespaceValueGraph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': '   ' }],
+      edges: [],
+    },
+  };
+
+  const emptyErrors = validateGraph(emptyValueGraph);
+  const whitespaceErrors = validateGraph(whitespaceValueGraph);
+
+  assert.ok(
+    emptyErrors.some((e: string) =>
+      e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
+    )
+  );
+  assert.ok(
+    whitespaceErrors.some((e: string) =>
+      e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
+    )
+  );
+});
+
+test('unknown node keys still fail after allowing human-collaborative', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        {
+          id: 'n1',
+          role: 'R',
+          'human-collaborative': 'decision',
+          invalid: 'key',
+        },
+      ],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.ok(errors.some((e: string) => e.includes('invalid keys: invalid')));
+});
+
+test('existing workflow document without human-collaborative remains valid', () => {
+  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.md'));
+  assert.strictEqual(result.valid, true, `Expected backward compatibility, got errors: ${result.errors.join('; ')}`);
+});
+
 test('valid fixture file passes', () => {
   const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.md'));
   assert.strictEqual(result.valid, true, `Expected valid, got errors: ${result.errors.join('; ')}`);

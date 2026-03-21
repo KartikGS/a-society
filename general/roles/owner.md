@@ -100,7 +100,13 @@ When a change is fully derivable — no ambiguity about scope, target, or implem
 
 **Multi-file scopes:** When a brief spans multiple files, provide a "Files Changed" summary table naming the specific target files and the expected action (additive, replace, insert) to streamline the downstream role's implementation plan.
 
+**Ordered-list insertions:** When a brief directs the downstream role to add an item to a numbered or ordered list, specify the insertion position — not just the section name. Acceptable forms: "after item N," "before item N," or "as the new item N." A brief that names only the section leaves the receiving role to infer position, which creates ambiguity and can require a correction round.
+
 Output-format changes are an exception. Any change that introduces a new required field, a new template section, or a new required structural element in the output is not mechanical — design decisions about what the output should look like are involved. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
+
+**Do not pre-specify update report classification.** If the change described in a brief may trigger a framework update report, do not state an expected impact classification in the brief. Classification is determined by the downstream role post-implementation by consulting the project's update report protocol. Stating a classification in the brief creates framing the downstream role must override — which adds a correction round rather than eliminating one. The same applies to approval rationale: do not comment on expected classification when approving a content change.
+
+This prohibition applies to briefs and to the main approval rationale — those two contexts only. Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the downstream role to consult the update report protocol after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
 ---
 

@@ -140,6 +140,7 @@ workflow:
   nodes:
     - id: owner-intake
       role: Owner
+      human-collaborative: "direction"   # optional; if present, must be a non-empty string
     - id: curator-proposal
       role: Curator
   edges:
@@ -149,7 +150,9 @@ workflow:
 ---
 ```
 
-**Implementation note:** The example above reflects the approved framework schema in `$INSTRUCTION_WORKFLOW_GRAPH`. Component 3 validates this permanent workflow format only.
+**Validation rule note:** `workflow.nodes[].human-collaborative` is optional. When present, Component 3 requires it to be a string and rejects empty or whitespace-only values.
+
+**Implementation note:** The example above reflects the approved framework schema in `$INSTRUCTION_WORKFLOW_GRAPH`, with an additive validator-level acceptance for optional node metadata. Component 3 validates this permanent workflow format only.
 
 ## Component 4 — Backward Pass Orderer
 

@@ -5,6 +5,7 @@ import { extractFrontmatter } from './utils.js';
 export interface WorkflowNode {
   id: string;
   role: string;
+  'human-collaborative'?: string;
 }
 
 export interface WorkflowEdge {
@@ -77,7 +78,7 @@ export function validateGraph(doc: unknown): string[] {
       }
       
       const keys = Object.keys(node);
-      const invalidKeys = keys.filter((k) => k !== 'id' && k !== 'role');
+      const invalidKeys = keys.filter((k) => k !== 'id' && k !== 'role' && k !== 'human-collaborative');
       if (invalidKeys.length > 0) {
         errors.push(`workflow.nodes[${i}] contains invalid keys: ${invalidKeys.join(', ')}`);
       }
@@ -93,6 +94,16 @@ export function validateGraph(doc: unknown): string[] {
       // role
       if (typeof node.role !== 'string' || node.role.trim() === '') {
         errors.push(`workflow.nodes[${i}].role must be a non-empty string`);
+      }
+      if ('human-collaborative' in node) {
+        if (
+          typeof node['human-collaborative'] !== 'string' ||
+          node['human-collaborative'].trim() === ''
+        ) {
+          errors.push(
+            `workflow.nodes[${i}].human-collaborative must be a non-empty string if present`
+          );
+        }
       }
     });
 

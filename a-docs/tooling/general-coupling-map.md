@@ -24,14 +24,14 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | `a-society-version.md` format (`**Baseline Version:** vX.Y`, `Version After` column) | Yes | Component 6: Version Comparator |
 | `$GENERAL_FEEDBACK_CONSENT` template format (`**Consented:**` field, section headers) | Yes | Component 2: Consent Utility (`renderConsentFile`, `checkConsent` parser) |
 | Feedback type identifiers and directory names (`onboarding`, `migration`, `curator-signal`) | Yes | Component 2: Consent Utility (`FEEDBACK_TYPES` constant) |
-| Workflow graph YAML frontmatter schema (per `$INSTRUCTION_WORKFLOW_GRAPH`): `workflow.name`, `workflow.nodes[].id`, `workflow.nodes[].role`, `workflow.edges[].from`, `workflow.edges[].to`, optional `workflow.edges[].artifact`; removed `workflow.phases`, `workflow.nodes[].phase`, `workflow.nodes[].first_occurrence_position`, `workflow.nodes[].is_synthesis_role` | Yes | Component 3: Workflow Graph Validator (enforces it) |
+| Workflow graph YAML frontmatter schema (per `$INSTRUCTION_WORKFLOW_GRAPH`): `workflow.name`, `workflow.nodes[].id`, `workflow.nodes[].role`, optional `workflow.nodes[].human-collaborative` (non-empty string when present), `workflow.edges[].from`, `workflow.edges[].to`, optional `workflow.edges[].artifact`; removed `workflow.phases`, `workflow.nodes[].phase`, `workflow.nodes[].first_occurrence_position`, `workflow.nodes[].is_synthesis_role` | Yes | Component 3: Workflow Graph Validator (enforces it) |
 | Backward pass ordering rule (per `$GENERAL_IMPROVEMENT`) | Yes | Component 4: Backward Pass Orderer (encodes the rule) |
 | `workflow.md` YAML frontmatter schema in record folder `[a-docs]`: `workflow.synthesis_role` (string, required), `workflow.path[].role` (string, required), `workflow.path[].phase` (string, required) | Yes | Component 4: Backward Pass Orderer |
 | `$GENERAL_MANIFEST` file format (`files` array, `path`/`scaffold`/`source_path`/`required` fields) | Yes | Component 1: Scaffolding System |
 | All `copy`-type `source_path` files in the manifest | Yes | Component 1: Scaffolding System (reads them at scaffold time) |
 | `$A_SOCIETY_COMM_TEMPLATE_PLAN` frontmatter schema `[a-docs]`: `type`, `date`, `complexity.*` (five sub-fields: `domain_spread`, `shared_artifact_impact`, `step_dependency`, `reversibility`, `scope_size`), `tier`, `path`, `known_unknowns` | Yes | Component 7: Plan Artifact Validator |
 
-**Open Type A follow-up (2026-03-19):** `$INSTRUCTION_WORKFLOW_GRAPH` simplified the workflow graph schema to nodes-and-edges only. Component 3 requires TA advisory + Developer follow-up to align implementation with the new schema. Invocation status remains closed; the open work is implementation alignment, not invocation guidance. *(Component 4 resolved — 2026-03-20, by backward pass orderer redesign.)*
+**Type A status note (2026-03-21):** Component 3 implementation alignment is complete for optional `workflow.nodes[].human-collaborative`. Remaining follow-on is documentation parity in `$INSTRUCTION_WORKFLOW_GRAPH` (framework-development track), not tooling implementation alignment.
 
 ---
 
