@@ -53,6 +53,8 @@ The project's `records/main.md` defines which artifact types appear at which seq
 
 **Reference stability:** Do not use hardcoded sequence IDs (e.g., `05-findings.md`) in standing instructions or templates to refer to trailing artifacts like backward-pass findings. Intermediate submissions or revisions will shift their sequence position. Always refer to them by function (e.g., "the backward-pass findings artifact after all submissions have resolved").
 
+**Parallel track sub-labeling:** When the intake role declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the intake role must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The intake role assigns these sub-labels in `workflow.md` and in the project's records convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
+
 The first sequence position (`01-`) is reserved for the workflow plan — the Phase 0 gate artifact produced by the Owner at flow intake, before any other artifact is created. Projects using the A-Society framework should declare this position explicitly in their `records/main.md` sequence table. See `$INSTRUCTION_WORKFLOW_COMPLEXITY` for the workflow plan format and its role as the Phase 0 gate.
 
 ---
@@ -75,6 +77,8 @@ workflow:
 
 **Who creates it:** The role that performs flow intake, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
 
+**Completeness obligation:** When populating `workflow.md` at intake, the intake role must list every role step they expect, including intermediate review and approval checkpoints between roles. If the intake role will review or approve work before the next non-intake role acts, that checkpoint must appear as its own intake-role entry in `workflow.md`. For example, if a project's workflow includes `RoleA - Deliverable` and the intake role reviews that deliverable before `RoleB` proceeds, `IntakeRole - RoleA Review` must appear as a distinct entry. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
+
 **Who can edit it:** The intake role and any role the project designates as workflow-authority for this flow. Regular implementer roles do not edit it.
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the intake role could not specify at intake.
@@ -82,6 +86,10 @@ workflow:
 **What the orderer reads from it:** The `synthesis_role` field and the `role` entries in the `path` list. The `phase` field is for human orientation and is not parsed programmatically.
 
 **Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.md` is for programmatic backward pass ordering. When creating `workflow.md`, populate it from the plan's `path`. `workflow.md` is authoritative for programmatic ordering; the plan's `path` governs human-oriented planning only.
+
+**Pre-convention record folders:** Record folders created before the project established the `workflow.md` requirement are exempt from that requirement. The absence of `workflow.md` in a pre-convention folder is not a convention violation — it is expected. A Backward Pass Orderer tool, if the project uses one, cannot be invoked for these folders; use manual backward pass ordering instead. Future agents encountering a record folder without `workflow.md` should verify whether the folder predates this requirement before treating the absence as an error. Projects should record the convention introduction date or version in their `records/main.md` so this determination is unambiguous.
+
+**Bootstrapping exemption:** When a flow establishes a new record-folder requirement, such as the introduction of `workflow.md` itself, that flow's record folder is exempt-by-origin from the requirement it creates. The flow that introduces a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts; it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
 ---
 

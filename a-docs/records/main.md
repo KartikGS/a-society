@@ -40,6 +40,8 @@ If a flow includes an additional Curator → Owner submission after the main dec
 
 **Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-update-report.md`, `owner-update-report.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
 
+**Parallel track sub-labeling:** When the Owner declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the Owner must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The Owner assigns these sub-labels in `workflow.md` and in the record folder convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
+
 **Owner decision naming distinction:** Use `NN-owner-decision.md` when the Owner is recording a decision and the previously active role has no subsequent action in this flow. Use `NN-owner-to-[role].md` only when the named role has a next action in the flow. Mislabeling a terminal Owner decision as an active handoff creates ambiguity about whether the named role still has pending work in this flow.
 
 **Example:** Main flow closes at `04-owner-to-curator.md`; update report submission takes `05-curator-update-report.md` and Owner decision takes `06-owner-update-report.md`; backward-pass findings then start at `07-`.
@@ -65,6 +67,8 @@ workflow:
 ```
 
 **Who creates it:** The Owner, at flow intake, alongside `01-owner-workflow-plan.md`.
+
+**Completeness obligation:** When populating `workflow.md` at intake, the Owner must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner entry in `workflow.md`. For example, `TA - Advisory` must be followed by `Owner - TA Review` when the Owner reviews the advisory before the Curator proceeds. No Owner checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
 **Who can edit it:** The Owner and any role explicitly designated as workflow-authority for this flow. Standard implementer roles do not edit `workflow.md`.
 

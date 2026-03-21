@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v16.0
+**Version:** v17.0
 
 ---
 
@@ -47,3 +47,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v15.0 | 2026-03-20 | 2026-03-20-synthesis-backlog-fix.md — Synthesis role expressly prohibited from generating maintenance backlogs (Breaking) |
 | v15.1 | 2026-03-20 | 2026-03-20-session-startup-logic.md — Session startup hedging removed from workflow and role templates (Recommended) |
 | v16.0 | 2026-03-20 | 2026-03-20-backward-pass-orderer-interface.md — Backward Pass Orderer invocation model changed: reads workflow.md from record folder, always-invoke, BackwardPassPlan output (Breaking); workflow.md documented in records instruction (Recommended) |
+| v17.0 | 2026-03-21 | 2026-03-21-records-ordering-guardrails.md — workflow.md completeness rule added to records instruction (Breaking); parallel-track sub-labeling added to records instruction (Optional); workflow.md pre-convention and bootstrapping exemptions added (Recommended); forward pass closure boundary added to improvement guardrails (Recommended) |
