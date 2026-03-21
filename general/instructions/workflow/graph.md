@@ -48,6 +48,7 @@ workflow:
   nodes:
     - id: [string — unique identifier for this structural node]
       role: [string — role name exactly as declared in agents.md]
+      human-collaborative: [string, optional — description of the human input required at this node; null or absent when fully agent-driven]
   edges:
     - from: [string — node id]
       to: [string — node id]
@@ -69,6 +70,8 @@ One entry per structural node in the forward pass. A structural node is one cont
 **`id`** — a unique identifier for this node. Convention: combine the role (lowercase) and the structural step, hyphenated (e.g., `owner-intake`, `curator-proposal`, `owner-review`).
 
 **`role`** — the role name as declared in `agents.md`, exactly.
+
+**`human-collaborative`** — optional. When present, must be a non-empty string describing the human input required at this node. Null or absent when the node is fully agent-driven.
 
 ### `workflow.edges`
 

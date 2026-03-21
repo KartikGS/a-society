@@ -31,7 +31,7 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | All `copy`-type `source_path` files in the manifest | Yes | Component 1: Scaffolding System (reads them at scaffold time) |
 | `$A_SOCIETY_COMM_TEMPLATE_PLAN` frontmatter schema `[a-docs]`: `type`, `date`, `complexity.*` (five sub-fields: `domain_spread`, `shared_artifact_impact`, `step_dependency`, `reversibility`, `scope_size`), `tier`, `path`, `known_unknowns` | Yes | Component 7: Plan Artifact Validator |
 
-**Type A status note (2026-03-21):** Component 3 implementation alignment is complete for optional `workflow.nodes[].human-collaborative`. Remaining follow-on is documentation parity in `$INSTRUCTION_WORKFLOW_GRAPH` (framework-development track), not tooling implementation alignment.
+**Type A status note (2026-03-22):** Component 3 alignment for optional `workflow.nodes[].human-collaborative` is fully complete. Implementation alignment was completed 2026-03-21; documentation parity in `$INSTRUCTION_WORKFLOW_GRAPH` was completed 2026-03-22 (general-lib-sync-bundle flow).
 
 ---
 
