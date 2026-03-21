@@ -20,6 +20,8 @@ workflow:
       role: Owner
     - id: curator-phase7
       role: Curator
+    - id: owner-phase8-closure
+      role: Owner
   edges:
     - from: owner-phase0-gate
       to: curator-phase0-docs
@@ -46,6 +48,9 @@ workflow:
     - from: owner-phase6-gate
       to: curator-phase7
       artifact: owner-approval
+    - from: curator-phase7
+      to: owner-phase8-closure
+      artifact: curator-to-owner
 ---
 
 # A-Society: Programmatic Tooling Layer — Roles and Workflow
@@ -318,11 +323,11 @@ This workflow extends the existing model rather than replacing it. The existing 
 
 ---
 
-#### Phase 7 — Registration, Finalization, and Backward Pass
+#### Phase 7 — Registration and Finalization
 
-**Purpose:** Register all tooling artifacts in the appropriate indexes, assess whether a framework update report is warranted, and produce backward pass findings for this flow.
+**Purpose:** Register all tooling artifacts in the appropriate indexes and assess whether a framework update report is warranted.
 
-**Role:** Curator (registration and finalization), all forward-pass nodes (backward pass).
+**Role:** Curator.
 
 **Work:**
 
@@ -336,26 +341,42 @@ Framework update report assessment:
 - Curator checks `$A_SOCIETY_UPDATES_PROTOCOL`: does the tooling layer's completion (new `tooling/` folder, new `general/` instruction, workflow frontmatter format) require adopting projects to review their `a-docs/`?
 - If yes: Curator drafts the update report and submits to Owner for review before publishing
 
-Backward pass:
-- Follows `$A_SOCIETY_IMPROVEMENT` protocol
-- Forward-pass node order: Owner (Phase 0 gate) → Curator (Phase 0 docs) → Tooling Developer (Phases 1, 1A, 2) → Curator (Phase 3 docs) → Tooling Developer (Phases 4–5–6) → TA (Phase 6 review) → Owner (Phase 6 gate) → Curator (Phase 7)
-- First occurrences: Owner first, Curator second, Developer third, TA fourth
-- Backward pass order: TA, Developer, Owner — then Curator (synthesis, always last)
-- TA and Developer are included only if they fired; if TA was not consulted in any phase, TA is excluded
-- Depth: full structured findings — this is a substantive multi-phase flow with structural decisions
-
-**Component 4 invocation:** If Component 4 (Backward Pass Orderer) is available and this flow had more than two participating roles, invoke Component 4 rather than computing the traversal order manually. Pass `$A_SOCIETY_WORKFLOW_TOOLING_DEV`. The orderer returns roles in backward pass order, excluding non-firing roles. The manual ordering above is provided as a reference; when Component 4 is available, it takes precedence.
-
-**Output:** Indexes updated; update report published if warranted; backward pass findings and synthesis produced.
+**Output:** Updated index row(s); updated a-docs-guide entry if applicable; framework update report draft submitted if triggered. Work hands off to the Owner for forward-pass closure.
 
 ---
 
-### Session model
+#### Phase 8 — Forward Pass Closure
+
+**Purpose:** The Owner acknowledges forward-pass completion.
+
+**Role:** Owner.
+
+**Work:** Review any pending update-report submission. Confirm all forward-pass work is complete and registered. Acknowledge closure and initiate the backward pass.
+
+**Output:** Closure message; backward pass initiated.
+
+---
+
+## 3. Backward Pass
+
+Backward pass is mandatory after forward-pass completion and is governed by `$A_SOCIETY_IMPROVEMENT`; it is not a workflow phase and is not represented as workflow graph nodes.
+
+**Forward-pass node order:** Owner (Phase 0) → Curator (Phase 0) → Tooling Developer (Phases 1, 1A, 2) → Curator (Phase 3) → Tooling Developer (Phases 4–5–6) → Technical Architect (Phase 6 review) → Owner (Phase 6 gate) → Curator (Phase 7) → Owner (Phase 8 closure).
+
+**First occurrences:** Owner, Curator, Tooling Developer, Technical Architect.
+
+**Backward pass order (manual candidate):** Technical Architect, Tooling Developer, Owner — then Curator (synthesis, always last).
+
+**Component 4 invocation:** If Component 4 (Backward Pass Orderer) is available and this flow had more than two participating roles, invoke Component 4 rather than computing the traversal order manually. Pass `$A_SOCIETY_WORKFLOW_TOOLING_DEV` via the record folder's `workflow.md`. The manual ordering above is provided as a reference; when Component 4 is available, it takes precedence.
+
+---
+
+## 4. Session model
 
 | Session | Role | Active in phases |
 |---|---|---|
-| Session A | Owner | Phase 0 gate, Phase 3 gate, Phase 6 final approval, Phase 7 backward pass |
-| Session B | Curator | Phase 0 docs, Phase 3 docs, Phase 7 registration + backward pass |
+| Session A | Owner | Phase 0 gate, Phase 3 gate, Phase 6 final approval, Phase 8 forward pass closure |
+| Session B | Curator | Phase 0 docs, Phase 3 docs, Phase 7 registration |
 | Session C | Tooling Developer | Phases 1, 1A, 2, 4, 5, 6 |
 | TA sessions | Technical Architect | On-demand — invoked when Developer escalates or at Owner's request for Phase 6 gate. When reviewing a tooling change or deviation, the TA also checks `$A_SOCIETY_TOOLING_COUPLING_MAP`'s invocation gap column for the affected component. If the gap is open, the TA notes it as a standing open item in the advisory output. This is not a hard stop — it is a gap-surfacing obligation. |
 
@@ -374,7 +395,8 @@ Phase 0 (Owner gate)
   └── Phase 3 (Curator/Owner gate)                 ─── Phase 4 (Developer)
                                                                 └── Phase 5 (Developer)
                                                                           └── Phase 6 (Developer + TA + Owner gate)
-                                                                                    └── Phase 7 (Curator + backward pass)
+                                                                                    └── Phase 7 (Curator)
+                                                                                              └── Phase 8 (Owner closure acknowledgment)
 ```
 
 Phases 1–2 and Phase 3 may run concurrently after Phase 0 clears.

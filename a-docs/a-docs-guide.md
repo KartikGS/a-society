@@ -178,7 +178,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** A-Society's primary ongoing work is framework development: growing, maintaining, and quality-gating the reusable instruction library. This workflow governs that cadence — the Proposal → Review → Implementation → Registration loop that every library addition or a-docs change passes through. Extracting it from the routing index into its own file allows agents working on framework development to load only the workflow they need without reading tooling workflow material.
 
-**What it owns:** The complete framework development workflow — the YAML graph (four nodes: Owner intake, Curator proposal, Owner review, Curator implementation/registration), all phases (0–4), handoffs table, session model, invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation rules.
+**What it owns:** The complete framework development workflow — the YAML graph (five nodes: Owner intake, Curator proposal, Owner review, Curator implementation/registration, Owner closure), all phases (0–5), handoffs table, session model, invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation rules.
 
 **What breaks without it:** The framework development workflow has no dedicated home. Agents cannot load only the framework workflow without also loading tooling workflow content. The Approval Invariant — the core constraint that prevents the Curator from writing to `general/` without Owner approval — is not discoverable except through role files.
 
@@ -190,7 +190,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** A-Society's programmatic tooling layer has its own implementation workflow — multi-phase, multi-role, with a Tooling Developer session, TA advisory reviews, and phase-gated documentation prerequisites. This workflow is structurally different from the framework development workflow (more phases, more roles, concurrent phase tracks, three standing sessions). Defining it in its own file keeps the framework development workflow clean and gives tooling-related sessions a dedicated, unambiguous workflow reference.
 
-**What it owns:** The complete tooling development workflow — the YAML graph (nine nodes across four roles), role definitions for this workflow (Tooling Developer, Technical Architect, Curator, Owner), all phases (0–7 including Phase 1A), session model (Sessions A, B, C, plus on-demand TA sessions), and the phase dependency diagram.
+**What it owns:** The complete tooling development workflow — the YAML graph (ten nodes across four roles), role definitions for this workflow (Tooling Developer, Technical Architect, Curator, Owner), all phases (0–8 including Phase 1A), session model (Sessions A, B, C, plus on-demand TA sessions), and the phase dependency diagram.
 
 **What breaks without it:** The tooling implementation workflow has no dedicated home. Role files for the Tooling Developer and Technical Architect reference `$A_SOCIETY_WORKFLOW_TOOLING_DEV` for session routing; without this file, those references are unresolvable. Component 4 (Backward Pass Orderer) cannot be correctly invoked for tooling flows without the YAML graph.
 
