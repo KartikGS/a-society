@@ -36,15 +36,13 @@ Within each record folder, artifacts are named with a zero-padded two-digit sequ
 
 If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `05-curator-to-owner.md`), the Owner re-decides at `06-owner-to-curator.md`, and backward pass findings shift to `07-` and `08-`. The sequence continues as long as the flow requires.
 
-If a flow includes an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
+If a flow includes an additional Curator → Owner submission after the main decision artifact, that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
 
-**Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-update-report.md`, `owner-update-report.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
+**Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-addendum.md`, `owner-addendum.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
 
 **Parallel track sub-labeling:** When the Owner declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the Owner must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The Owner assigns these sub-labels in `workflow.md` and in the record folder convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
 
 **Owner decision naming distinction:** Use `NN-owner-decision.md` when the Owner is recording a decision and the previously active role has no subsequent action in this flow. Use `NN-owner-to-[role].md` only when the named role has a next action in the flow. Mislabeling a terminal Owner decision as an active handoff creates ambiguity about whether the named role still has pending work in this flow.
-
-**Example:** Main flow closes at `04-owner-to-curator.md`; update report submission takes `05-curator-update-report.md` and Owner decision takes `06-owner-update-report.md`; backward-pass findings then start at `07-`.
 
 **Reference stability:** Do not use hardcoded sequence IDs (e.g., `05-findings.md`) in standing instructions or templates to refer to trailing artifacts like backward-pass findings. Intermediate submissions or revisions will shift their sequence position. Always refer to them by function (e.g., "the backward-pass findings artifact after all submissions have resolved").
 

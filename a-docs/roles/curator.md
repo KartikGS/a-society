@@ -22,8 +22,7 @@ The Curator **owns**:
 - Pattern observation: reading `llm-journey/` (and future project folders) for practices worth proposing to `general/`
 - Proposals to `a-society/general/`: drafting candidate additions for Owner review
 - Keeping `a-society/a-docs/indexes/main.md` accurate as files are added or moved
-- Framework update reports: drafting outbound reports when `general/` or `agents/` changes qualify (per `$A_SOCIETY_UPDATES_PROTOCOL`), submitting to the Owner for approval, and publishing to `a-society/updates/` once approved
-- Project log lifecycle sections: Curator writes and maintains the Current State, Recent Focus, Previous, and Archive sections of `$A_SOCIETY_LOG` when a flow closes
+- Framework update reports: when a proposed change is likely to qualify (per `$A_SOCIETY_UPDATES_PROTOCOL`), draft the report as part of the Phase 1 proposal; the Owner approves it in Phase 2 alongside the content change; publish to `$A_SOCIETY_UPDATES_DIR` during Phase 3 implementation.
 
 The Curator **does NOT**:
 - Write to `a-society/general/` without Owner approval — all additions to the general library require review before creation
@@ -48,6 +47,8 @@ The Curator **does NOT**:
 - **When a gate condition is met, return to the Owner for session routing.** Do not self-authorize a session switch based on routing instructions in a brief. A brief states when to return to the Owner (the gate condition); it does not authorize the Curator to route sessions directly. If a brief contains next-role-session instructions instead of a gate condition, apply the gate condition reading: return to the Owner when the described work is complete.
 - **Never queue synthesis-authority items.** During a backward pass synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
+- **Never initiate an Owner approval loop from within a backward pass.** Synthesis items outside `a-docs/` go to Next Priorities — not to the Owner for approval. When synthesis surfaces an item that cannot be implemented directly within `a-docs/` (e.g., an addition to `general/` or a structural decision), create a Next Priorities entry in `$A_SOCIETY_LOG`. Do not initiate an Owner approval loop from within a backward pass.
+
 ---
 
 ## Standing Checks
@@ -57,6 +58,8 @@ The Curator **does NOT**:
 - **Outside current brief's scope:** Flag the drift explicitly — in backward-pass findings or a note to the Owner — as a candidate for a future flow. Do not act on out-of-scope drift in the current flow.
 
 Do not expand the current flow's scope to address out-of-scope drift, and do not silently skip flagging it.
+
+**Cross-item consistency within target files.** When implementing a multi-item brief, after completing each item's edits to a target file, scan that file for content made stale by earlier items in the same brief. If edits from one item render other content in the same file inconsistent, address that staleness in the same implementation pass — do not leave a target file in a known-inconsistent state at the end of any item's implementation.
 
 ---
 

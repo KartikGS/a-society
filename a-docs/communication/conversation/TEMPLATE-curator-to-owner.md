@@ -6,7 +6,7 @@
 
 **Subject:** [Brief identifier for the work item — e.g., "Add minimum role set to $INSTRUCTION_ROLES"]
 **Status:** PENDING_REVIEW
-**Type:** Proposal | Update Report Submission | Maintenance Change
+**Type:** Proposal | Maintenance Change
 **Date:** [YYYY-MM-DD]
 
 ---
@@ -41,11 +41,9 @@
 
 ---
 
-## Implementation Status *(Update Report Submissions only — omit for Proposals and Maintenance Changes)*
+## Update Report Draft *(Proposals only — include when the proposed change is likely to qualify per `$A_SOCIETY_UPDATES_PROTOCOL`; omit otherwise)*
 
-**Implementation complete:** [Yes / No — if No, state what remains]
-**Files changed:** [List the files modified during implementation, using `$VAR` references where registered. If implementation is not yet complete, list files expected to change.]
-**Publication condition outstanding:** [Yes / No — if Yes, state what condition and what is blocking]
+[The draft update report, formatted per `$A_SOCIETY_UPDATES_TEMPLATE`. The Owner reviews and approves this draft as part of the Phase 2 decision alongside the content change — they are not reviewed separately.]
 
 ---
 

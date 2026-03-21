@@ -138,7 +138,7 @@ Backward pass order: Curator first, Owner second, Curator synthesizes last.
 
 #### Component 4 mandate
 
-When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available, invoke it for every flow regardless of role count. The invocation is `orderWithPromptsFromFile(recordFolderPath)`, where `recordFolderPath` is the path to the active record folder. Component 4 reads `workflow.md` from that folder directly — do not pass a workflow document path.
+When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available, invoke it for every flow regardless of role count. When Component 4 is available, manual backward pass ordering is not permitted. Manual computation is reserved for cases where Component 4 cannot be invoked (bootstrapping exemption, unavailability). If Component 4 is available, use it — regardless of how straightforward the flow appears. The invocation is `orderWithPromptsFromFile(recordFolderPath)`, where `recordFolderPath` is the path to the active record folder. Component 4 reads `workflow.md` from that folder directly — do not pass a workflow document path.
 
 Component 4 returns a `BackwardPassPlan`: an ordered list of entries, each containing:
 - `role` — the role name
@@ -158,11 +158,13 @@ The synthesis entry is always the final entry in the list and is produced by the
 2. **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
 3. **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
 4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-5. **Curator synthesizes** actionable items from both findings artifacts and routes them:
-   - Changes within Curator authority (maintenance, corrections, clarifications Curator owns): implement directly to a-docs. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets for the Owner. If the Curator has the authority to make the change, they must make it during synthesis—never queue it.
-   - Changes requiring Owner judgment (structural decisions, additions to `general/`, direction changes): submit to Owner for approval; implement after approval.
+5. **Curator synthesizes** actionable items from both findings artifacts and routes them based on structural scope:
+   - Changes within `a-docs/`: implement directly. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
+   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create a Next Priorities entry in `$A_SOCIETY_LOG`. The Owner routes these as new flows.
 
    Do not re-route improvement items through the project's main execution workflow.
+
+   Curator completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
 
 ---
 
@@ -207,5 +209,5 @@ These are judgment aids, not mandatory per-finding assessments.
 - Do not rewrite historical reports. They are immutable once produced.
 - If two documents conflict, resolve by updating one source-of-truth and adding a cross-reference — never duplicate.
 - The backward pass is not an execution session. Agents reflecting should not produce plans, implementations, or new artifacts beyond their findings file.
-- **Forward pass closure boundary:** Do not begin the backward pass before the forward pass is explicitly closed by the Owner as a distinct step. The Owner is the terminal node of every forward pass. Issuing a single instruction that collapses "complete registration" and "proceed to backward pass" into one step removes the boundary. The correct sequence: (1) the final forward-pass role completes its work and returns to the Owner; (2) the Owner reviews the completed work, confirms the forward pass is closed, and issues a separate backward pass initiation. Findings produced before the forward pass is confirmed closed may be based on incomplete work.
+- **Forward pass closure boundary:** Do not begin the backward pass before the forward pass is explicitly closed by the Owner as a distinct step. The Owner is the terminal node of every forward pass. Issuing a single instruction that collapses "complete registration" and "proceed to backward pass" into one step removes the boundary. The correct sequence: (1) the final forward-pass role completes its work and returns to the Owner; (2) the Owner reviews the completed work, confirms the forward pass is closed, and issues a separate backward pass initiation. Findings produced before the forward pass is confirmed closed may be based on incomplete work. **Approval is not completion:** The Owner confirming closure while Curator tasks remain pending (e.g., a publication step approved but not yet executed) is a forward pass closure boundary violation. "Complete" means executed; the Owner must verify execution, not merely that approval was issued.
 - **Every backward pass handoff must include all three fields.** Each role passing to the next backward pass role must include: `Next action:`, `Read:`, and `Expected response:`. Dropping a field is not permitted even when the receiving role could infer it from context. Inference is not a substitute for an explicit handoff. Each role is responsible for producing all three fields before passing.

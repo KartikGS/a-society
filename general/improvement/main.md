@@ -129,7 +129,7 @@ Order the backward pass as follows:
 
 Only the nodes and edges that fired during this instance are included. Dead branches are excluded.
 
-**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), invoke it for every flow regardless of role count. The orderer reads `workflow.md` from the active record folder; invoke it using `orderWithPromptsFromFile` with the record folder path. The orderer returns a structured backward pass plan: an ordered list of entries, each containing a role, step type (`meta-analysis` | `synthesis`), session instruction (`existing-session` | `new-session`), and prompt. The synthesis entry is always the final entry in the list and is produced by the algorithm — do not append it manually. Consult the project's tooling documentation for the specific invocation path. When no such tool is available, apply the traversal rules above manually.
+**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), invoke it for every flow regardless of role count. When a Backward Pass Orderer tool is available, manual traversal computation is not permitted. Manual ordering is reserved for projects where no such tool exists or for bootstrapping cases where the tool cannot be invoked. When the tool is available, use it — do not apply the manual traversal rules above as an alternative. The orderer reads `workflow.md` from the active record folder; invoke it using `orderWithPromptsFromFile` with the record folder path. The orderer returns a structured backward pass plan: an ordered list of entries, each containing a role, step type (`meta-analysis` | `synthesis`), session instruction (`existing-session` | `new-session`), and prompt. The synthesis entry is always the final entry in the list and is produced by the algorithm — do not append it manually. Consult the project's tooling documentation for the specific invocation path. When no such tool is available, apply the traversal rules above manually.
 
 ---
 
@@ -147,9 +147,9 @@ Only the nodes and edges that fired during this instance are included. Dead bran
 
 4. **The synthesis role** reviews all findings and identifies which warrant action.
 
-5. **Actionable items are routed based on scope:**
-   - Changes within synthesis role authority: implement directly to a-docs without a formal proposal. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets for the Owner. If the synthesis role has the authority to make the change, they must make it during synthesis—never queue it.
-   - Changes requiring Owner judgment: submit to the Owner for approval; implement after approval.
+5. **Actionable items are routed based on structural scope:**
+   - Changes within `a-docs/`: implement directly without a formal proposal. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
+   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create an entry for a future flow using the project's tracking mechanism. Do not initiate an Owner approval loop from within the backward pass.
 
    Do not re-route improvement items through the project's main execution workflow.
 

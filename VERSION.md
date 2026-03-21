@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v17.2
+**Version:** v17.3
 
 ---
 
@@ -50,3 +50,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v17.0 | 2026-03-21 | 2026-03-21-records-ordering-guardrails.md — workflow.md completeness rule added to records instruction (Breaking); parallel-track sub-labeling added to records instruction (Optional); workflow.md pre-convention and bootstrapping exemptions added (Recommended); forward pass closure boundary added to improvement guardrails (Recommended) |
 | v17.1 | 2026-03-21 | 2026-03-21-index-paths-bp-handoffs.md — Index path format rule replaced with explicit repo-relative requirement; unregistered-file guidance added (Recommended); backward pass handoff completeness guardrail added to improvement guardrails (Recommended) |
 | v17.2 | 2026-03-21 | 2026-03-21-next-priorities-bundle.md — Guardrail order corrected in improvement protocol; `workflow.md` delimiter requirement added to records instruction; ordered-list insertion position and classification scope note added to general Owner role template (all Recommended) |
+| v17.3 | 2026-03-21 | 2026-03-21-workflow-mechanics-corrections.md — Synthesis routing simplified to structural rule in general improvement protocol; backward pass tool mandate strengthened to prohibit manual ordering when tool is available (both Recommended) |

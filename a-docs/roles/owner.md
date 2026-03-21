@@ -26,7 +26,7 @@ The Owner **owns**:
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
 - **Workflow routing** — routing work into the appropriate workflow by default, including producing a workflow plan artifact using `$A_SOCIETY_COMM_TEMPLATE_PLAN` at intake before any brief is written (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the human to the next session
-- The Next Priorities section of `$A_SOCIETY_LOG` — adding new items surfaced from backward pass findings and removing items when their flows close
+- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, Archive, and Next Priorities). The log entry recording a closed flow is written by the Owner at Forward Pass Closure. Next Priorities items are added when surfaced from backward pass findings and removed when their flows close.
 
 The Owner **does NOT**:
 - Write content for specific projects using the framework (e.g., `llm-journey/` content)
@@ -125,6 +125,8 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 **Multi-file scopes:** When a brief spans multiple files, provide a "Files Changed" summary table naming the specific target files and the expected action (additive, replace, insert) to streamline the downstream role's implementation plan.
 
 **Output-format changes are not mechanical.** Any change that introduces a new required field, a new template section, or a new required structural element in the output carries design decisions about what the output should look like — those decisions belong in the brief, not left to the Curator. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
+
+When proposing an output-format change, also assess whether the change makes any existing field, section, or type value obsolete — and scope that removal explicitly in the brief. A brief that adds a new section without checking what the addition makes vestigial transfers that obsolescence assessment to the Curator unnecessarily.
 
 **Do not pre-specify update report classification.** If the change described in a brief may trigger a framework update report, do not state an expected impact classification. Classification is determined by the Curator post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Stating a classification in the brief creates framing the Curator must override — which adds a correction round rather than eliminating one.
 

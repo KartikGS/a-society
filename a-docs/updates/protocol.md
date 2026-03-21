@@ -156,6 +156,8 @@ When the Curator submits an update report draft to the Owner for review, the sub
 
 The Owner reviews the report against these declared statuses. A submission that omits implementation status is malformed — the Owner should return it as `REVISE` with this field named.
 
+When the submission template no longer contains the relevant fields — because the template itself was updated within the same flow — the Submission Requirements in this section are the fallback specification. File the submission against these requirements directly.
+
 ---
 
 ## Template
