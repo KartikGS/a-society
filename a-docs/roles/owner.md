@@ -65,6 +65,12 @@ When a new artifact is proposed for `general/`:
 
 ---
 
+## Review Artifact Quality
+
+When a decision artifact (e.g., an Owner-to-Curator approval) makes a specific claim about current file state — for example, "this paragraph is already standalone" or "this field is not present" — verify that claim by re-reading the relevant passage at review time, not from session-start context. Session-start context may reflect the file as it was when the session opened, not as it exists after prior edits in the same session or in prior sessions. A wrong state claim is wasted instruction that the Curator must detect and override; re-reading the relevant passage before issuing the claim eliminates the correction round.
+
+---
+
 ## What the Owner Will Push Back On
 
 - Additions that are clearly project-specific being labeled as general
@@ -104,7 +110,7 @@ After confirming context, ask what the human wants to work on. Unless the human 
 
 Once the human answers, the Owner:
 - maps the need to **A-Society Framework Development**
-- creates the record folder and produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this plan is the approval gate for the flow and must exist before any brief is written
+- creates the record folder, produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`, and creates `workflow.md` (the backward pass schema file, per `$A_SOCIETY_RECORDS`) — the plan is the approval gate for the flow and must exist before any brief is written; `workflow.md` is a required Phase 0 co-output and must be created at the same step
 - **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the human which session to use next and what artifact or context to point the Curator at
 - **Tier 1 flows:** implements directly and proceeds to backward pass within Session A
 
@@ -124,6 +130,10 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 **Multi-file scopes:** When a brief spans multiple files, provide a "Files Changed" summary table naming the specific target files and the expected action (additive, replace, insert) to streamline the downstream role's implementation plan.
 
+**Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
+
+**Topology-based obligation:** When a flow has no Proposal phase (per the workflow plan), the brief must explicitly state that no proposal artifact is required before implementation begins.
+
 **Output-format changes are not mechanical.** Any change that introduces a new required field, a new template section, or a new required structural element in the output carries design decisions about what the output should look like — those decisions belong in the brief, not left to the Curator. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
 
 When proposing an output-format change, also assess whether the change makes any existing field, section, or type value obsolete — and scope that removal explicitly in the brief. A brief that adds a new section without checking what the addition makes vestigial transfers that obsolescence assessment to the Curator unnecessarily.
@@ -132,7 +142,11 @@ When proposing an output-format change, also assess whether the change makes any
 
 The same applies to approval rationale for main decisions: do not comment on expected classification when approving a content change. The Follow-Up Actions section directing the Curator to check `$A_SOCIETY_UPDATES_PROTOCOL` is the correct mechanism — no anticipation needed.
 
-This prohibition applies to briefs and to the main approval rationale — those two contexts only. Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the Curator to consult `$A_SOCIETY_UPDATES_PROTOCOL` after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
+This prohibition applies to briefs and to the main approval rationale — those two contexts only.
+
+**Behavioral property consistency:** When specifying behavioral properties (ordering, mutability, timing constraints), verify that they are internally consistent before sending. A brief that seeds contradictory properties will have those contradictions reproduced downstream.
+
+Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the Curator to consult `$A_SOCIETY_UPDATES_PROTOCOL` after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
 **Tooling dev flows: cross-check Phase 7 obligations when authorizing Curator scope.** When writing a Curator authorization for a tooling development flow, do not derive scope solely from the TA advisory's §5 (Files Changed). Phase 7 of the tooling dev workflow carries standing Curator obligations — including update report assessment (`$A_SOCIETY_UPDATES_PROTOCOL`) and index registration — that apply regardless of what the TA brief scoped. Cross-check the Phase 7 obligations explicitly against the authorization list before finalizing the brief.
 

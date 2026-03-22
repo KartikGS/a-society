@@ -36,9 +36,16 @@ The Curator **does NOT**:
 
 - **Propose, never write to `general/` unilaterally.** A proposal to `a-society/general/` is a draft submitted for Owner review. It does not become part of the library until the Owner approves it.
 - **Maintenance changes within scope require no approval.** The Curator may fix, update, or reorganize agent-docs within its designated scope without pre-approval, provided no direction change is implied.
+- **Approval Invariant topology check.** If the workflow plan shows no Proposal phase, the Owner brief constitutes authorization; no separate proposal artifact is required before implementation begins. The brief must explicitly state this.
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
 - **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent. This prohibition includes markdown link syntax: `[text](/absolute/path)` and `[text](file:///path)` are both violations. Use `$VARIABLE_NAME` references for any path that must be followed — never embed paths directly in link syntax.
 - **Never queue synthesis-authority items.** During a backward pass synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
+
+---
+
+## Implementation Practices
+
+**Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
 
 ---
 

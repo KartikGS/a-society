@@ -103,13 +103,21 @@ When a change is fully derivable — no ambiguity about scope, target, or implem
 
 **Ordered-list insertions:** When a brief directs the downstream role to add an item to a numbered or ordered list, specify the insertion position — not just the section name. Acceptable forms: "after item N," "before item N," or "as the new item N." A brief that names only the section leaves the receiving role to infer position, which creates ambiguity and can require a correction round.
 
+**Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
+
+**Topology-based obligation:** When a flow has no Proposal phase (per the workflow plan), the brief must explicitly state that no proposal artifact is required before implementation begins.
+
 Output-format changes are an exception. Any change that introduces a new required field, a new template section, or a new required structural element in the output is not mechanical — design decisions about what the output should look like are involved. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.
 
 When proposing an output-format change, also assess whether the change makes any existing field, section, or type value obsolete — and scope that removal explicitly in the brief. A brief that adds a new section without checking what the addition makes vestigial transfers that obsolescence assessment to the downstream role unnecessarily.
 
 **Do not pre-specify update report classification.** If the change described in a brief may trigger a framework update report, do not state an expected impact classification in the brief. Classification is determined by the downstream role post-implementation by consulting the project's update report protocol. Stating a classification in the brief creates framing the downstream role must override — which adds a correction round rather than eliminating one. The same applies to approval rationale: do not comment on expected classification when approving a content change.
 
-This prohibition applies to briefs and to the main approval rationale — those two contexts only. Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the downstream role to consult the update report protocol after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
+This prohibition applies to briefs and to the main approval rationale — those two contexts only.
+
+**Behavioral property consistency:** When specifying behavioral properties (ordering, mutability, timing constraints), verify that they are internally consistent before sending. A brief that seeds contradictory properties will have those contradictions reproduced downstream.
+
+Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the downstream role to consult the update report protocol after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
 ---
 

@@ -70,7 +70,7 @@ Every flow begins here, before any other artifact is produced.
 
 **Work:** Assess the complexity of the triggered work against the five axes from `$INSTRUCTION_WORKFLOW_COMPLEXITY`. Select the appropriate tier. Define the known path and surface known unknowns.
 
-**Output:** `01-owner-workflow-plan.md` in the record folder (see `$A_SOCIETY_RECORDS`), produced using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. All five complexity axis fields, the tier field, and the path field must be non-null — a plan missing any required field is incomplete and does not satisfy this gate.
+**Output:** `01-owner-workflow-plan.md` in the record folder (see `$A_SOCIETY_RECORDS`), produced using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. All five complexity axis fields, the tier field, and the path field must be non-null — a plan missing any required field is incomplete and does not satisfy this gate. `workflow.md` (the backward pass schema file) must also be created in the record folder at this step — see `$A_SOCIETY_RECORDS` for the schema. Both files are Phase 0 outputs; a record folder missing `workflow.md` is incomplete.
 
 For **Tier 1 flows:** the plan is the approval gate; the Owner implements directly within Session A and proceeds to backward pass. No brief is written. No Session B is needed.
 
@@ -193,7 +193,7 @@ For detailed artifact formats, status vocabulary, and coordination rules, see `$
 
 | Edge | Transition Condition | What Carries It | Receiver Checks |
 |---|---|---|---|
-| Trigger → Phase 0 | Owner identifies need and creates record folder | `01-owner-workflow-plan.md` in the active record folder | All frontmatter fields non-null; tier and path specified |
+| Trigger → Phase 0 | Owner identifies need and creates record folder | `01-owner-workflow-plan.md` and `workflow.md` in the active record folder | All frontmatter fields non-null; tier and path specified; `workflow.md` present |
 | Phase 0 → Phase 1 | Plan complete; Tier 2 or 3 confirmed | Next sequenced artifact in the active record folder, from `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | Briefing contains Agreed Change and Scope; Curator acknowledges |
 | Phase 1 → Phase 2 | Draft + rationale submitted | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER`) | All three proposal elements present |
 | Phase 2 → Phase 3 | Decision = Approved | Next sequenced artifact in the active record folder (from `$A_SOCIETY_COMM_TEMPLATE_OWNER_TO_CURATOR`) | Approval stated explicitly |

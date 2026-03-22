@@ -135,6 +135,16 @@ Every update report must declare two version fields in the report header, before
 
 The Curator updates `$A_SOCIETY_VERSION` as part of Phase 4 (Registration), at the same time the report is published. These two writes are a single atomic registration step. Updating `$A_SOCIETY_VERSION` involves two distinct write targets: (1) the `**Version:**` header field at the top of the file, and (2) a new row in the History table. A Curator who updates only the History table row has not completed the registration step.
 
+### Deferred Reports in Subsequent Publication Cycles
+
+When a flow defers an update report (e.g., because update report assessment was not completed in that flow's Phase 4) and that deferred report is included in a later flow's publication cycle, apply this ordering rule:
+
+1. **Publish the deferred report first**, before the current flow's report. The deferred report's changes pre-date the current flow's changes; publishing order must reflect implementation chronology.
+2. **Assign version numbers at publication time**, continuing from the last published version — not from the version at which the report was deferred. The deferred report's `Previous Version` is the last published version; its `Framework Version` increments per the standard scheme (MAJOR for Breaking, MINOR for Recommended or Optional).
+3. **The current flow's report follows**, using the deferred report's `Framework Version` as its own `Previous Version`.
+
+Example: Last published version is v18.0. Two reports are due — one deferred from a prior flow (Breaking changes), one from the current flow (Recommended changes). Publish order: deferred report as v18.0 → v19.0 (Breaking), then current flow's report as v19.0 → v19.1 (Recommended).
+
 ---
 
 ## Delivery

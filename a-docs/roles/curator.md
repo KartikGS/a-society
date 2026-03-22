@@ -44,6 +44,8 @@ The Curator **does NOT**:
 
   **MAINT exemption:** Items explicitly marked `[MAINT]` or `[Curator authority — implement directly]` in the brief are exempt from the Approval Invariant and may be implemented directly without a Phase 2 decision artifact. This exemption applies only when the brief marks the item with one of those labels; it does not apply to inferred MAINT status.
 
+- **Topology waiver:** If the workflow plan shows no Proposal node, the brief constitutes authorization; no proposal artifact is required. The brief must explicitly state this (see `$A_SOCIETY_OWNER_ROLE` Brief-Writing Quality).
+
 - **When a gate condition is met, return to the Owner for session routing.** Do not self-authorize a session switch based on routing instructions in a brief. A brief states when to return to the Owner (the gate condition); it does not authorize the Curator to route sessions directly. If a brief contains next-role-session instructions instead of a gate condition, apply the gate condition reading: return to the Owner when the described work is complete.
 - **Never queue synthesis-authority items.** During a backward pass synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
