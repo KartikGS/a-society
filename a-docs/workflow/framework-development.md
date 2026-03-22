@@ -177,9 +177,9 @@ The Owner acknowledges forward-pass completion.
 
 **Owner:** Owner.
 
-**Work:** Confirm all forward-pass work is complete and registered. Before confirming closure, verify that all approved tasks have been executed — approval is not completion. Any Curator task outstanding at the time of approval (e.g., a publication step approved in Phase 2 but not yet executed) must be confirmed complete before the forward pass is declared closed. Update `$A_SOCIETY_LOG`: add the completed flow's entry across all relevant lifecycle sections (Current State, Recent Focus, Previous, Archive). Update Next Priorities as appropriate. Acknowledge closure and initiate the backward pass.
+**Work:** Confirm all forward-pass work is complete and registered. Before confirming closure, verify that all approved tasks have been executed — approval is not completion. Any Curator task outstanding at the time of approval (e.g., a publication step approved in Phase 2 but not yet executed) must be confirmed complete before the forward pass is declared closed. Update `$A_SOCIETY_LOG`: add the completed flow's entry across all relevant lifecycle sections (Current State, Recent Focus, Previous, Archive). Update Next Priorities as appropriate. Acknowledge closure and initiate the backward pass by invoking Component 4 (Backward Pass Orderer) using this flow's `workflow.md`. Component 4 invocation is the first backward pass action — no findings artifact may be produced before the traversal order has been determined.
 
-**Output:** Closure message; backward pass initiated.
+**Output:** Closure message; Component 4 invoked; backward pass traversal order confirmed.
 
 ---
 
@@ -232,7 +232,7 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 5. **Session A resumes.** The Owner executes Phase 5 (Forward Pass Closure). Before confirming closure, the Owner verifies all forward-pass work is complete — approved tasks must be confirmed executed, not merely approved. The Owner performs backward-pass work per `$A_SOCIETY_IMPROVEMENT` and tells the human whether to resume the Curator session for synthesis. The Owner provides a copyable path to the relevant artifact and — if a new Curator session is required — a copyable session-start prompt. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
 
-6. **Session B resumes (if needed).** The Curator completes any Owner-requested follow-through, performs backward-pass work or synthesis when due per `$A_SOCIETY_IMPROVEMENT`, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs when required. The Curator tells the human explicitly whether the flow is now complete or whether another Owner session is required. If another Owner session is needed, the Curator provides a copyable path to the relevant artifact and a copyable session-start prompt.
+6. **Session B resumes (if needed).** The Curator completes any Owner-requested follow-through, performs backward-pass work or synthesis when due per `$A_SOCIETY_IMPROVEMENT`, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs when required. Synthesis closes the flow unconditionally. If any Owner follow-up is identified, the Curator files it as a new trigger input for a separate flow — not as an additional Owner session within this flow. Session B then ends.
 
 **Owner as terminal node.** The Owner is the structural endpoint of the forward pass. Every flow reaches Step 5 before closure — the Owner receives the implementation output and any pending submissions, clears or redirects them, and explicitly acknowledges whether Curator follow-up remains. A flow that has not cleared the Owner has not closed.
 

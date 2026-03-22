@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[M][LIB][MAINT]` — **workflow-mechanics-corrections** (2026-03-21): Four systemic mechanics fixes — log update timing consolidated to Owner at Forward Pass Closure; synthesis routing simplified to structural rule; backward pass tool mandate strengthened; update report integrated into proposal/implementation cycle; framework update report v17.3.
 - `[S][MAINT]` — **graph-validator-human-collaborative** (2026-03-21): Added optional `human-collaborative` field to Component 3 (Workflow Graph Schema Validator); five new tests; INVOCATION and coupling map updated; two follow-on Next Priorities filed.
 - `[S][LIB][MAINT]` — **next-priorities-bundle** (2026-03-21): Five items implemented — guardrail order, ordered-list insertion position, workflow.md delimiter requirement, index repo-relative paths, classification pre-specification prohibition scoped; framework update report v17.2.
 - `[S][MAINT]` — **workflow-terminal-node-fix** (2026-03-21): Added terminal nodes to Framework Dev and Tooling Dev YAML graphs; forward-pass closure sections added to both workflows.

@@ -23,16 +23,16 @@ The identifier is assigned when the Owner creates the record folder. It does not
 
 Within each record folder, artifacts are named with a zero-padded two-digit sequence prefix:
 
-| Position | Artifact | Produced By | Trigger |
+| Artifact | Produced By | Trigger | Must Follow |
 |---|---|---|---|
-| `01-` | `owner-workflow-plan.md` | Owner | Flow intake — Phase 0 gate; all tiers |
-| `02-` | `owner-to-curator-brief.md` | Owner | Tier 2/3: plan exists; brief follows |
-| `03-` | `curator-to-owner.md` | Curator | Proposal drafted |
-| `04-` | `owner-to-curator.md` | Owner | Review decision issued |
-| `05-` | `curator-findings.md` | Curator | Backward pass (Phase 5) |
-| `06-` | `owner-findings.md` | Owner | Backward pass (Phase 5) |
+| `owner-workflow-plan.md` | Owner | Flow intake — Phase 0 gate; all tiers | — (first artifact in every flow) |
+| `owner-to-curator-brief.md` | Owner | Tier 2/3: plan complete, tier confirmed | `owner-workflow-plan.md` |
+| `curator-to-owner.md` (proposal) | Curator | Proposal drafted | Brief; or backward-pass direct-entry conditions met |
+| `owner-to-curator.md` | Owner | Review decision issued (Approved / Revise / Rejected) | `curator-to-owner.md` proposal |
+| `curator-to-owner.md` (implementation confirmation) | Curator | Implementation and registration complete (Phase 4 exit) | `owner-to-curator.md` with Approved status |
+| `[role]-findings.md` (one per participating role) | Each role, per Component 4 traversal order | Backward pass | All forward-pass submissions resolved |
 
-**Tier 1 flows** use a shortened sequence: `01-owner-workflow-plan.md` (Phase 0 gate) followed by `02-owner-backward-pass.md` (findings). No brief, proposal, or decision artifacts are produced.
+**Tier 1 flows** use a shortened sequence: `owner-workflow-plan.md` (Phase 0 gate) followed by `owner-backward-pass.md` (findings). No brief, proposal, or decision artifacts are produced.
 
 If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `05-curator-to-owner.md`), the Owner re-decides at `06-owner-to-curator.md`, and backward pass findings shift to `07-` and `08-`. The sequence continues as long as the flow requires.
 

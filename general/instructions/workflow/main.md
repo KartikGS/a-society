@@ -188,7 +188,13 @@ How are phases mapped to sessions? For multi-role workflows, describe:
 
 A session model makes the human's orchestration role visible and gives agents the information they need to guide the human at pause points. A session model is mandatory for any workflow with two or more roles. It is optional only for genuinely single-role workflows.
 
-### 6. Backward Pass (mandatory)
+### 6. Forward Pass Closure (mandatory)
+
+What happens when the forward pass ends? Every workflow document must name a forward pass closure step — the terminal node of the forward pass, which runs before the backward pass begins. This step is where the workflow consolidates its closure obligations: updating the project log, invoking any required tooling, and verifying that all approved tasks have been executed, not merely approved. Scattering these obligations across role documents and coordination protocols means they are invisible at the point they are needed; naming a closure step makes them visible and checkable.
+
+The two universal rules governing forward pass closure are stated in the project's workflow routing index (see the "Forward Pass Closure" section). Every workflow's closure step inherits those rules without restating them.
+
+### 7. Backward Pass (mandatory)
 
 What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own phase for what worked, what failed, and what should change.
 
@@ -252,13 +258,16 @@ For each phase, describe what causes an agent to stop and ask. The escalation de
 **Step 6 — Describe the session model (mandatory for two or more roles).**
 For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition — including a copyable artifact path (always) and a copyable session-start prompt when a new session is required. Define when sessions are resumed within a flow versus started fresh at flow close. Agents must state explicitly whether to start fresh or resume, without hedging based on session existence. Skip this step only for single-role workflows.
 
-**Step 7 — Define the backward pass.**
+**Step 7 — Define the forward pass closure step.**
+Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Do not restate the two universal rules (current-flow scoping and synthesis-is-terminal) — reference the workflow routing index instead.
+
+**Step 8 — Define the backward pass.**
 Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
 
-**Step 8 — Identify sub-documents.**
+**Step 9 — Identify sub-documents.**
 What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow `main.md`.
 
-**Step 9 — Cut what does not belong.**
+**Step 10 — Cut what does not belong.**
 A workflow document that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files.
 
 ---
