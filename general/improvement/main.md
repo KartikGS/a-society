@@ -149,7 +149,7 @@ Only the nodes and edges that fired during this instance are included. Dead bran
 
 5. **Actionable items are routed based on structural scope:**
    - Changes within `a-docs/`: implement directly without a formal proposal. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
-   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create an entry for a future flow using the project's tracking mechanism. Do not initiate an Owner approval loop from within the backward pass.
+   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create an entry for a future flow using the project's tracking mechanism. **Before filing**, apply the merge assessment: scan existing Next Priorities items for same target files/design area and compatible authority level; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Do not initiate an Owner approval loop from within the backward pass.
 
    Do not re-route improvement items through the project's main execution workflow.
 

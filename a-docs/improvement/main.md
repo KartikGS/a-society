@@ -160,7 +160,7 @@ The synthesis entry is always the final entry in the list and is produced by the
 4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
 5. **Curator synthesizes** actionable items from both findings artifacts and routes them based on structural scope:
    - Changes within `a-docs/`: implement directly. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
-   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create a Next Priorities entry in `$A_SOCIETY_LOG`. The Owner routes these as new flows.
+   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create a Next Priorities entry in `$A_SOCIETY_LOG`. **Before filing**, apply the merge assessment: scan existing Next Priorities items for same target files/design area and compatible authority level; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. The Owner routes these as new flows.
 
    Do not re-route improvement items through the project's main execution workflow.
 

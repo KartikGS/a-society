@@ -63,6 +63,16 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 ---
 
+## Implementation Practices
+
+**Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
+
+**Implementation stage — re-read before editing.** Before constructing the `old_string` for any Edit call, re-read the relevant section of the target file to obtain verbatim source text. Brief descriptions describe semantic intent, not verbatim source; relying on them for `old_string` construction causes match failures.
+
+**Implementation stage — Write vs. Edit for large removals.** When a modification removes a large section (roughly more than ten lines of formatted content), prefer the Write tool over the Edit tool. Constructing an `old_string` for a large removal is error-prone; a full rewrite is more reliable.
+
+---
+
 ## Context Loading
 
 Before beginning any session as the A-Society Curator, read:

@@ -26,7 +26,7 @@ The Owner **owns**:
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
 - **Workflow routing** — routing work into the appropriate workflow by default, including producing a workflow plan artifact using `$A_SOCIETY_COMM_TEMPLATE_PLAN` at intake before any brief is written (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the human to the next session
-- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, Archive, and Next Priorities). The log entry recording a closed flow is written by the Owner at Forward Pass Closure. Next Priorities items are added when surfaced from backward pass findings and removed when their flows close.
+- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When adding any Next Priorities item (at intake or when receiving synthesis findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, and (2) compatible authority level. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Items are removed when their flows close.
 
 The Owner **does NOT**:
 - Write content for specific projects using the framework (e.g., `llm-journey/` content)

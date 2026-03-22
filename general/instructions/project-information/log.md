@@ -42,7 +42,7 @@ A brief summary of where the project stands right now. Include:
 Each entry follows a rolling window:
 - When a new unit of work completes, it becomes `Recent Focus`
 - The previous `Recent Focus` is demoted to `Previous`
-- When there are already three `Previous` entries, the oldest is moved to the `## Archive` section
+- When there are already three `Previous` entries, the oldest is moved to the companion archive file (see Archive File below)
 - Validation: exactly one `Recent Focus`, at most three `Previous`
 
 ### 3. Next Priorities
@@ -53,8 +53,33 @@ A flat, ordered list of pending work items. Each item includes:
 
 Next priorities are not a backlog — they are the concrete next steps. Items that are long-deferred or require a future policy decision should be marked clearly so agents can skip them without asking.
 
-### 4. Archive
-All completed entries older than the three most recent `Previous` entries. The archive is append-only — entries are moved here and never modified. It is not typically read at orientation; it exists for historical traceability.
+**Merge Assessment**
+
+Before adding any Next Priorities item — whether at intake or from a synthesis pass — scan existing Next Priorities items for merge opportunities. Two items are mergeable when both conditions are true:
+
+1. **Same target files or same design area** — they touch the same document(s) or the same conceptual area.
+2. **Compatible authority level** — both are same-role authority (both the same implementing role, or both requiring the same approval path).
+
+When a merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
+
+### 4. Archive File
+
+The archive lives in a companion file: `[project]/a-docs/project-information/log-archive.md` — a separate file from the main log. The main log does not contain an `## Archive` section. Instead, it ends with a single pointer line:
+
+> Archived flows are recorded in `$[VARIABLE_NAME]`. One entry per flow. Entries are immutable once written. Most recent at top.
+
+The archive file uses this format for each entry:
+
+```
+[scope-tags] — **slug** (YYYY-MM-DD): one sentence describing what changed.
+```
+
+- **Date** — the close date of the flow.
+- **Slug** — matches the record folder identifier (if the project uses records).
+- **Sentence** — covers the primary change at the highest level; no sub-items, no artifact lists.
+- **Order** — most recent at top. Entries are immutable once written.
+
+The archive is not read at orientation. It exists for historical traceability when agents need to understand what predates the rolling window.
 
 ---
 
@@ -100,8 +125,8 @@ Write out the rolling window rules explicitly: how many `Previous` entries are s
 **Step 4 — List next priorities in order.**
 Write the most important items first. For each item, include enough context that an agent could start work on it without needing to ask what it means. If an item is blocked or deferred, say why — briefly.
 
-**Step 5 — Create the archive section.**
-Start it empty, or pre-populate it with any completed work that predates the log's creation. The archive is the log's memory; keep it present but out of the way.
+**Step 5 — Create the archive file.**
+Create `log-archive.md` as a companion file in the same `project-information/` folder as the main log. Start it empty, or pre-populate it with completed flows that predate the log's creation, using the one-liner format above. Add the pointer line at the bottom of the main log referencing the archive file by `$VARIABLE_NAME` from the project's index.
 
 ---
 
@@ -109,7 +134,7 @@ Start it empty, or pre-populate it with any completed work that predates the log
 
 - **Current state is current.** The log must reflect the actual present state of the project. An outdated log is worse than no log — it misdirects agents confidently.
 - **One `Recent Focus`.** Never allow two entries to claim `Recent Focus`. The discipline of the rolling window is what keeps the log useful.
-- **Archive everything, delete nothing.** Moving entries to archive preserves traceability while keeping the active view clean.
+- **Archive everything, delete nothing.** When an entry ages out of the rolling window, prepend it to `log-archive.md` in one-liner format. This preserves traceability while keeping the active log scannable.
 - **Next priorities are actionable.** Each item should be specific enough that an agent could pick it up and start. Vague items like "improve performance" are not next priorities — they are topics for a planning session.
 - **Maintained at the end of each unit of work.** The log is updated when work closes, not periodically. The agent responsible for closure (the BA, the owner, whoever closes work in your project) owns the update.
 

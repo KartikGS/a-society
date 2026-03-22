@@ -17,6 +17,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_STRUCTURE` | `a-society/a-docs/project-information/structure.md` | A-Society folder structure — governing principle and placement rules for each folder |
 | `$A_SOCIETY_ARCHITECTURE` | `a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
 | `$A_SOCIETY_LOG` | `a-society/a-docs/project-information/log.md` | A-Society project log — current state and next priorities for agents orienting at session start |
+| `$A_SOCIETY_LOG_ARCHIVE` | `a-society/a-docs/project-information/log-archive.md` | A-Society archived flow log — one-liner per closed flow; entries are immutable once written |
 | `$A_SOCIETY_INDEX` | `a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
 | `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
 | `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
