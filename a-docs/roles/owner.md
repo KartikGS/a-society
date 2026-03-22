@@ -111,6 +111,7 @@ After confirming context, ask what the human wants to work on. Unless the human 
 Once the human answers, the Owner:
 - maps the need to **A-Society Framework Development**
 - creates the record folder, produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`, and creates `workflow.md` (the backward pass schema file, per `$A_SOCIETY_RECORDS`) — the plan is the approval gate for the flow and must exist before any brief is written; `workflow.md` is a required Phase 0 co-output and must be created at the same step
+- When the flow carries `[LIB]` scope, include the registration loop as a distinct step in `workflow.md` at intake. The predictable structure is: Curator publishes update report → version incremented → Owner acknowledgment. The `[LIB]` scope tag is the signal to add this loop; omitting it produces a `workflow.md` path that does not match the flow that actually ran.
 - **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the human which session to use next and what artifact or context to point the Curator at
 - **Tier 1 flows:** implements directly and proceeds to backward pass within Session A
 

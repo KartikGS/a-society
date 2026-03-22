@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v19.1
+**Version:** v20.0
 
 ---
 
@@ -58,3 +58,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v18.1 | 2026-03-22 | 2026-03-22-improvement-bp-phase-separation.md — Backward pass protocol phase headings separated: Meta-Analysis Phase and Synthesis Phase replace How It Works (Recommended) |
 | v19.0 | 2026-03-22 | 2026-03-22-backward-pass-orderer-signature.md — Component 4 orderWithPromptsFromFile signature changed to two required parameters; embedded phase-instruction references documented in general improvement template (Breaking + Recommended) |
 | v19.1 | 2026-03-22 | 2026-03-22-brief-writing-quality.md — Authority designation, topology-based obligation, and behavioral property consistency added to general Owner role template; Approval Invariant topology check and Implementation Practices section added to general Curator role template (all Recommended) |
+| v20.0 | 2026-03-22 | 2026-03-22-workflow-path-completeness.md — workflow.md Phase 0 creation obligation and path-completeness obligation for predictable post-implementation steps added to general Owner role template (both Breaking) |

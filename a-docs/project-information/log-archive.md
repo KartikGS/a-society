@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[S][LIB][MAINT]` — **workflow-obligation-consolidation** (2026-03-22): Added universal Forward Pass Closure section to workflow routing index with current-flow scoping and synthesis-is-terminal rules; framework update report v18.0.
 - `[S][LIB][MAINT]` — **backward-pass-quality-principles** (2026-03-22): New "Analysis Quality" subsection in backward pass protocol — externally-caught errors are higher-priority, genuine analysis must trace root cause; framework update report v17.6.
 - `[S][LIB][MAINT]` — **general-lib-sync-bundle** (2026-03-22): Six-item LIB/MAINT bundle — workflow graph instruction human-collaborative parity, Component 3 test target corrected, approval-not-completion clarification and synthesis-closes statement added to improvement protocol, Owner brief obsoletes check added; framework update report v17.4.
 - `[S][LIB][MAINT]` — **log-restructure** (2026-03-22): Archive split (`$A_SOCIETY_LOG_ARCHIVE` created, `$INSTRUCTION_LOG` updated with two-file model), plus Next Priorities merge assessment scan rule added across Owner role, improvement, and log instruction docs; framework update report v17.5.
