@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v18.0
+**Version:** v18.1
 
 ---
 
@@ -55,3 +55,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v17.5 | 2026-03-22 | 2026-03-22-log-restructure.md — two-file log model (archive split); merge assessment for Next Priorities in log instruction, improvement protocol, and Owner role template (all Recommended) |
 | v17.6 | 2026-03-22 | 2026-03-22-backward-pass-analysis-quality.md — Analysis Quality subsection added to backward pass protocol in general improvement template (Recommended) |
 | v18.0 | 2026-03-22 | 2026-03-22-workflow-forward-pass-closure-instruction.md — Forward Pass Closure mandatory section and authoring step added to workflow instruction (Breaking) |
+| v18.1 | 2026-03-22 | 2026-03-22-improvement-bp-phase-separation.md — Backward pass protocol phase headings separated: Meta-Analysis Phase and Synthesis Phase replace How It Works (Recommended) |

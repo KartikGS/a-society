@@ -152,23 +152,16 @@ The synthesis entry is always the final entry in the list and is produced by the
 
 ---
 
-### How It Works
+### Meta-Analysis Phase
 
-1. **Curator produces findings first** (closest to implementation friction).
-2. **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
-3. **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
-4. **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-5. **Curator synthesizes** actionable items from both findings artifacts and routes them based on structural scope:
-   - Changes within `a-docs/`: implement directly. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
-   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create a Next Priorities entry in `$A_SOCIETY_LOG`. **Before filing**, apply the merge assessment: scan existing Next Priorities items for same target files/design area and compatible authority level; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. The Owner routes these as new flows.
+Instructions for roles producing backward pass findings.
 
-   Do not re-route improvement items through the project's main execution workflow.
+**Step 1.** **Curator produces findings first** (closest to implementation friction).
+**Step 2.** **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
+**Step 3.** **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
+**Step 4.** **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
 
-   Curator completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
-
----
-
-### Reflection Categories
+#### Reflection Categories
 
 Use these to guide your reflection (not all will apply every time):
 
@@ -183,7 +176,7 @@ Ground every finding in a specific moment from your execution.
 
 ---
 
-### Analysis Quality
+#### Analysis Quality
 
 **Externally-caught errors are higher priority, not lower.** When an error was caught by another role or the human rather than surfaced by the agent themselves, this is a signal that something failed to prevent the error. The backward pass must ask: "Why wasn't this caught by me?" The answer "the rule was documented" is the start of the analysis, not the end. The next question — "why wasn't the documented rule followed?" — leads to placement gaps, surfacing gaps, or structural gaps, all of which are actionable.
 
@@ -191,7 +184,7 @@ Ground every finding in a specific moment from your execution.
 
 ---
 
-### Generalizable Findings
+#### Generalizable Findings
 
 When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential A-Society contribution. Note it in the findings artifact so it is not lost.
 
@@ -199,7 +192,7 @@ The submission mechanism is defined separately — flag the finding explicitly i
 
 ---
 
-### Useful Lenses
+#### Useful Lenses
 
 When evaluating whether a finding warrants action:
 
@@ -208,6 +201,20 @@ When evaluating whether a finding warrants action:
 - **Proportionality:** Is the fix worth the disruption?
 
 These are judgment aids, not mandatory per-finding assessments.
+
+---
+
+### Synthesis Phase
+
+Instructions for the synthesis role.
+
+**Step 1.** **Curator synthesizes** actionable items from both findings artifacts and routes them based on structural scope:
+   - Changes within `a-docs/`: implement directly. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
+   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create a Next Priorities entry in `$A_SOCIETY_LOG`. **Before filing**, apply the merge assessment: scan existing Next Priorities items for same target files/design area and compatible authority level; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. The Owner routes these as new flows.
+
+   Do not re-route improvement items through the project's main execution workflow.
+
+   Curator completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
 
 ---
 

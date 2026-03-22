@@ -1,6 +1,6 @@
 # Improvement Principles and Backward Pass Protocol
 
-> [CUSTOMIZE] Replace all `[PROJECT_*]` placeholders with the appropriate `$VARIABLE_NAME` values from your project's index. Update role names to match your project's structure. Declare which output location applies (records or reports/) in the "How It Works" section.
+> [CUSTOMIZE] Replace all `[PROJECT_*]` placeholders with the appropriate `$VARIABLE_NAME` values from your project's index. Update role names to match your project's structure. Declare which output location applies (records or reports/) in the "Meta-Analysis Phase" section.
 
 This document combines the improvement philosophy and the backward pass protocol for a project's agent documentation system. It guides how future process gaps are evaluated and resolved, and standardizes how agents reflect on completed work and turn that reflection into documentation improvements.
 
@@ -133,31 +133,21 @@ Only the nodes and edges that fired during this instance are included. Dead bran
 
 ---
 
-### How It Works
+### Meta-Analysis Phase
 
-1. **Each agent who participated in the forward pass** produces a findings artifact reflecting on their experience — what was clear, what was ambiguous, what was missing, what conflicted. Follow the traversal order above.
+Instructions for roles producing backward pass findings.
 
-2. **Output location:**
+**Step 1.** **Each agent who participated in the forward pass** produces a findings artifact reflecting on their experience — what was clear, what was ambiguous, what was missing, what conflicted. Follow the traversal order above.
+
+**Step 2.** **Output location:**
    - *If the project uses records:* `[PROJECT_RECORDS]/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder
    - *If the project does not use records:* `[PROJECT_IMPROVEMENT_REPORTS]/META-YYYYMMDD-<TASK-ID>-<role>-findings.md`
 
    The project's `improvement/main.md` declares which path applies.
 
-3. **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
+**Step 3.** **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
 
-4. **The synthesis role** reviews all findings and identifies which warrant action.
-
-5. **Actionable items are routed based on structural scope:**
-   - Changes within `a-docs/`: implement directly without a formal proposal. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
-   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create an entry for a future flow using the project's tracking mechanism. **Before filing**, apply the merge assessment: scan existing Next Priorities items for same target files/design area and compatible authority level; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Do not initiate an Owner approval loop from within the backward pass.
-
-   Do not re-route improvement items through the project's main execution workflow.
-
-   The synthesis role completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
-
----
-
-### What to Reflect On
+#### What to Reflect On
 
 Use these categories to guide your reflection (not all will apply to every task):
 
@@ -172,7 +162,7 @@ Ground every finding in a specific moment from your execution. Vague findings ("
 
 ---
 
-### Analysis Quality
+#### Analysis Quality
 
 **Externally-caught errors are higher priority, not lower.** When an error was caught by another role or the human rather than surfaced by the agent themselves, this is a signal that something failed to prevent the error. The backward pass must ask: "Why wasn't this caught by me?" The answer "the rule was documented" is the start of the analysis, not the end. The next question — "why wasn't the documented rule followed?" — leads to placement gaps, surfacing gaps, or structural gaps, all of which are actionable.
 
@@ -180,7 +170,7 @@ Ground every finding in a specific moment from your execution. Vague findings ("
 
 ---
 
-### Generalizable Findings
+#### Generalizable Findings
 
 When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential framework contribution. Note it in the findings artifact so it is not lost.
 
@@ -188,7 +178,7 @@ The submission mechanism is defined separately — flag the finding explicitly i
 
 ---
 
-### Useful Lenses
+#### Useful Lenses
 
 When evaluating whether a finding warrants action, consider:
 
@@ -197,6 +187,22 @@ When evaluating whether a finding warrants action, consider:
 - **Proportionality:** Is the fix worth the disruption? Small friction in a rare edge case may not warrant a doc change.
 
 These are judgment aids, not mandatory per-finding assessments.
+
+---
+
+### Synthesis Phase
+
+Instructions for the synthesis role.
+
+**Step 1.** **The synthesis role** reviews all findings and identifies which warrant action.
+
+**Step 2.** **Actionable items are routed based on structural scope:**
+   - Changes within `a-docs/`: implement directly without a formal proposal. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
+   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create an entry for a future flow using the project's tracking mechanism. **Before filing**, apply the merge assessment: scan existing Next Priorities items for same target files/design area and compatible authority level; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Do not initiate an Owner approval loop from within the backward pass.
+
+   Do not re-route improvement items through the project's main execution workflow.
+
+   The synthesis role completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
 
 ---
 
