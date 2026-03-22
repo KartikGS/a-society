@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[S][MAINT]` — **graph-validator-human-collaborative** (2026-03-21): Added optional `human-collaborative` field to Component 3 (Workflow Graph Schema Validator); five new tests; INVOCATION and coupling map updated; two follow-on Next Priorities filed.
 - `[S][LIB][MAINT]` — **next-priorities-bundle** (2026-03-21): Five items implemented — guardrail order, ordered-list insertion position, workflow.md delimiter requirement, index repo-relative paths, classification pre-specification prohibition scoped; framework update report v17.2.
 - `[S][MAINT]` — **workflow-terminal-node-fix** (2026-03-21): Added terminal nodes to Framework Dev and Tooling Dev YAML graphs; forward-pass closure sections added to both workflows.
 - `[S][LIB][MAINT]` — **index-paths-and-bp-handoffs** (2026-03-21): Required repo-relative paths in `$INSTRUCTION_INDEX`; backward pass handoff completeness guardrail added to `$GENERAL_IMPROVEMENT`; framework update report v17.1.

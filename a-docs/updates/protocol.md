@@ -133,7 +133,7 @@ Every update report must declare two version fields in the report header, before
 - **Framework Version:** The version A-Society is at *after* this update is applied (e.g., `v1.1`). Increment per the scheme in `$A_SOCIETY_VERSION`: MAJOR for Breaking changes, MINOR for Recommended or Optional.
 - **Previous Version:** The version A-Society was at *before* this update (e.g., `v1.0`). Curators of adopting projects use this field to determine their position in the update sequence — they apply all reports whose Previous Version ≥ their project's recorded version.
 
-The Curator updates `$A_SOCIETY_VERSION` as part of Phase 4 (Registration), at the same time the report is published. These two writes are a single atomic registration step.
+The Curator updates `$A_SOCIETY_VERSION` as part of Phase 4 (Registration), at the same time the report is published. These two writes are a single atomic registration step. Updating `$A_SOCIETY_VERSION` involves two distinct write targets: (1) the `**Version:**` header field at the top of the file, and (2) a new row in the History table. A Curator who updates only the History table row has not completed the registration step.
 
 ---
 

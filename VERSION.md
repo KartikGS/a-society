@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v17.5
+**Version:** v17.6
 
 ---
 
@@ -53,3 +53,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v17.3 | 2026-03-21 | 2026-03-21-workflow-mechanics-corrections.md — Synthesis routing simplified to structural rule in general improvement protocol; backward pass tool mandate strengthened to prohibit manual ordering when tool is available (both Recommended) |
 | v17.4 | 2026-03-22 | 2026-03-22-general-lib-sync-bundle.md — human-collaborative field documented in workflow graph instruction; approval-not-completion clarification and synthesis-closes-backward-pass statement added to improvement protocol; obsoletes check added to Owner role template (all Recommended) |
 | v17.5 | 2026-03-22 | 2026-03-22-log-restructure.md — two-file log model (archive split); merge assessment for Next Priorities in log instruction, improvement protocol, and Owner role template (all Recommended) |
+| v17.6 | 2026-03-22 | 2026-03-22-backward-pass-analysis-quality.md — Analysis Quality subsection added to backward pass protocol in general improvement template (Recommended) |
