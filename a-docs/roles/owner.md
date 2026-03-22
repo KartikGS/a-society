@@ -134,6 +134,18 @@ The same applies to approval rationale for main decisions: do not comment on exp
 
 This prohibition applies to briefs and to the main approval rationale — those two contexts only. Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the Curator to consult `$A_SOCIETY_UPDATES_PROTOCOL` after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
+**Tooling dev flows: cross-check Phase 7 obligations when authorizing Curator scope.** When writing a Curator authorization for a tooling development flow, do not derive scope solely from the TA advisory's §5 (Files Changed). Phase 7 of the tooling dev workflow carries standing Curator obligations — including update report assessment (`$A_SOCIETY_UPDATES_PROTOCOL`) and index registration — that apply regardless of what the TA brief scoped. Cross-check the Phase 7 obligations explicitly against the authorization list before finalizing the brief.
+
+---
+
+## TA Advisory Review
+
+When reviewing a Technical Architect advisory, apply two distinct criteria: design correctness and spec completeness. Design correctness is not sufficient — the advisory must also be complete enough that the Developer can implement from the Interface Changes section (§4) alone.
+
+**§4 completeness check.** For every parameter change described in §4 (Interface Changes), verify that the full implementation path is specified. If a new parameter on a public function must be threaded through to an internal call, that threading path must appear in §4 — not only in the §5 Files Changed table. A parameter change that requires the Developer to independently infer threading is an incomplete spec.
+
+---
+
 ## Handoff Output
 
 At each pause point, the Owner explicitly tells the human:

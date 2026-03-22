@@ -59,7 +59,6 @@ If a flow includes an additional Curator → Owner submission after the main dec
 ```yaml
 ---
 workflow:
-  synthesis_role: <string>   # The role that performs backward pass synthesis
   path:
     - role: <string>         # Role name (parsed by Component 4)
       phase: <string>        # Phase descriptor (human orientation; not parsed by Component 4)
@@ -76,7 +75,7 @@ The YAML content must be wrapped in `---` frontmatter delimiters as shown. The B
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
 
-**What Component 4 reads from it:** `workflow.synthesis_role` and `workflow.path[].role`. The `phase` field is present for human orientation and is not parsed by Component 4.
+**What Component 4 reads from it:** `workflow.path[].role`. The `phase` field is present for human orientation and is not parsed by Component 4.
 
 **Relationship to the plan's `path` field:** `01-owner-workflow-plan.md` also contains a `path` field — a flat string list combining role and phase descriptor (e.g., `- Owner - Intake & Briefing`). These two representations coexist and serve distinct consumers:
 
@@ -108,7 +107,7 @@ The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
 2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.synthesis_role` and `workflow.path` from the plan's `path` field. Wrap the YAML content in `---` frontmatter delimiters (opening `---` on line 1, closing `---` after the final field). `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
+3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.path` from the plan's `path` field. Wrap the YAML content in `---` frontmatter delimiters (opening `---` on line 1, closing `---` after the final field). `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
 4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
 5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 

@@ -3,6 +3,11 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { extractFrontmatter } from './utils.js';
 
+/**
+ * Co-maintenance dependency: update if $GENERAL_IMPROVEMENT relocates in the index.
+ */
+const GENERAL_IMPROVEMENT_PATH = 'a-society/general/improvement/main.md';
+
 export interface WorkflowPathEntry {
   role: string;
   phase: string;
@@ -10,7 +15,6 @@ export interface WorkflowPathEntry {
 
 export interface RecordWorkflowFrontmatter {
   workflow: {
-    synthesis_role: string;
     path: WorkflowPathEntry[];
   };
 }
@@ -31,23 +35,19 @@ function createMetaAnalysisPrompt(
   nextRole: string,
   nextStepType: 'meta-analysis' | 'synthesis',
 ): string {
-  const handoff = nextStepType === 'synthesis'
-    ? `hand off to ${nextRole} (synthesis)`
-    : `hand off to ${nextRole}`;
-
   return [
-    `You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`,
-    'You are performing a backward pass findings review.',
-    `Backward pass position: ${position} of ${total}`,
-    `Read the prior artifacts in the record folder. Produce your findings at the next available sequence position. When complete, ${handoff}.`,
+    `Next action: Perform your backward pass meta-analysis (step ${position} of ${total}).`,
+    `Read: all prior artifacts in the record folder, then ### Meta-Analysis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
+    `Expected response: Your findings artifact at the next available sequence position in the record folder. When complete, hand off to ${nextRole} (${nextStepType}).`,
   ].join('\n\n');
 }
 
 function createSynthesisPrompt(role: string, position: number, total: number): string {
   return [
     `You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`,
-    `You are performing backward pass synthesis (position ${position} of ${total} - final step).`,
-    'Read all findings artifacts in the record folder and produce the synthesis at the next available sequence position.',
+    `You are performing backward pass synthesis (step ${position} of ${total} — final step).`,
+    `Read: all findings artifacts in the record folder, then ### Synthesis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
+    'Produce your synthesis at the next available sequence position in the record folder.',
   ].join('\n\n');
 }
 
@@ -61,10 +61,6 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
     throw new Error('workflow.md frontmatter must contain a workflow object');
   }
 
-  const synthesisRole = (rawWorkflow as Record<string, unknown>).synthesis_role;
-  if (typeof synthesisRole !== 'string' || synthesisRole.trim() === '') {
-    throw new Error('workflow.synthesis_role must be a non-empty string');
-  }
 
   const rawPath = (rawWorkflow as Record<string, unknown>).path;
   if (!Array.isArray(rawPath)) {
@@ -92,7 +88,6 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
 
   return {
     workflow: {
-      synthesis_role: synthesisRole,
       path: normalizedPath,
     },
   };
@@ -141,7 +136,10 @@ export function computeBackwardPassOrder(
   return plan;
 }
 
-export function orderWithPromptsFromFile(recordFolderPath: string): BackwardPassPlan {
+export function orderWithPromptsFromFile(
+  recordFolderPath: string,
+  synthesisRole: string,
+): BackwardPassPlan {
   const workflowFilePath = path.join(recordFolderPath, 'workflow.md');
 
   let content: string;
@@ -166,6 +164,6 @@ export function orderWithPromptsFromFile(recordFolderPath: string): BackwardPass
   const frontmatter = parseRecordWorkflowFrontmatter(parsed);
   return computeBackwardPassOrder(
     frontmatter.workflow.path,
-    frontmatter.workflow.synthesis_role,
+    synthesisRole,
   );
 }

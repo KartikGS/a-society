@@ -138,17 +138,17 @@ Backward pass order: Curator first, Owner second, Curator synthesizes last.
 
 #### Component 4 mandate
 
-When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available, invoke it for every flow regardless of role count. When Component 4 is available, manual backward pass ordering is not permitted. Manual computation is reserved for cases where Component 4 cannot be invoked (bootstrapping exemption, unavailability). If Component 4 is available, use it — regardless of how straightforward the flow appears. The invocation is `orderWithPromptsFromFile(recordFolderPath)`, where `recordFolderPath` is the path to the active record folder. Component 4 reads `workflow.md` from that folder directly — do not pass a workflow document path.
+When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available, invoke it for every flow regardless of role count. When Component 4 is available, manual backward pass ordering is not permitted. Manual computation is reserved for cases where Component 4 cannot be invoked (bootstrapping exemption, unavailability).
 
-Component 4 returns a `BackwardPassPlan`: an ordered list of entries, each containing:
+The invocation is `orderWithPromptsFromFile(recordFolderPath, synthesisRole)`, where `synthesisRole` is the role that will perform the final synthesis (usually `Curator`). Component 4 reads `workflow.md` from the record folder and returns an ordered list of `BackwardPassPlan` entries:
 - `role` — the role name
 - `stepType` — `meta-analysis` | `synthesis`
 - `sessionInstruction` — `existing-session` | `new-session`
 - `prompt` — the generated trigger prompt for that role
 
-The synthesis entry is always the final entry in the list and is produced by the algorithm — do not append it manually.
+**Embedded instructions:** Component 4 prompts automatically embed a `Read:` reference to the relevant phase instructions in this document (`### Meta-Analysis Phase` or `### Synthesis Phase`). Roles follow these references to orient to their phase-specific tasks; no separate session-start loading of the improvement document is required.
 
-**Bootstrapping exemption:** When a flow establishes a new record-folder requirement that the current folder cannot conform to (exempt-by-origin), Component 4 cannot be invoked for that flow's backward pass. This exemption must be acknowledged explicitly — never handled by silence. The Curator must either (a) note the exemption-by-origin in the backward pass initiation artifact, state the reason Component 4 is not being invoked, and proceed with manual ordering; or (b) create the required file manually for the current folder if conformance is achievable without contradiction. The protocol requirement to invoke Component 4 when available does not override a genuine bootstrapping constraint — but the constraint must be declared.
+**Bootstrapping exemption:** When a flow establishes a new record-folder requirement that the current folder cannot conform to (exempt-by-origin), Component 4 cannot be invoked for that flow's backward pass. This exemption must be acknowledged explicitly — never handled by silence. The Curator must either (a) note the exemption-by-origin in the backward pass initiation artifact, state the reason Component 4 is not being invoked, and proceed with manual ordering; or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
 ---
 

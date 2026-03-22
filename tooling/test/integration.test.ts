@@ -72,7 +72,6 @@ fs.writeFileSync(
   RECORD_WORKFLOW,
   `---
 workflow:
-  synthesis_role: Curator
   path:
     - role: Owner
       phase: Intake
@@ -164,7 +163,7 @@ test('Scenario 3 — second scaffold run skips all existing files (no overwrites
 // ── Scenario 4: Path Validator against live indexes ───────────────────────────
 
 test('Scenario 4 — path validator runs against public index without throwing', () => {
-  let results;
+  let results: any[] | undefined;
   assert.doesNotThrow(() => {
     results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
   });
@@ -213,7 +212,7 @@ test('Scenario 5 — workflow graph validator runs on live workflow and reports 
 
 test('Scenario 5 — backward pass orderer runs on record-folder workflow.md without throwing', () => {
   assert.doesNotThrow(() => {
-    backwardOrder = orderWithPromptsFromFile(RECORD_FOLDER);
+    backwardOrder = orderWithPromptsFromFile(RECORD_FOLDER, 'Curator');
   });
 });
 

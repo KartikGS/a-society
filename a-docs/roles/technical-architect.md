@@ -69,6 +69,10 @@ Implicit delegation — leaving the field underspecified and expecting the Devel
 
 **Record-folder requirements must note the bootstrapping exemption.** When an advisory establishes a new requirement for record folders (e.g., a new required file, a new schema requirement), the advisory must explicitly note that the current flow's record folder is exempt-by-origin from that requirement. State why the current folder cannot conform and what consequence follows (e.g., Component 4 cannot be invoked for this flow). Future agents encountering the folder need this context to distinguish an expected non-conformance from an error.
 
+**Coupling map consultation for component change advisories.** Before completing an advisory that modifies or redesigns a tooling component, check `$A_SOCIETY_TOOLING_COUPLING_MAP` for that component's entry. If there is an open invocation gap (the component exists but no `general/` instruction directs agents to invoke it), surface it in the advisory output. This consultation is a standing advisory obligation — it does not require the Owner to include it in the brief.
+
+**Parameter threading belongs in Interface Changes (§4), not Files Changed (§5).** When a new parameter on a public function must be threaded through to an internal call, specify the full threading path in §4 — not only in the §5 Files Changed table. The Developer reads §4 as the implementation specification; a threading requirement found only in §5 requires the Developer to infer a step that should be explicit. The §5 table is a coverage reference, not a substitute for interface specification.
+
 ---
 
 ## Context Loading

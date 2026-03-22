@@ -165,7 +165,10 @@ Component 4 reads `workflow.md` from a record folder and returns an enriched bac
 ```ts
 import { orderWithPromptsFromFile } from './src/backward-pass-orderer.ts';
 
-const plan = orderWithPromptsFromFile('/path/to/a-docs/records/20260320-some-flow');
+const plan = orderWithPromptsFromFile(
+  '/path/to/a-docs/records/20260320-some-flow',
+  'Curator'   // synthesisRole is required
+);
 
 // plan: Array<{
 //   role: string,
@@ -182,7 +185,6 @@ For unit tests or callers that already have parsed `workflow.path` entries:
 ```yaml
 ---
 workflow:
-  synthesis_role: Curator
   path:
     - role: Owner
       phase: Intake
@@ -206,14 +208,13 @@ const plan = computeBackwardPassOrder(
 );
 ```
 
-**Algorithm:** The orderer deduplicates roles by first occurrence in `workflow.path`, reverses that role list for meta-analysis traversal, then appends one final synthesis entry for `workflow.synthesis_role`.
+**Algorithm:** The orderer deduplicates roles by first occurrence in `workflow.path`, reverses that role list for meta-analysis traversal, then appends one final synthesis entry for the provided `synthesisRole`.
 
 ### Record-folder `workflow.md` schema
 
 ```yaml
 ---
 workflow:
-  synthesis_role: Curator
   path:
     - role: Owner
       phase: Intake
@@ -225,9 +226,11 @@ workflow:
 ```
 
 **Notes:**
-- `workflow.synthesis_role` is required and is read from `workflow.md`; callers do not supply it separately.
+- `workflow.synthesis_role` is no longer required in `workflow.md`; callers must supply the synthesis role as the second argument to `orderWithPromptsFromFile`.
+- **Backward-compatibility:** If `workflow.md` still contains `synthesis_role`, the field is silently ignored. Callers of the old `orderWithPromptsFromFile(recordFolderPath)` single-parameter signature must update their invocations to supply `synthesisRole` as the second argument.
 - `workflow.path[].phase` is stored for readability and future use; Component 4 currently computes order from `role` values only.
-- Output entries may repeat a role: once as a `meta-analysis` step and again as the final `synthesis` step.
+- Output entries follow the three-field handoff format (meta-analysis) or the orientation format (synthesis). Meta-analysis prompts no longer include the "You are the role agent" preamble.
+- Both prompt types embed a `Read:` reference to the relevant section in `$GENERAL_IMPROVEMENT` (`### Meta-Analysis Phase` or `### Synthesis Phase`).
 
 ---
 

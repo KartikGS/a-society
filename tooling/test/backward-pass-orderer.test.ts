@@ -65,14 +65,16 @@ test('computeBackwardPassOrder: prompts preserve findings and synthesis patterns
   const lastMetaEntry = result[1];
   const synthesisEntry = result[2];
 
-  assert.ok(firstEntry.prompt.includes('backward pass findings review'));
-  assert.ok(firstEntry.prompt.includes('hand off to Owner'));
+  assert.ok(firstEntry.prompt.includes('Perform your backward pass meta-analysis'));
+  assert.ok(firstEntry.prompt.includes('### Meta-Analysis Phase'));
+  assert.ok(firstEntry.prompt.includes('hand off to Owner (meta-analysis)'));
   assert.ok(lastMetaEntry.prompt.includes('hand off to Curator (synthesis)'));
   assert.ok(synthesisEntry.prompt.includes('backward pass synthesis'));
-  assert.ok(synthesisEntry.prompt.includes('Read all findings artifacts in the record folder'));
+  assert.ok(synthesisEntry.prompt.includes('### Synthesis Phase'));
+  assert.ok(synthesisEntry.prompt.includes('Read: all findings artifacts in the record folder'));
 });
 
-test('orderWithPromptsFromFile: reads workflow.md from a record folder', () => {
+test('orderWithPromptsFromFile: reads workflow.md from a record folder and ignores synthesis_role', () => {
   const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'backward-pass-orderer-'));
   const workflowFile = path.join(recordFolder, 'workflow.md');
 
@@ -80,7 +82,7 @@ test('orderWithPromptsFromFile: reads workflow.md from a record folder', () => {
     workflowFile,
     `---
 workflow:
-  synthesis_role: Curator
+  synthesis_role: Owner (ignored)
   path:
     - role: Owner
       phase: Intake
@@ -96,7 +98,7 @@ workflow:
   );
 
   try {
-    const result = orderWithPromptsFromFile(recordFolder);
+    const result = orderWithPromptsFromFile(recordFolder, 'Curator');
     assert.deepStrictEqual(
       result.map((entry) => [entry.role, entry.stepType]),
       [

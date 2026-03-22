@@ -189,14 +189,16 @@ workflow:
 
 ### Component 4: Backward Pass Orderer
 
-**What it is:** A tool that computes the correct backward pass traversal order from a workflow graph.
+**What it is:** A tool that computes the correct backward pass traversal order from a workflow graph and generates session prompts for each step.
 
 **What it does:**
-- Accepts: a workflow graph (Component 3 format) and an optional list of nodes that fired in this instance
-- Derives forward pass order from `first_occurrence_position` values
-- Reverses to produce backward pass order, placing the synthesis role last regardless
-- Filters to only nodes that fired (if instance list is provided)
-- Returns: ordered list of `(position, role, node-id)` tuples
+- Accepts: a record folder path (containing `workflow.md`) and the synthesis role name
+- Derives forward pass order from `role` entries in the `workflow.md` path
+- Reverses to produce backward pass order, placing the provided synthesis role last
+- Generates tailored prompts for each step:
+  - **Meta-analysis:** follows the three-field handoff format, no preamble, includes a `Read:` reference to `### Meta-Analysis Phase` in `$GENERAL_IMPROVEMENT`
+  - **Synthesis:** follows the orientation format (preamble included), includes a `Read:` reference to `### Synthesis Phase` in `$GENERAL_IMPROVEMENT`
+- Returns: an array of step objects (`role`, `stepType`, `sessionInstruction`, `prompt`)
 
 **What it does NOT do:**
 - Evaluate the quality of work at each node
@@ -205,13 +207,14 @@ workflow:
 - Substitute for the agent doing the actual backward pass reflection
 
 **Interface with the documentation layer:**
-- Reads workflow graph (Component 3 format) from its storage location
+- Reads `workflow.md` from the provided record folder path
+- Embeds references to `$GENERAL_IMPROVEMENT` sections in generated prompts
 - Writes nothing
-- Output is consumed by agents to sequence their backward pass work
+- Output is consumed by agents to sequence and execute their backward pass work
 
 **Dependencies:**
-- Component 3 (Workflow Graph Format) — hard dependency
-- Stable backward pass protocol rules (currently in `$A_SOCIETY_IMPROVEMENT`)
+- Component 3 (Workflow Graph Format) — `workflow.md` path schema
+- Stable backward pass protocol rules in `$GENERAL_IMPROVEMENT` (referenced by prompts)
 
 ---
 
