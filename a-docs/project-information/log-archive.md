@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[S][LIB][MAINT]` — **bp-meta-synthesis-separation** (2026-03-22): Backward pass protocol phase headings separated — `### How It Works` dissolved into `### Meta-Analysis Phase` and `### Synthesis Phase` in `$GENERAL_IMPROVEMENT` and `$A_SOCIETY_IMPROVEMENT`; framework update report v18.1.
 - `[S][LIB][MAINT]` — **workflow-obligation-consolidation** (2026-03-22): Added universal Forward Pass Closure section to workflow routing index with current-flow scoping and synthesis-is-terminal rules; framework update report v18.0.
 - `[S][LIB][MAINT]` — **backward-pass-quality-principles** (2026-03-22): New "Analysis Quality" subsection in backward pass protocol — externally-caught errors are higher-priority, genuine analysis must trace root cause; framework update report v17.6.
 - `[S][LIB][MAINT]` — **general-lib-sync-bundle** (2026-03-22): Six-item LIB/MAINT bundle — workflow graph instruction human-collaborative parity, Component 3 test target corrected, approval-not-completion clarification and synthesis-closes statement added to improvement protocol, Owner brief obsoletes check added; framework update report v17.4.

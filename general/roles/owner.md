@@ -19,7 +19,7 @@ The Owner **owns**:
 - The project's folder structure — changes require Owner review
 - The project's `agents.md` and `indexes/main.md`
 - Quality review of all contributions — the test is always alignment with the core bet
-- **Workflow routing** — routing work into the appropriate workflow by default, including producing a workflow plan artifact at intake before any brief is written (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the user to the next session
+- **Workflow routing** — routing work into the appropriate workflow by default. Before producing the workflow plan, conduct a structural readiness assessment per `$INSTRUCTION_WORKFLOW_COMPLEXITY`: verify the task is feasible, that a role with appropriate authority exists for it, and that a workflow can route it. If a structural gap is found, apply the Structural Gap Protocol before complexity analysis. This includes producing a workflow plan artifact at intake before any brief is written (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the user to the next session.
 - The project log — all sections (Current State, Recent Focus, Previous, and Next Priorities). The log entry for a closed flow is written at Forward Pass Closure. When adding any Next Priorities item (at intake or when receiving synthesis findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, and (2) compatible authority level. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations.
 - [CUSTOMIZE: list any project-specific owned artifacts, e.g., a standards document, a glossary]
 

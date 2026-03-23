@@ -28,6 +28,51 @@ Three principles govern the model:
 
 ---
 
+## Structural Readiness Assessment
+
+Before conducting complexity analysis, the Owner runs a structural readiness assessment. This assessment determines whether the task can be handled by the existing structure at all. It is a gate: a task that fails it does not proceed to complexity analysis or tier selection.
+
+There are three sequential checks.
+
+**Check 1 — Feasibility**
+
+Is the task possible at all? If no: tell the user directly, explain why (invariant violation, scope conflict, structural impossibility), and probe for the underlying need — sometimes an impossible framing hides an achievable one. Do not route.
+
+**Check 2 — Structural Routability**
+
+Can the task be handled by the existing structure? Two dimensions, both must be true:
+
+- *Role authority:* Does any defined role have the authority and responsibility for this task? Verify against role documents — the scope boundary definition lives in the role file itself, not in a separate metadata artifact.
+- *Workflow routability:* Does an existing workflow cover this task?
+
+If either dimension fails, a structural gap exists.
+
+**Check 3 — Frequency Assessment** *(only when a gap is found in Check 2)*
+
+How often will this task or similar tasks recur? This determines whether the appropriate response is to build a full new workflow or role, or to handle the task as a scoped one-off exception with explicit Owner direction. This is a sizing question, not a feasibility question — ask it only after a gap is confirmed.
+
+**Handling by Outcome**
+
+| Outcome | Action |
+|---|---|
+| Impossible | Tell user directly, explain why, probe for underlying need. Do not route. |
+| Structurally ready | Proceed with complexity analysis as normal. |
+| Structural gap found | Apply Structural Gap Protocol (see below). |
+| User overrides structural gap | Document the gap and risk explicitly in the workflow plan as a known constraint. Proceed only with explicit user direction. |
+
+**Structural Gap Protocol**
+
+When a structural gap is found and the user wants to proceed with addressing it:
+
+1. Tell the user what specifically is missing — a role with appropriate authority, a workflow, or both.
+2. Describe what setup would involve (new role, new workflow, or modification to existing).
+3. Get explicit user permission before opening a setup flow.
+4. Add the deferred task to Next Priorities in the project log with a dependency note (e.g., "depends on: structural setup — flow to be opened"). Update the entry with the setup flow identifier once the record folder is created in step 5.
+5. Open a separate setup flow through standard intake — including this structural readiness assessment, which will now pass since the structure is being built.
+6. When the setup flow completes, the deferred task re-enters intake as a new flow.
+
+---
+
 ## Complexity Axes
 
 At intake, the Owner evaluates the task against five axes:
