@@ -66,6 +66,9 @@ test('computeBackwardPassOrder: prompts preserve findings and synthesis patterns
   const synthesisEntry = result[2];
 
   assert.ok(firstEntry.prompt.includes('Perform your backward pass meta-analysis'));
+
+
+
   assert.ok(firstEntry.prompt.includes('### Meta-Analysis Phase'));
   assert.ok(firstEntry.prompt.includes('hand off to Owner (meta-analysis)'));
   assert.ok(lastMetaEntry.prompt.includes('hand off to Curator (synthesis)'));

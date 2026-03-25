@@ -35,6 +35,8 @@ These rules apply across all A-Society workflows. Each workflow's session model 
 
 **Agents must not pass conditional language to the human** (e.g., "Resume, but start new if none exists"). State the instruction explicitly based on flow state. If a new session is required, provide a copyable session-start prompt.
 
+**Multiple concurrent workflows:** When the identified work requires two or more separate workflow types, the Owner routes them as separate flows for the user to execute independently. The Owner does not orchestrate multiple concurrent flows within a single session.
+
 ---
 
 ## Forward Pass Closure

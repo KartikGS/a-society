@@ -55,10 +55,11 @@ Next priorities are not a backlog — they are the concrete next steps. Items th
 
 **Merge Assessment**
 
-Before adding any Next Priorities item — whether at intake or from a synthesis pass — scan existing Next Priorities items for merge opportunities. Two items are mergeable when both conditions are true:
+Before adding any Next Priorities item — whether at intake or from a synthesis pass — scan existing Next Priorities items for merge opportunities. Two items are mergeable when all three conditions are true:
 
 1. **Same target files or same design area** — they touch the same document(s) or the same conceptual area.
 2. **Compatible authority level** — both are same-role authority (both the same implementing role, or both requiring the same approval path).
+3. **Same workflow type and role path** — both items would run through the same workflow type with the same role sequence.
 
 When a merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
 

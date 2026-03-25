@@ -42,12 +42,12 @@ function createMetaAnalysisPrompt(
   ].join('\n\n');
 }
 
-function createSynthesisPrompt(role: string, position: number, total: number): string {
+function createSynthesisPrompt(role: string, position: number, total: number, recordFolderPath: string): string {
   return [
     `You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`,
     `You are performing backward pass synthesis (step ${position} of ${total} — final step).`,
-    `Read: all findings artifacts in the record folder, then ### Synthesis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
-    'Produce your synthesis at the next available sequence position in the record folder.',
+    `Read: all findings artifacts in ${recordFolderPath}, then ### Synthesis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
+    `Produce your synthesis at the next available sequence position in ${recordFolderPath}.`,
   ].join('\n\n');
 }
 
@@ -96,6 +96,7 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
 export function computeBackwardPassOrder(
   pathEntries: WorkflowPathEntry[],
   synthesisRole: string,
+  recordFolderPath: string = 'the record folder',
 ): BackwardPassPlan {
   const seenRoles = new Set<string>();
   const firstOccurrenceRoles: string[] = [];
@@ -130,7 +131,7 @@ export function computeBackwardPassOrder(
     role: synthesisRole,
     stepType: 'synthesis',
     sessionInstruction: 'new-session',
-    prompt: createSynthesisPrompt(synthesisRole, totalSteps, totalSteps),
+    prompt: createSynthesisPrompt(synthesisRole, totalSteps, totalSteps, recordFolderPath),
   });
 
   return plan;
@@ -165,5 +166,6 @@ export function orderWithPromptsFromFile(
   return computeBackwardPassOrder(
     frontmatter.workflow.path,
     synthesisRole,
+    recordFolderPath,
   );
 }

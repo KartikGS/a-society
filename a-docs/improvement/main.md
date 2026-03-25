@@ -136,9 +136,9 @@ Only nodes that fired during this instance are included. Dead branches are exclu
 A-Society's standard two-role flow: Owner first, Curator second.
 Backward pass order: Curator first, Owner second, Curator synthesizes last.
 
-#### Component 4 mandate
+#### Component 4 invocation
 
-When Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) is available, invoke it for every flow regardless of role count. When Component 4 is available, manual backward pass ordering is not permitted. Manual computation is reserved for cases where Component 4 cannot be invoked (bootstrapping exemption, unavailability).
+Manual computation is reserved for cases where Component 4 cannot be invoked (bootstrapping exemption, unavailability).
 
 The invocation is `orderWithPromptsFromFile(recordFolderPath, synthesisRole)`, where `synthesisRole` is the role that will perform the final synthesis (usually `Curator`). Component 4 reads `workflow.md` from the record folder and returns an ordered list of `BackwardPassPlan` entries:
 - `role` — the role name

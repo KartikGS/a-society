@@ -148,6 +148,8 @@ At each pause point, the Curator explicitly tells the human:
      ```
    - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
+**Expected response scope:** Name the immediate next artifact from the receiving role in response to this specific handoff only. Do not name artifacts that the receiving role will produce only after intermediate steps by another role have occurred. When the receiving role's response will be followed by intermediate work before a later Owner action, the Expected response covers the first response only — subsequent Owner actions belong in a later handoff.
+
 For A-Society, this applies at minimum:
 - after submitting a proposal in the active record folder
 - after implementation and registration, including any update-report draft awaiting Owner review

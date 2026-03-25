@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v21.0
+**Version:** v22.0
 
 ---
 
@@ -60,3 +60,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v19.1 | 2026-03-22 | 2026-03-22-brief-writing-quality.md — Authority designation, topology-based obligation, and behavioral property consistency added to general Owner role template; Approval Invariant topology check and Implementation Practices section added to general Curator role template (all Recommended) |
 | v20.0 | 2026-03-22 | 2026-03-22-workflow-path-completeness.md — workflow.md Phase 0 creation obligation and path-completeness obligation for predictable post-implementation steps added to general Owner role template (both Breaking) |
 | v21.0 | 2026-03-23 | 2026-03-23-structural-readiness-assessment.md — Structural Readiness Assessment (feasibility, routability, Structural Gap Protocol) added as mandatory intake gate before complexity analysis; Owner role template Workflow Routing bullet updated (Breaking) |
+| v22.0 | 2026-03-25 | 2026-03-25-doc-maintenance-bundle.md — Pre-handoff workflow.md verification step added to Curator role template (Breaking); concurrent-workflow routing rule added to Owner role template (Breaking); third merge assessment criterion added to log instruction (Breaking); prose insertions guidance added to Owner role template (Recommended); mandate sentences removed from general improvement template Tooling paragraph (Recommended) |

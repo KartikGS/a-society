@@ -226,6 +226,7 @@ test('Scenario 5 — backward pass last entry is synthesis role', () => {
   const last = backwardOrder[backwardOrder.length - 1];
   assert.strictEqual(last.stepType, 'synthesis', 'Last entry should be the synthesis role');
   assert.strictEqual(last.sessionInstruction, 'new-session', 'Synthesis step should open a new session');
+  assert.strictEqual(last.role, 'Curator', 'synthesis entry role should equal synthesisRole argument');
 });
 
 test('Scenario 5 — meta-analysis entries reuse the existing session', () => {

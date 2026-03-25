@@ -129,9 +129,9 @@ Order the backward pass as follows:
 
 Only the nodes and edges that fired during this instance are included. Dead branches are excluded.
 
-**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), invoke it for every flow regardless of role count. When a Backward Pass Orderer tool is available, manual traversal computation is not permitted. Manual ordering is reserved for projects where no such tool exists or for bootstrapping cases where the tool cannot be invoked.
+**Tooling:** If the project has a Backward Pass Orderer tool (a programmatic component that computes traversal order from a workflow graph), manual ordering is reserved for projects where no such tool exists or for bootstrapping cases where the tool cannot be invoked.
 
-When the tool is available, use it — do not apply the manual traversal rules above as an alternative. The orderer reads `workflow.md` from the active record folder; invoke it using `orderWithPromptsFromFile` with the record folder path and the synthesis role name. The orderer returns a structured backward pass plan: an ordered list of entries, each containing a role, step type (`meta-analysis` | `synthesis`), session instruction (`existing-session` | `new-session`), and prompt.
+The orderer reads `workflow.md` from the active record folder; invoke it using `orderWithPromptsFromFile` with the record folder path and the synthesis role name. The orderer returns a structured backward pass plan: an ordered list of entries, each containing a role, step type (`meta-analysis` | `synthesis`), session instruction (`existing-session` | `new-session`), and prompt.
 
 **Embedded instructions:** Generated prompts automatically embed a `Read:` reference to the relevant phase instructions in this document (`### Meta-Analysis Phase` or `### Synthesis Phase`). Roles follow these references to orient to their phase-specific tasks; no separate session-start loading of the improvement document is required. Consult the project's tooling documentation for the specific invocation path. When no such tool is available, apply the traversal rules above manually.
 
