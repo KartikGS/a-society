@@ -165,7 +165,7 @@ New or updated files are registered in the appropriate index.
 - New `a-docs/` files → add a rationale entry to `$A_SOCIETY_AGENT_DOCS_GUIDE`
 - If a framework update report was approved in Phase 2, confirm it was published during Phase 3. No separate update report submission is needed.
 
-**Output:** Updated index row(s); updated a-docs-guide entry if applicable; framework update report draft submitted if triggered. Work hands off to the Owner for forward-pass closure.
+**Output:** Updated index row(s); updated a-docs-guide entry if applicable; next sequenced `curator-to-owner` handoff artifact produced in the active record folder. If a framework update report was approved in Phase 2, the handoff may reference the published report, but the report itself is not submitted as a separate artifact at Phase 4. Work hands off to the Owner for forward-pass closure.
 
 ---
 

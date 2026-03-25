@@ -63,6 +63,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_COMMUNICATION` | `/a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `/a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `/a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols |
+| `$INSTRUCTION_MACHINE_READABLE_HANDOFF` | `/a-society/general/instructions/communication/coordination/machine-readable-handoff.md` | How to define and emit a machine-readable handoff block — YAML schema for agent pause-point output, enabling programmatic session routing |
 | `$INSTRUCTION_THINKING` | `/a-society/general/instructions/thinking/main.md` | How to create a thinking/ folder for any project |
 | `$INSTRUCTION_IMPROVEMENT` | `/a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `/a-society/general/instructions/records/main.md` | How to create a records structure for any project |

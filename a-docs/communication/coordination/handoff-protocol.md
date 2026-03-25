@@ -58,6 +58,12 @@ The `owner-to-curator.md` artifact must contain all mandatory fields from `TEMPL
 - Implementation constraints (if APPROVED)
 - Required changes (if REVISE) — numbered, specific, actionable
 
+### Machine-Readable Handoff Block (all session pause points)
+
+At every session pause point where natural-language handoff prose is produced, the agent must also emit a machine-readable handoff block. The block follows the prose and is emitted in the same output pass.
+
+See `$INSTRUCTION_MACHINE_READABLE_HANDOFF` for the schema, field definitions, the conditional constraint on `prompt`, and a worked example.
+
 ---
 
 ## Receiver Confirmation
