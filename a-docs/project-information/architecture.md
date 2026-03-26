@@ -2,13 +2,14 @@
 
 ## System Overview
 
-A-Society is a documentation framework, not a software application. Its "system" is a set of folders and files that agents read and write. Understanding the structure is understanding the architecture.
+A-Society is a framework for making projects agentic-friendly. Its foundation is documentation — structured context that agents read and follow — but its work product now includes programmatic layers: executable tooling utilities and a planned runtime that manages agent sessions directly. Understanding the structure is understanding the architecture.
 
-A-Society has four top-level folders, each with a distinct role:
+A-Society has five top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
 - **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal tooling.
 - **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in TypeScript (tsx runtime, ESM); invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
+- **`runtime/`** — the programmatic orchestration layer. Manages agent sessions end to end: injecting context from role definitions and workflow documents, routing handoffs between sessions, and triggering framework tools automatically. The runtime calls LLM APIs directly and provides its own interface — it is not a plugin for existing editors. Planned; not yet implemented. Technology: TypeScript/Node.js, consistent with the tooling layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
 The tooling layer comprises seven components, each covering a distinct deterministic operation:
@@ -61,15 +62,15 @@ The following constraints are non-negotiable. An agent that violates one has mad
 
 ### Layer Isolation
 
-`a-docs/` is documentation about A-Society. `general/`, `agents/`, and `tooling/` are A-Society's work product. These are categorically different things and must not be mixed.
+`a-docs/` is documentation about A-Society. `general/`, `agents/`, `tooling/`, and `runtime/` are A-Society's work product. These are categorically different things and must not be mixed.
 
-- Content that is part of A-Society's deliverable (instructions, templates, active agents, executable utilities) belongs in `general/`, `agents/`, or `tooling/`, never in `a-docs/`
-- Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/`, `agents/`, or `tooling/`
-- The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/`, `agents/`, or `tooling/`
-- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; deterministic executable utilities → `tooling/`
+- Content that is part of A-Society's deliverable (instructions, templates, active agents, executable utilities) belongs in `general/`, `agents/`, `tooling/`, or `runtime/`, never in `a-docs/`
+- Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/`, `agents/`, `tooling/`, or `runtime/`
+- The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/`, `agents/`, `tooling/`, or `runtime/`
+- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; deterministic executable utilities → `tooling/`; programmatic orchestration and session management → `runtime/`
 
 Violation: Placing an A-Society agent role file in `a-docs/roles/` when the agent works for other projects, not on A-Society.
-Violation: Placing tooling implementation code in `a-docs/` or `general/`.
+Violation: Placing tooling or runtime implementation code in `a-docs/` or `general/`.
 
 ### Boundary Respect
 

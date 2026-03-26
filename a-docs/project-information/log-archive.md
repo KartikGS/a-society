@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[M][LIB][MAINT]` — **structural-readiness-intake** (2026-03-23): Structural Readiness Assessment added as mandatory intake gate before complexity analysis; framework update report v21.0.
 - `[S][LIB][MAINT]` — **workflow-path-completeness** (2026-03-22): Two additive changes to Owner role files — `workflow.md` Phase 0 co-output obligation and predictable post-implementation steps path inclusion; framework update report v20.0.
 - `[S][LIB][MAINT]` — **brief-proposal-quality** (2026-03-22): Five behavioral guidance additions to Owner/Curator roles and Hard Rules; two deferred update reports published (`backward-pass-orderer-signature.md`, `brief-writing-quality.md`); `$A_SOCIETY_VERSION` updated to v19.1.
 - `[M][LIB][MAINT]` — **component4-design-advisory** (2026-03-22): Backward Pass Orderer redesigned — existing-session prompts switched to three-field format, Improvement doc `Read:` references embedded, `synthesis_role` removed from workflow.md schema, `orderWithPromptsFromFile` takes synthesisRole as required second argument; update report deferred (no mechanism at Phase 7; surfaced as backward pass finding).
