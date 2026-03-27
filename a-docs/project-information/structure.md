@@ -4,14 +4,16 @@ This document explains why each folder in `a-society/` exists — the principle 
 
 ---
 
-## The Three-Folder Structure
+## The Five-Folder Structure
 
 A-Society is a project like any other. As with any project using this framework, `a-docs/` sits alongside the project's actual work product — it is not above it or inside it.
 
-A-Society's work product occupies two folders:
+A-Society's work product occupies four folders:
 
 - **`general/`** — the library: distributable instructions, templates, and patterns that any project can adopt
 - **`agents/`** — the active agents: A-Society's deployed products that run on other projects
+- **`tooling/`** — the programmatic tooling layer: deterministic executable utilities that agents invoke for rule-derived framework operations
+- **`runtime/`** — the programmatic orchestration layer: manages agent sessions end to end, injecting context and routing handoffs programmatically
 
 A-Society's agent documentation occupies one folder:
 
@@ -20,6 +22,8 @@ A-Society's agent documentation occupies one folder:
 The key placement question is: what kind of thing is this?
 - Content any project can take and use directly → `general/`
 - An A-Society agent deployed to work on other projects → `agents/`
+- A deterministic executable utility invoked by agents for framework operations → `tooling/`
+- Programmatic session orchestration, context injection, or handoff routing → `runtime/`
 - Documentation for agents working on A-Society itself → `a-docs/`
 
 When you are unsure whether something belongs in `general/` vs another project's folder, ask: "Is this true only of A-Society, or would it be true of a legal project, a writing project, and a software project equally?" If the latter — it belongs in `general/`.
@@ -60,6 +64,44 @@ When you are unsure whether something belongs in `general/` vs another project's
 **Principle:** Files here are A-Society's work product deployed externally. An agent in `agents/` serves other projects; an agent in `a-docs/roles/` serves A-Society.
 
 **The key test:** Does this agent work *on A-Society* (maintaining, extending, or operating the framework)? → `a-docs/roles/`. Does this agent work *for other projects* on behalf of A-Society? → `agents/`.
+
+---
+
+### `tooling/`
+
+**Purpose:** A-Society's programmatic tooling layer — deterministic, executable utilities that agents invoke to perform rule-derived framework operations. These are work product: adopting project agents invoke them via paths registered in the public index. Implemented in TypeScript (tsx runtime, ESM).
+
+**What belongs here:**
+- TypeScript source files implementing approved tooling components (scaffolding, validation, workflow graph parsing, and similar)
+- Supporting files required by the tooling implementation (`package.json`, test infrastructure, INVOCATION.md)
+
+**What does not belong here:**
+- Documentation for agents about how to use tooling — that belongs in `a-docs/` (design specs) or `general/instructions/` (usage guidance)
+- Session orchestration or LLM-calling code — that belongs in `runtime/`
+- Content any project can take and use directly as documentation — that belongs in `general/`
+
+**Principle:** Files here are executable utilities that extend the framework's deterministic operations. The Tooling Developer writes here; the Curator does not.
+
+**The key test:** Is this a deterministic, rule-derived framework operation that an agent invokes programmatically? → `tooling/`. Does it involve calling LLMs, managing sessions, or routing handoffs? → `runtime/`. Is it guidance agents read and follow in natural language? → `general/` or `a-docs/`.
+
+---
+
+### `runtime/`
+
+**Purpose:** A-Society's programmatic orchestration layer — manages agent sessions end to end by injecting context from role definitions and workflow documents, routing handoffs between sessions, and triggering framework tools automatically. The runtime calls LLM APIs directly and provides its own interface. Implemented in TypeScript/Node.js, consistent with the tooling layer.
+
+**What belongs here:**
+- TypeScript source files implementing the runtime components (context injection, session management, handoff routing, LLM gateway, and similar)
+- Supporting runtime files (`package.json`, state management, INVOCATION.md)
+
+**What does not belong here:**
+- Deterministic utility tools that agents invoke for discrete operations — those belong in `tooling/`
+- Documentation or instructions for building the runtime — those belong in `a-docs/tooling/` (design specs) or `a-docs/` (operational docs)
+- Any content that is documentation rather than executable code
+
+**Principle:** Files here are the programmatic orchestration layer. The Runtime Developer writes here; the Curator does not.
+
+**The key test:** Does this code manage the lifecycle of an agent session — context injection, handoff routing, LLM calls? → `runtime/`. Is it a stateless deterministic utility an agent calls? → `tooling/`.
 
 ---
 

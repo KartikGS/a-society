@@ -1,0 +1,96 @@
+import readline from 'node:readline';
+import crypto from 'node:crypto';
+import type { OrientSession } from './types.js';
+import { ContextInjectionService } from './injection.js';
+import { LLMGateway, type MessageParam } from './llm.js';
+import { roleContextRegistry } from './registry.js';
+
+export async function runOrientSession(workspaceRoot: string, roleKey: string) {
+  if (!roleContextRegistry[roleKey]) {
+    console.error("This project's Owner role is not registered in the runtime.\nOnly registered projects support orient sessions.");
+    process.exit(1);
+  }
+
+  const session: OrientSession = {
+    sessionId: crypto.randomUUID(),
+    workspaceRoot,
+    roleKey,
+    startedAt: new Date().toISOString()
+  };
+
+  const { bundleContent } = ContextInjectionService.buildContextBundle(
+    roleKey,
+    workspaceRoot,
+    '',
+    null,
+    'orient'
+  );
+
+  const llm = new LLMGateway();
+  const systemPrompt = bundleContent;
+
+  const history: MessageParam[] = [];
+  const initialUserMsg: MessageParam = { 
+    role: 'user', 
+    content: "A new orient session has started. Greet the user and await their direction." 
+  };
+
+  console.log('\nStarting orient session...\n');
+  let response = '';
+  try {
+    response = await llm.executeTurn(systemPrompt, [initialUserMsg]);
+  } catch (error: any) {
+    if (error.name === 'LLMGatewayError' && error.type === 'AUTH_ERROR') {
+      console.error(error.message);
+    } else {
+      console.error(`Error during initial turn: ${error.message}`);
+    }
+    process.exit(1);
+  }
+  
+  history.push(initialUserMsg);
+  history.push({ role: 'assistant', content: response });
+
+  console.log('\n'); // newline after initial response
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: true
+  });
+
+  const promptUser = () => {
+    rl.question('\n> ', async (input) => {
+      const line = input.trim();
+      if (line === 'exit' || line === 'quit') {
+        rl.close();
+        return;
+      }
+      if (!line) {
+        promptUser();
+        return;
+      }
+
+      history.push({ role: 'user', content: line });
+
+      let streamResponse = '';
+      try {
+        streamResponse = await llm.executeTurn(systemPrompt, history);
+      } catch (error: any) {
+        console.error(`\nError during turn: ${error.message}`);
+      }
+
+      history.push({ role: 'assistant', content: streamResponse });
+      console.log('\n'); // newline after response
+
+      promptUser();
+    });
+  };
+
+  rl.on('close', () => {
+    console.log('\nOrient session closed.');
+    process.exit(0);
+  });
+
+  promptUser();
+}

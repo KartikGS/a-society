@@ -37,3 +37,10 @@ export interface TriggerRecord {
   success: boolean;
   retryStatus: string;
 }
+
+export interface OrientSession {
+  sessionId: string;
+  workspaceRoot: string;
+  roleKey: string;
+  startedAt: string;
+}

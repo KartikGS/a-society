@@ -17,7 +17,8 @@ export class ContextInjectionService {
     roleKey: string,
     projectRoot: string,
     activeArtifactPath: string,
-    directivePrompt: string | null
+    directivePrompt: string | null,
+    mode: 'flow' | 'orient' = 'flow'
   ): ContextBundleResult {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
     
@@ -58,7 +59,11 @@ export class ContextInjectionService {
     if (directivePrompt) {
       bundle += `System Instruction:\n${directivePrompt}\n\n`;
     }
-    bundle += `IMPORTANT INSTRUCTION: Your response must always end with a valid machine-readable handoff block formatted strictly per $INSTRUCTION_MACHINE_READABLE_HANDOFF. A handoff block is required to pass control back to the orchestrator, even if it is to terminate the flow.\n`;
+    if (mode === 'orient') {
+      bundle += `You are the Owner agent for this project. A new orient session has started.\nGreet the user and await their direction. Respond conversationally.\nNo machine-readable handoff block is required.\n`;
+    } else {
+      bundle += `IMPORTANT INSTRUCTION: Your response must always end with a valid machine-readable handoff block formatted strictly per $INSTRUCTION_MACHINE_READABLE_HANDOFF. A handoff block is required to pass control back to the orchestrator, even if it is to terminate the flow.\n`;
+    }
     
     // Compute hash
     const contextHash = crypto.createHash('sha256').update(bundle).digest('hex');

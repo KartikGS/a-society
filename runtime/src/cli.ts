@@ -3,6 +3,8 @@ import { FlowOrchestrator, parseWorkflow } from './orchestrator.js';
 import { ToolTriggerEngine } from './triggers.js';
 import crypto from 'node:crypto';
 import type { FlowRun } from './types.js';
+import { runOrientSession } from './orient.js';
+import path from 'node:path';
 
 const orchestrator = new FlowOrchestrator();
 
@@ -108,6 +110,13 @@ if (command === 'start-flow') {
   resumeFlow(role, artifact, humanInput);
 } else if (command === 'flow-status') {
   flowStatus();
+} else if (command === 'orient') {
+  const [workspaceRoot, roleKey] = args.slice(1);
+  if (!workspaceRoot || !roleKey) {
+    console.error('Usage: orient <workspaceRoot> <roleKey>');
+    process.exit(1);
+  }
+  runOrientSession(path.resolve(workspaceRoot), roleKey);
 } else {
-  console.log('Available CLI commands: start-flow, resume-flow, flow-status');
+  console.log('Available CLI commands: start-flow, resume-flow, flow-status, orient');
 }
