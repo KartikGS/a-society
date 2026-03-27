@@ -14,6 +14,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 |---|---|---|
 | **Agents** | | |
 | `$A_SOCIETY_INITIALIZER` | `/a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
+| **Runtime** | | |
+| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Invocation reference for the A-Society runtime — entry points, CLI commands, error conventions |
 | **Tooling** | | |
 | `$A_SOCIETY_TOOLING_INVOCATION` | `/a-society/tooling/INVOCATION.md` | Invocation reference for all tooling components — quick start, entry points, and error conventions |
 | `$A_SOCIETY_TOOLING_SCAFFOLDING_SYSTEM` | `/a-society/tooling/src/scaffolding-system.ts` | Component 1: Scaffolding System — creates a-docs/ folder structure and stub files from the manifest |

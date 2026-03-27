@@ -19,6 +19,7 @@ Implement the runtime orchestration layer in TypeScript/Node.js, following the a
 The Runtime Developer **owns**:
 
 - All implementation choices within an approved design: library selection, internal code structure, test harness design, error message text, file naming within `runtime/`
+- `runtime/INVOCATION.md`: the invocation reference document for the runtime layer — created during the implementation phase and authored by the Developer. This is an implementation deliverable, not a Curator registration task. The Curator's role is to index the completed document in the appropriate registries, not to author it.
 - Raising deviations: when the approved design cannot be implemented as specified, the Developer surfaces this to the TA immediately and does not implement a workaround unilaterally
 
 The Runtime Developer does **NOT** own:

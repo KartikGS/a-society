@@ -62,6 +62,8 @@ The `owner-to-curator.md` artifact must contain all mandatory fields from `TEMPL
 
 At every session pause point where natural-language handoff prose is produced, the agent must also emit a machine-readable handoff block. The block follows the prose and is emitted in the same output pass.
 
+**`session_action` values:** The only valid values are `start_new` (begin a new session for the receiving role) and `resume` (continue an existing session). Any other value — including `start` — is malformed and will be rejected by the Handoff Interpreter. This constraint applies to all roles producing handoff blocks, including the Owner and Technical Architect.
+
 See `$INSTRUCTION_MACHINE_READABLE_HANDOFF` for the schema, field definitions, the conditional constraint on `prompt`, and a worked example.
 
 ---

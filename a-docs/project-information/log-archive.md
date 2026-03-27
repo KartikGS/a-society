@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[S][LIB][MAINT]` — **doc-maintenance-bundle** (2026-03-25): Nine changes to `general/` and `a-docs/` across Owner/Curator roles, merge assessment third criterion, Component 4 invocation updates, and session routing rules; framework update report v22.0.
 - `[S]` — **component4-synthesis-fixes** (2026-03-24): Two Component 4 gaps fixed — `createSynthesisPrompt` threads `recordFolderPath` and Scenario 5 integration test adds `synthesisRole` assertion.
 - `[M][LIB][MAINT]` — **structural-readiness-intake** (2026-03-23): Structural Readiness Assessment added as mandatory intake gate before complexity analysis; framework update report v21.0.
 - `[S][LIB][MAINT]` — **workflow-path-completeness** (2026-03-22): Two additive changes to Owner role files — `workflow.md` Phase 0 co-output obligation and predictable post-implementation steps path inclusion; framework update report v20.0.

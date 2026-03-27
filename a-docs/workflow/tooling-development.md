@@ -4,6 +4,7 @@ workflow:
   nodes:
     - id: owner-phase0-gate
       role: Owner
+      human-collaborative: "yes"
     - id: curator-phase0-docs
       role: Curator
     - id: developer-phases-1-2
@@ -12,16 +13,19 @@ workflow:
       role: Curator
     - id: owner-phase3-gate
       role: Owner
+      human-collaborative: "yes"
     - id: developer-phases-4-5-6
       role: Tooling Developer
     - id: ta-phase6-review
       role: Technical Architect
     - id: owner-phase6-gate
       role: Owner
+      human-collaborative: "yes"
     - id: curator-phase7
       role: Curator
     - id: owner-phase8-closure
       role: Owner
+      human-collaborative: "yes"
   edges:
     - from: owner-phase0-gate
       to: curator-phase0-docs

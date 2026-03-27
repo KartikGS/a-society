@@ -73,6 +73,8 @@ Implicit delegation — leaving the field underspecified and expecting the Devel
 
 **Parameter threading belongs in Interface Changes (§4), not Files Changed (§5).** When a new parameter on a public function must be threaded through to an internal call, specify the full threading path in §4 — not only in the §5 Files Changed table. The Developer reads §4 as the implementation specification; a threading requirement found only in §5 requires the Developer to infer a step that should be explicit. The §5 table is a coverage reference, not a substitute for interface specification.
 
+**"Binding" implementation requirements must specify execution, not just declaration.** When an advisory uses "binding" to describe a trigger rule, invocation requirement, or similar implementation constraint, the advisory must also state explicitly: "real in-process function calls, not stubs or comment placeholders." If "binding" means only that the trigger point is architecturally declared — not that the code must execute it — state that distinction explicitly. Ambiguity between "the rule is declared in the design" and "the rule must execute as a real function call" is a spec gap. It produces stub implementations correctly filed as "no deviation from the spec" — because the spec did not unambiguously require execution.
+
 ---
 
 ## Context Loading
@@ -89,6 +91,8 @@ Before beginning any session as the A-Society Technical Architect, read:
 Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
 
 **Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, index, vision, structure, architecture, principles. Ready as Technical Architect."* If you cannot confirm all six, do not proceed.
+
+**Integration review sessions:** When the Technical Architect is invoked for integration review (code inspection against the approved spec) rather than Phase 0 architecture design, the operative context differs. Load: the approved Phase 0 architecture design document (the binding specification being verified against) and the source files under review. The six documents listed above are appropriate for architecture design; integration review is forensic — the primary question is "does the implementation match the approved spec?" — and requires direct access to the spec and source. The six-document standard load is not required for integration review sessions.
 
 ---
 

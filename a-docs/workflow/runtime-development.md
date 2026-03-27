@@ -6,6 +6,7 @@ workflow:
       role: Technical Architect
     - id: owner-phase0-gate
       role: Owner
+      human-collaborative: "yes"
     - id: developer-implementation-phases
       role: Runtime Developer
     - id: developer-integration-validation
@@ -14,10 +15,12 @@ workflow:
       role: Technical Architect
     - id: owner-integration-gate
       role: Owner
+      human-collaborative: "yes"
     - id: curator-registration
       role: Curator
     - id: owner-forward-pass-closure
       role: Owner
+      human-collaborative: "yes"
   edges:
     - from: ta-phase0-design
       to: owner-phase0-gate

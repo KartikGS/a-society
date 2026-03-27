@@ -4,14 +4,17 @@ workflow:
   nodes:
     - id: owner-intake-briefing
       role: Owner
+      human-collaborative: "yes"
     - id: curator-proposal
       role: Curator
     - id: owner-review
       role: Owner
+      human-collaborative: "yes"
     - id: curator-implementation-registration
       role: Curator
     - id: owner-closure-acknowledgment
       role: Owner
+      human-collaborative: "yes"
   edges:
     - from: owner-intake-briefing
       to: curator-proposal
