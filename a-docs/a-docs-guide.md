@@ -158,6 +158,16 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `roles/runtime-developer.md` — `$A_SOCIETY_RUNTIME_DEVELOPER_ROLE`
+
+**Why it exists:** The Runtime Developer has a specialized implementation mandate for the programmatic runtime layer, distinct from the deterministic tooling components. Without this, runtime implementation merges with the Tooling Developer, blurring the clear boundary between A-Society's utility layer and its session orchestration capabilities.
+
+**What it owns:** The Developer's execution authority over the runtime layer, hard rules, context loading requirements, and escalation paths.
+
+**What breaks without it:** No defined behavioral contract for implementing A-Society's runtime layer.
+
+---
+
 ## `thinking/`
 
 ### `thinking/` — folder
@@ -207,6 +217,16 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** The tooling implementation workflow has no dedicated home. Role files for the Tooling Developer and Technical Architect reference `$A_SOCIETY_WORKFLOW_TOOLING_DEV` for session routing; without this file, those references are unresolvable. Component 4 (Backward Pass Orderer) cannot be correctly invoked for tooling flows without the YAML graph.
 
 **Do not consolidate with:** `workflow/framework-development.md` — same reasoning as above; different cadence, different role set. Do not consolidate with `a-docs/tooling/architecture-addendum.md` — that file retains structural constraints and the post-Phase-6 addition protocol; this file owns the executable workflow (phases, roles, session routing).
+
+---
+
+### `workflow/runtime-development.md` — `$A_SOCIETY_WORKFLOW_RUNTIME_DEV`
+
+**Why it exists:** Provides the structural process specifically for designing and building A-Society's runtime layer, enforcing a strict Phase 0 design gate that distinguishes it from general tooling components.
+
+**What it owns:** The workflow graph, Phase 0 design requirements, integration and registration phases, and session orchestration rules for runtime development.
+
+**What breaks without it:** The runtime layer would either be developed monolithically without review gates or improperly forced into a Tooling sub-process that wasn't scoped for stateful orchestration implementations.
 
 ---
 

@@ -22,6 +22,14 @@ This directory contains A-Society's permanent execution workflows. Each workflow
 
 ---
 
+### Runtime Development
+
+**Summary:** Designing and building A-Society's programmatic runtime orchestration layer — from Phase 0 TA architecture design through implementation, integration validation, registration, and closure.
+
+**File:** `$A_SOCIETY_WORKFLOW_RUNTIME_DEV`
+
+---
+
 ## Session Routing Rules
 
 These rules apply across all A-Society workflows. Each workflow's session model may add workflow-specific routing details; these rules govern the defaults.

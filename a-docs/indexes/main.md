@@ -97,3 +97,5 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_COMM_HANDOFF_PROTOCOL` | `a-society/a-docs/communication/coordination/handoff-protocol.md` | Status vocabulary, handoff requirements, clarification rules, pre-replacement checks |
 | `$A_SOCIETY_COMM_FEEDBACK_PROTOCOL` | `a-society/a-docs/communication/coordination/feedback-protocol.md` | What to do when a discrepancy or blocker is discovered in prior work |
 | `$A_SOCIETY_COMM_CONFLICT_RESOLUTION` | `a-society/a-docs/communication/coordination/conflict-resolution.md` | Authority matrix, escalation path, human escalation threshold |
+| `$A_SOCIETY_RUNTIME_DEVELOPER_ROLE` | `a-society/a-docs/roles/runtime-developer.md` | A-Society Runtime Developer Agent role — implementation scope, rules, and escalation |
+| `$A_SOCIETY_WORKFLOW_RUNTIME_DEV` | `a-society/a-docs/workflow/runtime-development.md` | A-Society runtime development workflow — Phase 0 architecture design gate, placeholder implementation phases, session model, and YAML graph for the programmatic runtime implementation loop |
