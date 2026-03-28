@@ -1,3 +1,7 @@
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { select } from '@inquirer/prompts';
