@@ -50,66 +50,60 @@ export class AnthropicProvider implements LLMProvider {
         throw new Error('Unknown message type');
       });
 
-      if (tools && tools.length > 0) {
-        const nativeTools: Anthropic.Tool[] = tools.map((def: any) => ({
-          name: def.name,
-          description: def.description,
-          input_schema: def.inputSchema
-        }));
+      const nativeTools = tools && tools.length > 0
+        ? tools.map((def: any) => ({
+            name: def.name,
+            description: def.description,
+            input_schema: def.inputSchema
+          }))
+        : undefined;
 
-        const response = await this.client.messages.create({
-          model: this.model,
-          max_tokens: 8192,
-          system: systemPrompt,
-          messages: nativeMessages,
-          tools: nativeTools,
-          stream: false
-        });
+      const stream = await this.client.messages.create({
+        model: this.model,
+        max_tokens: 8192,
+        system: systemPrompt,
+        messages: nativeMessages,
+        ...(nativeTools ? { tools: nativeTools } : {}),
+        stream: true
+      });
 
-        if (response.stop_reason === 'tool_use') {
-          const calls = response.content.filter((c: any) => c.type === 'tool_use').map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            input: c.input as Record<string, unknown>
-          }));
-          const textBlock: any = response.content.find((c: any) => c.type === 'text');
-          const text = textBlock ? textBlock.text : undefined;
-          return {
-            type: 'tool_calls',
-            calls,
-            continuationMessages: [{ role: 'assistant_tool_calls', calls, text }]
-          };
-        }
+      let fullText = '';
+      const toolUseBlocks = new Map<number, { id: string; name: string; inputJson: string }>();
 
-        if (response.stop_reason === 'end_turn') {
-          const textBlock: any = response.content.find((c: any) => c.type === 'text');
-          const text = textBlock ? textBlock.text : '';
-          process.stdout.write(text);
-          return { type: 'text', text };
-        }
-
-        throw new LLMGatewayError('PROVIDER_MALFORMED', `Unexpected stop_reason from Anthropic provider: ${response.stop_reason}`);
-      } else {
-        const stream = await this.client.messages.create({
-          model: this.model,
-          max_tokens: 8192,
-          system: systemPrompt,
-          messages: nativeMessages,
-          stream: true
-        });
-
-        let fullResponse = '';
-
-        for await (const chunk of stream) {
-          if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-            process.stdout.write(chunk.delta.text);
-            fullResponse += chunk.delta.text;
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_start') {
+          const block = chunk.content_block as any;
+          if (block.type === 'tool_use') {
+            toolUseBlocks.set(chunk.index, { id: block.id, name: block.name, inputJson: '' });
+          }
+        } else if (chunk.type === 'content_block_delta') {
+          const delta = chunk.delta as any;
+          if (delta.type === 'text_delta') {
+            process.stdout.write(delta.text);
+            fullText += delta.text;
+          } else if (delta.type === 'input_json_delta') {
+            const block = toolUseBlocks.get(chunk.index);
+            if (block) block.inputJson += delta.partial_json;
           }
         }
-        
-        process.stdout.write('\n'); // newline after stream finishes
-        return { type: 'text', text: fullResponse };
       }
+
+      if (fullText) process.stdout.write('\n');
+
+      if (toolUseBlocks.size > 0) {
+        const calls = Array.from(toolUseBlocks.values()).map(block => ({
+          id: block.id,
+          name: block.name,
+          input: (() => { try { return JSON.parse(block.inputJson) as Record<string, unknown>; } catch { return {} as Record<string, unknown>; } })()
+        }));
+        return {
+          type: 'tool_calls',
+          calls,
+          continuationMessages: [{ role: 'assistant_tool_calls', calls, text: fullText || undefined }]
+        };
+      }
+
+      return { type: 'text', text: fullText };
     } catch (err: any) {
       if (err instanceof LLMGatewayError) throw err;
       if (err instanceof Anthropic.AuthenticationError) {

@@ -48,70 +48,66 @@ export class OpenAICompatibleProvider implements LLMProvider {
         })
       ];
 
-      if (tools && tools.length > 0) {
-        const nativeTools: OpenAI.Chat.ChatCompletionTool[] = tools.map((def: any) => ({
-          type: 'function',
-          function: {
-            name: def.name,
-            description: def.description,
-            parameters: def.inputSchema
-          }
-        }));
-
-        const response = await this.client.chat.completions.create({
-          model: this.model,
-          messages: openAIMessages,
-          tools: nativeTools,
-          stream: false,
-          max_tokens: 8192
-        });
-
-        if (!response.choices || response.choices.length === 0 || !response.choices[0].message) {
-          throw new LLMGatewayError('PROVIDER_MALFORMED', 'OpenAI-compatible provider returned empty choices.');
-        }
-
-        const message = response.choices[0].message;
-
-        if (message.tool_calls && message.tool_calls.length > 0) {
-          const calls = message.tool_calls.map(c => {
-            let input: Record<string, unknown>;
-            let parseError: string | undefined;
-            try {
-              input = JSON.parse(c.function.arguments);
-            } catch (e) {
-              input = {};
-              parseError = c.function.arguments;
+      const nativeTools = tools && tools.length > 0
+        ? tools.map((def: any) => ({
+            type: 'function' as const,
+            function: {
+              name: def.name,
+              description: def.description,
+              parameters: def.inputSchema
             }
-            return { id: c.id, name: c.function.name, input, parseError };
-          });
-          const text = message.content || undefined;
-          return { type: 'tool_calls', calls, continuationMessages: [{ role: 'assistant_tool_calls', calls, text }] };
+          }))
+        : undefined;
+
+      const stream = await this.client.chat.completions.create({
+        model: this.model,
+        messages: openAIMessages,
+        stream: true,
+        max_tokens: 8192,
+        ...(nativeTools ? { tools: nativeTools } : {})
+      });
+
+      let fullText = '';
+      const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta;
+        if (!delta) continue;
+        if (delta.content) {
+          process.stdout.write(delta.content);
+          fullText += delta.content;
         }
-
-        const textResult = message.content ?? '';
-        process.stdout.write(textResult);
-        return { type: 'text', text: textResult };
-      } else {
-        const stream = await this.client.chat.completions.create({
-          model: this.model,
-          messages: openAIMessages,
-          stream: true,
-          max_tokens: 8192
-        });
-
-        let fullResponse = '';
-
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content ?? '';
-          if (text) {
-            process.stdout.write(text);
-            fullResponse += text;
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            if (!toolCallAcc.has(tc.index)) {
+              toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
+            }
+            const acc = toolCallAcc.get(tc.index)!;
+            if (tc.id) acc.id = tc.id;
+            if (tc.function?.name) acc.name = acc.name || tc.function.name;
+            if (tc.function?.arguments) acc.args += tc.function.arguments;
           }
         }
-
-        process.stdout.write('\n');
-        return { type: 'text', text: fullResponse };
       }
+
+      if (fullText) process.stdout.write('\n');
+
+      if (toolCallAcc.size > 0) {
+        const calls = Array.from(toolCallAcc.values()).map(acc => {
+          let input: Record<string, unknown>;
+          let parseError: string | undefined;
+          try { input = JSON.parse(acc.args); }
+          catch { input = {}; parseError = acc.args; }
+          return { id: acc.id, name: acc.name, input, parseError };
+        });
+        return {
+          type: 'tool_calls',
+          calls,
+          continuationMessages: [{ role: 'assistant_tool_calls', calls, text: fullText || undefined }]
+        };
+      }
+
+      return { type: 'text', text: fullText };
 
     } catch (err: any) {
       if (err instanceof LLMGatewayError) throw err;

@@ -44,14 +44,19 @@ export class LLMGateway {
       throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
     }
 
-    const MAX_TOOL_ROUNDS = 10;
+    const MAX_TOOL_ROUNDS = 50;
     let messages: RuntimeMessageParam[] = [...messageHistory];
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const result = await this.provider.executeTurn(systemPrompt, messages, this.tools);
       if (result.type === 'text') {
         return result.text;
       }
-      
+
+      for (const call of result.calls) {
+        const pathArg = call.input?.path as string | undefined;
+        process.stdout.write(`[${call.name}${pathArg ? ': ' + pathArg : ''}]\n`);
+      }
+
       const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
         result.calls.map(async (call) => {
           let content: string, isError: boolean;
@@ -68,6 +73,6 @@ export class LLMGateway {
       );
       messages = [...messages, ...result.continuationMessages, ...toolResultMessages];
     }
-    throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (10). The session has been aborted.');
+    throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (50). The session has been aborted.');
   }
 }
