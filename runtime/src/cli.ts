@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { SessionStore } from './store.js';
 import { FlowOrchestrator, parseWorkflow } from './orchestrator.js';
 import { ToolTriggerEngine } from './triggers.js';

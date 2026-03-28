@@ -44,8 +44,9 @@ export class ToolTriggerEngine {
 
       } else if (event === 'TERMINAL_FORWARD_PASS') {
         triggerRecord.toolComponent = 'Backward Pass Orderer';
-        orderWithPromptsFromFile(flowRun.recordFolderPath, 'Curator');
-        triggerRecord.resultSummary = `Component 4 execution success: Computed backward traversal order`;
+        const synthesisRole = process.env.SYNTHESIS_ROLE ?? 'Curator';
+        orderWithPromptsFromFile(flowRun.recordFolderPath, synthesisRole);
+        triggerRecord.resultSummary = `Component 4 execution success: Computed backward traversal order (synthesisRole=${synthesisRole})`;
         triggerRecord.success = true;
 
       } else if (event === 'INITIALIZATION') {

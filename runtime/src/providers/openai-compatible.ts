@@ -114,6 +114,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       }
 
     } catch (err: any) {
+      if (err instanceof LLMGatewayError) throw err;
       if (err instanceof OpenAI.AuthenticationError) {
         throw new LLMGatewayError('AUTH_ERROR', 'Authentication failed: check OPENAI_COMPAT_API_KEY');
       }

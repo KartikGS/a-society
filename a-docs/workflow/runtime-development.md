@@ -88,14 +88,14 @@ Implementation phases are defined by the Phase 0 architecture document output. N
 Analogous to Tooling Dev Phase 6.
 
 - **Runtime Developer:** Tests the composed runtime layer end-to-end.
-- **TA review:** Assesses the integrated implementation against the approved architecture.
-- **Owner gate:** Owner explicitly signs off on the integrated product.
+- **TA review:** Assesses the integrated implementation against the approved architecture. When `$A_SOCIETY_RUNTIME_INVOCATION` (or an equivalent operator-facing reference) is modified in-flow, the TA also verifies that the documented commands, parameters, and environment-variable names match the implementation.
+- **Owner gate:** Owner explicitly signs off on the integrated product and verifies that any in-flow changes to `$A_SOCIETY_RUNTIME_INVOCATION` accurately reflect the implemented runtime surface before approval.
 
 ---
 
 ### Registration Phase
 
-**Curator:** Registers the `runtime/` public entry point in `$A_SOCIETY_PUBLIC_INDEX` — specifically `runtime/INVOCATION.md`, the externally-accessible interface. `runtime/src/` files are implementation details and are not individually indexed. Registers `a-docs/` artifacts in `$A_SOCIETY_INDEX`, and updates `$A_SOCIETY_AGENT_DOCS_GUIDE`. Registration does not include writing the project log's `Recent Focus` entry for the closing flow; that summary is written by the Owner during Forward Pass Closure.
+**Curator:** Registers the runtime public entry point in `$A_SOCIETY_PUBLIC_INDEX` — specifically `$A_SOCIETY_RUNTIME_INVOCATION`, the externally accessible interface. `runtime/src/` files are implementation details and are not individually indexed. Registers `a-docs/` artifacts in `$A_SOCIETY_INDEX`, updates `$A_SOCIETY_AGENT_DOCS_GUIDE`, and verifies that implemented CLI and environment-surface changes are reflected accurately in `$A_SOCIETY_RUNTIME_INVOCATION` before closing registration. Registration does not include writing the project log's `Recent Focus` entry for the closing flow; that summary is written by the Owner during Forward Pass Closure.
 
 ---
 

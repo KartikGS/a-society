@@ -11,16 +11,47 @@ The runtime is implemented as a TypeScript application operating within a local 
 
 ## Required Environment
 
-The runtime LLM Gateway relies on Anthropic. You must set your API key in the environment before starting or resuming flows:
+The runtime LLM Gateway relies on provider-specific credentials. These can be set as standard environment variables or persisted in a `runtime/.env` file.
 
-- `ANTHROPIC_API_KEY`: Required for model provider API calls.
+### Provider Configuration
+
+| Variable | Description | Default |
+|---|---|---|
+| `LLM_PROVIDER` | Provider selector (`anthropic` | `openai-compatible`) | `anthropic` |
+| `ANTHROPIC_API_KEY` | Required when `LLM_PROVIDER=anthropic`. | - |
+| `ANTHROPIC_MODEL` | Optional model override for Anthropic. | `claude-3-5-sonnet-20241022` |
+| `OPENAI_COMPAT_BASE_URL` | Required when `LLM_PROVIDER=openai-compatible`. | - |
+| `OPENAI_COMPAT_API_KEY` | Optional API key for OpenAI-compatible provider. | - |
+| `OPENAI_COMPAT_MODEL` | Optional model name for OpenAI-compatible provider. | `mistralai/Mistral-7B-Instruct-v0.3` |
+| `SYNTHESIS_ROLE` | Optional; synthesis role for Backward Pass Orderer. | `Curator` |
+
+### .env File Usage
+
+The runtime automatically loads variables from `a-society/runtime/.env` at startup. 
+1. Copy `runtime/.env.sample` to `runtime/.env`.
+2. Populate with your API keys and configuration.
+3. Note: `.env` is gitignored and must never be committed to the repository.
+
+#### Example: Anthropic (Default)
+```bash
+ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+#### Example: OpenAI-Compatible (Gemini via Vertex/AI Studio)
+```bash
+LLM_PROVIDER=openai-compatible
+OPENAI_COMPAT_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+OPENAI_COMPAT_API_KEY=AIza...
+OPENAI_COMPAT_MODEL=gemini-1.5-pro
+```
 
 ## Commands
 
 ### `start-flow`
 Creates a new `FlowRun` and begins automated orchestration.
-- **Usage:** `tsx src/cli.ts start-flow <workflowDocumentPath> <recordFolderPath> <startingRole> <startingArtifactPath>`
+- **Usage:** `tsx src/cli.ts start-flow <projectRoot> <workflowDocumentPath> <recordFolderPath> <startingRole> <startingArtifactPath>`
 - **Arguments:**
+  - `<projectRoot>`: The root directory of the project being orchestrated.
   - `<workflowDocumentPath>`: Path to the permanent workflow document containing the validated YAML graph.
   - `<recordFolderPath>`: Path to the current active flow's record folder.
   - `<startingRole>`: The role assigned to the first node in the flow.
@@ -28,15 +59,23 @@ Creates a new `FlowRun` and begins automated orchestration.
 
 ### `resume-flow`
 Resumes a paused or retryable flow from its last durable checkpoint.
-- **Usage:** `tsx src/cli.ts resume-flow <recordFolderPath> [humanInput]`
+- **Usage:** `tsx src/cli.ts resume-flow <roleKey> <activeArtifactPath> [humanInput]`
 - **Arguments:**
-  - `<recordFolderPath>`: Path to the previously initialized active flow.
+  - `<roleKey>`: The key identifying the role to resume as (e.g. `Owner`, `Curator`).
+  - `<activeArtifactPath>`: Path to the artifact to hand to the resuming role.
   - `[humanInput]`: Optional free-text string. Required when the flow is paused at an `awaiting_human` state originating from a `human-collaborative` workflow node.
 
 ### `flow-status`
-Inspects the active conditions of a runtime-managed flow.
-- **Usage:** `tsx src/cli.ts flow-status <recordFolderPath>`
+Inspects the active conditions of the last runtime-managed flow.
+- **Usage:** `tsx src/cli.ts flow-status`
 - **Output:** Returns the current node, active role sessions, last executed tool trigger, and the specific reason for any pause or failure.
+
+### `orient`
+Loads a specific role context for an interactive session with full file tool sandboxing.
+- **Usage:** `tsx src/cli.ts orient <workspaceRoot> <roleKey>`
+- **Arguments:**
+  - `<workspaceRoot>`: Absolute path to the workspace root for file tool sandboxing checking.
+  - `<roleKey>`: The key identifying the role context to load (resolved via internal role registry).
 
 ## Session State
 

@@ -111,6 +111,7 @@ export class AnthropicProvider implements LLMProvider {
         return { type: 'text', text: fullResponse };
       }
     } catch (err: any) {
+      if (err instanceof LLMGatewayError) throw err;
       if (err instanceof Anthropic.AuthenticationError) {
         throw new LLMGatewayError('AUTH_ERROR', 'Authentication failed check ANTHROPIC_API_KEY');
       }

@@ -44,6 +44,14 @@ The Runtime Developer does **NOT** own:
 
 ---
 
+## Implementation Discipline
+
+**Provider adapters must preserve already-classified gateway errors.** If a provider-level catch block receives an `LLMGatewayError` produced earlier in the call path, re-throw it unchanged before applying SDK-specific remapping. Do not re-wrap a classified gateway error into `UNKNOWN` or another provider-specific code.
+
+**One-shot diagnostic scripts do not belong at the runtime root.** Temporary diagnostics created to probe implementation behavior must live in a dedicated diagnostics subdirectory under the runtime layer, not alongside the layer's durable entry points. Remove them before phase completion unless the approved design promotes them into standing test infrastructure.
+
+---
+
 ## Context Loading
 
 Before beginning any session as the A-Society Runtime Developer, read:
