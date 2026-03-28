@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[L][ADR]` — **runtime-orchestrator-mvp** (2026-03-27): First implementation of A-Society's programmatic runtime layer — seven runtime components (Operator Interface, Flow Orchestrator, Context Injection Service, Session Store, LLM Gateway, Handoff Interpreter, Tool Trigger Engine) replacing the human's manual session-switching loop; `human-collaborative` added to Owner gate nodes in all three permanent workflows.
 - `[S][ADR]` — **runtime-layer-vision** (2026-03-26): Vision and architecture updated to acknowledge the runtime layer as A-Society's fourth work product layer — session management, context injection, and handoff routing; runtime/ added to architecture and Layer Isolation invariant.
 - `[M][LIB][ADR]` — **machine-readable-handoff** (2026-03-25): New `general/` instruction defining a machine-readable YAML handoff block emitted at every session pause point; handoff protocol updated; framework update report v22.1 (Recommended × 1).
 - `[S][LIB][MAINT]` — **doc-maintenance-bundle** (2026-03-25): Nine changes to `general/` and `a-docs/` across Owner/Curator roles, merge assessment third criterion, Component 4 invocation updates, and session routing rules; framework update report v22.0.
