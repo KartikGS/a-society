@@ -92,6 +92,12 @@ files:
     scaffold: copy
     source_path: general/roles/curator.md
 
+  - path: roles/technical-architect.md
+    description: "Technical Architect (advisory-producing) role — advisory standards, extension-before-bypass discipline, explicit failure states for external input; ready-made template for any role that scopes and specifies work for implementing roles"
+    required: false
+    scaffold: copy
+    source_path: general/roles/technical-architect.md
+
   # ── Workflow ──────────────────────────────────────────────────────────────────
 
   - path: workflow/main.md

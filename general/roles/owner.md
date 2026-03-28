@@ -87,6 +87,7 @@ Once the user answers, the Owner:
 - maps the need to the appropriate workflow
 - creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written; when the project uses records with backward pass tooling, also create `workflow.md` alongside `01-owner-workflow-plan.md` at this step — it is a required Phase 0 co-output, not a post-intake artifact
 - When the flow has a known post-implementation publication or registration step (e.g., publishing an update report, incrementing a version record), include that step in the path at intake. These steps are predictable at the time the plan is written and must not be left as implied appendages — they must appear explicitly so the backward pass traversal order reflects the full flow.
+- When that registration step follows naturally from an existing workflow phase — for example, when a library publication occurs during Implementation and a version acknowledgment occurs at Forward Pass Closure — represent it within those phases in `workflow.md` rather than by adding new path nodes. A new path node for a sub-step within an established phase produces a `workflow.md` that does not match the flow's actual structure and corrupts backward pass ordering.
 - **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the user which session to use next and what artifact or context to point the downstream role at
 - **Tier 1 flows:** implements directly and proceeds to backward pass within Session A
 
@@ -104,6 +105,8 @@ When a change is fully derivable — no ambiguity about scope, target, or implem
 
 **Ordered-list insertions:** When a brief directs the downstream role to add an item to a numbered or ordered list, specify the insertion position — not just the section name. Acceptable forms: "after item N," "before item N," or "as the new item N." A brief that names only the section leaves the receiving role to infer position, which creates ambiguity and can require a correction round.
 
+**Shared list constructs:** When adding an item to a criteria or conditions list that appears across multiple documents (e.g., an Owner review checklist instantiated in both a project-specific role and a general template), enumerate all documents containing that list before finalizing scope. A brief that scopes only one instance while a parallel list in another document remains unupdated produces a sync correction round that could have been avoided at intake.
+
 **Prose insertions:** When a brief directs the downstream role to insert text into existing prose — rather than into a numbered or bulleted list — provide the exact target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
 
 **Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
@@ -118,9 +121,29 @@ When proposing an output-format change, also assess whether the change makes any
 
 This prohibition applies to briefs and to the main approval rationale — those two contexts only.
 
+**Library flows and update report drafts:** When a flow modifies content in the project's shared distributable layer and is likely to qualify for a framework update report, the brief must explicitly instruct the downstream role to include the update report draft as a named section in the proposal submission. When the impact classification cannot yet be determined at brief-writing time, instruct the downstream role to include the draft with classification fields marked `TBD`, to be resolved post-implementation by consulting the project's update report protocol. This prevents an additional submission cycle just to add the update report — the draft and the content proposal are reviewed together in Phase 2.
+
 **Behavioral property consistency:** When specifying behavioral properties (ordering, mutability, timing constraints), verify that they are internally consistent before sending. A brief that seeds contradictory properties will have those contradictions reproduced downstream.
 
 Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the downstream role to consult the update report protocol after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
+
+---
+
+## TA Advisory Review
+
+When reviewing a Technical Architect advisory (or advisory from any equivalent role that produces implementation specifications), apply two distinct criteria: **design correctness** and **spec completeness**. Design correctness is not sufficient — the advisory must also be complete enough that the implementing role can proceed from the interface changes section alone.
+
+**Interface completeness check.** For every parameter, interface, or behavioral change described in the advisory, verify that the full implementation path is specified. If a new parameter on a public function must be threaded through to an internal call, that threading path must appear explicitly in the advisory — not only in a higher-level summary. An interface change that requires the implementing role to independently infer threading or integration is an incomplete spec.
+
+**Data-extraction type coverage check.** For every type or structure that represents data parsed from external input (model output, API responses, structured documents), verify that the type includes a mechanism to represent parse failure explicitly. A type that specifies only the happy-path fields is structurally incomplete. Also verify that every internal execution path — including no-op, fallback, and error paths — has its non-happy-path behavior explicitly specified in the advisory's per-file requirements, not left as an implied passthrough.
+
+---
+
+## Tooling Invocation Discipline
+
+When invoking project tooling during a flow — at intake (e.g., plan artifact validation), at forward pass closure (e.g., backward pass orderer), or at any other step — use the invocation documented in the project's tooling reference. Do not reconstruct the call from source code analysis or memory. Required argument order, return format, and entry point names are authoritative in the documented invocation; source code may differ from what published documentation describes, especially when a component has been updated since initial implementation.
+
+[CUSTOMIZE: reference the project's tooling invocation document here, e.g., `$[PROJECT]_TOOLING_INVOCATION`.]
 
 ---
 

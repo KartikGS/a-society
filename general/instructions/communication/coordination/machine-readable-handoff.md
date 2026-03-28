@@ -57,6 +57,8 @@ prompt:          <string|null>  # Full copyable session-start prompt;
 
 **`artifact_path`** — The primary artifact the receiving role must read at session start. Relative to the repository root, consistent with path conventions used in role Handoff Output sections. Must be a non-empty string.
 
+For phase-closure handoffs where the receiving role verifies completion rather than reads a new proposal or decision — for example, a Curator returning to the Owner after implementation and registration are complete — `artifact_path` should point to the primary artifact the receiving role needs to confirm closure: typically the final submission artifact in the record folder (e.g., the registration confirmation or implementation summary). If no single artifact represents the completion state, point to the record folder's most recent sequenced artifact.
+
 **`prompt`** — The session-start prompt the human copies to open a new session.
 - When `session_action` is `start_new`: must be a non-null string containing the full prompt.
 - When `session_action` is `resume`: must be `null`. Do not use an empty string — use explicit `null`.
@@ -111,6 +113,29 @@ session_action: start_new
 artifact_path: [project-name]/a-docs/records/[record-folder]/02-owner-to-curator-brief.md
 prompt: "You are a Curator agent for [Project Name]. Read [project-name]/a-docs/agents.md."
 ```
+
+---
+
+**Phase-closure case (receiving role verifies completion):**
+
+---
+
+Resume the existing Owner session (Session A).
+
+Next action: Verify implementation and registration complete; proceed to forward pass closure
+Read: `[project-name]/a-docs/records/[record-folder]/[NN]-curator-to-owner.md`
+Expected response: Forward pass closure message with backward pass initiation
+
+```handoff
+role: Owner
+session_action: resume
+artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-curator-to-owner.md
+prompt: null
+```
+
+---
+
+**Synthesis and flow-closure handoffs:** When the synthesis role completes backward pass synthesis, the flow closes unconditionally — no further handoff block is required for the current flow. If synthesis produces follow-up items that initiate a new flow, those are filed as new trigger inputs rather than continued within the current flow's handoff chain. Synthesis completion is the terminal event; there is no receiving role to hand off to within the current flow.
 
 ---
 

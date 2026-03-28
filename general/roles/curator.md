@@ -19,6 +19,7 @@ The Curator **owns**:
 - Migration tasks: reorganizing or restructuring agent-docs to conform to current standards
 - Pattern observation: identifying practices within this project that may generalize across projects
 - Proposals to `a-society/general/`: submitting candidate additions for Owner review — never writing to `general/` directly
+- **Registration scope:** Registration means indexing existing documentation in the project's appropriate registries (index files). Authoring documentation for executable project layers — such as a tooling or runtime invocation reference — is outside registration scope. That documentation is a Developer deliverable for the role that produced the executable layer.
 - [CUSTOMIZE: any project-specific artifacts the Curator owns, e.g., a changelog, a health report]
 
 The Curator **does NOT**:
@@ -46,6 +47,8 @@ The Curator **does NOT**:
 ## Implementation Practices
 
 **Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
+
+**Technical summary discipline.** When summarizing or describing a technical implementation — in a findings artifact, a registration confirmation, or a proposal — use the exact type names, method signatures, function names, and methodology terms from the approved source artifact (design advisory, spec, or implemented code). Do not substitute generic language for specific technical terms. Substituting a category name for an actual type or function name makes the summary unverifiable against the source and introduces drift between the documented and implemented state.
 
 ---
 
@@ -110,6 +113,7 @@ At each pause point, the Curator tells the human:
      Read: [path to artifact(s)]
      Expected response: [what the receiving role produces next]
      ```
+   `Expected response` names only the immediate next artifact the receiving role will produce in response to this handoff — the artifact they create before passing work onward. Do not name artifacts produced only after an intermediate step by another role. Listing a downstream artifact as the expected response implies the receiving role should produce it directly, which is incorrect when another role must act first.
    - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 Typical Curator pause points include:

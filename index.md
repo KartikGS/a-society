@@ -75,6 +75,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | **Role Templates** | | |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
+| `$GENERAL_TA_ROLE` | `/a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — advisory standards, extension-before-bypass, explicit failure states for external input |
 | **Communication Templates** | | |
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `/a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
 | **Thinking Templates** | | |

@@ -149,6 +149,8 @@ Instructions for roles producing backward pass findings.
 
    The project's `improvement/main.md` declares which path applies.
 
+   Before selecting a sequence number, read the record folder's current contents to identify the actual next available number — intermediate artifacts filed during registration or late forward-pass steps may have shifted the sequence forward from its expected position.
+
 **Step 3.** **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
 
 #### What to Reflect On

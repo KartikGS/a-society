@@ -17,7 +17,8 @@ export const roleContextRegistry: Record<string, RoleContextEntry> = {
       '$A_SOCIETY_INDEX',
       '$A_SOCIETY_VISION',
       '$A_SOCIETY_STRUCTURE',
-      '$A_SOCIETY_OWNER_ROLE'
+      '$A_SOCIETY_OWNER_ROLE',
+      '$A_SOCIETY_LOG'
     ]
   },
   'a-society__Curator': {

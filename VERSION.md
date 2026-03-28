@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v23.0
+**Version:** v23.1
 
 ---
 
@@ -63,3 +63,4 @@ This scheme aligns directly with the impact classification on framework update r
 | v22.0 | 2026-03-25 | 2026-03-25-doc-maintenance-bundle.md — Pre-handoff workflow.md verification step added to Curator role template (Breaking); concurrent-workflow routing rule added to Owner role template (Breaking); third merge assessment criterion added to log instruction (Breaking); prose insertions guidance added to Owner role template (Recommended); mandate sentences removed from general improvement template Tooling paragraph (Recommended) |
 | v22.1 | 2026-03-25 | 2026-03-25-machine-readable-handoff.md — Machine-readable handoff block instruction added to general library; four-field YAML schema (`role`, `session_action`, `artifact_path`, `prompt`) for agent pause-point output (Recommended) |
 | v23.0 | 2026-03-28 | 2026-03-28-improvement-synthesis-third-criterion.md — Third merge criterion added to Synthesis Phase merge assessment in general improvement template (Breaking) |
+| v23.1 | 2026-03-28 | 2026-03-28-general-doc-bundle.md — Role template quality bundle: backward pass sequence filing, Owner/Curator guidance quality (9 changes), records naming distinction, machine-readable handoff phase-closure semantics, TA role template added, Developer completion/integration-test requirements (all Recommended/Optional) |

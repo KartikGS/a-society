@@ -43,6 +43,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
+| `$GENERAL_TA_ROLE` | `a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — advisory standards, extension-before-bypass, explicit failure states for external input |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |

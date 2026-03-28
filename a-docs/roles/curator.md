@@ -70,6 +70,8 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 **Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
 
+**Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
+
 **Implementation stage — re-read before editing.** Before constructing the `old_string` for any Edit call, re-read the relevant section of the target file to obtain verbatim source text. Brief descriptions describe semantic intent, not verbatim source; relying on them for `old_string` construction causes match failures.
 
 **Implementation stage — verbatim retrieval for technical summaries.** When summarizing technical implementations in registration artifacts or other maintenance documentation, use the exact type names, method signatures, and methodology terms from the approved design or implementation artifacts. Do not substitute generic industry terms for project-specific names.

@@ -131,7 +131,7 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 **Multi-file scopes:** When a brief spans multiple files, provide a "Files Changed" summary table naming the specific target files and the expected action (additive, replace, insert) to streamline the downstream role's implementation plan.
 
-**Prose insertions:** When a brief directs a downstream role to insert text into existing prose, provide the exact target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
+**Prose insertions:** When a brief directs a downstream role to insert text into existing prose, provide the exact immediately adjacent target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." If the insertion is bounded from both sides, name the immediately adjacent clause on each side — not a nearby landmark elsewhere in the section. A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
 
 **Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
 
@@ -154,6 +154,14 @@ This prohibition applies to briefs and to the main approval rationale — those 
 Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the Curator to consult `$A_SOCIETY_UPDATES_PROTOCOL` after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
 **Tooling dev flows: cross-check Phase 7 obligations when authorizing Curator scope.** When writing a Curator authorization for a tooling development flow, do not derive scope solely from the TA advisory's §5 (Files Changed). Phase 7 of the tooling dev workflow carries standing Curator obligations — including update report assessment (`$A_SOCIETY_UPDATES_PROTOCOL`) and index registration — that apply regardless of what the TA brief scoped. Cross-check the Phase 7 obligations explicitly against the authorization list before finalizing the brief.
+
+---
+
+## Constraint-Writing Quality
+
+When a decision artifact or review constraint directs downstream implementation checks, write the constraint with the same precision required of briefs. Constraint language should be mechanically followable by the receiving role without needing pattern inference.
+
+**Registration scope must be file-based.** When directing index registration or verification, scope the instruction by the newly created or modified files, not by their parent directory, unless the directory boundary is itself the point of the constraint. "Verify whether `$A_SOCIETY_INDEX` needs updating for any newly created or modified files" is mechanically actionable; a location-based qualifier can accidentally exclude the relevant file.
 
 ---
 
