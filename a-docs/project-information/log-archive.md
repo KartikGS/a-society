@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[S][ADR]` — **runtime-layer-vision** (2026-03-26): Vision and architecture updated to acknowledge the runtime layer as A-Society's fourth work product layer — session management, context injection, and handoff routing; runtime/ added to architecture and Layer Isolation invariant.
 - `[M][LIB][ADR]` — **machine-readable-handoff** (2026-03-25): New `general/` instruction defining a machine-readable YAML handoff block emitted at every session pause point; handoff protocol updated; framework update report v22.1 (Recommended × 1).
 - `[S][LIB][MAINT]` — **doc-maintenance-bundle** (2026-03-25): Nine changes to `general/` and `a-docs/` across Owner/Curator roles, merge assessment third criterion, Component 4 invocation updates, and session routing rules; framework update report v22.0.
 - `[S]` — **component4-synthesis-fixes** (2026-03-24): Two Component 4 gaps fixed — `createSynthesisPrompt` threads `recordFolderPath` and Scenario 5 integration test adds `synthesisRole` assertion.

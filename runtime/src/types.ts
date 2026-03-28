@@ -44,3 +44,19 @@ export interface OrientSession {
   roleKey: string;
   startedAt: string;
 }
+
+export interface RuntimeMessageParam {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface LLMProvider {
+  executeTurn(systemPrompt: string, messages: RuntimeMessageParam[]): Promise<string>;
+}
+
+export class LLMGatewayError extends Error {
+  constructor(public readonly type: 'AUTH_ERROR' | 'RATE_LIMIT' | 'PROVIDER_MALFORMED' | 'UNKNOWN', message: string) {
+    super(message);
+    this.name = 'LLMGatewayError';
+  }
+}

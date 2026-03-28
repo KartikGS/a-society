@@ -2,7 +2,7 @@ import readline from 'node:readline';
 import crypto from 'node:crypto';
 import type { OrientSession } from './types.js';
 import { ContextInjectionService } from './injection.js';
-import { LLMGateway, type MessageParam } from './llm.js';
+import { LLMGateway, type RuntimeMessageParam } from './llm.js';
 import { roleContextRegistry } from './registry.js';
 
 export async function runOrientSession(workspaceRoot: string, roleKey: string) {
@@ -29,8 +29,8 @@ export async function runOrientSession(workspaceRoot: string, roleKey: string) {
   const llm = new LLMGateway();
   const systemPrompt = bundleContent;
 
-  const history: MessageParam[] = [];
-  const initialUserMsg: MessageParam = { 
+  const history: RuntimeMessageParam[] = [];
+  const initialUserMsg: RuntimeMessageParam = { 
     role: 'user', 
     content: "A new orient session has started. Greet the user and await their direction." 
   };

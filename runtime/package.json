@@ -16,7 +16,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
     "@inquirer/prompts": "^4.0.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "openai": "^4.0.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.0",

@@ -81,6 +81,10 @@ Implicit delegation — leaving the field underspecified and expecting the Devel
 
 **Before proposing new infrastructure or a bypass, enumerate explicitly why the existing path cannot be extended.** When designing a component that touches existing infrastructure, evaluate the extension path before proposing a bypass or parallel implementation. Produce an explicit enumeration: "The existing path cannot be extended because [specific obstacle]." If the enumeration yields a single resolvable obstacle (a hardcoded value, a missing parameter, a configuration gap), the conclusion is "extend the existing path" — not "bypass it." Skipping this enumeration and defaulting to new infrastructure produces unnecessary revision cycles when the extension path was available and was not evaluated.
 
+**This standard applies to dependency selection as well as code architecture.** Before proposing per-case library implementations (separate SDKs per provider, per-format parser, per-service client), enumerate whether a common library interface covers multiple cases: "Library X serves providers A, B, and C via [shared interface]; only provider D requires a separate client." Defaulting to one SDK per target without asking whether a common interface exists is the dependency-selection analogue of the infrastructure bypass — it produces a revision cycle when the common interface is surfaced by the user.
+
+**When a scope recommendation turns on uncertain knowledge of an external API or library, surface the uncertainty as a targeted clarification question before issuing the recommendation.** A scope deferral issued on the basis of uncertain capability knowledge (streaming support, API compatibility, model availability) and then withdrawn on clarification introduces a revision cycle that a targeted question would eliminate. State specifically what you cannot confirm — which API surface, capability, or behavior is uncertain — and what the answer changes about the scope. If the answer is "it works," the scope expands; if it does not, the deferral stands. A question is cheaper than a draft.
+
 ---
 
 ## Context Loading
