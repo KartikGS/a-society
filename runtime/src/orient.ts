@@ -26,7 +26,7 @@ export async function runOrientSession(workspaceRoot: string, roleKey: string) {
     'orient'
   );
 
-  const llm = new LLMGateway();
+  const llm = new LLMGateway(workspaceRoot);
   const systemPrompt = bundleContent;
 
   const history: RuntimeMessageParam[] = [];

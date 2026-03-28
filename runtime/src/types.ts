@@ -45,13 +45,39 @@ export interface OrientSession {
   startedAt: string;
 }
 
-export interface RuntimeMessageParam {
-  role: 'user' | 'assistant';
-  content: string;
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: 'object';
+    properties: Record<string, { type: string; description: string }>;
+    required: string[];
+  };
 }
 
+export interface ToolCall {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  parseError?: string;
+}
+
+export type RuntimeMessageParam =
+  | { role: 'user';                content: string }
+  | { role: 'assistant';           content: string }
+  | { role: 'assistant_tool_calls'; calls: ToolCall[]; text?: string }
+  | { role: 'tool_result';         callId: string; toolName: string; content: string; isError: boolean };
+
+export type ProviderTurnResult =
+  | { type: 'text'; text: string }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[] };
+
 export interface LLMProvider {
-  executeTurn(systemPrompt: string, messages: RuntimeMessageParam[]): Promise<string>;
+  executeTurn(
+    systemPrompt: string,
+    messages: RuntimeMessageParam[],
+    tools?: ToolDefinition[]
+  ): Promise<ProviderTurnResult>;
 }
 
 export class LLMGatewayError extends Error {

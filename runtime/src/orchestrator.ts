@@ -15,7 +15,6 @@ export function parseWorkflow(filePath: string): any {
 }
 
 export class FlowOrchestrator {
-  private llm = new LLMGateway();
 
   async advanceFlow(flowRun: FlowRun, roleKey: string, activeArtifactPath: string, humanInput?: string): Promise<void> {
     if (flowRun.status !== 'running') {
@@ -63,9 +62,10 @@ export class FlowOrchestrator {
     const historyForTurn = [...session.transcriptHistory, userMsg];
 
     // 2. Execute Provider Turn
+    const llm = new LLMGateway(flowRun.projectRoot);
     let assistantOutput: string;
     try {
-      assistantOutput = await this.llm.executeTurn(bundleContent, historyForTurn as any);
+      assistantOutput = await llm.executeTurn(bundleContent, historyForTurn as any);
     } catch (err: any) {
       flowRun.status = err.type === 'RATE_LIMIT' ? 'awaiting_retry' : 'failed';
       SessionStore.saveFlowRun(flowRun);

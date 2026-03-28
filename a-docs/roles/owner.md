@@ -163,6 +163,14 @@ When reviewing a Technical Architect advisory, apply two distinct criteria: desi
 
 **§4 completeness check.** For every parameter change described in §4 (Interface Changes), verify that the full implementation path is specified. If a new parameter on a public function must be threaded through to an internal call, that threading path must appear in §4 — not only in the §5 Files Changed table. A parameter change that requires the Developer to independently infer threading is an incomplete spec.
 
+**Data-extraction type coverage check.** For every type that represents data parsed from model output (tool calls, handoff blocks, YAML frontmatter, JSON responses), verify that the type includes a mechanism to represent parse failure. A type that specifies only the happy-path fields is structurally incomplete. Also verify that every internal execution path — including no-tool, no-op, and fallback paths — has its non-happy-path behavior explicitly specified in the advisory's per-file implementation requirements, not left as an implied passthrough.
+
+---
+
+## Forward Pass Closure Discipline
+
+When invoking a tooling component during Forward Pass Closure, use the invocation documented in `$A_SOCIETY_TOOLING_INVOCATION`; do not reconstruct the call from memory. For `orderWithPromptsFromFile`, `synthesisRole` is a required second argument. Omitting a required argument in an inline invocation can silently degrade runtime behavior rather than failing at compile time.
+
 ---
 
 ## Handoff Output

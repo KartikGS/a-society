@@ -95,7 +95,7 @@ Analogous to Tooling Dev Phase 6.
 
 ### Registration Phase
 
-**Curator:** Registers the `runtime/` public entry point in `$A_SOCIETY_PUBLIC_INDEX` — specifically `runtime/INVOCATION.md`, the externally-accessible interface. `runtime/src/` files are implementation details and are not individually indexed. Registers `a-docs/` artifacts in `$A_SOCIETY_INDEX`, and updates `$A_SOCIETY_AGENT_DOCS_GUIDE`.
+**Curator:** Registers the `runtime/` public entry point in `$A_SOCIETY_PUBLIC_INDEX` — specifically `runtime/INVOCATION.md`, the externally-accessible interface. `runtime/src/` files are implementation details and are not individually indexed. Registers `a-docs/` artifacts in `$A_SOCIETY_INDEX`, and updates `$A_SOCIETY_AGENT_DOCS_GUIDE`. Registration does not include writing the project log's `Recent Focus` entry for the closing flow; that summary is written by the Owner during Forward Pass Closure.
 
 ---
 
