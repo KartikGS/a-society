@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
@@ -21,7 +22,7 @@ export class FlowOrchestrator {
       throw new Error(`Cannot advance flow in state: ${flowRun.status}`);
     }
 
-    const wf = parseWorkflow(flowRun.workflowDocumentPath).workflow;
+    const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
     const currentNodeHeader = wf.nodes.find((n: any) => n.id === flowRun.currentNode);
     if (!currentNodeHeader) throw new Error('Current node not found in workflow');
 

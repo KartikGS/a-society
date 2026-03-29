@@ -358,6 +358,24 @@ When a project maintains two or more **permanent, distinct execution loops** —
 
 **Cross-reference updates:** When splitting a single `workflow/main.md` into an index plus workflow files, audit all existing references to the original variable (e.g., `$PROJECT_WORKFLOW`) for section citations (e.g., *"See `$PROJECT_WORKFLOW` 'When to start a new session'"*). Determine whether the cited section moves to a specific workflow file or belongs in the index. Update references accordingly, or ensure the index owns the cited content so existing references remain valid.
 
+### Multi-domain parallel-track flows (single workflow)
+
+When **one unit of work** spans **multiple domains or role types** (e.g., documentation, implementation track A, implementation track B) that can proceed **in parallel until a synchronization point**, model it as **a single workflow graph** with **parallel forks and at least one join** — not as separate workflows chosen because the work "touches more than one area."
+
+**What this is:** One instance, one workflow name, one record of the work. Branches run concurrently where edges are independent; a join node waits for all required inputs before the workflow continues toward closure.
+
+**What this is not:** It is not the same as **multiple distinct workflows** (separate named graphs with separate entry/terminal behavior). If the work is truly one feature or one decision thread, splitting it into multiple workflows fragments accountability and obscures handoffs. Use multiple workflows only when the project maintains **permanent, distinct execution loops** that meet the criteria in the "Multiple distinct workflows" section above.
+
+**When to use:** Independent implementation or review tracks exist; a single planning or architecture phase can feed all tracks; convergence is required before verification, acceptance, or publication.
+
+**Graph pattern (abstract):** Planning or architecture node → **parallel fork** to two or more domain tracks → **join** → downstream verification or closure nodes. Role names are project-specific; the structure is generic.
+
+**Checkpoints and approvals:** When a parallel track includes work that **must not proceed without a governance or approval step** (e.g., a shared library change that requires Owner or steward approval before implementation continues), model that step explicitly in the graph: either a **node** whose output is approval, or a **bidirectional edge** for clarification/approval, so the track does not silently bypass the approval obligation. The exact mechanics follow the same edge and bidirectional-edge rules defined earlier in this document.
+
+**Owner routing:** The Owner still routes the unit of work **into** this workflow once and receives **terminal** handoff once; parallel tracks do not remove Owner-as-terminal unless the workflow document declares a delegated-authority exception that explicitly covers the work class.
+
+**Session model:** Parallel tracks imply multiple active sessions may run concurrently for different roles; the human orchestrator switches between sessions per pause-point rules. The workflow document should state which tracks may run in parallel and where joins force ordering.
+
 ### Cross-workflow handoffs
 
 When a terminal node in one graph hands off to an entry node in another: use the same edge mechanics as within a single graph. Define the artifact, the transition condition, and the receiving node's input contract. The edge crosses graph boundaries; the mechanics do not change. Cross-workflow handoffs surface to the Owner before the next workflow is triggered.

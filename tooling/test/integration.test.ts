@@ -72,13 +72,18 @@ fs.writeFileSync(
   RECORD_WORKFLOW,
   `---
 workflow:
-  path:
-    - role: Owner
-      phase: Intake
-    - role: Curator
-      phase: Phase 1
-    - role: Owner
-      phase: Review
+  nodes:
+    - id: '1'
+      role: Owner
+    - id: '2'
+      role: Curator
+    - id: '3'
+      role: Owner
+  edges:
+    - from: '1'
+      to: '2'
+    - from: '2'
+      to: '3'
 ---
 
 # Workflow

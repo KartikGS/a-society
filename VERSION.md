@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v24.1
+**Version:** v25.0
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v25.0 | 2026-03-29 | 2026-03-29-owner-routing-multi-domain.md — Owner role: single flow with parallel tracks (Breaking); workflow instruction: multi-domain parallel-track pattern (Recommended) |
 | v24.1 | 2026-03-29 | 2026-03-29-workflow-schema-unification.md — Workflow schema unification — record-folder workflow.md adopts nodes/edges format (Recommended) |
 | v24.0 | 2026-03-29 | 2026-03-29-agent-context-frontmatter.md — YAML frontmatter for agent context injection (Breaking) |
 | v1.0 | 2026-03-09 | Baseline — versioning system introduced; all pre-versioning update reports incorporated |

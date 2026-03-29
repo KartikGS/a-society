@@ -158,7 +158,7 @@ workflow:
 
 **File:** `src/backward-pass-orderer.ts`
 
-Component 4 reads `workflow.md` from a record folder and returns an enriched backward pass plan with prompts.
+Component 4 reads `workflow.md` from a record folder (YAML frontmatter with a `workflow` object using **`nodes` and `edges`**) and returns an enriched backward pass plan with prompts.
 
 ### Primary entry point: `orderWithPromptsFromFile`
 
@@ -180,56 +180,53 @@ const plan = orderWithPromptsFromFile(
 
 ### Lower-level entry point: `computeBackwardPassOrder`
 
-For unit tests or callers that already have parsed `workflow.path` entries:
-
-```yaml
----
-workflow:
-  path:
-    - role: Owner
-      phase: Intake
-    - role: Curator
-      phase: Phase 1
-    - role: Owner
-      phase: Review
----
-```
+For unit tests or callers that already have parsed `workflow.nodes` (see record-folder schema below):
 
 ```ts
 import { computeBackwardPassOrder } from './src/backward-pass-orderer.ts';
 
 const plan = computeBackwardPassOrder(
   [
-    { role: 'Owner', phase: 'Intake' },
-    { role: 'Curator', phase: 'Phase 1' },
-    { role: 'Owner', phase: 'Review' },
+    { id: 'owner-intake', role: 'Owner' },
+    { id: 'curator-proposal', role: 'Curator' },
+    { id: 'owner-review', role: 'Owner' },
   ],
   'Curator',
+  '/path/to/a-docs/records/20260320-some-flow',   // optional; used in synthesis prompt paths
 );
 ```
 
-**Algorithm:** The orderer deduplicates roles by first occurrence in `workflow.path`, reverses that role list for meta-analysis traversal, then appends one final synthesis entry for the provided `synthesisRole`.
+**Algorithm:** The orderer scans `workflow.nodes` in **array order**. It collects each `role` on **first occurrence only** (deduplication preserves order of first appearance). That ordered unique-role list is **reversed** for meta-analysis traversal. One final **synthesis** step is appended for the provided `synthesisRole`. The `edges` array is not used for ordering today; it is part of the unified graph schema for validation and future use.
 
 ### Record-folder `workflow.md` schema
 
 ```yaml
 ---
 workflow:
-  path:
-    - role: Owner
-      phase: Intake
-    - role: Curator
-      phase: Phase 1
-    - role: Owner
-      phase: Review
+  name: "Example flow"
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+    - id: curator-proposal
+      role: Curator
+    - id: owner-review
+      role: Owner
+      human-collaborative: approval
+  edges:
+    - from: owner-intake
+      to: curator-proposal
+      artifact: owner-to-curator-brief
+    - from: curator-proposal
+      to: owner-review
+      artifact: curator-to-owner
 ---
 ```
 
 **Notes:**
-- `workflow.synthesis_role` is no longer required in `workflow.md`; callers must supply the synthesis role as the second argument to `orderWithPromptsFromFile`.
-- **Backward-compatibility:** If `workflow.md` still contains `synthesis_role`, the field is silently ignored. Callers of the old `orderWithPromptsFromFile(recordFolderPath)` single-parameter signature must update their invocations to supply `synthesisRole` as the second argument.
-- `workflow.path[].phase` is stored for readability and future use; Component 4 currently computes order from `role` values only.
-- Output entries follow the three-field handoff format (meta-analysis) or the orientation format (synthesis). Meta-analysis prompts no longer include the "You are the role agent" preamble.
+- **Legacy `path[]`:** If `workflow.path` is present, Component 4 **throws** with a migration message — adopt the `nodes`/`edges` schema per `$INSTRUCTION_WORKFLOW_GRAPH` and the record-folder variant in `$INSTRUCTION_RECORDS`.
+- The synthesis role is **not** read from `workflow.md`; callers pass it as the second argument to `orderWithPromptsFromFile`.
+- Output entries follow the three-field handoff format (meta-analysis) or the orientation format (synthesis). Meta-analysis prompts do not include the "You are the role agent" preamble.
 - Both prompt types embed a `Read:` reference to the relevant section in `$GENERAL_IMPROVEMENT` (`### Meta-Analysis Phase` or `### Synthesis Phase`).
 
 ---
@@ -300,6 +297,34 @@ const result = compareVersions(
 
 ---
 
+## Component 7 — Plan Artifact Validator
+
+**File:** `src/plan-artifact-validator.ts`
+
+Validates `01-owner-workflow-plan.md` in a record folder: presence, YAML frontmatter, and required fields (`type`, `date`, `complexity` axes, `tier`, `path`, `known_unknowns`) per `$A_SOCIETY_COMM_TEMPLATE_PLAN`.
+
+### Primary entry point: `validatePlanArtifact`
+
+```ts
+import { validatePlanArtifact } from './src/plan-artifact-validator.ts';
+
+const result = validatePlanArtifact('/path/to/a-docs/records/20260320-some-flow');
+
+// result: {
+//   valid: boolean,
+//   file_status: 'present' | 'absent',
+//   path_checked: string,
+//   errors: Array<{ field: string, issue: string }>
+// }
+```
+
+**Exit semantics (for CLI wrappers):** `valid === true` means plan present and fields valid; absent or invalid fields yield `valid === false` with `errors`; missing `recordFolderPath` or unreadable/malformed YAML throws `Error`.
+
+**Notes:**
+- Co-maintained with `$A_SOCIETY_COMM_TEMPLATE_PLAN` — allowed complexity axis values and tier values are enforced in the validator.
+
+---
+
 ## Running the test suite
 
 ```bash
@@ -316,6 +341,7 @@ Tests are in `test/`. Each component has a dedicated unit test file plus a share
 | `test/consent-utility.test.ts` | Unit — Component 2 |
 | `test/workflow-graph-validator.test.ts` | Unit — Component 3 |
 | `test/backward-pass-orderer.test.ts` | Unit — Component 4 |
+| `test/plan-artifact-validator.test.ts` | Unit — Component 7 |
 | `test/scaffolding-system.test.ts` | Unit — Component 1 |
 | `test/integration.test.ts` | Integration — all components composing |
 

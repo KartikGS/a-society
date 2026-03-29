@@ -49,13 +49,12 @@ OPENAI_COMPAT_MODEL=gemini-1.5-pro
 
 ### `start-flow`
 Creates a new `FlowRun` and begins automated orchestration.
-- **Usage:** `tsx src/cli.ts start-flow <projectRoot> <workflowDocumentPath> <recordFolderPath> <startingRole> <startingArtifactPath>`
+- **Usage:** `tsx src/cli.ts start-flow <projectRoot> <recordFolderPath> <startingRole> <startingArtifact>`
 - **Arguments:**
   - `<projectRoot>`: The root directory of the project being orchestrated.
-  - `<workflowDocumentPath>`: Path to the permanent workflow document containing the validated YAML graph.
-  - `<recordFolderPath>`: Path to the current active flow's record folder.
+  - `<recordFolderPath>`: Path to the current active flow's record folder. The workflow graph is read from `<recordFolderPath>/workflow.md` (record-folder subgraph schema per `$INSTRUCTION_WORKFLOW_GRAPH` / `$INSTRUCTION_RECORDS`).
   - `<startingRole>`: The role assigned to the first node in the flow.
-  - `<startingArtifactPath>`: The initial artifact provided to the starting role.
+  - `<startingArtifact>`: The initial artifact provided to the starting role.
 
 ### `resume-flow`
 Resumes a paused or retryable flow from its last durable checkpoint.

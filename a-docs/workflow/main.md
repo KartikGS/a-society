@@ -30,6 +30,14 @@ This directory contains A-Society's permanent execution workflows. Each workflow
 
 ---
 
+## Multi-domain pattern
+
+**Summary:** Single coordinated flow across framework documentation, tooling, runtime, or other domains — parallel tracks where work is independent until a join.
+
+**Full pattern:** `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`
+
+---
+
 ## Session Routing Rules
 
 These rules apply across all A-Society workflows. Each workflow's session model may add workflow-specific routing details; these rules govern the defaults.
@@ -43,7 +51,7 @@ These rules apply across all A-Society workflows. Each workflow's session model 
 
 **Agents must not pass conditional language to the human** (e.g., "Resume, but start new if none exists"). State the instruction explicitly based on flow state. If a new session is required, provide a copyable session-start prompt.
 
-**Multiple concurrent workflows:** When the identified work requires two or more separate workflow types, the Owner routes them as separate flows for the user to execute independently. The Owner does not orchestrate multiple concurrent flows within a single session.
+**Multi-domain flows:** When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. A feature that requires documentation changes, tooling changes, and runtime changes belongs in one flow with the right role sequence, not split into separate flows per work type. See `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` for the full pattern.
 
 ---
 

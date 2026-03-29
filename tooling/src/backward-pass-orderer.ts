@@ -8,14 +8,23 @@ import { extractFrontmatter } from './utils.js';
  */
 const GENERAL_IMPROVEMENT_PATH = 'a-society/general/improvement/main.md';
 
-export interface WorkflowPathEntry {
+export interface WorkflowNode {
+  id: string;
   role: string;
-  phase: string;
+  'human-collaborative'?: string;
+}
+
+export interface WorkflowEdge {
+  from: string;
+  to: string;
+  artifact?: string;
 }
 
 export interface RecordWorkflowFrontmatter {
   workflow: {
-    path: WorkflowPathEntry[];
+    name?: string;
+    nodes: WorkflowNode[];
+    edges: WorkflowEdge[];
   };
 }
 
@@ -61,54 +70,95 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
     throw new Error('workflow.md frontmatter must contain a workflow object');
   }
 
+  const workflowObj = rawWorkflow as Record<string, unknown>;
 
-  const rawPath = (rawWorkflow as Record<string, unknown>).path;
-  if (!Array.isArray(rawPath)) {
-    throw new Error('workflow.path must be an array');
+  if ('path' in workflowObj) {
+    throw new Error('Obsolete workflow schema detected (path[]). Please migrate workflow.md to the nodes/edges schema.');
   }
 
-  const normalizedPath = rawPath.map((entry, index) => {
-    if (!entry || typeof entry !== 'object') {
-      throw new Error(`workflow.path[${index}] must be an object`);
+  const rawNodes = workflowObj.nodes;
+  if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
+    throw new Error('workflow.nodes must be a non-empty array');
+  }
+
+  const nodes = rawNodes.map((node, index) => {
+    if (!node || typeof node !== 'object') {
+      throw new Error(`workflow.nodes[${index}] must be an object`);
     }
 
-    const role = (entry as Record<string, unknown>).role;
-    const phase = (entry as Record<string, unknown>).phase;
+    const nodeObj = node as Record<string, unknown>;
+    const id = nodeObj.id;
+    const role = nodeObj.role;
+
+    if (typeof id !== 'string' || id.trim() === '') {
+      throw new Error(`workflow.nodes[${index}].id must be a non-empty string`);
+    }
 
     if (typeof role !== 'string' || role.trim() === '') {
-      throw new Error(`workflow.path[${index}].role must be a non-empty string`);
+      throw new Error(`workflow.nodes[${index}].role must be a non-empty string`);
     }
 
-    if (typeof phase !== 'string' || phase.trim() === '') {
-      throw new Error(`workflow.path[${index}].phase must be a non-empty string`);
+    return {
+      id,
+      role,
+      'human-collaborative': typeof nodeObj['human-collaborative'] === 'string' ? nodeObj['human-collaborative'] : undefined,
+    };
+  });
+
+  const rawEdges = workflowObj.edges ?? [];
+  if (!Array.isArray(rawEdges)) {
+    throw new Error('workflow.edges must be an array');
+  }
+
+  const edges = rawEdges.map((edge, index) => {
+    if (!edge || typeof edge !== 'object') {
+      throw new Error(`workflow.edges[${index}] must be an object`);
     }
 
-    return { role, phase };
+    const edgeObj = edge as Record<string, unknown>;
+    const from = edgeObj.from;
+    const to = edgeObj.to;
+
+    if (typeof from !== 'string' || from.trim() === '') {
+      throw new Error(`workflow.edges[${index}].from must be a non-empty string`);
+    }
+
+    if (typeof to !== 'string' || to.trim() === '') {
+      throw new Error(`workflow.edges[${index}].to must be a non-empty string`);
+    }
+
+    return {
+      from,
+      to,
+      artifact: typeof edgeObj.artifact === 'string' ? edgeObj.artifact : undefined,
+    };
   });
 
   return {
     workflow: {
-      path: normalizedPath,
+      name: typeof workflowObj.name === 'string' ? workflowObj.name : undefined,
+      nodes,
+      edges,
     },
   };
 }
 
 export function computeBackwardPassOrder(
-  pathEntries: WorkflowPathEntry[],
+  nodes: WorkflowNode[],
   synthesisRole: string,
   recordFolderPath: string = 'the record folder',
 ): BackwardPassPlan {
   const seenRoles = new Set<string>();
   const firstOccurrenceRoles: string[] = [];
 
-  for (const entry of pathEntries) {
-    if (!seenRoles.has(entry.role)) {
-      seenRoles.add(entry.role);
-      firstOccurrenceRoles.push(entry.role);
+  for (const node of nodes) {
+    if (!seenRoles.has(node.role)) {
+      seenRoles.add(node.role);
+      firstOccurrenceRoles.push(node.role);
     }
   }
 
-  const traversalRoles = firstOccurrenceRoles.reverse();
+  const traversalRoles = [...firstOccurrenceRoles].reverse();
   const totalSteps = traversalRoles.length + 1;
 
   const plan: BackwardPassPlan = traversalRoles.map((role, index) => {
@@ -164,8 +214,9 @@ export function orderWithPromptsFromFile(
 
   const frontmatter = parseRecordWorkflowFrontmatter(parsed);
   return computeBackwardPassOrder(
-    frontmatter.workflow.path,
+    frontmatter.workflow.nodes,
     synthesisRole,
     recordFolderPath,
   );
 }
+

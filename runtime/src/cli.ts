@@ -11,8 +11,9 @@ import path from 'node:path';
 
 const orchestrator = new FlowOrchestrator();
 
-async function startFlow(projectRoot: string, workflowDocumentPath: string, recordFolderPath: string, startingRole: string, startingArtifact: string) {
+async function startFlow(projectRoot: string, recordFolderPath: string, startingRole: string, startingArtifact: string) {
   SessionStore.init();
+  const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
 
   let startNode = 'start';
   try {
@@ -28,7 +29,6 @@ async function startFlow(projectRoot: string, workflowDocumentPath: string, reco
   const flowRun: FlowRun = {
     flowId: crypto.randomUUID(),
     projectRoot,
-    workflowDocumentPath,
     recordFolderPath,
     currentNode: startNode,
     status: 'initialized'
@@ -88,7 +88,7 @@ function flowStatus() {
 
   console.log(`=== RUNTIME FLOW STATUS ===`);
   console.log(`Record Folder: ${flowRun.recordFolderPath}`);
-  console.log(`Workflow: ${flowRun.workflowDocumentPath}`);
+  console.log(`Workflow: ${path.join(flowRun.recordFolderPath, 'workflow.md')}`);
   console.log(`Node: ${flowRun.currentNode}`);
   console.log(`Status: ${flowRun.status}`);
 }
@@ -97,12 +97,12 @@ const args = process.argv.slice(2);
 const command = args[0];
 
 if (command === 'start-flow') {
-  const [root, wfPath, recPath, role, artifact] = args.slice(1);
-  if (!root || !wfPath || !recPath || !role || !artifact) {
-    console.error('Usage: start-flow <projectRoot> <workflowDocPath> <recordFolderPath> <startingRole> <startingArtifact>');
+  const [root, recPath, role, artifact] = args.slice(1);
+  if (!root || !recPath || !role || !artifact) {
+    console.error('Usage: start-flow <projectRoot> <recordFolderPath> <startingRole> <startingArtifact>');
     process.exit(1);
   }
-  startFlow(root, wfPath, recPath, role, artifact);
+  startFlow(root, recPath, role, artifact);
 } else if (command === 'resume-flow') {
   const [role, artifact, ...rest] = args.slice(1);
   if (!role || !artifact) {

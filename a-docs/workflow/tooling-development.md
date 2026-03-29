@@ -340,6 +340,7 @@ Registration:
 - Register any new `a-docs/` artifacts in `$A_SOCIETY_INDEX`
 - Add entries to `$A_SOCIETY_AGENT_DOCS_GUIDE` for any new `a-docs/` files created in this flow
 - Update `$A_SOCIETY_TOOLING_INVOCATION` with any new component's invocation entry (required for every new component — Component 5 validates all entries in `$A_SOCIETY_TOOLING_INVOCATION` and will fail on components not registered there)
+- Curator registration authority in this phase is limited to documentation and registration artifacts (`INVOCATION.md`, indexes, coupling map, a-docs-guide, update-report drafts/publication). If registration or verification surfaces a failure that requires edits under `tooling/src/` or tooling tests, the Curator flags it to the Owner; source-code changes require an explicit Owner exception or a Tooling Developer handoff before implementation
 
 Framework update report assessment:
 - Curator checks `$A_SOCIETY_UPDATES_PROTOCOL`: does the tooling layer's completion (new `tooling/` folder, new `general/` instruction, workflow frontmatter format) require adopting projects to review their `a-docs/`?

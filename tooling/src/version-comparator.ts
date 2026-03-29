@@ -156,7 +156,13 @@ export function compareVersions(
         return false;
       }
     })
-    .map(entry => ({ filename: entry.filename as string, version: entry.version }));
+    .map(entry => ({ filename: entry.filename as string, version: entry.version }))
+    .sort((a, b) => {
+      const va = parseVersion(a.version);
+      const vb = parseVersion(b.version);
+      if (va.major !== vb.major) return va.major - vb.major;
+      return va.minor - vb.minor;
+    });
 
   return { projectVersion, currentVersion, unappliedReports };
 }

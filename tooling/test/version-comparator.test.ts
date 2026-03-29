@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareVersions, parseVersion, isGreaterThan } from '../src/version-comparator.js';
@@ -10,6 +11,15 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const FRAMEWORK_VERSION = path.join(REPO_ROOT, 'a-society', 'VERSION.md');
 const UPDATES_DIR = path.join(REPO_ROOT, 'a-society', 'updates');
 const FIXTURES = path.join(__dirname, 'fixtures');
+
+function readFrameworkCurrentVersion(): string {
+  const content = fs.readFileSync(FRAMEWORK_VERSION, 'utf8');
+  const m = content.match(/^\*\*Version:\*\*\s*(v\d+\.\d+)/m);
+  if (!m) throw new Error('Cannot read **Version:** from VERSION.md');
+  return m[1];
+}
+
+const CURRENT_FRAMEWORK = readFrameworkCurrentVersion();
 
 let passed = 0;
 let failed = 0;
@@ -70,8 +80,8 @@ test('project at current version: no unapplied reports', () => {
     FRAMEWORK_VERSION,
     UPDATES_DIR,
   );
-  assert.strictEqual(result.projectVersion, 'v11.1');
-  assert.strictEqual(result.currentVersion, 'v11.1');
+  assert.strictEqual(result.projectVersion, CURRENT_FRAMEWORK);
+  assert.strictEqual(result.currentVersion, CURRENT_FRAMEWORK);
   assert.strictEqual(result.unappliedReports.length, 0);
 });
 
@@ -84,7 +94,7 @@ test('project behind current version: returns unapplied reports', () => {
     UPDATES_DIR,
   );
   assert.strictEqual(result.projectVersion, 'v4.1');
-  assert.strictEqual(result.currentVersion, 'v11.1');
+  assert.strictEqual(result.currentVersion, CURRENT_FRAMEWORK);
   assert.ok(result.unappliedReports.length > 0, 'expected unapplied reports');
 });
 
@@ -138,7 +148,7 @@ test('project initialized at current version: no unapplied reports', () => {
     FRAMEWORK_VERSION,
     UPDATES_DIR,
   );
-  assert.strictEqual(result.projectVersion, 'v11.1');
+  assert.strictEqual(result.projectVersion, CURRENT_FRAMEWORK);
   assert.strictEqual(result.unappliedReports.length, 0);
 });
 

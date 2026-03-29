@@ -9,7 +9,6 @@ export type FlowStatus =
 export interface FlowRun {
   flowId: string;
   projectRoot: string;
-  workflowDocumentPath: string;
   recordFolderPath: string;
   currentNode: string;
   status: FlowStatus;

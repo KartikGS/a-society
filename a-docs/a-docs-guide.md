@@ -186,13 +186,25 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `workflow/main.md` — `$A_SOCIETY_WORKFLOW`
 
-**Why it exists:** A-Society maintains two permanent execution workflows (framework development and tooling development), each with distinct phase sequences and role compositions. Without a routing index, agents arriving at the workflow folder must read both workflow files to determine which governs their current work. The index gives every agent a single load point: load it, identify the relevant workflow, then load that workflow file.
+**Why it exists:** A-Society maintains several permanent execution workflows (framework development, tooling development, runtime development), each with distinct phase sequences and role compositions. Without a routing index, agents arriving at the workflow folder must read every workflow file to determine which governs their current work. The index gives every agent a single load point: load it, identify the relevant workflow or multi-domain pattern, then load that file.
 
-**What it owns:** The workflow routing directory — one entry per permanent A-Society workflow (name, one-line summary, file reference), and the universal session routing rules that apply across all A-Society workflows.
+**What it owns:** The workflow routing directory — one entry per permanent A-Society workflow (name, one-line summary, file reference), the **Multi-domain pattern** pointer to `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`, and the universal session routing rules that apply across all A-Society workflows.
 
-**What breaks without it:** Agents have no single entry point to the workflow directory. The session routing rules — which all four role files reference via `$A_SOCIETY_WORKFLOW` — have no home. Each workflow would need to duplicate these rules, violating the Single-Source Invariant.
+**What breaks without it:** Agents have no single entry point to the workflow directory. The session routing rules — which role files reference via `$A_SOCIETY_WORKFLOW` — have no home. Each workflow would need to duplicate these rules, violating the Single-Source Invariant.
 
-**Do not consolidate with:** `workflow/framework-development.md` or `workflow/tooling-development.md` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
+**Do not consolidate with:** `workflow/framework-development.md`, `workflow/tooling-development.md`, or `workflow/runtime-development.md` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
+
+---
+
+### `workflow/multi-domain-development.md` — `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`
+
+**Why it exists:** Cross-cutting work often touches framework documentation, tooling, and runtime in one feature thread. The permanent workflows each describe a single-layer cadence; they do not by themselves explain how to stitch layers into one flow with parallel tracks. This pattern document fills that gap so Owner, TA, Tooling Developer, Runtime Developer, and Curator agents share one map.
+
+**What it owns:** When to use the pattern, how it composes (not replaces) the permanent workflows, a typical role map, parallel-track and Curator/`general/` checkpoint behavior, session routing references, and record-folder `workflow.md` expectations — plus an illustrative YAML subgraph.
+
+**What breaks without it:** Agents infer multi-domain routing from the routing index bullet alone; integration handoffs and approval loops for `general/` are under-specified for complex flows.
+
+**Do not consolidate with:** `workflow/main.md` — the routing index must stay lightweight. Do not consolidate with `workflow/framework-development.md` — that file owns the single-layer framework loop; this file owns cross-layer composition.
 
 ---
 
