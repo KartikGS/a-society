@@ -61,9 +61,15 @@ If a flow includes an additional Curator → Owner submission after the main dec
 ```yaml
 ---
 workflow:
-  path:
-    - role: <string>         # Role name (parsed by Component 4)
-      phase: <string>        # Phase descriptor (human orientation; not parsed by Component 4)
+  name: <string>             # Permanent workflow name; include flow identifier when helpful
+  nodes:
+    - id: <string>           # Unique node identifier
+      role: <string>         # Role name (parsed by Component 4)
+      human-collaborative: <string>  # Optional; non-empty string describing required human input
+  edges:
+    - from: <string>         # Node id
+      to: <string>           # Node id
+      artifact: <string>     # Optional; artifact type carried by this handoff
 ---
 ```
 
@@ -71,20 +77,20 @@ The YAML content must be wrapped in `---` frontmatter delimiters as shown. The B
 
 **Who creates it:** The Owner, at flow intake, alongside `01-owner-workflow-plan.md`.
 
-**Completeness obligation:** When populating `workflow.md` at intake, the Owner must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner entry in `workflow.md`. For example, `TA - Advisory` must be followed by `Owner - TA Review` when the Owner reviews the advisory before the Curator proceeds. No Owner checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
+**Completeness obligation:** When populating `workflow.md` at intake, the Owner must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.md`, with an incoming edge from the preceding node and an outgoing edge to the following node. For example, `TA - Advisory` must be followed by an `Owner - TA Review` node when the Owner reviews the advisory before the Curator proceeds. No Owner checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
 **Who can edit it:** The Owner and any role explicitly designated as workflow-authority for this flow. Standard implementer roles do not edit `workflow.md`.
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
 
-**What Component 4 reads from it:** `workflow.path[].role`. The `phase` field is present for human orientation and is not parsed by Component 4.
+**What Component 4 reads from it:** `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges`. The `human-collaborative` field is present for human orientation and is not parsed by Component 4.
 
 **Relationship to the plan's `path` field:** `01-owner-workflow-plan.md` also contains a `path` field — a flat string list combining role and phase descriptor (e.g., `- Owner - Intake & Briefing`). These two representations coexist and serve distinct consumers:
 
 - **Plan `path`** — human-oriented planning reference used for complexity assessment and routing decisions at intake. Not machine-parsed. Combined role + phase strings.
-- **`workflow.md` path** — machine-readable schema parsed by Component 4. Structured `role` and `phase` fields. Used to compute backward pass traversal order.
+- **`workflow.md`** — machine-readable graph parsed by Component 4. Structured nodes and edges. Used to compute backward pass traversal order.
 
-When creating `workflow.md` at intake, populate it from the plan's `path`. The roles listed must be consistent between the two. `workflow.md` is the authoritative source for programmatic backward pass ordering; the plan's `path` governs human-oriented planning only.
+When creating `workflow.md` at intake, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. Roles must be consistent between the two representations. `workflow.md` is the authoritative source for programmatic backward pass ordering; the plan's `path` governs human-oriented planning only.
 
 **Pre-convention record folders:** Record folders created before the `workflow.md` requirement was established are exempt from that requirement. The absence of `workflow.md` in a pre-convention folder is not a convention violation — it is expected. Component 4 cannot be invoked for these folders; use manual backward pass ordering. Future agents encountering a record folder without `workflow.md` should verify whether the folder predates this requirement before treating the absence as an error.
 

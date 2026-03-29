@@ -80,6 +80,8 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 **Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
 
+**Implementation stage — terminology sweep for schema changes.** When implementing a schema migration or any change that renames fields, nodes, or other structural terms, sweep adjacent prose in the target files for deprecated vocabulary and update it in the same pass. Treat the schema block and the explanatory prose as one consistency surface.
+
 **Implementation stage — re-read before editing.** Before constructing the `old_string` for any Edit call, re-read the relevant section of the target file to obtain verbatim source text. Brief descriptions describe semantic intent, not verbatim source; relying on them for `old_string` construction causes match failures.
 
 **Implementation stage — verbatim retrieval for technical summaries.** When summarizing technical implementations in registration artifacts or other maintenance documentation, use the exact type names, method signatures, and methodology terms from the approved design or implementation artifacts. Do not substitute generic industry terms for project-specific names.

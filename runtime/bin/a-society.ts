@@ -42,15 +42,10 @@ async function main() {
 
   let selectedFolderName = '';
 
-  if (projects.length === 1) {
-    selectedFolderName = projects[0].folderName;
-    console.log(`Found 1 project: ${projects[0].displayName}. Starting orient session...`);
-  } else {
-    selectedFolderName = await select({
-      message: 'Select a project:',
-      choices: projects.map(p => ({ name: p.displayName, value: p.folderName }))
-    });
-  }
+  selectedFolderName = await select({
+    message: 'Select a project:',
+    choices: projects.map(p => ({ name: p.displayName, value: p.folderName }))
+  });
 
   const roleKey = `${selectedFolderName}__Owner`;
   try {

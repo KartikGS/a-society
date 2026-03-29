@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v24.0
+**Version:** v24.1
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v24.1 | 2026-03-29 | 2026-03-29-workflow-schema-unification.md — Workflow schema unification — record-folder workflow.md adopts nodes/edges format (Recommended) |
 | v24.0 | 2026-03-29 | 2026-03-29-agent-context-frontmatter.md — YAML frontmatter for agent context injection (Breaking) |
 | v1.0 | 2026-03-09 | Baseline — versioning system introduced; all pre-versioning update reports incorporated |
 | v1.1 | 2026-03-09 | 2026-03-09-versioning-model.md — Versioning system introduced |

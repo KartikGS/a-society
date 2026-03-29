@@ -129,3 +129,23 @@ The graph captures structure, not behavior or rationale:
 - Not captured: conditional branching logic beyond the bare existence of the branch edge
 
 These all belong in the prose workflow document.
+
+---
+
+## Record-Folder workflow.md — Subgraph Variant
+
+Projects that maintain per-flow record folders and use a Backward Pass Orderer tool create a `workflow.md` in each record folder alongside the sequenced artifacts. This file uses the same nodes/edges schema defined in this document, with one key difference: it is a **flow-specific subgraph** — it captures only the nodes and edges the flow actually traverses, not the full workflow.
+
+**When to use this.** When your project uses a Backward Pass Orderer tool and records flow artifacts in per-flow record folders (see `$INSTRUCTION_RECORDS`). Projects without such tooling do not need `workflow.md` in record folders.
+
+**Schema.** Same as the permanent workflow graph schema above. `workflow.name` should reflect the permanent workflow name; include the flow identifier when helpful.
+
+**Who creates it.** The role that performs flow intake, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
+
+**What it captures.** Only the nodes the flow traverses and the edges between them. If the full permanent workflow has five nodes but this flow only traverses three, include only those three nodes and their connecting edges. Include branching edges (e.g., a revise loop) if the flow may take that branch.
+
+**What the orderer reads.** `workflow.nodes[].id`, `workflow.nodes[].role`, and `workflow.edges` — the same fields as from a permanent workflow graph — to compute backward pass traversal order specific to this flow instance.
+
+**Relationship to the permanent workflow graph.** The permanent workflow document describes the full workflow structure any flow traversal may follow. The record-folder `workflow.md` scopes that structure to what this flow actually traverses. Both use the same schema; they are not the same artifact. When they disagree, the permanent workflow document governs — it is the maintained source. The record-folder `workflow.md` is a historical artifact for this flow.
+
+**Maintenance.** Record-folder `workflow.md` files are created once at intake and are not modified unless the flow's path changes mid-flow, which requires explicit workflow-authority approval. Unlike the permanent workflow graph, they are not updated as the framework evolves — they record what actually ran.
