@@ -48,7 +48,7 @@ If a flow includes an additional Curator → Owner submission after the main dec
 
 **Prerequisite before filing findings:** Confirm all submissions in this flow are resolved — meaning the Owner has responded to every Curator → Owner artifact produced after the main decision. Do not begin backward-pass findings until this check passes.
 
-**Sequence verification before filing any artifact:** Before selecting a sequence number for a new artifact, read the record folder's current contents to identify the actual next available number. Do not derive the number from an expected preceding artifact's position — intermediate submissions (revisions, registration artifacts) filed between the forward pass and the backward pass may have shifted the sequence forward. This applies especially to backward-pass findings: the registration phase may have filed one or more artifacts before the backward pass begins, and a number derived from forward-pass position will collide with those artifacts.
+**Sequence verification before filing any artifact:** Before selecting a sequence number for a new artifact, read the record folder's current contents to identify the actual next available number. Do not derive the number from an expected preceding artifact's position — intermediate submissions (revisions, registration artifacts, forward-pass closure artifacts) filed before the artifact you are about to produce may have shifted the sequence forward. This obligation applies at backward pass entry: every role producing findings or synthesis must read the record folder before selecting a sequence number, because forward-pass closure artifacts and registration artifacts may have been filed since the forward pass began.
 
 ---
 

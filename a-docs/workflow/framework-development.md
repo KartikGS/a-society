@@ -170,6 +170,8 @@ New or updated files are registered in the appropriate index.
 
 **Output:** Updated index row(s); updated a-docs-guide entry if applicable; next sequenced `curator-to-owner` handoff artifact produced in the active record folder. If a framework update report was approved in Phase 2, the handoff may reference the published report, but the report itself is not submitted as a separate artifact at Phase 4. Work hands off to the Owner for forward-pass closure.
 
+**Phase 4 exit checklist:** Before filing the completion artifact, verify all of the following are done: (1) all approved content files created or modified; (2) all required index rows added; (3) a-docs-guide entry added if new `a-docs/` files were created; (4) framework update report published to `$A_SOCIETY_UPDATES_DIR` if one was approved in Phase 2; (5) the `curator-to-owner` completion artifact itself filed in the active record folder. The artifact enumerates each completed deliverable — an item absent from the enumeration is a signal that the corresponding work may not have been done.
+
 ---
 
 ### Phase 5 — Forward Pass Closure

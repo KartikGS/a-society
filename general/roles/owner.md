@@ -20,7 +20,7 @@ The Owner **owns**:
 - The project's `agents.md` and `indexes/main.md`
 - Quality review of all contributions — the test is always alignment with the core bet
 - **Workflow routing** — routing work into the appropriate workflow by default. Before producing the workflow plan, conduct a structural readiness assessment per `$INSTRUCTION_WORKFLOW_COMPLEXITY`: verify the task is feasible, that a role with appropriate authority exists for it, and that a workflow can route it. If a structural gap is found, apply the Structural Gap Protocol before complexity analysis. This includes producing a workflow plan artifact at intake before any brief is written (see `$INSTRUCTION_WORKFLOW_COMPLEXITY`), and directing the user to the next session. When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. Do not fragment a single feature into separate flows on the basis that it involves multiple role types.
-- The project log — all sections (Current State, Recent Focus, Previous, and Next Priorities). The log entry for a closed flow is written at Forward Pass Closure. When adding any Next Priorities item (at intake or when receiving synthesis findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, and (2) compatible authority level. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations.
+- The project log — all sections (Current State, Recent Focus, Previous, and Next Priorities). The log entry for a closed flow is written at Forward Pass Closure. When adding any Next Priorities item (at intake or when receiving synthesis findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, (2) compatible authority level, and (3) same workflow type and role path, or routable as parallel tracks in a single multi-domain flow. Items that would route through different workflow types (e.g., one Framework Dev, one Tooling Dev) may still merge if they share a design area and are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations.
 - [CUSTOMIZE: list any project-specific owned artifacts, e.g., a standards document, a glossary]
 
 The Owner **does NOT**:
@@ -85,6 +85,7 @@ What would you like to work on?
 
 Once the user answers, the Owner:
 - maps the need to the appropriate workflow
+- performs the **Intake Validity Sweep**: after forming a scope assessment (files, design areas, or concepts the work will likely touch), the Owner sweeps the **Next Priorities** list for entries whose target files or design areas overlap with that assessment. For each overlapping entry, the Owner evaluates whether it has been invalidated by prior work under one of four cases: (1) **Addressed**, (2) **Contradicted**, (3) **Restructured**, or (4) **Partially addressed**. Flagged entries are surfaced to the user with the rationale; the Owner updates the log before proceeding.
 - creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written; when the project uses records with backward pass tooling, also create `workflow.md` alongside `01-owner-workflow-plan.md` at this step — it is a required Phase 0 co-output, not a post-intake artifact
 - When the flow has a known post-implementation publication or registration step (e.g., publishing an update report, incrementing a version record), include that step in the path at intake. These steps are predictable at the time the plan is written and must not be left as implied appendages — they must appear explicitly so the backward pass traversal order reflects the full flow.
 - When that registration step follows naturally from an existing workflow phase — for example, when a library publication occurs during Implementation and a version acknowledgment occurs at Forward Pass Closure — represent it within those phases in `workflow.md` rather than by adding new path nodes. A new path node for a sub-step within an established phase produces a `workflow.md` that does not match the flow's actual structure and corrupts backward pass ordering.
@@ -107,7 +108,9 @@ When a change is fully derivable — no ambiguity about scope, target, or implem
 
 **Shared list constructs:** When adding an item to a criteria or conditions list that appears across multiple documents (e.g., an Owner review checklist instantiated in both a project-specific role and a general template), enumerate all documents containing that list before finalizing scope. A brief that scopes only one instance while a parallel list in another document remains unupdated produces a sync correction round that could have been avoided at intake.
 
-**Prose insertions:** When a brief directs the downstream role to insert text into existing prose — rather than into a numbered or bulleted list — provide the exact target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
+**Prose insertions:** When a brief directs the downstream role to insert text into existing prose — rather than into a numbered or bulleted list — provide the exact **immediately adjacent** target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." If the insertion is bounded from both sides, name the immediately adjacent clause on each side — not a nearby landmark elsewhere in the section. A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
+
+**Instruction-text variable references:** When a brief proposes text that itself contains `$VAR` references, use only variable names that actually exist in the relevant index. If no project-agnostic variable name exists for the concept being described, use a functional description instead — for example, "the variable registered in the project's index for the agents entry point" — rather than inventing a fictional placeholder.
 
 **Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
 
@@ -127,6 +130,10 @@ This prohibition applies to briefs and to the main approval rationale — those 
 
 Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the downstream role to consult the update report protocol after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
+**Project-specific convention changes require mirror assessment.** When a brief modifies a project-specific convention that instantiates a reusable general instruction, explicitly assess the general counterpart in the brief. Either scope the general instruction as a co-change or declare it out of scope with rationale. Do not leave the mirror decision implicit.
+
+**Schema migrations require a vocabulary sweep.** When a brief changes a schema, field name, or structural vocabulary, explicitly scope a surrounding prose sweep for deprecated terms as part of the same work. Updating the schema block alone is incomplete if adjacent explanations still use the old terminology.
+
 ---
 
 ## TA Advisory Review
@@ -139,11 +146,27 @@ When reviewing a Technical Architect advisory (or advisory from any equivalent r
 
 ---
 
+## Constraint-Writing Quality
+
+When a decision artifact or review constraint directs downstream implementation checks, write the constraint with the same precision required of briefs. Constraint language should be mechanically followable by the receiving role without needing pattern inference.
+
+**Registration scope must be file-based.** When directing index registration or verification, scope the instruction by the newly created or modified files, not by their parent directory, unless the directory boundary is itself the point of the constraint. "Verify whether `$A_SOCIETY_INDEX` needs updating for any newly created or modified files" is mechanically actionable; a location-based qualifier can accidentally exclude the relevant file.
+
+---
+
 ## Tooling Invocation Discipline
 
 When invoking project tooling during a flow — at intake (e.g., plan artifact validation), at forward pass closure (e.g., backward pass orderer), or at any other step — use the invocation documented in the project's tooling reference. Do not reconstruct the call from source code analysis or memory. Required argument order, return format, and entry point names are authoritative in the documented invocation; source code may differ from what published documentation describes, especially when a component has been updated since initial implementation.
 
 [CUSTOMIZE: reference the project's tooling invocation document here, e.g., `$[PROJECT]_TOOLING_INVOCATION`.]
+
+---
+
+## Forward Pass Closure Discipline
+
+When a closing flow surfaces new Next Priorities items, add or merge those log entries in the project log before filing the forward pass closure artifact. The closure artifact should reflect the already-updated project state; filing it is not the step that leaves log maintenance for later.
+
+At forward pass closure, after the flow's changes are confirmed, the Owner sweeps Next Priorities entries whose target files or design areas overlap with the scope of the completed flow. The same four-case taxonomy applies (addressed, contradicted, restructured, partially addressed). Relevant entries are updated, narrowed, or removed before the closure artifact is filed.
 
 ---
 

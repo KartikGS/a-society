@@ -46,9 +46,11 @@ The Curator **does NOT**:
 
 ## Implementation Practices
 
-**Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
+**Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
 
-**Technical summary discipline.** When summarizing or describing a technical implementation — in a findings artifact, a registration confirmation, or a proposal — use the exact type names, method signatures, function names, and methodology terms from the approved source artifact (design advisory, spec, or implemented code). Do not substitute generic language for specific technical terms. Substituting a category name for an actual type or function name makes the summary unverifiable against the source and introduces drift between the documented and implemented state.
+**Technical summary discipline.** When summarizing or describing a technical implementation — in a findings artifact, a registration confirmation, or a proposal — use the exact type names, method signatures, function names, and methodology terms from the approved source artifact (design advisory, spec, or implemented code). Do not substitute generic language for specific technical terms.
+
+**Implementation stage — terminology sweep for schema changes.** When implementing a change that renames structural terms, sweep surrounding prose for deprecated terminology as part of the same implementation pass, not deferred to a follow-up. Treat the schema block and the explanatory prose as one consistency surface.
 
 ---
 

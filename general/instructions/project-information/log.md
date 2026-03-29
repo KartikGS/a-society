@@ -45,6 +45,13 @@ Each entry follows a rolling window:
 - When there are already three `Previous` entries, the oldest is moved to the companion archive file (see Archive File below)
 - Validation: exactly one `Recent Focus`, at most three `Previous`
 
+**Validity Sweeps**
+
+The Owner performs a validity sweep of Next Priorities at two points in every flow:
+
+1. **Intake Sweep:** Triggered by the Owner's scope assessment of a new request. Overlapping entries are checked for invalidation (Addressed, Contradicted, Restructured, or Partially Addressed) before the workflow plan is produced.
+2. **Closure Sweep:** Triggered by the completed flow's scope at forward pass closure. Overlapping entries are checked for invalidation and resolved before the flow is marked closed.
+
 ### 3. Next Priorities
 A flat, ordered list of pending work items. Each item includes:
 - A scope tag (see below) indicating expected effort
@@ -59,7 +66,7 @@ Before adding any Next Priorities item — whether at intake or from a synthesis
 
 1. **Same target files or same design area** — they touch the same document(s) or the same conceptual area.
 2. **Compatible authority level** — both are same-role authority (both the same implementing role, or both requiring the same approval path).
-3. **Same workflow type and role path** — both items would run through the same workflow type with the same role sequence.
+3. **Same workflow type and role path, or routable as parallel tracks in a single multi-domain flow** — both items would run through the same workflow type with the same role sequence, or are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict.
 
 When a merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
 
