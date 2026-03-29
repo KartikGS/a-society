@@ -1,3 +1,11 @@
+---
+required_reading:
+  - $A_SOCIETY_VISION
+  - $A_SOCIETY_STRUCTURE
+  - $A_SOCIETY_PRINCIPLES
+  - $A_SOCIETY_AGENT_DOCS_GUIDE
+---
+
 # Role: A-Society Curator Agent
 
 ## Who This Is

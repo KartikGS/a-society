@@ -402,3 +402,25 @@ These three steps are not optional. A role document without registration is inco
 **Conflates role with person.** A role document defines a behavioral contract, not a personality profile. Keep the focus on authority and decision rules.
 
 **Context loading without a confirmation requirement.** An agent that reads five documents without confirming it has done so may not have done so. The confirmation statement is the gate.
+
+## YAML Frontmatter: Role-Specific Required Reading
+
+To enable programmatic session orchestration, every role document must include a YAML frontmatter block at the very top of the file, before any other content.
+
+### Field: `required_reading`
+
+- **Value:** A YAML list of `$VARIABLE_NAME` references registered in the project index.
+- **Derivation rule:** List every `$VAR` reference in the role file's `## Context Loading` section, in the order given. Exclude:
+  1. Any item already in `universal_required_reading` (e.g., `$PROJECT_AGENTS`, `$PROJECT_INDEX`, `$INSTRUCTION_MACHINE_READABLE_HANDOFF`)
+  2. The role file itself (injected automatically by the runtime)
+
+### Example
+
+```yaml
+---
+required_reading:
+  - $A_SOCIETY_VISION
+  - $A_SOCIETY_STRUCTURE
+  - $A_SOCIETY_PRINCIPLES
+---
+```

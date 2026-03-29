@@ -1,3 +1,13 @@
+---
+required_reading:
+  - $A_SOCIETY_VISION
+  - $A_SOCIETY_STRUCTURE
+  - $A_SOCIETY_ARCHITECTURE
+  - $A_SOCIETY_PRINCIPLES
+  - $A_SOCIETY_LOG
+  - $A_SOCIETY_WORKFLOW
+---
+
 # Role: A-Society Owner Agent
 
 ## Who This Is
@@ -133,6 +143,8 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 **Prose insertions:** When a brief directs a downstream role to insert text into existing prose, provide the exact immediately adjacent target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." If the insertion is bounded from both sides, name the immediately adjacent clause on each side — not a nearby landmark elsewhere in the section. A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
 
+**Instruction-text variable references:** When a brief proposes text that itself contains `$VAR` references, use only variable names that actually exist in the relevant index. If no project-agnostic variable name exists for the concept being described, use a functional description instead — for example, "the variable registered in the project's index for the agents entry point" — rather than inventing a fictional placeholder.
+
 **Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
 
 **Topology-based obligation:** When a flow has no Proposal phase (per the workflow plan), the brief must explicitly state that no proposal artifact is required before implementation begins.
@@ -178,6 +190,8 @@ When reviewing a Technical Architect advisory, apply two distinct criteria: desi
 ## Forward Pass Closure Discipline
 
 When invoking a tooling component during Forward Pass Closure, use the invocation documented in `$A_SOCIETY_TOOLING_INVOCATION`; do not reconstruct the call from memory. For `orderWithPromptsFromFile`, `synthesisRole` is a required second argument. Omitting a required argument in an inline invocation can silently degrade runtime behavior rather than failing at compile time.
+
+When a closing flow surfaces new Next Priorities items, add or merge those log entries in `$A_SOCIETY_LOG` before filing the forward pass closure artifact. The closure artifact should reflect the already-updated project state; it is not the step that leaves log maintenance for later.
 
 ---
 

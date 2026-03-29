@@ -1,3 +1,11 @@
+---
+required_reading:
+  - $A_SOCIETY_VISION
+  - $A_SOCIETY_STRUCTURE
+  - $A_SOCIETY_ARCHITECTURE
+  - $A_SOCIETY_PRINCIPLES
+---
+
 # Role: A-Society Technical Architect
 
 ## Who This Is

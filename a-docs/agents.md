@@ -1,3 +1,10 @@
+---
+universal_required_reading:
+  - $A_SOCIETY_AGENTS
+  - $A_SOCIETY_INDEX
+  - $INSTRUCTION_MACHINE_READABLE_HANDOFF
+---
+
 # A-Society: Agent Orientation
 
 This file is the entry point for any agent working on the A-Society project. Read it first. Read it fully. Do not begin work until context is confirmed.

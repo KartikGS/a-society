@@ -1,3 +1,10 @@
+---
+required_reading:
+  - $A_SOCIETY_ARCHITECTURE
+  - $A_SOCIETY_TOOLING_PROPOSAL
+  - $A_SOCIETY_TOOLING_ADDENDUM
+---
+
 # Role: A-Society Tooling Developer Agent
 
 ## Who This Is

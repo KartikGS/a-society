@@ -1,3 +1,8 @@
+---
+required_reading:
+  - $A_SOCIETY_ARCHITECTURE
+---
+
 # Role: A-Society Runtime Developer Agent
 
 ## Who This Is
