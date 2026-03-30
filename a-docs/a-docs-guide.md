@@ -12,9 +12,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Every agent working on A-Society reads this first. It is the single entry point that orients any agent to the project — what the project is, what roles exist, what documents to read and in what order, and what invariants govern all work here.
 
-**What it owns:** Role registration (the roles table), required reading sequence, context confirmation protocol, authority hierarchy for conflict resolution, and project-wide invariants.
+**What it owns:** Role registration (the roles table), universal required-reading set (YAML frontmatter), required reading sequence, context confirmation protocol, authority hierarchy for conflict resolution, and project-wide invariants.
 
-**What breaks without it:** Agents have no reliable starting point. Role existence is undiscoverable. Reading order is undefined.
+**What breaks without it:** Agents have no reliable starting point. Role existence is undiscoverable. Reading order is undefined. Universal context injection fails.
 
 **Do not consolidate with:** The vision (which explains what the project is, not how to operate within it), or any role file (which governs a specific role, not all agents).
 
@@ -114,9 +114,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Owner role has authority boundaries, review criteria, and escalation triggers specific to A-Society — in particular the generalizability test, abstraction level test, and duplication test that govern what enters `general/`. A generic template would not capture these.
 
-**What it owns:** The A-Society Owner's authority, what they own and do not own, how they review contributions to the framework, and when they escalate.
+**What it owns:** The A-Society Owner's authority, required-reading set (YAML frontmatter), what they own and do not own, how they review contributions to the framework, and when they escalate.
 
-**What breaks without it:** An Owner agent has no specific behavioral contract. They either over-reach (making framework changes beyond their authority) or under-reach (asking the human for every small decision).
+**What breaks without it:** An Owner agent has no specific behavioral contract. They either over-reach (making framework changes beyond their authority) or under-reach (asking the human for every small decision). Role context injection fails.
 
 **Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific review tests.
 
@@ -126,9 +126,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Curator role has hard rules and escalation triggers specific to A-Society's maintenance needs — in particular the prohibition on writing to `general/` without Owner approval, the requirement to use `$VAR` references, and the distillation protocol for proposing patterns from observed projects.
 
-**What it owns:** The A-Society Curator's maintenance scope, hard rules, pattern distillation process, current active work, and escalation triggers.
+**What it owns:** The A-Society Curator's maintenance scope, required-reading set (YAML frontmatter), hard rules, pattern distillation process, current active work, and escalation triggers.
 
-**What breaks without it:** A Curator agent has no specific behavioral contract. They may write directly to `general/` without approval, hardcode paths, or perform migration work without understanding the framework's boundaries.
+**What breaks without it:** A Curator agent has no specific behavioral contract. They may write directly to `general/` without approval, hardcode paths, or perform migration work without understanding the framework's boundaries. Role context injection fails.
 
 **Do not consolidate with:** `general/roles/curator.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
 
@@ -138,9 +138,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Technical Architect role has a narrow, pre-implementation mandate that is not covered by Owner or Curator: producing the automation boundary evaluation, component designs, and open question surfaces that must exist before any programmatic tooling is built. Without a dedicated role file, this work either collapses into the Owner (adding implementation-planning scope that the Owner does not own) or proceeds without a behavioral contract, risking implementation before design is verified.
 
-**What it owns:** The Technical Architect's authority, hard rules, primary work output definition, context loading, and escalation triggers for the programmatic tooling layer design phase.
+**What it owns:** The Technical Architect's authority, required-reading set (YAML frontmatter), hard rules, primary work output definition, and escalation triggers for the programmatic tooling layer design phase.
 
-**What breaks without it:** A Technical Architect agent has no behavioral contract. The boundary between design and implementation is undefined. Proposals may bypass Owner review. Direction decisions may be absorbed into technical decisions without escalation.
+**What breaks without it:** A Technical Architect agent has no behavioral contract. The boundary between design and implementation is undefined. Proposals may bypass Owner review. Direction decisions may be absorbed into technical decisions without escalation. Role context injection fails.
 
 **Do not consolidate with:** `roles/owner.md` — the Owner reviews and approves technical proposals; they do not produce them. Do not consolidate with `roles/curator.md` — the Curator maintains existing documentation; the Technical Architect designs new technical infrastructure that does not yet exist.
 
@@ -150,9 +150,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Tooling Developer role has a narrow implementation mandate: executing the six approved tooling components in Node.js, within `tooling/` only, with blocking escalation for any deviation from the approved spec. Without a dedicated role file, implementation either collapses into the Curator (who owns documentation, not Node.js code) or proceeds without a behavioral contract — risking scope creep, unapproved workarounds, and components that diverge from the TA's approved designs.
 
-**What it owns:** The Developer's authority (implementation choices, Node.js project initialization), hard rules (no implementation without Phase 0 cleared, no writes outside `tooling/`, no workarounds without TA resolution), minimal context loading (five documents only), and escalation triggers (design deviation, scope ambiguity, documentation gap, Phase 0 incomplete).
+**What it owns:** The Developer's authority (implementation choices, Node.js project initialization), required-reading set (YAML frontmatter), hard rules (no implementation without Phase 0 cleared, no writes outside `tooling/`, no workarounds without TA resolution), and escalation triggers (design deviation, scope ambiguity, documentation gap, Phase 0 incomplete).
 
-**What breaks without it:** A Tooling Developer agent has no behavioral contract. The boundary between implementation and design is undefined. Deviations from the approved spec may be absorbed into implementation decisions without escalation. The Phase 0 gate — which requires this file to be indexed before any Developer session opens — cannot be satisfied.
+**What breaks without it:** A Tooling Developer agent has no behavioral contract. The boundary between implementation and design is undefined. Deviations from the approved spec may be absorbed into implementation decisions without escalation. The Phase 0 gate — which requires this file to be indexed before any Developer session opens — cannot be satisfied. Role context injection fails.
 
 **Do not consolidate with:** `roles/technical-architect.md` — the TA scopes and designs; the Developer implements. Do not consolidate with `roles/curator.md` — the Curator maintains a-docs; the Developer writes Node.js code in `tooling/`. These are different layers with different authority boundaries.
 
@@ -162,9 +162,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Runtime Developer has a specialized implementation mandate for the programmatic runtime layer, distinct from the deterministic tooling components. Without this, runtime implementation merges with the Tooling Developer, blurring the clear boundary between A-Society's utility layer and its session orchestration capabilities.
 
-**What it owns:** The Developer's execution authority over the runtime layer, hard rules, context loading requirements, and escalation paths.
+**What it owns:** The Developer's execution authority over the runtime layer, required-reading set (YAML frontmatter), hard rules, and escalation paths.
 
-**What breaks without it:** No defined behavioral contract for implementing A-Society's runtime layer.
+**What breaks without it:** No defined behavioral contract for implementing A-Society's runtime layer. Role context injection fails.
 
 ---
 

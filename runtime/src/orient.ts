@@ -3,11 +3,12 @@ import crypto from 'node:crypto';
 import type { OrientSession } from './types.js';
 import { ContextInjectionService } from './injection.js';
 import { LLMGateway, type RuntimeMessageParam } from './llm.js';
-import { roleContextRegistry } from './registry.js';
+import { buildRoleContext } from './registry.js';
 
 export async function runOrientSession(workspaceRoot: string, roleKey: string) {
-  if (!roleContextRegistry[roleKey]) {
-    console.error("This project's Owner role is not registered in the runtime.\nOnly registered projects support orient sessions.");
+  const orientRoleEntry = buildRoleContext(roleKey, workspaceRoot);
+  if (!orientRoleEntry) {
+    console.error(`Could not load role context for '${roleKey}'. Check that the role file exists and contains valid frontmatter.`);
     process.exit(1);
   }
 

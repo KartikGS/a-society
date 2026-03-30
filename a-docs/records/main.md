@@ -77,7 +77,7 @@ The YAML content must be wrapped in `---` frontmatter delimiters as shown. The B
 
 **Who creates it:** The Owner, at flow intake, alongside `01-owner-workflow-plan.md`.
 
-**Completeness obligation:** When populating `workflow.md` at intake, the Owner must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.md`, with an incoming edge from the preceding node and an outgoing edge to the following node. For example, `TA - Advisory` must be followed by an `Owner - TA Review` node when the Owner reviews the advisory before the Curator proceeds. No Owner checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
+**Completeness obligation:** When populating `workflow.md` at intake, the Owner must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. Because the Owner creates the record folder and opens the flow, the first node in any A-Society `workflow.md` is always an Owner intake node. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.md`, with an incoming edge from the preceding node and an outgoing edge to the following node. For example, `TA - Advisory` must be followed by an `Owner - TA Review` node when the Owner reviews the advisory before the Curator proceeds. No Owner checkpoint may be omitted because it was implied, and the initial Owner intake node may not be skipped because the record folder already exists. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
 **Who can edit it:** The Owner and any role explicitly designated as workflow-authority for this flow. Standard implementer roles do not edit `workflow.md`.
 
@@ -115,7 +115,7 @@ The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
 2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.path` from the plan's `path` field. Wrap the YAML content in `---` frontmatter delimiters (opening `---` on line 1, closing `---` after the final field). `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
+3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.path` from the plan's `path` field. The first node is always the Owner intake step that created the folder and wrote `01-owner-workflow-plan.md`. Wrap the YAML content in `---` frontmatter delimiters (opening `---` on line 1, closing `---` after the final field). `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
 4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
 5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 

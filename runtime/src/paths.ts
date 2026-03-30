@@ -19,7 +19,7 @@ export function resolveVariableFromIndex(variable: string, projectRoot: string):
     for (const line of lines) {
       if (line.includes(variable)) {
         // Matches table rows like: | `$VAR` | `path/to/file` |
-        const match = line.match(/\|\s*`([\$A_Z_0-9]+)`\s*\|\s*`(.*?)`\s*\|/i);
+        const match = line.match(/\|\s*`(\$[\w-]+)`\s*\|\s*`(.*?)`/i);
         if (match && match[1] === variable && match[2]) {
           return match[2];
         }

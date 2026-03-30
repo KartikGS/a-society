@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { roleContextRegistry } from './registry.js';
+import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
 
 export interface ContextBundleResult {
@@ -23,7 +23,7 @@ export class ContextInjectionService {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
     
     // 1. Resolve and inject required reading
-    const roleEntry = roleContextRegistry[roleKey];
+    const roleEntry = buildRoleContext(roleKey, projectRoot);
     if (roleEntry) {
       bundle += `--- MANDATORY CONTEXT LOADING FOR ${roleKey} ---\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
@@ -38,7 +38,7 @@ export class ContextInjectionService {
         }
       }
     } else {
-      bundle += `--- UNKNOWN ROLE: ${roleKey}. No required reading registered. ---\n\n`;
+      bundle += `--- UNKNOWN ROLE: ${roleKey}. No required reading available. ---\n\n`;
     }
 
     // 2. Inject active artifact
