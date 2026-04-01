@@ -38,20 +38,9 @@ This directory contains A-Society's permanent execution workflows. Each workflow
 
 ---
 
-## Session Routing Rules
+## Multi-Domain Flows
 
-These rules apply across all A-Society workflows. Each workflow's session model may add workflow-specific routing details; these rules govern the defaults.
-
-**Within an active flow:** Resume the existing session for the receiving role by default. Do not start a new session unless one of the following conditions applies:
-- The existing session's context window is full or approaching limits
-- The accumulated context from earlier phases would be more noise than signal for the remaining work
-- Significant time has passed and the session may have expired
-
-**At flow close:** When a flow completes, start fresh sessions for each role involved in the next flow. The accumulated context from a completed flow is almost always noise for a new one.
-
-**Agents must not pass conditional language to the human** (e.g., "Resume, but start new if none exists"). State the instruction explicitly based on flow state. If a new session is required, provide a copyable session-start prompt.
-
-**Multi-domain flows:** When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. A feature that requires documentation changes, tooling changes, and runtime changes belongs in one flow with the right role sequence, not split into separate flows per work type. See `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` for the full pattern.
+When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. A feature that requires documentation changes, tooling changes, and runtime changes belongs in one flow with the right role sequence, not split into separate flows per work type. See `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` for the full pattern.
 
 ---
 

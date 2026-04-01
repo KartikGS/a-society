@@ -2,9 +2,7 @@ import yaml from 'js-yaml';
 
 export interface HandoffBlock {
   role: string;
-  session_action: 'resume' | 'start_new';
   artifact_path: string | null;
-  prompt: string | null;
 }
 
 export class HandoffParseError extends Error {
@@ -42,31 +40,14 @@ export class HandoffInterpreter {
       throw new HandoffParseError('Handoff block parsed but missing required root "handoff" key.');
     }
 
-    const { role, session_action, artifact_path, prompt } = parsed.handoff;
+    const { role, artifact_path } = parsed.handoff;
 
     if (typeof role !== 'string') throw new HandoffParseError('"role" field is required and must be a string.');
-    if (typeof session_action !== 'string') throw new HandoffParseError('"session_action" field is required and must be a string.');
-    
-    const isNew = session_action === 'start_new';
-    const isResume = session_action === 'resume';
-
-    if (!isNew && !isResume) {
-      throw new HandoffParseError('"session_action" must be one of: start_new, resume.');
-    }
-
-    if (isNew && (prompt === null || prompt === undefined)) {
-      throw new HandoffParseError('"prompt" cannot be null for a new session_action.');
-    }
-
-    if (isResume && prompt !== null && prompt !== undefined) {
-      throw new HandoffParseError('"prompt" must be strictly null (or missing) for a resume session_action.');
-    }
 
     return {
       role,
-      session_action: isNew ? 'start_new' : 'resume',
-      artifact_path: artifact_path ? String(artifact_path) : null,
-      prompt: prompt ? String(prompt) : null
+      artifact_path: artifact_path ? String(artifact_path) : null
     };
   }
 }
+

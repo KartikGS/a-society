@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[M][LIB]` — **workflow-schema-unification** (2026-03-29): Framework Dev flow closed (Phase 1 of 3 in multi-flow schema unification) — `$A_SOCIETY_RECORDS`, `$INSTRUCTION_RECORDS`, `$INSTRUCTION_WORKFLOW_GRAPH`, and `$A_SOCIETY_TOOLING_COUPLING_MAP` updated to nodes/edges workflow.md schema; framework update report v24.0 → v24.1 (Recommended).
 - `[M]` — **runtime-env-bundle** (2026-03-28): Four runtime items bundled — dotenv support (`dotenv` dep, `.env.sample`, `.gitignore`); provider catch-block fix re-throwing pre-classified `LLMGatewayError`; `synthesisRole` parameterized from `process.env.SYNTHESIS_ROLE ?? 'Curator'` in `triggers.ts`; `runtime/INVOCATION.md` updated with `orient` command, provider env table, `.env` usage, and three command-signature corrections.
 - `[M][LIB][MAINT]` — **general-doc-bundle** (2026-03-28): Six `general/` improvements bundled — `$GENERAL_OWNER_ROLE`, `$GENERAL_CURATOR_ROLE`, `$INSTRUCTION_RECORDS`, `$INSTRUCTION_MACHINE_READABLE_HANDOFF`, new `general/roles/technical-architect.md`, and `$INSTRUCTION_DEVELOPMENT`; framework update report v23.0 → v23.1 (10 Recommended, 3 Optional).
 - `[S][LIB][MAINT]` — **improvement-synthesis-third-criterion** (2026-03-28): Third merge criterion ("same workflow type and role path") added to Synthesis Phase of both `general/improvement/main.md` and `a-society/a-docs/improvement/main.md`; framework update report v22.1 → v23.0 (Breaking).

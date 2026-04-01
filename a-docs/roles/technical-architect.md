@@ -157,6 +157,4 @@ At each pause point, the Technical Architect submits its output to the Owner and
 2. What the Owner needs to evaluate or decide.
 3. Any open questions that require Owner resolution before the next phase can begin.
 
-**Session routing is the Owner's responsibility.** The Technical Architect does not prescribe which session to switch to, whether to start a new session, or what the receiving role should do next. The TA's handoff output ends with the artifact path and review context — the Owner routes from there.
-
 If the output is ready for Owner review, state that explicitly and provide the artifact path(s).

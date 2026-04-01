@@ -385,7 +385,6 @@ Backward pass is mandatory after forward-pass completion and is governed by `$A_
 | Session C | Tooling Developer | Phases 1, 1A, 2, 4, 5, 6 |
 | TA sessions | Technical Architect | On-demand — invoked when Developer escalates or at Owner's request for Phase 6 gate. When reviewing a tooling change or deviation, the TA also checks `$A_SOCIETY_TOOLING_COUPLING_MAP`'s invocation gap column for the affected component. If the gap is open, the TA notes it as a standing open item in the advisory output. This is not a hard stop — it is a gap-surfacing obligation. |
 
-The existing session model conventions apply: see `$A_SOCIETY_WORKFLOW` "Session Routing Rules" for the universal rules governing when to start new vs. resume. Each role explicitly tells the human whether to resume or start new at each pause point.
 
 The human orchestrates across three standing sessions (A, B, C) rather than two. TA sessions are invoked ad hoc; the human starts a new TA session when the Developer or Owner identifies the need, and the TA session closes after the review output is produced.
 

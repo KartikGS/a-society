@@ -74,12 +74,9 @@ Roles that are always active (e.g., the Owner) do not need this section — they
 What does this role tell the human when it reaches a pause point and another role must act next? Define the outgoing handoff message explicitly. A role document should not assume the human knows whether to start a new conversation, resume an existing one, or which artifact carries the work forward.
 
 At each pause point, the role should state:
-- Whether the human should resume an existing session or start a new one for the receiving role
 - Which session to switch to
 - What the receiving role needs to read (artifact path and any additional context)
-- Copyable inputs for the receiving role: always a read directive (`[artifact path]`); if a new session is required, also a session-start prompt first (`"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
-
-Default rule: resume the existing session. Start a new session only when the project's workflow says to — for example, context-window pressure, stale or noisy prior context, or elapsed time. The role should say this explicitly; the human should not infer it.
+- Copyable inputs for the receiving role: always a read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 When resuming an existing session, use the following named format:
 
@@ -89,7 +86,7 @@ Read: [path to artifact(s)]
 Expected response: [what the receiving role produces next]
 ```
 
-No role-assignment prompt is included — the session is already running under the correct role. The new-session format (session-start prompt followed by artifact path) applies only when the project's workflow criteria for a new session are met.
+No role-assignment prompt is included — the session is already running under the correct role.
 
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
@@ -149,10 +146,9 @@ If the workflow list for this project has not yet been customized, do not defaul
 
 ## Handoff Output
 At each pause point, tell the human:
-1. Whether to resume the existing session or start a new one for the receiving role. Default: resume the existing session. Start a new one only when the project's workflow says to.
-2. Which session to switch to.
-3. What the receiving role needs to read (artifact path and any additional context).
-4. Copyable inputs for the receiving role. Always: `[artifact path]`. If a new session is required, also provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+1. Which session to switch to.
+2. What the receiving role needs to read (artifact path and any additional context).
+3. Copyable inputs for the receiving role. Always: `[artifact path]`. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 If the work item is closed, say so explicitly and do not imply a further session switch.
 
@@ -193,7 +189,7 @@ Read: agents.md → vision → [relevant domain context].
 Confirm: "Context loaded per analyst role. Ready."
 
 ## Handoff Output
-When the Analyst finishes a specification or reaches a pause point that hands work to another role, tell the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what artifact to point the receiving role at. Always provide a copyable read directive (`[artifact path]`); if a new session is required, also provide a session-start prompt first (`"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+When the Analyst finishes a specification or reaches a pause point that hands work to another role, tell the human which session to switch to, and what artifact to point the receiving role at. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 ## Escalate to Human When
 - The requirement contradicts the project vision
@@ -232,7 +228,7 @@ Read: agents.md → [role-specific context] → active task specification.
 Confirm: "Context loaded. Proceeding with [task description]."
 
 ## Handoff Output
-When the Implementer completes the deliverable or reaches a blocker that must move to another role, tell the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`); if a new session is required, also provide a session-start prompt first (`"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+When the Implementer completes the deliverable or reaches a blocker that must move to another role, tell the human which session to switch to, and what artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 ## Escalate When
 - The specification contains a contradiction
@@ -274,7 +270,7 @@ Read: agents.md → [relevant standards document] → active work product.
 Confirm: "Context loaded. Reviewing [artifact]."
 
 ## Handoff Output
-When the Reviewer issues a verdict and another role must act, tell the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what review artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`); if a new session is required, also provide a session-start prompt first (`"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+When the Reviewer issues a verdict and another role must act, tell the human which session to switch to, and what review artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 ## Escalate When
 - An AC cannot be verified with available evidence
@@ -311,7 +307,7 @@ Does not: perform any role's substantive work, make design or scope decisions.
 5. Review the report and issue the next handoff.
 
 ## Handoff Output
-At each pause point, the Coordinator tells the human whether to resume the next role's existing session or start a new one (default: resume), which session to switch to, and what state artifact or handoff the next role needs to read. Always provide a copyable read directive (`[artifact path]`); if a new session is required, also provide a session-start prompt first (`"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+At each pause point, the Coordinator tells the human which session to switch to, and what state artifact or handoff the next role needs to read. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 ## Context Loading
 Read: agents.md → current state document → active task queue.
@@ -355,7 +351,7 @@ Read: agents.md → vision → structure → index → [task-specific context].
 Confirm: "Context loaded: agents.md, vision, structure, index. Ready as Curator."
 
 ## Handoff Output
-At each pause point, the Curator tells the human whether to resume the receiving role's existing session or start a new one (default: resume), which session to switch to, and what artifact, changed files, or findings the receiving role needs to read. Always provide a copyable read directive (`[artifact path]`); if a new session is required, also provide a session-start prompt first (`"You are a [Role] agent for [Project Name]. Read [path to agents.md]."`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+At each pause point, the Curator tells the human which session to switch to, and what artifact, changed files, or findings the receiving role needs to read. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 ## Escalate to Owner When
 - A proposal to a-society/general/ is ready for review

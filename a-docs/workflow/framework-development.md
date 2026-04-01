@@ -166,11 +166,12 @@ New or updated files are registered in the appropriate index.
 - Content in `general/` or `agents/` → register in `$A_SOCIETY_PUBLIC_INDEX`
 - Content in `a-docs/` → register in `$A_SOCIETY_INDEX`
 - New `a-docs/` files → add a rationale entry to `$A_SOCIETY_AGENT_DOCS_GUIDE`
+- Significantly modified `a-docs/` files (major section added or removed) → verify the rationale entry in `$A_SOCIETY_AGENT_DOCS_GUIDE` remains accurate; update if the change affects the file's described purpose, scope, or "Do not consolidate with" guidance
 - If a framework update report was approved in Phase 2, confirm it was published during Phase 3. No separate update report submission is needed.
 
 **Output:** Updated index row(s); updated a-docs-guide entry if applicable; next sequenced `curator-to-owner` handoff artifact produced in the active record folder. If a framework update report was approved in Phase 2, the handoff may reference the published report, but the report itself is not submitted as a separate artifact at Phase 4. Work hands off to the Owner for forward-pass closure.
 
-**Phase 4 exit checklist:** Before filing the completion artifact, verify all of the following are done: (1) all approved content files created or modified; (2) all required index rows added; (3) a-docs-guide entry added if new `a-docs/` files were created; (4) framework update report published to `$A_SOCIETY_UPDATES_DIR` if one was approved in Phase 2; (5) the `curator-to-owner` completion artifact itself filed in the active record folder. The artifact enumerates each completed deliverable — an item absent from the enumeration is a signal that the corresponding work may not have been done.
+**Phase 4 exit checklist:** Before filing the completion artifact, verify all of the following are done: (1) all approved content files created or modified; (2) all required index rows added; (3) a-docs-guide entry added for new `a-docs/` files, and rationale entry verified-accurate for significantly modified `a-docs/` files (updated if needed); (4) framework update report published to `$A_SOCIETY_UPDATES_DIR` if one was approved in Phase 2; (5) the `curator-to-owner` completion artifact itself filed in the active record folder. The artifact enumerates each completed deliverable — an item absent from the enumeration is a signal that the corresponding work may not have been done.
 
 ---
 
@@ -218,24 +219,24 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 | **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
 | **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
 
-**Session routing rule:** See `$A_SOCIETY_WORKFLOW` "Session Routing Rules" for the universal rules governing when to start new vs. resume. Do not pass conditional language to the human — state the instruction explicitly based on flow state.
+
 
 ### How it flows
 
-1. **Session A starts.** The human and Owner align on a need. The Owner creates the record folder and produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. **For Tier 1 flows:** the plan is the approval gate; the Owner implements and closes the flow within Session A — no brief is written and Session B is not needed. **For Tier 2 and 3 flows:** the Owner writes the Owner-to-Curator brief as the next sequenced artifact immediately after the plan. Because this is the start of a completely new flow, the Owner explicitly instructs the human to start a fresh Curator session (Session B), provides a copyable path to the brief, and provides a copyable session-start prompt for the Curator. Session A pauses.
+1. **Session A starts.** The human and Owner align on a need. The Owner creates the record folder and produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. **For Tier 1 flows:** the plan is the approval gate; the Owner implements and closes the flow within Session A — no brief is written and Session B is not needed. **For Tier 2 and 3 flows:** the Owner writes the Owner-to-Curator brief as the next sequenced artifact immediately after the plan. The Owner directs the human to the Curator session (Session B). Session A pauses.
 
-2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator tells the human whether to resume the existing Owner session or start a new one, provides a copyable path to the proposal artifact, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B pauses.
+2. **Session B starts or resumes.** The human opens or returns to the Curator session and points it at the briefing. The Curator acknowledges, drafts the proposal, and writes the next sequenced artifact in the active record folder. The Curator provides a copyable path to the proposal artifact. Session B pauses.
 
 3. **Session A resumes.** The human returns to the Owner session and points it at the proposal. The Owner reviews it and writes a decision as the next sequenced artifact in the active record folder. The Owner tells the human what to do next:
-   - **Approved:** resume the existing Curator session unless the new-session criteria apply; provide a copyable path to the approval artifact and, if a new session is required, a copyable session-start prompt for the Curator.
-   - **Revise:** resume the existing Curator session unless the new-session criteria apply; provide a copyable path to the revision request and, if a new session is required, a copyable session-start prompt for the Curator.
+   - **Approved:** provide a copyable path to the approval artifact.
+   - **Revise:** provide a copyable path to the revision request.
    - **Rejected:** item closed; no further session switch needed.
 
    Session A pauses.
 
-4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements (including publishing any update report approved in Phase 2) and registers. After forward-pass work is complete, Session B pauses and hands off to the Owner for terminal review and forward-pass closure (Phase 5). The backward pass follows only after the Owner confirms the forward pass is closed. The Curator tells the human to resume Session A (or start a new Owner session if new-session criteria apply), provides a copyable path to the registration confirmation, and — if a new session is required — provides a copyable session-start prompt for the Owner. Session B then pauses.
+4. **Session B resumes.** The human returns to the Curator session and points it at the decision. The Curator implements (including publishing any update report approved in Phase 2) and registers. After forward-pass work is complete, Session B pauses and hands off to the Owner for terminal review and forward-pass closure (Phase 5). The backward pass follows only after the Owner confirms the forward pass is closed. The Curator provides a copyable path to the registration confirmation. Session B then pauses.
 
-5. **Session A resumes.** The Owner executes Phase 5 (Forward Pass Closure). Before confirming closure, the Owner verifies all forward-pass work is complete — approved tasks must be confirmed executed, not merely approved. The Owner performs backward-pass work per `$A_SOCIETY_IMPROVEMENT` and tells the human whether to resume the Curator session for synthesis. The Owner provides a copyable path to the relevant artifact and — if a new Curator session is required — a copyable session-start prompt. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
+5. **Session A resumes.** The Owner executes Phase 5 (Forward Pass Closure). Before confirming closure, the Owner verifies all forward-pass work is complete — approved tasks must be confirmed executed, not merely approved. The Owner performs backward-pass work per `$A_SOCIETY_IMPROVEMENT` and tells the human whether the Curator session is needed for synthesis. The Owner provides a copyable path to the relevant artifact. If no Curator follow-up is needed, the Owner says the flow is complete. Session A ends or pauses accordingly.
 
 6. **Session B resumes (if needed).** The Curator completes any Owner-requested follow-through, performs backward-pass work or synthesis when due per `$A_SOCIETY_IMPROVEMENT`, publishes any approved follow-up artifacts, and proposes any actionable items as new trigger inputs when required. Synthesis closes the flow unconditionally. If any Owner follow-up is identified, the Curator files it as a new trigger input for a separate flow — not as an additional Owner session within this flow. Session B then ends.
 
@@ -243,12 +244,10 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 ### The human's role at each transition
 
-The human is the orchestrator — they maintain continuity between sessions and route artifacts. At each pause point, the active agent should:
-1. Instruct the human to either start a fresh session (if entering a new flow) or resume the existing session (if within an active flow). Do not pass a conditional ("if none exists, start new") to the human.
-2. Provide a copyable path to the artifact it produced
-3. Tell the human which session to switch to
-4. State what the receiving agent needs to read
-5. If a new session is required, provide a copyable session-start prompt for the receiving role
+At each pause point, the active agent should:
+1. Provide a copyable path to the artifact it produced
+2. Tell the human which session to switch to
+3. State what the receiving agent needs to read
 
 ---
 

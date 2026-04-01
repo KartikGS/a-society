@@ -114,7 +114,7 @@ Not every multi-domain flow includes all roles. Omit nodes that do not apply; ke
 
 After a **shared planning or TA design** phase, the graph may **fork** to two or more implementation nodes that run **concurrently**. Each track produces completion artifacts (e.g., completion reports) consumed by a **join** node — typically **TA integration review**, then **Owner integration gate**.
 
-**Session model:** Parallel tracks usually mean **multiple active sessions** for different roles. The human switches between sessions per pause-point rules in `$A_SOCIETY_WORKFLOW`. Agents must not hedge; they state explicitly whether to resume or start a new session per flow state.
+
 
 ---
 
@@ -132,11 +132,7 @@ If the **only** `general/` work is Curator-owned and requires approval, the embe
 
 ---
 
-## Session routing
 
-Universal rules apply: `$A_SOCIETY_WORKFLOW` **Session Routing Rules** (resume within a flow, fresh sessions at flow close, no conditional hedging). Multi-domain flows do not relax those rules.
-
----
 
 ## Record folder and `workflow.md`
 

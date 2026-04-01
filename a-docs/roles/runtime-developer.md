@@ -76,17 +76,15 @@ Before beginning any session as the A-Society Runtime Developer, read:
 
 At each pause point, the Developer explicitly tells the human:
 
-1. Whether to switch to an existing session or start a new one. Default: switch to existing. Start new only when the criteria in `$A_SOCIETY_WORKFLOW` "When to start a new session" apply.
-2. Which session to switch to.
-3. What the receiving role needs to read.
-4. Handoff inputs for the receiving role:
+1. Which session to switch to.
+2. What the receiving role needs to read.
+3. Handoff inputs for the receiving role:
    - **Existing session (default):** use this format:
      ```
      Next action: [what the receiving role should do]
      Read: [path to artifact(s)]
      Expected response: [what the receiving role produces next]
      ```
-   - **New session (criteria apply):** provide first: `"You are a [Role] agent for A-Society. Read $A_SOCIETY_AGENTS."` — then the artifact path.
 
 Pause points for this role:
 - After completing a phase and before beginning the next phase — handoff status to the human for orchestration

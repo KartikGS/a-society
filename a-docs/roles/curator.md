@@ -151,17 +151,15 @@ The A-Society Curator's migration responsibility (restructuring agent-docs in an
 Before issuing your handoff, verify the next step against the flow's `workflow.md`. Do not rely on memory of the workflow sequence.
 
 At each pause point, the Curator explicitly tells the human:
-1. Whether to switch to the receiving role's existing session or start a fresh one. Do not hedge or ask the human if a session exists — declare the instruction explicitly based on whether this is a new flow (start new) or within an active flow (resume). See `$A_SOCIETY_WORKFLOW` "When to start a new session" for exceptions.
-2. Which session to switch to.
-3. What the receiving role needs to read.
-4. Handoff inputs for the receiving role:
+1. Which session to switch to.
+2. What the receiving role needs to read.
+3. Handoff inputs for the receiving role:
    - **Existing session (default):** use this format:
      ```
      Next action: [what the receiving role should do]
      Read: [path to artifact(s)]
      Expected response: [what the receiving role produces next]
      ```
-   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 **Expected response scope:** Name the immediate next artifact from the receiving role in response to this specific handoff only. Do not name artifacts that the receiving role will produce only after intermediate steps by another role have occurred. When the receiving role's response will be followed by intermediate work before a later Owner action, the Expected response covers the first response only — subsequent Owner actions belong in a later handoff.
 

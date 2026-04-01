@@ -173,17 +173,15 @@ At forward pass closure, after the flow's changes are confirmed, the Owner sweep
 ## Handoff Output
 
 At each pause point, the Owner tells the human:
-1. Whether to resume the existing session or start a fresh session for the receiving role. Do not hedge or ask the human if a session exists — declare the instruction explicitly based on whether this is a new flow (start new) or within an active flow (resume).
-2. Which session to switch to.
-3. What the receiving role needs to read (artifact path and any additional context).
-4. Handoff inputs for the receiving role:
+1. Which session to switch to.
+2. What the receiving role needs to read (artifact path and any additional context).
+3. Handoff inputs for the receiving role:
    - **Existing session (default):** use this format:
      ```
      Next action: [what the receiving role should do]
      Read: [path to artifact(s)]
      Expected response: [what the receiving role produces next]
      ```
-   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 If the work item is closed, the Owner says so explicitly and does not imply a further handoff.
 

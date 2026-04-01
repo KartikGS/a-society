@@ -154,9 +154,13 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 When proposing an output-format change, also assess whether the change makes any existing field, section, or type value obsolete — and scope that removal explicitly in the brief. A brief that adds a new section without checking what the addition makes vestigial transfers that obsolescence assessment to the Curator unnecessarily.
 
+**Removal-of-dependents scoping.** When a brief scopes removal of an item from a numbered or structured list, explicitly enumerate any other content in that file — or in sibling files receiving the same removal — that depends on the removed item and would become vestigial after its removal. This includes format blocks gated on the removed item, cross-references to it, and any prose whose meaning changes when the item no longer exists. Apply this consistently across all target files in the brief; do not scope explicit dependent removal for only the first instance noticed and leave the same pattern implicit in the remaining files.
+
 **Project-specific convention changes require mirror assessment.** When a brief modifies a project-specific convention that instantiates a reusable general instruction, explicitly assess the general counterpart in the brief. Either scope the general instruction as a co-change or declare it out of scope with rationale. Do not leave the mirror decision implicit; otherwise the Curator must guess whether parity maintenance is in scope.
 
 **Schema migrations require a vocabulary sweep.** When a brief changes a schema, field name, or structural vocabulary, explicitly scope a surrounding prose sweep for deprecated terms as part of the same work. Updating the schema block alone is incomplete if adjacent explanations still use the old terminology.
+
+**Schema-code coupling check.** When a documentation change defines or modifies a schema with a programmatic consumer (a type definition, parser, or validator in the codebase), the brief must scope both the documentation change and the corresponding code change in the same flow. At brief-writing time, ask: "Does this documentation change define or modify a schema that is consumed programmatically?" If yes, identify the programmatic consumer and include it in the flow scope. A brief scoped documentation-only when code must also change fragments the work and requires external correction.
 
 **Do not pre-specify update report classification.** If the change described in a brief may trigger a framework update report, do not state an expected impact classification. Classification is determined by the Curator post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Stating a classification in the brief creates framing the Curator must override — which adds a correction round rather than eliminating one.
 
@@ -200,22 +204,22 @@ When a closing flow surfaces new Next Priorities items, add or merge those log e
 
 At forward pass closure, after the flow's changes are confirmed, the Owner sweeps Next Priorities entries whose target files or design areas overlap with the scope of the completed flow. The same four-case taxonomy applies (addressed, contradicted, restructured, partially addressed). Relevant entries are updated, narrowed, or removed before the closure artifact is filed.
 
+**Multi-track path portability.** For flows with multiple parallel tracks, verify at closure that all track convergence artifacts (e.g., completion artifacts filed by non-Curator roles) do not contain machine-specific absolute paths or `file://` URLs. Confirming functional completeness is not sufficient — handoff artifact format portability must also be confirmed. A `file://` path in a terminal track artifact violates the path portability rule even if the path was not used for routing.
+
 ---
 
 ## Handoff Output
 
 At each pause point, the Owner explicitly tells the human:
-1. Whether to resume an existing session or start a fresh one. Do not hedge or ask the human if a session exists — declare the instruction explicitly based on whether this is a new flow (start new) or within an active flow (resume). See `$A_SOCIETY_WORKFLOW` "When to start a new session" for exceptions.
-2. Which session to switch to.
-3. What the receiving role needs to read.
-4. Handoff inputs for the receiving role:
+1. Which session to switch to.
+2. What the receiving role needs to read.
+3. Handoff inputs for the receiving role:
    - **Existing session (default):** use this format:
      ```
      Next action: [what the receiving role should do]
      Read: [path to artifact(s)]
      Expected response: [what the receiving role produces next]
      ```
-   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 For A-Society, this applies at minimum:
 - after writing `01-owner-to-curator-brief.md`

@@ -105,10 +105,9 @@ When performing migration tasks — bringing a project's agent-docs into conform
 Before issuing your handoff, verify the next step against the flow's `workflow.md`. Do not rely on memory of the workflow sequence.
 
 At each pause point, the Curator tells the human:
-1. Whether to switch to the receiving role's existing session or start a fresh session. Do not hedge or ask the human if a session exists — declare the instruction explicitly based on whether this is a new flow (start new) or within an active flow (resume).
-2. Which session to switch to.
-3. What the receiving role needs to read (artifact path, changed files, findings, or other required context).
-4. Handoff inputs for the receiving role:
+1. Which session to switch to.
+2. What the receiving role needs to read (artifact path, changed files, findings, or other required context).
+3. Handoff inputs for the receiving role:
    - **Existing session (default):** use this format:
      ```
      Next action: [what the receiving role should do]
@@ -116,7 +115,6 @@ At each pause point, the Curator tells the human:
      Expected response: [what the receiving role produces next]
      ```
    `Expected response` names only the immediate next artifact the receiving role will produce in response to this handoff — the artifact they create before passing work onward. Do not name artifacts produced only after an intermediate step by another role. Listing a downstream artifact as the expected response implies the receiving role should produce it directly, which is incorrect when another role must act first.
-   - **New session (criteria apply):** provide first: `"You are a [Role] agent for [Project Name]. Read [path to agents.md]."` — then the artifact path. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
 Typical Curator pause points include:
 - after submitting a proposal or update-report draft for Owner review

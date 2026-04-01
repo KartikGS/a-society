@@ -56,32 +56,17 @@ The simplest workflow — a linear sequence of phases, running once at a time �
 
 ---
 
-## Sessions and the Human Orchestrator
+## Sessions and the Human Partner
 
-A graph defines what work looks like. Sessions define how the work is executed.
+A graph defines what work looks like. Sessions define how the work is executed by an agent in a specific role.
 
-**Session** — a continuous interaction between the human and an agent in a specific role. A session can span multiple phases of the graph. It can be paused while another role's session runs and resumed when the workflow returns to that role. The session is where context lives — an agent in a session remembers what it did earlier in that session and why.
+**Session** — a continuous interaction between the human and an agent. The session is where the immediate context of a work item lives.
 
-**The human as orchestrator** — the human decides when to start sessions, when to pause and resume them, which artifacts to point agents at, and maintains continuity between sessions that agents cannot. The human is not a passive approver at the end of a pipeline — they are the runtime that executes the graph.
+**The human as partner** — the human provides the direction, decisions, and creative input that the agent transforms into structured work products. The human is not a passive consumer; they are an active collaborator within each phase of the graph.
 
-In the current operational model, agents do not persist memory between sessions. This creates two realities:
+**Continuity** — between sessions, continuity is maintained by the shared record folder and the artifacts produced at each node. Each agent reads the relevant prior artifacts to orient itself to the current state of the flow.
 
-- **Within a session**, an agent has full context: its role, the work it has done, and the reasoning behind its decisions.
-- **Between sessions**, continuity lives in two places: the human's memory and the communication artifacts that carry state between roles.
-
-**Session reuse — within a flow:** resume existing sessions by default. When the workflow returns to a role that already has an active session, the human resumes that session rather than starting a new one. The agent retains its earlier context and reads any new artifacts to catch up on what happened while it was paused. A new session is warranted within a flow only when the context window is exhausted or the accumulated context would be more noise than signal.
-
-**Session reuse — at flow close:** when a flow completes, start fresh sessions for the next flow. The accumulated context from a completed flow is almost always noise for a new one — reasoning about a closed unit of work, artifacts that are no longer active, context that was relevant only to what just finished. The default at every new flow start is a fresh session for each role involved.
-
-**Transition behavior:** When an agent finishes a phase and the next phase belongs to a different role, the agent should acknowledge the pause point and tell the human what to do next. At each pause point, the agent produces:
-- A **copyable artifact path** — always. The next role's agent must be pointed at the right artifact.
-- A **copyable session-start prompt** — when a new session is required. Format: *"You are a [Role] agent for [Project Name]. Read [path to agents.md]."*
-
-The agent knows it is talking to the human who will carry the work forward.
-
-**Bidirectional mid-phase exchanges** are a special case. When a downstream node invokes a back-channel, the human switches to the upstream session, delivers the question artifact, retrieves the response, and resumes the downstream session from its waiting state. Unlike a normal phase transition, the downstream session is paused — not complete. The downstream agent should tell the human its waiting state, what question was sent, and what it needs to continue.
-
-**Future automation:** By explicitly modeling the human's orchestration role, the framework creates a specification for what automation would need to replace: session lifecycle management, artifact routing, role switching, and continuity maintenance. A project that automates orchestration replaces the human at this layer — the graph structure, node contracts, and edge conditions remain unchanged.
+**Bidirectional mid-phase exchanges** — when a node requires clarification or a decision from an upstream role, the flow enters a waiting state. The human facilitates the exchange of information between the relevant role contexts.
 
 ---
 
@@ -178,23 +163,13 @@ When does an agent stop and ask rather than proceed? Define explicit conditions:
 - Who receives the escalation?
 - What information must the escalation include?
 
-### 5. Session Model (mandatory for two or more roles)
-
-How are phases mapped to sessions? For multi-role workflows, describe:
-- Which roles run in which sessions
-- Where the natural pause points are (edges that cross session boundaries)
-- What the human does at each transition (which session to switch to, which artifact to route)
-- When to start a new session vs. resume an existing one (see session reuse rules in "Sessions and the Human Orchestrator"). Agents must never pass conditional language to the human (e.g., "Resume, but start new if none exist") — they must assert the rule explicitly based on flow state.
-
-A session model makes the human's orchestration role visible and gives agents the information they need to guide the human at pause points. A session model is mandatory for any workflow with two or more roles. It is optional only for genuinely single-role workflows.
-
-### 6. Forward Pass Closure (mandatory)
+### 5. Forward Pass Closure (mandatory)
 
 What happens when the forward pass ends? Every workflow document must name a forward pass closure step — the terminal node of the forward pass, which runs before the backward pass begins. This step is where the workflow consolidates its closure obligations: updating the project log, invoking any required tooling, and verifying that all approved tasks have been executed, not merely approved. Scattering these obligations across role documents and coordination protocols means they are invisible at the point they are needed; naming a closure step makes them visible and checkable.
 
 The two universal rules governing forward pass closure are stated in the project's workflow routing index (see the "Forward Pass Closure" section). Every workflow's closure step inherits those rules without restating them.
 
-### 7. Backward Pass (mandatory)
+### 6. Backward Pass (mandatory)
 
 What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own phase for what worked, what failed, and what should change.
 
@@ -255,19 +230,16 @@ What rules apply to all work in this project, regardless of phase? Write them as
 **Step 5 — Define escalation.**
 For each phase, describe what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note."
 
-**Step 6 — Describe the session model (mandatory for two or more roles).**
-For workflows with two or more roles: map phases to sessions, identify pause points where the human switches between sessions, and describe what the agent should tell the human at each transition — including a copyable artifact path (always) and a copyable session-start prompt when a new session is required. Define when sessions are resumed within a flow versus started fresh at flow close. Agents must state explicitly whether to start fresh or resume, without hedging based on session existence. Skip this step only for single-role workflows.
-
-**Step 7 — Define the forward pass closure step.**
+**Step 6 — Define the forward pass closure step.**
 Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Do not restate the two universal rules (current-flow scoping and synthesis-is-terminal) — reference the workflow routing index instead.
 
-**Step 8 — Define the backward pass.**
+**Step 7 — Define the backward pass.**
 Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
 
-**Step 9 — Identify sub-documents.**
+**Step 8 — Identify sub-documents.**
 What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow `main.md`.
 
-**Step 10 — Cut what does not belong.**
+**Step 9 — Cut what does not belong.**
 A workflow document that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files.
 
 ---
