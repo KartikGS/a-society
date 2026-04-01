@@ -69,12 +69,18 @@ Inspects the active conditions of the last runtime-managed flow.
 - **Usage:** `tsx src/cli.ts flow-status`
 - **Output:** Returns the current node, active role sessions, last executed tool trigger, and the specific reason for any pause or failure.
 
+## Interactive Entry Point
+
+### `a-society`
+
+The recommended entry point for interactive Owner sessions. Discovers all A-Society-initialized projects in the current working directory, prompts for project selection, and starts an Owner session for the selected project via the `orient` mechanism.
+
+- **Usage:** `a-society` (run from the workspace root containing your project folders)
+- **Source:** `runtime/bin/a-society.ts`
+- **Project detection:** A directory is recognized as an initialized A-Society project if it contains `a-docs/agents.md`.
+
 ### `orient`
-Loads a specific role context for an interactive session with full file tool sandboxing.
-- **Usage:** `tsx src/cli.ts orient <workspaceRoot> <roleKey>`
-- **Arguments:**
-  - `<workspaceRoot>`: Absolute path to the workspace root for file tool sandboxing checking.
-  - `<roleKey>`: The key identifying the role context to load (resolved via internal role registry).
+Underlying mechanism for interactive role sessions — loads role context, injects it as the system prompt, and opens a readline loop. For interactive Owner sessions, use the `a-society` binary instead; `orient` is the low-level entry point for programmatic or non-Owner role use.
 
 ## Session State
 

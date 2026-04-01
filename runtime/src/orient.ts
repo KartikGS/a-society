@@ -33,10 +33,10 @@ export async function runOrientSession(workspaceRoot: string, roleKey: string) {
   const history: RuntimeMessageParam[] = [];
   const initialUserMsg: RuntimeMessageParam = { 
     role: 'user', 
-    content: "A new orient session has started. Greet the user and await their direction." 
+    content: "A new session has started. Read the project log in your context and give a brief status of where the project is at, then ask what the user wants to work on." 
   };
 
-  console.log('\nStarting orient session...\n');
+  console.log('\n');
   let response = '';
   try {
     response = await llm.executeTurn(systemPrompt, [initialUserMsg]);
@@ -89,7 +89,7 @@ export async function runOrientSession(workspaceRoot: string, roleKey: string) {
   };
 
   rl.on('close', () => {
-    console.log('\nOrient session closed.');
+    console.log('\nSession closed.');
     process.exit(0);
   });
 
