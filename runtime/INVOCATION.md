@@ -23,7 +23,6 @@ The runtime LLM Gateway relies on provider-specific credentials. These can be se
 | `OPENAI_COMPAT_BASE_URL` | Required when `LLM_PROVIDER=openai-compatible`. | - |
 | `OPENAI_COMPAT_API_KEY` | Optional API key for OpenAI-compatible provider. | - |
 | `OPENAI_COMPAT_MODEL` | Optional model name for OpenAI-compatible provider. | `mistralai/Mistral-7B-Instruct-v0.3` |
-| `SYNTHESIS_ROLE` | Optional; synthesis role for Backward Pass Orderer. | `Curator` |
 
 ### .env File Usage
 

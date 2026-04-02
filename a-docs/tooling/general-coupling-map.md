@@ -29,7 +29,6 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | `workflow.md` YAML frontmatter schema in record folder `[a-docs]`: `workflow.name` (string, optional), `workflow.nodes[].id` (string, required), `workflow.nodes[].role` (string, required), `workflow.nodes[].human-collaborative` (string, optional), `workflow.edges[].from` (string, required), `workflow.edges[].to` (string, required), `workflow.edges[].artifact` (string, optional); removed `workflow.path[]`. | Yes | Component 4: Backward Pass Orderer |
 | `$GENERAL_MANIFEST` file format (`files` array, `path`/`scaffold`/`source_path`/`required` fields) | Yes | Component 1: Scaffolding System |
 | All `copy`-type `source_path` files in the manifest | Yes | Component 1: Scaffolding System (reads them at scaffold time) |
-| `$A_SOCIETY_COMM_TEMPLATE_PLAN` frontmatter schema `[a-docs]`: `type`, `date`, `complexity.*` (five sub-fields: `domain_spread`, `shared_artifact_impact`, `step_dependency`, `reversibility`, `scope_size`), `tier`, `path`, `known_unknowns` | Yes | Component 7: Plan Artifact Validator |
 
 **Type A status note (2026-03-22):** Component 3 alignment for optional `workflow.nodes[].human-collaborative` is fully complete. Implementation alignment was completed 2026-03-21; documentation parity in `$INSTRUCTION_WORKFLOW_GRAPH` was completed 2026-03-22 (general-lib-sync-bundle flow).
 
@@ -45,7 +44,6 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Component 3: Workflow Graph Validator | Closed (2026-03-15) |
 | `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15); Type C updates: 2026-03-18, 2026-03-20, 2026-03-22 |
 | Initializer context (`$A_SOCIETY_INITIALIZER`, Phase 3) | Component 1: Scaffolding System | Closed (2026-03-15) |
-| `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Component 7: Plan Artifact Validator | Closed (2026-03-18) |
 
 ---
 

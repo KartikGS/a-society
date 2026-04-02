@@ -12,19 +12,18 @@ A-Society has five top-level folders, each with a distinct role:
 - **`runtime/`** — the programmatic orchestration layer. Manages agent sessions end to end: injecting context from role definitions and workflow documents, routing handoffs between sessions, and triggering framework tools automatically. The runtime calls LLM APIs directly and provides its own interface — it is not a plugin for existing editors. Planned; not yet implemented. Technology: TypeScript/Node.js, consistent with the tooling layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
-The tooling layer comprises seven components, each covering a distinct deterministic operation:
+The tooling layer comprises six components, each covering a distinct deterministic operation:
 
 | Component | What it does |
 |---|---|
+| Scaffolding System (1) | Creates the folder structure and stub files for a new project's `a-docs/` |
+| Consent Utility (2) | Creates consent files from template and checks consent status |
+| Workflow Graph Schema Validator (3) | Validates that a workflow graph document matches the approved YAML frontmatter format; enforces no same-role neighbors on every edge; optional **strict** mode requires Owner at all start/end nodes for record-folder graphs |
+| Backward Pass Orderer (4) | Computes backward pass traversal order and generates per-role session trigger prompts from `workflow.md` in the active record folder |
 | Path Validator (5) | Checks that every path registered in an index table resolves to an existing file |
 | Version Comparator (6) | Identifies which framework update reports an adopting project has not yet applied |
-| Plan Artifact Validator (7) | Confirms a plan artifact exists in a given record folder and that its YAML frontmatter satisfies all required field constraints |
-| Consent Utility (2) | Creates consent files from template and checks consent status |
-| Workflow Graph Schema Validator (3) | Validates that a workflow graph document matches the approved YAML frontmatter format |
-| Backward Pass Orderer (4) | Computes backward pass traversal order and generates per-role session trigger prompts from `workflow.md` in the active record folder |
-| Scaffolding System (1) | Creates the folder structure and stub files for a new project's `a-docs/` |
 
-Component numbers reflect the implementation phase order (Phases 1–5 in the approved proposal; Component 7 is in Phase 1A, concurrent with Phases 1–3). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
+Component numbers reflect the implementation phase order (Phases 1–5 in the approved proposal). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
 
 **Node.js project initialization:** The `tooling/` directory is initialized with Node.js project scaffolding (`package.json`, directory structure) by the Tooling Developer after the Owner approves this architecture document update. This is a Developer responsibility — the Curator does not write to `tooling/`.
 

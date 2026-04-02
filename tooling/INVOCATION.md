@@ -129,7 +129,17 @@ import { validateWorkflowFile } from './src/workflow-graph-validator.ts';
 const { valid, errors } = validateWorkflowFile('/path/to/workflow/main.md');
 // valid: boolean
 // errors: string[] — empty when valid
+
+// Optional second argument enables strict mode (see structural checks below)
+const { valid: strictOk, errors: strictErrors } = validateWorkflowFile(
+  '/path/to/workflow/main.md',
+  true
+);
 ```
+
+**Structural checks (always applied):** After schema validation, Component 3 rejects any edge whose `from` and `to` nodes share the same `role` (no neighboring same-role handoffs).
+
+**Strict mode** (`strict === true`): Additionally requires that every **start** node (no incoming edges) and every **end** node (no outgoing edges) has `role: Owner`. If the graph has exactly one node, that node must be `Owner`. Use strict mode for per-flow record-folder `workflow.md` graphs where Owner bookends are required; omit `strict` (or pass `false`) for permanent workflow documents such as `a-docs/workflow/main.md` where those invariants do not apply.
 
 ### Workflow graph YAML frontmatter schema
 
@@ -297,34 +307,6 @@ const result = compareVersions(
 
 ---
 
-## Component 7 — Plan Artifact Validator
-
-**File:** `src/plan-artifact-validator.ts`
-
-Validates `01-owner-workflow-plan.md` in a record folder: presence, YAML frontmatter, and required fields (`type`, `date`, `complexity` axes, `tier`, `path`, `known_unknowns`) per `$A_SOCIETY_COMM_TEMPLATE_PLAN`.
-
-### Primary entry point: `validatePlanArtifact`
-
-```ts
-import { validatePlanArtifact } from './src/plan-artifact-validator.ts';
-
-const result = validatePlanArtifact('/path/to/a-docs/records/20260320-some-flow');
-
-// result: {
-//   valid: boolean,
-//   file_status: 'present' | 'absent',
-//   path_checked: string,
-//   errors: Array<{ field: string, issue: string }>
-// }
-```
-
-**Exit semantics (for CLI wrappers):** `valid === true` means plan present and fields valid; absent or invalid fields yield `valid === false` with `errors`; missing `recordFolderPath` or unreadable/malformed YAML throws `Error`.
-
-**Notes:**
-- Co-maintained with `$A_SOCIETY_COMM_TEMPLATE_PLAN` — allowed complexity axis values and tier values are enforced in the validator.
-
----
-
 ## Running the test suite
 
 ```bash
@@ -341,7 +323,6 @@ Tests are in `test/`. Each component has a dedicated unit test file plus a share
 | `test/consent-utility.test.ts` | Unit — Component 2 |
 | `test/workflow-graph-validator.test.ts` | Unit — Component 3 |
 | `test/backward-pass-orderer.test.ts` | Unit — Component 4 |
-| `test/plan-artifact-validator.test.ts` | Unit — Component 7 |
 | `test/scaffolding-system.test.ts` | Unit — Component 1 |
 | `test/integration.test.ts` | Integration — all components composing |
 

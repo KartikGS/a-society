@@ -35,7 +35,7 @@ export interface ValidationResult {
  * Uses runtime type checks; accepts unknown input and reports all violations.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validateGraph(doc: unknown): string[] {
+export function validateGraph(doc: unknown, strict?: boolean): string[] {
   const errors: string[] = [];
 
   if (!doc || typeof doc !== 'object') {
@@ -141,6 +141,63 @@ export function validateGraph(doc: unknown): string[] {
     }
   }
 
+  if (errors.length > 0) return errors;
+
+  const workflow = wf as WorkflowGraph;
+
+  // 1. Unconditional check: No neighboring same-role nodes
+  const nodeIdToRole = new Map<string, string>();
+  for (const node of workflow.nodes) {
+    nodeIdToRole.set(node.id, node.role);
+  }
+
+  for (let i = 0; i < workflow.edges.length; i++) {
+    const edge = workflow.edges[i];
+    const fromRole = nodeIdToRole.get(edge.from);
+    const toRole = nodeIdToRole.get(edge.to);
+
+    if (fromRole && toRole && fromRole === toRole) {
+      errors.push(`Invalid edge [${i}]: neighboring nodes "${edge.from}" and "${edge.to}" both share the same role "${fromRole}"`);
+    }
+  }
+
+  // 2. Strict checks: Owner at start and end
+  if (strict) {
+    const toIds = new Set<string>();
+    const fromIds = new Set<string>();
+    for (const edge of workflow.edges) {
+      toIds.add(edge.to);
+      fromIds.add(edge.from);
+    }
+
+    if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
+      // Sole node case
+      if (workflow.nodes[0].role !== 'Owner') {
+        errors.push(`Strict mode violation: sole node role must be "Owner" (found "${workflow.nodes[0].role}")`);
+      }
+    } else {
+      // General case: Any node with no incoming/outgoing edges must be Owner if it's a start/end
+      const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
+      const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
+
+      for (const node of startNodes) {
+        if (node.role !== 'Owner') {
+          errors.push(
+            `Strict mode violation: start node "${node.id}" must have role "Owner" (found "${node.role}")`
+          );
+        }
+      }
+
+      for (const node of endNodes) {
+        if (node.role !== 'Owner') {
+          errors.push(
+            `Strict mode violation: end node "${node.id}" must have role "Owner" (found "${node.role}")`
+          );
+        }
+      }
+    }
+  }
+
   return errors;
 }
 
@@ -149,7 +206,7 @@ export function validateGraph(doc: unknown): string[] {
  *
  * Parses the YAML frontmatter from the file and runs all schema checks.
  */
-export function validateWorkflowFile(filePath: string): ValidationResult {
+export function validateWorkflowFile(filePath: string, strict?: boolean): ValidationResult {
   let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -169,6 +226,6 @@ export function validateWorkflowFile(filePath: string): ValidationResult {
     return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }
 
-  const errors = validateGraph(doc);
+  const errors = validateGraph(doc, strict);
   return { valid: errors.length === 0, errors };
 }

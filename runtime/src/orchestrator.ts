@@ -99,10 +99,6 @@ export class FlowOrchestrator {
     SessionStore.saveRoleSession(session);
     SessionStore.saveTurnRecord(session.logicalSessionId, turnRecord);
 
-    // 5. Evaluate Plan Rule Trigger
-    if (handoff.artifact_path && handoff.artifact_path.includes('01-owner-workflow-plan.md')) {
-      await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'ACTIVE_ARTIFACT', { artifactPath: handoff.artifact_path });
-    }
 
     // C-2: Workflow Edge Routing Rule Check
     const proposedRole = handoff.role;

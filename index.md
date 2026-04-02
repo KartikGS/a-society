@@ -21,11 +21,10 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_TOOLING_INVOCATION` | `/a-society/tooling/INVOCATION.md` | Invocation reference for all tooling components — quick start, entry points, and error conventions |
 | `$A_SOCIETY_TOOLING_SCAFFOLDING_SYSTEM` | `/a-society/tooling/src/scaffolding-system.ts` | Component 1: Scaffolding System — creates a-docs/ folder structure and stub files from the manifest |
 | `$A_SOCIETY_TOOLING_CONSENT_UTILITY` | `/a-society/tooling/src/consent-utility.ts` | Component 2: Consent Utility — creates and checks feedback consent files |
-| `$A_SOCIETY_TOOLING_WORKFLOW_GRAPH_VALIDATOR` | `/a-society/tooling/src/workflow-graph-validator.ts` | Component 3: Workflow Graph Validator — validates YAML frontmatter schema in workflow/main.md |
+| `$A_SOCIETY_TOOLING_WORKFLOW_GRAPH_VALIDATOR` | `/a-society/tooling/src/workflow-graph-validator.ts` | Component 3: Workflow Graph Validator — validates YAML frontmatter workflow graph schema; rejects same-role neighbors on edges; optional strict mode (Owner at all start/end nodes) for record-folder graphs |
 | `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` | `/a-society/tooling/src/backward-pass-orderer.ts` | Component 4: Backward Pass Orderer — computes backward pass role traversal order from a workflow graph |
 | `$A_SOCIETY_TOOLING_PATH_VALIDATOR` | `/a-society/tooling/src/path-validator.ts` | Component 5: Path Validator — checks whether every path in an index table resolves to an existing file |
 | `$A_SOCIETY_TOOLING_VERSION_COMPARATOR` | `/a-society/tooling/src/version-comparator.ts` | Component 6: Version Comparator — identifies framework update reports an adopting project has not yet applied |
-| `$A_SOCIETY_TOOLING_PLAN_ARTIFACT_VALIDATOR` | `/a-society/tooling/src/plan-artifact-validator.ts` | Component 7: Plan Artifact Validator — confirms a plan artifact exists in a given record folder and that its YAML frontmatter satisfies all required field constraints |
 | **Feedback** | | |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `/a-society/feedback/onboarding/_template.md` | Template for Initializer signal reports — one report per initialization run |
 | `$INSTRUCTION_CONSENT` | `/a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |

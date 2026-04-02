@@ -9,4 +9,4 @@
 
 | Version After | Update Report | Applied | Notes |
 |---|---|---|---|
-| v25.0 | 2026-03-29-owner-routing-multi-domain.md | 2026-03-29 | — |
+| v27.0 | 2026-03-31-session-routing-removal.md | 2026-03-31 | — |

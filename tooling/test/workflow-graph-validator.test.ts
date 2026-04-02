@@ -191,10 +191,89 @@ test('file without frontmatter fails', () => {
   assert.strictEqual(result.valid, false);
 });
 
-test('live A-Society workflow passes validation', () => {
+test('neighboring same-role nodes produces error (unconditional)', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Owner' },
+        { id: 'n2', role: 'Owner' },
+      ],
+      edges: [{ from: 'n1', to: 'n2' }],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.ok(
+    errors.some((e: string) => e.includes('neighboring nodes "n1" and "n2" both share the same role "Owner"'))
+  );
+});
+
+test('strict mode: non-Owner start node produces error', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Curator' },
+        { id: 'n2', role: 'Owner' },
+      ],
+      edges: [{ from: 'n1', to: 'n2' }],
+    },
+  };
+  const errors = validateGraph(graph, true);
+  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role "Owner"')));
+});
+
+test('strict mode: non-Owner end node produces error', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Owner' },
+        { id: 'n2', role: 'Curator' },
+      ],
+      edges: [{ from: 'n1', to: 'n2' }],
+    },
+  };
+  const errors = validateGraph(graph, true);
+  assert.ok(errors.some((e: string) => e.includes('end node "n2" must have role "Owner"')));
+});
+
+test('strict mode: sole node must be Owner', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'Curator' }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph, true);
+  assert.ok(errors.some((e: string) => e.includes('sole node role must be "Owner"')));
+});
+
+test('strict mode: valid graph passes', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Owner' },
+        { id: 'n2', role: 'Curator' },
+        { id: 'n3', role: 'Owner' },
+      ],
+      edges: [
+        { from: 'n1', to: 'n2' },
+        { from: 'n2', to: 'n3' },
+      ],
+    },
+  };
+  const errors = validateGraph(graph, true);
+  assert.deepStrictEqual(errors, []);
+});
+
+test('live A-Society workflow passes validation (non-strict)', () => {
   const result = validateWorkflowFile(LIVE_WORKFLOW);
   assert.strictEqual(result.valid, true, `Live workflow invalid:\n${result.errors.map(e => '  ' + e).join('\n')}`);
 });
+
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

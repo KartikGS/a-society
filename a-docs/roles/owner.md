@@ -142,6 +142,8 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 **Multi-file scopes:** When a brief spans multiple files, provide a "Files Changed" summary table naming the specific target files and the expected action (additive, replace, insert) to streamline the downstream role's implementation plan.
 
+**Removed type surfaces require consumer enumeration.** When a brief removes or renames a union variant, enum value, interface member, event type, or other consumed program element, enumerate not only the definition site but also the consuming call sites that must change to keep the layer valid. A type-surface removal mechanically implies downstream edits; list those consuming files in the Files Changed table rather than leaving the receiving role to discover them during implementation.
+
 **Prose insertions:** When a brief directs a downstream role to insert text into existing prose, provide the exact immediately adjacent target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." If the insertion is bounded from both sides, name the immediately adjacent clause on each side — not a nearby landmark elsewhere in the section. A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
 
 **Instruction-text variable references:** When a brief proposes text that itself contains `$VAR` references, use only variable names that actually exist in the relevant index. If no project-agnostic variable name exists for the concept being described, use a functional description instead — for example, "the variable registered in the project's index for the agents entry point" — rather than inventing a fictional placeholder.
@@ -183,6 +185,8 @@ Classification guidance issued in **update report phase handoffs** is permitted 
 When a decision artifact or review constraint directs downstream implementation checks, write the constraint with the same precision required of briefs. Constraint language should be mechanically followable by the receiving role without needing pattern inference.
 
 **Registration scope must be file-based.** When directing index registration or verification, scope the instruction by the newly created or modified files, not by their parent directory, unless the directory boundary is itself the point of the constraint. "Verify whether `$A_SOCIETY_INDEX` needs updating for any newly created or modified files" is mechanically actionable; a location-based qualifier can accidentally exclude the relevant file.
+
+**Public-index variable retirement requires a reference sweep.** When a brief, convergence decision, or other Owner authorization retires a public-index variable or deletes a publicly registered artifact, sweep `a-society/` for references to that `$VARIABLE_NAME` before finalizing scope. Explicitly name every dependent file that must change, including any `general/` artifacts, so required `[LIB]` authorization is granted up front rather than retroactively.
 
 ---
 
