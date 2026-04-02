@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v27.0
+**Version:** v27.1
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v27.1 | 2026-04-02 | 2026-04-02-parallel-handoff-array-form.md — Machine-readable handoff instruction adds fork-point array form while preserving single-target form (Recommended) |
 | v27.0 | 2026-03-31 | 2026-03-31-session-routing-removal.md — Session routing removed from all governance docs and handoff schema; `session_action`/`prompt` removed from runtime (Breaking × 3 + Recommended × 1) |
 | v26.0 | 2026-03-29 | 2026-03-29-owner-protocol-and-role-guidance-bundle.md — Owner role: log validity sweeps (Breaking); multi-domain merge criteria (Breaking); brief-writing & constraint precision (Recommended) |
 | v25.0 | 2026-03-29 | 2026-03-29-owner-routing-multi-domain.md — Owner role: single flow with parallel tracks (Breaking); workflow instruction: multi-domain parallel-track pattern (Recommended) |

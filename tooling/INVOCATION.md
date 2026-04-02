@@ -180,33 +180,27 @@ const plan = orderWithPromptsFromFile(
   'Curator'   // synthesisRole is required
 );
 
-// plan: Array<{
-//   role: string,
-//   stepType: 'meta-analysis' | 'synthesis',
-//   sessionInstruction: 'existing-session' | 'new-session',
-//   prompt: string
-// }>
+// plan: BackwardPassPlan = BackwardPassEntry[][]
+// Outer array: sequential steps (run in order)
+// Inner array: concurrent group (entries may run in parallel)
 ```
 
 ### Lower-level entry point: `computeBackwardPassOrder`
 
-For unit tests or callers that already have parsed `workflow.nodes` (see record-folder schema below):
+For unit tests or callers that already have parsed `workflow.nodes` and `workflow.edges`:
 
 ```ts
 import { computeBackwardPassOrder } from './src/backward-pass-orderer.ts';
 
 const plan = computeBackwardPassOrder(
-  [
-    { id: 'owner-intake', role: 'Owner' },
-    { id: 'curator-proposal', role: 'Curator' },
-    { id: 'owner-review', role: 'Owner' },
-  ],
-  'Curator',
-  '/path/to/a-docs/records/20260320-some-flow',   // optional; used in synthesis prompt paths
+  nodes,        // WorkflowNode[]
+  edges,        // WorkflowEdge[]
+  'Curator',    // synthesisRole
+  '/path/to/record/folder' // optional; used in synthesis prompt paths
 );
 ```
 
-**Algorithm:** The orderer scans `workflow.nodes` in **array order**. It collects each `role` on **first occurrence only** (deduplication preserves order of first appearance). That ordered unique-role list is **reversed** for meta-analysis traversal. One final **synthesis** step is appended for the provided `synthesisRole`. The `edges` array is not used for ordering today; it is part of the unified graph schema for validation and future use.
+**Algorithm:** The orderer uses a graph-based topological algorithm (**Type C**). It computes the "reverse distance from terminal" for each node using BFS through predecessor links. Nodes at the same distance form a concurrent group. Roles are deduplicated across groups (first occurrence wins, in backward-pass order). One final **synthesis** step is appended for the provided `synthesisRole`.
 
 ### Record-folder `workflow.md` schema
 
@@ -217,26 +211,22 @@ workflow:
   nodes:
     - id: owner-intake
       role: Owner
-      human-collaborative: direction
     - id: curator-proposal
       role: Curator
     - id: owner-review
       role: Owner
-      human-collaborative: approval
   edges:
     - from: owner-intake
       to: curator-proposal
-      artifact: owner-to-curator-brief
     - from: curator-proposal
       to: owner-review
-      artifact: curator-to-owner
 ---
 ```
 
 **Notes:**
-- **Legacy `path[]`:** If `workflow.path` is present, Component 4 **throws** with a migration message — adopt the `nodes`/`edges` schema per `$INSTRUCTION_WORKFLOW_GRAPH` and the record-folder variant in `$INSTRUCTION_RECORDS`.
-- The synthesis role is **not** read from `workflow.md`; callers pass it as the second argument to `orderWithPromptsFromFile`.
-- Output entries follow the three-field handoff format (meta-analysis) or the orientation format (synthesis). Meta-analysis prompts do not include the "You are the role agent" preamble.
+- **Legacy `path[]`:** If `workflow.path` is present, Component 4 **throws** with a migration message.
+- **Concurrent Groups:** When an inner array in the plan contains multiple entries, the meta-analysis prompts include a note directing agents to use sub-labeled finding filenames (e.g., `05a-`, `05b-`) to avoid collisions.
+- **Linear Compatibility:** For linear graphs, every inner array has exactly one entry, and the output is functionally identical to original versions (regression protection).
 - Both prompt types embed a `Read:` reference to the relevant section in `$GENERAL_IMPROVEMENT` (`### Meta-Analysis Phase` or `### Synthesis Phase`).
 
 ---

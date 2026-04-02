@@ -8,6 +8,7 @@ import crypto from 'node:crypto';
 import type { FlowRun } from './types.js';
 import { runOrientSession } from './orient.js';
 import path from 'node:path';
+import { renderFlowStatus } from './visualization.js';
 
 const orchestrator = new FlowOrchestrator();
 
@@ -15,22 +16,28 @@ async function startFlow(projectRoot: string, recordFolderPath: string, starting
   SessionStore.init();
   const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
 
-  let startNode = 'start';
+  let startNodeId = 'start';
   try {
     const doc = parseWorkflow(workflowDocumentPath);
     if (doc.workflow && doc.workflow.nodes) {
       const node = doc.workflow.nodes.find((n: any) => n.role === startingRole);
       if (node) {
-        startNode = node.id;
+        startNodeId = node.id;
       }
     }
-  } catch(e) { /* ignore parse errors until trigger */ }
+  } catch(e) { 
+    console.error(`Workflow parsing failed: ${e.message}`);
+    process.exit(1);
+  }
 
   const flowRun: FlowRun = {
     flowId: crypto.randomUUID(),
     projectRoot,
     recordFolderPath,
-    currentNode: startNode,
+    activeNodes: [startNodeId],
+    completedNodes: [],
+    completedNodeArtifacts: {},
+    pendingNodeArtifacts: { [startNodeId]: [startingArtifact] },
     status: 'initialized'
   };
 
@@ -46,14 +53,14 @@ async function startFlow(projectRoot: string, recordFolderPath: string, starting
 
   console.log(`Starting flow at ${recordFolderPath}...`);
   try {
-    await orchestrator.advanceFlow(flowRun, startingRole, startingArtifact);
+    await orchestrator.advanceFlow(flowRun, startNodeId, startingArtifact);
     console.log(`Flow paused or completed. Current status: ${SessionStore.loadFlowRun()?.status}`);
   } catch (err: any) {
     console.error(`Flow execution stopped: ${err.message}`);
   }
 }
 
-async function resumeFlow(roleKey: string, activeArtifactPath: string, humanInput?: string) {
+async function resumeFlow(nodeId: string, activeArtifactPath?: string, humanInput?: string) {
   SessionStore.init();
   const flowRun = SessionStore.loadFlowRun();
   if (!flowRun) {
@@ -71,7 +78,7 @@ async function resumeFlow(roleKey: string, activeArtifactPath: string, humanInpu
 
   console.log(`Resuming flow at ${flowRun.recordFolderPath}...`);
   try {
-    await orchestrator.advanceFlow(flowRun, roleKey, activeArtifactPath, humanInput);
+    await orchestrator.advanceFlow(flowRun, nodeId, activeArtifactPath, humanInput);
     console.log(`Flow paused or completed. Current status: ${SessionStore.loadFlowRun()?.status}`);
   } catch (err: any) {
     console.error(`Flow execution stopped: ${err.message}`);
@@ -86,11 +93,14 @@ function flowStatus() {
     return;
   }
 
-  console.log(`=== RUNTIME FLOW STATUS ===`);
-  console.log(`Record Folder: ${flowRun.recordFolderPath}`);
-  console.log(`Workflow: ${path.join(flowRun.recordFolderPath, 'workflow.md')}`);
-  console.log(`Node: ${flowRun.currentNode}`);
-  console.log(`Status: ${flowRun.status}`);
+  try {
+    const workflowPath = path.join(flowRun.recordFolderPath, 'workflow.md');
+    const wf = parseWorkflow(workflowPath).workflow;
+    console.log(renderFlowStatus(flowRun, wf));
+  } catch (err: any) {
+    // Fall back to minimal output if workflow.md is unreadable
+    console.log(`=== RUNTIME FLOW STATUS ===\nRecord Folder: ${flowRun.recordFolderPath}\nStatus: ${flowRun.status}\n(Workflow graph unavailable for visualization: ${err.message})`);
+  }
 }
 
 const args = process.argv.slice(2);
@@ -104,13 +114,18 @@ if (command === 'start-flow') {
   }
   startFlow(root, recPath, role, artifact);
 } else if (command === 'resume-flow') {
-  const [role, artifact, ...rest] = args.slice(1);
-  if (!role || !artifact) {
-    console.error('Usage: resume-flow <roleKey> <activeArtifactPath> [humanInput]');
+  const [nodeId, artifact, ...rest] = args.slice(1);
+  if (!nodeId) {
+    console.error('Usage: resume-flow <nodeId> [activeArtifactPath] [humanInput]');
     process.exit(1);
   }
+  
+  // If artifact looks like human input (no dot and multiple words or just different from standard path), 
+  // it might be tricky. But the convention is nodeId artifact humanInput.
+  // We'll follow the positional rule.
+  
   const humanInput = rest.length > 0 ? rest.join(' ') : undefined;
-  resumeFlow(role, artifact, humanInput);
+  resumeFlow(nodeId, artifact, humanInput);
 } else if (command === 'flow-status') {
   flowStatus();
 } else if (command === 'orient') {

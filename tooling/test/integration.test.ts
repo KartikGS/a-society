@@ -26,7 +26,7 @@ import { validatePaths }                       from '../src/path-validator.js';
 import { validateWorkflowFile }                from '../src/workflow-graph-validator.js';
 import { orderWithPromptsFromFile }            from '../src/backward-pass-orderer.js';
 import { compareVersions }                     from '../src/version-comparator.js';
-import type { BackwardPassEntry }              from '../src/backward-pass-orderer.js';
+import type { BackwardPassEntry, BackwardPassPlan } from '../src/backward-pass-orderer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -204,6 +204,7 @@ test('Scenario 4 — internal index: any failures are framework drift, not tool 
 
 // ── Scenario 5: Workflow Graph Validator + Backward Pass Orderer ──────────────
 
+let backwardPlan: BackwardPassPlan | undefined;
 let backwardOrder: BackwardPassEntry[] | undefined;
 
 test('Scenario 5 — workflow graph validator runs on live workflow and reports framework drift without failing', () => {
@@ -217,7 +218,9 @@ test('Scenario 5 — workflow graph validator runs on live workflow and reports 
 
 test('Scenario 5 — backward pass orderer runs on record-folder workflow.md without throwing', () => {
   assert.doesNotThrow(() => {
-    backwardOrder = orderWithPromptsFromFile(RECORD_FOLDER, 'Curator');
+    backwardPlan = orderWithPromptsFromFile(RECORD_FOLDER, 'Curator');
+    // Flatten 2D plan to flat array for downstream assertions
+    backwardOrder = backwardPlan.flat();
   });
 });
 

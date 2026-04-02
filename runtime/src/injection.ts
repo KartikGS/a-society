@@ -16,7 +16,7 @@ export class ContextInjectionService {
   static buildContextBundle(
     roleKey: string,
     projectRoot: string,
-    activeArtifactPath: string,
+    activeArtifactPath: string | string[],
     directivePrompt: string | null,
     mode: 'flow' | 'orient' = 'flow'
   ): ContextBundleResult {
@@ -41,13 +41,17 @@ export class ContextInjectionService {
       bundle += `--- UNKNOWN ROLE: ${roleKey}. No required reading available. ---\n\n`;
     }
 
-    // 2. Inject active artifact
-    if (activeArtifactPath) {
-      const fullActivePath = path.resolve(projectRoot, activeArtifactPath);
-      bundle += `--- ACTIVE WORKSPACE ARTIFACT ---\n`;
-      bundle += `[FILE: ${activeArtifactPath}]\n`;
-      if (fs.existsSync(fullActivePath)) {
-        const content = fs.readFileSync(fullActivePath, 'utf8');
+    // 2. Inject active artifact(s)
+    const paths = Array.isArray(activeArtifactPath) ? activeArtifactPath : (activeArtifactPath ? [activeArtifactPath] : []);
+    const total = paths.length;
+
+    for (let i = 0; i < paths.length; i++) {
+      const p = paths[i];
+      const fullPath = path.resolve(projectRoot, p);
+      bundle += `--- ACTIVE WORKSPACE ARTIFACT${total > 1 ? ` (${i + 1} of ${total})` : ''} ---\n`;
+      bundle += `[FILE: ${p}]\n`;
+      if (fs.existsSync(fullPath)) {
+        const content = fs.readFileSync(fullPath, 'utf8');
         bundle += `${content}\n\n`;
       } else {
         bundle += `(File does not exist yet)\n\n`;

@@ -1,6 +1,6 @@
 # A-Society Version Record
 
-**Baseline Version:** v27.0
+**Baseline Version:** v27.1
 **Initialized:** 2026-03-29
 
 ---

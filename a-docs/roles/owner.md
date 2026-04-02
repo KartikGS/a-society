@@ -150,6 +150,8 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 **Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
 
+**Mixed-scope Curator briefs need an execution-timing rule.** When a brief to the Curator combines approval-scoped work with direct-authority `[MAINT]` or `[Curator authority — implement directly]` items, state whether the direct-authority items should be implemented immediately on receipt or batched into the post-approval implementation pass. Authority answers who may do the work; the brief must also answer when that work should occur.
+
 **Topology-based obligation:** When a flow has no Proposal phase (per the workflow plan), the brief must explicitly state that no proposal artifact is required before implementation begins.
 
 **Output-format changes are not mechanical.** Any change that introduces a new required field, a new template section, or a new required structural element in the output carries design decisions about what the output should look like — those decisions belong in the brief, not left to the Curator. A brief that introduces an output-format change must explicitly specify the expected output form. "Open Questions: None" is only correct when the output form is also fully derivable from the brief.

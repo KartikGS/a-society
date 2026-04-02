@@ -35,7 +35,11 @@ export interface BackwardPassEntry {
   prompt: string;
 }
 
-export type BackwardPassPlan = BackwardPassEntry[];
+/**
+ * Sequential steps (outer array) containing concurrent groups (inner array).
+ * Linear flows have exactly one entry in each inner array.
+ */
+export type BackwardPassPlan = BackwardPassEntry[][];
 
 function createMetaAnalysisPrompt(
   role: string,
@@ -43,12 +47,21 @@ function createMetaAnalysisPrompt(
   total: number,
   nextRole: string,
   nextStepType: 'meta-analysis' | 'synthesis',
+  concurrent: boolean,
 ): string {
-  return [
+  const lines = [
     `Next action: Perform your backward pass meta-analysis (step ${position} of ${total}).`,
     `Read: all prior artifacts in the record folder, then ### Meta-Analysis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
     `Expected response: Your findings artifact at the next available sequence position in the record folder. When complete, hand off to ${nextRole} (${nextStepType}).`,
-  ].join('\n\n');
+  ];
+
+  if (concurrent) {
+    lines.push(
+      `Note: this step is concurrent — other roles are performing their meta-analysis in parallel. File your findings at the next available sub-labeled position (e.g., NNa-, NNb-) after reading the record folder's current contents to confirm the available slot.`
+    );
+  }
+
+  return lines.join('\n\n');
 }
 
 function createSynthesisPrompt(role: string, position: number, total: number, recordFolderPath: string): string {
@@ -145,44 +158,111 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
 
 export function computeBackwardPassOrder(
   nodes: WorkflowNode[],
+  edges: WorkflowEdge[],
   synthesisRole: string,
   recordFolderPath: string = 'the record folder',
 ): BackwardPassPlan {
-  const seenRoles = new Set<string>();
-  const firstOccurrenceRoles: string[] = [];
+  // Step 1: Build predecessors map
+  const predecessors: Record<string, string[]> = {};
+  for (const edge of edges) {
+    predecessors[edge.to] = [...(predecessors[edge.to] ?? []), edge.from];
+  }
 
-  for (const node of nodes) {
-    if (!seenRoles.has(node.role)) {
-      seenRoles.add(node.role);
-      firstOccurrenceRoles.push(node.role);
+  // Step 2: Find terminal nodes (no outgoing edges)
+  const hasOutgoing = new Set(edges.map(e => e.from));
+  const terminalIds = nodes.map(n => n.id).filter(id => !hasOutgoing.has(id));
+
+  if (terminalIds.length === 0) {
+    // Falls back to linear first-occurrence if no edges exist or graph is malformed
+    // But per spec §8: "workflow.nodes must produce at least one terminal node"
+    throw new Error('workflow.nodes must produce at least one terminal node');
+  }
+
+  // Step 3: BFS from terminals through predecessor links
+  const nodeDistance: Record<string, number> = {};
+  const queue: string[] = [...terminalIds];
+  terminalIds.forEach(id => { nodeDistance[id] = 0; });
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const dist = nodeDistance[current];
+    for (const pred of (predecessors[current] ?? [])) {
+      if (nodeDistance[pred] === undefined) {
+        nodeDistance[pred] = dist + 1;
+        queue.push(pred);
+      }
     }
   }
 
-  const traversalRoles = [...firstOccurrenceRoles].reverse();
-  const totalSteps = traversalRoles.length + 1;
+  // Step 4: Compute maximum reverse distance for each role
+  const nodeById: Record<string, WorkflowNode> = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const roleMaxDistance: Record<string, number> = {};
+  
+  for (const [id, dist] of Object.entries(nodeDistance)) {
+    const role = nodeById[id]?.role;
+    if (role) {
+      roleMaxDistance[role] = Math.max(roleMaxDistance[role] ?? 0, dist);
+    }
+  }
 
-  const plan: BackwardPassPlan = traversalRoles.map((role, index) => {
-    const nextRole = index < traversalRoles.length - 1
-      ? traversalRoles[index + 1]
-      : synthesisRole;
-    const nextStepType = index < traversalRoles.length - 1
-      ? 'meta-analysis'
-      : 'synthesis';
+  // Step 5: Group roles by their maximum distance, sort ascending
+  const roleGroupsByDist: Record<number, string[]> = {};
+  for (const [role, dist] of Object.entries(roleMaxDistance)) {
+    roleGroupsByDist[dist] = [...(roleGroupsByDist[dist] ?? []), role];
+  }
+  
+  const sortedRoleDistances = Object.keys(roleGroupsByDist).map(Number).sort((a, b) => a - b);
+  const roleGroups: string[][] = sortedRoleDistances.map(d => roleGroupsByDist[d]);
 
-    return {
-      role,
-      stepType: 'meta-analysis' as const,
-      sessionInstruction: 'existing-session' as const,
-      prompt: createMetaAnalysisPrompt(role, index + 1, totalSteps, nextRole, nextStepType),
-    };
-  });
+  // Step 6: Convert to BackwardPassPlan
+  const totalMetaSteps = roleGroups.reduce((acc, group) => acc + group.length, 0);
+  const totalSteps = totalMetaSteps + 1;
+  let currentPosition = 1;
 
-  plan.push({
+  const plan: BackwardPassPlan = [];
+
+  for (let i = 0; i < roleGroups.length; i++) {
+    const group = roleGroups[i];
+    const isConcurrent = group.length > 1;
+    const groupEntries: BackwardPassEntry[] = [];
+
+    for (const role of group) {
+      // Determine what follows this group
+      let nextRole: string;
+      let nextStepType: 'meta-analysis' | 'synthesis';
+
+      if (group.length > 1 && group.indexOf(role) < group.length - 1) {
+        // More roles in same group
+        nextRole = group[group.indexOf(role) + 1];
+        nextStepType = 'meta-analysis';
+      } else if (i < roleGroups.length - 1) {
+        // Next group
+        nextRole = roleGroups[i + 1][0];
+        nextStepType = 'meta-analysis';
+      } else {
+        // Synthesis
+        nextRole = synthesisRole;
+        nextStepType = 'synthesis';
+      }
+
+      groupEntries.push({
+        role,
+        stepType: 'meta-analysis',
+        sessionInstruction: 'existing-session',
+        prompt: createMetaAnalysisPrompt(role, currentPosition, totalSteps, nextRole, nextStepType, isConcurrent),
+      });
+      currentPosition++;
+    }
+    plan.push(groupEntries);
+  }
+
+  // Final Synthesis Step
+  plan.push([{
     role: synthesisRole,
     stepType: 'synthesis',
     sessionInstruction: 'new-session',
     prompt: createSynthesisPrompt(synthesisRole, totalSteps, totalSteps, recordFolderPath),
-  });
+  }]);
 
   return plan;
 }
@@ -215,6 +295,7 @@ export function orderWithPromptsFromFile(
   const frontmatter = parseRecordWorkflowFrontmatter(parsed);
   return computeBackwardPassOrder(
     frontmatter.workflow.nodes,
+    frontmatter.workflow.edges,
     synthesisRole,
     recordFolderPath,
   );

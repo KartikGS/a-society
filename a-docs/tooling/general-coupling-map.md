@@ -42,8 +42,10 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | Component 6: Version Comparator | Closed (2026-03-15) |
 | `$INSTRUCTION_CONSENT` | Component 2: Consent Utility | Closed (2026-03-15) |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Component 3: Workflow Graph Validator | Closed (2026-03-15) |
-| `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15); Type C updates: 2026-03-18, 2026-03-20, 2026-03-22 |
+| `$GENERAL_IMPROVEMENT` (improvement/backward pass context) | Component 4: Backward Pass Orderer | Closed (2026-03-15); Type C updates: 2026-03-18, 2026-03-20, 2026-03-22, 2026-04-02 |
 | Initializer context (`$A_SOCIETY_INITIALIZER`, Phase 3) | Component 1: Scaffolding System | Closed (2026-03-15) |
+
+**Type C status note (2026-04-02):** Component 4 interface documentation is aligned with the parallel-track update. `computeBackwardPassOrder` now requires an `edges` parameter, and `orderWithPromptsFromFile` now returns `BackwardPassEntry[][]` (`BackwardPassPlan`) rather than `BackwardPassEntry[]`. `$A_SOCIETY_TOOLING_INVOCATION` was updated in the implementation track.
 
 ---
 

@@ -9,4 +9,4 @@
 
 | Version After | Update Report | Applied | Notes |
 |---|---|---|---|
-| v27.0 | 2026-03-31-session-routing-removal.md | 2026-03-31 | — |
+| v27.1 | 2026-04-02-parallel-handoff-array-form.md | 2026-04-02 | — |

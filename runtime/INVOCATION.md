@@ -51,22 +51,22 @@ Creates a new `FlowRun` and begins automated orchestration.
 - **Usage:** `tsx src/cli.ts start-flow <projectRoot> <recordFolderPath> <startingRole> <startingArtifact>`
 - **Arguments:**
   - `<projectRoot>`: The root directory of the project being orchestrated.
-  - `<recordFolderPath>`: Path to the current active flow's record folder. The workflow graph is read from `<recordFolderPath>/workflow.md` (record-folder subgraph schema per `$INSTRUCTION_WORKFLOW_GRAPH` / `$INSTRUCTION_RECORDS`).
+  - `<recordFolderPath>`: Path to the current active flow's record folder. The workflow graph is read from `<recordFolderPath>/workflow.md`.
   - `<startingRole>`: The role assigned to the first node in the flow.
   - `<startingArtifact>`: The initial artifact provided to the starting role.
 
 ### `resume-flow`
-Resumes a paused or retryable flow from its last durable checkpoint.
-- **Usage:** `tsx src/cli.ts resume-flow <roleKey> <activeArtifactPath> [humanInput]`
+Resumes a paused or retryable flow from its last durable checkpoint for a specific active node.
+- **Usage:** `tsx src/cli.ts resume-flow <nodeId> [activeArtifactPath] [humanInput]`
 - **Arguments:**
-  - `<roleKey>`: The key identifying the role to resume as (e.g. `Owner`, `Curator`).
-  - `<activeArtifactPath>`: Path to the artifact to hand to the resuming role.
-  - `[humanInput]`: Optional free-text string. Required when the flow is paused at an `awaiting_human` state originating from a `human-collaborative` workflow node.
+  - `<nodeId>`: The ID of the node to resume (e.g. `tooling-developer`, `runtime-developer`), not the role name.
+  - `[activeArtifactPath]`: Optional path to the artifact to hand to the resuming node. If omitted, the orchestrator reads the pending artifacts for this node from the flow state.
+  - `[humanInput]`: Optional free-text string. Required when the flow is paused at an `awaiting_human` state for this node.
 
 ### `flow-status`
-Inspects the active conditions of the last runtime-managed flow.
+Inspects the active conditions of the last runtime-managed flow, including multi-node parallel state.
 - **Usage:** `tsx src/cli.ts flow-status`
-- **Output:** Returns the current node, active role sessions, last executed tool trigger, and the specific reason for any pause or failure.
+- **Output:** Returns a formatted status including the record folder, overall status, active nodes (with their roles), completed nodes, and any pending joins (nodes waiting for multiple predecessors).
 
 ## Interactive Entry Point
 
@@ -85,18 +85,24 @@ Underlying mechanism for interactive role sessions — loads role context, injec
 
 The runtime persists operational state separately from the canonical project log. 
 - **State location:** `a-society/runtime/.state/`
-- **Contents:** `FlowRun` metadata, role-session histories, tool-trigger results, and last-known execution checkpoints. 
-*Note:* The runtime state directory is purely for orchestration metadata. Do not store canonical `a-docs/` artifacts inside it.
+- **Contents:** `FlowRun` metadata (multi-node model), node-keyed role-session histories, tool-trigger results, and last-known execution checkpoints. 
+
+**IMPORTANT:** The multi-node tracking model introduced in v0.x is incompatible with previous `.state/flow.json` formats. Any existing states must be discarded before running the updated runtime.
 
 ## Status Values
 
 A flow run will always be in one of the following states:
 - `initialized`: Flow created, graph validated, ready for first turn.
-- `running`: Flow is actively executing model turns and routing decisions.
-- `awaiting_human`: Flow paused at a `human-collaborative` workflow node, waiting for explicit operator input.
+- `running`: Flow is actively executing model turns and routing decisions for at least one active node.
+- `awaiting_human`: Flow paused at a `human-collaborative` workflow node, waiting for explicit operator input. **Note:** In the current version, an `awaiting_human` pause halts all tracks in the flow.
 - `awaiting_retry`: Flow paused due to a transient error (e.g. rate limit), waiting for operator retry.
-- `completed`: Flow reached a terminal node and forward orchestration is finished. Archive operations complete.
-- `failed`: Flow encountered an unrecoverable violation or hard error. Operator intervention required.
+- `completed`: Flow reached terminal nodes and all active tracks have finished.
+- `failed`: Flow encountered an unrecoverable violation or hard error on any track. Operator intervention required.
+
+## Concurrency and Constraints
+
+- **Single-Operator Model:** The runtime is designed for a single operator. If multiple processes attempt to modify the same flow state simultaneously, state corruption may occur.
+- **Node-Keyed Sessions:** Sessions are keyed by `nodeId` (`flowId__nodeId`). This ensures that the same role appearing in multiple parallel tracks has independent context and history.
 
 ## Error Conventions
 

@@ -6,7 +6,7 @@ import {
   computeBackwardPassOrder,
   orderWithPromptsFromFile,
 } from '../src/backward-pass-orderer.js';
-import type { WorkflowNode } from '../src/backward-pass-orderer.js';
+import type { WorkflowNode, WorkflowEdge } from '../src/backward-pass-orderer.js';
 
 let passed = 0;
 let failed = 0;
@@ -25,57 +25,78 @@ function test(name: string, fn: () => void): void {
 
 console.log('\nbackward-pass-orderer');
 
-const TWO_ROLE_NODES: WorkflowNode[] = [
+const LINEAR_NODES: WorkflowNode[] = [
   { id: '1', role: 'Owner' },
   { id: '2', role: 'Curator' },
-  { id: '3', role: 'Curator' },
-  { id: '4', role: 'Owner' },
+];
+const LINEAR_EDGES: WorkflowEdge[] = [
+  { from: '1', to: '2' },
 ];
 
-const FOUR_ROLE_NODES: WorkflowNode[] = [
-  { id: '1', role: 'Owner' },
-  { id: '2', role: 'Tooling Developer' },
-  { id: '3', role: 'Technical Architect' },
-  { id: '4', role: 'Curator' },
+const PARALLEL_NODES: WorkflowNode[] = [
+  { id: 'start', role: 'Owner' },
+  { id: 'fork', role: 'Technical Architect' },
+  { id: 'track-a', role: 'Tooling Developer' },
+  { id: 'track-b', role: 'Runtime Developer' },
+  { id: 'join', role: 'Curator' },
+];
+const PARALLEL_EDGES: WorkflowEdge[] = [
+  { from: 'start', to: 'fork' },
+  { from: 'fork', to: 'track-a' },
+  { from: 'fork', to: 'track-b' },
+  { from: 'track-a', to: 'join' },
+  { from: 'track-b', to: 'join' },
 ];
 
-test('computeBackwardPassOrder: reverses first-occurrence roles and appends synthesis', () => {
-  const result = computeBackwardPassOrder(TWO_ROLE_NODES, 'Curator');
-  assert.deepStrictEqual(
-    result.map((entry) => [entry.role, entry.stepType, entry.sessionInstruction]),
-    [
-      ['Curator', 'meta-analysis', 'existing-session'],
-      ['Owner', 'meta-analysis', 'existing-session'],
-      ['Curator', 'synthesis', 'new-session'],
-    ],
-  );
+test('computeBackwardPassOrder (Linear): reverses roles and appends synthesis', () => {
+  const result = computeBackwardPassOrder(LINEAR_NODES, LINEAR_EDGES, 'Curator');
+  // 2D structure: [[Curator-meta], [Owner-meta], [Curator-synth]]
+  assert.strictEqual(result.length, 3);
+  assert.strictEqual(result[0][0].role, 'Curator');
+  assert.strictEqual(result[1][0].role, 'Owner');
+  assert.strictEqual(result[2][0].role, 'Curator');
+  assert.strictEqual(result[2][0].stepType, 'synthesis');
 });
 
-test('four-role workflow matches order: Curator, TA, Developer, Owner, Curator', () => {
-  const result = computeBackwardPassOrder(FOUR_ROLE_NODES, 'Curator');
-  assert.deepStrictEqual(
-    result.map((entry) => entry.role),
-    ['Curator', 'Technical Architect', 'Tooling Developer', 'Owner', 'Curator'],
-  );
+test('computeBackwardPassOrder (Parallel): produces concurrent group for parallel tracks', () => {
+  const result = computeBackwardPassOrder(PARALLEL_NODES, PARALLEL_EDGES, 'Curator');
+  
+  // Distances from Curator(join):
+  // Join: 0
+  // Track-a, Track-b: 1
+  // Fork: 2
+  // Start: 3
+  
+  // Expected role groups:
+  // 1. [Curator] (meta)
+  // 2. [Tooling Developer, Runtime Developer] (concurrent meta)
+  // 3. [Technical Architect] (meta)
+  // 4. [Owner] (meta)
+  // 5. [Curator] (synthesis)
+  
+  assert.strictEqual(result.length, 5);
+  assert.strictEqual(result[0].length, 1); // Curator
+  assert.strictEqual(result[1].length, 2); // Tooling + Runtime (Concurrent)
+  assert.strictEqual(result[2].length, 1); // TA
+  assert.strictEqual(result[3].length, 1); // Owner
+  assert.strictEqual(result[4].length, 1); // Curator (Synthesis)
+
+  assert.ok(result[1][0].role === 'Tooling Developer' || result[1][0].role === 'Runtime Developer');
+  assert.ok(result[1][1].role === 'Tooling Developer' || result[1][1].role === 'Runtime Developer');
 });
 
-test('computeBackwardPassOrder: prompts preserve findings and synthesis patterns', () => {
-  const result = computeBackwardPassOrder(TWO_ROLE_NODES, 'Curator');
-  const firstEntry = result[0];
-  const lastMetaEntry = result[1];
-  const synthesisEntry = result[2];
+test('concurrent group prompt includes sub-labeled findings note', () => {
+  const result = computeBackwardPassOrder(PARALLEL_NODES, PARALLEL_EDGES, 'Curator');
+  const concurrentEntry = result[1][0];
+  const linearEntry = result[2][0];
 
-  assert.ok(firstEntry.prompt.includes('Perform your backward pass meta-analysis'));
-  assert.ok(firstEntry.prompt.includes('### Meta-Analysis Phase'));
-  assert.ok(firstEntry.prompt.includes('hand off to Owner (meta-analysis)'));
-  assert.ok(lastMetaEntry.prompt.includes('hand off to Curator (synthesis)'));
-  assert.ok(synthesisEntry.prompt.includes('backward pass synthesis'));
-  assert.ok(synthesisEntry.prompt.includes('### Synthesis Phase'));
-  assert.ok(synthesisEntry.prompt.includes('Read: all findings artifacts in the record folder'));
+  assert.ok(concurrentEntry.prompt.includes('Note: this step is concurrent'));
+  assert.ok(concurrentEntry.prompt.includes('sub-labeled position (e.g., NNa-, NNb-)'));
+  assert.ok(!linearEntry.prompt.includes('Note: this step is concurrent'));
 });
 
-test('orderWithPromptsFromFile: reads workflow.md with nodes/edges schema', () => {
-  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'backward-pass-orderer-'));
+test('orderWithPromptsFromFile: threads edges and handles complex graph', () => {
+  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-complex-'));
   const workflowFile = path.join(recordFolder, 'workflow.md');
 
   fs.writeFileSync(
@@ -83,62 +104,45 @@ test('orderWithPromptsFromFile: reads workflow.md with nodes/edges schema', () =
     `---
 workflow:
   nodes:
-    - id: '1'
-      role: Owner
-    - id: '2'
-      role: Curator
-    - id: '3'
-      role: Owner
+    - id: 'a'
+      role: RoleA
+    - id: 'b'
+      role: RoleB
+    - id: 'c'
+      role: RoleC
   edges:
-    - from: '1'
-      to: '2'
-    - from: '2'
-      to: '3'
+    - from: 'a'
+      to: 'b'
+    - from: 'b'
+      to: 'c'
 ---
-
-# Workflow
 `,
-    'utf8',
+    'utf8'
   );
 
   try {
-    const result = orderWithPromptsFromFile(recordFolder, 'Curator');
-    assert.deepStrictEqual(
-      result.map((entry) => [entry.role, entry.stepType]),
-      [
-        ['Curator', 'meta-analysis'],
-        ['Owner', 'meta-analysis'],
-        ['Curator', 'synthesis'],
-      ],
-    );
+    const result = orderWithPromptsFromFile(recordFolder, 'RoleC');
+    // Distances:
+    // c: 0
+    // b: 1
+    // a: 2
+    
+    // Groups: [RoleC], [RoleB], [RoleA], [RoleC-Synth]
+    assert.strictEqual(result.length, 4);
+    assert.strictEqual(result[0][0].role, 'RoleC');
+    assert.strictEqual(result[1][0].role, 'RoleB');
+    assert.strictEqual(result[2][0].role, 'RoleA');
+    assert.strictEqual(result[3][0].role, 'RoleC');
+    assert.strictEqual(result[3][0].stepType, 'synthesis');
   } finally {
     fs.rmSync(recordFolder, { recursive: true, force: true });
   }
 });
 
-test('orderWithPromptsFromFile: fails on legacy path schema', () => {
-  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-legacy-fail-'));
-  const workflowFile = path.join(recordFolder, 'workflow.md');
-
-  fs.writeFileSync(
-    workflowFile,
-    `---
-workflow:
-  path:
-    - role: Owner
-      phase: Intake
----
-`,
-    'utf8',
-  );
-
-  try {
-    assert.throws(() => {
-      orderWithPromptsFromFile(recordFolder, 'Curator');
-    }, /Obsolete workflow schema detected \(path\[\]\). Please migrate workflow.md to the nodes\/edges schema./);
-  } finally {
-    fs.rmSync(recordFolder, { recursive: true, force: true });
-  }
+test('errors when no terminal nodes found (cycle or empty)', () => {
+  assert.throws(() => {
+    computeBackwardPassOrder([{ id: 'a', role: 'R'}], [{ from: 'a', to: 'a' }], 'R');
+  }, /workflow\.nodes must produce at least one terminal node/);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

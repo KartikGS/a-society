@@ -10,7 +10,10 @@ export interface FlowRun {
   flowId: string;
   projectRoot: string;
   recordFolderPath: string;
-  currentNode: string;
+  activeNodes: string[];                          // node IDs currently executing
+  completedNodes: string[];                       // node IDs that have finished
+  completedNodeArtifacts: Record<string, string>; // nodeId → artifact_path of that node's output
+  pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;
 }
 

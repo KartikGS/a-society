@@ -2,7 +2,7 @@
 
 ## What It Is
 
-A machine-readable handoff block is a structured YAML block emitted by an agent at every session pause point alongside its natural-language handoff prose. It declares, in a parseable format, which role receives control next and which artifact the receiving role should read.
+A machine-readable handoff block is a structured YAML block emitted by an agent at every session pause point alongside its natural-language handoff prose. It declares, in a parseable format, which role or roles receive control next and which artifact each receiving role should read.
 
 The format contract belongs to A-Society. Orchestration tools are platform-specific and outside A-Society's scope. The block defines what any orchestrator consumes; it does not define the orchestrator itself.
 
@@ -25,6 +25,10 @@ Do not emit a block for:
 - Clarification exchanges within an active session
 - Intermediate output that does not conclude a phase
 
+**Form selection rule:**
+At fork points — when the workflow graph has multiple outgoing edges from the current node — emit one handoff entry per fork target using the array form defined below.
+At non-fork points, emit a single handoff using the standard single-object form.
+
 ---
 
 ## How to Emit It
@@ -37,11 +41,32 @@ The block is always last in the agent's pause-point output — after the prose, 
 
 ## The Schema
 
-```
+The handoff block supports two forms:
+
+### Single-target form (default)
+
+Use this when the current workflow node has exactly one outgoing edge.
+
+```yaml
 role:            <string>       # Receiving role name (e.g., "Owner", "Curator")
 artifact_path:   <string>       # Primary artifact for the receiving role to read;
                                 # path relative to the repository root
 ```
+
+### Array form (fork points)
+
+Use this when the current workflow node has multiple outgoing edges.
+
+```yaml
+- role:          <string>       # First fork target
+  artifact_path: <string>
+- role:          <string>       # Second fork target
+  artifact_path: <string>
+```
+
+Emit one array entry per fork target. The orchestrator validates that:
+- the number of entries matches the number of outgoing edges from the current workflow node
+- each entry's `role` matches one of the successor nodes' roles
 
 ### Field Definitions
 
@@ -49,14 +74,13 @@ artifact_path:   <string>       # Primary artifact for the receiving role to rea
 
 **`artifact_path`** — The primary artifact the receiving role must read at session start. Relative to the repository root, consistent with path conventions used in role Handoff Output sections. Must be a non-empty string.
 
-
 ---
 
 ## Worked Example
 
-The following shows a complete pause-point handoff at the end of a Curator session — natural-language prose followed immediately by the machine-readable block.
+The following examples show complete pause-point handoffs — natural-language prose followed immediately by the machine-readable block.
 
-**Resume case (Owner has an active session):**
+**Single-target case (non-fork):**
 
 ---
 
@@ -71,22 +95,24 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/03-curator-to-owner
 
 ---
 
-**Start-new case (Curator has no active session):**
+**Fork-point case (parallel tracks):**
 
 ---
 
-Next action: Acknowledge the briefing, then draft a proposal
-Read: `[project-name]/a-docs/records/[record-folder]/02-owner-to-curator-brief.md`
-Expected response: `03-curator-to-owner.md` filed in the record folder
+Next action: Open both implementation tracks from the approved convergence decision
+Read: `[project-name]/a-docs/records/[record-folder]/04-owner-approval.md`
+Expected response: parallel completion artifacts from both receiving roles
 
 ```handoff
-role: Curator
-artifact_path: [project-name]/a-docs/records/[record-folder]/02-owner-to-curator-brief.md
+- role: Tooling Developer
+  artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
+- role: Runtime Developer
+  artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
 ```
 
 ---
 
-**Phase-closure case (receiving role verifies completion):**
+**Phase-closure case (single target):**
 
 ---
 

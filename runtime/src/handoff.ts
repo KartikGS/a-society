@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 
-export interface HandoffBlock {
+export interface HandoffTarget {
   role: string;
   artifact_path: string | null;
 }
@@ -15,39 +15,60 @@ export class HandoffParseError extends Error {
 export class HandoffInterpreter {
   /**
    * Extracts and validates the final handoff block from an assistant message.
-   * Fails strictly if missing, malformed, or conditionally invalid.
+   * Supports both single-target and array (multi-target) forms.
+   * Always returns an array of HandoffTargets.
    */
-  static parse(text: string): HandoffBlock {
-    // Look for ```yaml\nhandoff: ... ``` or similar.
-    // The spec says "fenced code block tag: handoff" or the format is yaml with handoff key.
-    const blockRegex = /```(?:yaml)?\s*[\n\r]+handoff:([\s\S]*?)```/i;
-    const match = text.match(blockRegex);
+  static parse(text: string): HandoffTarget[] {
+    // 1. Try to find ```handoff ... ``` block
+    const handoffTagRegex = /```handoff\s*[\n\r]+([\s\S]*?)```/i;
+    let match = text.match(handoffTagRegex);
+    let payload: any;
     
-    if (!match) {
-      throw new HandoffParseError('No valid handoff block found. A handoff block is required to pass control back to the orchestrator.');
+    if (match) {
+      try {
+        payload = yaml.load(match[1]);
+      } catch (err: any) {
+        throw new HandoffParseError(`Malformed YAML in handoff block: ${err.message}`);
+      }
+    } else {
+      // 2. Try to find ```yaml ... ``` specifically with a handoff: key (backward compatibility)
+      const yamlTagRegex = /```(?:yaml)?\s*[\n\r]+handoff:([\s\S]*?)```/i;
+      match = text.match(yamlTagRegex);
+      if (!match) {
+          throw new HandoffParseError('No valid handoff block found. A handoff block is required to pass control back to the orchestrator.');
+      }
+      try {
+          const yamlStr = `handoff:${match[1]}`;
+          const parsed: any = yaml.load(yamlStr);
+          payload = parsed.handoff;
+      } catch (err: any) {
+          throw new HandoffParseError(`Malformed YAML in handoff block: ${err.message}`);
+      }
     }
 
-    let parsed: any;
-    try {
-      // Re-prepend the 'handoff:' key to parse standard YAML
-      const yamlStr = `handoff:${match[1]}`;
-      parsed = yaml.load(yamlStr);
-    } catch (err: any) {
-      throw new HandoffParseError(`Malformed YAML in handoff block: ${err.message}`);
+    if (!payload && payload !== 0) {
+      throw new HandoffParseError('Handoff block is empty or invalid.');
     }
 
-    if (!parsed || !parsed.handoff) {
-      throw new HandoffParseError('Handoff block parsed but missing required root "handoff" key.');
+    // Empty array guard:
+    if (Array.isArray(payload) && payload.length === 0) {
+      throw new HandoffParseError('Handoff block must contain at least one target.');
     }
 
-    const { role, artifact_path } = parsed.handoff;
+    // Single-object form:
+    if (!Array.isArray(payload)) {
+      if (typeof payload.role !== 'string' || payload.role.trim() === '') {
+        throw new HandoffParseError('"role" field is required and must be a non-empty string.');
+      }
+      return [{ role: payload.role, artifact_path: payload.artifact_path ? String(payload.artifact_path) : null }];
+    }
 
-    if (typeof role !== 'string') throw new HandoffParseError('"role" field is required and must be a string.');
-
-    return {
-      role,
-      artifact_path: artifact_path ? String(artifact_path) : null
-    };
+    // Array form:
+    return payload.map((entry: any, i: number) => {
+      if (typeof entry.role !== 'string' || entry.role.trim() === '') {
+        throw new HandoffParseError(`Handoff array entry [${i}]: "role" field is required and must be a non-empty string.`);
+      }
+      return { role: entry.role, artifact_path: entry.artifact_path ? String(entry.artifact_path) : null };
+    });
   }
 }
-

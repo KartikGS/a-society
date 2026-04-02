@@ -114,6 +114,7 @@ Not every multi-domain flow includes all roles. Omit nodes that do not apply; ke
 
 After a **shared planning or TA design** phase, the graph may **fork** to two or more implementation nodes that run **concurrently**. Each track produces completion artifacts (e.g., completion reports) consumed by a **join** node — typically **TA integration review**, then **Owner integration gate**.
 
+When more than one Developer track converges, require those completion artifacts to follow the shared completion-report contract in the relevant Developer role docs: labeled sections for modified files, implemented behavior, verification summary, deviations, and spec-update impact. Convergence review should compare like-for-like artifacts, not normalize different report shapes after the fact.
 
 
 ---
