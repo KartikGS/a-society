@@ -80,6 +80,8 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 **Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
 
+**Proposal stage — source-claim verification.** When a brief makes a specific claim about the current state of a source document — for example, that an item already exists in another role file or that a precedent has already been implemented — re-read the cited document during proposal preparation and confirm the claim before drafting from it. If the claim cannot be verified, note the discrepancy explicitly in the proposal rather than silently treating the brief's claim as authoritative.
+
 **Implementation stage — terminology sweep for schema changes.** When implementing a schema migration or any change that renames fields, nodes, or other structural terms, sweep adjacent prose in the target files for deprecated vocabulary and update it in the same pass. Treat the schema block and the explanatory prose as one consistency surface.
 
 **Implementation stage — re-read before editing.** Before constructing the `old_string` for any Edit call, re-read the relevant section of the target file to obtain verbatim source text. Brief descriptions describe semantic intent, not verbatim source; relying on them for `old_string` construction causes match failures.

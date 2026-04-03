@@ -48,6 +48,8 @@ The Curator **does NOT**:
 
 **Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
 
+**Proposal stage — implementation portability check.** When adapting content from a project-specific context to a general context — or vice versa, when instantiating general guidance into a project-specific document — verify that all variable references, terminology, and examples are valid in the target context. A `$VAR` reference valid in one project's index may not exist in another's; terminology and examples specific to a technology or domain may not apply at the general level. Replace project-specific references with generic equivalents before submitting.
+
 **Technical summary discipline.** When summarizing or describing a technical implementation — in a findings artifact, a registration confirmation, or a proposal — use the exact type names, method signatures, function names, and methodology terms from the approved source artifact (design advisory, spec, or implemented code). Do not substitute generic language for specific technical terms.
 
 **Implementation stage — terminology sweep for schema changes.** When implementing a change that renames structural terms, sweep surrounding prose for deprecated terminology as part of the same implementation pass, not deferred to a follow-up. Treat the schema block and the explanatory prose as one consistency surface.

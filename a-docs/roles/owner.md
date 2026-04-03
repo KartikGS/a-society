@@ -146,6 +146,8 @@ A fully-specified brief eliminates revision cycles for straightforward changes. 
 
 **Prose insertions:** When a brief directs a downstream role to insert text into existing prose, provide the exact immediately adjacent target clause or phrase at the insertion boundary. Acceptable forms: "after the clause ending '...X'," "before the sentence beginning 'Y'," or "replace the phrase 'Z' with." If the insertion is bounded from both sides, name the immediately adjacent clause on each side — not a nearby landmark elsewhere in the section. A brief that names only the section leaves the receiving role to infer the exact insertion point, which creates ambiguity and can require a correction round.
 
+**Structured-entry replacement boundary.** When directing a change within a structured documentation entry — such as a table row, index entry, log item, or role-table record — state whether the replacement applies to the full entry or only a named sub-element within it (for example, "update only the Description cell" vs. "replace the full row"). A brief that specifies only the target entry without bounding the replacement scope leaves the receiving role to infer which parts are in scope, which can result in either over-replacement (unintended changes to adjacent fields) or under-replacement (incomplete updates).
+
 **Instruction-text variable references:** When a brief proposes text that itself contains `$VAR` references, use only variable names that actually exist in the relevant index. If no project-agnostic variable name exists for the concept being described, use a functional description instead — for example, "the variable registered in the project's index for the agents entry point" — rather than inventing a fictional placeholder.
 
 **Authority designation:** The `[Curator authority — implement directly]` label can designate write authority outside the receiving role's default scope when the Owner explicitly scopes it in the brief. Absent explicit designation, the receiving role operates within its default scope. The brief is the correct home for explicit authority designation.
@@ -211,6 +213,8 @@ When a closing flow surfaces new Next Priorities items, add or merge those log e
 At forward pass closure, after the flow's changes are confirmed, the Owner sweeps Next Priorities entries whose target files or design areas overlap with the scope of the completed flow. The same four-case taxonomy applies (addressed, contradicted, restructured, partially addressed). Relevant entries are updated, narrowed, or removed before the closure artifact is filed.
 
 **Multi-track path portability.** For flows with multiple parallel tracks, verify at closure that all track convergence artifacts (e.g., completion artifacts filed by non-Curator roles) do not contain machine-specific absolute paths or `file://` URLs. Confirming functional completeness is not sufficient — handoff artifact format portability must also be confirmed. A `file://` path in a terminal track artifact violates the path portability rule even if the path was not used for routing.
+
+**Update-report path naming.** When a forward pass closure artifact instructs the Curator to publish a framework update report, specify the filename using the `$A_SOCIETY_UPDATES_PROTOCOL` contract: `[YYYY-MM-DD]-[brief-descriptor].md` within `$A_SOCIETY_UPDATES_DIR`. A date-only filename is non-compliant with the programmatic parsing contract and will be ignored by the Version Comparator.
 
 ---
 
