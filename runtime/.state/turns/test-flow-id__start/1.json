@@ -1,0 +1,12 @@
+{
+  "turnNumber": 1,
+  "inputArtifactPath": "",
+  "injectedContextHash": "d1a0d1d8e3541a1620495632d837a2034e52e08c4e1f38af83a58c9cb5cd0a23",
+  "assistantOutput": "Please proceed.",
+  "parsedHandoffResult": [
+    {
+      "role": "Next",
+      "artifact_path": "mock.md"
+    }
+  ]
+}

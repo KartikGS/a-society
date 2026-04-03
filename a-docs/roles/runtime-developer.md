@@ -93,6 +93,8 @@ Pause points for this role:
 
 **Completion report:** Upon completing a phase's implementation work, the Developer produces `NN-developer-completion.md` in the active record folder at the next available sequence position. The completion report must use explicit labeled sections so parallel Developer tracks remain comparable at convergence. At minimum include: (1) modified files inventory; (2) implemented behavior in this phase, mapped to the approved design or advisory section where applicable; (3) verification summary (tests, commands, or other checks, with pass/fail status); (4) any deviations from the approved spec and their resolution status (escalated to TA / resolved / pending); (5) whether the approved design requires an update as a result of accepted deviations. This creates a first-party implementation record that the Owner and Curator can cite without normalizing ad hoc artifact shapes.
 
+**Exact-path discipline.** In completion reports and backward-pass findings, use the exact repo-relative path for every cited file as it exists on disk. Do not abbreviate parent directories or rely on approximate conventions; TA and Curator verification depend on path-faithful artifacts.
+
 ---
 
 ## Escalation Triggers

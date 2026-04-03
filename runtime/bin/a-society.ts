@@ -5,7 +5,7 @@ config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
 import fs from 'node:fs';
 import path from 'node:path';
 import { select } from '@inquirer/prompts';
-import { runOrientSession } from '../src/orient.js';
+import { FlowOrchestrator } from '../src/orchestrator.js';
 
 function discoverProjects(workspaceRoot: string): Array<{ displayName: string; folderName: string }> {
   try {
@@ -22,8 +22,8 @@ function discoverProjects(workspaceRoot: string): Array<{ displayName: string; f
       }
     }
     return matches;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+  } catch (err: any) {
+    if (err.code === 'ENOENT') {
       return [];
     }
     throw err;
@@ -49,9 +49,10 @@ async function main() {
 
   const roleKey = `${selectedFolderName}__Owner`;
   try {
-    await runOrientSession(workspaceRoot, roleKey);
-  } catch (err) {
-    // Top-level catch just in case. Error is logged in runOrientSession
+    const orchestrator = new FlowOrchestrator();
+    await orchestrator.startUnifiedOrchestration(workspaceRoot, roleKey);
+  } catch (err: any) {
+    console.error(`Orchestration stopped: ${err.message}`);
   }
 }
 

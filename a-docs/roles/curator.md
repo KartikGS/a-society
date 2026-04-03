@@ -88,6 +88,8 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 **Implementation stage — verbatim retrieval for technical summaries.** When summarizing technical implementations in registration artifacts or other maintenance documentation, use the exact type names, method signatures, and methodology terms from the approved design or implementation artifacts. Do not substitute generic industry terms for project-specific names.
 
+**Implementation stage — operator-facing references require direct source comparison.** When registration or maintenance touches an operator-facing reference for an executable layer (for example an `INVOCATION.md` file), compare the documented commands, parameters, exposed entry points, and environment-variable names directly against the live implementation or CLI surface. Do not rely on advisory summaries, approval artifacts, or completion-report prose as substitutes for source comparison.
+
 **Implementation stage — Write vs. Edit for large removals.** When a modification removes a large section (roughly more than ten lines of formatted content), prefer the Write tool over the Edit tool. Constructing an `old_string` for a large removal is error-prone; a full rewrite is more reliable.
 
 ---

@@ -3,10 +3,11 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
-import { LLMGateway } from './llm.js';
-import { HandoffInterpreter, HandoffTarget } from './handoff.js';
+import { HandoffInterpreter, HandoffParseError, HandoffTarget } from './handoff.js';
 import { ToolTriggerEngine } from './triggers.js';
 import type { FlowRun, TurnRecord } from './types.js';
+import { runInteractiveSession } from './orient.js';
+import crypto from 'node:crypto';
 
 export function parseWorkflow(filePath: string): any {
   if (!fs.existsSync(filePath)) throw new Error(`Workflow file not found: ${filePath}`);
@@ -18,17 +19,84 @@ export function parseWorkflow(filePath: string): any {
 
 export class FlowOrchestrator {
 
-  async advanceFlow(
+  public async startUnifiedOrchestration(
+    workspaceRoot: string, 
+    roleKey: string,
+    inputStream: NodeJS.ReadableStream = process.stdin,
+    outputStream: NodeJS.WritableStream = process.stdout
+  ): Promise<void> {
+    SessionStore.init();
+    let flowRun = SessionStore.loadFlowRun();
+
+    if (!flowRun) {
+      console.log(`Bootstrapping flow from interactive session...`);
+      const handoffs = await runInteractiveSession(workspaceRoot, roleKey, undefined, undefined, inputStream, outputStream);
+      if (!handoffs) return; // interactive session exited without handoff
+
+      const artifactPath = handoffs[0].artifact_path;
+      if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
+
+      const recordFolderPath = path.dirname(path.resolve(workspaceRoot, artifactPath));
+      const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
+
+      if (!fs.existsSync(workflowDocumentPath)) {
+        throw new Error(`workflow.md not found in ${recordFolderPath}`);
+      }
+
+      let startNodeId = 'start';
+      try {
+        const doc = parseWorkflow(workflowDocumentPath);
+        if (doc.workflow && doc.workflow.nodes) {
+          const startingRoleName = handoffs[0].role;
+          const node = doc.workflow.nodes.find((n: any) => n.role === startingRoleName);
+          if (node) {
+            startNodeId = node.id;
+          } else {
+             startNodeId = doc.workflow.nodes[0].id;
+          }
+        }
+      } catch(e: any) { 
+        throw new Error(`Workflow parsing failed: ${e.message}`);
+      }
+
+      flowRun = {
+        flowId: crypto.randomUUID(),
+        projectRoot: workspaceRoot,
+        recordFolderPath,
+        activeNodes: [startNodeId],
+        completedNodes: [],
+        completedNodeArtifacts: {},
+        pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
+        status: 'running'
+      };
+
+      await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+      SessionStore.saveFlowRun(flowRun);
+    }
+
+    while (flowRun.status === 'running' && flowRun.activeNodes.length > 0) {
+      const nodeId = flowRun.activeNodes[0];
+      await this.advanceFlow(flowRun, nodeId, undefined, undefined, inputStream, outputStream);
+      flowRun = SessionStore.loadFlowRun()!;
+    }
+    
+    if (flowRun?.status === 'completed') {
+      console.log("\nOrchestration complete.");
+    }
+  }
+
+  public async advanceFlow(
     flowRun: FlowRun,
     nodeId: string,
     activeArtifactPath?: string | string[],
-    humanInput?: string
+    humanInput?: string,
+    inputStream: NodeJS.ReadableStream = process.stdin,
+    outputStream: NodeJS.WritableStream = process.stdout
   ): Promise<void> {
     if (flowRun.status === 'completed' || flowRun.status === 'failed') {
       throw new Error(`Cannot advance flow in state: ${flowRun.status}`);
     }
 
-    // Node ID guard
     if (!flowRun.activeNodes.includes(nodeId)) {
       throw new Error(`Node '${nodeId}' is not in activeNodes: [${flowRun.activeNodes.join(', ')}]. Only active nodes can be advanced.`);
     }
@@ -37,22 +105,11 @@ export class FlowOrchestrator {
     const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
     if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
 
-    // Evaluate human-collaborative pause
-    const isHumanColl = currentNodeDef['human-collaborative'];
-    if (isHumanColl && typeof isHumanColl === 'string' && isHumanColl.trim() !== '') {
-      if (!humanInput) {
-        flowRun.status = 'awaiting_human';
-        SessionStore.saveFlowRun(flowRun);
-        console.log(`Flow paused at node '${nodeId}'. Awaiting human input via resume-flow.`);
-        return;
-      }
-    }
-
-    // Role and Session derivation
-    const roleKey = currentNodeDef.role;
+    const namespace = path.basename(flowRun.projectRoot);
+    const roleKey = `${namespace}__${currentNodeDef.role}`;
+    
     const sessionId = `${flowRun.flowId}__${nodeId}`;
     
-    // Resolve artifacts
     const resolvedArtifacts: string[] =
       activeArtifactPath !== undefined
         ? (Array.isArray(activeArtifactPath) ? activeArtifactPath : [activeArtifactPath])
@@ -63,70 +120,61 @@ export class FlowOrchestrator {
       session = { roleName: roleKey, logicalSessionId: sessionId, transcriptHistory: [], isActive: true };
     }
 
-    // 1. Context Assembly
     const { bundleContent, contextHash } = ContextInjectionService.buildContextBundle(
       roleKey, flowRun.projectRoot, resolvedArtifacts, null
     );
-
-    // Build user message
-    let userMessageContent = "";
-    if (humanInput) {
-      userMessageContent += `Human Input:\n${humanInput}\n\n`;
+    
+    const injectedHistory = [...session.transcriptHistory];
+    
+    if (injectedHistory.length === 0) {
+      let userMessageContent = "";
+      if (humanInput) {
+        userMessageContent += `Human Input:\n${humanInput}\n\n`;
+      }
+      if (resolvedArtifacts.length === 1) {
+        userMessageContent += `Active artifact: ${resolvedArtifacts[0]}\nPlease proceed.`;
+      } else if (resolvedArtifacts.length > 1) {
+        userMessageContent += `Active artifacts (parallel track inputs):\n${resolvedArtifacts.map(a => `- ${a}`).join('\n')}\nPlease proceed.`;
+      } else {
+        userMessageContent += `Please proceed.`;
+      }
+      injectedHistory.push({ role: 'user', content: userMessageContent });
+    } else if (humanInput) {
+      injectedHistory.push({ role: 'user', content: humanInput });
     }
-    if (resolvedArtifacts.length === 1) {
-      userMessageContent += `Active artifact: ${resolvedArtifacts[0]}`;
-    } else if (resolvedArtifacts.length > 1) {
-      userMessageContent += `Active artifacts (parallel track inputs):\n`;
-      userMessageContent += resolvedArtifacts.map(a => `- ${a}`).join('\n');
+    
+    flowRun.status = 'running';
+    SessionStore.saveFlowRun(flowRun);
+
+    const handoffs = await runInteractiveSession(flowRun.projectRoot, roleKey, bundleContent, injectedHistory as any, inputStream, outputStream);
+    
+    if (handoffs) {
+      const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));
+      const turnRecord: TurnRecord = {
+        turnNumber: currentTurnNumber,
+        inputArtifactPath: resolvedArtifacts.join(', '),
+        injectedContextHash: contextHash,
+        assistantOutput: injectedHistory[injectedHistory.length - 1]?.content || "Handoff generated.",
+        parsedHandoffResult: handoffs
+      };
+
+      session.transcriptHistory = injectedHistory;
+      SessionStore.saveRoleSession(session);
+      SessionStore.saveTurnRecord(session.logicalSessionId, turnRecord);
+
+      await this.applyHandoffAndAdvance(flowRun, nodeId, handoffs);
     } else {
-      userMessageContent += `Please proceed.`;
-    }
-    
-    const userMsg = { role: 'user', content: userMessageContent };
-    const historyForTurn = [...session.transcriptHistory, userMsg];
-
-    // 2. Execute Provider Turn
-    const llm = new LLMGateway(flowRun.projectRoot);
-    let assistantOutput: string;
-    try {
-      flowRun.status = 'running';
-      assistantOutput = await llm.executeTurn(bundleContent, historyForTurn as any);
-    } catch (err: any) {
-      flowRun.status = err.type === 'RATE_LIMIT' ? 'awaiting_retry' : 'failed';
+      flowRun.status = 'awaiting_human';
+      session.transcriptHistory = injectedHistory;
+      SessionStore.saveRoleSession(session);
       SessionStore.saveFlowRun(flowRun);
-      throw err;
     }
+  }
 
-    // 3. Extract and Parse Handoff
-    let handoffs: HandoffTarget[];
-    try {
-      handoffs = HandoffInterpreter.parse(assistantOutput);
-    } catch (err: any) {
-      flowRun.status = 'failed';
-      SessionStore.saveFlowRun(flowRun);
-      throw new Error(`Orchestration stopped due to contract violation: ${err.message}`);
-    }
-
-    // 4. Update History
-    const currentTurnNumber = (session.transcriptHistory.length / 2) + 1;
-    const turnRecord: TurnRecord = {
-      turnNumber: currentTurnNumber,
-      inputArtifactPath: resolvedArtifacts.join(', '),
-      injectedContextHash: contextHash,
-      assistantOutput,
-      parsedHandoffResult: handoffs
-    };
-
-    session.transcriptHistory.push(userMsg);
-    session.transcriptHistory.push({ role: 'assistant', content: assistantOutput });
-    
-    SessionStore.saveRoleSession(session);
-    SessionStore.saveTurnRecord(session.logicalSessionId, turnRecord);
-
-    // 5. Fork/Join Detection and Activation
+  public async applyHandoffAndAdvance(flowRun: FlowRun, nodeId: string, handoffs: HandoffTarget[]): Promise<void> {
+    const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
     const outgoingEdges = (wf.edges || []).filter((e: any) => e.from === nodeId);
 
-    // Terminal Case
     if (outgoingEdges.length === 0) {
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
@@ -140,7 +188,6 @@ export class FlowOrchestrator {
       return;
     }
 
-    // Linear Case
     if (outgoingEdges.length === 1) {
       if (handoffs.length !== 1) {
         throw new Error(`Non-fork node '${nodeId}' has 1 outgoing edge but agent emitted ${handoffs.length} handoff targets. Use single-target handoff form for non-fork nodes.`);
@@ -162,18 +209,15 @@ export class FlowOrchestrator {
       return;
     }
 
-    // Fork Case
     if (outgoingEdges.length > 1) {
       if (handoffs.length !== outgoingEdges.length) {
         throw new Error(`Fork node '${nodeId}' has ${outgoingEdges.length} outgoing edges but agent emitted ${handoffs.length} handoff targets. An array handoff with one entry per fork target is required.`);
       }
 
-      // Validate distinct roles in outgoing edges
       const roles = outgoingEdges.map((e: any) => wf.nodes.find((n: any) => n.id === e.to)?.role);
       const uniqueRoles = new Set(roles);
       if (uniqueRoles.size !== roles.length) {
-        // Find the duplicate role
-        const duplicateRole = roles.find((r, i) => roles.indexOf(r) !== i);
+        const duplicateRole = roles.find((r: any, i: number) => roles.indexOf(r) !== i);
         throw new Error(`Fork node '${nodeId}' has multiple outgoing edges with role '${duplicateRole}'. Non-unique fork-target roles are not supported in this version. Each fork target must have a distinct role.`);
       }
 
@@ -194,7 +238,7 @@ export class FlowOrchestrator {
 
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
-      flowRun.completedNodeArtifacts[nodeId] = ''; // Fork nodes have no single output
+      flowRun.completedNodeArtifacts[nodeId] = ''; 
 
       for (const pair of activationPairs) {
         this.activateOrDefer(flowRun, wf, pair.targetId, [pair.artifact]);
@@ -213,7 +257,6 @@ export class FlowOrchestrator {
     const incomingEdges = (wf.edges || []).filter((e: any) => e.to === candidateNodeId);
     
     if (incomingEdges.length <= 1) {
-      // Not a join - activate immediately
       flowRun.pendingNodeArtifacts[candidateNodeId] = incomingArtifacts;
       if (!flowRun.activeNodes.includes(candidateNodeId)) {
         flowRun.activeNodes.push(candidateNodeId);
@@ -221,11 +264,9 @@ export class FlowOrchestrator {
       return;
     }
 
-    // Join node: check if all predecessors are complete
     const allComplete = incomingEdges.every((e: any) => flowRun.completedNodes.includes(e.from));
 
     if (allComplete) {
-      // Gather all predecessor artifacts in edge order
       const joinArtifacts = incomingEdges
         .map((e: any) => flowRun.completedNodeArtifacts[e.from])
         .filter((a: string) => a !== '');
@@ -235,6 +276,5 @@ export class FlowOrchestrator {
         flowRun.activeNodes.push(candidateNodeId);
       }
     }
-    // Else: waiting for other predecessors
   }
 }

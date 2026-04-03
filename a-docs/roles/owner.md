@@ -208,6 +208,8 @@ When reviewing a Technical Architect advisory, apply two distinct criteria: desi
 
 When invoking a tooling component during Forward Pass Closure, use the invocation documented in `$A_SOCIETY_TOOLING_INVOCATION`; do not reconstruct the call from memory. For `orderWithPromptsFromFile`, `synthesisRole` is a required second argument. Omitting a required argument in an inline invocation can silently degrade runtime behavior rather than failing at compile time.
 
+**Backward-pass initiation must use the actual traversal output.** When initiating backward pass, invoke Component 4 directly when it is available; use the manual traversal rules in `$A_SOCIETY_IMPROVEMENT` only when the tool cannot be used. Do not delegate backward-pass ordering to the human. If the closure artifact spells out the backward-pass order, transcribe the full result faithfully, including concurrent groups and the terminal synthesis step.
+
 When a closing flow surfaces new Next Priorities items, add or merge those log entries in `$A_SOCIETY_LOG` before filing the forward pass closure artifact. The closure artifact should reflect the already-updated project state; it is not the step that leaves log maintenance for later.
 
 At forward pass closure, after the flow's changes are confirmed, the Owner sweeps Next Priorities entries whose target files or design areas overlap with the scope of the completed flow. The same four-case taxonomy applies (addressed, contradicted, restructured, partially addressed). Relevant entries are updated, narrowed, or removed before the closure artifact is filed.
@@ -230,6 +232,8 @@ At each pause point, the Owner explicitly tells the human:
      Read: [path to artifact(s)]
      Expected response: [what the receiving role produces next]
      ```
+
+**Expected response scope.** Name the immediate next artifact or decision the receiving role produces in response to this specific handoff. Do not replace the concrete next output with a vague process label such as "continue backward pass" or "findings tracking."
 
 For A-Society, this applies at minimum:
 - after writing `01-owner-to-curator-brief.md`
