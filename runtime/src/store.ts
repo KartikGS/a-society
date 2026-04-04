@@ -5,14 +5,22 @@ import type { FlowRun, RoleSession, TurnRecord, TriggerRecord } from './types.js
 
 // Get the current directory of this module, then resolve up to runtime/.state
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STATE_DIR = path.resolve(__dirname, '../../runtime/.state');
-const SESSIONS_DIR = path.join(STATE_DIR, 'sessions');
-const TURNS_DIR = path.join(STATE_DIR, 'turns');
-const TRIGGERS_DIR = path.join(STATE_DIR, 'triggers');
+
+function getStateDir() {
+  if (process.env.A_SOCIETY_STATE_DIR) {
+    return path.resolve(process.env.A_SOCIETY_STATE_DIR);
+  }
+  return path.resolve(__dirname, '../../runtime/.state');
+}
+
+function getSessionsDir(stateDir: string) { return path.join(stateDir, 'sessions'); }
+function getTurnsDir(stateDir: string) { return path.join(stateDir, 'turns'); }
+function getTriggersDir(stateDir: string) { return path.join(stateDir, 'triggers'); }
 
 export class SessionStore {
   static init() {
-    [STATE_DIR, SESSIONS_DIR, TURNS_DIR, TRIGGERS_DIR].forEach(dir => {
+    const stateDir = getStateDir();
+    [stateDir, getSessionsDir(stateDir), getTurnsDir(stateDir), getTriggersDir(stateDir)].forEach(dir => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -20,11 +28,11 @@ export class SessionStore {
   }
 
   static saveFlowRun(flow: FlowRun) {
-    fs.writeFileSync(path.join(STATE_DIR, 'flow.json'), JSON.stringify(flow, null, 2));
+    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(flow, null, 2));
   }
 
   static loadFlowRun(): FlowRun | null {
-    const p = path.join(STATE_DIR, 'flow.json');
+    const p = path.join(getStateDir(), 'flow.json');
     if (!fs.existsSync(p)) return null;
     const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun;
     if (!flow.stateVersion) {
@@ -36,17 +44,20 @@ export class SessionStore {
   }
 
   static saveRoleSession(session: RoleSession) {
-    fs.writeFileSync(path.join(SESSIONS_DIR, `${session.logicalSessionId}.json`), JSON.stringify(session, null, 2));
+    const sessionsDir = getSessionsDir(getStateDir());
+    fs.writeFileSync(path.join(sessionsDir, `${session.logicalSessionId}.json`), JSON.stringify(session, null, 2));
   }
 
   static loadRoleSession(logicalSessionId: string): RoleSession | null {
-    const p = path.join(SESSIONS_DIR, `${logicalSessionId}.json`);
+    const sessionsDir = getSessionsDir(getStateDir());
+    const p = path.join(sessionsDir, `${logicalSessionId}.json`);
     if (!fs.existsSync(p)) return null;
     return JSON.parse(fs.readFileSync(p, 'utf8')) as RoleSession;
   }
 
   static saveTurnRecord(logicalSessionId: string, turn: TurnRecord) {
-    const sessionTurnsDir = path.join(TURNS_DIR, logicalSessionId);
+    const turnsDir = getTurnsDir(getStateDir());
+    const sessionTurnsDir = path.join(turnsDir, logicalSessionId);
     if (!fs.existsSync(sessionTurnsDir)) {
       fs.mkdirSync(sessionTurnsDir, { recursive: true });
     }
@@ -54,7 +65,8 @@ export class SessionStore {
   }
 
   static saveTriggerRecord(flowRunId: string, trigger: TriggerRecord) {
-    const flowTriggersDir = path.join(TRIGGERS_DIR, flowRunId);
+    const triggersDir = getTriggersDir(getStateDir());
+    const flowTriggersDir = path.join(triggersDir, flowRunId);
     if (!fs.existsSync(flowTriggersDir)) {
       fs.mkdirSync(flowTriggersDir, { recursive: true });
     }

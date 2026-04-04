@@ -29,6 +29,14 @@ export class FlowOrchestrator {
     SessionStore.init();
     let flowRun = SessionStore.loadFlowRun();
 
+    if (flowRun && flowRun.projectRoot !== workspaceRoot) {
+      console.warn(`\n[Warning] Resuming flow from a different project root:`);
+      console.warn(`  Loaded: ${flowRun.projectRoot}`);
+      console.warn(`  Expected: ${workspaceRoot}`);
+      console.warn(`Starting a fresh session instead.\n`);
+      flowRun = null;
+    }
+
     if (!flowRun) {
       console.log(`Bootstrapping flow from interactive session...`);
       const handoffResult = await runInteractiveSession(workspaceRoot, roleKey, undefined, undefined, inputStream, outputStream);

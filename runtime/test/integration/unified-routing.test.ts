@@ -53,7 +53,12 @@ async function runTest() {
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'unified-routing-test-'));
   const testDir = path.join(tmpBase, 'test-project');
+  const testStateDir = path.join(tmpBase, '.state');
   fs.mkdirSync(testDir);
+  fs.mkdirSync(testStateDir);
+
+  process.env.A_SOCIETY_STATE_DIR = testStateDir;
+
   const aSocietyPath = path.join(testDir, 'a-society');
   const aDocsPath = path.join(aSocietyPath, 'a-docs');
   const recordPath = path.join(aDocsPath, 'records', 'test-flow');
@@ -92,7 +97,8 @@ workflow:
     completedNodes: [],
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
-    status: 'running'
+    status: 'running',
+    stateVersion: '2'
   });
 
   const orchestrator = new FlowOrchestrator();
@@ -138,6 +144,7 @@ workflow:
   } finally {
     process.chdir(originalCwd);
     server.close();
+    fs.rmSync(tmpBase, { recursive: true, force: true });
   }
 }
 
