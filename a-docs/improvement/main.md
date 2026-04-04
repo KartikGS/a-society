@@ -136,17 +136,19 @@ Only nodes that fired during this instance are included. Dead branches are exclu
 A-Society's standard two-role flow: Owner first, Curator second.
 Backward pass order: Curator first, Owner second, Curator synthesizes last.
 
-#### Component 4 invocation
+#### Component 4 (Backward Pass Plan Generator)
 
 Manual computation is reserved for cases where Component 4 cannot be invoked (bootstrapping exemption, unavailability).
 
-The invocation is `orderWithPromptsFromFile(recordFolderPath, synthesisRole)`, where `synthesisRole` is the role that will perform the final synthesis (usually `Curator`). Component 4 reads `workflow.md` from the record folder and returns an ordered list of `BackwardPassPlan` entries:
-- `role` — the role name
-- `stepType` — `meta-analysis` | `synthesis`
-- `sessionInstruction` — `existing-session` | `new-session`
-- `prompt` — the generated trigger prompt for that role
+When the project uses the A-Society runtime, backward pass initiation and agent context injection are handled programmatically — agents do not invoke the Backward Pass Orderer directly.
 
-**Embedded instructions:** Component 4 prompts automatically embed a `Read:` reference to the relevant phase instructions in this document (`### Meta-Analysis Phase` or `### Synthesis Phase`). Roles follow these references to orient to their phase-specific tasks; no separate session-start loading of the improvement document is required.
+The runtime calls `computeBackwardPassPlan(recordFolderPath, synthesisRole, mode)` to generate the structured backward pass plan. Component 4 reads `workflow.md` from the record folder and returns the plan as a 2D array of entries (sequential step groups containing concurrent meta-analysis or synthesis roles).
+
+The role-specific backward pass instructions for this project live in:
+- `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` — injected into findings-producing backward pass sessions for A-Society
+- `$A_SOCIETY_IMPROVEMENT_SYNTHESIS` — injected into the Curator synthesis session for A-Society
+
+`$GENERAL_IMPROVEMENT_META_ANALYSIS` and `$GENERAL_IMPROVEMENT_SYNTHESIS` remain framework templates. They are not A-Society's own runtime injection targets.
 
 **Bootstrapping exemption:** When a flow establishes a new record-folder requirement that the current folder cannot conform to (exempt-by-origin), Component 4 cannot be invoked for that flow's backward pass. This exemption must be acknowledged explicitly — never handled by silence. The Curator must either (a) note the exemption-by-origin in the backward pass initiation artifact, state the reason Component 4 is not being invoked, and proceed with manual ordering; or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
@@ -154,75 +156,10 @@ The invocation is `orderWithPromptsFromFile(recordFolderPath, synthesisRole)`, w
 
 ### Meta-Analysis Phase
 
-Instructions for roles producing backward pass findings.
-
-**Step 1.** **Curator produces findings first** (closest to implementation friction).
-**Step 2.** **Owner produces findings second**, reviewing Curator findings and adding strategic-level observations.
-**Step 3.** **Output:** The next sequenced artifact in the active record folder — e.g., `04-curator-findings.md`, `05-owner-findings.md`. See `$A_SOCIETY_RECORDS` for the naming convention.
-**Step 4.** **Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-
-#### Reflection Categories
-
-Use these to guide your reflection (not all will apply every time):
-
-1. **Conflicting instructions** — two documents said different things
-2. **Missing information** — something you needed wasn't documented
-3. **Unclear instructions** — you had to guess at the intended meaning
-4. **Redundant information** — the same thing was said in multiple places
-5. **Scope concerns** — a role boundary or responsibility was ambiguous
-6. **Workflow friction** — a step felt unnecessary or a handoff was unclear
-
-Ground every finding in a specific moment from your execution.
-
----
-
-#### Analysis Quality
-
-**Externally-caught errors are higher priority, not lower.** When an error was caught by another role or the human rather than surfaced by the agent themselves, this is a signal that something failed to prevent the error. The backward pass must ask: "Why wasn't this caught by me?" The answer "the rule was documented" is the start of the analysis, not the end. The next question — "why wasn't the documented rule followed?" — leads to placement gaps, surfacing gaps, or structural gaps, all of which are actionable.
-
-**Artifact production vs. genuine analysis.** The reflection categories are a starting point, not a checklist to fill. If a finding could have been written without tracing the error, the analysis has not been done. A genuine finding names a specific root cause, not just a description of what went wrong.
-
----
-
-#### Generalizable Findings
-
-When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential A-Society contribution. Note it in the findings artifact so it is not lost.
-
-The submission mechanism is defined separately — flag the finding explicitly in your findings artifact so it is not silently lost when the mechanism becomes available.
-
----
-
-#### Useful Lenses
-
-When evaluating whether a finding warrants action:
-
-- **Portability:** Should the fix propagate to `general/`, or is it A-Society-specific?
-- **Evolvability:** Does the fix reduce future edit cost?
-- **Proportionality:** Is the fix worth the disruption?
-
-These are judgment aids, not mandatory per-finding assessments.
+Project-specific runtime/session instructions for this phase are defined in `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS`.
 
 ---
 
 ### Synthesis Phase
 
-Instructions for the synthesis role.
-
-**Step 1.** **Curator synthesizes** actionable items from both findings artifacts and routes them based on structural scope:
-   - Changes within `a-docs/`: implement directly. **Failure mode:** treating synthesis as an ideation exercise and generating a "backlog" of maintenance tickets. If the change is within `a-docs/`, make it now — never queue it.
-   - Changes outside `a-docs/` (additions to `general/`, structural decisions, direction changes): create a Next Priorities entry in `$A_SOCIETY_LOG`. **Before filing**, apply the merge assessment: scan existing Next Priorities items for (1) same target files or same design area, (2) compatible authority level, and (3) same workflow type and role path; when a merge is identified, replace the existing item(s) with a merged item retaining all source citations. The Owner routes these as new flows.
-
-   Do not re-route improvement items through the project's main execution workflow.
-
-   Curator completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
-
----
-
-### Guardrails
-
-- Do not silently mutate role authority boundaries during improvement implementation.
-- Do not rewrite historical reports. They are immutable once produced.
-- If two documents conflict, resolve by updating one source-of-truth and adding a cross-reference — never duplicate.
-- The backward pass is not an execution session. Agents reflecting should not produce plans, implementations, or new artifacts beyond their findings file.
-- **Forward pass closure boundary:** Do not begin the backward pass before the forward pass is explicitly closed by the Owner as a distinct step. The Owner is the terminal node of every forward pass. Issuing a single instruction that collapses "complete registration" and "proceed to backward pass" into one step removes the boundary. The correct sequence: (1) the final forward-pass role completes its work and returns to the Owner; (2) the Owner reviews the completed work, confirms the forward pass is closed, and issues a separate backward pass initiation. Findings produced before the forward pass is confirmed closed may be based on incomplete work. **Approval is not completion:** The Owner confirming closure while Curator tasks remain pending (e.g., a publication step approved but not yet executed) is a forward pass closure boundary violation. "Complete" means executed; the Owner must verify execution, not merely that approval was issued.
-- **Every backward pass handoff must include all three fields.** Each role passing to the next backward pass role must include: `Next action:`, `Read:`, and `Expected response:`. Dropping a field is not permitted even when the receiving role could infer it from context. Inference is not a substitute for an explicit handoff. Each role is responsible for producing all three fields before passing.
+Project-specific runtime/session instructions for this phase are defined in `$A_SOCIETY_IMPROVEMENT_SYNTHESIS`.

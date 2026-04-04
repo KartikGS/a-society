@@ -71,9 +71,13 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_THINKING` | `a-society/general/thinking/main.md` | Ready-made general principles template — cross-role operational rules |
 | `$GENERAL_THINKING_REASONING` | `a-society/general/thinking/reasoning.md` | Ready-made reasoning framework template — cognitive heuristics for agents |
 | `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Ready-made keep-in-mind template — operational reminders and hard stops |
-| `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy and backward pass protocol template |
+| `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
+| `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
+| `$GENERAL_IMPROVEMENT_SYNTHESIS` | `a-society/general/improvement/synthesis.md` | Synthesis phase instructions — injected into the synthesis (Curator) session by the runtime; contains routing rules, merge assessment, and synthesis closure behavior |
 | `$GENERAL_IMPROVEMENT_REPORTS` | `a-society/general/improvement/reports/main.md` | Ready-made improvement reports index template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |
+| `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` | `a-society/a-docs/improvement/meta-analysis.md` | A-Society project-specific meta-analysis phase instructions — runtime injection target for backward pass findings sessions in this project |
+| `$A_SOCIETY_IMPROVEMENT_SYNTHESIS` | `a-society/a-docs/improvement/synthesis.md` | A-Society project-specific synthesis phase instructions — runtime injection target for Curator synthesis sessions in this project |
 | `$A_SOCIETY_PRINCIPLES` | `a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
 | `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.md` | A-Society workflow directory — routing index for all permanent A-Society workflows; universal session routing rules |

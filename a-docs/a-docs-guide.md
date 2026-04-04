@@ -246,13 +246,33 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/main.md` — `$A_SOCIETY_IMPROVEMENT`
 
-**Why it exists:** Improvement decisions require both principled reasoning (when to split a file, when to add a protocol, when to cross-reference) and a standardized backward pass protocol (who produces findings, in what order, how findings route to action). Without a single dedicated file, improvement philosophy gets buried in role files, backward passes are ad-hoc, and each cycle reinvents the process.
+**Why it exists:** Improvement decisions require both principled reasoning (when to split a file, when to add a protocol, when to cross-reference) and a standing project-specific backward pass reference. This file is the canonical home for the philosophy, traversal rules, and the mapping to the project-specific phase files the runtime injects. Without it, improvement philosophy gets buried in role files, the relation between philosophy and runtime-injected phase instructions is implicit, and each cycle reinvents the process.
 
-**What it owns:** The five improvement principles, the decision framework for applying them during meta-synthesis, the backward pass traversal algorithm, and the protocol for producing and routing findings.
+**What it owns:** The five improvement principles, the decision framework for applying them during meta-synthesis, the backward pass traversal algorithm, and the cross-references to `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` and `$A_SOCIETY_IMPROVEMENT_SYNTHESIS`.
 
 **What breaks without it:** Improvement sessions reinvent principles each time. Backward passes lack a standard structure. Findings are lost or misrouted instead of flowing through the correct approval path.
 
 **Do not consolidate with:** `agents.md` or role files — this document is improvement infrastructure; the others are execution infrastructure.
+
+### `improvement/meta-analysis.md` — `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS`
+
+**Why it exists:** The runtime injects a project-specific instruction file into findings-producing backward pass sessions. The framework-level template in `general/` is not the runtime target for A-Society itself; this file is. Without it, the runtime either injects generic template content or a monolithic protocol file that makes findings sessions read irrelevant material.
+
+**What it owns:** The A-Society-specific meta-analysis instructions: when to run, how findings-producing roles should treat ordering and output, reflection categories, analysis-quality expectations, and the `meta-analysis-complete` completion signal.
+
+**What breaks without it:** Runtime-injected findings sessions do not have a project-specific instruction target. Agents receive the wrong layer (framework template) or an over-broad file, and findings artifacts drift from the project's actual protocol.
+
+**Do not consolidate with:** `improvement/main.md` — that file owns philosophy and traversal rules; this file owns the injected instructions for findings sessions.
+
+### `improvement/synthesis.md` — `$A_SOCIETY_IMPROVEMENT_SYNTHESIS`
+
+**Why it exists:** The synthesis session has different responsibilities from findings sessions: direct `a-docs/` maintenance, Next Priorities routing, and closure of the backward pass. It needs its own project-specific runtime injection target.
+
+**What it owns:** The A-Society-specific synthesis instructions: direct-vs-queued routing based on structural scope, use of `$A_SOCIETY_LOG` for non-`a-docs/` follow-up work, and the guardrails that apply to closing the backward pass in this project.
+
+**What breaks without it:** The Curator synthesis session must infer A-Society-specific routing from a generic template or from the full protocol document, increasing the risk of wrong-layer routing or backlog generation.
+
+**Do not consolidate with:** `improvement/main.md` or `improvement/meta-analysis.md` — the philosophy/traversal layer, findings-session layer, and synthesis-session layer serve different consumers and should remain separate.
 
 ---
 

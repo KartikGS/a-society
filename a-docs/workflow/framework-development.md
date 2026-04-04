@@ -75,7 +75,7 @@ Every flow begins here, before any other artifact is produced.
 
 **Output:** `01-owner-workflow-plan.md` in the record folder (see `$A_SOCIETY_RECORDS`), produced using `$A_SOCIETY_COMM_TEMPLATE_PLAN`. All five complexity axis fields, the tier field, and the path field must be non-null — a plan missing any required field is incomplete and does not satisfy this gate. `workflow.md` (the backward pass schema file) must also be created in the record folder at this step — see `$A_SOCIETY_RECORDS` for the schema. Both files are Phase 0 outputs; a record folder missing `workflow.md` is incomplete.
 
-For **Tier 1 flows:** the plan is the approval gate; the Owner implements directly within Session A and proceeds to backward pass. No brief is written. No Session B is needed.
+For **Tier 1 flows:** the plan is the approval gate; the Owner implements directly within Session A. No brief is written. No Session B is needed.
 
 For **Tier 2 and 3 flows:** the plan gates the brief. The Owner writes the Owner-to-Curator brief as the next sequenced artifact (e.g., `02-owner-to-curator-brief.md`) immediately after, then initiates Session B.
 
@@ -183,13 +183,9 @@ The Owner acknowledges forward-pass completion.
 
 **Owner:** Owner.
 
-**Work:** Confirm all forward-pass work is complete and registered. Before confirming closure, verify that all approved tasks have been executed — approval is not completion. Any Curator task outstanding at the time of approval (e.g., a publication step approved in Phase 2 but not yet executed) must be confirmed complete before the forward pass is declared closed. Update `$A_SOCIETY_LOG`: add the completed flow's entry across all relevant lifecycle sections (Current State, Recent Focus, Previous, Archive). Update Next Priorities as appropriate. Acknowledge closure and initiate the backward pass by invoking Component 4 (Backward Pass Orderer) using this flow's `workflow.md`. Component 4 invocation is the first backward pass action — no findings artifact may be produced before the traversal order has been determined.
+**Work:** Confirm all forward-pass work is complete and registered. Before confirming closure, verify that all approved tasks have been executed — approval is not completion. Any Curator task outstanding at the time of approval (e.g., a publication step approved in Phase 2 but not yet executed) must be confirmed complete before the forward pass is declared closed. Update `$A_SOCIETY_LOG`: add the completed flow's entry across all relevant lifecycle sections (Current State, Recent Focus, Previous, Archive). Update Next Priorities as appropriate.
 
-**Output:** Closure message; Component 4 invoked; backward pass traversal order confirmed.
-
----
-
-Backward pass is mandatory after forward-pass completion and is governed by `$A_SOCIETY_IMPROVEMENT`; it is not a workflow phase and is not represented as workflow graph nodes.
+**Output:** Closure message; forward pass confirmed complete.
 
 ---
 
@@ -216,8 +212,8 @@ The workflow runs across two concurrent sessions, with the human switching betwe
 
 | Session | Role | Phases |
 |---|---|---|
-| **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
-| **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register). Backward pass per `$A_SOCIETY_IMPROVEMENT`. |
+| **Session A** | Owner | Phase 0 (plan) → Tier 2/3: briefing → *pause* → Phase 2 (review). |
+| **Session B** | Curator | Phase 1 (proposal) → *pause* → Phase 3 + Phase 4 (implement, register). |
 
 
 

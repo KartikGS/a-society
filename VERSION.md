@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v27.2
+**Version:** v28.0
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v28.0 | 2026-04-04 | 2026-04-04-programmatic-improvement-system.md — Backward pass initiation, role traversal, and instruction injection handled by the runtime (Breaking); protocol split into $GENERAL_IMPROVEMENT_META_ANALYSIS and $GENERAL_IMPROVEMENT_SYNTHESIS (Breaking) |
 | v27.2 | 2026-04-03 | 2026-04-03-role-guidance-precision-bundle.md — Owner and Curator role templates: 7 Owner brief-writing/closure/constraint additions + 1 Curator implementation portability addition (all Recommended) |
 | v27.1 | 2026-04-02 | 2026-04-02-parallel-handoff-array-form.md — Machine-readable handoff instruction adds fork-point array form while preserving single-target form (Recommended) |
 | v27.0 | 2026-03-31 | 2026-03-31-session-routing-removal.md — Session routing removed from all governance docs and handoff schema; `session_action`/`prompt` removed from runtime (Breaking × 3 + Recommended × 1) |

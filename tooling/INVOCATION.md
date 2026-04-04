@@ -168,39 +168,57 @@ workflow:
 
 **File:** `src/backward-pass-orderer.ts`
 
-Component 4 reads `workflow.md` from a record folder (YAML frontmatter with a `workflow` object using **`nodes` and `edges`**) and returns an enriched backward pass plan with prompts.
+Component 4 is a **runtime library** for computing backward pass plans and locating produced findings. Agents do not invoke it directly; the runtime calls it during improvement orchestration.
 
-### Primary entry point: `orderWithPromptsFromFile`
+### Primary entry point: `computeBackwardPassPlan`
 
 ```ts
-import { orderWithPromptsFromFile } from './src/backward-pass-orderer.ts';
+import { computeBackwardPassPlan } from './src/backward-pass-orderer.ts';
 
-const plan = orderWithPromptsFromFile(
+const plan = computeBackwardPassPlan(
   '/path/to/a-docs/records/20260320-some-flow',
-  'Curator'   // synthesisRole is required
+  'Curator',        // synthesisRole
+  'graph-based'     // 'graph-based' | 'parallel'
 );
 
 // plan: BackwardPassPlan = BackwardPassEntry[][]
-// Outer array: sequential steps (run in order)
-// Inner array: concurrent group (entries may run in parallel)
+// Outer array: sequential steps
+// Inner array: concurrent group
 ```
 
-### Lower-level entry point: `computeBackwardPassOrder`
+### Discovery entry points
 
-For unit tests or callers that already have parsed `workflow.nodes` and `workflow.edges`:
+Used by the runtime at session-start time to inject findings:
 
 ```ts
-import { computeBackwardPassOrder } from './src/backward-pass-orderer.ts';
+import { locateFindingsFiles, locateAllFindingsFiles } from './src/backward-pass-orderer.ts';
 
-const plan = computeBackwardPassOrder(
-  nodes,        // WorkflowNode[]
-  edges,        // WorkflowEdge[]
-  'Curator',    // synthesisRole
-  '/path/to/record/folder' // optional; used in synthesis prompt paths
+// Get paths for specific roles (meta-analysis)
+const paths = locateFindingsFiles(recordFolderPath, ['Role A', 'Role B']);
+
+// Get all findings files (synthesis)
+const allPaths = locateAllFindingsFiles(recordFolderPath);
+```
+
+### Lower-level entry point: `buildBackwardPassPlan`
+
+For testing or pre-parsed workflow nodes:
+
+```ts
+import { buildBackwardPassPlan } from './src/backward-pass-orderer.ts';
+
+const plan = buildBackwardPassPlan(
+  nodes,            // WorkflowNode[]
+  edges,            // WorkflowEdge[]
+  'Curator',        // synthesisRole
+  'graph-based'     // 'graph-based' | 'parallel'
 );
 ```
 
-**Algorithm:** The orderer uses a graph-based topological algorithm (**Type C**). It computes the "reverse distance from terminal" for each node using BFS through predecessor links. Nodes at the same distance form a concurrent group. Roles are deduplicated across groups (first occurrence wins, in backward-pass order). One final **synthesis** step is appended for the provided `synthesisRole`.
+**Algorithm:**
+- **Graph-based:** Computes reverse distance from terminals using BFS. Roles at the same distance form concurrent groups. Each entry includes `findingsRolesToInject: string[]` derived from a **role-appearance check algorithm**: direct successor roles are injected only if their first occurrence in the forward pass was after the current role's first occurrence. This preserves the causal structure of the backward pass.
+- **Parallel:** All distinct roles from the workflow are grouped into a single concurrent meta-analysis step. `findingsRolesToInject` is always `[]`.
+- **Synthesis:** A final sequential step is appended for the `synthesisRole`. The runtime uses `stepType: 'synthesis'` to trigger `locateAllFindingsFiles`.
 
 ### Record-folder `workflow.md` schema
 
@@ -224,10 +242,10 @@ workflow:
 ```
 
 **Notes:**
-- **Legacy `path[]`:** If `workflow.path` is present, Component 4 **throws** with a migration message.
-- **Concurrent Groups:** When an inner array in the plan contains multiple entries, the meta-analysis prompts include a note directing agents to use sub-labeled finding filenames (e.g., `05a-`, `05b-`) to avoid collisions.
-- **Linear Compatibility:** For linear graphs, every inner array has exactly one entry, and the output is functionally identical to original versions (regression protection).
-- Both prompt types embed a `Read:` reference to the relevant section in `$GENERAL_IMPROVEMENT` (`### Meta-Analysis Phase` or `### Synthesis Phase`).
+- **Findings Location:** `locateFindingsFiles` matches files named `NN[a-z]?-[role-slug]-findings.md` where `[role-slug]` is the role name lowercased with spaces converted to hyphens. It is case-insensitive and returns repo-relative paths.
+- **Deduplication:** Roles are deduplicated across groups (first occurrence in backward pass wins).
+- **Session Model:** Meta-analysis entries set `sessionInstruction: 'existing-session'`. Synthesis entries set `sessionInstruction: 'new-session'`.
+- **Injection:** Component 4 provides the list of role names to inject; the runtime performs the file location and injection.
 
 ---
 

@@ -101,15 +101,9 @@ Analogous to Tooling Dev Phase 6.
 
 ### Forward Pass Closure
 
-**Owner:** Acknowledges forward-pass completion and initiates backward pass.
+**Owner:** Acknowledges forward-pass completion.
 
 ---
-
-## 3. Backward Pass
-
-Backward pass is mandatory after forward-pass completion and is governed by `$A_SOCIETY_IMPROVEMENT`; it is not a workflow phase and is not represented as workflow graph nodes.
-
-**Traversal order:** Because implementation phase nodes in the YAML graph are a placeholder, the full backward pass traversal order cannot be computed until Phase 0 produces the architecture design and the graph is completed. At that point, Component 4 (`$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER`) should be used.
 
 ---
 

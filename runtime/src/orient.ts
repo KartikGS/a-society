@@ -1,10 +1,10 @@
 import readline from 'node:readline';
 import crypto from 'node:crypto';
-import type { OrientSession, FlowRun } from './types.js';
+import type { OrientSession, FlowRun, HandoffResult } from './types.js';
 import { ContextInjectionService } from './injection.js';
 import { LLMGateway, type RuntimeMessageParam } from './llm.js';
 import { buildRoleContext } from './registry.js';
-import { HandoffInterpreter, HandoffParseError, HandoffTarget } from './handoff.js';
+import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 
 export async function runInteractiveSession(
   workspaceRoot: string,
@@ -13,7 +13,7 @@ export async function runInteractiveSession(
   providedHistory?: RuntimeMessageParam[],
   inputStream: NodeJS.ReadableStream = process.stdin,
   outputStream: NodeJS.WritableStream = process.stdout
-): Promise<HandoffTarget[] | null> {
+): Promise<HandoffResult | null> {
   const orientRoleEntry = buildRoleContext(roleKey, workspaceRoot);
   if (!orientRoleEntry) {
     if (outputStream === process.stdout) {
@@ -66,9 +66,9 @@ export async function runInteractiveSession(
     history.push({ role: 'assistant', content: response });
 
     try {
-      const handoffs = HandoffInterpreter.parse(response);
+      const result = HandoffInterpreter.parse(response);
       if (outputStream === process.stdout) console.log("Handoff detected. Transitioning node...");
-      return handoffs;
+      return result;
     } catch (e: any) {
       if (!(e instanceof HandoffParseError)) throw e;
     }
@@ -83,16 +83,16 @@ export async function runInteractiveSession(
       }
       
       try {
-        const handoffs = HandoffInterpreter.parse(streamResponse);
+        const result = HandoffInterpreter.parse(streamResponse);
         if (outputStream === process.stdout) console.log("Handoff detected. Transitioning node...");
-        return handoffs;
+        return result;
       } catch (e: any) {
         if (!(e instanceof HandoffParseError)) throw e;
       }
     }
   }
 
-  return new Promise<HandoffTarget[] | null>((resolve) => {
+  return new Promise<HandoffResult | null>((resolve) => {
     const rl = readline.createInterface({
       input: inputStream,
       output: outputStream,
@@ -124,9 +124,9 @@ export async function runInteractiveSession(
         history.push({ role: 'assistant', content: streamResponse });
 
         try {
-          const handoffs = HandoffInterpreter.parse(streamResponse);
+          const result = HandoffInterpreter.parse(streamResponse);
           if (outputStream === process.stdout) console.log("Handoff detected. Transitioning node...");
-          finish(handoffs);
+          finish(result);
           rl.close();
           return;
         } catch (e: any) {
@@ -151,7 +151,7 @@ export async function runInteractiveSession(
       }
     });
 
-    const finish = (result: HandoffTarget[] | null) => {
+    const finish = (result: HandoffResult | null) => {
       if (!resolved) {
         resolved = true;
         resolve(result);

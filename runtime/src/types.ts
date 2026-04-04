@@ -6,6 +6,23 @@ export type FlowStatus =
   | 'completed' 
   | 'failed';
 
+export interface HandoffTarget {
+  role: string;
+  artifact_path: string | null;
+}
+
+export type HandoffResult =
+  | { kind: 'targets'; targets: HandoffTarget[] }
+  | { kind: 'forward-pass-closed'; recordFolderPath: string; artifactPath: string }
+  | { kind: 'meta-analysis-complete'; findingsPath: string };
+
+export interface ImprovementPhaseState {
+  mode: 'graph-based' | 'parallel';
+  currentStep: number;                         // index into BackwardPassPlan outer array
+  completedRoles: string[];                    // role names that have produced findings or been attempted
+  findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
+}
+
 export interface FlowRun {
   flowId: string;
   projectRoot: string;
@@ -15,6 +32,8 @@ export interface FlowRun {
   completedNodeArtifacts: Record<string, string>; // nodeId → artifact_path of that node's output
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;
+  stateVersion: string;                        // Persistence version: "2" for this schema; absent/old = "1"
+  improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
 }
 
 export interface RoleSession {

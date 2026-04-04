@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  computeBackwardPassOrder,
-  orderWithPromptsFromFile,
+  buildBackwardPassPlan,
+  locateFindingsFiles,
+  locateAllFindingsFiles,
 } from '../src/backward-pass-orderer.js';
 import type { WorkflowNode, WorkflowEdge } from '../src/backward-pass-orderer.js';
 
@@ -23,7 +24,7 @@ function test(name: string, fn: () => void): void {
   }
 }
 
-console.log('\nbackward-pass-orderer');
+console.log('\nbackward-pass-orderer (Component 4 Redesign)');
 
 const LINEAR_NODES: WorkflowNode[] = [
   { id: '1', role: 'Owner' },
@@ -33,118 +34,134 @@ const LINEAR_EDGES: WorkflowEdge[] = [
   { from: '1', to: '2' },
 ];
 
-const PARALLEL_NODES: WorkflowNode[] = [
-  { id: 'start', role: 'Owner' },
-  { id: 'fork', role: 'Technical Architect' },
-  { id: 'track-a', role: 'Tooling Developer' },
-  { id: 'track-b', role: 'Runtime Developer' },
-  { id: 'join', role: 'Curator' },
+const REPEATED_NODES: WorkflowNode[] = [
+  { id: 'o1', role: 'Owner' },
+  { id: 'c1', role: 'Curator' },
+  { id: 'ta1', role: 'Technical Architect' },
+  { id: 'o2', role: 'Owner' },
+  { id: 'c2', role: 'Curator' },
 ];
-const PARALLEL_EDGES: WorkflowEdge[] = [
-  { from: 'start', to: 'fork' },
-  { from: 'fork', to: 'track-a' },
-  { from: 'fork', to: 'track-b' },
-  { from: 'track-a', to: 'join' },
-  { from: 'track-b', to: 'join' },
+const REPEATED_EDGES: WorkflowEdge[] = [
+  { from: 'o1', to: 'c1' },
+  { from: 'c1', to: 'ta1' },
+  { from: 'ta1', to: 'o2' },
+  { from: 'o2', to: 'c2' },
 ];
 
-test('computeBackwardPassOrder (Linear): reverses roles and appends synthesis', () => {
-  const result = computeBackwardPassOrder(LINEAR_NODES, LINEAR_EDGES, 'Curator');
-  // 2D structure: [[Curator-meta], [Owner-meta], [Curator-synth]]
+test('buildBackwardPassPlan (Graph-based, Linear): verifies order and injection', () => {
+  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Curator', 'graph-based');
+  
+  // Backward order: Curator (meta) -> Owner (meta) -> Curator (synthesis)
   assert.strictEqual(result.length, 3);
+  
   assert.strictEqual(result[0][0].role, 'Curator');
+  assert.deepStrictEqual(result[0][0].findingsRolesToInject, []); // Curator has no successor
+
   assert.strictEqual(result[1][0].role, 'Owner');
+  assert.deepStrictEqual(result[1][0].findingsRolesToInject, ['Curator']); // Owner's successor is Curator (pos 1 > pos 0)
+
   assert.strictEqual(result[2][0].role, 'Curator');
   assert.strictEqual(result[2][0].stepType, 'synthesis');
 });
 
-test('computeBackwardPassOrder (Parallel): produces concurrent group for parallel tracks', () => {
-  const result = computeBackwardPassOrder(PARALLEL_NODES, PARALLEL_EDGES, 'Curator');
+test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace §2.5', () => {
+  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Curator', 'graph-based');
   
-  // Distances from Curator(join):
-  // Join: 0
-  // Track-a, Track-b: 1
-  // Fork: 2
-  // Start: 3
+  // Distances from c2 (Curator):
+  // c2: 0 -> Curator max=0 (initial)
+  // o2: 1 -> Owner max=1
+  // ta1: 2 -> TA max=2
+  // c1: 3 -> Curator max=max(0,3)=3
+  // o1: 4 -> Owner max=max(1,4)=4
   
-  // Expected role groups:
-  // 1. [Curator] (meta)
-  // 2. [Tooling Developer, Runtime Developer] (concurrent meta)
-  // 3. [Technical Architect] (meta)
-  // 4. [Owner] (meta)
-  // 5. [Curator] (synthesis)
+  // Groups by max reverse distance:
+  // 0: Synthesis Curator (separate loop)
+  // 2: TA
+  // 3: Curator
+  // 4: Owner
   
-  assert.strictEqual(result.length, 5);
-  assert.strictEqual(result[0].length, 1); // Curator
-  assert.strictEqual(result[1].length, 2); // Tooling + Runtime (Concurrent)
-  assert.strictEqual(result[2].length, 1); // TA
-  assert.strictEqual(result[3].length, 1); // Owner
-  assert.strictEqual(result[4].length, 1); // Curator (Synthesis)
+  assert.strictEqual(result.length, 4);
+  
+  assert.strictEqual(result[0][0].role, 'Technical Architect');
+  assert.deepStrictEqual(result[0][0].findingsRolesToInject, []); // Successor o2 (Owner, pos 0) <= TA pos 2 -> Exclude
 
-  assert.ok(result[1][0].role === 'Tooling Developer' || result[1][0].role === 'Runtime Developer');
-  assert.ok(result[1][1].role === 'Tooling Developer' || result[1][1].role === 'Runtime Developer');
+  assert.strictEqual(result[1][0].role, 'Curator');
+  assert.deepStrictEqual(result[1][0].findingsRolesToInject, ['Technical Architect']); // Successor ta1 (TA, pos 2) > Curator pos 1 -> Include
+
+  assert.strictEqual(result[2][0].role, 'Owner');
+  assert.deepStrictEqual(result[2][0].findingsRolesToInject, ['Curator']); // Successor c1 (Curator, pos 1) > Owner pos 0 -> Include
+
+  assert.strictEqual(result[3][0].role, 'Curator');
+  assert.strictEqual(result[3][0].stepType, 'synthesis');
 });
 
-test('concurrent group prompt includes sub-labeled findings note', () => {
-  const result = computeBackwardPassOrder(PARALLEL_NODES, PARALLEL_EDGES, 'Curator');
-  const concurrentEntry = result[1][0];
-  const linearEntry = result[2][0];
-
-  assert.ok(concurrentEntry.prompt.includes('Note: this step is concurrent'));
-  assert.ok(concurrentEntry.prompt.includes('sub-labeled position (e.g., NNa-, NNb-)'));
-  assert.ok(!linearEntry.prompt.includes('Note: this step is concurrent'));
+test('buildBackwardPassPlan (Parallel Mode): all roles in one group, no injection', () => {
+  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Curator', 'parallel');
+  
+  // Roles: Owner, Curator, Technical Architect
+  assert.strictEqual(result.length, 2);
+  assert.strictEqual(result[0].length, 3);
+  
+  const roles = result[0].map(e => e.role);
+  assert.ok(roles.includes('Owner'));
+  assert.ok(roles.includes('Curator'));
+  assert.ok(roles.includes('Technical Architect'));
+  
+  assert.ok(result[0].every(e => e.findingsRolesToInject.length === 0));
+  
+  assert.strictEqual(result[1][0].role, 'Curator');
+  assert.strictEqual(result[1][0].stepType, 'synthesis');
 });
 
-test('orderWithPromptsFromFile: threads edges and handles complex graph', () => {
-  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-complex-'));
-  const workflowFile = path.join(recordFolder, 'workflow.md');
-
-  fs.writeFileSync(
-    workflowFile,
-    `---
-workflow:
-  nodes:
-    - id: 'a'
-      role: RoleA
-    - id: 'b'
-      role: RoleB
-    - id: 'c'
-      role: RoleC
-  edges:
-    - from: 'a'
-      to: 'b'
-    - from: 'b'
-      to: 'c'
----
-`,
-    'utf8'
-  );
+test('locateFindingsFiles: finds correctly normalized and case-insensitive roles', () => {
+  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-files-'));
+  fs.writeFileSync(path.join(recordFolder, '01-owner-findings.md'), 'test');
+  fs.writeFileSync(path.join(recordFolder, '02a-technical-architect-findings.md'), 'test');
+  fs.writeFileSync(path.join(recordFolder, '03-other-role-findings.md'), 'test');
+  fs.writeFileSync(path.join(recordFolder, 'random.txt'), 'test');
 
   try {
-    const result = orderWithPromptsFromFile(recordFolder, 'RoleC');
-    // Distances:
-    // c: 0
-    // b: 1
-    // a: 2
-    
-    // Groups: [RoleC], [RoleB], [RoleA], [RoleC-Synth]
-    assert.strictEqual(result.length, 4);
-    assert.strictEqual(result[0][0].role, 'RoleC');
-    assert.strictEqual(result[1][0].role, 'RoleB');
-    assert.strictEqual(result[2][0].role, 'RoleA');
-    assert.strictEqual(result[3][0].role, 'RoleC');
-    assert.strictEqual(result[3][0].stepType, 'synthesis');
+    const results = locateFindingsFiles(recordFolder, ['Owner', 'Technical Architect']);
+    assert.strictEqual(results.length, 2);
+    assert.ok(results.some(r => r.endsWith('01-owner-findings.md')));
+    assert.ok(results.some(r => r.endsWith('02a-technical-architect-findings.md')));
+    assert.ok(!results.some(r => r.endsWith('03-other-role-findings.md')));
   } finally {
     fs.rmSync(recordFolder, { recursive: true, force: true });
   }
 });
 
-test('errors when no terminal nodes found (cycle or empty)', () => {
-  assert.throws(() => {
-    computeBackwardPassOrder([{ id: 'a', role: 'R'}], [{ from: 'a', to: 'a' }], 'R');
-  }, /workflow\.nodes must produce at least one terminal node/);
+test('locateFindingsFiles: returns [] for absent directory', () => {
+  const results = locateFindingsFiles('/non/existent/path', ['Owner']);
+  assert.deepStrictEqual(results, []);
+});
+
+test('locateAllFindingsFiles: returns all matching files', () => {
+  const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-all-files-'));
+  fs.writeFileSync(path.join(recordFolder, '01-owner-findings.md'), 'test');
+  fs.writeFileSync(path.join(recordFolder, '02a-technical-architect-findings.md'), 'test');
+  fs.writeFileSync(path.join(recordFolder, '05-curator-findings.md'), 'test');
+
+  try {
+    const results = locateAllFindingsFiles(recordFolder);
+    assert.strictEqual(results.length, 3);
+    assert.ok(results.some(r => r.endsWith('01-owner-findings.md')));
+    assert.ok(results.some(r => r.endsWith('02a-technical-architect-findings.md')));
+    assert.ok(results.some(r => r.endsWith('05-curator-findings.md')));
+  } finally {
+    fs.rmSync(recordFolder, { recursive: true, force: true });
+  }
+});
+
+test('synthesis entry has correct fields', () => {
+  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Admin', 'graph-based');
+  const synthGroup = result[result.length - 1];
+  assert.strictEqual(synthGroup.length, 1);
+  assert.strictEqual(synthGroup[0].role, 'Admin');
+  assert.strictEqual(synthGroup[0].stepType, 'synthesis');
+  assert.strictEqual(synthGroup[0].sessionInstruction, 'new-session');
+  assert.deepStrictEqual(synthGroup[0].findingsRolesToInject, []);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
-

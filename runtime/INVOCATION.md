@@ -22,3 +22,18 @@ When invoked:
 When an active conversational node emits a formalized `handoff` YAML block, the runtime identifies it via `HandoffInterpreter.parse`, persisting tracking markers into `.state/flow.json`. The orchestrator terminates the conversational loop immediately natively, processing workflow transitions against `workflow.md`, evaluating dependencies, and recursively launching the target successors automatically.
 
 The system treats interactive sessions and automated background executions symmetrically as nodes seamlessly passing the orchestration token linearly securely.
+
+## Improvement Orchestration
+
+The runtime manages the project improvement backward-pass automatically. After a forward pass is closed (indicated by a `type: forward-pass-closed` signal), the runtime presents the operator with three improvement mode options:
+
+1. **Graph-based** — Meta-analysis roles run in reverse topological order. Each role receives findings from its direct successors in the forward pass, enabling structured reflection.
+2. **Parallel** — All meta-analysis roles run simultaneously. No cross-role findings are injected. Best for rapid, independent assessment.
+3. **No improvement** — Closes the record immediately without a backward pass.
+
+### Execution Lifecycle
+- **Meta-analysis**: The runtime launches sessions for each role in the backward pass. Roles are instructed to produce findings artifacts and emit a `type: meta-analysis-complete` signal.
+- **Synthesis**: After meta-analysis completes, the runtime automatically launches a fresh **Curator** session for synthesis. This session receives all produced findings in its context.
+- **Closure**: Once synthesis completes, the flow status is set to `completed` and the record is closed.
+
+No separate CLI commands are required for improvement; the cycle is triggered natively by the forward-pass-closed signal.

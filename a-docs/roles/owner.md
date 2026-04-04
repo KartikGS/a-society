@@ -164,6 +164,8 @@ When proposing an output-format change, also assess whether the change makes any
 
 **Project-specific convention changes require mirror assessment.** When a brief modifies a project-specific convention that instantiates a reusable general instruction, explicitly assess the general counterpart in the brief. Either scope the general instruction as a co-change or declare it out of scope with rationale. Do not leave the mirror decision implicit; otherwise the Curator must guess whether parity maintenance is in scope.
 
+**Runtime-injected file references must name the project layer.** When a brief or review specifies a file the runtime will inject into project sessions, reference the project's own `a-docs/` artifact or explicitly require derivation from project context (for example `flowRun.projectRoot`). Do not use `$GENERAL_*` template variables as runtime injection targets; those name framework templates, not project session inputs.
+
 **Schema migrations require a vocabulary sweep.** When a brief changes a schema, field name, or structural vocabulary, explicitly scope a surrounding prose sweep for deprecated terms as part of the same work. Updating the schema block alone is incomplete if adjacent explanations still use the old terminology.
 
 **Schema-code coupling check.** When a documentation change defines or modifies a schema with a programmatic consumer (a type definition, parser, or validator in the codebase), the brief must scope both the documentation change and the corresponding code change in the same flow. At brief-writing time, ask: "Does this documentation change define or modify a schema that is consumed programmatically?" If yes, identify the programmatic consumer and include it in the flow scope. A brief scoped documentation-only when code must also change fragments the work and requires external correction.
@@ -171,6 +173,8 @@ When proposing an output-format change, also assess whether the change makes any
 **Do not pre-specify update report classification.** If the change described in a brief may trigger a framework update report, do not state an expected impact classification. Classification is determined by the Curator post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Stating a classification in the brief creates framing the Curator must override — which adds a correction round rather than eliminating one.
 
 **`[LIB]` brief trigger for update report drafts.** When a `[LIB]` flow is likely to qualify for a framework update report, the brief must explicitly instruct the Curator to include the update report draft as a named section in the proposal submission. When classification cannot yet be determined, instruct the Curator to include the draft with classification fields marked `TBD`, to be resolved at Phase 4 by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. This requirement comes from Phase 1 of `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV`; surface it in the brief rather than relying on the Curator to infer it from the workflow document mid-flow.
+
+**Update report drafts for newly created files must use proposed `$VAR` names.** When a brief asks the Curator to draft an update report for files being created or indexed in the same flow, name those files in the draft using their proposed variable names rather than raw paths. Proposed `$VAR` names are acceptable in draft content before registration when the same brief also scopes the index additions that will define them.
 
 The same applies to approval rationale for main decisions: do not comment on expected classification when approving a content change. The Follow-Up Actions section directing the Curator to check `$A_SOCIETY_UPDATES_PROTOCOL` is the correct mechanism — no anticipation needed.
 
@@ -207,8 +211,6 @@ When reviewing a Technical Architect advisory, apply two distinct criteria: desi
 ## Forward Pass Closure Discipline
 
 When invoking a tooling component during Forward Pass Closure, use the invocation documented in `$A_SOCIETY_TOOLING_INVOCATION`; do not reconstruct the call from memory. For `orderWithPromptsFromFile`, `synthesisRole` is a required second argument. Omitting a required argument in an inline invocation can silently degrade runtime behavior rather than failing at compile time.
-
-**Backward-pass initiation must use the actual traversal output.** When initiating backward pass, invoke Component 4 directly when it is available; use the manual traversal rules in `$A_SOCIETY_IMPROVEMENT` only when the tool cannot be used. Do not delegate backward-pass ordering to the human. If the closure artifact spells out the backward-pass order, transcribe the full result faithfully, including concurrent groups and the terminal synthesis step.
 
 When a closing flow surfaces new Next Priorities items, add or merge those log entries in `$A_SOCIETY_LOG` before filing the forward pass closure artifact. The closure artifact should reflect the already-updated project state; it is not the step that leaves log maintenance for later.
 

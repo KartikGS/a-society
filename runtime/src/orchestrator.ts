@@ -3,10 +3,11 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
-import { HandoffInterpreter, HandoffParseError, HandoffTarget } from './handoff.js';
+import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { ToolTriggerEngine } from './triggers.js';
-import type { FlowRun, TurnRecord } from './types.js';
+import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget } from './types.js';
 import { runInteractiveSession } from './orient.js';
+import { ImprovementOrchestrator } from './improvement.js';
 import crypto from 'node:crypto';
 
 export function parseWorkflow(filePath: string): any {
@@ -30,9 +31,13 @@ export class FlowOrchestrator {
 
     if (!flowRun) {
       console.log(`Bootstrapping flow from interactive session...`);
-      const handoffs = await runInteractiveSession(workspaceRoot, roleKey, undefined, undefined, inputStream, outputStream);
-      if (!handoffs) return; // interactive session exited without handoff
+      const handoffResult = await runInteractiveSession(workspaceRoot, roleKey, undefined, undefined, inputStream, outputStream);
+      if (!handoffResult) return; // interactive session exited without handoff
 
+      if (handoffResult.kind !== 'targets') {
+        throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
+      }
+      const handoffs = handoffResult.targets;
       const artifactPath = handoffs[0].artifact_path;
       if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
 
@@ -67,7 +72,8 @@ export class FlowOrchestrator {
         completedNodes: [],
         completedNodeArtifacts: {},
         pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
-        status: 'running'
+        status: 'running',
+        stateVersion: '2'
       };
 
       await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
@@ -146,15 +152,31 @@ export class FlowOrchestrator {
     flowRun.status = 'running';
     SessionStore.saveFlowRun(flowRun);
 
-    const handoffs = await runInteractiveSession(flowRun.projectRoot, roleKey, bundleContent, injectedHistory as any, inputStream, outputStream);
+    const handoffResult = await runInteractiveSession(flowRun.projectRoot, roleKey, bundleContent, injectedHistory as any, inputStream, outputStream);
     
-    if (handoffs) {
+    if (handoffResult) {
+      if (handoffResult.kind === 'forward-pass-closed') {
+        await ImprovementOrchestrator.handleForwardPassClosure(
+          flowRun,
+          { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },
+          inputStream,
+          outputStream,
+        );
+        return;
+      }
+
+      if (handoffResult.kind === 'meta-analysis-complete') {
+        throw new Error(`Unexpected meta-analysis-complete signal during forward pass at node '${nodeId}'.`);
+      }
+
+      // kind === 'targets'
+      const handoffs = handoffResult.targets;
       const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));
       const turnRecord: TurnRecord = {
         turnNumber: currentTurnNumber,
         inputArtifactPath: resolvedArtifacts.join(', '),
         injectedContextHash: contextHash,
-        assistantOutput: injectedHistory[injectedHistory.length - 1]?.content || "Handoff generated.",
+        assistantOutput: (injectedHistory[injectedHistory.length - 1] as any)?.content || "Handoff generated.",
         parsedHandoffResult: handoffs
       };
 

@@ -3,11 +3,6 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { extractFrontmatter } from './utils.js';
 
-/**
- * Co-maintenance dependency: update if $GENERAL_IMPROVEMENT relocates in the index.
- */
-const GENERAL_IMPROVEMENT_PATH = 'a-society/general/improvement/main.md';
-
 export interface WorkflowNode {
   id: string;
   role: string;
@@ -32,7 +27,7 @@ export interface BackwardPassEntry {
   role: string;
   stepType: 'meta-analysis' | 'synthesis';
   sessionInstruction: 'existing-session' | 'new-session';
-  prompt: string;
+  findingsRolesToInject: string[];
 }
 
 /**
@@ -41,39 +36,7 @@ export interface BackwardPassEntry {
  */
 export type BackwardPassPlan = BackwardPassEntry[][];
 
-function createMetaAnalysisPrompt(
-  role: string,
-  position: number,
-  total: number,
-  nextRole: string,
-  nextStepType: 'meta-analysis' | 'synthesis',
-  concurrent: boolean,
-): string {
-  const lines = [
-    `Next action: Perform your backward pass meta-analysis (step ${position} of ${total}).`,
-    `Read: all prior artifacts in the record folder, then ### Meta-Analysis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
-    `Expected response: Your findings artifact at the next available sequence position in the record folder. When complete, hand off to ${nextRole} (${nextStepType}).`,
-  ];
-
-  if (concurrent) {
-    lines.push(
-      `Note: this step is concurrent — other roles are performing their meta-analysis in parallel. File your findings at the next available sub-labeled position (e.g., NNa-, NNb-) after reading the record folder's current contents to confirm the available slot.`
-    );
-  }
-
-  return lines.join('\n\n');
-}
-
-function createSynthesisPrompt(role: string, position: number, total: number, recordFolderPath: string): string {
-  return [
-    `You are the ${role} agent for A-Society. Read a-society/a-docs/agents.md.`,
-    `You are performing backward pass synthesis (step ${position} of ${total} — final step).`,
-    `Read: all findings artifacts in ${recordFolderPath}, then ### Synthesis Phase in ${GENERAL_IMPROVEMENT_PATH}`,
-    `Produce your synthesis at the next available sequence position in ${recordFolderPath}.`,
-  ].join('\n\n');
-}
-
-function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter {
+export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter {
   if (!doc || typeof doc !== 'object') {
     throw new Error('workflow.md frontmatter must parse to an object');
   }
@@ -84,10 +47,6 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
   }
 
   const workflowObj = rawWorkflow as Record<string, unknown>;
-
-  if ('path' in workflowObj) {
-    throw new Error('Obsolete workflow schema detected (path[]). Please migrate workflow.md to the nodes/edges schema.');
-  }
 
   const rawNodes = workflowObj.nodes;
   if (!Array.isArray(rawNodes) || rawNodes.length === 0) {
@@ -156,103 +115,141 @@ function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter
   };
 }
 
-export function computeBackwardPassOrder(
+export function buildBackwardPassPlan(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   synthesisRole: string,
-  recordFolderPath: string = 'the record folder',
+  mode: 'graph-based' | 'parallel',
 ): BackwardPassPlan {
-  // Step 1: Build predecessors map
+  const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const hasOutgoing = new Set(edges.map(e => e.from));
+  const terminalIds = nodes.map(n => n.id).filter(id => !hasOutgoing.has(id));
+
+  if (terminalIds.length === 0) {
+    throw new Error('workflow.nodes must produce at least one terminal node');
+  }
+
+  if (mode === 'parallel') {
+    const roles = Array.from(new Set(nodes.map(n => n.role)));
+    const metaAnalysisGroup: BackwardPassEntry[] = roles.map(role => ({
+      role,
+      stepType: 'meta-analysis',
+      sessionInstruction: 'existing-session',
+      findingsRolesToInject: [],
+    }));
+
+    const synthesisGroup: BackwardPassEntry[] = [{
+      role: synthesisRole,
+      stepType: 'synthesis',
+      sessionInstruction: 'new-session',
+      findingsRolesToInject: [],
+    }];
+
+    return [metaAnalysisGroup, synthesisGroup];
+  }
+
+  // mode === 'graph-based'
+
+  // Step 1: Compute topological order position (BFS from sources)
+  const incomingCount: Record<string, number> = {};
+  const children: Record<string, string[]> = {};
+  for (const node of nodes) {
+    incomingCount[node.id] = 0;
+    children[node.id] = [];
+  }
+  for (const edge of edges) {
+    incomingCount[edge.to] = (incomingCount[edge.to] ?? 0) + 1;
+    children[edge.from].push(edge.to);
+  }
+
+  const sources = nodes.filter(n => incomingCount[n.id] === 0).map(n => n.id);
+  const topologicalOrder: string[] = [];
+  const queue = [...sources];
+  const processedIncoming = { ...incomingCount };
+
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    topologicalOrder.push(currentId);
+    for (const childId of children[currentId]) {
+      processedIncoming[childId]--;
+      if (processedIncoming[childId] === 0) {
+        queue.push(childId);
+      }
+    }
+  }
+
+  const nodePosition = Object.fromEntries(topologicalOrder.map((id, index) => [id, index]));
+
+  // Step 2: First occurrence position per role
+  const firstOccurrencePosition: Record<string, number> = {};
+  for (const node of nodes) {
+    const pos = nodePosition[node.id];
+    if (pos !== undefined) {
+      if (firstOccurrencePosition[node.role] === undefined || pos < firstOccurrencePosition[node.role]) {
+        firstOccurrencePosition[node.role] = pos;
+      }
+    }
+  }
+
+  // Step 3: Direct successor roles per role
+  const directSuccessorRoles: Record<string, Set<string>> = {};
+  for (const edge of edges) {
+    const fromRole = nodeById[edge.from].role;
+    const toRole = nodeById[edge.to].role;
+    if (!directSuccessorRoles[fromRole]) directSuccessorRoles[fromRole] = new Set();
+    directSuccessorRoles[fromRole].add(toRole);
+  }
+
+  // Step 4: Backward pass grouping (BFS from terminals through predecessors)
   const predecessors: Record<string, string[]> = {};
   for (const edge of edges) {
     predecessors[edge.to] = [...(predecessors[edge.to] ?? []), edge.from];
   }
 
-  // Step 2: Find terminal nodes (no outgoing edges)
-  const hasOutgoing = new Set(edges.map(e => e.from));
-  const terminalIds = nodes.map(n => n.id).filter(id => !hasOutgoing.has(id));
-
-  if (terminalIds.length === 0) {
-    // Falls back to linear first-occurrence if no edges exist or graph is malformed
-    // But per spec §8: "workflow.nodes must produce at least one terminal node"
-    throw new Error('workflow.nodes must produce at least one terminal node');
-  }
-
-  // Step 3: BFS from terminals through predecessor links
   const nodeDistance: Record<string, number> = {};
-  const queue: string[] = [...terminalIds];
+  const backQueue = [...terminalIds];
   terminalIds.forEach(id => { nodeDistance[id] = 0; });
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  while (backQueue.length > 0) {
+    const current = backQueue.shift()!;
     const dist = nodeDistance[current];
     for (const pred of (predecessors[current] ?? [])) {
       if (nodeDistance[pred] === undefined) {
         nodeDistance[pred] = dist + 1;
-        queue.push(pred);
+        backQueue.push(pred);
       }
     }
   }
 
-  // Step 4: Compute maximum reverse distance for each role
-  const nodeById: Record<string, WorkflowNode> = Object.fromEntries(nodes.map(n => [n.id, n]));
   const roleMaxDistance: Record<string, number> = {};
-  
   for (const [id, dist] of Object.entries(nodeDistance)) {
-    const role = nodeById[id]?.role;
-    if (role) {
-      roleMaxDistance[role] = Math.max(roleMaxDistance[role] ?? 0, dist);
-    }
+    const role = nodeById[id].role;
+    roleMaxDistance[role] = Math.max(roleMaxDistance[role] ?? 0, dist);
   }
 
-  // Step 5: Group roles by their maximum distance, sort ascending
   const roleGroupsByDist: Record<number, string[]> = {};
   for (const [role, dist] of Object.entries(roleMaxDistance)) {
     roleGroupsByDist[dist] = [...(roleGroupsByDist[dist] ?? []), role];
   }
-  
+
   const sortedRoleDistances = Object.keys(roleGroupsByDist).map(Number).sort((a, b) => a - b);
-  const roleGroups: string[][] = sortedRoleDistances.map(d => roleGroupsByDist[d]);
-
-  // Step 6: Convert to BackwardPassPlan
-  const totalMetaSteps = roleGroups.reduce((acc, group) => acc + group.length, 0);
-  const totalSteps = totalMetaSteps + 1;
-  let currentPosition = 1;
-
   const plan: BackwardPassPlan = [];
 
-  for (let i = 0; i < roleGroups.length; i++) {
-    const group = roleGroups[i];
-    const isConcurrent = group.length > 1;
-    const groupEntries: BackwardPassEntry[] = [];
+  for (const dist of sortedRoleDistances) {
+    const roles = roleGroupsByDist[dist];
+    const groupEntries: BackwardPassEntry[] = roles.map(role => {
+      const successors = directSuccessorRoles[role] ?? new Set();
+      const findingsRolesToInject = Array.from(successors).filter(s =>
+        firstOccurrencePosition[s] > firstOccurrencePosition[role]
+      );
 
-    for (const role of group) {
-      // Determine what follows this group
-      let nextRole: string;
-      let nextStepType: 'meta-analysis' | 'synthesis';
-
-      if (group.length > 1 && group.indexOf(role) < group.length - 1) {
-        // More roles in same group
-        nextRole = group[group.indexOf(role) + 1];
-        nextStepType = 'meta-analysis';
-      } else if (i < roleGroups.length - 1) {
-        // Next group
-        nextRole = roleGroups[i + 1][0];
-        nextStepType = 'meta-analysis';
-      } else {
-        // Synthesis
-        nextRole = synthesisRole;
-        nextStepType = 'synthesis';
-      }
-
-      groupEntries.push({
+      return {
         role,
         stepType: 'meta-analysis',
         sessionInstruction: 'existing-session',
-        prompt: createMetaAnalysisPrompt(role, currentPosition, totalSteps, nextRole, nextStepType, isConcurrent),
-      });
-      currentPosition++;
-    }
+        findingsRolesToInject,
+      };
+    });
     plan.push(groupEntries);
   }
 
@@ -261,15 +258,16 @@ export function computeBackwardPassOrder(
     role: synthesisRole,
     stepType: 'synthesis',
     sessionInstruction: 'new-session',
-    prompt: createSynthesisPrompt(synthesisRole, totalSteps, totalSteps, recordFolderPath),
+    findingsRolesToInject: [],
   }]);
 
   return plan;
 }
 
-export function orderWithPromptsFromFile(
+export function computeBackwardPassPlan(
   recordFolderPath: string,
   synthesisRole: string,
+  mode: 'graph-based' | 'parallel',
 ): BackwardPassPlan {
   const workflowFilePath = path.join(recordFolderPath, 'workflow.md');
 
@@ -293,11 +291,56 @@ export function orderWithPromptsFromFile(
   }
 
   const frontmatter = parseRecordWorkflowFrontmatter(parsed);
-  return computeBackwardPassOrder(
+  return buildBackwardPassPlan(
     frontmatter.workflow.nodes,
     frontmatter.workflow.edges,
     synthesisRole,
-    recordFolderPath,
+    mode,
   );
 }
 
+function normalizeRoleSlug(role: string): string {
+  return role.toLowerCase().replace(/\s+/g, '-');
+}
+
+export function locateFindingsFiles(
+  recordFolderPath: string,
+  roleNames: string[],
+): string[] {
+  const filenames = (() => {
+    try {
+      return fs.readdirSync(recordFolderPath);
+    } catch {
+      return [];
+    }
+  })();
+
+  const normalizedRequestedRoles = new Set(roleNames.map(normalizeRoleSlug));
+  const findingsPattern = /^(\d+)[a-z]?-(.*)-findings\.md$/i;
+
+  const matches = filenames.filter(filename => {
+    const match = filename.match(findingsPattern);
+    if (!match) return false;
+    const roleSlug = normalizeRoleSlug(match[2]);
+    return normalizedRequestedRoles.has(roleSlug);
+  });
+
+  return matches.map(filename => path.relative(process.cwd(), path.join(recordFolderPath, filename)));
+}
+
+export function locateAllFindingsFiles(
+  recordFolderPath: string,
+): string[] {
+  const filenames = (() => {
+    try {
+      return fs.readdirSync(recordFolderPath);
+    } catch {
+      return [];
+    }
+  })();
+
+  const findingsPattern = /^\d+[a-z]?-(.*)-findings\.md$/i;
+  const matches = filenames.filter(filename => findingsPattern.test(filename));
+
+  return matches.map(filename => path.relative(process.cwd(), path.join(recordFolderPath, filename)));
+}

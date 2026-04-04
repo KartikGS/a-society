@@ -26,7 +26,13 @@ export class SessionStore {
   static loadFlowRun(): FlowRun | null {
     const p = path.join(STATE_DIR, 'flow.json');
     if (!fs.existsSync(p)) return null;
-    return JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun;
+    const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun;
+    if (!flow.stateVersion) {
+      // State version absent — pre-versioning state ("1"). Compatible with current schema.
+      // improvementPhase will be undefined (correct initial state). No data loss.
+      flow.stateVersion = '1';
+    }
+    return flow;
   }
 
   static saveRoleSession(session: RoleSession) {

@@ -334,23 +334,19 @@ Framework update report assessment:
 
 **Role:** Owner.
 
-**Work:** Review any pending update-report submission. Confirm all forward-pass work is complete and registered. Acknowledge closure and initiate the backward pass by invoking Component 4 (Backward Pass Orderer) using this flow's `workflow.md`. Component 4 invocation is the first backward pass action — no findings artifact may be produced before the traversal order has been determined.
+**Work:** Review any pending update-report submission. Confirm all forward-pass work is complete and registered.
 
-**Output:** Closure message; backward pass initiated.
+**Output:** Closure message.
 
 ---
 
 ## 3. Backward Pass
-
-Backward pass is mandatory after forward-pass completion and is governed by `$A_SOCIETY_IMPROVEMENT`; it is not a workflow phase and is not represented as workflow graph nodes.
 
 **Forward-pass node order:** Owner (Phase 0) → Curator (Phase 0) → Tooling Developer (Phases 1, 2) → Curator (Phase 3) → Tooling Developer (Phases 4–5–6) → Technical Architect (Phase 6 review) → Owner (Phase 6 gate) → Curator (Phase 7) → Owner (Phase 8 closure).
 
 **First occurrences:** Owner, Curator, Tooling Developer, Technical Architect.
 
 **Backward pass order (manual candidate):** Technical Architect, Tooling Developer, Owner — then Curator (synthesis, always last).
-
-**Component 4 invocation:** If Component 4 (Backward Pass Orderer) is available and this flow had more than two participating roles, invoke Component 4 rather than computing the traversal order manually. Pass `$A_SOCIETY_WORKFLOW_TOOLING_DEV` via the record folder's `workflow.md`. The manual ordering above is provided as a reference; when Component 4 is available, it takes precedence.
 
 ---
 
