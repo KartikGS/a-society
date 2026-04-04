@@ -1,24 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { resolveVariableFromIndex } from './paths.js';
 
 export interface RoleContextEntry {
   requiredReadingVariables: string[];
-}
-
-/**
- * Derives the index variable name from a roleKey.
- * format: "namespace__Role Name" -> "$NAMESPACE_ROLE_NAME_ROLE"
- */
-function roleKeyToIndexVariable(roleKey: string): string | null {
-  const parts = roleKey.split('__');
-  if (parts.length !== 2) return null;
-
-  const namespacePart = parts[0].replace(/-/g, '_').toUpperCase();
-  const roleNamePart = parts[1].split(' ').map(word => word.toUpperCase()).join('_');
-
-  return `$${namespacePart}_${roleNamePart}_ROLE`;
 }
 
 /**
@@ -33,8 +18,16 @@ function roleKeyToIndexVariable(roleKey: string): string | null {
  * If the YAML file is missing, an error is thrown.
  */
 export function buildRoleContext(roleKey: string, projectRoot: string): RoleContextEntry | null {
-  const yamlPath = path.join(projectRoot, 'a-docs', 'roles', 'required-readings.yaml');
-  
+  // roleKey format: "namespace__Role Name" — namespace is the project subfolder under projectRoot
+  const parts = roleKey.split('__');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid roleKey format: '${roleKey}'. Expected 'namespace__RoleName'.`);
+  }
+  const namespace = parts[0];
+  const roleId = parts[1].toLowerCase().replace(/\s+/g, '-');
+
+  const yamlPath = path.join(projectRoot, namespace, 'a-docs', 'roles', 'required-readings.yaml');
+
   if (!fs.existsSync(yamlPath)) {
     throw new Error(`required-readings.yaml not found at ${yamlPath} — cannot initialize session.`);
   }
@@ -52,13 +45,6 @@ export function buildRoleContext(roleKey: string, projectRoot: string): RoleCont
   }
 
   const universalReading = Array.isArray(config.universal) ? config.universal : [];
-  
-  // Extract role identifier from roleKey: "namespace__Role Name" -> "role name"
-  const parts = roleKey.split('__');
-  if (parts.length !== 2) {
-    throw new Error(`Invalid roleKey format: '${roleKey}'. Expected 'namespace__RoleName'.`);
-  }
-  const roleId = parts[1].toLowerCase();
 
   const roleReading = (config.roles && Array.isArray(config.roles[roleId])) ? config.roles[roleId] : [];
 

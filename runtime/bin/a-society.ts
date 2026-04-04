@@ -50,8 +50,7 @@ async function main() {
   const roleKey = `${selectedFolderName}__Owner`;
   try {
     const orchestrator = new FlowOrchestrator();
-    const projectRoot = path.join(workspaceRoot, selectedFolderName);
-    await orchestrator.startUnifiedOrchestration(projectRoot, roleKey);
+    await orchestrator.startUnifiedOrchestration(workspaceRoot, roleKey);
   } catch (err: any) {
     console.error(`Orchestration stopped: ${err.message}`);
   }
