@@ -140,6 +140,18 @@ files:
     scaffold: copy
     source_path: general/improvement/reports/main.md
 
+  - path: improvement/meta-analysis.md
+    description: "Project-specific meta-analysis phase instructions — injected by the runtime into backward pass meta-analysis sessions; base on $GENERAL_IMPROVEMENT_META_ANALYSIS and resolve [PROJECT_*] placeholders; conditional on project using the A-Society programmatic runtime"
+    required: false
+    scaffold: copy
+    source_path: general/improvement/meta-analysis.md
+
+  - path: improvement/synthesis.md
+    description: "Project-specific synthesis phase instructions — injected by the runtime into backward pass synthesis sessions; base on $GENERAL_IMPROVEMENT_SYNTHESIS and resolve [PROJECT_*] placeholders; conditional on project using the A-Society programmatic runtime"
+    required: false
+    scaffold: copy
+    source_path: general/improvement/synthesis.md
+
   # ── Communication ─────────────────────────────────────────────────────────────
 
   - path: communication/main.md

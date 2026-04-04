@@ -1,7 +1,7 @@
 import { SessionStore } from './store.js';
 import type { FlowRun, TriggerRecord } from './types.js';
 import { validateWorkflowFile } from '../../tooling/src/workflow-graph-validator.js';
-import { orderWithPromptsFromFile } from '../../tooling/src/backward-pass-orderer.js';
+import { computeBackwardPassPlan } from '../../tooling/src/backward-pass-orderer.js';
 import { scaffoldFromManifestFile } from '../../tooling/src/scaffolding-system.js';
 import path from 'node:path';
 
@@ -33,7 +33,8 @@ export class ToolTriggerEngine {
       } else if (event === 'TERMINAL_FORWARD_PASS') {
         triggerRecord.toolComponent = 'Backward Pass Orderer';
         const synthesisRole = 'Curator';
-        orderWithPromptsFromFile(flowRun.recordFolderPath, synthesisRole);
+        // Component 4: computeBackwardPassPlan replaces the deprecated orderWithPromptsFromFile
+        computeBackwardPassPlan(flowRun.recordFolderPath, synthesisRole, 'graph-based');
         triggerRecord.resultSummary = `Component 4 execution success: Computed backward traversal order (synthesisRole=${synthesisRole})`;
         triggerRecord.success = true;
 

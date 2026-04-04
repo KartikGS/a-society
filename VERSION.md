@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v28.0
+**Version:** v29.0
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v29.0 | 2026-04-04 | 2026-04-04-project-scoped-improvement-instructions.md — Support for project-specific improvement instructions required by the runtime: meta-analysis and synthesis instruction targets (Breaking); record-folder artifact path clarification (Recommended) |
 | v28.0 | 2026-04-04 | 2026-04-04-programmatic-improvement-system.md — Backward pass initiation, role traversal, and instruction injection handled by the runtime (Breaking); protocol split into $GENERAL_IMPROVEMENT_META_ANALYSIS and $GENERAL_IMPROVEMENT_SYNTHESIS (Breaking) |
 | v27.2 | 2026-04-03 | 2026-04-03-role-guidance-precision-bundle.md — Owner and Curator role templates: 7 Owner brief-writing/closure/constraint additions + 1 Curator implementation portability addition (all Recommended) |
 | v27.1 | 2026-04-02 | 2026-04-02-parallel-handoff-array-form.md — Machine-readable handoff instruction adds fork-point array form while preserving single-target form (Recommended) |

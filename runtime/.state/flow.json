@@ -1,7 +1,7 @@
 {
   "flowId": "test-flow-id",
-  "projectRoot": "/tmp/unified-routing-test-1eEeMn/test-project",
-  "recordFolderPath": "/tmp/unified-routing-test-1eEeMn/test-project/a-society/a-docs/records/test-flow",
+  "projectRoot": "/tmp/unified-routing-test-NqulRi/test-project",
+  "recordFolderPath": "/tmp/unified-routing-test-NqulRi/test-project/a-society/a-docs/records/test-flow",
   "activeNodes": [
     "next"
   ],
@@ -16,5 +16,6 @@
       "mock.md"
     ]
   },
-  "status": "running"
+  "status": "running",
+  "stateVersion": "1"
 }

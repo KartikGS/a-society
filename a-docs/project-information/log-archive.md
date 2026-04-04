@@ -6,6 +6,7 @@ Format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence.`
 
 ---
 
+- `[L][LIB][RUNTIME]` — **parallel-track-orchestration** (2026-04-02): Multi-domain flow (Tooling Dev + Runtime Dev parallel tracks + Curator) closed — Component 4 BFS algorithm + `BackwardPassPlan` 2D type; runtime fork/join with `activeNodes`/`completedNodes`, node-keyed sessions, `HandoffTarget[]` parser; `$INSTRUCTION_MACHINE_READABLE_HANDOFF` fork-point array form schema; framework update report v27.0 → v27.1 (Recommended).
 - `[M][LIB][RUNTIME]` — **c7-removal-c3-extension-synthesis-hardcode** (2026-04-01): Multi-domain flow (Tooling Dev + Runtime Dev parallel tracks) closed — Component 7 removed; Component 3 extended with strict structural invariant checks; synthesis role hardcoded to 'Curator' in `runtime/src/triggers.ts`; coupling map and all invocation/architecture docs updated; no framework update report.
 - `[S][RUNTIME]` — **orient-startup-simplification** (2026-04-01): Runtime Dev flow closed — `runtime/src/orient.ts` initial message updated to direct Owner to read project log and give brief status before asking user direction; startup console log removed; close message simplified; `runtime/INVOCATION.md` updated with interactive entry point; no `general/` changes, no framework update report.
 - `[S][RUNTIME]` — **registry-frontmatter-reader** (2026-03-30): Runtime Dev flow closed — `registry.ts` refactored from static `roleContextRegistry` to dynamic `buildRoleContext` reading YAML frontmatter; `paths.ts` regex bug fixed; backward pass complete with synthesis MAINT items.

@@ -9,15 +9,9 @@ import type { FlowRun, HandoffResult } from './types.js';
 // Co-maintenance: update if the synthesis role convention changes for this project.
 const SYNTHESIS_ROLE = 'Curator';
 
-/**
- * Co-maintenance: update if $GENERAL_IMPROVEMENT_META_ANALYSIS relocates in the index.
- */
-const META_ANALYSIS_INSTRUCTION_PATH = 'a-society/general/improvement/meta-analysis.md';
 
-/**
- * Co-maintenance: update if $GENERAL_IMPROVEMENT_SYNTHESIS relocates in the index.
- */
-const SYNTHESIS_INSTRUCTION_PATH = 'a-society/general/improvement/synthesis.md';
+// §$[PROJECT]_IMPROVEMENT_META_ANALYSIS: project root + a-docs/improvement/meta-analysis.md
+// $[PROJECT]_IMPROVEMENT_SYNTHESIS: project root + a-docs/improvement/synthesis.md
 
 export class ImprovementOrchestrator {
   static async handleForwardPassClosure(
@@ -89,10 +83,13 @@ export class ImprovementOrchestrator {
                     }
                 }
 
+                // $[PROJECT]_IMPROVEMENT_META_ANALYSIS: project root + a-docs/improvement/meta-analysis.md
+                const metaAnalysisInstructionPath = path.join(flowRun.projectRoot, 'a-docs', 'improvement', 'meta-analysis.md');
+
                 const { bundleContent } = ContextInjectionService.buildContextBundle(
                     roleKey,
                     flowRun.projectRoot,
-                    [META_ANALYSIS_INSTRUCTION_PATH, ...findingsFilePaths],
+                    [metaAnalysisInstructionPath, ...findingsFilePaths],
                     null
                 );
 
@@ -115,10 +112,13 @@ export class ImprovementOrchestrator {
             } else if (entry.stepType === 'synthesis') {
                 const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
 
+                // $[PROJECT]_IMPROVEMENT_SYNTHESIS: project root + a-docs/improvement/synthesis.md
+                const synthesisInstructionPath = path.join(flowRun.projectRoot, 'a-docs', 'improvement', 'synthesis.md');
+
                 const { bundleContent } = ContextInjectionService.buildContextBundle(
                     roleKey,
                     flowRun.projectRoot,
-                    [SYNTHESIS_INSTRUCTION_PATH, ...allFindingsFiles],
+                    [synthesisInstructionPath, ...allFindingsFiles],
                     null
                 );
 
