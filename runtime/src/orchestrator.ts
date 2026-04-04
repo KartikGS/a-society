@@ -53,9 +53,13 @@ export class FlowOrchestrator {
       console.log(`Bootstrapping flow from interactive session...`);
       const bootstrapHistory: RuntimeMessageParam[] = [];
 
+      const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
+        roleKey, workspaceRoot, [], null, 'flow'
+      );
+
       while (true) {
         const handoffResult = await runInteractiveSession(
-          workspaceRoot, roleKey, undefined,
+          workspaceRoot, roleKey, bootstrapBundle,
           bootstrapHistory.length > 0 ? bootstrapHistory : undefined,
           inputStream, outputStream
         );
@@ -92,7 +96,8 @@ export class FlowOrchestrator {
             }
           }
         } catch(e: any) {
-          throw new Error(`Workflow parsing failed: ${e.message}`);
+          bootstrapHistory.push({ role: 'user', content: `Workflow parsing failed: ${e.message}. Please fix workflow.md so it has valid YAML frontmatter (delimited by ---) with a top-level 'workflow:' key containing 'nodes' and 'edges', then restate your handoff.` });
+          continue;
         }
 
         flowRun = {
@@ -107,7 +112,12 @@ export class FlowOrchestrator {
           stateVersion: '2'
         };
 
-        await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+        try {
+          await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+        } catch (e: any) {
+          bootstrapHistory.push({ role: 'user', content: e.message });
+          continue;
+        }
         SessionStore.saveFlowRun(flowRun);
         break;
       }
