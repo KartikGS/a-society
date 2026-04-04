@@ -80,6 +80,12 @@ files:
 
   # ── Roles ─────────────────────────────────────────────────────────────────────
 
+  - path: roles/required-readings.yaml
+    description: "Required readings authority — sole machine-readable source of truth for all project-wide and role-specific context injection"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/roles/required-readings.md
+
   - path: roles/owner.md
     description: "Owner role — vision keeper, quality gatekeeper, and structure guardian for this project"
     required: true

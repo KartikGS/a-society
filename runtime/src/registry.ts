@@ -22,84 +22,48 @@ function roleKeyToIndexVariable(roleKey: string): string | null {
 }
 
 /**
- * Extracts YAML frontmatter from a markdown file.
- * Returns the parsed object or null if no valid frontmatter is found.
- */
-function extractFrontmatter(filePath: string): any {
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const lines = content.split('\n');
-    
-    if (lines[0].trim() !== '---') return null;
-    
-    let closingIndex = -1;
-    for (let i = 1; i < lines.length; i++) {
-      if (lines[i].trim() === '---') {
-        closingIndex = i;
-        break;
-      }
-    }
-    
-    if (closingIndex === -1) return null;
-    
-    const yamlContent = lines.slice(1, closingIndex).join('\n');
-    return yaml.load(yamlContent);
-  } catch (error: any) {
-    console.error(`Error reading or parsing frontmatter in ${filePath}: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Dynamically builds the RoleContextEntry for a given role by reading agents.md
- * (for universal reading) and the role's specific file (for role reading).
+ * Dynamically builds the RoleContextEntry for a given role by reading
+ * a-docs/roles/required-readings.yaml.
  * 
- * Fields read:
- * - 'universal_required_reading' from agents.md
- * - 'required_reading' from the role file
+ * authoratative schema:
+ * universal: [ $VAR_NAME, ... ]
+ * roles:
+ *   role_id: [ $VAR_NAME, ... ]
  * 
- * The roleKey format 'namespace__RoleName' is load-bearing; roleKeys that do not
- * follow this convention will not resolve to a file.
+ * If the YAML file is missing, an error is thrown.
  */
 export function buildRoleContext(roleKey: string, projectRoot: string): RoleContextEntry | null {
-  // 1. Resolve and read agents.md for universal reading
-  const agentsPath = resolveVariableFromIndex('$A_SOCIETY_AGENTS', projectRoot);
-  if (!agentsPath || !fs.existsSync(agentsPath)) {
-    console.error(`Could not resolve $A_SOCIETY_AGENTS at ${agentsPath || '$A_SOCIETY_AGENTS'}`);
-    return null;
+  const yamlPath = path.join(projectRoot, 'a-docs', 'roles', 'required-readings.yaml');
+  
+  if (!fs.existsSync(yamlPath)) {
+    throw new Error(`required-readings.yaml not found at ${yamlPath} — cannot initialize session.`);
   }
 
-  const agentsFrontmatter = extractFrontmatter(agentsPath);
-  if (!agentsFrontmatter || !Array.isArray(agentsFrontmatter.universal_required_reading)) {
-    console.error(`agents.md at ${agentsPath} is missing valid 'universal_required_reading' frontmatter.`);
-    return null;
+  let config: any;
+  try {
+    const content = fs.readFileSync(yamlPath, 'utf8');
+    config = yaml.load(content);
+  } catch (error: any) {
+    throw new Error(`Error parsing required-readings.yaml: ${error.message}`);
   }
 
-  const universalReading = agentsFrontmatter.universal_required_reading;
-
-  // 2. Resolve and read role file for role-specific reading
-  const roleVar = roleKeyToIndexVariable(roleKey);
-  if (!roleVar) {
-    console.error(`Invalid roleKey format: '${roleKey}'. Expected 'namespace__RoleName'.`);
-    return null;
+  if (!config || typeof config !== 'object') {
+    throw new Error(`Invalid required-readings.yaml format at ${yamlPath}`);
   }
 
-  const rolePath = resolveVariableFromIndex(roleVar, projectRoot);
-  if (!rolePath || !fs.existsSync(rolePath)) {
-    console.error(`Could not resolve ${roleVar} for roleKey '${roleKey}' at ${rolePath || roleVar}`);
-    return null;
+  const universalReading = Array.isArray(config.universal) ? config.universal : [];
+  
+  // Extract role identifier from roleKey: "namespace__Role Name" -> "role name"
+  const parts = roleKey.split('__');
+  if (parts.length !== 2) {
+    throw new Error(`Invalid roleKey format: '${roleKey}'. Expected 'namespace__RoleName'.`);
   }
+  const roleId = parts[1].toLowerCase();
 
-  const roleFrontmatter = extractFrontmatter(rolePath);
-  if (!roleFrontmatter) {
-    console.error(`Role file at ${rolePath} is missing valid frontmatter.`);
-    return null;
-  }
+  const roleReading = (config.roles && Array.isArray(config.roles[roleId])) ? config.roles[roleId] : [];
 
-  const roleReading = Array.isArray(roleFrontmatter.required_reading) ? roleFrontmatter.required_reading : [];
-
-  // 3. Merge and return
   return {
     requiredReadingVariables: [...new Set([...universalReading, ...roleReading])]
   };
 }
+

@@ -1,9 +1,3 @@
----
-universal_required_reading:
-  - $A_SOCIETY_AGENTS
-  - $A_SOCIETY_INDEX
-  - $INSTRUCTION_MACHINE_READABLE_HANDOFF
----
 
 # A-Society: Agent Orientation
 
@@ -33,6 +27,7 @@ Key file locations are registered in [`a-society/indexes/main.md`](/a-society/a-
 | **Curator** | [`roles/curator.md`](/a-society/a-docs/roles/curator.md) | Agent-docs steward — maintenance, migration, and pattern distillation into `general/` |
 | **Technical Architect** | [`roles/technical-architect.md`](/a-society/a-docs/roles/technical-architect.md) | Scoping and planning the programmatic tooling layer — automation boundaries, component design, open questions |
 | **Tooling Developer** | [`roles/tooling-developer.md`](/a-society/a-docs/roles/tooling-developer.md) | Implementing approved tooling components in TypeScript — spec-faithful execution within `tooling/` |
+| **Runtime Developer** | [`roles/runtime-developer.md`](/a-society/a-docs/roles/runtime-developer.md) | Implementing the framework's runtime orchestration layer in TypeScript — spec-faithful execution |
 
 Additional roles will be added here as the project grows. Do not assume a role exists unless it appears in this table.
 
@@ -40,25 +35,11 @@ Additional roles will be added here as the project grows. Do not assume a role e
 
 ---
 
-## Required Reading
+## Required Readings Authority
 
-Load context in this order before beginning any session:
+All universal and role-specific required readings for this project are maintained in the single machine-readable authority file: [`a-society/a-docs/roles/required-readings.yaml`](/a-society/a-docs/roles/required-readings.yaml).
 
-1. **This file** — `agents.md` (you are reading it)
-2. **Index** — [`a-society/indexes/main.md`](/a-society/a-docs/indexes/main.md) — read this second so all `$VAR` references below can be resolved
-3. **Vision** — `$A_SOCIETY_VISION` — what the framework is and where it is going
-4. **Structure** — `$A_SOCIETY_STRUCTURE` — why each folder exists and what belongs where
-5. **Role file** — your assigned role from the table above (e.g., `$A_SOCIETY_OWNER_ROLE`, `$A_SOCIETY_CURATOR_ROLE`) — your behavioral contract, authority, and any additional required readings
-
----
-
-## Context Confirmation (Mandatory)
-
-Your first output in any session must confirm that required context has been loaded:
-
-> *"Context loaded: agents.md, index, vision, structure, [role file]. Ready."*
-
-If any required document could not be read, name it explicitly and state why before proceeding. Do not begin work without this confirmation. An agent that skips this step has not loaded context — regardless of what it claims to know.
+The runtime uses this file to programmatically inject the correct context for every session.
 
 ---
 

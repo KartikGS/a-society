@@ -48,14 +48,6 @@ When designing any structured representation for data received from an external 
 
 ---
 
-## Context Loading
-
-[CUSTOMIZE: list the documents this role reads at session start — typically the project's agents.md, vision, structure, index, and the relevant workflow document.]
-
-**Context confirmation (mandatory):** Your first output in any session must confirm that required context has been loaded.
-
----
-
 ## Escalate to Owner When
 
 - A proposed design requires a direction decision (scope expansion, new architectural commitment, technology choice with long-term implications)

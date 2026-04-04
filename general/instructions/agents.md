@@ -8,10 +8,7 @@ It answers four questions an agent has at the start of any session:
 
 1. **What project am I in?** — a brief description and pointer to the vision
 2. **What role am I playing?** — the role table, with links to role files
-3. **What do I need to read?** — the required reading list, in order
-4. **How do I confirm I'm ready?** — the context confirmation statement
-
-An `agents.md` that answers all four questions clearly reduces session startup time to near zero. An agent that has read it is oriented; one that has not is not — regardless of what else they may have loaded.
+An `agents.md` that answers all three questions clearly reduces session startup time to near zero. An agent that has read it is oriented; one that has not is not — regardless of what else they may have loaded.
 
 ---
 
@@ -44,13 +41,8 @@ A table with three columns: Role name, file path, one-line primary focus. Every 
 - Roles are assigned by the human before a session begins.
 - An agent operates in exactly one role per session. An agent may not assume a role or shift to a different role mid-session without explicit human instruction.
 
-### 4. Required reading list (mandatory)
-An ordered list of documents every agent must read before starting work, regardless of role. Typically: this file → index → vision → structure → role file. **The index must come second** — before vision and structure — because those documents use `$VAR` references that cannot be resolved until the index is loaded. The role file is listed last because it may specify additional readings of its own.
-
-### 5. Context confirmation statement (mandatory)
-The exact text an agent must output to confirm they have loaded required context. State it verbatim — agents copy it. Include a note that an agent which skips this step has not loaded context, even if they claim otherwise.
-
-The confirmation must enumerate every item in the required reading list by name. A fixed string that omits items in the list is a confirmation failure — even if those items were loaded. When a project's required reading list includes items beyond the standard set, those items must appear by name in the confirmation statement template. An `agents.md` whose confirmation template does not match its required reading list is incomplete.
+### 4. Required readings authority (mandatory)
+Declare that required readings are maintained in `a-docs/roles/required-readings.yaml` as the single authoritative source. Provide a relative link to that file. See `$INSTRUCTION_REQUIRED_READINGS` for the maintenance protocol.
 
 ### 6. Authority and conflict resolution (mandatory)
 When two documents give conflicting guidance, which takes precedence? **The expected authority hierarchy is: project vision (highest precedence) → project structure → role document → agents.md.** State this order explicitly. Do not invert it — placing the role document above the vision or structure inverts the intended hierarchy. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
@@ -83,11 +75,8 @@ State the index location and explain `$VAR` convention in two to three sentences
 **Step 3 — Build the roles table.**
 List every role. Include: role name, file path, one-line primary focus. Confirm that Owner and Curator are both present — a project missing either is not initialized. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
 
-**Step 4 — Write the required reading list.**
-Order matters. Start with `agents.md` itself (agents confirm they have read it), then the index, then vision, then structure, then role file. **The index must come second** — before vision and structure — so that `$VAR` references in those documents can be resolved as agents read them. If your project has additional universal required readings (e.g., a standards document every agent needs), insert them before the role file.
-
-**Step 5 — Write the context confirmation statement.**
-State it exactly as agents should output it. Use a blockquote so it is visually distinct. Include the enforcement note. The confirmation must list every item in the required reading list by name — not a generic placeholder. If you added items to the required reading list in Step 4, update the confirmation statement to match. A confirmation template that does not match the required reading list is a documentation failure.
+**Step 4 — Add the required readings authority pointer.**
+State clearly that all universal and role-specific required readings are maintained in `a-docs/roles/required-readings.yaml`. Provide a link to that file.
 
 **Step 6 — Write authority and conflict resolution.**
 List the documents in precedence order. **The expected hierarchy is: project vision → project structure → role document → agents.md.** Three to five items is typical. End with the escalation to human.
@@ -124,14 +113,7 @@ Key file paths are in `indexes/main.md`. Resolve $VAR references there.
 | Backend | roles/sub-agents/backend.md | API and data layer |
 
 ## Required Reading
-1. This file
-2. $VISION — project vision
-3. $TOOLING_STANDARD — mandatory tools and constraints
-4. $WORKFLOW — how work gets done
-5. Your role file
-
-## Context Confirmation
-> "Context loaded: agents.md, vision, tooling, workflow, [role]. Ready."
+All required readings are maintained in `a-docs/roles/required-readings.yaml`.
 
 ## Invariants
 - Never use npm or yarn — pnpm only.
@@ -154,13 +136,7 @@ Key file paths are in `indexes/main.md`. Resolve $VAR references there.
 | Writer | roles/writer.md | Drafting within approved briefs |
 
 ## Required Reading
-1. This file
-2. $VISION — what this publication is for
-3. $STYLE_GUIDE — voice, tone, citation format
-4. Your role file
-
-## Context Confirmation
-> "Context loaded: agents.md, vision, style guide, [role]. Ready."
+All required readings are maintained in `a-docs/roles/required-readings.yaml`.
 
 ## Invariants
 - Never publish without editor approval.
@@ -174,7 +150,7 @@ Key file paths are in `indexes/main.md`. Resolve $VAR references there.
 
 **Too long.** If agents skim it, they miss invariants. Keep it to what every agent truly needs, every session.
 
-**Missing the context confirmation.** Without a confirmation gate, there is no way to know if context was actually loaded. The confirmation is the gate, not a formality.
+**Missing the required readings pointer.** A project without a pointer to the authoritative reading list leaves agents to guess what they should load, or rely on stale ad-hoc lists and instructions.
 
 **Roles not in a table.** A prose description of roles is ambiguous. The table is a declaration: these roles exist, these do not.
 
@@ -182,26 +158,3 @@ Key file paths are in `indexes/main.md`. Resolve $VAR references there.
 
 **Updated frequently.** A frequently-updated `agents.md` signals that something upstream is unstable. Fix the upstream problem; do not treat `agents.md` as a changelog.
 
-## YAML Frontmatter: Universal Required Reading
-
-To enable programmatic session orchestration and context injection, every `agents.md` must include a YAML frontmatter block at the very top of the file, before any other content.
-
-### Field: `universal_required_reading`
-
-- **Value:** A YAML list of `$VARIABLE_NAME` references registered in the project index.
-- **Semantics:** This set represents the baseline context bundle injected by the runtime for every role in the project.
-- **Universal minimum set:** Every project's universal list should include at minimum:
-  - The variable registered in the project's index for its own `agents.md`
-  - The variable registered in the project's index for its own file index
-  - `$INSTRUCTION_MACHINE_READABLE_HANDOFF` — registered in the project's index per the adoption instructions in the handoff instruction itself
-
-### Example
-
-```yaml
----
-universal_required_reading:
-  - $A_SOCIETY_AGENTS
-  - $A_SOCIETY_INDEX
-  - $INSTRUCTION_MACHINE_READABLE_HANDOFF
----
-```

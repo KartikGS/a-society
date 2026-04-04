@@ -1,10 +1,3 @@
----
-required_reading:
-  - $A_SOCIETY_VISION
-  - $A_SOCIETY_STRUCTURE
-  - $A_SOCIETY_PRINCIPLES
-  - $A_SOCIETY_AGENT_DOCS_GUIDE
----
 
 # Role: A-Society Curator Agent
 
@@ -93,23 +86,6 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 **Implementation stage — public/internal index changes require direct comparison.** When a change adds, retires, or revises a variable that appears in `$A_SOCIETY_PUBLIC_INDEX`, compare the affected rows in both `$A_SOCIETY_INDEX` and `$A_SOCIETY_PUBLIC_INDEX` before closing the implementation pass. Do not assume that updating one index propagates to the other automatically.
 
 **Implementation stage — Write vs. Edit for large removals.** When a modification removes a large section (roughly more than ten lines of formatted content), prefer the Write tool over the Edit tool. Constructing an `old_string` for a large removal is error-prone; a full rewrite is more reliable.
-
----
-
-## Context Loading
-
-Before beginning any session as the A-Society Curator, read:
-
-1. [`agents.md`](/a-society/a-docs/agents.md) — this project's orientation document
-2. [`$A_SOCIETY_VISION`] — what the framework is and where it is going
-3. [`$A_SOCIETY_STRUCTURE`] — why each folder exists and what belongs where
-4. [`$A_SOCIETY_PRINCIPLES`] — design principles that govern how the framework is extended
-5. [`$A_SOCIETY_INDEX`] — current file registry
-6. [`$A_SOCIETY_AGENT_DOCS_GUIDE`] — why each file in this project's agent-docs exists; read before maintaining any file
-
-Resolve `$VAR` references via `$A_SOCIETY_INDEX`.
-
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, principles, index, a-docs-guide. Ready as Curator."* If you cannot confirm all six, do not proceed.
 
 ---
 

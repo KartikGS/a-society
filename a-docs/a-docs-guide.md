@@ -134,6 +134,18 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `roles/required-readings.yaml` — `$A_SOCIETY_REQUIRED_READINGS`
+
+**Why it exists:** To ensure every session starts with the correct context without relying on prose checklists or frontmatter duplication. This file is the single, machine-readable authority for context injection.
+
+**What it owns:** The universal reading list and the role-specific mapping of `$VAR` references for all roles in the project.
+
+**Who reads it:** The runtime parsing layer (which performs the injection). Humans consult it as a sequence reference.
+
+**What breaks without it:** Programmatic context injection fails. Reading sequence becomes undocumented.
+
+---
+
 ### `roles/technical-architect.md` — `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE`
 
 **Why it exists:** The Technical Architect role has a narrow, pre-implementation mandate that is not covered by Owner or Curator: producing the automation boundary evaluation, component designs, and open question surfaces that must exist before any programmatic tooling is built. Without a dedicated role file, this work either collapses into the Owner (adding implementation-planning scope that the Owner does not own) or proceeds without a behavioral contract, risking implementation before design is verified.

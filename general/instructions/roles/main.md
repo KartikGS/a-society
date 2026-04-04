@@ -57,8 +57,8 @@ Both lists matter equally. Stating what a role does not do is often more useful 
 ### 3. Hard Rules (mandatory if any exist)
 Non-negotiable constraints that cannot be overridden by any other instruction. If a role has behaviors that must never change regardless of context — state them as hard rules with explicit markers. An agent that treats a hard rule as a guideline is operating incorrectly.
 
-### 4. Context Loading (mandatory)
-What must an agent read before operating in this role? List the documents in order of priority. Include the context confirmation statement — the attestation the agent must produce before beginning work. An agent that begins work without confirming context has not loaded context.
+### 4. Context Loading (deprecated)
+Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via `a-docs/roles/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
 
 ### 5. Escalation Triggers (mandatory)
 When must this role escalate to a human or to another role? Be specific. "When uncertain" is not an escalation trigger — it is an invitation to guess. Name the categories of situation that require escalation.
@@ -131,12 +131,9 @@ Does not: make unilateral direction changes, [project-specific exclusions].
 4. Duplication test — does an equivalent already exist?
 5. Quality test — can a new collaborator use this without additional explanation?
 
-## Context Loading
-Read: agents.md → vision → structure → index → workflow.
-Confirm: "Context loaded: agents.md, vision, structure, index, workflow. Ready."
-
 ## Post-Confirmation Protocol
-After confirming context, ask what the user wants to work on and route that need into the appropriate workflow by default.
+
+After confirming context via the runtime-injected identity, ask what the user wants to work on and route that need into the appropriate workflow by default.
 
 Freeform discussion remains available, but only when the user explicitly asks to stay outside workflow (for example: thinking aloud, exploring options, or discussing before committing to a path). Freeform is a human override, not a co-equal default entry path.
 
@@ -184,9 +181,7 @@ Does not: propose implementation approaches, write deliverables, assign other ro
 - If scope is unclear, stop and clarify before proceeding. Never infer scope.
 - Acceptance criteria must be verifiable — if it cannot be checked, it is not an AC.
 
-## Context Loading
-Read: agents.md → vision → [relevant domain context].
-Confirm: "Context loaded per analyst role. Ready."
+## Handoff Output
 
 ## Handoff Output
 When the Analyst finishes a specification or reaches a pause point that hands work to another role, tell the human which session to switch to, and what artifact to point the receiving role at. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
@@ -223,9 +218,7 @@ Does not: redefine scope, make design decisions, approve their own output for fi
 - If the specification is ambiguous, stop and request clarification. Do not infer.
 - If a blocker is encountered, report it immediately. Do not work around it silently.
 
-## Context Loading
-Read: agents.md → [role-specific context] → active task specification.
-Confirm: "Context loaded. Proceeding with [task description]."
+## Handoff Output
 
 ## Handoff Output
 When the Implementer completes the deliverable or reaches a blocker that must move to another role, tell the human which session to switch to, and what artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
@@ -265,9 +258,7 @@ For each acceptance criterion:
 3. State the verdict: pass / fail / cannot verify.
 4. If fail: classify as blocking or non-blocking, with rationale.
 
-## Context Loading
-Read: agents.md → [relevant standards document] → active work product.
-Confirm: "Context loaded. Reviewing [artifact]."
+## Handoff Output
 
 ## Handoff Output
 When the Reviewer issues a verdict and another role must act, tell the human which session to switch to, and what review artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
@@ -309,9 +300,7 @@ Does not: perform any role's substantive work, make design or scope decisions.
 ## Handoff Output
 At each pause point, the Coordinator tells the human which session to switch to, and what state artifact or handoff the next role needs to read. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
 
-## Context Loading
-Read: agents.md → current state document → active task queue.
-Confirm: "Context loaded. Current state: [summary]. Next action: [role] → [task]."
+## Escalate When
 
 ## Escalate When
 - Two roles produce conflicting outputs that cannot be resolved by the coordinator
@@ -346,9 +335,7 @@ Does not: write to a-society/general/ without Owner approval, set project direct
 - Maintenance changes within scope require no approval — unless a direction decision is implied.
 - If a maintenance change implies a direction decision, stop and escalate.
 
-## Context Loading
-Read: agents.md → vision → structure → index → [task-specific context].
-Confirm: "Context loaded: agents.md, vision, structure, index. Ready as Curator."
+## Handoff Output
 
 ## Handoff Output
 At each pause point, the Curator tells the human which session to switch to, and what artifact, changed files, or findings the receiving role needs to read. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
@@ -382,7 +369,6 @@ These three steps are not optional. A role document without registration is inco
 - **Primary Focus first, always.** An agent skimming the document should understand the role from the first paragraph.
 - **Both ownership lists are mandatory.** What the role does AND what it does not do. Omitting the "does not" list is a documentation failure.
 - **Hard rules get a distinct visual marker.** Agents must recognize them as non-overridable. Use bold, a horizontal rule, or a callout block — be consistent within your project.
-- **Context loading is a checklist, not prose.** List each document. Include the confirmation statement verbatim.
 - **Escalation triggers are specific.** Name the categories of situation, not just "when uncertain."
 
 ---
@@ -397,26 +383,5 @@ These three steps are not optional. A role document without registration is inco
 
 **Conflates role with person.** A role document defines a behavioral contract, not a personality profile. Keep the focus on authority and decision rules.
 
-**Context loading without a confirmation requirement.** An agent that reads five documents without confirming it has done so may not have done so. The confirmation statement is the gate.
+**Too broad.** A role that "owns everything" owns nothing. Authority without specificity cannot be enforced.
 
-## YAML Frontmatter: Role-Specific Required Reading
-
-To enable programmatic session orchestration, every role document must include a YAML frontmatter block at the very top of the file, before any other content.
-
-### Field: `required_reading`
-
-- **Value:** A YAML list of `$VARIABLE_NAME` references registered in the project index.
-- **Derivation rule:** List every `$VAR` reference in the role file's `## Context Loading` section, in the order given. Exclude:
-  1. Any item already in `universal_required_reading` (e.g., `$PROJECT_AGENTS`, `$PROJECT_INDEX`, `$INSTRUCTION_MACHINE_READABLE_HANDOFF`)
-  2. The role file itself (injected automatically by the runtime)
-
-### Example
-
-```yaml
----
-required_reading:
-  - $A_SOCIETY_VISION
-  - $A_SOCIETY_STRUCTURE
-  - $A_SOCIETY_PRINCIPLES
----
-```

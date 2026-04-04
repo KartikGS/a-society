@@ -29,6 +29,9 @@ Note: rows annotated `[a-docs]` represent co-maintenance dependencies on `a-docs
 | `workflow.md` YAML frontmatter schema in record folder `[a-docs]`: `workflow.name` (string, optional), `workflow.nodes[].id` (string, required), `workflow.nodes[].role` (string, required), `workflow.nodes[].human-collaborative` (string, optional), `workflow.edges[].from` (string, required), `workflow.edges[].to` (string, required), `workflow.edges[].artifact` (string, optional); removed `workflow.path[]`. | Yes | Component 4: Backward Pass Orderer |
 | `$GENERAL_MANIFEST` file format (`files` array, `path`/`scaffold`/`source_path`/`required` fields) | Yes | Component 1: Scaffolding System |
 | All `copy`-type `source_path` files in the manifest | Yes | Component 1: Scaffolding System (reads them at scaffold time) |
+| `a-docs/roles/required-readings.yaml` format `[a-docs]`: `universal` list (sequence of `$VAR` strings); `roles` map keyed by lowercase hyphenated role identifier, each value a sequence of `$VAR` strings | Yes | `runtime/src/registry.ts` (centralized required-reading resolution) |
+
+**Type A status note (2026-04-04):** `a-docs/roles/required-readings.yaml` format dependency added. Content injection is now a runtime responsibility managed via this schema. Parity with `runtime/src/registry.ts` confirmed.
 
 **Type A status note (2026-03-22):** Component 3 alignment for optional `workflow.nodes[].human-collaborative` is fully complete. Implementation alignment was completed 2026-03-21; documentation parity in `$INSTRUCTION_WORKFLOW_GRAPH` was completed 2026-03-22 (general-lib-sync-bundle flow).
 

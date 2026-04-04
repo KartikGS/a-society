@@ -51,6 +51,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `/a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_AGENTS` | `/a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `/a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
+| `$INSTRUCTION_REQUIRED_READINGS` | `/a-society/general/instructions/roles/required-readings.md` | How to maintain required-readings.yaml — machine-readable source of truth for context injection |
 | `$INSTRUCTION_ARCHITECTURE` | `/a-society/general/instructions/project-information/architecture.md` | How to create an architecture document for any project |
 | `$INSTRUCTION_LOG` | `/a-society/general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `/a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |

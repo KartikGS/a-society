@@ -22,8 +22,21 @@ export class ContextInjectionService {
   ): ContextBundleResult {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
     
+    // Extract role display name and project name from roleKey: "namespace__Role Name"
+    const parts = roleKey.split('__');
+    const projectName = parts[0];
+    const roleDisplayName = parts[1] || roleKey;
+
+    // 0a. Role announcement
+    bundle += `You are the ${roleDisplayName} agent for ${projectName}. Below is information that will help you play your role.\n\n`;
+
+    // 0b. Date injection
+    const today = new Date().toISOString().split('T')[0];
+    bundle += `Today's date is ${today}.\n\n`;
+
     // 1. Resolve and inject required reading
     const roleEntry = buildRoleContext(roleKey, projectRoot);
+
     if (roleEntry) {
       bundle += `--- MANDATORY CONTEXT LOADING FOR ${roleKey} ---\n`;
       for (const varName of roleEntry.requiredReadingVariables) {

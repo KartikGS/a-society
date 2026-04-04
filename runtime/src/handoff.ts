@@ -23,23 +23,13 @@ export class HandoffInterpreter {
       try {
         payload = yaml.load(match[1]);
       } catch (err: any) {
-        throw new HandoffParseError(`Malformed YAML in handoff block: ${err.message}`);
+        throw new HandoffParseError(`Error: Handoff block could not be parsed. Expected fields: role (string), artifact_path (string or null). Please correct the handoff block and restate it.`);
       }
     } else {
-      // 2. Try to find ```yaml ... ``` specifically with a handoff: key (backward compatibility)
-      const yamlTagRegex = /```(?:yaml)?\s*[\n\r]+handoff:([\s\S]*?)```/i;
-      match = text.match(yamlTagRegex);
-      if (!match) {
-          throw new HandoffParseError('No valid handoff block found. A handoff block is required to pass control back to the orchestrator.');
-      }
-      try {
-          const yamlStr = `handoff:${match[1]}`;
-          const parsed: any = yaml.load(yamlStr);
-          payload = parsed.handoff;
-      } catch (err: any) {
-          throw new HandoffParseError(`Malformed YAML in handoff block: ${err.message}`);
-      }
+      throw new HandoffParseError('Error: Handoff block could not be parsed. Expected fields: role (string), artifact_path (string or null). Please correct the handoff block and restate it.');
     }
+
+
 
     if (!payload && payload !== 0) {
       throw new HandoffParseError('Handoff block is empty or invalid.');

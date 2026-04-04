@@ -12,8 +12,10 @@ export async function runInteractiveSession(
   providedSystemPrompt?: string,
   providedHistory?: RuntimeMessageParam[],
   inputStream: NodeJS.ReadableStream = process.stdin,
-  outputStream: NodeJS.WritableStream = process.stdout
+  outputStream: NodeJS.WritableStream = process.stdout,
+  autonomous: boolean = false
 ): Promise<HandoffResult | null> {
+
   const orientRoleEntry = buildRoleContext(roleKey, workspaceRoot);
   if (!orientRoleEntry) {
     if (outputStream === process.stdout) {
@@ -71,8 +73,10 @@ export async function runInteractiveSession(
       return result;
     } catch (e: any) {
       if (!(e instanceof HandoffParseError)) throw e;
+      if (autonomous) throw e;
     }
   } else {
+
     if (history[history.length - 1].role === 'user') {
       let streamResponse = '';
       try {
@@ -88,9 +92,13 @@ export async function runInteractiveSession(
         return result;
       } catch (e: any) {
         if (!(e instanceof HandoffParseError)) throw e;
+        if (autonomous) throw e;
       }
     }
   }
+
+  if (autonomous) return null; // Should not reach here for autonomous turn
+
 
   return new Promise<HandoffResult | null>((resolve) => {
     const rl = readline.createInterface({

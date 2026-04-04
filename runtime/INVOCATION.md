@@ -36,4 +36,28 @@ The runtime manages the project improvement backward-pass automatically. After a
 - **Synthesis**: After meta-analysis completes, the runtime automatically launches a fresh **Curator** session for synthesis. This session receives all produced findings in its context.
 - **Closure**: Once synthesis completes, the flow status is set to `completed` and the record is closed.
 
-No separate CLI commands are required for improvement; the cycle is triggered natively by the forward-pass-closed signal.
+## Configuration and Errors
+
+### Required Readings Configuration
+
+The runtime manages context injection by reading a central configuration file: `a-docs/roles/required-readings.yaml`. This file must exist in the project root. If it is missing, the orchestrator will emit a terminal error and cannot initialize sessions.
+
+Authoritative schema for `required-readings.yaml`:
+```yaml
+universal:
+  - $VAR_NAME       # Resolved against the project's index; loaded for every role
+roles:
+  role_id:
+    - $VAR_NAME     # role_id is the lowercase role name (e.g., owner, curator)
+```
+
+### Error Feedback Loop
+
+The A-Society runtime implements an autonomous error feedback loop for specific workflow and handoff errors. Instead of terminating the session, these errors are returned to the model as a user-turn message, allowing the agent to self-correct:
+
+- **Malformed handoff YAML**: If the `handoff` block is invalid or missing required fields.
+- **Missing record folder**: If the orchestrator cannot find the record folder specified during handoff.
+- **Missing workflow.md**: If the required `workflow.md` is not present in the record folder.
+
+Hard configuration failures (e.g., missing `required-readings.yaml`, project index resolution failures) still result in terminal errors and stop orchestration.
+

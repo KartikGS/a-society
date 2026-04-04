@@ -79,15 +79,16 @@ Populate all foundational documents in this order:
 2. `project-information/structure.md` — why each folder exists, what belongs where
 3. `project-information/log.md` — current state, recent focus, and next priorities for the Owner's first session
 4. `roles/[role].md` — at minimum, an Owner role; add others if the project clearly warrants them
-5. `thinking/` — the three files: `main.md` (general principles), `reasoning.md` (reasoning framework), and `keep-in-mind.md` (operational reminders). Use `$GENERAL_THINKING`, `$GENERAL_THINKING_REASONING`, and `$GENERAL_THINKING_KEEP_IN_MIND` as starting points. Read `$INSTRUCTION_THINKING` before drafting. Customize role name references and project-specific content; remove any template items that do not apply.
-6. `agents.md` — the agent entry point, referencing all of the above
-7. `a-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`
-8. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered
-9. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
-10. `improvement/main.md` — from `$GENERAL_IMPROVEMENT`; adapt role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items.
-11. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files
-12. `a-society-version.md` — read A-Society's current version from `$A_SOCIETY_VERSION` and create `a-docs/a-society-version.md` stamping the baseline version and initialization date. Use `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the format.
-13. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate
+5. `roles/required-readings.yaml` — the machine-readable authority for context injection. Read `$INSTRUCTION_REQUIRED_READINGS` before drafting. Populate the `universal` list with project-wide orientation documents (agents.md, index, etc.) and the `roles` map with the specific required readings for each role created in step 4.
+6. `thinking/` — the three files: `main.md` (general principles), `reasoning.md` (reasoning framework), and `keep-in-mind.md` (operational reminders). Use `$GENERAL_THINKING`, `$GENERAL_THINKING_REASONING`, and `$GENERAL_THINKING_KEEP_IN_MIND` as starting points. Read `$INSTRUCTION_THINKING` before drafting. Customize role name references and project-specific content; remove any template items that do not apply.
+7. `agents.md` — the agent entry point, referencing all of the above. Read `$INSTRUCTION_AGENTS` before drafting.
+8. `a-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`. Read `$INSTRUCTION_AGENT_DOCS_GUIDE` before drafting.
+9. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered. Read `$INSTRUCTION_WORKFLOW` before drafting.
+10. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
+11. `improvement/main.md` — from `$GENERAL_IMPROVEMENT`; adapt role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items. Read `$INSTRUCTION_IMPROVEMENT` before drafting.
+12. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files. Read `$INSTRUCTION_RECORDS` before drafting.
+13. `a-society-version.md` — read A-Society's current version from `$A_SOCIETY_VERSION` and create `a-docs/a-society-version.md` stamping the baseline version and initialization date. Use `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the format.
+14. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate. Read `$INSTRUCTION_INDEX` before drafting.
 
 Before drafting documents 1–12, read the corresponding instruction by resolving `$INSTRUCTION_*` variables via `$A_SOCIETY_PUBLIC_INDEX`. Documents in steps 10–11 are initialized from `$GENERAL_IMPROVEMENT*` templates.
 
@@ -158,7 +159,7 @@ After human approval:
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, log, role(s), thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/reports/template-findings.md, and a-society-version.md
+- All foundational documents exist and are populated with real content: vision, structure, log, role(s), required-readings.yaml, thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/reports/template-findings.md, and a-society-version.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The feedback consent outcome is explicit for each applicable type: onboarding signal (always), migration feedback (if a Curator role was created), and curator-signal feedback (if a Curator role was created). Each consent is recorded in `a-docs/feedback/[type]/consent.md`. **Consent is verified only when the human's Yes or No was received and recorded in this session — the existence of a consent file does not constitute verified consent.** The onboarding signal report outcome is stated in the completion message.

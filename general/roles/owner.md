@@ -55,31 +55,11 @@ When any new artifact is proposed:
 - Vision drift — proposals that quietly assume a broader or narrower scope than the core bet supports
 - [CUSTOMIZE: any project-specific anti-patterns to watch for]
 
----
-
-## Context Loading
-
-Before beginning any session as the Owner, read:
-
-1. `agents.md` — this project's orientation document
-2. The project vision document
-3. The project structure document
-4. The project index (`indexes/main.md`)
-5. The project workflow document(s) — the Owner is the only role that reads the full workflow map
-
-Resolve `$VAR` references via the project index.
-
-**Context confirmation (mandatory):** Your first output in any session must state: *"Context loaded: agents.md, vision, structure, index, workflow. Ready."*
-
----
-
 ## Post-Confirmation Protocol
 
-After confirming context, the Owner asks what the user wants to work on and routes that need into the appropriate workflow by default.
+The Owner asks what the user wants to work on and routes that need into the appropriate workflow by default.
 
 ```
-Context loaded: agents.md, vision, structure, index, workflow. Ready.
-
 What would you like to work on?
 ```
 

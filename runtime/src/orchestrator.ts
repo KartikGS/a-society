@@ -9,14 +9,27 @@ import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget } from './types.
 import { runInteractiveSession } from './orient.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import crypto from 'node:crypto';
+import { resolveVariableFromIndex } from './paths.js';
+
+export class WorkflowError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WorkflowError';
+  }
+}
+
 
 export function parseWorkflow(filePath: string): any {
-  if (!fs.existsSync(filePath)) throw new Error(`Workflow file not found: ${filePath}`);
+  if (!fs.existsSync(filePath)) {
+    const folder = path.dirname(filePath);
+    throw new WorkflowError(`Error: workflow.md not found in ${folder}. This file is required before a handoff can be routed. Please create workflow.md in the record folder and restate your handoff.`);
+  }
   const content = fs.readFileSync(filePath, 'utf8');
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) throw new Error('No valid frontmatter found in workflow');
   return yaml.load(match[1]);
 }
+
 
 export class FlowOrchestrator {
 
@@ -160,49 +173,70 @@ export class FlowOrchestrator {
     flowRun.status = 'running';
     SessionStore.saveFlowRun(flowRun);
 
-    const handoffResult = await runInteractiveSession(flowRun.projectRoot, roleKey, bundleContent, injectedHistory as any, inputStream, outputStream);
-    
-    if (handoffResult) {
-      if (handoffResult.kind === 'forward-pass-closed') {
-        await ImprovementOrchestrator.handleForwardPassClosure(
-          flowRun,
-          { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },
-          inputStream,
-          outputStream,
-        );
-        return;
+    while (true) {
+      let handoffResult: HandoffResult | null = null;
+      try {
+        handoffResult = await runInteractiveSession(flowRun.projectRoot, roleKey, bundleContent, injectedHistory as any, inputStream, outputStream, true);
+        
+        if (handoffResult) {
+           if (handoffResult.kind === 'forward-pass-closed') {
+            await ImprovementOrchestrator.handleForwardPassClosure(
+              flowRun,
+              { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },
+              inputStream,
+              outputStream,
+            );
+            return;
+          }
+
+          if (handoffResult.kind === 'meta-analysis-complete') {
+            throw new Error(`Unexpected meta-analysis-complete signal during forward pass at node '${nodeId}'.`);
+          }
+
+          // kind === 'targets'
+          const handoffs = handoffResult.targets;
+          await this.applyHandoffAndAdvance(flowRun, nodeId, handoffs);
+          
+          const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));
+          const turnRecord: TurnRecord = {
+            turnNumber: currentTurnNumber,
+            inputArtifactPath: (Array.isArray(resolvedArtifacts) ? resolvedArtifacts.join(', ') : (resolvedArtifacts || '')),
+            injectedContextHash: contextHash,
+            assistantOutput: (injectedHistory[injectedHistory.length - 1] as any)?.content || "Handoff generated.",
+            parsedHandoffResult: handoffs
+          };
+
+          session.transcriptHistory = injectedHistory;
+          SessionStore.saveRoleSession(session);
+          SessionStore.saveTurnRecord(session.logicalSessionId, turnRecord);
+          break;
+        } else {
+          flowRun.status = 'awaiting_human';
+          session.transcriptHistory = injectedHistory;
+          SessionStore.saveRoleSession(session);
+          SessionStore.saveFlowRun(flowRun);
+          break;
+        }
+      } catch (e: any) {
+        if (e instanceof HandoffParseError || e instanceof WorkflowError) {
+          injectedHistory.push({ role: 'user', content: e.message });
+          // Save session so history is preserved
+          session.transcriptHistory = injectedHistory;
+          SessionStore.saveRoleSession(session);
+          continue;
+        }
+        throw e;
       }
-
-      if (handoffResult.kind === 'meta-analysis-complete') {
-        throw new Error(`Unexpected meta-analysis-complete signal during forward pass at node '${nodeId}'.`);
-      }
-
-      // kind === 'targets'
-      const handoffs = handoffResult.targets;
-      const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));
-      const turnRecord: TurnRecord = {
-        turnNumber: currentTurnNumber,
-        inputArtifactPath: resolvedArtifacts.join(', '),
-        injectedContextHash: contextHash,
-        assistantOutput: (injectedHistory[injectedHistory.length - 1] as any)?.content || "Handoff generated.",
-        parsedHandoffResult: handoffs
-      };
-
-      session.transcriptHistory = injectedHistory;
-      SessionStore.saveRoleSession(session);
-      SessionStore.saveTurnRecord(session.logicalSessionId, turnRecord);
-
-      await this.applyHandoffAndAdvance(flowRun, nodeId, handoffs);
-    } else {
-      flowRun.status = 'awaiting_human';
-      session.transcriptHistory = injectedHistory;
-      SessionStore.saveRoleSession(session);
-      SessionStore.saveFlowRun(flowRun);
     }
   }
 
+
   public async applyHandoffAndAdvance(flowRun: FlowRun, nodeId: string, handoffs: HandoffTarget[]): Promise<void> {
+    if (!fs.existsSync(flowRun.recordFolderPath)) {
+      throw new WorkflowError(`Error: No record folder found at ${flowRun.recordFolderPath}. A record folder must be created before emitting a handoff. Please create the record folder, create workflow.md inside it, and restate your handoff.`);
+    }
     const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
+
     const outgoingEdges = (wf.edges || []).filter((e: any) => e.from === nodeId);
 
     if (outgoingEdges.length === 0) {
