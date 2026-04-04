@@ -115,7 +115,10 @@ export class FlowOrchestrator {
         try {
           await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
         } catch (e: any) {
-          bootstrapHistory.push({ role: 'user', content: e.message });
+          bootstrapHistory.push({
+            role: 'user',
+            content: `workflow.md was found at ${workflowDocumentPath} but failed schema validation. Error: ${e.message}\n\nDo not recreate the file — update it. The workflow.md must contain YAML frontmatter (between --- delimiters) with a top-level 'workflow:' key. Required structure:\n---\nworkflow:\n  nodes:\n    - id: <string>\n      role: <string>\n      description: <string>\n  edges:\n    - from: <node-id>\n      to: <node-id>\n---\nPlease fix workflow.md with this schema and restate your handoff.`
+          });
           continue;
         }
         SessionStore.saveFlowRun(flowRun);
