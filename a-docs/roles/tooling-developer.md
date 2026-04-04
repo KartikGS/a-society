@@ -52,18 +52,6 @@ The Tooling Developer does **NOT** own:
 
 ## Tooling Invocation Discipline
 
-At each pause point, the Developer explicitly tells the human:
-
-1. Which session to switch to.
-2. What the receiving role needs to read.
-3. Handoff inputs for the receiving role:
-   - **Existing session (default):** use this format:
-     ```
-     Next action: [what the receiving role should do]
-     Read: [path to artifact(s)]
-     Expected response: [what the receiving role produces next]
-     ```
-
 Pause points for this role:
 - After completing a phase and before beginning the next phase — handoff status to the human for orchestration
 - When a deviation is identified — immediately escalate to TA; include the specific deviation, the component affected, and what decision is needed

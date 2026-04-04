@@ -91,10 +91,10 @@ What would you like to work on?
 Once the human answers, the Owner:
 - maps the need to **A-Society Framework Development**
 - performs the **Intake Validity Sweep**: after forming a scope assessment (files, design areas, or concepts the work will likely touch), the Owner sweeps the **Next Priorities** list for entries whose target files or design areas overlap with that assessment. For each overlapping entry, the Owner evaluates whether it has been invalidated by prior work under one of four cases: (1) **Addressed**, (2) **Contradicted**, (3) **Restructured**, or (4) **Partially addressed**. Flagged entries are surfaced to the user with the rationale; the Owner updates the log before proceeding.
-- creates the record folder, produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`, and creates `workflow.md` (the backward pass schema file, per `$A_SOCIETY_RECORDS`) — the plan is the approval gate for the flow and must exist before any brief is written; `workflow.md` is a required Phase 0 co-output and must be created at the same step
+- creates the record folder, produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`, and creates `workflow.md` (the schema file, per `$A_SOCIETY_RECORDS`) — the plan is the approval gate for the flow and must exist before any brief is written; `workflow.md` is a required Phase 0 co-output and must be created at the same step
 - When the flow carries `[LIB]` scope, represent the registration loop explicitly in `workflow.md` at intake, but do so within the existing workflow phases rather than by adding new path nodes. The predictable structure is: Curator publishes the update report during Implementation; version increment and acknowledgment occur during Forward Pass Closure. The `[LIB]` scope tag is the signal to account for this loop; omitting it produces a `workflow.md` path that does not match the flow that actually ran.
 - **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the human which session to use next and what artifact or context to point the Curator at
-- **Tier 1 flows:** implements directly and proceeds to backward pass within Session A
+- **Tier 1 flows:** implements directly within Session A
 
 If the human explicitly asks to discuss, think aloud, or stay outside the workflow, the Owner may do so. Freeform is a human override, not the default entry path.
 
@@ -197,30 +197,6 @@ At forward pass closure, after the flow's changes are confirmed, the Owner sweep
 **Multi-track path portability.** For flows with multiple parallel tracks, verify at closure that all track convergence artifacts (e.g., completion artifacts filed by non-Curator roles) do not contain machine-specific absolute paths or `file://` URLs. Confirming functional completeness is not sufficient — handoff artifact format portability must also be confirmed. A `file://` path in a terminal track artifact violates the path portability rule even if the path was not used for routing.
 
 **Update-report path naming.** When a forward pass closure artifact instructs the Curator to publish a framework update report, specify the filename using the `$A_SOCIETY_UPDATES_PROTOCOL` contract: `[YYYY-MM-DD]-[brief-descriptor].md` within `$A_SOCIETY_UPDATES_DIR`. A date-only filename is non-compliant with the programmatic parsing contract and will be ignored by the Version Comparator.
-
----
-
-## Handoff Output
-
-At each pause point, the Owner explicitly tells the human:
-1. Which session to switch to.
-2. What the receiving role needs to read.
-3. Handoff inputs for the receiving role:
-   - **Existing session (default):** use this format:
-     ```
-     Next action: [what the receiving role should do]
-     Read: [path to artifact(s)]
-     Expected response: [what the receiving role produces next]
-     ```
-
-**Expected response scope.** Name the immediate next artifact or decision the receiving role produces in response to this specific handoff. Do not replace the concrete next output with a vague process label such as "continue backward pass" or "findings tracking."
-
-For A-Society, this applies at minimum:
-- after writing `01-owner-to-curator-brief.md`
-- after issuing a review decision in the active record folder
-- after Owner findings, when the Curator still needs to synthesize or publish follow-up artifacts
-
-If the decision is terminal, say so explicitly and do not imply an additional session switch.
 
 ---
 

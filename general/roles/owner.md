@@ -66,11 +66,11 @@ What would you like to work on?
 Once the user answers, the Owner:
 - maps the need to the appropriate workflow
 - performs the **Intake Validity Sweep**: after forming a scope assessment (files, design areas, or concepts the work will likely touch), the Owner sweeps the **Next Priorities** list for entries whose target files or design areas overlap with that assessment. For each overlapping entry, the Owner evaluates whether it has been invalidated by prior work under one of four cases: (1) **Addressed**, (2) **Contradicted**, (3) **Restructured**, or (4) **Partially addressed**. Flagged entries are surfaced to the user with the rationale; the Owner updates the log before proceeding.
-- creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written; when the project uses records with backward pass tooling, also create `workflow.md` alongside `01-owner-workflow-plan.md` at this step — it is a required Phase 0 co-output, not a post-intake artifact
-- When the flow has a known post-implementation publication or registration step (e.g., publishing an update report, incrementing a version record), include that step in the path at intake. These steps are predictable at the time the plan is written and must not be left as implied appendages — they must appear explicitly so the backward pass traversal order reflects the full flow.
-- When that registration step follows naturally from an existing workflow phase — for example, when a library publication occurs during Implementation and a version acknowledgment occurs at Forward Pass Closure — represent it within those phases in `workflow.md` rather than by adding new path nodes. A new path node for a sub-step within an established phase produces a `workflow.md` that does not match the flow's actual structure and corrupts backward pass ordering.
+- creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written; also create `workflow.md` alongside `01-owner-workflow-plan.md` at this step — it is a required Phase 0 co-output, not a post-intake artifact
+- When the flow has a known post-implementation publication or registration step (e.g., publishing an update report, incrementing a version record), include that step in the path at intake. These steps are predictable at the time the plan is written and must not be left as implied appendages — they must appear explicitly so the path reflects the full flow.
+- When that registration step follows naturally from an existing workflow phase — for example, when a library publication occurs during Implementation and a version acknowledgment occurs at Forward Pass Closure — represent it within those phases in `workflow.md` rather than by adding new path nodes. A new path node for a sub-step within an established phase produces a `workflow.md` that does not match the flow's actual structure.
 - **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the user which session to use next and what artifact or context to point the downstream role at
-- **Tier 1 flows:** implements directly and proceeds to backward pass within Session A
+- **Tier 1 flows:** implements directly within Session A
 
 If the user explicitly asks to discuss, think aloud, or stay outside workflow, the Owner may engage freeform. Freeform is a human override, not the default entry path.
 
@@ -165,23 +165,6 @@ When a closing flow surfaces new Next Priorities items, add or merge those log e
 At forward pass closure, after the flow's changes are confirmed, the Owner sweeps Next Priorities entries whose target files or design areas overlap with the scope of the completed flow. The same four-case taxonomy applies (addressed, contradicted, restructured, partially addressed). Relevant entries are updated, narrowed, or removed before the closure artifact is filed.
 
 **Multi-track path portability.** For flows with multiple parallel tracks, verify at closure that all track convergence artifacts (e.g., completion artifacts filed by downstream roles) do not contain machine-specific absolute paths or `file://` URLs. Confirming functional completeness is not sufficient — handoff artifact format portability must also be confirmed. A `file://` path in a terminal track artifact violates the path portability rule even if the path was not used for routing.
-
----
-
-## Handoff Output
-
-At each pause point, the Owner tells the human:
-1. Which session to switch to.
-2. What the receiving role needs to read (artifact path and any additional context).
-3. Handoff inputs for the receiving role:
-   - **Existing session (default):** use this format:
-     ```
-     Next action: [what the receiving role should do]
-     Read: [path to artifact(s)]
-     Expected response: [what the receiving role produces next]
-     ```
-
-If the work item is closed, the Owner says so explicitly and does not imply a further handoff.
 
 ---
 

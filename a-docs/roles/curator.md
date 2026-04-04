@@ -128,32 +128,6 @@ The A-Society Curator's migration responsibility (restructuring agent-docs in an
 
 ---
 
-## Handoff Output
-
-Before issuing your handoff, verify the next step against the flow's `workflow.md`. Do not rely on memory of the workflow sequence.
-
-At each pause point, the Curator explicitly tells the human:
-1. Which session to switch to.
-2. What the receiving role needs to read.
-3. Handoff inputs for the receiving role:
-   - **Existing session (default):** use this format:
-     ```
-     Next action: [what the receiving role should do]
-     Read: [path to artifact(s)]
-     Expected response: [what the receiving role produces next]
-     ```
-
-**Expected response scope:** Name the immediate next artifact from the receiving role in response to this specific handoff only. Do not name artifacts that the receiving role will produce only after intermediate steps by another role have occurred. When the receiving role's response will be followed by intermediate work before a later Owner action, the Expected response covers the first response only — subsequent Owner actions belong in a later handoff.
-
-For A-Society, this applies at minimum:
-- after submitting a proposal in the active record folder
-- after implementation and registration, including any update-report draft awaiting Owner review
-- after Curator findings or synthesis, when the next action belongs to the Owner or the item is complete
-
-If the flow is complete or blocked on Owner review, say that explicitly.
-
----
-
 ## Escalate to Owner When
 
 - A proposal to `a-society/general/` is ready for review

@@ -71,22 +71,7 @@ This does not mean the agent refuses to work. It means the agent names the discr
 Roles that are always active (e.g., the Owner) do not need this section — they are entry points, not downstream nodes.
 
 ### 7. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
-What does this role tell the human when it reaches a pause point and another role must act next? Define the outgoing handoff message explicitly. A role document should not assume the human knows whether to start a new conversation, resume an existing one, or which artifact carries the work forward.
-
-At each pause point, the role should state:
-- Which session to switch to
-- What the receiving role needs to read (artifact path and any additional context)
-- Copyable inputs for the receiving role: always a read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
-
-When resuming an existing session, use the following named format:
-
-```
-Next action: [what the receiving role should do]
-Read: [path to artifact(s)]
-Expected response: [what the receiving role produces next]
-```
-
-No role-assignment prompt is included — the session is already running under the correct role.
+What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`. The block declares the receiving role and the artifact path the runtime uses to route the next session.
 
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
@@ -142,12 +127,7 @@ If the workflow list for this project has not yet been customized, do not defaul
 [CUSTOMIZE: list the project's actual workflows and their one-line summaries here. The Owner uses this list as the routing map after the user states a need.]
 
 ## Handoff Output
-At each pause point, tell the human:
-1. Which session to switch to.
-2. What the receiving role needs to read (artifact path and any additional context).
-3. Copyable inputs for the receiving role. Always: `[artifact path]`. Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
-
-If the work item is closed, say so explicitly and do not imply a further session switch.
+At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
 ## Escalate to Human When
 - A contribution would change direction or scope
@@ -182,9 +162,7 @@ Does not: propose implementation approaches, write deliverables, assign other ro
 - Acceptance criteria must be verifiable — if it cannot be checked, it is not an AC.
 
 ## Handoff Output
-
-## Handoff Output
-When the Analyst finishes a specification or reaches a pause point that hands work to another role, tell the human which session to switch to, and what artifact to point the receiving role at. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
 ## Escalate to Human When
 - The requirement contradicts the project vision
@@ -219,9 +197,7 @@ Does not: redefine scope, make design decisions, approve their own output for fi
 - If a blocker is encountered, report it immediately. Do not work around it silently.
 
 ## Handoff Output
-
-## Handoff Output
-When the Implementer completes the deliverable or reaches a blocker that must move to another role, tell the human which session to switch to, and what artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
 ## Escalate When
 - The specification contains a contradiction
@@ -259,9 +235,7 @@ For each acceptance criterion:
 4. If fail: classify as blocking or non-blocking, with rationale.
 
 ## Handoff Output
-
-## Handoff Output
-When the Reviewer issues a verdict and another role must act, tell the human which session to switch to, and what review artifact or evidence the receiving role needs. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
 ## Escalate When
 - An AC cannot be verified with available evidence
@@ -298,9 +272,7 @@ Does not: perform any role's substantive work, make design or scope decisions.
 5. Review the report and issue the next handoff.
 
 ## Handoff Output
-At each pause point, the Coordinator tells the human which session to switch to, and what state artifact or handoff the next role needs to read. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
-
-## Escalate When
+At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
 ## Escalate When
 - Two roles produce conflicting outputs that cannot be resolved by the coordinator
@@ -336,9 +308,7 @@ Does not: write to a-society/general/ without Owner approval, set project direct
 - If a maintenance change implies a direction decision, stop and escalate.
 
 ## Handoff Output
-
-## Handoff Output
-At each pause point, the Curator tells the human which session to switch to, and what artifact, changed files, or findings the receiving role needs to read. Always provide a copyable read directive (`[artifact path]`). Paths must be relative to the repository root (e.g., `project-name/a-docs/agents.md`). Never use machine-specific absolute paths or `file://` URLs.
+At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
 ## Escalate to Owner When
 - A proposal to a-society/general/ is ready for review

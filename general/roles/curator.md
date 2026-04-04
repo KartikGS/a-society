@@ -40,7 +40,7 @@ The Curator **does NOT**:
 - **Approval Invariant topology check.** If the workflow plan shows no Proposal phase, the Owner brief constitutes authorization; no separate proposal artifact is required before implementation begins. The brief must explicitly state this.
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
 - **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent. This prohibition includes markdown link syntax: `[text](/absolute/path)` and `[text](file:///path)` are both violations. Use `$VARIABLE_NAME` references for any path that must be followed — never embed paths directly in link syntax.
-- **Never queue synthesis-authority items.** During a backward pass synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
+- **Never queue synthesis-authority items.** During synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
 ---
 
@@ -82,31 +82,6 @@ When performing migration tasks — bringing a project's agent-docs into conform
 6. After marking migration complete, check `a-docs/feedback/migration/consent.md` (see `$INSTRUCTION_CONSENT` for the consent check procedure). If `Consented: Yes`, generate a migration feedback report using `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` and file it at `$A_SOCIETY_FEEDBACK_MIGRATION/[project]-[update-report-date].md`. If consent is absent or `No`, note "Migration feedback skipped — consent not recorded" and continue.
 
 **If the project has no `a-society-version.md`** (initialized before versioning was introduced): create one, set the baseline to `v1.0`, leave Applied Updates empty, and apply reports from v1.0 forward. See `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the file format.
-
----
-
-## Handoff Output
-
-Before issuing your handoff, verify the next step against the flow's `workflow.md`. Do not rely on memory of the workflow sequence.
-
-At each pause point, the Curator tells the human:
-1. Which session to switch to.
-2. What the receiving role needs to read (artifact path, changed files, findings, or other required context).
-3. Handoff inputs for the receiving role:
-   - **Existing session (default):** use this format:
-     ```
-     Next action: [what the receiving role should do]
-     Read: [path to artifact(s)]
-     Expected response: [what the receiving role produces next]
-     ```
-   `Expected response` names only the immediate next artifact the receiving role will produce in response to this handoff — the artifact they create before passing work onward. Do not name artifacts produced only after an intermediate step by another role. Listing a downstream artifact as the expected response implies the receiving role should produce it directly, which is incorrect when another role must act first.
-
-Typical Curator pause points include:
-- after submitting a proposal or update-report draft for Owner review
-- after implementation and registration when another role owes review or findings
-- after findings or synthesis when the next action belongs to another role or the item is complete
-
-If the work item is complete or blocked on another role, the Curator states that explicitly.
 
 ---
 

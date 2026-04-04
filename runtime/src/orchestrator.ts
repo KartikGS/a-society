@@ -3,13 +3,12 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
-import { HandoffInterpreter, HandoffParseError } from './handoff.js';
+import { HandoffParseError } from './handoff.js';
 import { ToolTriggerEngine } from './triggers.js';
-import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget } from './types.js';
+import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget, RuntimeMessageParam } from './types.js';
 import { runInteractiveSession } from './orient.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import crypto from 'node:crypto';
-import { resolveVariableFromIndex } from './paths.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -52,53 +51,66 @@ export class FlowOrchestrator {
 
     if (!flowRun) {
       console.log(`Bootstrapping flow from interactive session...`);
-      const handoffResult = await runInteractiveSession(workspaceRoot, roleKey, undefined, undefined, inputStream, outputStream);
-      if (!handoffResult) return; // interactive session exited without handoff
+      const bootstrapHistory: RuntimeMessageParam[] = [];
 
-      if (handoffResult.kind !== 'targets') {
-        throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
-      }
-      const handoffs = handoffResult.targets;
-      const artifactPath = handoffs[0].artifact_path;
-      if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
+      while (true) {
+        const handoffResult = await runInteractiveSession(
+          workspaceRoot, roleKey, undefined,
+          bootstrapHistory.length > 0 ? bootstrapHistory : undefined,
+          inputStream, outputStream
+        );
+        if (!handoffResult) return;
 
-      const recordFolderPath = path.dirname(path.resolve(workspaceRoot, artifactPath));
-      const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
-
-      if (!fs.existsSync(workflowDocumentPath)) {
-        throw new Error(`workflow.md not found in ${recordFolderPath}`);
-      }
-
-      let startNodeId = 'start';
-      try {
-        const doc = parseWorkflow(workflowDocumentPath);
-        if (doc.workflow && doc.workflow.nodes) {
-          const startingRoleName = handoffs[0].role;
-          const node = doc.workflow.nodes.find((n: any) => n.role === startingRoleName);
-          if (node) {
-            startNodeId = node.id;
-          } else {
-             startNodeId = doc.workflow.nodes[0].id;
-          }
+        if (handoffResult.kind !== 'targets') {
+          throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
         }
-      } catch(e: any) { 
-        throw new Error(`Workflow parsing failed: ${e.message}`);
+        const handoffs = handoffResult.targets;
+        const artifactPath = handoffs[0].artifact_path;
+        if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
+
+        const recordFolderPath = path.dirname(path.resolve(workspaceRoot, artifactPath));
+        const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
+
+        if (!fs.existsSync(workflowDocumentPath)) {
+          bootstrapHistory.push({
+            role: 'user',
+            content: `Error: workflow.md not found in ${recordFolderPath}. This file is required before a handoff can be routed. Please create the record folder, create workflow.md inside it with a valid YAML frontmatter workflow graph, and restate your handoff.`
+          });
+          continue;
+        }
+
+        let startNodeId = 'start';
+        try {
+          const doc = parseWorkflow(workflowDocumentPath);
+          if (doc.workflow && doc.workflow.nodes) {
+            const startingRoleName = handoffs[0].role;
+            const node = doc.workflow.nodes.find((n: any) => n.role === startingRoleName);
+            if (node) {
+              startNodeId = node.id;
+            } else {
+              startNodeId = doc.workflow.nodes[0].id;
+            }
+          }
+        } catch(e: any) {
+          throw new Error(`Workflow parsing failed: ${e.message}`);
+        }
+
+        flowRun = {
+          flowId: crypto.randomUUID(),
+          projectRoot: workspaceRoot,
+          recordFolderPath,
+          activeNodes: [startNodeId],
+          completedNodes: [],
+          completedNodeArtifacts: {},
+          pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
+          status: 'running',
+          stateVersion: '2'
+        };
+
+        await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+        SessionStore.saveFlowRun(flowRun);
+        break;
       }
-
-      flowRun = {
-        flowId: crypto.randomUUID(),
-        projectRoot: workspaceRoot,
-        recordFolderPath,
-        activeNodes: [startNodeId],
-        completedNodes: [],
-        completedNodeArtifacts: {},
-        pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
-        status: 'running',
-        stateVersion: '2'
-      };
-
-      await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
-      SessionStore.saveFlowRun(flowRun);
     }
 
     while (flowRun.status === 'running' && flowRun.activeNodes.length > 0) {

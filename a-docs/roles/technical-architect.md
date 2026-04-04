@@ -133,12 +133,3 @@ For each `a-docs/` format dependency in a component design:
 
 ---
 
-## Handoff Output
-
-At each pause point, the Technical Architect submits its output to the Owner and provides:
-
-1. The artifact path(s) to review.
-2. What the Owner needs to evaluate or decide.
-3. Any open questions that require Owner resolution before the next phase can begin.
-
-If the output is ready for Owner review, state that explicitly and provide the artifact path(s).

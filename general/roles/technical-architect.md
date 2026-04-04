@@ -34,6 +34,18 @@ These standards govern every advisory this role produces.
 
 Behavioral requirements stated in advisory prose but not mirrored in the per-file or interface-changes section of the advisory are not binding implementation requirements. Implementing roles read implementation specs from the per-file specification section — not from advisory prose. Any requirement that must be implemented must appear in the specification section, not only in the rationale or summary.
 
+### Specification Rigor
+
+To eliminate ambiguity and implementation cycles, every advisory must meet these precision standards:
+
+1.  **Directory-Scoped Verification:** Before asserting that a file exists or does not exist in a "Current State" or "Scope" assessment, the advisory must explicitly verify the existence of the file relative to the directory scope.
+2.  **Explicit Import Naming:** When specified behavior depends on a new external or internal dependency, name the required imports explicitly in the specification.
+3.  **Pinning Semantics for Role Order:** When an advisory reduces a node graph to a specific role traversal order, provide explicit per-role pinning semantics and a worked trace that accounts for repeated-role cases (where the same role appears multiple times in a flow).
+4.  **Parser/Regex Verification:** When claiming that an existing parser or regex already supports a format, verify the claim against the authoritative format instruction and a worked example, not just the current implementation behavior.
+5.  **Identifier-Mapping Rules:** All load-bearing identifier-mapping rules (e.g., mapping a human-readable name to a machine-key) must be stated explicitly with worked examples and defined failure behavior.
+6.  **Repo-Relative Paths:** Use exact repository-relative paths in all file references and "Files Changed" tables.
+7.  **Developer Path Portability:** Require that any produced implementation reports or backward-pass findings use repository-relative paths throughout; absolute paths and `file://` URLs are prohibited.
+
 ### Extension Before Bypass (Architecture and Infrastructure)
 
 Before proposing new infrastructure or a bypass of an existing architectural path, enumerate explicitly why the existing path cannot be extended to handle the new requirement. The rationale for extension-over-bypass belongs in the advisory. A proposal to introduce new infrastructure without this enumeration transfers an unresolved design decision to the implementing role.
