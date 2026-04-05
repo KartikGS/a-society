@@ -68,10 +68,13 @@ export class AnthropicProvider implements LLMProvider {
       });
 
       let fullText = '';
+      let stopReason: string | null = null;
       const toolUseBlocks = new Map<number, { id: string; name: string; inputJson: string }>();
 
       for await (const chunk of stream) {
-        if (chunk.type === 'content_block_start') {
+        if (chunk.type === 'message_delta' && (chunk.delta as any).stop_reason) {
+          stopReason = (chunk.delta as any).stop_reason;
+        } else if (chunk.type === 'content_block_start') {
           const block = chunk.content_block as any;
           if (block.type === 'tool_use') {
             toolUseBlocks.set(chunk.index, { id: block.id, name: block.name, inputJson: '' });
@@ -89,6 +92,9 @@ export class AnthropicProvider implements LLMProvider {
       }
 
       if (fullText) process.stdout.write('\n');
+      if (stopReason === 'max_tokens') {
+        process.stderr.write(`[Warning] Response truncated: model hit max_tokens limit (stop_reason=max_tokens). The response may be incomplete.\n`);
+      }
 
       if (toolUseBlocks.size > 0) {
         const calls = Array.from(toolUseBlocks.values()).map(block => ({

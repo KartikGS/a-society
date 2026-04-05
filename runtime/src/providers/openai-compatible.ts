@@ -68,10 +68,14 @@ export class OpenAICompatibleProvider implements LLMProvider {
       });
 
       let fullText = '';
+      let finishReason: string | null = null;
       const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
 
       for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta;
+        const choice = chunk.choices[0];
+        if (!choice) continue;
+        if (choice.finish_reason) finishReason = choice.finish_reason;
+        const delta = choice.delta;
         if (!delta) continue;
         if (delta.content) {
           process.stdout.write(delta.content);
@@ -91,6 +95,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
       }
 
       if (fullText) process.stdout.write('\n');
+      if (finishReason === 'length') {
+        process.stderr.write(`[Warning] Response truncated: model hit max_tokens limit (finish_reason=length). The response may be incomplete.\n`);
+      }
 
       if (toolCallAcc.size > 0) {
         const calls = Array.from(toolCallAcc.values()).map(acc => {
