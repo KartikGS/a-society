@@ -26,6 +26,7 @@ Use these categories to guide your reflection (not all will apply to every task)
 4. **Redundant information** — the same thing was said in multiple places
 5. **Scope concerns** — a role boundary or responsibility was ambiguous
 6. **Workflow friction** — a step felt unnecessary or a handoff was unclear
+7. **Role file gaps** — something you needed to do your job correctly was absent from or wrong in your role file. This includes: instructions that referenced documents not in your context without telling you where to find them, constraints you had to infer rather than read, and directives that pointed to outdated APIs or procedures. Ask explicitly: "Was there anything I did confidently that turned out to be wrong, where my role file gave me no signal that I was operating incorrectly?"
 
 Ground every finding in a specific moment from your execution. Vague findings ("the docs could be better") are not useful.
 

@@ -84,17 +84,15 @@ When a decision artifact (e.g., an Owner-to-Curator approval) makes a specific c
 
 ## Post-Confirmation Protocol
 
-After confirming context, ask what the human wants to work on. Unless the human explicitly asks to stay outside workflow, route that need into **A-Society Framework Development**.
+After confirming context, ask what the human wants to work on. Unless the human explicitly asks to stay outside workflow, route that need into the appropriate workflow per `$A_SOCIETY_WORKFLOW`.
 
 What would you like to work on?
 
 Once the human answers, the Owner:
-- maps the need to **A-Society Framework Development**
+- maps the need to the appropriate workflow — consult `$A_SOCIETY_WORKFLOW` to select the right one; consult `$INSTRUCTION_WORKFLOW_COMPLEXITY` for tier selection criteria and any invariants that constrain tier choice for the selected workflow
 - performs the **Intake Validity Sweep**: after forming a scope assessment (files, design areas, or concepts the work will likely touch), the Owner sweeps the **Next Priorities** list for entries whose target files or design areas overlap with that assessment. For each overlapping entry, the Owner evaluates whether it has been invalidated by prior work under one of four cases: (1) **Addressed**, (2) **Contradicted**, (3) **Restructured**, or (4) **Partially addressed**. Flagged entries are surfaced to the user with the rationale; the Owner updates the log before proceeding.
 - creates the record folder, produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`, and creates `workflow.md` (the schema file, per `$A_SOCIETY_RECORDS`) — the plan is the approval gate for the flow and must exist before any brief is written; `workflow.md` is a required Phase 0 co-output and must be created at the same step
 - When the flow carries `[LIB]` scope, represent the registration loop explicitly in `workflow.md` at intake, but do so within the existing workflow phases rather than by adding new path nodes. The predictable structure is: Curator publishes the update report during Implementation; version increment and acknowledgment occur during Forward Pass Closure. The `[LIB]` scope tag is the signal to account for this loop; omitting it produces a `workflow.md` path that does not match the flow that actually ran.
-- **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the human which session to use next and what artifact or context to point the Curator at
-- **Tier 1 flows:** implements directly within Session A
 
 If the human explicitly asks to discuss, think aloud, or stay outside the workflow, the Owner may do so. Freeform is a human override, not the default entry path.
 
@@ -181,8 +179,6 @@ When reviewing a Technical Architect advisory, apply two distinct criteria: desi
 ---
 
 ## Forward Pass Closure Discipline
-
-When invoking a tooling component during Forward Pass Closure, use the invocation documented in `$A_SOCIETY_TOOLING_INVOCATION`; do not reconstruct the call from memory. For `orderWithPromptsFromFile`, `synthesisRole` is a required second argument. Omitting a required argument in an inline invocation can silently degrade runtime behavior rather than failing at compile time.
 
 When a closing flow surfaces new Next Priorities items, add or merge those log entries in `$A_SOCIETY_LOG` before filing the forward pass closure artifact. The closure artifact should reflect the already-updated project state; it is not the step that leaves log maintenance for later.
 

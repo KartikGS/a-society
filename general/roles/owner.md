@@ -64,13 +64,11 @@ What would you like to work on?
 ```
 
 Once the user answers, the Owner:
-- maps the need to the appropriate workflow
+- maps the need to the appropriate workflow — consult the project's workflow directory for the available workflows; consult `$INSTRUCTION_WORKFLOW_COMPLEXITY` for tier selection criteria and any invariants that constrain tier choice for the selected workflow
 - performs the **Intake Validity Sweep**: after forming a scope assessment (files, design areas, or concepts the work will likely touch), the Owner sweeps the **Next Priorities** list for entries whose target files or design areas overlap with that assessment. For each overlapping entry, the Owner evaluates whether it has been invalidated by prior work under one of four cases: (1) **Addressed**, (2) **Contradicted**, (3) **Restructured**, or (4) **Partially addressed**. Flagged entries are surfaced to the user with the rationale; the Owner updates the log before proceeding.
-- creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written; also create `workflow.md` alongside `01-owner-workflow-plan.md` at this step — it is a required Phase 0 co-output, not a post-intake artifact
+- creates the record folder and produces `01-owner-workflow-plan.md` — this plan is the approval gate for the flow and must exist before any brief is written; also create `workflow.md` alongside `01-owner-workflow-plan.md` at this step — it is a required Phase 0 co-output, not a post-intake artifact; consult `$A_SOCIETY_RECORDS` for the required schema
 - When the flow has a known post-implementation publication or registration step (e.g., publishing an update report, incrementing a version record), include that step in the path at intake. These steps are predictable at the time the plan is written and must not be left as implied appendages — they must appear explicitly so the path reflects the full flow.
 - When that registration step follows naturally from an existing workflow phase — for example, when a library publication occurs during Implementation and a version acknowledgment occurs at Forward Pass Closure — represent it within those phases in `workflow.md` rather than by adding new path nodes. A new path node for a sub-step within an established phase produces a `workflow.md` that does not match the flow's actual structure.
-- **Tier 2 and 3 flows:** writes the Owner-to-Curator brief as the next sequenced artifact, then tells the user which session to use next and what artifact or context to point the downstream role at
-- **Tier 1 flows:** implements directly within Session A
 
 If the user explicitly asks to discuss, think aloud, or stay outside workflow, the Owner may engage freeform. Freeform is a human override, not the default entry path.
 
@@ -147,14 +145,6 @@ When a decision artifact or review constraint directs downstream implementation 
 **Registration scope must be file-based.** When directing index registration or verification, scope the instruction by the newly created or modified files, not by their parent directory, unless the directory boundary is itself the point of the constraint. "Verify whether `$A_SOCIETY_INDEX` needs updating for any newly created or modified files" is mechanically actionable; a location-based qualifier can accidentally exclude the relevant file.
 
 **Index variable retirement requires a reference sweep.** When a brief, decision artifact, or other Owner authorization retires a project index variable or deletes a registered artifact, sweep the project for references to that `$VARIABLE_NAME` before finalizing scope. Explicitly name every dependent file that must change so the required authorization is granted up front rather than retroactively.
-
----
-
-## Tooling Invocation Discipline
-
-When invoking project tooling during a flow — at intake (e.g., plan artifact validation), at forward pass closure (e.g., backward pass orderer), or at any other step — use the invocation documented in the project's tooling reference. Do not reconstruct the call from source code analysis or memory. Required argument order, return format, and entry point names are authoritative in the documented invocation; source code may differ from what published documentation describes, especially when a component has been updated since initial implementation.
-
-[CUSTOMIZE: reference the project's tooling invocation document here, e.g., `$[PROJECT]_TOOLING_INVOCATION`.]
 
 ---
 
