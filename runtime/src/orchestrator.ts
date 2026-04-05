@@ -54,7 +54,7 @@ export class FlowOrchestrator {
       const bootstrapHistory: RuntimeMessageParam[] = [];
 
       const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
-        roleKey, workspaceRoot, [], null, 'flow'
+        roleKey, workspaceRoot, [], null, 'bootstrap'
       );
 
       while (true) {

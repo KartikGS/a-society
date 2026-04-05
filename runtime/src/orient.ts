@@ -31,17 +31,7 @@ export async function runInteractiveSession(
     startedAt: new Date().toISOString()
   };
 
-  let systemPrompt = providedSystemPrompt;
-  if (!systemPrompt) {
-    const { bundleContent } = ContextInjectionService.buildContextBundle(
-      roleKey,
-      workspaceRoot,
-      '',
-      null,
-      'orient'
-    );
-    systemPrompt = bundleContent;
-  }
+  const systemPrompt = providedSystemPrompt ?? '';
 
   const llm = new LLMGateway(workspaceRoot);
   const history: RuntimeMessageParam[] = providedHistory ? [...providedHistory] : [];

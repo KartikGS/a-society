@@ -18,7 +18,7 @@ export class ContextInjectionService {
     projectRoot: string,
     activeArtifactPath: string | string[],
     directivePrompt: string | null,
-    mode: 'flow' | 'orient' = 'flow'
+    mode: 'flow' | 'bootstrap' = 'flow'
   ): ContextBundleResult {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
     
@@ -76,10 +76,10 @@ export class ContextInjectionService {
     if (directivePrompt) {
       bundle += `System Instruction:\n${directivePrompt}\n\n`;
     }
-    if (mode === 'orient') {
-      bundle += `You are the Owner agent for this project. A new orient session has started.\nGreet the user and await their direction. Respond conversationally.\nNo machine-readable handoff block is required.\n`;
+    if (mode === 'bootstrap') {
+      bundle += `You are beginning an intake session. Greet the user, summarize the current project status from the log, and ask what they would like to work on. Do NOT emit a handoff block yet.\n\nOnce the user specifies a task: perform the intake process (scope assessment, validity sweep, complexity analysis), create the record folder, produce workflow.md and 01-owner-workflow-plan.md, write any required briefs, and then emit a machine-readable handoff block per $INSTRUCTION_MACHINE_READABLE_HANDOFF pointing to the artifact the next role should read. The handoff block is only emitted after the intake work is complete.\n`;
     } else {
-      bundle += `IMPORTANT INSTRUCTION: Your response must always end with a valid machine-readable handoff block formatted strictly per $INSTRUCTION_MACHINE_READABLE_HANDOFF. A handoff block is required to pass control back to the orchestrator, even if it is to terminate the flow.\n`;
+      bundle += `When your work for this phase is complete and you are ready to pass control to the next role, end your response with a machine-readable handoff block per $INSTRUCTION_MACHINE_READABLE_HANDOFF. If you need clarification from the user, need approval, or are presenting options, respond normally and await their reply — do not emit a handoff until you are ready to hand off.\n`;
     }
     
     // Compute hash
