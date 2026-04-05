@@ -5,7 +5,9 @@ config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
 import fs from 'node:fs';
 import path from 'node:path';
 import { select } from '@inquirer/prompts';
-import { FlowOrchestrator } from '../src/orchestrator.js';
+import { SessionStore } from '../src/store.js';
+import { FlowOrchestrator, parseWorkflow } from '../src/orchestrator.js';
+import { renderFlowStatus } from '../src/visualization.js';
 
 function discoverProjects(workspaceRoot: string): Array<{ displayName: string; folderName: string }> {
   try {
@@ -31,6 +33,26 @@ function discoverProjects(workspaceRoot: string): Array<{ displayName: string; f
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  if (command === 'flow-status') {
+    SessionStore.init();
+    const flowRun = SessionStore.loadFlowRun();
+    if (!flowRun) {
+      console.log('No active flow state found in .state/flow.json');
+      return;
+    }
+    try {
+      const workflowPath = path.join(flowRun.recordFolderPath, 'workflow.md');
+      const wf = parseWorkflow(workflowPath).workflow;
+      console.log(renderFlowStatus(flowRun, wf));
+    } catch (err: any) {
+      console.log(`Status: ${flowRun.status}\n(Workflow graph unavailable: ${err.message})`);
+    }
+    return;
+  }
+
   const workspaceRoot = process.cwd();
   const projects = discoverProjects(workspaceRoot);
 

@@ -1,6 +1,6 @@
 import { AnthropicProvider } from './providers/anthropic.js';
 import { OpenAICompatibleProvider } from './providers/openai-compatible.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall } from './types.js';
+import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult, TurnUsage } from './types.js';
 import { LLMGatewayError } from './types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from './tools/file-executor.js';
 
@@ -37,24 +37,43 @@ export class LLMGateway {
     }
   }
 
-  async executeTurn(systemPrompt: string, messageHistory: RuntimeMessageParam[]): Promise<string> {
+  async executeTurn(
+    systemPrompt: string,
+    messageHistory: RuntimeMessageParam[],
+    options?: TurnOptions
+  ): Promise<GatewayTurnResult> {
     if (!this.tools || !this.executor) {
-      const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined);
-      if (result.type === 'text') return result.text;
+      const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
+      if (result.type === 'text') return { text: result.text, usage: result.usage };
       throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
     }
+
+    let accInputTokens = 0;
+    let accOutputTokens = 0;
+    let anyUsage = false;
 
     const MAX_TOOL_ROUNDS = 50;
     let messages: RuntimeMessageParam[] = [...messageHistory];
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const result = await this.provider.executeTurn(systemPrompt, messages, this.tools);
+      if (options?.signal?.aborted) {
+        throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
+      }
+
+      const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+      
+      if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
+      if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
+
       if (result.type === 'text') {
-        return result.text;
+        const usage: TurnUsage | undefined = anyUsage
+          ? { inputTokens: accInputTokens, outputTokens: accOutputTokens }
+          : undefined;
+        return { text: result.text, usage };
       }
 
       for (const call of result.calls) {
         const pathArg = call.input?.path as string | undefined;
-        process.stdout.write(`[${call.name}${pathArg ? ': ' + pathArg : ''}]\n`);
+        process.stderr.write(`[${call.name}${pathArg ? ': ' + pathArg : ''}]\n`);
       }
 
       const toolResultMessages: RuntimeMessageParam[] = await Promise.all(

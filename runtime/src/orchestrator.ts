@@ -58,71 +58,91 @@ export class FlowOrchestrator {
       );
 
       while (true) {
-        const handoffResult = await runInteractiveSession(
-          workspaceRoot, roleKey, bootstrapBundle,
-          bootstrapHistory.length > 0 ? bootstrapHistory : undefined,
-          inputStream, outputStream
-        );
-        if (!handoffResult) return;
-
-        if (handoffResult.kind !== 'targets') {
-          throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
-        }
-        const handoffs = handoffResult.targets;
-        const artifactPath = handoffs[0].artifact_path;
-        if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
-
-        const recordFolderPath = path.dirname(path.resolve(workspaceRoot, artifactPath));
-        const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
-
-        if (!fs.existsSync(workflowDocumentPath)) {
-          bootstrapHistory.push({
-            role: 'user',
-            content: `Error: workflow.md not found in ${recordFolderPath}. This file is required before a handoff can be routed. Please create the record folder, create workflow.md inside it with a valid YAML frontmatter workflow graph, and restate your handoff.`
-          });
-          continue;
-        }
-
-        let startNodeId = 'start';
         try {
-          const doc = parseWorkflow(workflowDocumentPath);
-          if (doc.workflow && doc.workflow.nodes) {
-            const startingRoleName = handoffs[0].role;
-            const node = doc.workflow.nodes.find((n: any) => n.role === startingRoleName);
-            if (node) {
-              startNodeId = node.id;
-            } else {
-              startNodeId = doc.workflow.nodes[0].id;
-            }
+          const controller = new AbortController();
+          const sigintHandler = () => controller.abort();
+          process.once('SIGINT', sigintHandler);
+
+          let handoffResult: HandoffResult | null = null;
+          try {
+            handoffResult = await runInteractiveSession(
+              workspaceRoot, roleKey, bootstrapBundle,
+              bootstrapHistory.length > 0 ? bootstrapHistory : undefined,
+              inputStream, outputStream,
+              true,               // autonomous
+              controller.signal   // ← externalSignal
+            );
+          } finally {
+            process.removeListener('SIGINT', sigintHandler);
           }
-        } catch(e: any) {
-          bootstrapHistory.push({ role: 'user', content: `Workflow parsing failed: ${e.message}. Please fix workflow.md so it has valid YAML frontmatter (delimited by ---) with a top-level 'workflow:' key containing 'nodes' and 'edges', then restate your handoff.` });
-          continue;
-        }
 
-        flowRun = {
-          flowId: crypto.randomUUID(),
-          projectRoot: workspaceRoot,
-          recordFolderPath,
-          activeNodes: [startNodeId],
-          completedNodes: [],
-          completedNodeArtifacts: {},
-          pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
-          status: 'running',
-          stateVersion: '2'
-        };
+          if (!handoffResult) {
+            flowRun = null;
+            return;
+          }
 
-        try {
-          await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+          if (handoffResult.kind !== 'targets') {
+            throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
+          }
+          const handoffs = handoffResult.targets;
+          const artifactPath = handoffs[0].artifact_path;
+          if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
+
+          const recordFolderPath = path.dirname(path.resolve(workspaceRoot, artifactPath));
+          const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
+
+          if (!fs.existsSync(workflowDocumentPath)) {
+            bootstrapHistory.push({
+              role: 'user',
+              content: `Error: workflow.md not found in ${recordFolderPath}. This file is required before a handoff can be routed. Please create the record folder, create workflow.md inside it with a valid YAML frontmatter workflow graph, and restate your handoff.`
+            });
+            continue;
+          }
+
+          let startNodeId = 'start';
+          try {
+            const doc = parseWorkflow(workflowDocumentPath);
+            if (doc.workflow && doc.workflow.nodes) {
+              const startingRoleName = handoffs[0].role;
+              const node = doc.workflow.nodes.find((n: any) => n.role === startingRoleName);
+              if (node) {
+                startNodeId = node.id;
+              } else {
+                startNodeId = doc.workflow.nodes[0].id;
+              }
+            }
+          } catch(e: any) {
+            bootstrapHistory.push({ role: 'user', content: `Workflow parsing failed: ${e.message}. Please fix workflow.md so it has valid YAML frontmatter (delimited by ---) with a top-level 'workflow:' key containing 'nodes' and 'edges', then restate your handoff.` });
+            continue;
+          }
+
+          flowRun = {
+            flowId: crypto.randomUUID(),
+            projectRoot: workspaceRoot,
+            recordFolderPath,
+            activeNodes: [startNodeId],
+            completedNodes: [],
+            completedNodeArtifacts: {},
+            pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
+            status: 'running',
+            stateVersion: '2'
+          };
+
+          try {
+            await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+          } catch (e: any) {
+            bootstrapHistory.push({
+              role: 'user',
+              content: `workflow.md was found at ${workflowDocumentPath} but failed schema validation. Error: ${e.message}\n\nDo not recreate the file — update it. The workflow.md must contain YAML frontmatter (between --- delimiters) with a top-level 'workflow:' key. Required structure:\n---\nworkflow:\n  nodes:\n    - id: <string>\n      role: <string>\n      description: <string>\n  edges:\n    - from: <node-id>\n      to: <node-id>\n---\nPlease fix workflow.md with this schema and restate your handoff.`
+            });
+            continue;
+          }
+          SessionStore.saveFlowRun(flowRun);
+          break;
         } catch (e: any) {
-          bootstrapHistory.push({
-            role: 'user',
-            content: `workflow.md was found at ${workflowDocumentPath} but failed schema validation. Error: ${e.message}\n\nDo not recreate the file — update it. The workflow.md must contain YAML frontmatter (between --- delimiters) with a top-level 'workflow:' key. Required structure:\n---\nworkflow:\n  nodes:\n    - id: <string>\n      role: <string>\n      description: <string>\n  edges:\n    - from: <node-id>\n      to: <node-id>\n---\nPlease fix workflow.md with this schema and restate your handoff.`
-          });
+          bootstrapHistory.push({ role: 'user', content: `Unexpected error: ${e.message}` });
           continue;
         }
-        SessionStore.saveFlowRun(flowRun);
-        break;
       }
     }
 
@@ -199,12 +219,26 @@ export class FlowOrchestrator {
     SessionStore.saveFlowRun(flowRun);
 
     while (true) {
-      let handoffResult: HandoffResult | null = null;
       try {
-        handoffResult = await runInteractiveSession(flowRun.projectRoot, roleKey, bundleContent, injectedHistory as any, inputStream, outputStream, true);
-        
+        const controller = new AbortController();
+        const sigintHandler = () => controller.abort();
+        process.once('SIGINT', sigintHandler);
+
+        let handoffResult: HandoffResult | null = null;
+        try {
+          handoffResult = await runInteractiveSession(
+            flowRun.projectRoot, roleKey, bundleContent,
+            injectedHistory as any,
+            inputStream, outputStream,
+            true,               // autonomous
+            controller.signal   // ← externalSignal
+          );
+        } finally {
+          process.removeListener('SIGINT', sigintHandler);
+        }
+          
         if (handoffResult) {
-           if (handoffResult.kind === 'forward-pass-closed') {
+          if (handoffResult.kind === 'forward-pass-closed') {
             await ImprovementOrchestrator.handleForwardPassClosure(
               flowRun,
               { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },

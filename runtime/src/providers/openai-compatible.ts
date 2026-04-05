@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { LLMGatewayError } from '../types.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult } from '../types.js';
+import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions, TurnUsage } from '../types.js';
+import { Spinner } from '../spinner.js';
 
 export class OpenAICompatibleProvider implements LLMProvider {
   private client: OpenAI;
@@ -22,8 +23,15 @@ export class OpenAICompatibleProvider implements LLMProvider {
   async executeTurn(
     systemPrompt: string,
     messages: RuntimeMessageParam[],
-    tools?: ToolDefinition[]
+    tools?: ToolDefinition[],
+    options?: TurnOptions
   ): Promise<ProviderTurnResult> {
+    const spinner = new Spinner();
+    spinner.start();
+    let fullText = '';
+    let inputTokens: number | undefined;
+    let outputTokens: number | undefined;
+
     try {
       const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
         { role: 'system' as const, content: systemPrompt },
@@ -64,20 +72,27 @@ export class OpenAICompatibleProvider implements LLMProvider {
         messages: openAIMessages,
         stream: true,
         max_tokens: 8192,
+        stream_options: { include_usage: true },
         ...(nativeTools ? { tools: nativeTools } : {})
-      });
+      }, { signal: options?.signal });
 
-      let fullText = '';
       let finishReason: string | null = null;
       const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
 
       for await (const chunk of stream) {
+        if (!chunk.choices.length && chunk.usage) {
+          inputTokens = chunk.usage.prompt_tokens ?? undefined;
+          outputTokens = chunk.usage.completion_tokens ?? undefined;
+          continue;
+        }
+
         const choice = chunk.choices[0];
         if (!choice) continue;
         if (choice.finish_reason) finishReason = choice.finish_reason;
         const delta = choice.delta;
         if (!delta) continue;
         if (delta.content) {
+          if (fullText === '') spinner.stop();
           process.stdout.write(delta.content);
           fullText += delta.content;
         }
@@ -94,10 +109,16 @@ export class OpenAICompatibleProvider implements LLMProvider {
         }
       }
 
+      spinner.stop();
+
       if (fullText) process.stdout.write('\n');
       if (finishReason === 'length') {
         process.stderr.write(`[Warning] Response truncated: model hit max_tokens limit (finish_reason=length). The response may be incomplete.\n`);
       }
+
+      const usage: TurnUsage | undefined = (inputTokens !== undefined || outputTokens !== undefined)
+        ? { inputTokens, outputTokens }
+        : undefined;
 
       if (toolCallAcc.size > 0) {
         const calls = Array.from(toolCallAcc.values()).map(acc => {
@@ -110,13 +131,18 @@ export class OpenAICompatibleProvider implements LLMProvider {
         return {
           type: 'tool_calls',
           calls,
-          continuationMessages: [{ role: 'assistant_tool_calls', calls, text: fullText || undefined }]
+          continuationMessages: [{ role: 'assistant_tool_calls', calls, text: fullText || undefined }],
+          usage
         };
       }
 
-      return { type: 'text', text: fullText };
-
+      return { type: 'text', text: fullText, usage };
     } catch (err: any) {
+      if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
+        spinner.stop();
+        throw new LLMGatewayError('ABORTED', 'Turn aborted by operator', fullText || undefined);
+      }
+      spinner.stop();
       if (err instanceof LLMGatewayError) throw err;
       if (err instanceof OpenAI.AuthenticationError) {
         throw new LLMGatewayError('AUTH_ERROR', 'Authentication failed: check OPENAI_COMPAT_API_KEY');

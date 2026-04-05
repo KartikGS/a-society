@@ -108,6 +108,10 @@ Implicit delegation — leaving the field underspecified and expecting the Devel
 
 **Integration review must verify operator-facing reference accuracy when such documentation is in scope.** When a flow modifies an invocation reference or equivalent operator-facing document, compare the documented commands, parameters, and environment-variable names against the implementation during integration review. Treat any mismatch as an integration finding, not as Curator-only cleanup.
 
+**Multi-path modal-symmetry check for design decisions.** When a design change targets a component that has distinct execution paths (for example, interactive and autonomous modes, synchronous and asynchronous paths, TTY and non-TTY paths), verify explicitly that the decision applies symmetrically across all modes — or, if scope is intentionally restricted to a subset of paths, state that restriction and its justification in the advisory. Do not leave mode scope implicit from the brief's framing. A design scoped interactively by example that silently omits the autonomous path requires a full re-draft when the omission is caught; a single sentence of scope declaration prevents the correction.
+
+**Out-parameter mutation contracts must be declared explicitly.** When a behavior requirement is satisfied by mutating a caller-provided argument (out-parameter semantics), the advisory must name it as such: specify that the function is expected to mutate the caller's variable directly, not operate on a local copy. This is distinct from specifying observable external behavior. If the contract is "push to `providedHistory` directly so the orchestrator's copy receives the mutation," that is an out-parameter contract — it must appear explicitly in the advisory. If left implicit, the Developer correctly implements the local-copy default, and the defect is surfaced only at the caller boundary after implementation is complete.
+
 ---
 
 ## a-docs/ Format Dependencies

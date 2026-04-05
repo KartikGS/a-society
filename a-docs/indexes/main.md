@@ -40,7 +40,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2` | `a-society/a-docs/tooling/ta-assessment-phase1-2.md` | Technical Architect's Phase 1-2 deviation assessment — formal ruling on two implementation deviations and required spec updates |
 | `$A_SOCIETY_TOOLING_INVOCATION` | `a-society/tooling/INVOCATION.md` | Invocation reference for all tooling components — quick start, entry points, and error conventions |
 | `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` | `a-society/tooling/src/backward-pass-orderer.ts` | Component 4: Backward Pass Orderer — computes backward pass role traversal order from a workflow graph |
-| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Invocation reference for the A-Society runtime — entry points, CLI commands, error conventions |
+| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Invocation reference for the A-Society runtime — entry points, CLI commands, and UX behaviors |
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator.md` | Ready-made Curator role template for any project |

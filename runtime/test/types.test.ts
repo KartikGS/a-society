@@ -27,7 +27,8 @@ test('FlowRun: conforms to new multi-node structure', () => {
     completedNodes: [],
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'node1': ['artifact.md'] },
-    status: 'initialized'
+    status: 'initialized',
+    stateVersion: '2'
   };
 
   assert.strictEqual(flowRun.activeNodes.length, 1);

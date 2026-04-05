@@ -89,20 +89,39 @@ export type RuntimeMessageParam =
   | { role: 'assistant_tool_calls'; calls: ToolCall[]; text?: string }
   | { role: 'tool_result';         callId: string; toolName: string; content: string; isError: boolean };
 
+export interface TurnUsage {
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+export interface TurnOptions {
+  signal?: AbortSignal;
+}
+
+export interface GatewayTurnResult {
+  text: string;
+  usage?: TurnUsage;
+}
+
 export type ProviderTurnResult =
-  | { type: 'text'; text: string }
-  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[] };
+  | { type: 'text';       text: string;                                                   usage?: TurnUsage }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; usage?: TurnUsage };
 
 export interface LLMProvider {
   executeTurn(
     systemPrompt: string,
     messages: RuntimeMessageParam[],
-    tools?: ToolDefinition[]
+    tools?: ToolDefinition[],
+    options?: TurnOptions
   ): Promise<ProviderTurnResult>;
 }
 
 export class LLMGatewayError extends Error {
-  constructor(public readonly type: 'AUTH_ERROR' | 'RATE_LIMIT' | 'PROVIDER_MALFORMED' | 'UNKNOWN', message: string) {
+  constructor(
+    public readonly type: 'AUTH_ERROR' | 'RATE_LIMIT' | 'PROVIDER_MALFORMED' | 'UNKNOWN' | 'ABORTED',
+    message: string,
+    public readonly partialText?: string
+  ) {
     super(message);
     this.name = 'LLMGatewayError';
   }

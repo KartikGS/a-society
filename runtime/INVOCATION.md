@@ -8,8 +8,13 @@ An Owner bootstraps an execution session exclusively utilizing the singular CLI 
 
 ```bash
 a-society
+a-society flow-status
 ```
-*(Optionally you can run `npm run a-society` inside the runtime folder or install globally.)*
+
+### Commands
+
+- **`a-society`**: Starts or resumes the unified orchestration flow. Discovers projects in the current working directory and prompts for selection.
+- **`a-society flow-status`**: Reads the current `.state/flow.json` and prints the flow ID, status, and active nodes to the terminal.
 
 When invoked:
 1. The orchestrator scans the filesystem to identify initialized A-Society projects.
@@ -60,4 +65,21 @@ The A-Society runtime implements an autonomous error feedback loop for specific 
 - **Missing workflow.md**: If the required `workflow.md` is not present in the record folder.
 
 Hard configuration failures (e.g., missing `required-readings.yaml`, project index resolution failures) still result in terminal errors and stop orchestration.
+
+## Runtime UX Features
+
+### Liveness Feedback
+When waiting for a response from the LLM provider, a spinner (⠋) and "Thinking..." label are displayed on `stderr`. This indicator is TTY-gated and will not appear in piped or redirected output. The spinner is automatically cleared as soon as the first token of the response is received.
+
+### Token Usage Reporting
+After every turn, the cumulative token usage for that turn (including all tool-call rounds) is displayed on `stderr`:
+`[tokens: 1234 in, 567 out]`
+This provides immediate feedback on the cost and volume of the interaction.
+
+### Interrupt and Resumption
+If you press `Ctrl+C` while the model is generating a response:
+1. The current API request is immediately aborted.
+2. The partial text received up to that point is preserved in the session history.
+3. The session returns to the prompt (in interactive mode) or the `awaiting_human` state (in autonomous mode).
+This allows for graceful interruption and immediate correction without losing session state or crashing the process.
 

@@ -21,25 +21,29 @@ console.log('\nhandoff-interpreter');
 test('parse (Single-object): returns array with one target', () => {
   const text = "Some text before.\n```handoff\nrole: Owner\nartifact_path: path/to/file.md\n```";
   const result = HandoffInterpreter.parse(text);
-  assert.strictEqual(result.length, 1);
-  assert.strictEqual(result[0].role, 'Owner');
-  assert.strictEqual(result[0].artifact_path, 'path/to/file.md');
+  assert.strictEqual(result.kind, 'targets');
+  const targets = (result as any).targets;
+  assert.strictEqual(targets.length, 1);
+  assert.strictEqual(targets[0].role, 'Owner');
+  assert.strictEqual(targets[0].artifact_path, 'path/to/file.md');
 });
 
 test('parse (Array): returns multiple targets', () => {
   const text = "Fork point reached.\n```handoff\n- role: Tooling Developer\n  artifact_path: path/a.md\n- role: Runtime Developer\n  artifact_path: path/b.md\n```";
   const result = HandoffInterpreter.parse(text);
-  assert.strictEqual(result.length, 2);
-  assert.strictEqual(result[0].role, 'Tooling Developer');
-  assert.strictEqual(result[1].role, 'Runtime Developer');
-  assert.strictEqual(result[0].artifact_path, 'path/a.md');
-  assert.strictEqual(result[1].artifact_path, 'path/b.md');
+  assert.strictEqual(result.kind, 'targets');
+  const targets = (result as any).targets;
+  assert.strictEqual(targets.length, 2);
+  assert.strictEqual(targets[0].role, 'Tooling Developer');
+  assert.strictEqual(targets[1].role, 'Runtime Developer');
+  assert.strictEqual(targets[0].artifact_path, 'path/a.md');
+  assert.strictEqual(targets[1].artifact_path, 'path/b.md');
 });
 
 test('parse (Null artifact): handles null artifact_path', () => {
   const text = "```handoff\nrole: Curator\nartifact_path: null\n```";
   const result = HandoffInterpreter.parse(text);
-  assert.strictEqual(result[0].artifact_path, null);
+  assert.strictEqual((result as any).targets[0].artifact_path, null);
 });
 
 test('parse (Empty array): throws HandoffParseError', () => {
