@@ -68,7 +68,7 @@ export class FlowOrchestrator {
           try {
             handoffResult = await runInteractiveSession(
               workspaceRoot, roleKey, bootstrapBundle,
-              bootstrapHistory.length > 0 ? bootstrapHistory : undefined,
+              bootstrapHistory,
               inputStream, outputStream,
               false,              // interactive — Owner must converse before emitting handoff
               controller.signal   // ← externalSignal

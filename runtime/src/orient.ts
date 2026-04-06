@@ -35,7 +35,7 @@ export async function runInteractiveSession(
   const systemPrompt = providedSystemPrompt ?? '';
 
   const llm = new LLMGateway(workspaceRoot);
-  const history: RuntimeMessageParam[] = providedHistory ? [...providedHistory] : [];
+  const history: RuntimeMessageParam[] = providedHistory ?? [];
 
   if (history.length === 0) {
     const initialUserMsg: RuntimeMessageParam = { 
@@ -45,10 +45,12 @@ export async function runInteractiveSession(
 
     let response = '';
     let usage: any;
+    let intermediateMessages: RuntimeMessageParam[] | undefined;
     try {
       const result = await llm.executeTurn(systemPrompt, [initialUserMsg], { signal: externalSignal });
       response = result.text;
       usage = result.usage;
+      intermediateMessages = result.intermediateMessages;
     } catch (error: any) {
       if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
         if (error.partialText && providedHistory) {
@@ -64,8 +66,9 @@ export async function runInteractiveSession(
       }
       return null;
     }
-    
+
     history.push(initialUserMsg);
+    if (intermediateMessages) history.push(...intermediateMessages);
     history.push({ role: 'assistant', content: response });
 
     if (usage && process.stderr.isTTY) {
@@ -87,10 +90,13 @@ export async function runInteractiveSession(
     if (history[history.length - 1].role === 'user') {
       let streamResponse = '';
       let usage: any;
+      let intermediateMessages2: RuntimeMessageParam[] | undefined;
       try {
         const result = await llm.executeTurn(systemPrompt, history, { signal: externalSignal });
         streamResponse = result.text;
         usage = result.usage;
+        intermediateMessages2 = result.intermediateMessages;
+        if (intermediateMessages2) history.push(...intermediateMessages2);
         history.push({ role: 'assistant', content: streamResponse });
       } catch (error: any) {
         if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
@@ -101,8 +107,9 @@ export async function runInteractiveSession(
           return null;
         }
         if (outputStream === process.stdout) console.error(`\nError during turn: ${error.message}`);
+        return null;
       }
-      
+
       if (usage && process.stderr.isTTY) {
         const inStr = usage.inputTokens !== undefined ? String(usage.inputTokens) : '?';
         const outStr = usage.outputTokens !== undefined ? String(usage.outputTokens) : '?';
@@ -159,6 +166,7 @@ export async function runInteractiveSession(
           const result = await llm.executeTurn(systemPrompt as string, history, { signal });
           streamResponse = result.text;
           usage = result.usage;
+          if (result.intermediateMessages) history.push(...result.intermediateMessages);
           history.push({ role: 'assistant', content: streamResponse });
         } catch (error: any) {
           if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
@@ -195,7 +203,7 @@ export async function runInteractiveSession(
     let resolved = false;
 
     rl.on('close', () => {
-      if (inputStream === process.stdin && outputStream === process.stdout) {
+      if (!resolved && inputStream === process.stdin && outputStream === process.stdout) {
         console.log('\nSession closed.');
       }
       if (!resolved) {

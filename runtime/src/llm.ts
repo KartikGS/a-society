@@ -54,13 +54,14 @@ export class LLMGateway {
 
     const MAX_TOOL_ROUNDS = 50;
     let messages: RuntimeMessageParam[] = [...messageHistory];
+    const intermediateMessages: RuntimeMessageParam[] = [];
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       if (options?.signal?.aborted) {
         throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
       }
 
       const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
-      
+
       if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
       if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
 
@@ -68,7 +69,7 @@ export class LLMGateway {
         const usage: TurnUsage | undefined = anyUsage
           ? { inputTokens: accInputTokens, outputTokens: accOutputTokens }
           : undefined;
-        return { text: result.text, usage };
+        return { text: result.text, usage, intermediateMessages: intermediateMessages.length > 0 ? intermediateMessages : undefined };
       }
 
       for (const call of result.calls) {
@@ -90,6 +91,7 @@ export class LLMGateway {
           return { role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError };
         })
       );
+      intermediateMessages.push(...result.continuationMessages, ...toolResultMessages);
       messages = [...messages, ...result.continuationMessages, ...toolResultMessages];
     }
     throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (50). The session has been aborted.');
