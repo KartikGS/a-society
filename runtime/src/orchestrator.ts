@@ -117,9 +117,11 @@ export class FlowOrchestrator {
             continue;
           }
 
+          const bootstrapNamespace = roleKey.split('__')[0];
           flowRun = {
             flowId: crypto.randomUUID(),
             projectRoot: workspaceRoot,
+            projectNamespace: bootstrapNamespace,
             recordFolderPath,
             activeNodes: [startNodeId],
             completedNodes: [],
@@ -178,8 +180,7 @@ export class FlowOrchestrator {
     const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
     if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
 
-    const namespace = path.basename(flowRun.projectRoot);
-    const roleKey = `${namespace}__${currentNodeDef.role}`;
+    const roleKey = `${flowRun.projectNamespace}__${currentNodeDef.role}`;
     
     const sessionId = `${flowRun.flowId}__${nodeId}`;
     

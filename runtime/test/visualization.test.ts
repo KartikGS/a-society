@@ -40,6 +40,7 @@ test('renderFlowStatus: single active node, no completed', () => {
   const flowRun: FlowRun = {
     flowId: 'uuid',
     projectRoot: '.',
+    projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
     activeNodes: ['start'],
     completedNodes: [],
@@ -61,6 +62,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
     const flowRun: FlowRun = {
       flowId: 'uuid',
       projectRoot: '.',
+      projectNamespace: 'test-project',
       recordFolderPath: './records/r1',
       activeNodes: ['t1'],
       completedNodes: ['start', 'fork', 't2'],
@@ -84,6 +86,7 @@ test('renderFlowStatus: completed flow', () => {
     const flowRun: FlowRun = {
         flowId: 'uuid',
         projectRoot: '.',
+        projectNamespace: 'test-project',
         recordFolderPath: './records/r1',
         activeNodes: [],
         completedNodes: ['start', 'fork', 't1', 't2', 'join'],

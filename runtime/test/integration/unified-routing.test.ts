@@ -103,6 +103,7 @@ workflow:
   SessionStore.saveFlowRun({
     flowId: 'test-flow-id',
     projectRoot: testDir,
+    projectNamespace: 'test-project',
     recordFolderPath: recordPath,
     activeNodes: ['start'],
     completedNodes: [],

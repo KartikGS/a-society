@@ -22,6 +22,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
   const flowRun: FlowRun = {
     flowId: 'f1',
     projectRoot: '.',
+    projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
     activeNodes: ['node1'],
     completedNodes: [],

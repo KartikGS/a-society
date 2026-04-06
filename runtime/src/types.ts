@@ -27,6 +27,7 @@ export interface ImprovementPhaseState {
 export interface FlowRun {
   flowId: string;
   projectRoot: string;
+  projectNamespace: string;            // project subfolder name (e.g. "a-society"); used to build role keys in advanceFlow
   recordFolderPath: string;
   activeNodes: string[];                          // node IDs currently executing
   completedNodes: string[];                       // node IDs that have finished
