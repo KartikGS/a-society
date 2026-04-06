@@ -14,7 +14,8 @@ export interface HandoffTarget {
 export type HandoffResult =
   | { kind: 'targets'; targets: HandoffTarget[] }
   | { kind: 'forward-pass-closed'; recordFolderPath: string; artifactPath: string }
-  | { kind: 'meta-analysis-complete'; findingsPath: string };
+  | { kind: 'meta-analysis-complete'; findingsPath: string }
+  | { kind: 'awaiting_human' };
 
 export interface ImprovementPhaseState {
   mode: 'graph-based' | 'parallel';

@@ -28,6 +28,22 @@ When an active conversational node emits a formalized `handoff` YAML block, the 
 
 The system treats interactive sessions and automated background executions symmetrically as nodes seamlessly passing the orchestration token linearly securely.
 
+### In-Flow Human Interaction
+
+An autonomous agent can pause the flow and request human input by emitting a specialized `handoff` block:
+
+```handoff
+type: prompt-human
+```
+
+When this signal is detected:
+1. The runtime pauses the autonomous execution.
+2. The operator is prompted for input at the terminal (`> `).
+3. The human's reply is appended to the session history as a `user` turn.
+4. The same agent session resumes immediately with the new input.
+
+This enables clarifications, approvals, or missing data requests without breaking the flow or requiring manual session resumption. If the operator enters `exit` or `quit`, or the input stream closes, the flow status is set to `awaiting_human` and the session is suspended. Empty input (Enter with no text) re-prompts without advancing the session.
+
 ## Improvement Orchestration
 
 The runtime manages the project improvement backward-pass automatically. After a forward pass is closed (indicated by a `type: forward-pass-closed` signal), the runtime presents the operator with three improvement mode options:

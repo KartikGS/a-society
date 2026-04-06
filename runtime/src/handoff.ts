@@ -75,6 +75,9 @@ export class HandoffInterpreter {
             findingsPath: payload.findings_path,
           };
         }
+        if (payload.type === 'prompt-human') {
+          return { kind: 'awaiting_human' };
+        }
         throw new HandoffParseError(`Unknown handoff signal type: ${payload.type}`);
       }
 

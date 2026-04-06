@@ -9,6 +9,7 @@ import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget, RuntimeMessageP
 import { runInteractiveSession } from './orient.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import crypto from 'node:crypto';
+import readline from 'node:readline';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -69,7 +70,7 @@ export class FlowOrchestrator {
               workspaceRoot, roleKey, bootstrapBundle,
               bootstrapHistory.length > 0 ? bootstrapHistory : undefined,
               inputStream, outputStream,
-              true,               // autonomous
+              false,              // interactive — Owner must converse before emitting handoff
               controller.signal   // ← externalSignal
             );
           } finally {
@@ -238,6 +239,23 @@ export class FlowOrchestrator {
         }
           
         if (handoffResult) {
+          if (handoffResult.kind === 'awaiting_human') {
+            const humanReply = await this.readHumanInput(inputStream, outputStream);
+            if (humanReply === null) {
+              // Human exited — suspend flow
+              flowRun.status = 'awaiting_human';
+              session.transcriptHistory = injectedHistory;
+              SessionStore.saveRoleSession(session);
+              SessionStore.saveFlowRun(flowRun);
+              break;
+            }
+            injectedHistory.push({ role: 'user', content: humanReply });
+            session.transcriptHistory = injectedHistory;
+            SessionStore.saveRoleSession(session);
+            // Do not save flowRun here — status remains 'running'
+            continue;
+          }
+
           if (handoffResult.kind === 'forward-pass-closed') {
             await ImprovementOrchestrator.handleForwardPassClosure(
               flowRun,
@@ -369,6 +387,29 @@ export class FlowOrchestrator {
       SessionStore.saveFlowRun(flowRun);
       return;
     }
+  }
+
+
+  private readHumanInput(
+    inputStream: NodeJS.ReadableStream,
+    outputStream: NodeJS.WritableStream
+  ): Promise<string | null> {
+    return new Promise((resolve) => {
+      const rl = readline.createInterface({ input: inputStream, output: outputStream, terminal: true });
+      rl.question('\n> ', (answer) => {
+        rl.close();
+        const line = answer.trim();
+        if (line === 'exit' || line === 'quit') {
+          resolve(null);
+        } else if (line === '') {
+          // Re-prompt on empty (per Owner correction in Phase 0 gate)
+          this.readHumanInput(inputStream, outputStream).then(resolve);
+        } else {
+          resolve(line);
+        }
+      });
+      rl.on('close', () => resolve(null));
+    });
   }
 
   private removeActiveNode(flowRun: FlowRun, nodeId: string) {

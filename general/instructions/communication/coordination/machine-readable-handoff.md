@@ -14,7 +14,7 @@ Emit a machine-readable block at every session pause point — whenever the agen
 
 Do not emit a block for:
 - In-session confirmations or acknowledgments that do not hand off to another role
-- Clarification exchanges within an active session
+- Clarification exchanges where no formal pause is needed — when you do need human input before continuing, emit `type: prompt-human` rather than a routing handoff
 - Intermediate output that does not conclude a phase
 
 **Form selection rule:**
@@ -60,11 +60,44 @@ Emit one array entry per fork target. The orchestrator validates that:
 - the number of entries matches the number of outgoing edges from the current workflow node
 - each entry's `role` matches one of the successor nodes' roles
 
+### Typed signal forms (closure and interaction)
+
+Use this for framework-level signals that do not route to a new workflow node but instead trigger runtime behavior (closure, improvement, or human interaction). Typed signals are discriminated by a `type` field.
+
+**`forward-pass-closed`** — Signals the end of the forward pass.
+```yaml
+type: forward-pass-closed
+record_folder_path: <string>       # Path to the record folder
+artifact_path: <string>            # Path to the Owner's closure artifact
+```
+
+**`meta-analysis-complete`** — Produced by backward-pass meta-analysis sessions.
+```yaml
+type: meta-analysis-complete
+findings_path: <string>            # Path to the findings artifact
+```
+
+**`prompt-human`** — Pauses the session for human input.
+```yaml
+type: prompt-human
+```
+**When to emit:** Emit `type: prompt-human` when the agent needs a human reply before it can continue — a clarification question, a missing input, or an approval that only the human can provide. The agent writes its question as normal response text and ends with this block.
+
+**Behavior:** The runtime prompts the human for a reply, appends it to the session history, and resumes the same agent session. This may repeat across multiple exchanges; the session continues until the agent emits a routing handoff.
+
+**Constraint:** Do not emit `type: prompt-human` when a routing target is already determinable. Use it only when the agent genuinely cannot proceed without human input.
+
 ### Field Definitions
 
 **`role`** — The name of the receiving role as defined in the project's `agents.md`. Must be a non-empty string matching a declared role (e.g., `"Owner"`, `"Curator"`, `"Technical Architect"`).
 
 **`artifact_path`** — The primary artifact the receiving role must read at session start. Relative to the repository root. Must be a non-empty string.
+
+**`type`** — Discriminator for typed signal forms. Must be one of `forward-pass-closed`, `meta-analysis-complete`, or `prompt-human`.
+
+**`record_folder_path`** — Used in `forward-pass-closed`; the repo-relative path to the record folder for the current flow.
+
+**`findings_path`** — Used in `meta-analysis-complete`; the repo-relative path to the findings artifact produced in the meta-analysis session.
 
 ---
 
@@ -91,6 +124,27 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/03-curator-to-owner
 ```handoff
 role: Owner
 artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-curator-to-owner.md
+```
+
+**Closure signal case (forward pass):**
+
+```handoff
+type: forward-pass-closed
+record_folder_path: [project-name]/a-docs/records/[record-folder]
+artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-closure.md
+```
+
+**Meta-analysis completion case:**
+
+```handoff
+type: meta-analysis-complete
+findings_path: [project-name]/a-docs/records/[record-folder]/[NN]-[role]-findings.md
+```
+
+**Human interaction case:**
+
+```handoff
+type: prompt-human
 ```
 
 **Synthesis and flow-closure handoffs:** When the synthesis role completes synthesis, the flow closes unconditionally — no further handoff block is required for the current flow. If synthesis produces follow-up items that initiate a new flow, those are filed as new trigger inputs rather than continued within the current flow's handoff chain. Synthesis completion is the terminal event; there is no receiving role to hand off to within the current flow.

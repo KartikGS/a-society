@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v30.0
+**Version:** v31.0
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v31.0 | 2026-04-05 | 2026-04-05-in-flow-human-interaction.md — Addition of `type: prompt-human`, `forward-pass-closed`, and `meta-analysis-complete` typed handoff signals to the machine-readable handoff instruction (Breaking); runtime stream-close and empty-input re-prompt clarification (Recommended). |
 | v30.0 | 2026-04-04 | 2026-04-04-required-readings-authority.md — Transition from decentralized, prose-based "Context Loading" rituals and frontmatter reading lists to a single machine-readable authority: required-readings.yaml (Breaking × 2 + Recommended × 2). |
 | v29.0 | 2026-04-04 | 2026-04-04-project-scoped-improvement-instructions.md — Support for project-specific improvement instructions required by the runtime: meta-analysis and synthesis instruction targets (Breaking); record-folder artifact path clarification (Recommended) |
 | v28.0 | 2026-04-04 | 2026-04-04-programmatic-improvement-system.md — Backward pass initiation, role traversal, and instruction injection handled by the runtime (Breaking); protocol split into $GENERAL_IMPROVEMENT_META_ANALYSIS and $GENERAL_IMPROVEMENT_SYNTHESIS (Breaking) |

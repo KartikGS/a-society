@@ -70,6 +70,8 @@ When a new artifact is proposed for `general/`:
 
 When a decision artifact (e.g., an Owner-to-Curator approval) makes a specific claim about current file state — for example, "this paragraph is already standalone" or "this field is not present" — verify that claim by re-reading the relevant passage at review time, not from session-start context. Session-start context may reflect the file as it was when the session opened, not as it exists after prior edits in the same session or in prior sessions. A wrong state claim is wasted instruction that the Curator must detect and override; re-reading the relevant passage before issuing the claim eliminates the correction round.
 
+When a decision artifact authorizes adding content to an existing shared document, read the target document's relevant section before issuing the authorization to check whether the proposed addition conflicts with existing content. Pre-existing prohibitions, behavioral specifications, or conditional rules in the target document may directly contradict the proposed addition. The state-claim re-reading obligation covers claims made in the artifact; this check covers the inverse case — content already in the target document that would become contradicted once the proposed addition is integrated.
+
 ---
 
 ## What the Owner Will Push Back On
@@ -159,6 +161,8 @@ This prohibition applies to briefs and to the main approval rationale — those 
 Classification guidance issued in **update report phase handoffs** is permitted and is a positive practice: when directing the Curator to consult `$A_SOCIETY_UPDATES_PROTOCOL` after implementation, noting a likely classification as orienting guidance does not create framing that must be overridden, because classification is now actually determinable.
 
 **Tooling dev flows: cross-check Phase 7 obligations when authorizing Curator scope.** When writing a Curator authorization for a tooling development flow, do not derive scope solely from the TA advisory's §5 (Files Changed). Phase 7 of the tooling dev workflow carries standing Curator obligations — including update report assessment (`$A_SOCIETY_UPDATES_PROTOCOL`) and index registration — that apply regardless of what the TA brief scoped. Cross-check the Phase 7 obligations explicitly against the authorization list before finalizing the brief.
+
+**TA design briefs require a constraint/preference partition.** When a brief asks a Technical Architect to produce a design, constraints in the brief must be genuinely non-negotiable — derived from framework invariants, explicit user direction, or immovable prior decisions. A design preference or working hypothesis is not a constraint; presenting it as one closes off design space the TA is specifically engaged to evaluate. If the Owner has a hypothesis about the right direction, name it as a preference with rationale and require the TA to address it — do not convert it into a prohibitive constraint. The test: "Would I reject a TA advisory that explored this option?" If the answer is "I don't know," it is not a constraint.
 
 ---
 
