@@ -124,11 +124,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner.md` — `$A_SOCIETY_OWNER_ROLE`
 
-**Why it exists:** The Owner role has authority boundaries, review criteria, escalation triggers, and just-in-time routing guidance specific to A-Society. A generic template would not capture A-Society's review tests or the project-specific Owner support documents loaded at later moments.
+**Why it exists:** The Owner role has authority boundaries, pushback posture, escalation triggers, and just-in-time routing guidance specific to A-Society. A generic template would not capture A-Society's project-specific review posture or the Owner support documents loaded at later moments.
 
-**What it owns:** The A-Society Owner's authority, what they own and do not own, A-Society-specific review criteria, standing review-artifact guidance, and the routing pointers to the Owner's phase-specific support documents.
+**What it owns:** The A-Society Owner's authority, what they own and do not own, their standing pushback posture, and the routing pointers to the Owner's phase-specific support documents.
 
-**What breaks without it:** An Owner agent has no specific behavioral contract or routing guidance for when to load the phase-specific Owner documents. They either over-reach (making framework changes beyond their authority), under-reach (asking the human for every small decision), or carry too much phase detail inline in the role file.
+**What breaks without it:** An Owner agent has no specific behavioral contract or routing guidance for when to load the phase-specific Owner documents. They either over-reach (making framework changes beyond their authority), under-reach (asking the human for every small decision), or lose the structure that keeps phase detail out of the role file.
 
 **Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific review tests. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
 
@@ -138,7 +138,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Owner role now uses just-in-time reads for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner.md` can stay a routing guide instead of carrying all phase instructions inline.
 
-**What it owns:** The Owner's on-demand phase documents: brief/constraint writing, TA advisory review, and forward pass closure.
+**What it owns:** The Owner's on-demand support documents: brief/constraint writing, review behavior, log management, TA advisory review, and forward pass closure.
 
 **What breaks without it:** Those instructions either creep back into `roles/owner.md` or scatter into unrelated locations such as `workflow/`, making the read path harder to follow and the role file harder to maintain.
 
@@ -155,6 +155,30 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Brief-writing detail returns to the role file, bloating the Owner's startup context and mixing general role identity with a later-phase task surface.
 
 **Do not consolidate with:** `roles/owner.md` — role contract vs. phase-specific execution guidance. Do not consolidate with `roles/owner/ta-advisory-review.md` or `roles/owner/forward-pass-closure.md` — each document is loaded for a different Owner moment.
+
+---
+
+### `roles/owner/review-behavior.md` — `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`
+
+**Why it exists:** Review behavior is conditional guidance. The Owner only needs this surface when reviewing a proposed addition, not at the start of every session. Keeping it in a dedicated support document preserves the routing-guide shape of `roles/owner.md`.
+
+**What it owns:** The preserved `## How the Owner Reviews an Addition` and `## Review Artifact Quality` guidance extracted from `roles/owner.md`.
+
+**What breaks without it:** Review-specific criteria either bloat the Owner role file again or get split across approval artifacts with no canonical Owner reference.
+
+**Do not consolidate with:** `roles/owner.md` — role contract vs. review-phase guidance. Do not consolidate with `roles/owner/brief-writing.md` — drafting and reviewing are distinct Owner moments with different checks.
+
+---
+
+### `roles/owner/log-management.md` — `$A_SOCIETY_OWNER_LOG_MANAGEMENT`
+
+**Why it exists:** The Owner manages `$A_SOCIETY_LOG` only at specific moments: intake, synthesis follow-up, and closure. Merge assessment and log-filing obligations are important, but they do not belong in the always-loaded role file.
+
+**What it owns:** The project-log management and merge-assessment guidance extracted from `roles/owner.md`.
+
+**What breaks without it:** Log-management detail returns to the role file, or the merge-assessment procedure becomes implicit and inconsistently applied when filing Next Priorities.
+
+**Do not consolidate with:** `roles/owner.md` — role contract vs. log-management procedure. Do not consolidate with `roles/owner/forward-pass-closure.md` — closure uses the log, but log management also occurs at intake and during synthesis follow-up.
 
 ---
 
@@ -186,11 +210,23 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Curator role has hard rules and escalation triggers specific to A-Society's maintenance needs — in particular the prohibition on writing to `general/` without Owner approval, the requirement to use `$VAR` references, and the distillation protocol for proposing patterns from observed projects.
 
-**What it owns:** The A-Society Curator's maintenance scope, required-reading set (YAML frontmatter), hard rules, pattern distillation process, current active work, and escalation triggers.
+**What it owns:** The A-Society Curator's maintenance scope, hard rules, pattern distillation process, version-aware migration obligations, and the routing pointer to the Curator's implementation-practices document.
 
 **What breaks without it:** A Curator agent has no specific behavioral contract. They may write directly to `general/` without approval, hardcode paths, or perform migration work without understanding the framework's boundaries. Role context injection fails.
 
 **Do not consolidate with:** `general/roles/curator.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
+
+---
+
+### `roles/curator/implementation-practices.md` — `$A_SOCIETY_CURATOR_IMPL_PRACTICES`
+
+**Why it exists:** The Curator's proposal, implementation, and registration checks are phase-specific. Keeping them in a dedicated support document lets `roles/curator.md` stay focused on scope, authority, and escalation while still giving the Curator one canonical execution reference when work begins.
+
+**What it owns:** The preserved `## Standing Checks` and `## Implementation Practices` guidance extracted from `roles/curator.md`.
+
+**What breaks without it:** Proposal and implementation detail creeps back into the role file, increasing startup context and weakening the just-in-time design model.
+
+**Do not consolidate with:** `roles/curator.md` — role contract vs. execution guidance. Do not consolidate with `general/roles/curator.md` — this document is specific to A-Society's own Curator operating on A-Society.
 
 ---
 
@@ -210,7 +246,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Technical Architect role has a narrow, pre-implementation mandate that is not covered by Owner or Curator: producing the automation boundary evaluation, component designs, and open question surfaces that must exist before any programmatic tooling is built. Without a dedicated role file, this work either collapses into the Owner (adding implementation-planning scope that the Owner does not own) or proceeds without a behavioral contract, risking implementation before design is verified.
 
-**What it owns:** The Technical Architect's authority, required-reading set (YAML frontmatter), hard rules, primary work output definition, and escalation triggers for the programmatic tooling layer design phase.
+**What it owns:** The Technical Architect's authority, hard rules, primary work output definition, and the routing pointer to the TA's advisory-standards document.
 
 **What breaks without it:** A Technical Architect agent has no behavioral contract. The boundary between design and implementation is undefined. Proposals may bypass Owner review. Direction decisions may be absorbed into technical decisions without escalation. Role context injection fails.
 
@@ -218,11 +254,23 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `roles/technical-architect/advisory-standards.md` — `$A_SOCIETY_TA_ADVISORY_STANDARDS`
+
+**Why it exists:** Advisory standards matter only when the Technical Architect is producing an advisory, component design, or integration review. Keeping them in a support document preserves the TA role file as a startup contract rather than a full advisory-writing manual.
+
+**What it owns:** The preserved `## Advisory Standards` and `## a-docs/ Format Dependencies` guidance extracted from `roles/technical-architect.md`.
+
+**What breaks without it:** TA advisory-writing detail returns to the role file, or the advisory-quality standard fragments across old advisories and workflow notes with no canonical home.
+
+**Do not consolidate with:** `roles/technical-architect.md` — role contract vs. advisory-execution guidance. Do not consolidate with `tooling/architecture-proposal.md` — this file governs how the TA writes advisories; the proposal records the current approved tooling design.
+
+---
+
 ### `roles/tooling-developer.md` — `$A_SOCIETY_TOOLING_DEVELOPER_ROLE`
 
 **Why it exists:** The Tooling Developer role has a narrow implementation mandate: executing the six approved tooling components in Node.js, within `tooling/` only, with blocking escalation for any deviation from the approved spec. Without a dedicated role file, implementation either collapses into the Curator (who owns documentation, not Node.js code) or proceeds without a behavioral contract — risking scope creep, unapproved workarounds, and components that diverge from the TA's approved designs.
 
-**What it owns:** The Developer's authority (implementation choices, Node.js project initialization), required-reading set (YAML frontmatter), hard rules (no implementation without Phase 0 cleared, no writes outside `tooling/`, no workarounds without TA resolution), and escalation triggers (design deviation, scope ambiguity, documentation gap, Phase 0 incomplete).
+**What it owns:** The Developer's authority (implementation choices, Node.js project initialization), hard rules (no implementation without Phase 0 cleared, no writes outside `tooling/`, no workarounds without TA resolution), escalation triggers (design deviation, scope ambiguity, documentation gap, Phase 0 incomplete), and the routing pointers to invocation-discipline and spec-reference reads.
 
 **What breaks without it:** A Tooling Developer agent has no behavioral contract. The boundary between implementation and design is undefined. Deviations from the approved spec may be absorbed into implementation decisions without escalation. The Phase 0 gate — which requires this file to be indexed before any Developer session opens — cannot be satisfied. Role context injection fails.
 
@@ -230,13 +278,37 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `roles/tooling-developer/invocation-discipline.md` — `$A_SOCIETY_TOOLING_DEV_INVOCATION`
+
+**Why it exists:** Tooling phase handoff and completion-report guidance matters only at pause points, not for the entire lifespan of a Tooling Developer session. Extracting it preserves a lighter startup role file while keeping one canonical reference for handoff discipline.
+
+**What it owns:** The preserved `## Tooling Invocation Discipline` guidance extracted from `roles/tooling-developer.md`.
+
+**What breaks without it:** Handoff and completion-report requirements either bloat the role file or drift into ad hoc completion artifacts with no stable reference.
+
+**Do not consolidate with:** `roles/tooling-developer.md` — role contract vs. pause-point guidance. Do not consolidate with `$A_SOCIETY_TOOLING_PROPOSAL` or `$A_SOCIETY_TOOLING_ADDENDUM` — those documents define tooling scope and architecture, not Developer handoff behavior.
+
+---
+
 ### `roles/runtime-developer.md` — `$A_SOCIETY_RUNTIME_DEVELOPER_ROLE`
 
 **Why it exists:** The Runtime Developer has a specialized implementation mandate for the programmatic runtime layer, distinct from the deterministic tooling components. Without this, runtime implementation merges with the Tooling Developer, blurring the clear boundary between A-Society's utility layer and its session orchestration capabilities.
 
-**What it owns:** The Developer's execution authority over the runtime layer, required-reading set (YAML frontmatter), hard rules, and escalation paths.
+**What it owns:** The Developer's execution authority over the runtime layer, hard rules, escalation paths, and the routing pointer to runtime implementation-discipline guidance.
 
 **What breaks without it:** No defined behavioral contract for implementing A-Society's runtime layer. Role context injection fails.
+
+---
+
+### `roles/runtime-developer/implementation-discipline.md` — `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE`
+
+**Why it exists:** Runtime implementation discipline is execution-time guidance, not startup identity. Keeping it in a dedicated support document lets the Runtime Developer load it only when implementation or validation work is actually underway.
+
+**What it owns:** The preserved `## Implementation Discipline` guidance extracted from `roles/runtime-developer.md`.
+
+**What breaks without it:** Runtime implementation-specific practices return to the role file, increasing startup context and making the role harder to maintain as the runtime layer grows.
+
+**Do not consolidate with:** `roles/runtime-developer.md` — role contract vs. implementation guidance. Do not consolidate with `workflow/runtime-development.md` — the workflow defines phase structure; this file defines how the Runtime Developer executes within those phases.
 
 ---
 

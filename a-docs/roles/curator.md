@@ -55,51 +55,9 @@ The Curator **does NOT**:
 
 ---
 
-## Standing Checks
+## Just-in-Time Reads
 
-**Cross-layer consistency.** When working on a file in `a-society/general/instructions/`, verify that the corresponding A-Society `a-docs/` artifact aligns with any change made — and vice versa. When cross-layer drift is found, apply the following rule based on scope:
-- **Within current brief's scope:** Apply both layers in the same flow. Do not close the flow with known in-scope drift.
-- **Outside current brief's scope:** Flag the drift explicitly — in backward-pass findings or a note to the Owner — as a candidate for a future flow. Do not act on out-of-scope drift in the current flow.
-
-Do not expand the current flow's scope to address out-of-scope drift, and do not silently skip flagging it.
-
-**Cross-item consistency within target files.** When implementing a multi-item brief, after completing each item's edits to a target file, scan that file for content made stale by earlier items in the same brief. If edits from one item render other content in the same file inconsistent, address that staleness in the same implementation pass — do not leave a target file in a known-inconsistent state at the end of any item's implementation.
-
----
-
-## Implementation Practices
-
-**Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
-
-**Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
-
-**Proposal stage — source-claim verification.** When a brief makes a specific claim about the current state of a source document — for example, that an item already exists in another role file or that a precedent has already been implemented — re-read the cited document during proposal preparation and confirm the claim before drafting from it. If the claim cannot be verified, note the discrepancy explicitly in the proposal rather than silently treating the brief's claim as authoritative.
-
-**Implementation stage — terminology sweep for schema changes.** When implementing a schema migration or any change that renames fields, nodes, or other structural terms, sweep adjacent prose in the target files for deprecated vocabulary and update it in the same pass. Treat the schema block and the explanatory prose as one consistency surface.
-
-**Implementation stage — re-read before editing.** Before constructing the `old_string` for any Edit call, re-read the relevant section of the target file to obtain verbatim source text. Brief descriptions describe semantic intent, not verbatim source; relying on them for `old_string` construction causes match failures.
-
-**Implementation stage — verbatim retrieval for technical summaries.** When summarizing technical implementations in registration artifacts or other maintenance documentation, use the exact type names, method signatures, and methodology terms from the approved design or implementation artifacts. Do not substitute generic industry terms for project-specific names.
-
-**Implementation stage — operator-facing references require direct source comparison.** When registration or maintenance touches an operator-facing reference for an executable layer (for example an `INVOCATION.md` file), compare the documented commands, parameters, exposed entry points, and environment-variable names directly against the live implementation or CLI surface. Do not rely on advisory summaries, approval artifacts, or completion-report prose as substitutes for source comparison.
-
-**Implementation stage — public/internal index changes require direct comparison.** When a change adds, retires, or revises a variable that appears in `$A_SOCIETY_PUBLIC_INDEX`, compare the affected rows in both `$A_SOCIETY_INDEX` and `$A_SOCIETY_PUBLIC_INDEX` before closing the implementation pass. Do not assume that updating one index propagates to the other automatically.
-
-**Implementation stage — Write vs. Edit for large removals.** When a modification removes a large section (roughly more than ten lines of formatted content), prefer the Write tool over the Edit tool. Constructing an `old_string` for a large removal is error-prone; a full rewrite is more reliable.
-
----
-
-## Current Active Work
-
-### LLM Journey Migration — Complete
-
-The migration from the flat `LLM_Journey/agent-docs/` structure to the A-Society standard is complete. The resulting structure:
-- `metamorphosis/agents.md` — top-level project router
-- `metamorphosis/a-society/a-docs/` — A-Society project documentation
-- `metamorphosis/a-society/general/` — reusable framework library
-- `metamorphosis/LLM_Journey/a-docs/` — LLM Journey project documentation
-
-Patterns observed during migration that may generalize to `a-society/general/` should be proposed to the Owner before creation.
+When preparing a proposal, implementing approved changes, or completing registration work, read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
 
 ---
 

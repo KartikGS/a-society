@@ -32,11 +32,16 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_ADOCS_DESIGN` | `a-society/a-docs/a-docs-design.md` | A-Society a-docs design principles — structural rules for authoring and maintaining the a-docs layer |
 | `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, review surfaces, and just-in-time routing to Owner phase guidance |
 | `$A_SOCIETY_OWNER_BRIEF_WRITING` | `a-society/a-docs/roles/owner/brief-writing.md` | A-Society Owner brief-writing and constraint-writing guidance — loaded when the Owner drafts briefs or review constraints |
+| `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR` | `a-society/a-docs/roles/owner/review-behavior.md` | A-Society Owner review-behavior guidance — loaded when the Owner reviews a proposed addition |
+| `$A_SOCIETY_OWNER_LOG_MANAGEMENT` | `a-society/a-docs/roles/owner/log-management.md` | A-Society Owner log-management guidance — loaded when the Owner manages the project log or files Next Priorities |
 | `$A_SOCIETY_OWNER_TA_REVIEW` | `a-society/a-docs/roles/owner/ta-advisory-review.md` | A-Society Owner TA advisory review guidance — loaded when the Owner reviews Technical Architect advisories |
 | `$A_SOCIETY_OWNER_CLOSURE` | `a-society/a-docs/roles/owner/forward-pass-closure.md` | A-Society Owner forward-pass closure guidance — loaded when the Owner closes a forward pass |
 | `$A_SOCIETY_CURATOR_ROLE` | `a-society/a-docs/roles/curator.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
+| `$A_SOCIETY_CURATOR_IMPL_PRACTICES` | `a-society/a-docs/roles/curator/implementation-practices.md` | A-Society Curator proposal and implementation practices — loaded when the Curator prepares a proposal or implements approved changes |
 | `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the programmatic tooling layer |
+| `$A_SOCIETY_TA_ADVISORY_STANDARDS` | `a-society/a-docs/roles/technical-architect/advisory-standards.md` | A-Society Technical Architect advisory standards — loaded when the TA produces an advisory or integration review |
 | `$A_SOCIETY_TOOLING_DEVELOPER_ROLE` | `a-society/a-docs/roles/tooling-developer.md` | A-Society Tooling Developer Agent role — implementation scope, hard rules, and escalation triggers |
+| `$A_SOCIETY_TOOLING_DEV_INVOCATION` | `a-society/a-docs/roles/tooling-developer/invocation-discipline.md` | A-Society Tooling Developer invocation discipline — loaded at phase handoff and completion-report moments |
 | `$A_SOCIETY_TOOLING` | `a-society/a-docs/tooling/main.md` | A-Society tooling documentation entry point — orientation to the tooling subfolder: what each document is and when an agent reads it |
 | `$A_SOCIETY_TOOLING_PROPOSAL` | `a-society/a-docs/tooling/architecture-proposal.md` | Technical Architect's component designs and automation boundary evaluation — binding specification for all six tooling components |
 | `$A_SOCIETY_TOOLING_COUPLING_MAP` | `a-society/a-docs/tooling/general-coupling-map.md` | Standing reference for tooling/general coupling — format dependencies per component and invocation gap status; updated at Phase 7 after any Type A–F change |
@@ -113,4 +118,5 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_COMM_FEEDBACK_PROTOCOL` | `a-society/a-docs/communication/coordination/feedback-protocol.md` | What to do when a discrepancy or blocker is discovered in prior work |
 | `$A_SOCIETY_COMM_CONFLICT_RESOLUTION` | `a-society/a-docs/communication/coordination/conflict-resolution.md` | Authority matrix, escalation path, human escalation threshold |
 | `$A_SOCIETY_RUNTIME_DEVELOPER_ROLE` | `a-society/a-docs/roles/runtime-developer.md` | A-Society Runtime Developer Agent role — implementation scope, rules, and escalation |
+| `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE` | `a-society/a-docs/roles/runtime-developer/implementation-discipline.md` | A-Society Runtime Developer implementation discipline — loaded when the Runtime Developer implements or validates runtime changes |
 | `$A_SOCIETY_WORKFLOW_RUNTIME_DEV` | `a-society/a-docs/workflow/runtime-development.md` | A-Society runtime development workflow — Phase 0 architecture design gate, placeholder implementation phases, session model, and YAML graph for the programmatic runtime implementation loop |

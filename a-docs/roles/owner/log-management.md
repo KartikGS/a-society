@@ -1,0 +1,5 @@
+# Owner Log Management
+
+## Log Management and Merge Assessment
+
+The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When adding any Next Priorities item (at intake or when receiving synthesis findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, (2) compatible authority level, and (3) same workflow type and role path, or routable as parallel tracks in a single multi-domain flow. Items that would route through different workflow types (e.g., one Framework Dev, one Tooling Dev) may still merge if they share a design area and are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Items are removed when their flows close.

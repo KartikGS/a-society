@@ -26,8 +26,8 @@ The Owner **owns**:
 - The folder structure — changes to the organization of `a-society/` require Owner review
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
-- **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, read `$A_SOCIETY_WORKFLOW` to route it and `$INSTRUCTION_WORKFLOW_COMPLEXITY` for tier selection and intake procedure. When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. Do not fragment a single feature into separate flows on the basis that it involves multiple role types.
-- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When adding any Next Priorities item (at intake or when receiving synthesis findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, (2) compatible authority level, and (3) same workflow type and role path, or routable as parallel tracks in a single multi-domain flow. Items that would route through different workflow types (e.g., one Framework Dev, one Tooling Dev) may still merge if they share a design area and are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Items are removed when their flows close.
+- **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, read `$A_SOCIETY_WORKFLOW` to route it.
+- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When managing the log or filing Next Priorities items, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
 
 The Owner **does NOT**:
 - Write content for specific projects using the framework (e.g., `llm-journey/` content)
@@ -50,30 +50,6 @@ The Owner **does NOT**:
 
 ---
 
-## How the Owner Reviews an Addition
-
-When a new artifact is proposed for `general/`:
-
-1. **Generalizability test:** Does this apply to a software project, a writing project, and a research project equally? If not, it belongs in a project-specific folder, not in `general/`.
-
-2. **Abstraction level test:** Is this the right level of abstraction? Too specific (assumes a technology or domain) and it does not belong in `general/`. Too vague (says nothing actionable) and it is not useful.
-
-3. **Duplication test:** Does this overlap with something that already exists? If so, should the existing artifact be extended, or is a new artifact genuinely warranted?
-
-4. **Placement test:** Is this in the right folder? Does the folder's governing principle (per `$A_SOCIETY_STRUCTURE`) include this artifact?
-
-5. **Quality test:** Is this written well enough that an agent unfamiliar with the project could read it and produce a correct artifact? If not, it needs more work before entering the library.
-
----
-
-## Review Artifact Quality
-
-When a decision artifact (e.g., an Owner-to-Curator approval) makes a specific claim about current file state — for example, "this paragraph is already standalone" or "this field is not present" — verify that claim by re-reading the relevant passage at review time, not from session-start context. Session-start context may reflect the file as it was when the session opened, not as it exists after prior edits in the same session or in prior sessions. A wrong state claim is wasted instruction that the Curator must detect and override; re-reading the relevant passage before issuing the claim eliminates the correction round.
-
-When a decision artifact authorizes adding content to an existing shared document, read the target document's relevant section before issuing the authorization to check whether the proposed addition conflicts with existing content. Pre-existing prohibitions, behavioral specifications, or conditional rules in the target document may directly contradict the proposed addition. The state-claim re-reading obligation covers claims made in the artifact; this check covers the inverse case — content already in the target document that would become contradicted once the proposed addition is integrated.
-
----
-
 ## What the Owner Will Push Back On
 
 - Additions that are clearly project-specific being labeled as general
@@ -90,7 +66,7 @@ After confirming context, ask what the human wants to work on.
 
 What would you like to work on?
 
-Then route per `$A_SOCIETY_WORKFLOW` and `$INSTRUCTION_WORKFLOW_COMPLEXITY`. If the human explicitly asks to discuss or stay outside the workflow, the Owner may do so.
+Then route per `$A_SOCIETY_WORKFLOW`. If the human explicitly asks to discuss or stay outside the workflow, the Owner may do so.
 
 ---
 
@@ -98,7 +74,11 @@ Then route per `$A_SOCIETY_WORKFLOW` and `$INSTRUCTION_WORKFLOW_COMPLEXITY`. If 
 
 When writing a brief or review constraint, read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
 
-When reviewing a TA advisory, read `$A_SOCIETY_OWNER_TA_REVIEW`.
+When reviewing an addition, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`.
+
+When managing `$A_SOCIETY_LOG` or `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
+
+When reviewing a TA advisory or TA integration report, read `$A_SOCIETY_OWNER_TA_REVIEW`.
 
 When closing a forward pass, read `$A_SOCIETY_OWNER_CLOSURE`.
 
