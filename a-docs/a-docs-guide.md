@@ -10,11 +10,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `agents.md` — `$A_SOCIETY_AGENTS`
 
-**Why it exists:** Every agent working on A-Society reads this first. It is the single entry point that orients any agent to the project — what the project is, what roles exist, what documents to read and in what order, and what invariants govern all work here.
+**Why it exists:** Every agent working on A-Society reads this first. It is the single entry point that orients any agent to the project with only the information that must be universal at session start: what the project is, how to resolve authority conflicts, and which project-wide invariants always apply.
 
-**What it owns:** Role registration (the roles table), universal required-reading set (YAML frontmatter), required reading sequence, context confirmation protocol, authority hierarchy for conflict resolution, and project-wide invariants.
+**What it owns:** Minimal project orientation, the authority hierarchy for conflict resolution, and project-wide invariants.
 
-**What breaks without it:** Agents have no reliable starting point. Role existence is undiscoverable. Reading order is undefined. Universal context injection fails.
+**What breaks without it:** Agents have no reliable starting point or universal conflict-resolution model. Project-wide invariants would have no single orientation home.
 
 **Do not consolidate with:** The vision (which explains what the project is, not how to operate within it), or any role file (which governs a specific role, not all agents).
 
@@ -27,6 +27,18 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What it owns:** Rationale for every significant file and folder in this project's agent-docs.
 
 **Do not consolidate with:** `project-information/structure.md` (structure explains folder placement rules; this explains file purpose) or `agents.md` (agents.md is the entry point for all agents; this is deep context for the Curator specifically).
+
+---
+
+### `a-docs-design.md` — `$A_SOCIETY_ADOCS_DESIGN`
+
+**Why it exists:** A-Society now carries an explicit design model for the documentation layer itself. Without a dedicated file, progressive context disclosure and entry-point minimalism would remain an implicit preference rather than a maintainable standard.
+
+**What it owns:** The structural rules for how A-Society's `a-docs/` is authored and maintained: progressive context disclosure, redundancy avoidance, workflow-conditional extraction, role-document scope, and minimal `agents.md` scope.
+
+**What breaks without it:** Agents and Curators have no canonical standard for deciding when a role file should point instead of inline, when `agents.md` has become bloated, or when a new addition has made older content vestigial.
+
+**Do not consolidate with:** `project-information/principles.md` — that file governs how A-Society is extended as a framework; this file governs how the A-Society documentation layer itself is authored. Do not consolidate with `a-docs-guide.md` — the guide explains why files exist; this file defines how those files should be structured.
 
 ---
 
@@ -112,13 +124,61 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner.md` — `$A_SOCIETY_OWNER_ROLE`
 
-**Why it exists:** The Owner role has authority boundaries, review criteria, and escalation triggers specific to A-Society — in particular the generalizability test, abstraction level test, and duplication test that govern what enters `general/`. A generic template would not capture these.
+**Why it exists:** The Owner role has authority boundaries, review criteria, escalation triggers, and just-in-time routing guidance specific to A-Society. A generic template would not capture A-Society's review tests or the project-specific Owner support documents loaded at later moments.
 
-**What it owns:** The A-Society Owner's authority, required-reading set (YAML frontmatter), what they own and do not own, how they review contributions to the framework, and when they escalate.
+**What it owns:** The A-Society Owner's authority, what they own and do not own, A-Society-specific review criteria, standing review-artifact guidance, and the routing pointers to the Owner's phase-specific support documents.
 
-**What breaks without it:** An Owner agent has no specific behavioral contract. They either over-reach (making framework changes beyond their authority) or under-reach (asking the human for every small decision). Role context injection fails.
+**What breaks without it:** An Owner agent has no specific behavioral contract or routing guidance for when to load the phase-specific Owner documents. They either over-reach (making framework changes beyond their authority), under-reach (asking the human for every small decision), or carry too much phase detail inline in the role file.
 
-**Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific review tests.
+**Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific review tests. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
+
+---
+
+### `roles/owner/` — folder
+
+**Why it exists:** The Owner role now uses just-in-time reads for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner.md` can stay a routing guide instead of carrying all phase instructions inline.
+
+**What it owns:** The Owner's on-demand phase documents: brief/constraint writing, TA advisory review, and forward pass closure.
+
+**What breaks without it:** Those instructions either creep back into `roles/owner.md` or scatter into unrelated locations such as `workflow/`, making the read path harder to follow and the role file harder to maintain.
+
+**Do not consolidate with:** `roles/owner.md` — that file is the role contract and routing surface; this folder holds the documents it points to. Do not consolidate with `workflow/` — these are Owner-specific support docs, not shared workflow definitions.
+
+---
+
+### `roles/owner/brief-writing.md` — `$A_SOCIETY_OWNER_BRIEF_WRITING`
+
+**Why it exists:** Brief-writing and constraint-writing guidance is phase-specific. Keeping it in a dedicated Owner support document means the Owner loads it when needed rather than carrying it in every session.
+
+**What it owns:** The preserved `## Brief-Writing Quality` and `## Constraint-Writing Quality` guidance extracted from `roles/owner.md`.
+
+**What breaks without it:** Brief-writing detail returns to the role file, bloating the Owner's startup context and mixing general role identity with a later-phase task surface.
+
+**Do not consolidate with:** `roles/owner.md` — role contract vs. phase-specific execution guidance. Do not consolidate with `roles/owner/ta-advisory-review.md` or `roles/owner/forward-pass-closure.md` — each document is loaded for a different Owner moment.
+
+---
+
+### `roles/owner/ta-advisory-review.md` — `$A_SOCIETY_OWNER_TA_REVIEW`
+
+**Why it exists:** TA advisory review guidance only matters when the Owner is reviewing a Technical Architect advisory. It should not be carried inline in the Owner role for sessions that never involve a TA.
+
+**What it owns:** The preserved `## TA Advisory Review` guidance extracted from `roles/owner.md`.
+
+**What breaks without it:** TA-specific review instructions either bloat the Owner role file or get misplaced into broader workflow docs where they no longer read as Owner-only obligations.
+
+**Do not consolidate with:** `roles/owner.md` — this is conditional review guidance, not universal role identity. Do not consolidate with `roles/owner/brief-writing.md` — advisory review and brief writing are different phases with different checks.
+
+---
+
+### `roles/owner/forward-pass-closure.md` — `$A_SOCIETY_OWNER_CLOSURE`
+
+**Why it exists:** Forward pass closure guidance applies only when the Owner is closing a flow. It belongs in a dedicated closure document rather than in the always-loaded Owner role file.
+
+**What it owns:** The preserved `## Forward Pass Closure Discipline` guidance extracted from `roles/owner.md`.
+
+**What breaks without it:** Closure-time verification, log/archive discipline, and update-report path naming either remain inline in `roles/owner.md` or drift into artifacts that are not the canonical Owner closure reference.
+
+**Do not consolidate with:** `roles/owner.md` — this is closure-phase guidance, not general role contract. Do not consolidate with `workflow/main.md` — workflows define phase structure; this file defines how the Owner executes one specific phase.
 
 ---
 
@@ -270,7 +330,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The runtime injects a project-specific instruction file into findings-producing backward pass sessions. The framework-level template in `general/` is not the runtime target for A-Society itself; this file is. Without it, the runtime either injects generic template content or a monolithic protocol file that makes findings sessions read irrelevant material.
 
-**What it owns:** The A-Society-specific meta-analysis instructions: when to run, how findings-producing roles should treat ordering and output, reflection categories, analysis-quality expectations, and the `meta-analysis-complete` completion signal.
+**What it owns:** The A-Society-specific meta-analysis instructions: when to run, how findings-producing roles should treat ordering and output, reflection categories, analysis-quality expectations, the a-docs structure checks used to catch documentation anti-patterns, and the `meta-analysis-complete` completion signal.
 
 **What breaks without it:** Runtime-injected findings sessions do not have a project-specific instruction target. Agents receive the wrong layer (framework template) or an over-broad file, and findings artifacts drift from the project's actual protocol.
 

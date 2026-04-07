@@ -29,7 +29,11 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_INDEX` | `a-society/general/instructions/indexes/main.md` | How to create a file path index for any project |
 | `$A_SOCIETY_AGENTS` | `a-society/a-docs/agents.md` | A-Society agent orientation — entry point for all agents working on this project |
 | `$A_SOCIETY_AGENT_DOCS_GUIDE` | `a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's agent-docs exists — required reading for the Curator |
-| `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, responsibilities, and context loading |
+| `$A_SOCIETY_ADOCS_DESIGN` | `a-society/a-docs/a-docs-design.md` | A-Society a-docs design principles — structural rules for authoring and maintaining the a-docs layer |
+| `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, review surfaces, and just-in-time routing to Owner phase guidance |
+| `$A_SOCIETY_OWNER_BRIEF_WRITING` | `a-society/a-docs/roles/owner/brief-writing.md` | A-Society Owner brief-writing and constraint-writing guidance — loaded when the Owner drafts briefs or review constraints |
+| `$A_SOCIETY_OWNER_TA_REVIEW` | `a-society/a-docs/roles/owner/ta-advisory-review.md` | A-Society Owner TA advisory review guidance — loaded when the Owner reviews Technical Architect advisories |
+| `$A_SOCIETY_OWNER_CLOSURE` | `a-society/a-docs/roles/owner/forward-pass-closure.md` | A-Society Owner forward-pass closure guidance — loaded when the Owner closes a forward pass |
 | `$A_SOCIETY_CURATOR_ROLE` | `a-society/a-docs/roles/curator.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
 | `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the programmatic tooling layer |
 | `$A_SOCIETY_TOOLING_DEVELOPER_ROLE` | `a-society/a-docs/roles/tooling-developer.md` | A-Society Tooling Developer Agent role — implementation scope, hard rules, and escalation triggers |
@@ -42,10 +46,12 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` | `a-society/tooling/src/backward-pass-orderer.ts` | Component 4: Backward Pass Orderer — computes backward pass role traversal order from a workflow graph |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Invocation reference for the A-Society runtime — entry points, CLI commands, and UX behaviors |
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
+| `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
 | `$GENERAL_TA_ROLE` | `a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — advisory standards, extension-before-bypass, explicit failure states for external input |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
+| `$INSTRUCTION_ADOCS_DESIGN` | `a-society/general/instructions/a-docs-design.md` | How to create and maintain an a-docs design-principles file for any project |
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
 | `$INSTRUCTION_REQUIRED_READINGS` | `a-society/general/instructions/roles/required-readings.md` | How to maintain required-readings.yaml — authority maintenance protocol |

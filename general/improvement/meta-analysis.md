@@ -60,6 +60,20 @@ These are judgment aids, not mandatory per-finding assessments.
 
 ---
 
+### a-docs Structure Checks
+
+When the reviewed artifact lives in the project's `a-docs/` or affects the agent-documentation layer, apply these additional checks:
+
+1. **Redundancy check:** Does this document reference, explain, or link anything already in the agent's starting context via required readings or runtime injection? If yes, flag the specific lines for removal.
+2. **Phase-coupling check:** Does this role document contain instructions applicable only at a specific workflow phase? If yes, flag the section for extraction to a phase-specific document and add a pointer.
+3. **Workflow-conditioning check:** Does this document contain instructions applicable only in specific workflow types? If yes, flag the section for extraction.
+4. **Role document scope check:** Does this role document contain anything beyond routing guidance, ownership declaration, and pointers to phase-specific documents? If yes, flag the excess.
+5. **agents.md scope check:** Does the project's `agents.md` contain anything beyond: what the project is (one paragraph), the authority/conflict resolution model, and project-wide invariants? If yes, flag it for removal.
+6. **Addition-without-removal check:** When a new instruction is added to a role document or `agents.md`, does any existing content become redundant or vestigial? If yes, flag it. Adding without checking what the addition makes obsolete is how garbage accumulates.
+7. **Repeated-header matching guidance:** When editing files with repeated semantic sub-headers (for example, `### Roles` appearing under multiple parent `##` headings), include the parent section header in the match context to preserve placement integrity. A mis-edit that places content under the wrong parent due to ambiguous header matching is a structural error, not a minor slip.
+
+---
+
 ### Output Format
 
 - *If the project uses records:* `[PROJECT_RECORDS]/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder

@@ -60,6 +60,19 @@ These are judgment aids, not mandatory per-finding assessments.
 
 ---
 
+### a-docs Structure Checks
+
+When the reviewed artifact lives in `a-docs/` or affects the agent-documentation layer, apply these additional checks:
+
+1. **Redundancy check:** Does this document reference, explain, or link anything already in the agent's injected context or required readings? If yes, flag the specific lines for removal.
+2. **Phase-coupling check:** Does this role document contain instructions applicable only at a specific workflow phase? If yes, flag the section for extraction to a phase-specific document and add a pointer.
+3. **Workflow-conditioning check:** Does this document contain instructions applicable only in specific workflow types (for example, only flows with a TA, only flows with a forward pass closure)? If yes, flag the section for extraction.
+4. **Role document scope check:** Does this role document contain anything beyond routing guidance, ownership declaration, and pointers to phase-specific documents? If yes, flag the excess.
+5. **agents.md scope check:** Does `agents.md` contain anything beyond: what the project is (one paragraph), the authority/conflict resolution model, and project-wide invariants? If yes, flag it for removal.
+6. **Addition-without-removal check:** When a new instruction is added to a role document or `agents.md`, does any existing content become redundant or vestigial? If yes, flag it. Adding without checking what the addition makes obsolete is how garbage accumulates.
+
+---
+
 ### Output Format
 
 - *If the project uses records:* `a-society/a-docs/records/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder

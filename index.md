@@ -49,6 +49,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_STRUCTURE` | `/a-society/general/instructions/project-information/structure.md` | How to create a structure document for any project |
 | `$INSTRUCTION_INDEX` | `/a-society/general/instructions/indexes/main.md` | How to create a file path index for any project |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `/a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
+| `$INSTRUCTION_ADOCS_DESIGN` | `/a-society/general/instructions/a-docs-design.md` | How to create and maintain an a-docs design-principles file for any project |
 | `$INSTRUCTION_AGENTS` | `/a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `/a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
 | `$INSTRUCTION_REQUIRED_READINGS` | `/a-society/general/instructions/roles/required-readings.md` | How to maintain required-readings.yaml — machine-readable source of truth for context injection |
@@ -73,6 +74,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_RECORDS` | `/a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | **Manifests** | | |
 | `$GENERAL_MANIFEST` | `/a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
+| **a-docs Templates** | | |
+| `$GENERAL_ADOCS_DESIGN` | `/a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | **Role Templates** | | |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |

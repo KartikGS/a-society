@@ -27,7 +27,7 @@ files:
   # ── Entry point ──────────────────────────────────────────────────────────────
 
   - path: agents.md
-    description: "Agent orientation — entry point for all agents working on this project; roles table, required reading sequence, context confirmation protocol, and project-wide invariants"
+    description: "Agent orientation — minimal entry point for all agents working on this project; what the project is, the authority model, and project-wide invariants"
     required: true
     scaffold: stub
     source_path: general/instructions/agents.md
@@ -37,6 +37,12 @@ files:
     required: true
     scaffold: stub
     source_path: general/instructions/a-docs-guide.md
+
+  - path: a-docs-design.md
+    description: "a-docs design principles — cross-cutting rules for how the project's agent-docs is authored and maintained; governs progressive context disclosure, minimal entry documents, and phase-specific guidance"
+    required: true
+    scaffold: copy
+    source_path: general/a-docs-design.md
 
   # ── Indexes ───────────────────────────────────────────────────────────────────
 
