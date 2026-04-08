@@ -97,5 +97,48 @@ If you press `Ctrl+C` while the model is generating a response:
 1. The current API request is immediately aborted.
 2. The partial text received up to that point is preserved in the session history.
 3. The session returns to the prompt (in interactive mode) or the `awaiting_human` state (in autonomous mode).
-This allows for graceful interruption and immediate correction without losing session state or crashing the process.
+
+## Telemetry and Observability
+
+The A-Society runtime includes an OpenTelemetry-based observability layer for tracking flow execution, session turns, and LLM provider performance.
+
+### Configuration
+
+Telemetry behavior is controlled via environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `A_SOCIETY_TELEMETRY_ENABLED` | `true` | Set to `false` to disable all telemetry bootstrapping. |
+| `A_SOCIETY_OTLP_ENDPOINT` | (none) | OTLP/HTTP collector endpoint (e.g., `http://localhost:4318`). If absent, spans are collected but not exported. |
+| `A_SOCIETY_OTLP_HEADERS` | (none) | Comma-separated key=value pairs for OTLP export headers (e.g., `x-otlp-key=xyz`). |
+| `A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE` | `false` | If `true`, captures full system prompts, user turns, and assistant turns as span events. **WARNING: Captured payloads may contain sensitive data.** |
+| `A_SOCIETY_ENVIRONMENT` | `production` | Sets the `deployment.environment` resource attribute. |
+
+### Local Development Setup
+
+To view traces locally during development:
+
+1. **Jaeger (Docker)**:
+   ```bash
+   docker run -d --name jaeger \
+     -e COLLECTOR_OTLP_ENABLED=true \
+     -p 16686:16686 \
+     -p 4318:4318 \
+     jaegertracing/all-in-one:latest
+   ```
+2. **Export**: Set `A_SOCIETY_OTLP_ENDPOINT=http://localhost:4318` before running the runtime. Traces will be visible at `http://localhost:16686`.
+
+### Integration with External Tools
+
+Any OTLP-compatible backend can ingest A-Society traces. For example, to use **LangSmith** via their OTLP endpoint:
+```bash
+export A_SOCIETY_OTLP_ENDPOINT=https://api.smith.langchain.com/otel
+export A_SOCIETY_OTLP_HEADERS="x-api-key=ls__..."
+```
+
+### Operational Behavior
+
+- **Configuration Errors**: If `A_SOCIETY_OTLP_HEADERS` is malformed, a warning is printed to `stderr` and orchestration proceeds.
+- **Bootstrapping**: If telemetry is enabled but the SDK fails to start (e.g., port conflict), a warning is printed to `stderr` and the runtime continues without telemetry.
+- **Metric Verification**: A-Society emits metrics including `a_society.session.turn.started` and `a_society.provider.latency`. These can be verified using any OTLP-compatible Prometheus exporter or collector.
 

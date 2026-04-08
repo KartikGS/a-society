@@ -2,14 +2,14 @@
 
 ## System Overview
 
-A-Society is a framework for making projects agentic-friendly. Its foundation is documentation — structured context that agents read and follow — but its work product now includes programmatic layers: executable tooling utilities and a planned runtime that manages agent sessions directly. Understanding the structure is understanding the architecture.
+A-Society is a framework for making projects agentic-friendly. Its foundation is documentation — structured context that agents read and follow — but its work product now includes programmatic layers: executable tooling utilities and a runtime that manages agent sessions directly. Understanding the structure is understanding the architecture.
 
 A-Society has five top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
 - **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal tooling.
 - **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in TypeScript (tsx runtime, ESM); invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
-- **`runtime/`** — the programmatic orchestration layer. Manages agent sessions end to end: injecting context from role definitions and workflow documents, routing handoffs between sessions, and triggering framework tools automatically. The runtime calls LLM APIs directly and provides its own interface — it is not a plugin for existing editors. Planned; not yet implemented. Technology: TypeScript/Node.js, consistent with the tooling layer.
+- **`runtime/`** — the programmatic orchestration layer. Manages agent sessions end to end: injecting context from role definitions and workflow documents, routing handoffs between sessions, and triggering framework tools automatically. The runtime calls LLM APIs directly and provides its own interface — it is not a plugin for existing editors. Implemented in TypeScript/Node.js and active in this repository, consistent with the tooling layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
 The tooling layer comprises six components, each covering a distinct deterministic operation:
@@ -25,12 +25,12 @@ The tooling layer comprises six components, each covering a distinct determinist
 
 Component numbers reflect the implementation phase order (Phases 1–5 in the approved proposal). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
 
-**Node.js project initialization:** The `tooling/` directory is initialized with Node.js project scaffolding (`package.json`, directory structure) by the Tooling Developer after the Owner approves this architecture document update. This is a Developer responsibility — the Curator does not write to `tooling/`.
+**Node.js project initialization:** The `tooling/` directory is a Node.js project with its own scaffolding (`package.json`, directory structure, and test infrastructure) maintained by the Tooling Developer. This remains a Developer responsibility — the Curator does not write to `tooling/`.
 
 Two indexes govern path resolution:
 
-- **`a-society/index.md`** — the public index. Covers all paths in `general/`, `agents/`, and `tooling/`. External agents and project owners resolve paths here.
-- **`a-society/a-docs/indexes/main.md`** — the internal index. Covers paths within `a-docs/`. Internal agents (Owner, Curator, Tooling Developer) resolve paths here.
+- **`a-society/index.md`** — the public index. Covers all public-facing paths in `general/`, `agents/`, and the operator entry points in `tooling/` and `runtime/`. External agents and project owners resolve paths here.
+- **`a-society/a-docs/indexes/main.md`** — the internal index. Covers A-Society's internal documentation set plus the internal-facing and operator-facing references that A-Society roles maintain directly. Internal agents resolve paths here.
 
 ---
 

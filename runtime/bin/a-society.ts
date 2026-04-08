@@ -2,6 +2,9 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
 
+import { TelemetryManager } from '../src/observability.js';
+TelemetryManager.init();
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { select } from '@inquirer/prompts';
@@ -78,7 +81,11 @@ async function main() {
   }
 }
 
-main().catch(err => {
+try {
+  await main();
+} catch (err: any) {
   console.error(`Fatal error:`, err);
   process.exit(1);
-});
+} finally {
+  await TelemetryManager.shutdown();
+}

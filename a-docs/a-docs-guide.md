@@ -1,6 +1,6 @@
 # A-Society: Agent-Docs Guide
 
-This document explains why each file and folder in `a-society/`'s agent-docs exists — its purpose, what it is responsible for, and what would break if it were removed or consolidated with something else. It is written for the Curator: the agent responsible for maintaining these files.
+This document explains why each file and folder in A-Society's internal documentation set exists, plus the operator-facing invocation references the Curator maintains during registration work. For each surface it records purpose, responsibility, and what would break if it were removed or consolidated incorrectly. It is written for the Curator: the agent responsible for maintaining these surfaces.
 
 This is not a directory listing. It is a rationale document. Read it before maintaining any file in this project.
 
@@ -24,7 +24,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Curator cannot maintain files it does not understand. This document ensures the Curator knows not just where files are (that is the index's job) but *why each file exists* — so it can maintain them correctly, avoid consolidating things that must stay separate, and recognize when a file's purpose has drifted.
 
-**What it owns:** Rationale for every significant file and folder in this project's agent-docs.
+**What it owns:** Rationale for every significant file and folder in this project's internal documentation set, plus the load-bearing operator references the Curator maintains directly.
 
 **Do not consolidate with:** `project-information/structure.md` (structure explains folder placement rules; this explains file purpose) or `agents.md` (agents.md is the entry point for all agents; this is deep context for the Curator specifically).
 
@@ -138,7 +138,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Owner role now uses just-in-time reads for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner.md` can stay a routing guide instead of carrying all phase instructions inline.
 
-**What it owns:** The Owner's on-demand support documents: brief/constraint writing, review behavior, log management, TA advisory review, and forward pass closure.
+**What it owns:** The Owner's on-demand support documents: brief/constraint writing, review behavior, log management, TA advisory and integration-gate review, and forward pass closure.
 
 **What breaks without it:** Those instructions either creep back into `roles/owner.md` or scatter into unrelated locations such as `workflow/`, making the read path harder to follow and the role file harder to maintain.
 
@@ -184,11 +184,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner/ta-advisory-review.md` — `$A_SOCIETY_OWNER_TA_REVIEW`
 
-**Why it exists:** TA advisory review guidance only matters when the Owner is reviewing a Technical Architect advisory. It should not be carried inline in the Owner role for sessions that never involve a TA.
+**Why it exists:** TA advisory and integration-gate review guidance only matters when the Owner is reviewing a Technical Architect advisory or deciding whether a TA-reviewed implementation clears the integration gate. It should not be carried inline in the Owner role for sessions that never involve a TA.
 
-**What it owns:** The preserved `## TA Advisory Review` guidance extracted from `roles/owner.md`.
+**What it owns:** The preserved `## TA Advisory Review` guidance extracted from `roles/owner.md`, plus the Owner's contract-review checks for TA-reviewed integration gates.
 
-**What breaks without it:** TA-specific review instructions either bloat the Owner role file or get misplaced into broader workflow docs where they no longer read as Owner-only obligations.
+**What breaks without it:** TA-specific review instructions either bloat the Owner role file or get misplaced into broader workflow docs where they no longer read as Owner-only obligations. Integration-gate decisions become ad hoc instead of following a stable Owner-side evidence hierarchy.
 
 **Do not consolidate with:** `roles/owner.md` — this is conditional review guidance, not universal role identity. Do not consolidate with `roles/owner/brief-writing.md` — advisory review and brief writing are different phases with different checks.
 
@@ -561,6 +561,34 @@ These files live in `a-docs/tooling/`. They are the design, specification, asses
 **What breaks without it:** The basis for the post-Phase 2 spec updates to the proposal is undiscoverable. The ruling that accepted hardcoded rendering in Component 2 and the VERSION.md history table approach in Component 6 cannot be verified. Future agents maintaining the tooling layer cannot trace why those two components diverge from an implementation-neutral reading of the spec.
 
 **Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the authoritative spec; the assessment records the process by which the spec was revised. Merging them would obscure the deviation-ruling-update chain.
+
+---
+
+## Operator References
+
+These files live in the executable layers rather than in `a-docs/`, but they are still Curator-maintained reference surfaces: internal roles verify them against live behavior, index them, and keep their rationale in view.
+
+### `tooling/INVOCATION.md` — `$A_SOCIETY_TOOLING_INVOCATION`
+
+**Why it exists:** The tooling layer is executable work product. Agents and maintainers need one operator-facing surface that states how each tool is invoked, what the entry points are, and what error conventions apply. Without it, interface knowledge fragments across proposals, tests, and source files.
+
+**What it owns:** The tooling quick-start, per-component invocation entry points, examples, and operator-facing error conventions.
+
+**What breaks without it:** Agents cannot invoke the tooling layer reliably from a stable reference. The Curator and TA lose the canonical documentation surface they compare against the live implementation.
+
+**Do not consolidate with:** `a-docs/tooling/main.md` — that file is orientation to the tooling documentation set; this file is the operator reference for the executable layer. Do not consolidate with `a-docs/tooling/architecture-proposal.md` — the proposal is the design spec, not the invocation contract.
+
+---
+
+### `runtime/INVOCATION.md` — `$A_SOCIETY_RUNTIME_INVOCATION`
+
+**Why it exists:** The runtime is an executable operator surface with commands, UX behaviors, and environment variables that must be discoverable without reading source files. This reference is the canonical place where that surface is documented.
+
+**What it owns:** Runtime entry points, CLI usage, interactive/autonomous UX notes, error and warning behaviors, and environment-driven configuration such as telemetry settings.
+
+**What breaks without it:** Operators and reviewers infer runtime behavior from source code or historical artifacts. The Curator, TA, and Owner lose the stable operator-facing document they are expected to compare against the implementation at review and registration time.
+
+**Do not consolidate with:** `workflow/runtime-development.md` — the workflow defines how the runtime is designed and reviewed, not how operators invoke it. Do not consolidate with `project-information/architecture.md` — architecture explains what the runtime is; this file explains how to run it.
 
 ---
 

@@ -1,6 +1,9 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
+
+import { TelemetryManager } from './observability.js';
+TelemetryManager.init();
 import { SessionStore } from './store.js';
 import { FlowOrchestrator, parseWorkflow } from './orchestrator.js';
 import path from 'node:path';

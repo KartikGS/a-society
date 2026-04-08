@@ -3,13 +3,15 @@ import { OpenAICompatibleProvider } from './providers/openai-compatible.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult, TurnUsage } from './types.js';
 import { LLMGatewayError } from './types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from './tools/file-executor.js';
+import { TelemetryManager } from './observability.js';
+import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from './types.js';
 
 function createProvider(name: string): LLMProvider {
   switch (name) {
-    case 'anthropic':        return new AnthropicProvider();
+    case 'anthropic':        return new AnthropicProvider(process.env.ANTHROPIC_API_KEY || '');
     case 'openai-compatible': return new OpenAICompatibleProvider();
     default:
       throw new LLMGatewayError(
@@ -42,58 +44,83 @@ export class LLMGateway {
     messageHistory: RuntimeMessageParam[],
     options?: TurnOptions
   ): Promise<GatewayTurnResult> {
-    if (!this.tools || !this.executor) {
-      const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
-      if (result.type === 'text') return { text: result.text, usage: result.usage };
-      throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
-    }
-
-    let accInputTokens = 0;
-    let accOutputTokens = 0;
-    let anyUsage = false;
-
-    const MAX_TOOL_ROUNDS = 50;
-    let messages: RuntimeMessageParam[] = [...messageHistory];
-    const intermediateMessages: RuntimeMessageParam[] = [];
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      if (options?.signal?.aborted) {
-        throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
+    const tracer = TelemetryManager.getTracer();
+    const toolsEnabled = !!(this.tools && this.executor);
+    return tracer.startActiveSpan('llm.gateway.execute_turn', { 
+      kind: SpanKind.INTERNAL,
+      attributes: {
+        'llm.tools_enabled': toolsEnabled,
+        'llm.message_count': messageHistory.length
       }
+    }, async (span) => {
+      try {
+        if (!this.tools || !this.executor) {
+          const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
+          if (result.type === 'text') return { text: result.text, usage: result.usage };
+          throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
+        }
 
-      const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+        let accInputTokens = 0;
+        let accOutputTokens = 0;
+        let anyUsage = false;
 
-      if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
-      if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
-
-      if (result.type === 'text') {
-        const usage: TurnUsage | undefined = anyUsage
-          ? { inputTokens: accInputTokens, outputTokens: accOutputTokens }
-          : undefined;
-        return { text: result.text, usage, intermediateMessages: intermediateMessages.length > 0 ? intermediateMessages : undefined };
-      }
-
-      for (const call of result.calls) {
-        const pathArg = call.input?.path as string | undefined;
-        process.stderr.write(`[${call.name}${pathArg ? ': ' + pathArg : ''}]\n`);
-      }
-
-      const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
-        result.calls.map(async (call) => {
-          let content: string, isError: boolean;
-          if (call.parseError) {
-            content = `Error: could not parse tool arguments: ${call.parseError}`;
-            isError = true;
-          } else {
-            const res = await this.executor!.execute(call);
-            content = res.content;
-            isError = res.isError;
+        const MAX_TOOL_ROUNDS = 50;
+        let messages: RuntimeMessageParam[] = [...messageHistory];
+        const intermediateMessages: RuntimeMessageParam[] = [];
+        for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+          if (options?.signal?.aborted) {
+            throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
           }
-          return { role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError };
-        })
-      );
-      intermediateMessages.push(...result.continuationMessages, ...toolResultMessages);
-      messages = [...messages, ...result.continuationMessages, ...toolResultMessages];
-    }
-    throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (50). The session has been aborted.');
+
+          const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+
+          if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
+          if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
+
+          if (result.type === 'text') {
+            const usage: TurnUsage | undefined = anyUsage
+              ? { inputTokens: accInputTokens, outputTokens: accOutputTokens }
+              : undefined;
+            span.setAttribute('llm.tool_round_count', round);
+            return { text: result.text, usage, intermediateMessages: intermediateMessages.length > 0 ? intermediateMessages : undefined };
+          }
+
+          span.addEvent('llm.tool_round', { round_index: round, call_count: result.calls.length });
+          for (const call of result.calls) {
+            span.addEvent('llm.tool_call', { 
+              'llm.tool_name': call.name, 
+              'llm.tool_id': call.id 
+            });
+            const pathArg = call.input?.path as string | undefined;
+            process.stderr.write(`[${call.name}${pathArg ? ': ' + pathArg : ''}]\n`);
+          }
+
+          const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
+            result.calls.map(async (call) => {
+              let content: string, isError: boolean;
+              if (call.parseError) {
+                content = `Error: could not parse tool arguments: ${call.parseError}`;
+                isError = true;
+              } else {
+                const res = await this.executor!.execute(call);
+                content = res.content;
+                isError = res.isError;
+              }
+              return { role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError };
+            })
+          );
+          intermediateMessages.push(...result.continuationMessages, ...toolResultMessages);
+          messages = [...messages, ...result.continuationMessages, ...toolResultMessages];
+        }
+        span.addEvent('llm.max_rounds_exceeded', { limit: MAX_TOOL_ROUNDS });
+        throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (50). The session has been aborted.');
+      } catch (e: any) {
+        span.recordException(e);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw e;
+      } finally {
+        span.end();
+      }
+    });
   }
 }
