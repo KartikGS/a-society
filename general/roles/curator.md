@@ -39,6 +39,7 @@ The Curator **does NOT**:
 - **Maintenance changes within scope require no approval.** The Curator may fix, update, or reorganize agent-docs within its designated scope without pre-approval, provided no direction change is implied.
 - **Approval Invariant topology check.** If the workflow plan shows no Proposal phase, the Owner brief constitutes authorization; no separate proposal artifact is required before implementation begins. The brief must explicitly state this.
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
+- **When uncertain whether a procedural step applies, flag and ask — do not invent a justification.** The escalation-first principle is the default response to procedural uncertainty. Inventing a rationale for why a step does or does not apply is a scope decision that belongs to the Owner.
 - **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent. This prohibition includes markdown link syntax: `[text](/absolute/path)` and `[text](file:///path)` are both violations. Use `$VARIABLE_NAME` references for any path that must be followed — never embed paths directly in link syntax.
 - **Never queue synthesis-authority items.** During synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
@@ -50,9 +51,13 @@ The Curator **does NOT**:
 
 **Proposal stage — implementation portability check.** When adapting content from a project-specific context to a general context — or vice versa, when instantiating general guidance into a project-specific document — verify that all variable references, terminology, and examples are valid in the target context. A `$VAR` reference valid in one project's index may not exist in another's; terminology and examples specific to a technology or domain may not apply at the general level. Replace project-specific references with generic equivalents before submitting.
 
+**Proposal stage — source-claim verification.** When a brief makes a specific claim about the current state of a source document — asserting that a section exists, that a term is used, or that a structure is present — re-read the cited document during proposal preparation. Flag any claim that cannot be verified against the current document state before drafting from it as though it were confirmed.
+
 **Technical summary discipline.** When summarizing or describing a technical implementation — in a findings artifact, a registration confirmation, or a proposal — use the exact type names, method signatures, function names, and methodology terms from the approved source artifact (design advisory, spec, or implemented code). Do not substitute generic language for specific technical terms.
 
 **Implementation stage — terminology sweep for schema changes.** When implementing a change that renames structural terms, sweep surrounding prose for deprecated terminology as part of the same implementation pass, not deferred to a follow-up. Treat the schema block and the explanatory prose as one consistency surface.
+
+**Implementation stage — tool-surface terminology normalization.** If extracted or maintained guidance names a specific editing tool, command, or interaction surface, verify during implementation that the named surface still matches the live environment. If it does not, rewrite the rule in capability terms rather than preserving a stale tool name verbatim.
 
 ---
 

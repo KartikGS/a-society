@@ -57,7 +57,7 @@ The Curator **does NOT**:
 
 ## Just-in-Time Reads
 
-When preparing a proposal, implementing approved changes, or completing registration work, read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
+Before preparing a proposal, beginning implementation, or completing registration work, stop and read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
 
 ---
 

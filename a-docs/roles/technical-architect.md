@@ -60,7 +60,7 @@ Before any implementation begins, the Technical Architect produces:
 
 ## Just-in-Time Reads
 
-When producing a technical advisory, component design, or integration review, read `$A_SOCIETY_TA_ADVISORY_STANDARDS`.
+Before producing a technical advisory, component design, or integration review, read `$A_SOCIETY_TA_ADVISORY_STANDARDS`.
 
 ---
 

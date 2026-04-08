@@ -45,6 +45,11 @@ To eliminate ambiguity and implementation cycles, every advisory must meet these
 5.  **Identifier-Mapping Rules:** All load-bearing identifier-mapping rules (e.g., mapping a human-readable name to a machine-key) must be stated explicitly with worked examples and defined failure behavior.
 6.  **Repo-Relative Paths:** Use exact repository-relative paths in all file references and "Files Changed" tables.
 7.  **Developer Path Portability:** Require that any produced implementation reports or backward-pass findings use repository-relative paths throughout; absolute paths and `file://` URLs are prohibited.
+8.  **Brief constraint evaluation:** when a brief contains design constraints, distinguish hard constraints from design preferences before anchoring to them; if a constraint is really a preference, surface the alternative comparison explicitly rather than silently accepting the preference as mandatory.
+9.  **Current-state claims from required reading:** when required-reading or orientation documents make current-state claims that materially constrain advisory scope, spot-check the live codebase before relying on those claims as implementation-state evidence.
+10. **Approved schema identifier names are contract terms:** when an advisory defines queryable identifiers (attribute names, event names, field names, or equivalent schema terms), exact name conformance is blocking unless the approved design is revised.
+11. **Instrumentation test scope must distinguish schema shape from production-path execution:** when an advisory specifies observability or instrumentation tests, it must say whether each test proves schema shape, production-path coverage, or both; if the integration gate depends on real coverage, the advisory must explicitly require production-path execution.
+12. **Instrumentation boundary definitions require call-site enumeration:** before defining a span or instrumentation boundary around a function reached from multiple execution paths, enumerate the invocation paths explicitly so the boundary covers all intended call sites.
 
 ### Extension Before Bypass (Architecture and Infrastructure)
 

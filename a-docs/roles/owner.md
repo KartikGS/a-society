@@ -27,7 +27,7 @@ The Owner **owns**:
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
 - **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, read `$A_SOCIETY_WORKFLOW` to route it.
-- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When managing the log or filing Next Priorities items, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
+- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. Before routing intake work that may update Next Priorities, filing or merging Next Priorities items, or otherwise managing the log, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
 
 The Owner **does NOT**:
 - Write content for specific projects using the framework (e.g., `llm-journey/` content)
@@ -72,15 +72,15 @@ Then route per `$A_SOCIETY_WORKFLOW`. If the human explicitly asks to discuss or
 
 ## Just-in-Time Reads
 
-When writing a brief or review constraint, read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+Before writing a brief or review constraint, read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
 
-When reviewing an addition, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`.
+Before reviewing an addition, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`.
 
-When managing `$A_SOCIETY_LOG` or `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
+Before routing intake work that may update Next Priorities, filing or merging Next Priorities items, or otherwise managing `$A_SOCIETY_LOG` or `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
 
-When reviewing a TA advisory or TA integration report, read `$A_SOCIETY_OWNER_TA_REVIEW`.
+Before reviewing a TA advisory or TA integration report, read `$A_SOCIETY_OWNER_TA_REVIEW`.
 
-When closing a forward pass, read `$A_SOCIETY_OWNER_CLOSURE`.
+Before closing a forward pass, read `$A_SOCIETY_OWNER_CLOSURE`.
 
 ---
 

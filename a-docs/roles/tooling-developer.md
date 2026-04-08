@@ -52,7 +52,7 @@ The Tooling Developer does **NOT** own:
 
 ## Just-in-Time Reads
 
-When completing a phase, preparing a completion report, or handing off implementation status, read `$A_SOCIETY_TOOLING_DEV_INVOCATION`.
+Before completing a phase, preparing a completion report, or handing off implementation status, read `$A_SOCIETY_TOOLING_DEV_INVOCATION`.
 
 When you need to understand automation scope boundaries or original component specifications, consult `$A_SOCIETY_TOOLING_PROPOSAL` and `$A_SOCIETY_TOOLING_ADDENDUM`.
 

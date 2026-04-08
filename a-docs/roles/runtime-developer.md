@@ -47,7 +47,7 @@ The Runtime Developer does **NOT** own:
 
 ## Just-in-Time Reads
 
-When implementing or validating runtime changes, read `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE`.
+Before implementing or validating runtime changes, read `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE`.
 
 ---
 
