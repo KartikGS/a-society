@@ -25,6 +25,7 @@ try {
 export class TelemetryManager {
   private static instance: NodeSDK | null = null;
   private static testProvider: any = null;
+  private static testMeterProvider: any = null;
   private static tracer: opentelemetry.Tracer | null = null;
   private static meter: opentelemetry.Meter | null = null;
 
@@ -77,9 +78,9 @@ export class TelemetryManager {
     process.on('beforeExit', () => this.shutdown());
   }
 
-  static async initForTest(traceExporter: SpanExporter): Promise<void> {
+  static async initForTest(traceExporter: SpanExporter, metricExporter?: any): Promise<void> {
     await this.shutdown();
-    
+
     const resource = Resource.default().merge(new Resource({
       [SemanticResourceAttributes.SERVICE_NAME]: 'a-society-runtime-test',
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'a-society',
@@ -87,6 +88,7 @@ export class TelemetryManager {
     }));
 
     const { BasicTracerProvider } = await import('@opentelemetry/sdk-trace-base');
+    const { MeterProvider, PeriodicExportingMetricReader } = await import('@opentelemetry/sdk-metrics');
     const { AsyncHooksContextManager } = await import('@opentelemetry/context-async-hooks');
     const opentelemetryApi = await import('@opentelemetry/api');
 
@@ -100,8 +102,31 @@ export class TelemetryManager {
     contextManager.enable();
     opentelemetryApi.context.setGlobalContextManager(contextManager);
 
+    if (metricExporter) {
+      this.testMeterProvider = new MeterProvider({ resource });
+      this.testMeterProvider.addMetricReader(new PeriodicExportingMetricReader({
+        exporter: metricExporter,
+        exportIntervalMillis: 60_000,
+      }));
+      opentelemetryApi.metrics.setGlobalMeterProvider(this.testMeterProvider);
+    } else {
+      this.testMeterProvider = null;
+    }
+
     this.tracer = this.testProvider.getTracer('a-society-runtime');
-    this.meter = null;
+    this.meter = opentelemetryApi.metrics.getMeter('a-society-runtime');
+  }
+
+  static async forceFlush(): Promise<void> {
+    if (this.instance && typeof (this.instance as any).forceFlush === 'function') {
+      await (this.instance as any).forceFlush();
+    }
+    if (this.testProvider && typeof this.testProvider.forceFlush === 'function') {
+      await this.testProvider.forceFlush();
+    }
+    if (this.testMeterProvider && typeof this.testMeterProvider.forceFlush === 'function') {
+      await this.testMeterProvider.forceFlush();
+    }
   }
 
   static async shutdown(): Promise<void> {
@@ -112,6 +137,10 @@ export class TelemetryManager {
     if (this.testProvider) {
       await this.testProvider.shutdown();
       this.testProvider = null;
+    }
+    if (this.testMeterProvider) {
+      await this.testMeterProvider.shutdown();
+      this.testMeterProvider = null;
     }
     this.tracer = null;
     this.meter = null;

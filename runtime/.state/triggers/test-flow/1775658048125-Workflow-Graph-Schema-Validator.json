@@ -1,0 +1,7 @@
+{
+  "toolComponent": "Workflow Graph Schema Validator",
+  "inputSummary": "{\"workflowDocumentPath\":\"/tmp/a-society-test-h3WsLy/record/workflow.md\"}",
+  "resultSummary": "Component 3 execution success: Validated format at /tmp/a-society-test-h3WsLy/record/workflow.md",
+  "success": true,
+  "retryStatus": "none"
+}

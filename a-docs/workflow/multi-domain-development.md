@@ -110,6 +110,19 @@ Not every multi-domain flow includes all roles. Omit nodes that do not apply; ke
 
 ---
 
+## Workflow-Linked Support Docs
+
+- **`owner-intake`** — Before routing intake work that may update Next Priorities or otherwise managing `$A_SOCIETY_LOG` / `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`. If the Owner will issue briefs or detailed downstream constraints, also read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+- **`ta-design`, `ta-integration`** — Before producing design or integration-review output, read `$A_SOCIETY_TA_ADVISORY_STANDARDS`.
+- **`tooling-implementation`** — Before handing off implementation status or filing a completion artifact, read `$A_SOCIETY_TOOLING_DEV_INVOCATION`.
+- **`runtime-implementation`** — Before implementing or validating runtime changes for the track handoff, read `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE`.
+- **`owner-integration-gate`** — Before reviewing TA integration output or deciding the convergence gate, read `$A_SOCIETY_OWNER_TA_REVIEW`. If the gate artifact adds detailed downstream constraints, also read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+- **`curator-proposal`, `curator-implementation`** — Before proposal drafting, implementation, or registration/maintenance verification, read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
+- **`owner-curator-approval`** — Before reviewing Curator-submitted documentation artifacts, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`. If the decision artifact adds detailed downstream constraints, also read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+- **`owner-closure`** — Before updating `$A_SOCIETY_LOG`, managing `$A_SOCIETY_LOG_ARCHIVE`, or filing closure, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT` and `$A_SOCIETY_OWNER_CLOSURE`.
+
+---
+
 ## Parallel tracks
 
 After a **shared planning or TA design** phase, the graph may **fork** to two or more implementation nodes that run **concurrently**. Each track produces completion artifacts (e.g., completion reports) consumed by a **join** node — typically **TA integration review**, then **Owner integration gate**.

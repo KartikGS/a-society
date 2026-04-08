@@ -55,9 +55,9 @@ The Curator **does NOT**:
 
 ---
 
-## Just-in-Time Reads
+## Workflow-Linked Support Docs
 
-Before preparing a proposal, beginning implementation, or completing registration work, stop and read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
+Phase-specific support documents for this role are surfaced from the active workflow at the phase where they apply. Follow the workflow's references for proposal, implementation, and registration work rather than pre-loading those documents from this role file.
 
 ---
 

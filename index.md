@@ -78,8 +78,15 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$GENERAL_ADOCS_DESIGN` | `/a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | **Role Templates** | | |
 | `$GENERAL_OWNER_ROLE` | `/a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
+| `$GENERAL_OWNER_BRIEF_WRITING` | `/a-society/general/roles/owner/brief-writing.md` | Ready-made Owner brief-writing and constraint-writing support doc template |
+| `$GENERAL_OWNER_REVIEW_BEHAVIOR` | `/a-society/general/roles/owner/review-behavior.md` | Ready-made Owner contribution-review support doc template |
+| `$GENERAL_OWNER_LOG_MANAGEMENT` | `/a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
+| `$GENERAL_OWNER_TA_REVIEW` | `/a-society/general/roles/owner/ta-advisory-review.md` | Ready-made Owner advisory and integration-gate review support doc template |
+| `$GENERAL_OWNER_CLOSURE` | `/a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
 | `$GENERAL_CURATOR_ROLE` | `/a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
-| `$GENERAL_TA_ROLE` | `/a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — advisory standards, extension-before-bypass, explicit failure states for external input |
+| `$GENERAL_CURATOR_IMPL_PRACTICES` | `/a-society/general/roles/curator/implementation-practices.md` | Ready-made Curator proposal, implementation, and registration-practices support doc template |
+| `$GENERAL_TA_ROLE` | `/a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — authority, boundaries, and workflow-linked support-doc routing |
+| `$GENERAL_TA_ADVISORY_STANDARDS` | `/a-society/general/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template |
 | **Communication Templates** | | |
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `/a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
 | **Thinking Templates** | | |

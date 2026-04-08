@@ -70,17 +70,9 @@ Then route per `$A_SOCIETY_WORKFLOW`. If the human explicitly asks to discuss or
 
 ---
 
-## Just-in-Time Reads
+## Workflow-Linked Support Docs
 
-Before writing a brief or review constraint, read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
-
-Before reviewing an addition, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`.
-
-Before routing intake work that may update Next Priorities, filing or merging Next Priorities items, or otherwise managing `$A_SOCIETY_LOG` or `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
-
-Before reviewing a TA advisory or TA integration report, read `$A_SOCIETY_OWNER_TA_REVIEW`.
-
-Before closing a forward pass, read `$A_SOCIETY_OWNER_CLOSURE`.
+Phase-specific support documents for this role are surfaced from the active workflow at the gate where they apply. Follow the workflow's references for intake/log work, brief or constraint writing, proposal review, TA-output review, and forward-pass closure rather than pre-loading those documents from this role file.
 
 ---
 

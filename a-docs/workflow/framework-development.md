@@ -63,6 +63,16 @@ These are not workflow phases. They are what creates the input for Phase 1.
 
 ---
 
+## Workflow-Linked Support Docs
+
+- **Phase 0 / `owner-intake-briefing`** — Before routing intake work that may update Next Priorities or otherwise managing `$A_SOCIETY_LOG` / `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`. If the flow is Tier 2 or 3 and the Owner will write a brief, read `$A_SOCIETY_OWNER_BRIEF_WRITING` before drafting it.
+- **Phase 1 / `curator-proposal`** — Before drafting the proposal, read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
+- **Phase 2 / `owner-review`** — Before reviewing the proposal, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`. If the decision artifact adds downstream implementation constraints or file-specific directions, also read `$A_SOCIETY_OWNER_BRIEF_WRITING` before finalizing it.
+- **Phase 3-4 / `curator-implementation-registration`** — Before implementation and again before registration/maintenance verification, read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
+- **Phase 5 / `owner-closure-acknowledgment`** — Before updating `$A_SOCIETY_LOG`, managing `$A_SOCIETY_LOG_ARCHIVE`, or filing closure, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT` and `$A_SOCIETY_OWNER_CLOSURE`.
+
+---
+
 ## Phases
 
 ### Phase 0 — Intake

@@ -45,9 +45,9 @@ The Runtime Developer does **NOT** own:
 
 ---
 
-## Just-in-Time Reads
+## Workflow-Linked Support Docs
 
-Before implementing or validating runtime changes, read `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE`.
+Phase-specific support documents for this role are surfaced from the active workflow at the implementation or validation phase where they apply. Follow the workflow's references there rather than pre-loading those documents from this role file.
 
 ---
 

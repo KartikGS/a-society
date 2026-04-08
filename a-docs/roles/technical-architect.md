@@ -58,9 +58,9 @@ Before any implementation begins, the Technical Architect produces:
 
 ---
 
-## Just-in-Time Reads
+## Workflow-Linked Support Docs
 
-Before producing a technical advisory, component design, or integration review, read `$A_SOCIETY_TA_ADVISORY_STANDARDS`.
+Phase-specific support documents for this role are surfaced from the active workflow at the advisory or review phase where they apply. Follow the workflow's references there rather than pre-loading those documents from this role file.
 
 ---
 

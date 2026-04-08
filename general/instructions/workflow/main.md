@@ -8,6 +8,8 @@ A workflow document describes the repeatable process by which work moves through
 
 It is not a role document. It is not a requirements template. It is the living map of the project's execution loop — the document every agent consults when they ask "what do I do next?"
 
+It is also the delivery surface for phase-linked support docs. If a role needs a companion document at proposal time, review time, implementation handoff, or closure, the workflow is the place that says "read this now."
+
 A workflow document is read at session start and referenced during execution. It must be specific enough to prevent guessing and stable enough to survive many CRs without requiring constant updates.
 
 ---
@@ -112,6 +114,7 @@ What are the named stages that every unit of work passes through? Each phase is 
 - **Owner** — which role runs this node. The phase owner is always an agent role — never a human. Human involvement is encoded via the `Human-collaborative` field.
 - **Output** — what artifact or state this node produces (the exit condition; what fires the outgoing edge)
 - **Human-collaborative** *(when applicable)* — the nature of human contribution to this phase. Presence of this field indicates the assigned agent acts as the human interface for this work; see the Human-Collaborative Phase Pattern below.
+- **Supporting docs** *(when applicable)* — any phase-specific support docs the role must read at this node. The workflow is the place that surfaces these docs at the moment they become relevant.
 
 #### Human-Collaborative Phase Pattern
 
@@ -187,6 +190,8 @@ A backward pass entry in the workflow document names the roles involved and wher
 
 If the workflow document grows sections that describe specific artifact formats or role-specific behaviors in depth, those sections belong in sub-documents. The workflow document describes the process; sub-documents describe the artifacts produced by that process.
 
+What does belong here when relevant is the phase-entry cue that activates a support doc: the workflow says when a role must read it.
+
 ---
 
 ## Sub-Document Structure
@@ -219,7 +224,7 @@ Do not create sub-folders preemptively. If a project has no requirements artifac
 Give the workflow a name. Decide whether it runs once at a time (single-instance) or may have multiple traversals running simultaneously (multi-instance). If multi-instance, define the unit-of-work ID slug vocabulary the project will use.
 
 **Step 2 — Name the phases (nodes).**
-List every stage that a unit of work passes through. For each node: name it, assign an owner role, define its input (what arrives), define its output (what it produces), and note whether the phase requires human collaboration (see the Human-Collaborative Phase Pattern in Section 1). Phase 1 always carries the `Human-collaborative` field as a structural rule. If a stage has no owner, it is not a stage — it is a gap.
+List every stage that a unit of work passes through. For each node: name it, assign an owner role, define its input (what arrives), define its output (what it produces), note whether the phase requires human collaboration (see the Human-Collaborative Phase Pattern in Section 1), and list any phase-specific support docs that must be read at this node. Phase 1 always carries the `Human-collaborative` field as a structural rule. If a stage has no owner, it is not a stage — it is a gap.
 
 **Step 3 — Define handoffs (edges).**
 For each transition between nodes, define: the transition condition (when does the edge fire), the artifact that carries the handoff, what it must contain, and what the receiving role checks before acting.
@@ -240,7 +245,7 @@ Describe the backward pass — which roles participate and where findings go. Fo
 What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow `main.md`.
 
 **Step 9 — Cut what does not belong.**
-A workflow document that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files.
+A workflow document that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files. A role document that enumerates phase-triggered "before X, read Y" cues has drifted in the other direction; move those cues back into the workflow.
 
 ---
 

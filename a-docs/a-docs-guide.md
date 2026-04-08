@@ -124,11 +124,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner.md` — `$A_SOCIETY_OWNER_ROLE`
 
-**Why it exists:** The Owner role has authority boundaries, pushback posture, escalation triggers, and just-in-time routing guidance specific to A-Society. A generic template would not capture A-Society's project-specific review posture or the Owner support documents loaded at later moments.
+**Why it exists:** The Owner role has authority boundaries, pushback posture, escalation triggers, and workflow-linked support-doc routing specific to A-Society. A generic template would not capture A-Society's project-specific review posture or the Owner support documents surfaced at later workflow moments.
 
-**What it owns:** The A-Society Owner's authority, what they own and do not own, their standing pushback posture, and the routing pointers to the Owner's phase-specific support documents.
+**What it owns:** The A-Society Owner's authority, what they own and do not own, their standing pushback posture, and the routing guidance that tells the agent to rely on workflow-delivered Owner support documents.
 
-**What breaks without it:** An Owner agent has no specific behavioral contract or routing guidance for when to load the phase-specific Owner documents. They either over-reach (making framework changes beyond their authority), under-reach (asking the human for every small decision), or lose the structure that keeps phase detail out of the role file.
+**What breaks without it:** An Owner agent has no specific behavioral contract or routing guidance for how phase-specific Owner support docs are delivered. They either over-reach (making framework changes beyond their authority), under-reach (asking the human for every small decision), or lose the structure that keeps phase detail out of the role file.
 
 **Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific review tests. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
 
@@ -136,13 +136,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner/` — folder
 
-**Why it exists:** The Owner role now uses just-in-time reads for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner.md` can stay a routing guide instead of carrying all phase instructions inline.
+**Why it exists:** The Owner role now uses workflow-linked support docs for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner.md` can stay a routing guide while the workflow surfaces the right document at the right moment.
 
 **What it owns:** The Owner's on-demand support documents: brief/constraint writing, review behavior, log management, TA advisory and integration-gate review, and forward pass closure.
 
-**What breaks without it:** Those instructions either creep back into `roles/owner.md` or scatter into unrelated locations such as `workflow/`, making the read path harder to follow and the role file harder to maintain.
+**What breaks without it:** Those instructions either creep back into `roles/owner.md` or stop being reusable as distinct support docs, making the role file harder to maintain and the workflow's delivery cues less clear.
 
-**Do not consolidate with:** `roles/owner.md` — that file is the role contract and routing surface; this folder holds the documents it points to. Do not consolidate with `workflow/` — these are Owner-specific support docs, not shared workflow definitions.
+**Do not consolidate with:** `roles/owner.md` — that file is the role contract and routing surface; this folder holds the support docs the workflow surfaces later. Do not consolidate with `workflow/` — the workflow delivers these docs, but they remain Owner-specific support documents rather than shared workflow definitions.
 
 ---
 
@@ -224,7 +224,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What it owns:** The preserved `## Standing Checks` and `## Implementation Practices` guidance extracted from `roles/curator.md`.
 
-**What breaks without it:** Proposal and implementation detail creeps back into the role file, increasing startup context and weakening the just-in-time design model.
+**What breaks without it:** Proposal and implementation detail creeps back into the role file, increasing startup context and weakening the workflow-linked support-doc model.
 
 **Do not consolidate with:** `roles/curator.md` — role contract vs. execution guidance. Do not consolidate with `general/roles/curator.md` — this document is specific to A-Society's own Curator operating on A-Society.
 

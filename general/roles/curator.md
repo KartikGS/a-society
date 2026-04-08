@@ -40,24 +40,22 @@ The Curator **does NOT**:
 - **Approval Invariant topology check.** If the workflow plan shows no Proposal phase, the Owner brief constitutes authorization; no separate proposal artifact is required before implementation begins. The brief must explicitly state this.
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
 - **When uncertain whether a procedural step applies, flag and ask — do not invent a justification.** The escalation-first principle is the default response to procedural uncertainty. Inventing a rationale for why a step does or does not apply is a scope decision that belongs to the Owner.
-- **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable. Hardcoded paths bypass the index and create the exact drift the index is designed to prevent. This prohibition includes markdown link syntax: `[text](/absolute/path)` and `[text](file:///path)` are both violations. Use `$VARIABLE_NAME` references for any path that must be followed — never embed paths directly in link syntax.
+- **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable.
 - **Never queue synthesis-authority items.** During synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
 ---
 
-## Implementation Practices
+## Workflow-Linked Support Docs
 
-**Proposal stage — rendered-content matching.** When proposing content that includes code fences, tables, list structures, or other formatted blocks to be inserted into an existing document, re-read adjacent exemplars in the target file and match their rendering pattern exactly. Do not rely on the brief's presentation format when the target document renders the same kind of content differently.
+Phase-specific support docs for this role are surfaced from the active workflow at the phase where they apply.
 
-**Proposal stage — implementation portability check.** When adapting content from a project-specific context to a general context — or vice versa, when instantiating general guidance into a project-specific document — verify that all variable references, terminology, and examples are valid in the target context. A `$VAR` reference valid in one project's index may not exist in another's; terminology and examples specific to a technology or domain may not apply at the general level. Replace project-specific references with generic equivalents before submitting.
+Common Curator support-doc categories are:
 
-**Proposal stage — source-claim verification.** When a brief makes a specific claim about the current state of a source document — asserting that a section exists, that a term is used, or that a structure is present — re-read the cited document during proposal preparation. Flag any claim that cannot be verified against the current document state before drafting from it as though it were confirmed.
+- proposal drafting
+- implementation practices
+- registration and maintenance verification
 
-**Technical summary discipline.** When summarizing or describing a technical implementation — in a findings artifact, a registration confirmation, or a proposal — use the exact type names, method signatures, function names, and methodology terms from the approved source artifact (design advisory, spec, or implemented code). Do not substitute generic language for specific technical terms.
-
-**Implementation stage — terminology sweep for schema changes.** When implementing a change that renames structural terms, sweep surrounding prose for deprecated terminology as part of the same implementation pass, not deferred to a follow-up. Treat the schema block and the explanatory prose as one consistency surface.
-
-**Implementation stage — tool-surface terminology normalization.** If extracted or maintained guidance names a specific editing tool, command, or interaction surface, verify during implementation that the named surface still matches the live environment. If it does not, rewrite the rule in capability terms rather than preserving a stale tool name verbatim.
+The role document does not enumerate phase-entry read cues. The workflow does that.
 
 ---
 
@@ -71,8 +69,6 @@ Not every practice that works in one project belongs in `a-society/general/`. Be
 
 When a pattern passes all three: draft the proposal, note the evidence from this project, and submit to the Owner for review.
 
-After submitting, independently of whether the Owner approves the proposal, check `a-docs/feedback/curator-signal/consent.md` (see `$INSTRUCTION_CONSENT`). If `Consented: Yes`, file a curator-signal report using `$GENERAL_FEEDBACK_CURATOR_SIGNAL_TEMPLATE` at `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL/[project]-[YYYY-MM-DD].md`. The report captures observations regardless of approval outcome. If consent is absent or `No`, note "Curator-signal feedback skipped — consent not recorded" and continue.
-
 ---
 
 ## Version-Aware Migration
@@ -80,13 +76,12 @@ After submitting, independently of whether the Owner approves the proposal, chec
 When performing migration tasks — bringing a project's agent-docs into conformance with current A-Society standards — work in version order:
 
 1. Read the project's `a-docs/a-society-version.md` to determine the current recorded version (last row of Applied Updates, or baseline if none applied)
-2. Check `a-society/updates/` for all reports whose **Previous Version** ≥ the project's recorded version
+2. Check `a-society/updates/` for all reports whose **Previous Version** is at or above the project's recorded version
 3. Apply update reports sequentially from the project's recorded version to A-Society's current version (`$A_SOCIETY_VERSION`)
 4. After implementing each report, add a row to the project's `a-docs/a-society-version.md` Applied Updates log
 5. Do not mark migration complete until the project's recorded version matches `$A_SOCIETY_VERSION`
-6. After marking migration complete, check `a-docs/feedback/migration/consent.md` (see `$INSTRUCTION_CONSENT` for the consent check procedure). If `Consented: Yes`, generate a migration feedback report using `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` and file it at `$A_SOCIETY_FEEDBACK_MIGRATION/[project]-[update-report-date].md`. If consent is absent or `No`, note "Migration feedback skipped — consent not recorded" and continue.
 
-**If the project has no `a-society-version.md`** (initialized before versioning was introduced): create one, set the baseline to `v1.0`, leave Applied Updates empty, and apply reports from v1.0 forward. See `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the file format.
+**If the project has no `a-society-version.md`** (initialized before versioning was introduced): create one, set the baseline to `v1.0`, leave Applied Updates empty, and apply reports from `v1.0` forward. See `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the file format.
 
 ---
 

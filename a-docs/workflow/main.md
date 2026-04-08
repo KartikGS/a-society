@@ -4,6 +4,12 @@ This directory contains A-Society's permanent execution workflows. Each workflow
 
 ---
 
+## Phase-Linked Guidance
+
+These workflow documents are also the delivery surface for phase-specific support docs. When a workflow phase or gate tells a role to read a supporting document, treat that reference as part of the phase definition rather than as optional background reading from the role file.
+
+---
+
 ## Available Workflows
 
 ### Framework Development

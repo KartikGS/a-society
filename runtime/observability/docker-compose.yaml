@@ -1,0 +1,67 @@
+version: "3.8"
+
+networks:
+  a-society-observability:
+    driver: bridge
+
+services:
+  tempo:
+    image: grafana/tempo:2.4.1
+    container_name: a-society-tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "13200:3200"
+    networks:
+      - a-society-observability
+
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: a-society-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yaml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+    ports:
+      - "19090:9090"
+    networks:
+      - a-society-observability
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.93.0
+    container_name: a-society-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "14317:4317"
+      - "14318:4318"
+      - "18888:8888"
+      - "18889:8889"
+      - "13134:13133"
+    depends_on:
+      - tempo
+      - prometheus
+    networks:
+      - a-society-observability
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: a-society-grafana
+    volumes:
+      - ./grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: "traceqlEditor"
+    ports:
+      - "13000:3000"
+    depends_on:
+      - prometheus
+      - tempo
+    networks:
+      - a-society-observability

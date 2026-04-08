@@ -98,17 +98,59 @@ files:
     scaffold: copy
     source_path: general/roles/owner.md
 
+  - path: roles/owner/brief-writing.md
+    description: "Owner support doc — brief-writing and constraint-writing guidance surfaced by the workflow at relevant Owner phases"
+    required: false
+    scaffold: copy
+    source_path: general/roles/owner/brief-writing.md
+
+  - path: roles/owner/review-behavior.md
+    description: "Owner support doc — contribution-review guidance surfaced by the workflow at Owner review phases"
+    required: false
+    scaffold: copy
+    source_path: general/roles/owner/review-behavior.md
+
+  - path: roles/owner/log-management.md
+    description: "Owner support doc — intake and log-management guidance surfaced by the workflow at routing and closure moments"
+    required: false
+    scaffold: copy
+    source_path: general/roles/owner/log-management.md
+
+  - path: roles/owner/ta-advisory-review.md
+    description: "Owner support doc — advisory and integration-gate review guidance surfaced by workflows that use an advisory-producing role"
+    required: false
+    scaffold: copy
+    source_path: general/roles/owner/ta-advisory-review.md
+
+  - path: roles/owner/forward-pass-closure.md
+    description: "Owner support doc — forward-pass closure guidance surfaced by the workflow's terminal Owner phase"
+    required: false
+    scaffold: copy
+    source_path: general/roles/owner/forward-pass-closure.md
+
   - path: roles/curator.md
     description: "Curator role — agent-docs steward; maintenance, migration, and pattern distillation"
     required: true
     scaffold: copy
     source_path: general/roles/curator.md
 
+  - path: roles/curator/implementation-practices.md
+    description: "Curator support doc — proposal, implementation, and registration practices surfaced by the workflow at Curator phases"
+    required: false
+    scaffold: copy
+    source_path: general/roles/curator/implementation-practices.md
+
   - path: roles/technical-architect.md
-    description: "Technical Architect (advisory-producing) role — advisory standards, extension-before-bypass discipline, explicit failure states for external input; ready-made template for any role that scopes and specifies work for implementing roles"
+    description: "Technical Architect (advisory-producing) role — authority, boundaries, and workflow-linked support-doc routing for any role that scopes and specifies work for implementing roles"
     required: false
     scaffold: copy
     source_path: general/roles/technical-architect.md
+
+  - path: roles/technical-architect/advisory-standards.md
+    description: "Technical Architect support doc — advisory standards surfaced by workflows that use an advisory-producing role"
+    required: false
+    scaffold: copy
+    source_path: general/roles/technical-architect/advisory-standards.md
 
   # ── Workflow ──────────────────────────────────────────────────────────────────
 

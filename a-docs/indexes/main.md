@@ -30,7 +30,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_AGENTS` | `a-society/a-docs/agents.md` | A-Society agent orientation — entry point for all agents working on this project |
 | `$A_SOCIETY_AGENT_DOCS_GUIDE` | `a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's internal docs and Curator-maintained operator references exists — required reading for the Curator |
 | `$A_SOCIETY_ADOCS_DESIGN` | `a-society/a-docs/a-docs-design.md` | A-Society a-docs design principles — structural rules for authoring and maintaining the a-docs layer |
-| `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, review surfaces, and just-in-time routing to Owner phase guidance |
+| `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, boundaries, and workflow-linked support-doc routing |
 | `$A_SOCIETY_OWNER_BRIEF_WRITING` | `a-society/a-docs/roles/owner/brief-writing.md` | A-Society Owner brief-writing and constraint-writing guidance — loaded when the Owner drafts briefs or review constraints |
 | `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR` | `a-society/a-docs/roles/owner/review-behavior.md` | A-Society Owner review-behavior guidance — loaded when the Owner reviews a proposed addition |
 | `$A_SOCIETY_OWNER_LOG_MANAGEMENT` | `a-society/a-docs/roles/owner/log-management.md` | A-Society Owner log-management guidance — loaded when the Owner manages the project log or files Next Priorities |
@@ -53,8 +53,15 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
+| `$GENERAL_OWNER_BRIEF_WRITING` | `a-society/general/roles/owner/brief-writing.md` | Ready-made Owner brief-writing and constraint-writing support doc template |
+| `$GENERAL_OWNER_REVIEW_BEHAVIOR` | `a-society/general/roles/owner/review-behavior.md` | Ready-made Owner contribution-review support doc template |
+| `$GENERAL_OWNER_LOG_MANAGEMENT` | `a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
+| `$GENERAL_OWNER_TA_REVIEW` | `a-society/general/roles/owner/ta-advisory-review.md` | Ready-made Owner advisory and integration-gate review support doc template |
+| `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
 | `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
-| `$GENERAL_TA_ROLE` | `a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — advisory standards, extension-before-bypass, explicit failure states for external input |
+| `$GENERAL_CURATOR_IMPL_PRACTICES` | `a-society/general/roles/curator/implementation-practices.md` | Ready-made Curator proposal, implementation, and registration-practices support doc template |
+| `$GENERAL_TA_ROLE` | `a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — authority, boundaries, and workflow-linked support-doc routing |
+| `$GENERAL_TA_ADVISORY_STANDARDS` | `a-society/general/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_ADOCS_DESIGN` | `a-society/general/instructions/a-docs-design.md` | How to create and maintain an a-docs design-principles file for any project |
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |

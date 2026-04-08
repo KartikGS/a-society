@@ -8,7 +8,7 @@
 
 Scope, evaluate, and specify work for implementing roles — producing advisories complete enough that an implementing role can proceed from the specification alone without requiring design clarification.
 
-[CUSTOMIZE: describe what the advisory-producing role evaluates and specifies in this project — e.g., "automation boundary evaluation and component design for the programmatic tooling layer."]
+[CUSTOMIZE: describe what the advisory-producing role evaluates and specifies in this project.]
 
 ---
 
@@ -26,42 +26,17 @@ This role **does NOT**:
 
 ---
 
-## Advisory Standards
+## Workflow-Linked Support Docs
 
-These standards govern every advisory this role produces.
+Phase-specific support docs for this role are surfaced from the active workflow at the advisory or review phase where they apply.
 
-### Advisory Completeness (Prose vs. Specification Sections)
+Common advisory-role support-doc categories are:
 
-Behavioral requirements stated in advisory prose but not mirrored in the per-file or interface-changes section of the advisory are not binding implementation requirements. Implementing roles read implementation specs from the per-file specification section — not from advisory prose. Any requirement that must be implemented must appear in the specification section, not only in the rationale or summary.
+- advisory standards
+- design-review standards
+- integration-review standards
 
-### Specification Rigor
-
-To eliminate ambiguity and implementation cycles, every advisory must meet these precision standards:
-
-1.  **Directory-Scoped Verification:** Before asserting that a file exists or does not exist in a "Current State" or "Scope" assessment, the advisory must explicitly verify the existence of the file relative to the directory scope.
-2.  **Explicit Import Naming:** When specified behavior depends on a new external or internal dependency, name the required imports explicitly in the specification.
-3.  **Pinning Semantics for Role Order:** When an advisory reduces a node graph to a specific role traversal order, provide explicit per-role pinning semantics and a worked trace that accounts for repeated-role cases (where the same role appears multiple times in a flow).
-4.  **Parser/Regex Verification:** When claiming that an existing parser or regex already supports a format, verify the claim against the authoritative format instruction and a worked example, not just the current implementation behavior.
-5.  **Identifier-Mapping Rules:** All load-bearing identifier-mapping rules (e.g., mapping a human-readable name to a machine-key) must be stated explicitly with worked examples and defined failure behavior.
-6.  **Repo-Relative Paths:** Use exact repository-relative paths in all file references and "Files Changed" tables.
-7.  **Developer Path Portability:** Require that any produced implementation reports or backward-pass findings use repository-relative paths throughout; absolute paths and `file://` URLs are prohibited.
-8.  **Brief constraint evaluation:** when a brief contains design constraints, distinguish hard constraints from design preferences before anchoring to them; if a constraint is really a preference, surface the alternative comparison explicitly rather than silently accepting the preference as mandatory.
-9.  **Current-state claims from required reading:** when required-reading or orientation documents make current-state claims that materially constrain advisory scope, spot-check the live codebase before relying on those claims as implementation-state evidence.
-10. **Approved schema identifier names are contract terms:** when an advisory defines queryable identifiers (attribute names, event names, field names, or equivalent schema terms), exact name conformance is blocking unless the approved design is revised.
-11. **Instrumentation test scope must distinguish schema shape from production-path execution:** when an advisory specifies observability or instrumentation tests, it must say whether each test proves schema shape, production-path coverage, or both; if the integration gate depends on real coverage, the advisory must explicitly require production-path execution.
-12. **Instrumentation boundary definitions require call-site enumeration:** before defining a span or instrumentation boundary around a function reached from multiple execution paths, enumerate the invocation paths explicitly so the boundary covers all intended call sites.
-
-### Extension Before Bypass (Architecture and Infrastructure)
-
-Before proposing new infrastructure or a bypass of an existing architectural path, enumerate explicitly why the existing path cannot be extended to handle the new requirement. The rationale for extension-over-bypass belongs in the advisory. A proposal to introduce new infrastructure without this enumeration transfers an unresolved design decision to the implementing role.
-
-### Extension Before Bypass (Dependency Selection)
-
-The extension-before-bypass standard applies to library and dependency selection. Before introducing a separate library or per-case implementation for each provider, format, or service type, enumerate whether a common interface or existing library covers multiple cases. New dependencies require justification that the existing dependency surface cannot be extended.
-
-### Explicit Failure States for External Input
-
-When designing any structured representation for data received from an external source — model output, API responses, structured documents, user-supplied inputs, or any equivalent — include an explicit state for malformed or unrecognized input. Do not assume all inputs will be well-formed. A representation that specifies only the success path is incomplete; the failure state must be reachable and named.
+The role document does not enumerate phase-entry read cues. The workflow does that.
 
 ---
 

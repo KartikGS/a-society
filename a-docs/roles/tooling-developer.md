@@ -50,9 +50,9 @@ The Tooling Developer does **NOT** own:
 
 ---
 
-## Just-in-Time Reads
+## Workflow-Linked Support Docs
 
-Before completing a phase, preparing a completion report, or handing off implementation status, read `$A_SOCIETY_TOOLING_DEV_INVOCATION`.
+Phase-specific support documents for this role are surfaced from the active workflow at the handoff or completion-report moments where they apply. Follow the workflow's references there rather than pre-loading those documents from this role file.
 
 When you need to understand automation scope boundaries or original component specifications, consult `$A_SOCIETY_TOOLING_PROPOSAL` and `$A_SOCIETY_TOOLING_ADDENDUM`.
 

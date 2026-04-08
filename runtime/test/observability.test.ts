@@ -2,12 +2,15 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { 
-  setupTestTelemetry, 
-  clearTestSpans, 
-  getSpan, 
-  getSpansByName, 
-  getEvents 
+import {
+  setupTestTelemetry,
+  clearTestSpans,
+  clearTestMetrics,
+  flushTestTelemetry,
+  getSpan,
+  getSpansByName,
+  getEvents,
+  getMetricDataPoints
 } from './telemetry-test-helper.js';
 import { TelemetryManager } from '../src/observability.js';
 import { HandoffInterpreter } from '../src/handoff.js';
@@ -97,6 +100,7 @@ async function run() {
 
   await test('Scenario: LLMGateway.executeTurn with tool rounds (REAL CODE)', async () => {
     clearTestSpans();
+    clearTestMetrics();
     const mockProvider = new MockProvider([
       { 
         type: 'tool_calls', 
@@ -126,6 +130,7 @@ async function run() {
 
   await test('Scenario: Prompt-human suspension in orient.ts (REAL CODE)', async () => {
     clearTestSpans();
+    clearTestMetrics();
     const mockProvider = new MockProvider([
       { type: 'text', text: 'I need clarification. ```handoff\ntype: prompt-human\n```' }
     ]);
@@ -157,8 +162,50 @@ async function run() {
     assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.handoff_detected' && e.attributes['handoff_kind'] === 'awaiting_human'));
   });
 
+  await test('Scenario: Handoff parse failure in autonomous orient.ts (REAL CODE)', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    const mockProvider = new MockProvider([
+      { type: 'text', text: 'I broke the handoff. ```handoff\nrole:\n```' }
+    ]);
+
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+    };
+
+    try {
+      const result = await runInteractiveSession(
+        tmpDir,
+        'a-society__curator',
+        'System prompt',
+        [{ role: 'user', content: 'Produce a handoff.' }],
+        undefined, undefined,
+        true
+      );
+      assert.strictEqual(result, null);
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+
+    await flushTestTelemetry();
+
+    const parseSpan = getSpan('handoff.parse');
+    assert.strictEqual(parseSpan.attributes['handoff.parse.success'], false);
+
+    const turnSpan = getSpan('session.turn');
+    assert.strictEqual(turnSpan.attributes['session.turn.outcome'], undefined);
+    assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.parse_failed'));
+
+    const points = getMetricDataPoints('a_society.handoff.parse_failure');
+    const parseFailurePoint = points.find(point => point.attributes['role_key'] === 'a-society__curator');
+    assert.ok(parseFailurePoint);
+    assert.strictEqual(parseFailurePoint?.value, 1);
+  });
+
   await test('Scenario: ToolTriggerEngine.evaluateAndTrigger (REAL CODE)', async () => {
     clearTestSpans();
+    clearTestMetrics();
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
     const workflowPath = path.join(workflowsDir, 'workflow.md');
@@ -175,11 +222,19 @@ async function run() {
 
     const triggerSpan = getSpan('tool_trigger.execute');
     assert.ok(triggerSpan);
+    assert.strictEqual(triggerSpan.attributes['flow.id'], 'test-flow');
     assert.strictEqual(triggerSpan.attributes['trigger.event'], 'START');
+    assert.strictEqual(triggerSpan.attributes['trigger.component'], 'Workflow Graph Schema Validator');
+    assert.strictEqual(triggerSpan.attributes['trigger.success'], true);
+    assert.strictEqual(
+      triggerSpan.attributes['trigger.result_summary'],
+      `Component 3 execution success: Validated format at ${workflowPath}`
+    );
   });
 
   await test('Scenario: ImprovementOrchestrator closure (REAL CODE)', async () => {
     clearTestSpans();
+    clearTestMetrics();
     process.env.A_SOCIETY_STATE_DIR = path.join(tmpDir, '.state');
     SessionStore.init();
     
@@ -205,6 +260,11 @@ async function run() {
 
     const impSpan = getSpan('improvement.orchestrate');
     assert.ok(impSpan);
+    assert.strictEqual(impSpan.attributes['flow.id'], 'test-flow');
+    assert.strictEqual(impSpan.attributes['improvement.record_folder'], tmpDir);
+    assert.strictEqual(impSpan.attributes['improvement.mode'], 'none');
+    assert.ok(getEvents(impSpan).find(e => e.name === 'improvement.mode_selected' && e.attributes['mode'] === 'none'));
+    assert.ok(getEvents(impSpan).find(e => e.name === 'store.flow_saved' && e.attributes['stage'] === 'improvement_skipped'));
   });
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);

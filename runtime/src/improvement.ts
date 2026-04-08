@@ -19,9 +19,12 @@ export class ImprovementOrchestrator {
     outputStream: NodeJS.WritableStream,
   ): Promise<void> {
     const tracer = TelemetryManager.getTracer();
-    return tracer.startActiveSpan('improvement.orchestrate', { 
+    return tracer.startActiveSpan('improvement.orchestrate', {
       kind: SpanKind.INTERNAL,
-      attributes: { 'flow.id': flowRun.flowId }
+      attributes: {
+        'flow.id': flowRun.flowId,
+        'improvement.record_folder': signal.recordFolderPath,
+      }
     }, async (span) => {
       const rl = readline.createInterface({
         input: inputStream,
@@ -47,13 +50,17 @@ export class ImprovementOrchestrator {
         rl.close();
 
         if (choice === '3') {
+          span.setAttribute('improvement.mode', 'none');
+          span.addEvent('improvement.mode_selected', { mode: 'none' });
           outputStream.write(`[improvement] No improvement selected. Record closed.\n`);
           flowRun.status = 'completed';
           SessionStore.saveFlowRun(flowRun);
+          span.addEvent('store.flow_saved', { stage: 'improvement_skipped' });
           return;
         }
 
         const mode = choice === '1' ? 'graph-based' : 'parallel';
+        span.setAttribute('improvement.mode', mode);
         span.addEvent('improvement.mode_selected', { mode });
         flowRun.improvementPhase = {
           mode,
@@ -63,8 +70,10 @@ export class ImprovementOrchestrator {
         };
         flowRun.stateVersion = '2';
         SessionStore.saveFlowRun(flowRun);
+        span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 
         const plan = computeBackwardPassPlan(signal.recordFolderPath, SYNTHESIS_ROLE, mode);
+        span.setAttribute('improvement.plan_step_count', plan.length);
 
         // Sequential steps
         for (let i = 0; i < plan.length; i++) {
@@ -72,10 +81,19 @@ export class ImprovementOrchestrator {
           const group = plan[i];
           const isSynthesis = group.some(e => e.stepType === 'synthesis');
           const spanName = isSynthesis ? 'improvement.synthesis' : 'improvement.meta_analysis.step';
+          span.addEvent('improvement.step_started', {
+            step_index: i,
+            step_kind: isSynthesis ? 'synthesis' : 'meta-analysis',
+            role_count: group.length,
+            roles: group.map(entry => entry.role).join(','),
+          });
 
-          await tracer.startActiveSpan(spanName, { 
-            kind: SpanKind.INTERNAL, 
-            attributes: { 'improvement.step_index': i } 
+          await tracer.startActiveSpan(spanName, {
+            kind: SpanKind.INTERNAL,
+            attributes: {
+              'improvement.step_index': i,
+              'improvement.step_kind': isSynthesis ? 'synthesis' : 'meta-analysis',
+            }
           }, async (stepSpan) => {
             try {
               if (isSynthesis) stepSpan.addEvent('improvement.synthesis_started');
@@ -93,6 +111,11 @@ export class ImprovementOrchestrator {
                     const perRoleFiles = locateFindingsFiles(signal.recordFolderPath, [expectedRole]);
                     if (perRoleFiles.length === 0) {
                       outputStream.write(`[improvement] Role ${entry.role}: expected findings from ${expectedRole} but no matching file found in ${signal.recordFolderPath}. Proceeding without findings for this role.\n`);
+                      span.addEvent('improvement.no_findings_warning', {
+                        step_index: i,
+                        role: entry.role,
+                        expected_role: expectedRole,
+                      });
                     }
                   }
 
@@ -149,6 +172,12 @@ export class ImprovementOrchestrator {
                 flowRun.improvementPhase!.completedRoles.push(entry.role);
               }));
               SessionStore.saveFlowRun(flowRun);
+              span.addEvent('store.flow_saved', { stage: 'step_completed', step_index: i });
+              span.addEvent('improvement.step_completed', {
+                step_index: i,
+                step_kind: isSynthesis ? 'synthesis' : 'meta-analysis',
+                completed_roles: group.map(entry => entry.role).join(','),
+              });
             } finally {
               stepSpan.end();
             }
@@ -157,6 +186,7 @@ export class ImprovementOrchestrator {
 
         flowRun.status = 'completed';
         SessionStore.saveFlowRun(flowRun);
+        span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
         outputStream.write(`[improvement] Improvement phase complete. Flow closed.\n`);
       } catch (e: any) {
         span.recordException(e);

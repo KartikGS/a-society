@@ -15,9 +15,12 @@ import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 export class ToolTriggerEngine {
   static async evaluateAndTrigger(flowRun: FlowRun, event: 'START' | 'TERMINAL_FORWARD_PASS' | 'INITIALIZATION', payload: any): Promise<void> {
     const tracer = TelemetryManager.getTracer();
-    return tracer.startActiveSpan('tool_trigger.execute', { 
+    return tracer.startActiveSpan('tool_trigger.execute', {
       kind: SpanKind.INTERNAL,
-      attributes: { 'trigger.event': event }
+      attributes: {
+        'flow.id': flowRun.flowId,
+        'trigger.event': event
+      }
     }, async (span) => {
       const triggerRecord: TriggerRecord = {
         toolComponent: 'Unknown',
@@ -30,7 +33,7 @@ export class ToolTriggerEngine {
       try {
         if (event === 'START') {
           triggerRecord.toolComponent = 'Workflow Graph Schema Validator';
-          span.setAttribute('trigger.tool_component', triggerRecord.toolComponent);
+          span.setAttribute('trigger.component', triggerRecord.toolComponent);
           const res = validateWorkflowFile(payload.workflowDocumentPath, true);
           if (!res.valid) {
             throw new Error('Component 3 Error: ' + res.errors.join(', '));
@@ -40,7 +43,7 @@ export class ToolTriggerEngine {
 
         } else if (event === 'TERMINAL_FORWARD_PASS') {
           triggerRecord.toolComponent = 'Backward Pass Orderer';
-          span.setAttribute('trigger.tool_component', triggerRecord.toolComponent);
+          span.setAttribute('trigger.component', triggerRecord.toolComponent);
           const synthesisRole = 'Curator';
           // Component 4: computeBackwardPassPlan replaces the deprecated orderWithPromptsFromFile
           computeBackwardPassPlan(flowRun.recordFolderPath, synthesisRole, 'graph-based');
@@ -49,10 +52,10 @@ export class ToolTriggerEngine {
 
         } else if (event === 'INITIALIZATION') {
           triggerRecord.toolComponent = 'Scaffolding System';
-          span.setAttribute('trigger.tool_component', triggerRecord.toolComponent);
+          span.setAttribute('trigger.component', triggerRecord.toolComponent);
           const aSocietyRoot = path.resolve(flowRun.projectRoot, '..', '..');
           const res = scaffoldFromManifestFile(
-              flowRun.projectRoot, 
+              flowRun.projectRoot,
               'Active Project', 
               aSocietyRoot, 
               path.join(aSocietyRoot, 'general', 'manifest.yaml'), 
@@ -61,7 +64,7 @@ export class ToolTriggerEngine {
           triggerRecord.resultSummary = `Component 1 execution success: Scaffolded target directory (${res.created.length} created, ${res.failed.length} failed)`;
           triggerRecord.success = true;
         } else {
-          span.end();
+          span.addEvent('trigger.noop');
           return; // No trigger condition met
         }
 
@@ -75,6 +78,13 @@ export class ToolTriggerEngine {
         span.setStatus({ code: SpanStatusCode.ERROR });
         throw new Error(`ToolTriggerEngine failed to execute binding rule for ${event}: ${err.message}`);
       } finally {
+        span.setAttribute('trigger.success', triggerRecord.success);
+        if (triggerRecord.toolComponent !== 'Unknown') {
+          span.setAttribute('trigger.component', triggerRecord.toolComponent);
+        }
+        if (triggerRecord.resultSummary) {
+          span.setAttribute('trigger.result_summary', triggerRecord.resultSummary);
+        }
         span.end();
       }
     });

@@ -111,22 +111,47 @@ Telemetry behavior is controlled via environment variables:
 | `A_SOCIETY_TELEMETRY_ENABLED` | `true` | Set to `false` to disable all telemetry bootstrapping. |
 | `A_SOCIETY_OTLP_ENDPOINT` | (none) | OTLP/HTTP collector endpoint (e.g., `http://localhost:4318`). If absent, spans are collected but not exported. |
 | `A_SOCIETY_OTLP_HEADERS` | (none) | Comma-separated key=value pairs for OTLP export headers (e.g., `x-otlp-key=xyz`). |
+| `A_SOCIETY_OTLP_METRICS_INTERVAL` | `60000` | Metrics export interval in milliseconds for the OTLP metric exporter. Lower this when validating metrics locally. |
 | `A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE` | `false` | If `true`, captures full system prompts, user turns, and assistant turns as span events. **WARNING: Captured payloads may contain sensitive data.** |
 | `A_SOCIETY_ENVIRONMENT` | `production` | Sets the `deployment.environment` resource attribute. |
 
 ### Local Development Setup
 
-To view traces locally during development:
+The runtime uses OTLP/HTTP directly and is collector-compatible. You can either point it at an already-running local collector or start the dedicated A-Society stack.
 
-1. **Jaeger (Docker)**:
+1. **Reuse an existing local collector**:
+   If you already have an OTLP/HTTP collector listening on `http://localhost:4318` (for example from `llm-journey/observability/`), set:
    ```bash
-   docker run -d --name jaeger \
-     -e COLLECTOR_OTLP_ENABLED=true \
-     -p 16686:16686 \
-     -p 4318:4318 \
-     jaegertracing/all-in-one:latest
+   export A_SOCIETY_OTLP_ENDPOINT=http://localhost:4318
    ```
-2. **Export**: Set `A_SOCIETY_OTLP_ENDPOINT=http://localhost:4318` before running the runtime. Traces will be visible at `http://localhost:16686`.
+
+2. **Run the dedicated A-Society local stack**:
+   A self-contained collector/Tempo/Prometheus/Grafana setup lives at `a-society/runtime/observability/docker-compose.yaml`. It uses alternate host ports so it can run alongside the LLM Journey stack without container or port collisions.
+
+   From the repository root:
+   ```bash
+   docker compose -f a-society/runtime/observability/docker-compose.yaml up -d
+   export A_SOCIETY_OTLP_ENDPOINT=http://localhost:14318
+   export A_SOCIETY_ENVIRONMENT=development
+   ```
+
+   Operator endpoints:
+
+   | Surface | URL |
+   |---|---|
+   | Grafana | `http://localhost:13000` |
+   | Prometheus | `http://localhost:19090` |
+   | Tempo API | `http://localhost:13200` |
+   | OTLP/HTTP ingest | `http://localhost:14318` |
+   | OTLP/gRPC ingest | `http://localhost:14317` |
+
+   The Grafana datasources are provisioned automatically. The local stack currently supports traces and metrics; the runtime does not emit OTLP logs yet.
+
+3. **Validate metrics quickly during local work**:
+   To shorten the wait for exported metrics in a local collector-backed setup:
+   ```bash
+   export A_SOCIETY_OTLP_METRICS_INTERVAL=10000
+   ```
 
 ### Integration with External Tools
 
@@ -141,4 +166,3 @@ export A_SOCIETY_OTLP_HEADERS="x-api-key=ls__..."
 - **Configuration Errors**: If `A_SOCIETY_OTLP_HEADERS` is malformed, a warning is printed to `stderr` and orchestration proceeds.
 - **Bootstrapping**: If telemetry is enabled but the SDK fails to start (e.g., port conflict), a warning is printed to `stderr` and the runtime continues without telemetry.
 - **Metric Verification**: A-Society emits metrics including `a_society.session.turn.started` and `a_society.provider.latency`. These can be verified using any OTLP-compatible Prometheus exporter or collector.
-

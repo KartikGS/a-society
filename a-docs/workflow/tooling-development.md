@@ -156,6 +156,18 @@ This workflow extends the existing model rather than replacing it. The existing 
 
 ---
 
+### Workflow-Linked Support Docs
+
+- **Workflow entry / Owner routing** — Before routing intake work that may update Next Priorities or otherwise managing `$A_SOCIETY_LOG` / `$A_SOCIETY_LOG_ARCHIVE`, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`. If the Owner will issue a brief or decision artifact with detailed downstream constraints, also read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+- **`curator-phase0-docs`, `curator-phase3-docs`, `curator-phase7`** — Before drafting, implementing, or registering Curator-owned work, read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`.
+- **`owner-phase0-gate`, `owner-phase3-gate`** — Before reviewing Curator-submitted documentation artifacts, read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`. If the gate artifact adds detailed downstream constraints, also read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+- **`developer-phases-1-2`, `developer-phases-4-5-6`** — Before handing off phase status or filing `NN-developer-completion.md`, read `$A_SOCIETY_TOOLING_DEV_INVOCATION`.
+- **`ta-phase6-review` and any on-demand TA advisory in this workflow** — Before producing advisory or integration-review output, read `$A_SOCIETY_TA_ADVISORY_STANDARDS`.
+- **`owner-phase6-gate`** — Before reviewing the TA assessment or deciding the final integration gate, read `$A_SOCIETY_OWNER_TA_REVIEW`. If the gate artifact adds correction constraints for downstream work, also read `$A_SOCIETY_OWNER_BRIEF_WRITING`.
+- **`owner-phase8-closure`** — Before updating `$A_SOCIETY_LOG`, managing `$A_SOCIETY_LOG_ARCHIVE`, or filing closure, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT` and `$A_SOCIETY_OWNER_CLOSURE`.
+
+---
+
 ### Phases
 
 #### Phase 0 — Pre-implementation Documentation Baseline

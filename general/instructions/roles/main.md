@@ -6,6 +6,8 @@ A role document is a behavioral contract for an agent. It defines what that agen
 
 It is not a job description. A job description lists tasks. A role document defines **decision authority** — who can say yes, who can say no, and who must be consulted. An agent that has read a role document should be able to operate within that role without asking "am I allowed to do this?" for every decision.
 
+Role documents are not phase playbooks. If a role needs phase-specific guidance, create separate support docs and have the workflow surface them at the relevant node or gate.
+
 ---
 
 ## Why Projects Need Role Documents
@@ -57,27 +59,36 @@ Both lists matter equally. Stating what a role does not do is often more useful 
 ### 3. Hard Rules (mandatory if any exist)
 Non-negotiable constraints that cannot be overridden by any other instruction. If a role has behaviors that must never change regardless of context — state them as hard rules with explicit markers. An agent that treats a hard rule as a guideline is operating incorrectly.
 
-### 4. Context Loading (deprecated)
+### 4. Workflow-Linked Support Docs (strongly recommended when phase-specific guidance exists)
+If the role has guidance that applies only at certain workflow phases — for example proposal drafting, design review, implementation handoff, or forward-pass closure — put that guidance in separate support docs and have the workflow surface those docs at the relevant nodes.
+
+The role document may include a short section such as "Workflow-Linked Support Docs" that names the categories of moments covered by those support docs. It should not enumerate phase-triggered cues such as "Before X, read Y." Those cues belong in the workflow document, because the workflow is the delivery surface for phase-entry guidance.
+
+Projects often place these companion docs under `roles/[role]/`, but the exact location is less important than the separation of concerns: the role doc stays small, and the workflow delivers the phase-specific guidance.
+
+Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, `$GENERAL_OWNER_TA_REVIEW`, `$GENERAL_OWNER_CLOSURE`, `$GENERAL_CURATOR_IMPL_PRACTICES`, and `$GENERAL_TA_ADVISORY_STANDARDS`.
+
+### 5. Context Loading (deprecated)
 Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via `a-docs/roles/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
 
-### 5. Escalation Triggers (mandatory)
+### 6. Escalation Triggers (mandatory)
 When must this role escalate to a human or to another role? Be specific. "When uncertain" is not an escalation trigger — it is an invitation to guess. Name the categories of situation that require escalation.
 
-### 6. Input Validation (mandatory for workflow-participating roles)
+### 7. Input Validation (mandatory for workflow-participating roles)
 What input does this role expect to receive when activated? Define the expected format, source, and content of the handoff artifact that triggers this role's work. An agent that receives input not matching its expected format should **flag the discrepancy** rather than proceed silently — unexpected input is a signal that the workflow may have been bypassed or broken.
 
 This does not mean the agent refuses to work. It means the agent names the discrepancy explicitly before proceeding, so the human can decide whether the workflow bypass was intentional.
 
 Roles that are always active (e.g., the Owner) do not need this section — they are entry points, not downstream nodes.
 
-### 7. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
+### 8. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
 What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`. The block declares the receiving role and the artifact path the runtime uses to route the next session.
 
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
 ### Optional Sections
 - **Working style / character** — useful for roles where tone and approach matter (e.g., a reviewer who must be constructively critical)
-- **Review checklist** — useful for roles that evaluate contributions (owner, reviewer, coordinator)
+- **Review checklist** — useful only when the checklist applies across all uses of the role. If it applies only at certain workflow phases, move it to a workflow-linked support doc instead.
 - **Interfaces** — useful for roles that have structured handoffs with other roles
 
 ---
@@ -109,13 +120,6 @@ The Owner is the universal entry point for all project sessions.
 Owns: vision interpretation, folder structure, agents.md, index, contribution review, workflow routing.
 Does not: make unilateral direction changes, [project-specific exclusions].
 
-## How the Owner Reviews a Contribution
-1. Vision alignment — does this serve the core bet?
-2. Scope test — is this within declared scope?
-3. Placement test — is this in the correct folder?
-4. Duplication test — does an equivalent already exist?
-5. Quality test — can a new collaborator use this without additional explanation?
-
 ## Post-Confirmation Protocol
 
 After confirming context via the runtime-injected identity, ask what the user wants to work on and route that need into the appropriate workflow by default.
@@ -125,6 +129,17 @@ Freeform discussion remains available, but only when the user explicitly asks to
 If the workflow list for this project has not yet been customized, do not default to freeform. First establish which workflow should govern the work, then route into it.
 
 [CUSTOMIZE: list the project's actual workflows and their one-line summaries here. The Owner uses this list as the routing map after the user states a need.]
+
+## Workflow-Linked Support Docs
+
+Phase-specific support docs for this role are surfaced from the active workflow at the gate where they apply. Common Owner support-doc categories are:
+- intake and log management
+- contribution review
+- brief or constraint writing
+- review of advisory-role outputs when applicable
+- forward-pass closure
+
+The role document does not enumerate "before X, read Y" cues. The workflow does that.
 
 ## Handoff Output
 At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
@@ -354,4 +369,3 @@ These three steps are not optional. A role document without registration is inco
 **Conflates role with person.** A role document defines a behavioral contract, not a personality profile. Keep the focus on authority and decision rules.
 
 **Too broad.** A role that "owns everything" owns nothing. Authority without specificity cannot be enforced.
-
