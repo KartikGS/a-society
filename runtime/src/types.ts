@@ -98,18 +98,20 @@ export interface TurnUsage {
 
 export interface TurnOptions {
   signal?: AbortSignal;
+  outputStream?: NodeJS.WritableStream;
 }
 
 export interface GatewayTurnResult {
   text: string;
   usage?: TurnUsage;
+  displayedText?: boolean;
   /** Tool call/result messages accumulated during this turn, in conversation order, excluding the final assistant text message. */
   intermediateMessages?: RuntimeMessageParam[];
 }
 
 export type ProviderTurnResult =
-  | { type: 'text';       text: string;                                                   usage?: TurnUsage }
-  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; usage?: TurnUsage };
+  | { type: 'text';       text: string;                                                   usage?: TurnUsage; displayedText?: boolean }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; usage?: TurnUsage; displayedText?: boolean };
 
 export interface LLMProvider {
   executeTurn(

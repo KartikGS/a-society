@@ -33,8 +33,55 @@ Every project's universal list must include at minimum:
 ### 2. `roles`
 A map where each key is a **Role ID** and each value is a list of role-specific `$VARIABLE_NAME` references.
 
-**Role ID Naming:**
-Keys must be lowercase, hyphenated strings that match the role name as registered in the `agents.md` roles table (e.g., `owner`, `curator`, `technical-architect`).
+---
+
+## Role Key Convention
+
+The `roles` map uses **Role IDs** as keys. These IDs must follow a specific naming convention to ensure consistent lookup across the framework, the runtime, and adopting projects.
+
+### Rules
+
+1. **Format:** Keys must be lowercase, hyphenated strings.
+2. **Source:** Keys must match the role name as registered in the project's `agents.md` roles table, lowercased with spaces replaced by hyphens.
+3. **Single-word names:** Convert directly (e.g., `Owner` → `owner`, `Curator` → `curator`).
+4. **Multi-word names:** Lowercase and hyphenate (e.g., `Technical Architect` → `technical-architect`, `Tooling Developer` → `tooling-developer`, `Runtime Developer` → `runtime-developer`).
+
+### Worked Example
+
+Given a roles table in `agents.md`:
+
+| Role | Responsibility |
+|---|---|
+| Owner | Vision, quality gate |
+| Curator | Documentation maintenance |
+| Technical Architect | Scoping and planning |
+| Tooling Developer | Tooling implementation |
+| Runtime Developer | Runtime implementation |
+
+The corresponding `roles` map keys are:
+
+```yaml
+roles:
+  owner:
+    - $SOME_VARIABLE
+  curator:
+    - $SOME_VARIABLE
+  technical-architect:
+    - $SOME_VARIABLE
+  tooling-developer:
+    - $SOME_VARIABLE
+  runtime-developer:
+    - $SOME_VARIABLE
+```
+
+### Runtime Derivation (Optional)
+
+Some implementations derive role keys programmatically from internal namespace formats. The rule is:
+
+- Extract the second segment of the namespace (e.g., `a-society__Owner` → `Owner`)
+- Lowercase and hyphenate using the same rules above
+
+This derivation produces the same keys as the manual convention above and can be used by tooling or runtime implementations that store role names in a different internal format.
 
 ---
 

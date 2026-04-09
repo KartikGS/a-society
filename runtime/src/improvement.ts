@@ -125,8 +125,7 @@ export class ImprovementOrchestrator {
                   const { bundleContent } = ContextInjectionService.buildContextBundle(
                     roleKey,
                     flowRun.projectRoot,
-                    [metaAnalysisInstructionPath, ...findingsFilePaths],
-                    null
+                    [metaAnalysisInstructionPath, ...findingsFilePaths]
                   );
 
                   const userMessage = `Backward pass meta-analysis. Your record folder is: ${signal.recordFolderPath}.\nProduce your findings artifact at the next available sequence position in the record folder.\nWhen your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set to the repo-relative path of your findings file.`;
@@ -154,8 +153,7 @@ export class ImprovementOrchestrator {
                   const { bundleContent } = ContextInjectionService.buildContextBundle(
                     roleKey,
                     flowRun.projectRoot,
-                    [synthesisInstructionPath, ...allFindingsFiles],
-                    null
+                    [synthesisInstructionPath, ...allFindingsFiles]
                   );
 
                   const userMessage = `Backward pass synthesis. Your record folder is: ${signal.recordFolderPath}.\nFindings from all roles in this flow are in your context. Produce the synthesis artifact.`;

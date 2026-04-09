@@ -8,6 +8,15 @@ import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
+function writeAssistantOutputIfNeeded(
+  text: string,
+  displayedText: boolean | undefined,
+  outputStream: NodeJS.WritableStream
+): void {
+  if (!text || displayedText) return;
+  outputStream.write(text);
+}
+
 export async function runInteractiveSession(
   workspaceRoot: string,
   roleKey: string,
@@ -73,10 +82,14 @@ export async function runInteractiveSession(
               turnSpan.addEvent('session.user_turn', { content: initialUserMsg.content });
             }
 
-            const result = await llm.executeTurn(systemPrompt, [initialUserMsg], { signal: externalSignal });
+            const result = await llm.executeTurn(systemPrompt, [initialUserMsg], {
+              signal: externalSignal,
+              outputStream
+            });
             if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
               turnSpan.addEvent('session.assistant_turn', { content: result.text });
             }
+            writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
 
             history.push(initialUserMsg);
             if (result.intermediateMessages) history.push(...result.intermediateMessages);
@@ -153,10 +166,14 @@ export async function runInteractiveSession(
                 turnSpan.addEvent('session.user_turn', { content: (history[history.length - 1] as any).content });
               }
 
-              const result = await llm.executeTurn(systemPrompt, history, { signal: externalSignal });
+              const result = await llm.executeTurn(systemPrompt, history, {
+                signal: externalSignal,
+                outputStream
+              });
               if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
                 turnSpan.addEvent('session.assistant_turn', { content: result.text });
               }
+              writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
 
               if (result.intermediateMessages) history.push(...result.intermediateMessages);
               history.push({ role: 'assistant', content: result.text });
@@ -263,10 +280,14 @@ export async function runInteractiveSession(
                 currentController = new AbortController();
                 const signal = currentController.signal;
 
-                const result = await llm.executeTurn(systemPrompt as string, history, { signal });
+                const result = await llm.executeTurn(systemPrompt as string, history, {
+                  signal,
+                  outputStream
+                });
                 if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
                   turnSpan.addEvent('session.assistant_turn', { content: result.text });
                 }
+                writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
 
                 if (result.intermediateMessages) history.push(...result.intermediateMessages);
                 history.push({ role: 'assistant', content: result.text });

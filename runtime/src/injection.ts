@@ -11,14 +11,12 @@ export interface ContextBundleResult {
 
 export class ContextInjectionService {
   /**
-   * Assembles the required-reading set, the active artifact, and the runtime directive into a single context string.
+   * Assembles the required-reading set and active artifact(s) into a single context string.
    */
   static buildContextBundle(
     roleKey: string,
     projectRoot: string,
-    activeArtifactPath: string | string[],
-    directivePrompt: string | null,
-    mode: 'flow' | 'bootstrap' = 'flow'
+    activeArtifactPath: string | string[]
   ): ContextBundleResult {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
     
@@ -71,17 +69,6 @@ export class ContextInjectionService {
       }
     }
 
-    // 3. Runtime directive
-    bundle += `--- RUNTIME DIRECTIVE ---\n`;
-    if (directivePrompt) {
-      bundle += `System Instruction:\n${directivePrompt}\n\n`;
-    }
-    if (mode === 'bootstrap') {
-      bundle += `You are beginning an intake session. Greet the user, summarize the current project status from the log, and ask what they would like to work on. Do NOT emit a handoff block yet.\n\nOnce the user specifies a task: perform the intake process (scope assessment, validity sweep, complexity analysis), create the record folder, produce workflow.md and 01-owner-workflow-plan.md, write any required briefs, and then emit a machine-readable handoff block per $INSTRUCTION_MACHINE_READABLE_HANDOFF pointing to the artifact the next role should read. The handoff block is only emitted after the intake work is complete.\n`;
-    } else {
-      bundle += `When your work for this phase is complete and you are ready to pass control to the next role, end your response with a machine-readable handoff block per $INSTRUCTION_MACHINE_READABLE_HANDOFF. If you need clarification from the user, need approval, or are presenting options, respond normally and await their reply — do not emit a handoff until you are ready to hand off.\n`;
-    }
-    
     // Compute hash
     const contextHash = crypto.createHash('sha256').update(bundle).digest('hex');
 

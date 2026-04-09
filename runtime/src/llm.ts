@@ -56,13 +56,16 @@ export class LLMGateway {
       try {
         if (!this.tools || !this.executor) {
           const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
-          if (result.type === 'text') return { text: result.text, usage: result.usage };
+          if (result.type === 'text') {
+            return { text: result.text, usage: result.usage, displayedText: result.displayedText };
+          }
           throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
         }
 
         let accInputTokens = 0;
         let accOutputTokens = 0;
         let anyUsage = false;
+        let displayedText = false;
 
         const MAX_TOOL_ROUNDS = 50;
         let messages: RuntimeMessageParam[] = [...messageHistory];
@@ -73,6 +76,7 @@ export class LLMGateway {
           }
 
           const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+          displayedText = displayedText || !!result.displayedText;
 
           if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
           if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
@@ -82,7 +86,12 @@ export class LLMGateway {
               ? { inputTokens: accInputTokens, outputTokens: accOutputTokens }
               : undefined;
             span.setAttribute('llm.tool_round_count', round);
-            return { text: result.text, usage, intermediateMessages: intermediateMessages.length > 0 ? intermediateMessages : undefined };
+            return {
+              text: result.text,
+              usage,
+              displayedText,
+              intermediateMessages: intermediateMessages.length > 0 ? intermediateMessages : undefined
+            };
           }
 
           span.addEvent('llm.tool_round', { round_index: round, call_count: result.calls.length });

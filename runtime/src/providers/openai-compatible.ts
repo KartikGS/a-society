@@ -8,6 +8,7 @@ import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 export class OpenAICompatibleProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
+  private baseURL: string;
 
   constructor() {
     const baseURL = process.env.OPENAI_COMPAT_BASE_URL;
@@ -19,7 +20,19 @@ export class OpenAICompatibleProvider implements LLMProvider {
       baseURL: baseURL,
       apiKey: process.env.OPENAI_COMPAT_API_KEY || ''
     });
+    this.baseURL = baseURL;
     this.model = process.env.OPENAI_COMPAT_MODEL ?? 'mistralai/Mistral-7B-Instruct-v0.3';
+  }
+
+  private formatProviderError(err: any, summary: string, suggestion?: string): string {
+    const detail = typeof err?.message === 'string' && err.message.trim() !== ''
+      ? ` Provider message: ${err.message}.`
+      : '';
+    const requestId = typeof err?.request_id === 'string' && err.request_id.trim() !== ''
+      ? ` Request ID: ${err.request_id}.`
+      : '';
+    const nextStep = suggestion ? ` ${suggestion}` : '';
+    return `${summary} Model: ${this.model}. Endpoint: ${this.baseURL}.${requestId}${detail}${nextStep}`;
   }
 
   async executeTurn(
@@ -44,6 +57,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
       const spinner = new Spinner();
       spinner.start();
       let fullText = '';
+      const outputStream = options?.outputStream ?? process.stdout;
+      let displayedText = false;
       let inputTokens: number | undefined;
       let outputTokens: number | undefined;
 
@@ -108,7 +123,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
           if (!delta) continue;
           if (delta.content) {
             if (fullText === '') spinner.stop();
+            outputStream.write(delta.content);
             fullText += delta.content;
+            displayedText = true;
           }
           if (delta.tool_calls) {
             for (const tc of delta.tool_calls) {
@@ -151,12 +168,13 @@ export class OpenAICompatibleProvider implements LLMProvider {
             type: 'tool_calls' as const,
             calls,
             continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
-            usage
+            usage,
+            displayedText
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, usage };
+        return { type: 'text' as const, text: fullText, usage, displayedText };
       } catch (err: any) {
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
           spinner.stop();
@@ -169,10 +187,34 @@ export class OpenAICompatibleProvider implements LLMProvider {
         span.setStatus({ code: SpanStatusCode.ERROR });
         if (err instanceof LLMGatewayError) throw err;
         if (err instanceof OpenAI.AuthenticationError) {
-          throw new LLMGatewayError('AUTH_ERROR', 'Authentication failed: check OPENAI_COMPAT_API_KEY');
+          throw new LLMGatewayError(
+            'AUTH_ERROR',
+            this.formatProviderError(
+              err,
+              'Authentication failed for the OpenAI-compatible provider.',
+              'Check OPENAI_COMPAT_API_KEY and provider access.'
+            )
+          );
         }
-        if (err instanceof OpenAI.RateLimitError || err instanceof OpenAI.APIConnectionError) {
-          throw new LLMGatewayError('RATE_LIMIT', 'Transient network or rate limit error');
+        if (err instanceof OpenAI.RateLimitError) {
+          throw new LLMGatewayError(
+            'RATE_LIMIT',
+            this.formatProviderError(
+              err,
+              'OpenAI-compatible provider returned HTTP 429 (rate limited or quota exceeded).',
+              'Retry later or check provider quota/credits for this model.'
+            )
+          );
+        }
+        if (err instanceof OpenAI.APIConnectionError) {
+          throw new LLMGatewayError(
+            'RATE_LIMIT',
+            this.formatProviderError(
+              err,
+              'Could not reach the OpenAI-compatible provider.',
+              'Check network access, endpoint availability, and any provider-side outages.'
+            )
+          );
         }
         if (err instanceof OpenAI.APIError) {
           throw new LLMGatewayError('PROVIDER_MALFORMED', `Provider API error: ${err.message}`);

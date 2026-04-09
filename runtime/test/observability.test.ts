@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { Writable } from 'node:stream';
 import {
   setupTestTelemetry,
   clearTestSpans,
@@ -134,6 +135,13 @@ async function run() {
     const mockProvider = new MockProvider([
       { type: 'text', text: 'I need clarification. ```handoff\ntype: prompt-human\n```' }
     ]);
+    let capturedOutput = '';
+    const output = new Writable({
+      write(chunk, _encoding, callback) {
+        capturedOutput += chunk.toString();
+        callback();
+      }
+    });
     
     // Patch LLMGateway constructor to return a gateway with our mock provider
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
@@ -147,12 +155,14 @@ async function run() {
             'a-society__curator', 
             'System prompt', 
             [{ role: 'user', content: 'Who are you?' }], 
-            undefined, undefined, 
+            undefined, output, 
             true
         );
     } finally {
         LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }
+
+    assert.ok(capturedOutput.includes('I need clarification.'));
 
     const intSpan = getSpan('session.interaction');
     assert.strictEqual(intSpan.attributes['session.interaction.outcome'], 'awaiting_human');

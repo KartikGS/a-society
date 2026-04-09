@@ -137,7 +137,7 @@ workflow:
     console.log("\n--- Starting Orchestration Run ---");
     // Intercept LLM executeTurn to check bundle content
     const injectionSpy = (roleKey: string, projectRoot: string, artifacts: any) => {
-        const bundle = ContextInjectionService.buildContextBundle(roleKey, projectRoot, artifacts, null);
+        const bundle = ContextInjectionService.buildContextBundle(roleKey, projectRoot, artifacts);
         if (!bundle.bundleContent.includes("You are the start agent for test-project.")) {
             throw new Error("Missing role announcement in bundle");
         }

@@ -67,7 +67,7 @@ export class FlowOrchestrator {
             const bootstrapHistory: RuntimeMessageParam[] = [];
 
             const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
-              roleKey, workspaceRoot, [], null, 'bootstrap'
+              roleKey, workspaceRoot, []
             );
 
             let retryCount = 0;
@@ -250,7 +250,7 @@ export class FlowOrchestrator {
         }
 
         const { bundleContent, contextHash } = ContextInjectionService.buildContextBundle(
-          roleKey, flowRun.projectRoot, resolvedArtifacts, null
+          roleKey, flowRun.projectRoot, resolvedArtifacts
         );
         
         const injectedHistory = [...session.transcriptHistory];
