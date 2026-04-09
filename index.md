@@ -1,6 +1,6 @@
 # A-Society — Public Index
 
-This is the single source of truth for all public-facing file paths in `a-society/` — the `general/` library and the `agents/` layer.
+This is the single source of truth for all public-facing file paths in `a-society/` — the `general/` library, the `agents/` layer, and the standing executable operator surface.
 
 External agents (e.g., the Initializer) and project owners resolve file paths from this index. Internal A-Society agents working on the framework itself use `a-society/a-docs/indexes/main.md` for internal paths.
 
@@ -15,16 +15,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | **Agents** | | |
 | `$A_SOCIETY_INITIALIZER` | `/a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
 | **Runtime** | | |
-| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Invocation reference for the A-Society runtime — entry points, CLI commands, UX behaviors, and telemetry configuration |
+| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, state location, and telemetry configuration |
 | `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
-| **Tooling** | | |
-| `$A_SOCIETY_TOOLING_INVOCATION` | `/a-society/tooling/INVOCATION.md` | Invocation reference for all tooling components — quick start, entry points, and error conventions |
-| `$A_SOCIETY_TOOLING_SCAFFOLDING_SYSTEM` | `/a-society/tooling/src/scaffolding-system.ts` | Component 1: Scaffolding System — creates a-docs/ folder structure and stub files from the manifest |
-| `$A_SOCIETY_TOOLING_CONSENT_UTILITY` | `/a-society/tooling/src/consent-utility.ts` | Component 2: Consent Utility — creates and checks feedback consent files |
-| `$A_SOCIETY_TOOLING_WORKFLOW_GRAPH_VALIDATOR` | `/a-society/tooling/src/workflow-graph-validator.ts` | Component 3: Workflow Graph Validator — validates YAML frontmatter workflow graph schema; rejects same-role neighbors on edges; optional strict mode (Owner at all start/end nodes) for record-folder graphs |
-| `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` | `/a-society/tooling/src/backward-pass-orderer.ts` | Component 4: Backward Pass Orderer — computes backward pass role traversal order from a workflow graph |
-| `$A_SOCIETY_TOOLING_PATH_VALIDATOR` | `/a-society/tooling/src/path-validator.ts` | Component 5: Path Validator — checks whether every path in an index table resolves to an existing file |
-| `$A_SOCIETY_TOOLING_VERSION_COMPARATOR` | `/a-society/tooling/src/version-comparator.ts` | Component 6: Version Comparator — identifies framework update reports an adopting project has not yet applied |
 | **Feedback** | | |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `/a-society/feedback/onboarding/_template.md` | Template for Initializer signal reports — one report per initialization run |
 | `$INSTRUCTION_CONSENT` | `/a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
@@ -39,9 +31,9 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_UPDATES_DIR` | `/a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when `general/` or `agents/` changes require a-docs review |
 | **Workflows** | | |
 | `$A_SOCIETY_WORKFLOW` | `/a-society/a-docs/workflow/main.md` | A-Society workflow directory — routing index for all permanent A-Society workflows; universal session routing rules |
-| `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` | `/a-society/a-docs/workflow/multi-domain-development.md` | A-Society multi-domain development pattern — single flow with parallel tracks across framework, tooling, runtime, and related roles |
+| `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` | `/a-society/a-docs/workflow/multi-domain-development.md` | A-Society multi-domain development pattern — single flow with parallel tracks across framework, executable implementation, and related roles |
 | `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV` | `/a-society/a-docs/workflow/framework-development.md` | A-Society framework development workflow — phases, handoffs, invariants, session model, and YAML graph for the documentation and library maintenance loop |
-| `$A_SOCIETY_WORKFLOW_TOOLING_DEV` | `/a-society/a-docs/workflow/tooling-development.md` | A-Society tooling development workflow — phases, roles, session model, constraints, and YAML graph for the programmatic tooling implementation loop |
+| `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` | `/a-society/a-docs/workflow/executable-development.md` | A-Society executable development workflow — executable design gate, framework-services/orchestration implementation, validation, registration, and closure |
 | **Instructions** | | |
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `/a-society/general/instructions/a-society-version-record.md` | How to create and maintain an A-Society version record in any initialized project |
 | `$INSTRUCTION_TOOLING` | `/a-society/general/instructions/tooling.md` | How to create a tooling document for any project |

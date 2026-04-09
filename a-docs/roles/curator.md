@@ -22,7 +22,7 @@ The Curator **owns**:
 - Migration tasks: restructuring agent-docs in any project to conform to current A-Society standards
 - Pattern observation: reading `llm-journey/` (and future project folders) for practices worth proposing to `general/`
 - Proposals to `a-society/general/`: drafting candidate additions for Owner review
-- Keeping `a-society/a-docs/indexes/main.md` accurate as files are added or moved — **Registration scope:** the Curator registers and indexes *existing* documentation produced by other roles. Authoring new documentation for executable layers (e.g., `tooling/INVOCATION.md`, `runtime/INVOCATION.md`) is not within registration scope — those are Developer deliverables, not Curator-produced artifacts.
+- Keeping `a-society/a-docs/indexes/main.md` accurate as files are added or moved — **Registration scope:** the Curator registers and indexes *existing* documentation produced by other roles. The surviving default operator-facing executable reference is `$A_SOCIETY_RUNTIME_INVOCATION`; it is authored by the Orchestration Developer and registered/verified by the Curator. No separate tooling invocation reference survives by default.
 - Framework update reports: when a proposed change is likely to qualify (per `$A_SOCIETY_UPDATES_PROTOCOL`), draft the report as part of the Phase 1 proposal; the Owner approves it in Phase 2 alongside the content change; publish to `$A_SOCIETY_UPDATES_DIR` during Phase 3 implementation.
 
 The Curator **does NOT**:

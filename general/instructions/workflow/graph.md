@@ -6,9 +6,9 @@
 
 ## What This Is
 
-A workflow graph representation is a machine-readable encoding of the same workflow your `workflow/main.md` already describes in prose. It captures the structure of the workflow's forward pass — structural nodes (role-owned work blocks) and edges (handoffs) — in a YAML format that programmatic tools can process without reading prose.
+A workflow graph representation is a machine-readable encoding of the same workflow your `workflow/main.md` already describes in prose. It captures the structure of the workflow's forward pass — structural nodes (role-owned work blocks) and edges (handoffs) — in a YAML format that executable capabilities can process without reading prose.
 
-This is a companion to the workflow prose document, not a replacement. The prose explains the workflow to agents and humans; the graph enables tools to compute derived facts (such as backward pass traversal order) deterministically and consistently.
+This is a companion to the workflow prose document, not a replacement. The prose explains the workflow to agents and humans; the graph enables executable capabilities to compute derived facts (such as backward pass traversal order) deterministically and consistently.
 
 ---
 
@@ -87,7 +87,7 @@ For branching (e.g., an Approved branch and a Revise branch from the same review
 
 **Step 2 — List the edges.** For each handoff in your workflow document, add an edge. Add the artifact name if the handoff is carried by a named artifact type. Add branching edges where the workflow branches.
 
-**Step 3 — Validate and verify.** If your project has a workflow graph validator, run it to confirm the frontmatter schema is valid. If your project has a Backward Pass Orderer, use it to confirm the backward pass order implied by the graph matches the backward pass order stated in your workflow prose. If no such tooling exists, compare the backward pass section of your workflow document against `$GENERAL_IMPROVEMENT` and confirm the prose order is consistent with the graph structure.
+**Step 3 — Validate and verify.** If your project has a workflow graph validator, run it to confirm the frontmatter schema is valid. If your project has an executable backward-pass ordering capability, use it to confirm the backward pass order implied by the graph matches the backward pass order stated in your workflow prose. If no such capability exists, compare the backward pass section of your workflow document against `$GENERAL_IMPROVEMENT` and confirm the prose order is consistent with the graph structure.
 
 ---
 
@@ -134,9 +134,9 @@ These all belong in the prose workflow document.
 
 ## Record-Folder workflow.md — Subgraph Variant
 
-Projects that maintain per-flow record folders and use a Backward Pass Orderer tool create a `workflow.md` in each record folder alongside the sequenced artifacts. This file uses the same nodes/edges schema defined in this document, with one key difference: it is a **flow-specific subgraph** — it captures only the nodes and edges the flow actually traverses, not the full workflow.
+Projects that maintain per-flow record folders and use an executable backward-pass ordering capability create a `workflow.md` in each record folder alongside the sequenced artifacts. This file uses the same nodes/edges schema defined in this document, with one key difference: it is a **flow-specific subgraph** — it captures only the nodes and edges the flow actually traverses, not the full workflow.
 
-**When to use this.** When your project uses a Backward Pass Orderer tool and records flow artifacts in per-flow record folders (see `$INSTRUCTION_RECORDS`). Projects without such tooling do not need `workflow.md` in record folders.
+**When to use this.** When your project uses an executable backward-pass ordering capability and records flow artifacts in per-flow record folders (see `$INSTRUCTION_RECORDS`). Projects without such a capability do not need `workflow.md` in record folders.
 
 **Schema.** Same as the permanent workflow graph schema above. `workflow.name` should reflect the permanent workflow name; include the flow identifier when helpful.
 

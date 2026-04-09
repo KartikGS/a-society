@@ -181,7 +181,7 @@ The backward pass is proportional to the flow. Simple flows produce simple backw
 
 **Source:** The record folder's artifact sequence is the executed workflow log. Each artifact represents a completed step; the prefix ordering gives the sequence; the file names identify the role and action.
 
-**At close:** The Owner or Curator (depending on tier) reads the record folder artifact sequence and derives the traversal order for the backward pass. This is the input for `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` if available; otherwise derive manually per `$INSTRUCTION_IMPROVEMENT`.
+**At close:** The Owner or Curator (depending on tier) reads the record folder artifact sequence and derives the traversal order for the backward pass. This is the input for the project's executable backward-pass ordering capability if available; otherwise derive manually per `$INSTRUCTION_IMPROVEMENT`.
 
 **Planned vs. actual path:** The workflow plan records the intended path; the artifact sequence records the actual path. For Tier 1 flows these will typically be identical. For more complex flows, any divergence between planned and actual path is itself a backward pass finding — surfaced naturally when the record is reviewed at close.
 

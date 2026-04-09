@@ -71,7 +71,7 @@ Questions are for understanding what exists or what the human has already decide
 Do not proceed to Phase 3 until the human has answered.
 
 ### Phase 3 — Draft
-Before populating documents manually, run `$A_SOCIETY_TOOLING_SCAFFOLDING` to scaffold the target project's `a-docs/` structure. Pass the project root path and the manifest path (`$GENERAL_MANIFEST`). The scaffold creates all required `a-docs/` folders and stub files — including consent file stubs via `$A_SOCIETY_TOOLING_CONSENT_UTILITY` — in the correct locations. After scaffolding, customize each file with the project's actual content using the steps below. Do not create files the scaffold has already created.
+Before populating documents manually, use A-Society's executable scaffolding capability, if available, to scaffold the target project's `a-docs/` structure. Pass the project root path and the manifest path (`$GENERAL_MANIFEST`). The capability creates the required `a-docs/` folders and stub files in the correct locations. If consent-file support is included, it may also create consent stubs. If no scaffolding capability is available, create the required structure manually from the manifest and continue. After scaffolding, customize each file with the project's actual content using the steps below. Do not recreate files the scaffold has already created.
 
 Populate all foundational documents in this order:
 

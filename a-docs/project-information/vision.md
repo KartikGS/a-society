@@ -45,7 +45,7 @@ Workflows exist because **expertise alone is not enough — experts must communi
 
 The framework's recommendation to every project: **follow your designed workflows**. They exist because you decided that completeness and quality require multiple expert perspectives. Bypassing them means losing those perspectives — and the quality guarantee they provide.
 
-The runtime layer is the mechanism by which this compliance becomes structural rather than instructional. When the runtime is deployed, agents follow the workflow because they are routed through it — not because a document told them to. The case for designed workflows holds regardless: structure that is enforced programmatically is still structure that was designed because completeness requires multiple expert perspectives.
+The executable layer is the mechanism by which this compliance becomes structural rather than instructional. When the executable layer is deployed, agents follow the workflow because deterministic framework services and runtime orchestration enforce the designed path programmatically — not because a document told them to. The case for designed workflows holds regardless: structure that is enforced programmatically is still structure that was designed because completeness requires multiple expert perspectives.
 
 The investment is in the project setup — not in the agent itself.
 
@@ -84,15 +84,13 @@ These conditions are not hard to create. They require deliberate, upfront struct
 
 ## What A-Society Is
 
-A-Society has four work product layers:
+A-Society has three work product layers:
 
 **The library layer** — a collection of general instructions, templates, and role archetypes, each answering the question: "When setting up a new project for agents, how do you create [X]?" Each instruction explains what the artifact is, why it is needed, and how to build it. The library lives under `a-society/general/` and is project-agnostic — applicable to software, writing, legal, research, and any other domain.
 
 **The active layer** — a set of agents that use the library to do the actual work. These agents live under `a-society/agents/`. The primary active agent is the **Initializer**: given a project, it reads what exists, drafts the foundational agent-docs, resolves ambiguity with the human through targeted questions, and produces a complete `a-docs/` ready for agents to operate in. The human reviews and approves; they do not build manually.
 
-**The programmatic tooling layer** — an active layer that sits alongside the documentation layer. Where the documentation layer enables agents to operate correctly by giving them structured context, the tooling layer enables consistent, reliable execution of repeatable framework operations programmatically — scaffolding, validation, and similar. Tooling extends the framework's reach: it does not replace agent judgment, it makes the well-defined parts of the framework dependable regardless of which agent or human runs them. The layer is implemented and in use today, and its scope continues to expand as more deterministic framework operations are identified.
-
-**The runtime layer** — an active layer that manages agent sessions, context injection, and handoff routing programmatically. Where the documentation layer gives agents the knowledge to operate correctly and the tooling layer makes deterministic operations reliable, the runtime layer moves process choreography from natural-language instruction to programmatic control: session management, context loading, handoff transitions, and backward pass triggers are handled mechanically rather than through agent instruction-following. This frees the in-context budget for behavioral guidance — how agents think, what they review, what quality means. The runtime calls LLM APIs directly and provides its own interface; it is not a plugin for existing editors. Technology: TypeScript/Node.js, consistent with the tooling layer. The layer is live and actively handles context injection, handoff routing, and backward-pass orchestration in this project. The natural evolution: the library defines what good looks like, the active agents produce it, the tooling makes deterministic operations reliable, and the runtime orchestrates the whole loop.
+**The executable layer** — the programmatic execution layer rooted in `a-society/runtime/`. It has two standing capability families: deterministic framework services (scaffolding, validation, consent handling, backward-pass planning, update comparison, and related helpers) and orchestration (session management, context loading, handoff transitions, trigger execution, and operator-facing runtime behavior). The executable layer does not replace agent judgment; it makes repeatable framework operations reliable and moves process choreography from natural-language instruction to programmatic control. The `tooling/` directory may persist temporarily as a legacy implementation location during migration, but it is no longer a standing peer layer. The natural evolution: the library defines what good looks like, the active agents produce it, and the executable layer makes the repeatable parts dependable.
 
 Like any project using this framework, A-Society also maintains its own `a-docs/` — the agent documentation for agents working on A-Society itself. This is not part of the distributable framework; it is A-Society's own operational layer.
 
@@ -110,6 +108,7 @@ The result is a clean separation at the filesystem level:
 a-society/          ← the framework (pulled from this repo)
   general/          ← reusable instructions, templates, archetypes
   agents/           ← a-society's active agents (e.g., the Initializer)
+  runtime/          ← standing executable root and operator surface
   a-docs/           ← a-society's own project documentation
 
 my-project/         ← the user's project

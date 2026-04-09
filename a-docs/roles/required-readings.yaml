@@ -25,9 +25,9 @@ roles:
     - $A_SOCIETY_STRUCTURE
     - $A_SOCIETY_ARCHITECTURE
     - $A_SOCIETY_PRINCIPLES
-  tooling-developer:
-    - $A_SOCIETY_TOOLING_DEVELOPER_ROLE
+  framework-services-developer:
+    - $A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE
     - $A_SOCIETY_ARCHITECTURE
-  runtime-developer:
-    - $A_SOCIETY_RUNTIME_DEVELOPER_ROLE
+  orchestration-developer:
+    - $A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE
     - $A_SOCIETY_ARCHITECTURE

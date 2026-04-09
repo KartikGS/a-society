@@ -44,7 +44,7 @@ The `roles` map uses **Role IDs** as keys. These IDs must follow a specific nami
 1. **Format:** Keys must be lowercase, hyphenated strings.
 2. **Source:** Keys must match the role name as registered in the project's `agents.md` roles table, lowercased with spaces replaced by hyphens.
 3. **Single-word names:** Convert directly (e.g., `Owner` → `owner`, `Curator` → `curator`).
-4. **Multi-word names:** Lowercase and hyphenate (e.g., `Technical Architect` → `technical-architect`, `Tooling Developer` → `tooling-developer`, `Runtime Developer` → `runtime-developer`).
+4. **Multi-word names:** Lowercase and hyphenate (e.g., `Technical Architect` → `technical-architect`, `Framework Services Developer` → `framework-services-developer`, `Orchestration Developer` → `orchestration-developer`).
 
 ### Worked Example
 
@@ -55,8 +55,8 @@ Given a roles table in `agents.md`:
 | Owner | Vision, quality gate |
 | Curator | Documentation maintenance |
 | Technical Architect | Scoping and planning |
-| Tooling Developer | Tooling implementation |
-| Runtime Developer | Runtime implementation |
+| Framework Services Developer | Deterministic executable support implementation |
+| Orchestration Developer | Session and operator-surface implementation |
 
 The corresponding `roles` map keys are:
 
@@ -68,9 +68,9 @@ roles:
     - $SOME_VARIABLE
   technical-architect:
     - $SOME_VARIABLE
-  tooling-developer:
+  framework-services-developer:
     - $SOME_VARIABLE
-  runtime-developer:
+  orchestration-developer:
     - $SOME_VARIABLE
 ```
 
@@ -81,7 +81,7 @@ Some implementations derive role keys programmatically from internal namespace f
 - Extract the second segment of the namespace (e.g., `a-society__Owner` → `Owner`)
 - Lowercase and hyphenate using the same rules above
 
-This derivation produces the same keys as the manual convention above and can be used by tooling or runtime implementations that store role names in a different internal format.
+This derivation produces the same keys as the manual convention above and can be used by implementations that store role names in a different internal format.
 
 ---
 

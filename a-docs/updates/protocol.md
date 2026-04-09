@@ -71,11 +71,11 @@ Example: `a-society/updates/2026-03-06-minimum-role-set.md`
 
 ## Programmatic Parsing Contract
 
-The naming convention and version field format described above are stable contracts that programmatic tooling may depend on. Do not change either without a corresponding update to the Version Comparator implementation and a Curator maintenance proposal.
+The naming convention and version field format described above are stable contracts that the code implementing A-Society's executable update-comparison capability may depend on. Do not change either without a corresponding update to that code and a Curator maintenance proposal.
 
 ### File discovery
 
-The Version Comparator scans `$A_SOCIETY_UPDATES_DIR` for files matching the pattern:
+The executable update-comparison capability scans `$A_SOCIETY_UPDATES_DIR` for files matching the pattern:
 
 ```
 YYYY-MM-DD-[descriptor].md
@@ -100,7 +100,7 @@ Every update report declares two version fields in the header, on their own line
 - No trailing text on the version field lines
 - Both fields are always present; a report missing either field is malformed
 
-The Version Comparator extracts the `**Previous Version:**` field to determine whether a report applies to a given project.
+The executable update-comparison capability extracts the `**Previous Version:**` field to determine whether a report applies to a given project.
 
 ### Comparison rule
 
@@ -112,14 +112,14 @@ report's Previous Version >= project's recorded version
 
 The project's recorded version is read from the project's `a-docs/a-society-version.md` (see `$INSTRUCTION_A_SOCIETY_VERSION_RECORD`).
 
-The Comparator returns all matching reports ordered by Previous Version ascending. The Curator applies them in that order — sequential application is required because each report moves the project from one version to the next.
+The executable update-comparison capability returns all matching reports ordered by Previous Version ascending. The Curator applies them in that order — sequential application is required because each report moves the project from one version to the next.
 
 ### Stability guarantee
 
 The filename format and version field format defined in this section are stable. A change to either requires:
 
 1. A Curator maintenance proposal to this section
-2. A concurrent update to the Version Comparator implementation
+2. A concurrent update to the code implementing the executable update-comparison capability
 3. Owner approval before the change is published
 
 Do not modify the filename format or version field format without all three steps complete.

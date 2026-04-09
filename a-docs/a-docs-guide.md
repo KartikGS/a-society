@@ -262,53 +262,53 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** TA advisory-writing detail returns to the role file, or the advisory-quality standard fragments across old advisories and workflow notes with no canonical home.
 
-**Do not consolidate with:** `roles/technical-architect.md` — role contract vs. advisory-execution guidance. Do not consolidate with `tooling/architecture-proposal.md` — this file governs how the TA writes advisories; the proposal records the current approved tooling design.
+**Do not consolidate with:** `roles/technical-architect.md` — role contract vs. advisory-execution guidance. Do not consolidate with `executable/architecture-proposal.md` — this file governs how the TA writes advisories; the proposal records the current approved executable design.
 
 ---
 
-### `roles/tooling-developer.md` — `$A_SOCIETY_TOOLING_DEVELOPER_ROLE`
+### `roles/framework-services-developer.md` — `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE`
 
-**Why it exists:** The Tooling Developer role has a narrow implementation mandate: executing the six approved tooling components in Node.js, within `tooling/` only, with blocking escalation for any deviation from the approved spec. Without a dedicated role file, implementation either collapses into the Curator (who owns documentation, not Node.js code) or proceeds without a behavioral contract — risking scope creep, unapproved workarounds, and components that diverge from the TA's approved designs.
+**Why it exists:** The unified executable layer still needs a pure execution role for deterministic framework services. Without this role, framework-service implementation either collapses into the Curator (wrong authority) or into orchestration work (wrong boundary), recreating the retired tooling/runtime split in a less explicit form.
 
-**What it owns:** The Developer's authority (implementation choices, Node.js project initialization), hard rules (no implementation without Phase 0 cleared, no writes outside `tooling/`, no workarounds without TA resolution), escalation triggers (design deviation, scope ambiguity, documentation gap, Phase 0 incomplete), and the routing pointers to invocation-discipline and spec-reference reads.
+**What it owns:** Deterministic executable framework-service implementation, migration-safe legacy edits under `tooling/` when explicitly scoped, escalation triggers for design deviation and scope ambiguity, and the boundary that this role does not own a standing operator-facing executable reference by default.
 
-**What breaks without it:** A Tooling Developer agent has no behavioral contract. The boundary between implementation and design is undefined. Deviations from the approved spec may be absorbed into implementation decisions without escalation. The Phase 0 gate — which requires this file to be indexed before any Developer session opens — cannot be satisfied. Role context injection fails.
+**What breaks without it:** No clear behavioral contract for executable framework-service work. The executable role split becomes implicit, and implementation decisions drift across the framework-services/orchestration boundary.
 
-**Do not consolidate with:** `roles/technical-architect.md` — the TA scopes and designs; the Developer implements. Do not consolidate with `roles/curator.md` — the Curator maintains a-docs; the Developer writes Node.js code in `tooling/`. These are different layers with different authority boundaries.
-
----
-
-### `roles/tooling-developer/invocation-discipline.md` — `$A_SOCIETY_TOOLING_DEV_INVOCATION`
-
-**Why it exists:** Tooling phase handoff and completion-report guidance matters only at pause points, not for the entire lifespan of a Tooling Developer session. Extracting it preserves a lighter startup role file while keeping one canonical reference for handoff discipline.
-
-**What it owns:** The preserved `## Tooling Invocation Discipline` guidance extracted from `roles/tooling-developer.md`.
-
-**What breaks without it:** Handoff and completion-report requirements either bloat the role file or drift into ad hoc completion artifacts with no stable reference.
-
-**Do not consolidate with:** `roles/tooling-developer.md` — role contract vs. pause-point guidance. Do not consolidate with `$A_SOCIETY_TOOLING_PROPOSAL` or `$A_SOCIETY_TOOLING_ADDENDUM` — those documents define tooling scope and architecture, not Developer handoff behavior.
+**Do not consolidate with:** `roles/orchestration-developer.md` — deterministic framework services and orchestration are different executable subdomains. Do not consolidate with `roles/curator.md` — executable implementation and standing-doc maintenance remain different authorities.
 
 ---
 
-### `roles/runtime-developer.md` — `$A_SOCIETY_RUNTIME_DEVELOPER_ROLE`
+### `roles/framework-services-developer/implementation-discipline.md` — `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE`
 
-**Why it exists:** The Runtime Developer has a specialized implementation mandate for the programmatic runtime layer, distinct from the deterministic tooling components. Without this, runtime implementation merges with the Tooling Developer, blurring the clear boundary between A-Society's utility layer and its session orchestration capabilities.
+**Why it exists:** Framework-service implementation guidance matters at execution time, not at session start. Keeping it separate preserves a lighter startup role file while giving the implementation phases one canonical completion-report and co-maintenance reference.
 
-**What it owns:** The Developer's execution authority over the runtime layer, hard rules, escalation paths, and the routing pointer to runtime implementation-discipline guidance.
+**What it owns:** Completion-report shape, exact-path discipline, service-contract co-maintenance guidance, and migration-boundary rules for legacy `tooling/` code.
 
-**What breaks without it:** No defined behavioral contract for implementing A-Society's runtime layer. Role context injection fails.
+**What breaks without it:** Framework-service completion artifacts drift in shape, and migration-boundary or co-maintenance mistakes get rediscovered ad hoc.
+
+**Do not consolidate with:** `roles/framework-services-developer.md` — role contract vs. execution guidance. Do not consolidate with `$A_SOCIETY_EXECUTABLE_PROPOSAL` — the proposal defines the executable design; this file defines how the Developer executes within that design.
 
 ---
 
-### `roles/runtime-developer/implementation-discipline.md` — `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE`
+### `roles/orchestration-developer.md` — `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE`
 
-**Why it exists:** Runtime implementation discipline is execution-time guidance, not startup identity. Keeping it in a dedicated support document lets the Runtime Developer load it only when implementation or validation work is actually underway.
+**Why it exists:** The executable layer needs a role that explicitly owns orchestration behavior and the surviving operator-facing executable reference. Without this, `runtime/INVOCATION.md` authorship and orchestration ownership fall back into the retired pre-unification role framing or become ambiguous between implementer and Curator.
 
-**What it owns:** The preserved `## Implementation Discipline` guidance extracted from `roles/runtime-developer.md`.
+**What it owns:** Runtime orchestration implementation, operator-facing runtime reference ownership, escalation triggers, and the hard boundary that this role does not own `general/` or standing executable design decisions.
 
-**What breaks without it:** Runtime implementation-specific practices return to the role file, increasing startup context and making the role harder to maintain as the runtime layer grows.
+**What breaks without it:** No clear behavioral contract for orchestration work. `$A_SOCIETY_RUNTIME_INVOCATION` ownership becomes ambiguous. The executable role split becomes under-specified.
 
-**Do not consolidate with:** `roles/runtime-developer.md` — role contract vs. implementation guidance. Do not consolidate with `workflow/runtime-development.md` — the workflow defines phase structure; this file defines how the Runtime Developer executes within those phases.
+---
+
+### `roles/orchestration-developer/implementation-discipline.md` — `$A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE`
+
+**Why it exists:** Orchestration implementation guidance is execution-time detail, not startup identity. Keeping it separate preserves a lighter startup role file while giving orchestration phases one canonical reference for completion artifacts, runtime-specific implementation rules, and operator-surface co-maintenance.
+
+**What it owns:** Completion-report shape, exact-path discipline, runtime operator-surface co-maintenance, and runtime-specific implementation rules such as gateway error preservation and direct `providedHistory` mutation.
+
+**What breaks without it:** Runtime-specific implementation rules drift back into role prose or disappear into old artifacts, and `$A_SOCIETY_RUNTIME_INVOCATION` can fall out of sync with the live executable surface.
+
+**Do not consolidate with:** `roles/orchestration-developer.md` — role contract vs. execution guidance. Do not consolidate with `workflow/executable-development.md` — the workflow defines phases; this file defines how the Orchestration Developer executes within them.
 
 ---
 
@@ -330,19 +330,19 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `workflow/main.md` — `$A_SOCIETY_WORKFLOW`
 
-**Why it exists:** A-Society maintains several permanent execution workflows (framework development, tooling development, runtime development), each with distinct phase sequences and role compositions. Without a routing index, agents arriving at the workflow folder must read every workflow file to determine which governs their current work. The index gives every agent a single load point: load it, identify the relevant workflow or multi-domain pattern, then load that file.
+**Why it exists:** A-Society maintains several permanent execution workflows (framework development and executable development), each with distinct phase sequences and role compositions. Without a routing index, agents arriving at the workflow folder must read every workflow file to determine which governs their current work. The index gives every agent a single load point: load it, identify the relevant workflow or multi-domain pattern, then load that file.
 
 **What it owns:** The workflow routing directory — one entry per permanent A-Society workflow (name, one-line summary, file reference), and the **Multi-domain pattern** pointer to `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`.
 
 **What breaks without it:** Agents have no single entry point to the workflow directory.
 
-**Do not consolidate with:** `workflow/framework-development.md`, `workflow/tooling-development.md`, or `workflow/runtime-development.md` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
+**Do not consolidate with:** `workflow/framework-development.md` or `workflow/executable-development.md` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
 
 ---
 
 ### `workflow/multi-domain-development.md` — `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`
 
-**Why it exists:** Cross-cutting work often touches framework documentation, tooling, and runtime in one feature thread. The permanent workflows each describe a single-layer cadence; they do not by themselves explain how to stitch layers into one flow with parallel tracks. This pattern document fills that gap so Owner, TA, Tooling Developer, Runtime Developer, and Curator agents share one map.
+**Why it exists:** Cross-cutting work often touches framework documentation, framework services, and orchestration in one feature thread. The permanent workflows each describe a single-layer cadence; they do not by themselves explain how to stitch layers into one flow with parallel tracks. This pattern document fills that gap so Owner, TA, Framework Services Developer, Orchestration Developer, and Curator agents share one map.
 
 **What it owns:** When to use the pattern, how it composes (not replaces) the permanent workflows, a typical role map, parallel-track and Curator/`general/` checkpoint behavior, and record-folder `workflow.md` expectations — plus an illustrative YAML subgraph.
 
@@ -354,35 +354,25 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `workflow/framework-development.md` — `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV`
 
-**Why it exists:** A-Society's primary ongoing work is framework development: growing, maintaining, and quality-gating the reusable instruction library. This workflow governs that cadence — the Proposal → Review → Implementation → Registration loop that every library addition or a-docs change passes through. Extracting it from the routing index into its own file allows agents working on framework development to load only the workflow they need without reading tooling workflow material.
+**Why it exists:** A-Society's primary ongoing work is framework development: growing, maintaining, and quality-gating the reusable instruction library. This workflow governs that cadence — the Proposal → Review → Implementation → Registration loop that every library addition or a-docs change passes through. Extracting it from the routing index into its own file allows agents working on framework development to load only the workflow they need without reading unrelated executable-implementation workflow material.
 
 **What it owns:** The complete framework development workflow — the YAML graph (five nodes: Owner intake, Curator proposal, Owner review, Curator implementation/registration, Owner closure), all phases (0–5), handoffs table, invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation rules.
 
-**What breaks without it:** The framework development workflow has no dedicated home. Agents cannot load only the framework workflow without also loading tooling workflow content. The Approval Invariant — the core constraint that prevents the Curator from writing to `general/` without Owner approval — is not discoverable except through role files.
+**What breaks without it:** The framework development workflow has no dedicated home. Agents cannot load only the framework workflow without also loading unrelated executable workflow content. The Approval Invariant — the core constraint that prevents the Curator from writing to `general/` without Owner approval — is not discoverable except through role files.
 
-**Do not consolidate with:** `workflow/main.md` (the routing index) — that file routes agents to workflows; this file defines one. Do not consolidate with `workflow/tooling-development.md` — the two workflows have different phase sequences, different role compositions, and serve different operational cadences; merging them would force every agent to read irrelevant workflow material.
-
----
-
-### `workflow/tooling-development.md` — `$A_SOCIETY_WORKFLOW_TOOLING_DEV`
-
-**Why it exists:** A-Society's programmatic tooling layer has its own implementation workflow — multi-phase, multi-role, with a Tooling Developer session, TA advisory reviews, and phase-gated documentation prerequisites. This workflow is structurally different from the framework development workflow (more phases, more roles, concurrent phase tracks, three standing sessions). Defining it in its own file keeps the framework development workflow clean and gives tooling-related sessions a dedicated, unambiguous workflow reference.
-
-**What it owns:** The complete tooling development workflow — the YAML graph (ten nodes across four roles), role definitions for this workflow (Tooling Developer, Technical Architect, Curator, Owner), all phases (0–8 including Phase 1A), and the phase dependency diagram.
-
-**What breaks without it:** The tooling implementation workflow has no dedicated home. Component 4 (Backward Pass Orderer) cannot be correctly invoked for tooling flows without the YAML graph.
-
-**Do not consolidate with:** `workflow/framework-development.md` — same reasoning as above; different cadence, different role set. Do not consolidate with `a-docs/tooling/architecture-addendum.md` — that file retains structural constraints and the post-Phase-6 addition protocol; this file owns the executable workflow (phases, roles).
+**Do not consolidate with:** `workflow/main.md` (the routing index) — that file routes agents to workflows; this file defines one. Do not consolidate with `workflow/executable-development.md` — the two workflows have different phase sequences, different role compositions, and serve different operational cadences; merging them would force every agent to read irrelevant workflow material.
 
 ---
 
-### `workflow/runtime-development.md` — `$A_SOCIETY_WORKFLOW_RUNTIME_DEV`
+### `workflow/executable-development.md` — `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV`
 
-**Why it exists:** Provides the structural process specifically for designing and building A-Society's runtime layer, enforcing a strict Phase 0 design gate that distinguishes it from general tooling components.
+**Why it exists:** The unified executable layer has one permanent implementation workflow, covering both deterministic framework services and orchestration. Without a dedicated workflow, agents would have to reconstruct the executable path from the retired tooling/runtime split or treat `runtime/` changes as ad hoc exceptions to framework development.
 
-**What it owns:** The workflow graph, Phase 0 design requirements, and integration and registration phases for runtime development.
+**What it owns:** The executable workflow graph, the executable design gate, the two executable implementation tracks, integration validation, registration expectations, and forward-pass closure requirements.
 
-**What breaks without it:** The runtime layer would either be developed monolithically without review gates or improperly forced into a Tooling sub-process that wasn't scoped for stateful orchestration implementations.
+**What breaks without it:** The executable implementation path has no authoritative home. The standing role split between Framework Services Developer and Orchestration Developer becomes procedural folklore instead of documented workflow structure.
+
+**Do not consolidate with:** `workflow/framework-development.md` — framework documentation and executable implementation remain different operational cadences. Do not consolidate with `executable/architecture-addendum.md` — that file governs standing executable constraints; this file governs the executable workflow.
 
 ---
 
@@ -498,69 +488,67 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-## `tooling/`
+## `executable/`
 
-These files live in `a-docs/tooling/`. They are the design, specification, assessment, and coupling governance artifacts for A-Society's programmatic tooling layer.
+These files live in `a-docs/executable/`. They are the standing design, governance, historical-assessment, and coupling-reference artifacts for A-Society's unified executable layer.
 
-### `tooling/main.md` — `$A_SOCIETY_TOOLING`
+### `executable/main.md` — `$A_SOCIETY_EXECUTABLE`
 
-**Why it exists:** The tooling folder contains four related documents — component spec, implementation workflow, coupling map, and TA deviation assessment — that together govern A-Society's programmatic tooling layer. Without an entry point, agents must open all four documents to determine which is relevant to their task. The main.md lists each document, its purpose, and who reads it.
+**Why it exists:** The executable folder contains the standing doc set for the unified executable layer. Without an entry point, agents must open every executable document to determine which is relevant to their task.
 
-**What it owns:** Orientation to the tooling subfolder — one-paragraph description of each document and its intended reader(s).
+**What it owns:** Orientation to the executable subfolder — one-paragraph description of each standing executable document and its intended reader(s).
 
-**What breaks without it:** The tooling folder has no navigable entry point. Agents must scan all four documents to understand which to consult.
+**What breaks without it:** The executable doc set has no navigable entry point.
 
-**Do not consolidate with:** Any of the four tooling documents — each answers a distinct question (what to build, how to build it, format dependencies, deviation rulings). The main.md is an orientation layer, not a summary of those documents.
-
----
-
-### `tooling/general-coupling-map.md` — `$A_SOCIETY_TOOLING_COUPLING_MAP`
-
-**Why it exists:** The tooling components depend on `general/` formats — if a format changes, a component breaks. Conversely, when a tool is built, a `general/` instruction should direct agents to invoke it. Without a standing reference for these two dependency types, both can drift silently: format changes break tools without warning, and tools go unused because no instruction points agents to them.
-
-**What it owns:** Two tables — the format dependency table (which `general/` elements each component parses) and the invocation status table (whether each component has a `general/` instruction directing agents to invoke it, and whether that gap is Open or Closed). Also a change taxonomy (Types A–F) defining which change types require this document to be updated.
-
-**Who uses it:** The Owner checks the format dependency table at Phase 2 (Coupling Test) before approving any `general/` proposal. The TA checks the invocation gap column when reviewing tooling deviations. The Curator updates it at Phase 7 (Registration) after any Type A–F change.
-
-**What breaks without it:** Format changes are approved without scoping the tooling update — tools break after `general/` changes. Invocation gaps accumulate invisibly — tools exist but no agent knows to use them. The Coupling Test and Manifest Check in Phase 2 have no reference to check against.
-
-**Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the component spec; this document is the coupling state. Do not consolidate with `tooling/architecture-addendum.md` — the addendum is the implementation workflow; this document is a standing operational reference updated after each cross-layer change.
+**Do not consolidate with:** Any of the executable documents — each answers a distinct question (design, governance, coupling state, historical deviation rulings). The main.md is an orientation layer, not a summary of those documents.
 
 ---
 
-### `tooling/architecture-proposal.md` — `$A_SOCIETY_TOOLING_PROPOSAL`
+### `executable/general-coupling-map.md` — `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`
 
-**Why it exists:** The Tooling Developer's primary authority for implementation decisions. The proposal contains the automation boundary evaluation, all six component designs (interfaces, data flow, open questions resolved), and the co-maintenance dependency declarations added after Phase 1-2. Without it, the Developer has no binding specification — implementation would proceed from memory or inference, producing components that diverge from what the Owner approved.
+**Why it exists:** The executable capabilities depend on stable `general/` and `a-docs/` formats, and the maintained guidance surfaces must describe those capabilities in project-agnostic terms. Without a standing coupling reference, co-maintenance drift becomes invisible.
 
-**What it owns:** The definitive record of what each component does, what its interface is, what it depends on, and what was ruled in or out of automation scope. Any post-implementation spec update (accepted deviations) is recorded here; the proposal is the living spec, not a snapshot.
+**What it owns:** The executable format dependency table, the maintained-guidance status table, and the executable change taxonomy (Types A–F).
 
-**What breaks without it:** The Developer has no authoritative design reference. Components may be implemented inconsistently or revised without a documented basis. Deviations from this document are the trigger for TA escalation — without the document, there is nothing to deviate from.
+**What breaks without it:** Format changes are approved without scoping executable follow-through, and capability/guidance drift accumulates silently.
 
-**Do not consolidate with:** `tooling/architecture-addendum.md` — the proposal is the WHAT (component designs); the addendum is the WHO/WHEN (phases, roles, session routing). Do not consolidate with `tooling/ta-assessment-phase1-2.md` — the assessment records deviation rulings; the proposal records the authoritative spec.
-
----
-
-### `tooling/architecture-addendum.md` — `$A_SOCIETY_TOOLING_ADDENDUM`
-
-**Why it exists:** The proposal defines the components. The addendum complements it with the structural constraints, dependency rules, and post-Phase-6 addition protocol that govern the tooling layer's ongoing maintenance. These are architectural and governance rules — distinct from the executable workflow phases, which live in `$A_SOCIETY_WORKFLOW_TOOLING_DEV`.
-
-**What it owns:** Section 3 (Constraints and Dependencies) — the hard rules governing role boundaries (TA does not implement, Developer writes to `tooling/` only), the four inherited workflow invariants, and the open dependency on the update report discovery problem. Section 4 (Post-Phase-6 Component Additions) — the Phase 0 gate conditions for adding new components after the original launch, the TA advisory mode definition for new components, and the phase numbering convention.
-
-**What breaks without it:** The structural constraints — particularly the Phase 3 gate before Phase 4 and the deviation escalation rule — have no documented home. The protocol for adding post-Phase-6 components is undefined. Future Technical Architects and Developers working on new components have no governance reference.
-
-**Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the component spec; the addendum is the governance and constraints layer. Do not consolidate with `$A_SOCIETY_WORKFLOW_TOOLING_DEV` — that document owns the executable workflow (phases, roles); this document owns the structural constraints that govern the build process regardless of phase.
+**Do not consolidate with:** `executable/architecture-proposal.md` — the proposal is the executable design; this document is the standing coupling state. Do not consolidate with `executable/architecture-addendum.md` — the addendum is the governance layer; this document is the operational co-maintenance reference.
 
 ---
 
-### `tooling/ta-assessment-phase1-2.md` — `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2`
+### `executable/architecture-proposal.md` — `$A_SOCIETY_EXECUTABLE_PROPOSAL`
 
-**Why it exists:** During Phases 1 and 2, the Developer identified two implementation deviations from the approved spec and escalated to the Technical Architect per the deviation protocol. The TA's formal rulings on those deviations — and the required spec updates — are recorded here. This creates a traceable audit trail: deviation → ruling → spec update → implementation.
+**Why it exists:** This is the standing executable design reference. It records the runtime-root model, the framework-services/orchestration role split, the capability inventory, and the surviving operator-surface rule.
 
-**What it owns:** The description of each Phase 1-2 deviation, the TA's ruling (both ruled "Accept with spec update"), and the required change to `$A_SOCIETY_TOOLING_PROPOSAL` for each deviation.
+**What it owns:** The definitive description of what the unified executable layer is, what capabilities it contains, how ownership is split, and which stable documentation contracts it depends on.
 
-**What breaks without it:** The basis for the post-Phase 2 spec updates to the proposal is undiscoverable. The ruling that accepted hardcoded rendering in Component 2 and the VERSION.md history table approach in Component 6 cannot be verified. Future agents maintaining the tooling layer cannot trace why those two components diverge from an implementation-neutral reading of the spec.
+**What breaks without it:** The executable role split and runtime-root model lose their authoritative design reference.
 
-**Do not consolidate with:** `tooling/architecture-proposal.md` — the proposal is the authoritative spec; the assessment records the process by which the spec was revised. Merging them would obscure the deviation-ruling-update chain.
+**Do not consolidate with:** `executable/architecture-addendum.md` — the proposal is the WHAT; the addendum is the governance and maintenance layer. Do not consolidate with `executable/legacy-ta-assessment-phase1-2.md` — the assessment records historical rulings; the proposal records the standing design.
+
+---
+
+### `executable/architecture-addendum.md` — `$A_SOCIETY_EXECUTABLE_ADDENDUM`
+
+**Why it exists:** The proposal defines the executable layer. The addendum complements it with the standing placement rules, registration rules, extension rules, and migration constraints that govern executable-layer maintenance.
+
+**What it owns:** Runtime-root placement constraints, role ownership boundaries, registration obligations, and extension/migration rules.
+
+**What breaks without it:** The executable layer's maintenance rules fragment across workflows and old proposals with no single governance reference.
+
+**Do not consolidate with:** `executable/architecture-proposal.md` — the proposal is the design spec; the addendum is the governance layer. Do not consolidate with `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` — that document owns the executable workflow; this file owns the standing executable constraints.
+
+---
+
+### `executable/legacy-ta-assessment-phase1-2.md` — `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2`
+
+**Why it exists:** The unified executable layer carries forward two historical deviation rulings from the legacy framework-service implementation path. This file preserves the authoritative basis for those rulings.
+
+**What it owns:** The standing record of the update-comparison and consent-rendering deviation rulings that remain load-bearing in the unified executable layer.
+
+**What breaks without it:** Future maintainers lose the basis for two still-active design exceptions.
+
+**Do not consolidate with:** `executable/architecture-proposal.md` — the proposal is the authoritative standing design; the assessment preserves the historical ruling chain behind specific carried-forward deviations.
 
 ---
 
@@ -568,27 +556,15 @@ These files live in `a-docs/tooling/`. They are the design, specification, asses
 
 These files live in the executable layers rather than in `a-docs/`, but they are still Curator-maintained reference surfaces: internal roles verify them against live behavior, index them, and keep their rationale in view.
 
-### `tooling/INVOCATION.md` — `$A_SOCIETY_TOOLING_INVOCATION`
-
-**Why it exists:** The tooling layer is executable work product. Agents and maintainers need one operator-facing surface that states how each tool is invoked, what the entry points are, and what error conventions apply. Without it, interface knowledge fragments across proposals, tests, and source files.
-
-**What it owns:** The tooling quick-start, per-component invocation entry points, examples, and operator-facing error conventions.
-
-**What breaks without it:** Agents cannot invoke the tooling layer reliably from a stable reference. The Curator and TA lose the canonical documentation surface they compare against the live implementation.
-
-**Do not consolidate with:** `a-docs/tooling/main.md` — that file is orientation to the tooling documentation set; this file is the operator reference for the executable layer. Do not consolidate with `a-docs/tooling/architecture-proposal.md` — the proposal is the design spec, not the invocation contract.
-
----
-
 ### `runtime/INVOCATION.md` — `$A_SOCIETY_RUNTIME_INVOCATION`
 
-**Why it exists:** The runtime is an executable operator surface with commands, UX behaviors, and environment variables that must be discoverable without reading source files. This reference is the canonical place where that surface is documented.
+**Why it exists:** The runtime is the sole default operator-facing executable surface. Commands, runtime signals, state location, and environment variables must be discoverable without reading source files.
 
-**What it owns:** Runtime entry points, CLI usage, interactive/autonomous UX notes, error and warning behaviors, and environment-driven configuration such as telemetry settings.
+**What it owns:** Runtime entry points, runtime signal semantics, state-directory behavior, and environment-driven configuration such as telemetry settings.
 
 **What breaks without it:** Operators and reviewers infer runtime behavior from source code or historical artifacts. The Curator, TA, and Owner lose the stable operator-facing document they are expected to compare against the implementation at review and registration time.
 
-**Do not consolidate with:** `workflow/runtime-development.md` — the workflow defines how the runtime is designed and reviewed, not how operators invoke it. Do not consolidate with `project-information/architecture.md` — architecture explains what the runtime is; this file explains how to run it.
+**Do not consolidate with:** `workflow/executable-development.md` — the workflow defines how the executable layer is designed and reviewed, not how operators invoke it. Do not consolidate with `project-information/architecture.md` — architecture explains what the runtime is; this file explains how to operate it.
 
 ---
 

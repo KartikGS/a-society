@@ -30,7 +30,7 @@ Do not create consent files for feedback types that are not yet active in the pr
 
 1. Ask the human explicitly: "May A-Society write a [type] report to `a-society/feedback/[type]/` after [triggering event]? This report helps A-Society improve the framework."
 2. Record the answer — do not infer consent from silence or general agreement.
-3. Run `$A_SOCIETY_TOOLING_CONSENT_UTILITY` to create the consent file. Pass: the project's `a-docs/` path, the feedback type identifier (`onboarding`, `migration`, or `curator-signal`), and the consent answer recorded in step 2. The utility creates the file at `a-docs/feedback/[type]/consent.md` with the correct format. If the tool is unavailable, copy `$GENERAL_FEEDBACK_CONSENT` manually, fill in the Type, Consented, Date, Recorded by, and description fields, and save at that path.
+3. Use the project's executable consent-creation capability, if one exists, to create the consent file. Pass the project's `a-docs/` path, the feedback type identifier (`onboarding`, `migration`, or `curator-signal`), and the consent answer recorded in step 2. If no such capability exists, copy `$GENERAL_FEEDBACK_CONSENT` manually, fill in the Type, Consented, Date, Recorded by, and description fields, and save at `a-docs/feedback/[type]/consent.md`.
 4. Register the consent file in the project's index as `$[PROJECT]_FEEDBACK_[TYPE]_CONSENT`.
 
 ---

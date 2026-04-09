@@ -121,7 +121,7 @@ After implementation, verify:
 
 - Any new workflow is registered in the project's index
 - Cross-references to modified sections still resolve correctly
-- The backward pass order is still computable from the updated graph (run `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` if available; otherwise derive manually per `$INSTRUCTION_IMPROVEMENT`)
+- The backward pass order is still computable from the updated graph (use the project's executable backward-pass ordering capability if available; otherwise derive manually per `$INSTRUCTION_IMPROVEMENT`)
 
 ---
 

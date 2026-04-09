@@ -102,7 +102,7 @@ Look up the variable in the index to get the current path, then open the file. D
 3. No other updates are needed.
 
 **When validating the index:**
-Run `$A_SOCIETY_TOOLING_PATH_VALIDATOR` to confirm every path in the index resolves to an existing file. Pass the index file path as the argument. A zero-failure result confirms all registered paths are accessible. Run after any index update: adding entries, updating paths after a file move, or retiring rows. A failing result names the specific entries to fix.
+Use the project's executable path-validation capability, if one exists, to confirm every path in the index resolves to an existing file. Pass the index file path as the argument. A zero-failure result confirms all registered paths are accessible. Run after any index update: adding entries, updating paths after a file move, or retiring rows. If no such capability exists, verify the paths manually. A failing result should name the specific entries to fix.
 
 **When referencing a file not in the index:**
 For files that do not belong in the index — per-flow artifacts, active working files, or any file only referenced once — use the repo-relative path directly in handoffs and artifacts. Do not invent an unregistered `$VARIABLE_NAME` to anchor it. An invented variable that is not registered in the index resolves to nothing: it gives the appearance of indirection without the benefit. If an unregistered variable appears in a handoff, it is a signal that a plain repo-relative path should have been used instead.

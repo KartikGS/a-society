@@ -1,168 +1,83 @@
 # A-Society Runtime Invocation
 
-The A-Society runtime architecture executes all behavior dynamically utilizing emergent execution models exclusively. There are no longer CLI node overrides or specific resume commands.
+This is the sole default operator-facing executable reference for A-Society. It is authored by the Orchestration Developer and registered or verified by the Curator.
 
-## Initiating a Session
+---
 
-An Owner bootstraps an execution session exclusively utilizing the singular CLI command:
+## Commands
 
-```bash
-a-society
-a-society flow-status
-```
+### `a-society`
 
-### Commands
+Starts or resumes the unified orchestration flow.
 
-- **`a-society`**: Starts or resumes the unified orchestration flow. Discovers projects in the current working directory and prompts for selection.
-- **`a-society flow-status`**: Reads the current `.state/flow.json` and prints the flow ID, status, and active nodes to the terminal.
+Operator-visible behavior:
 
-When invoked:
-1. The orchestrator scans the filesystem to identify initialized A-Society projects.
-2. The user selects the active project interactive workspace.
-3. The orchestrator accesses the existing `.state/flow.json` to resume where the project left off. If no active flow is present, it initiates the **Owner** bootstrapping session via `runInteractiveSession`.
-4. The user outlines expectations and tracks state directly via logs and interactive chatting.
+1. Scan the current working directory for initialized projects by checking for `a-docs/agents.md`
+2. Prompt the operator to select a project
+3. Start or resume orchestration from the selected project's Owner role
 
-## Progression and Automation
+### `a-society flow-status`
 
-When an active conversational node emits a formalized `handoff` YAML block, the runtime identifies it via `HandoffInterpreter.parse`, persisting tracking markers into `.state/flow.json`. The orchestrator terminates the conversational loop immediately natively, processing workflow transitions against `workflow.md`, evaluating dependencies, and recursively launching the target successors automatically.
+Reads the current flow state and prints a rendered status view.
 
-The system treats interactive sessions and automated background executions symmetrically as nodes seamlessly passing the orchestration token linearly securely.
+If no active flow state exists, the command reports that no active flow state was found.
 
-### In-Flow Human Interaction
+---
 
-An autonomous agent can pause the flow and request human input by emitting a specialized `handoff` block:
+## Runtime Signals
 
-```handoff
-type: prompt-human
-```
+The runtime consumes the machine-readable handoff contract from `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
 
-When this signal is detected:
-1. The runtime pauses the autonomous execution.
-2. The operator is prompted for input at the terminal (`> `).
-3. The human's reply is appended to the session history as a `user` turn.
-4. The same agent session resumes immediately with the new input.
+- `type: prompt-human` pauses execution for terminal input and resumes the same session after a human reply
+- `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
+- `type: meta-analysis-complete` is consumed during backward-pass orchestration
 
-This enables clarifications, approvals, or missing data requests without breaking the flow or requiring manual session resumption. If the operator enters `exit` or `quit`, or the input stream closes, the flow status is set to `awaiting_human` and the session is suspended. Empty input (Enter with no text) re-prompts without advancing the session.
+When the operator enters `exit` or `quit` at a prompt-human pause, or the input stream closes, the flow is suspended as `awaiting_human`. Empty input re-prompts without advancing the session.
 
-## Improvement Orchestration
+---
 
-The runtime manages the project improvement backward-pass automatically. After a forward pass is closed (indicated by a `type: forward-pass-closed` signal), the runtime presents the operator with three improvement mode options:
+## Required Project Surface
 
-1. **Graph-based** — Meta-analysis roles run in reverse topological order. Each role receives findings from its direct successors in the forward pass, enabling structured reflection.
-2. **Parallel** — All meta-analysis roles run simultaneously. No cross-role findings are injected. Best for rapid, independent assessment.
-3. **No improvement** — Closes the record immediately without a backward pass.
+The runtime loads context from `a-docs/roles/required-readings.yaml`. If that file is missing or the relevant index variables do not resolve, orchestration cannot start.
 
-### Execution Lifecycle
-- **Meta-analysis**: The runtime launches sessions for each role in the backward pass. Roles are instructed to produce findings artifacts and emit a `type: meta-analysis-complete` signal.
-- **Synthesis**: After meta-analysis completes, the runtime automatically launches a fresh **Curator** session for synthesis. This session receives all produced findings in its context.
-- **Closure**: Once synthesis completes, the flow status is set to `completed` and the record is closed.
+---
 
-## Configuration and Errors
+## State Location
 
-### Required Readings Configuration
+- Default state directory: `a-society/runtime/.state`
+- Override: `A_SOCIETY_STATE_DIR`
 
-The runtime manages context injection by reading a central configuration file: `a-docs/roles/required-readings.yaml`. This file must exist in the project root. If it is missing, the orchestrator will emit a terminal error and cannot initialize sessions.
+The runtime persists flow state, role sessions, turn records, and trigger records in this state directory.
 
-Authoritative schema for `required-readings.yaml`:
-```yaml
-universal:
-  - $VAR_NAME       # Resolved against the project's index; loaded for every role
-roles:
-  role_id:
-    - $VAR_NAME     # role_id is the lowercase role name (e.g., owner, curator)
-```
-
-### Error Feedback Loop
-
-The A-Society runtime implements an autonomous error feedback loop for specific workflow and handoff errors. Instead of terminating the session, these errors are returned to the model as a user-turn message, allowing the agent to self-correct:
-
-- **Malformed handoff YAML**: If the `handoff` block is invalid or missing required fields.
-- **Missing record folder**: If the orchestrator cannot find the record folder specified during handoff.
-- **Missing workflow.md**: If the required `workflow.md` is not present in the record folder.
-
-Hard configuration failures (e.g., missing `required-readings.yaml`, project index resolution failures) still result in terminal errors and stop orchestration.
-
-## Runtime UX Features
-
-### Liveness Feedback
-When waiting for a response from the LLM provider, a spinner (⠋) and "Thinking..." label are displayed on `stderr`. This indicator is TTY-gated and will not appear in piped or redirected output. The spinner is automatically cleared as soon as the first token of the response is received.
-
-### Token Usage Reporting
-After every turn, the cumulative token usage for that turn (including all tool-call rounds) is displayed on `stderr`:
-`[tokens: 1234 in, 567 out]`
-This provides immediate feedback on the cost and volume of the interaction.
-
-### Interrupt and Resumption
-If you press `Ctrl+C` while the model is generating a response:
-1. The current API request is immediately aborted.
-2. The partial text received up to that point is preserved in the session history.
-3. The session returns to the prompt (in interactive mode) or the `awaiting_human` state (in autonomous mode).
+---
 
 ## Telemetry and Observability
 
-The A-Society runtime includes an OpenTelemetry-based observability layer for tracking flow execution, session turns, and LLM provider performance.
-
-### Configuration
-
-Telemetry behavior is controlled via environment variables:
+Telemetry behavior is controlled by the following environment variables:
 
 | Variable | Default | Description |
 |---|---|---|
-| `A_SOCIETY_TELEMETRY_ENABLED` | `true` | Set to `false` to disable all telemetry bootstrapping. |
-| `A_SOCIETY_OTLP_ENDPOINT` | (none) | OTLP/HTTP collector endpoint (e.g., `http://localhost:4318`). If absent, spans are collected but not exported. |
-| `A_SOCIETY_OTLP_HEADERS` | (none) | Comma-separated key=value pairs for OTLP export headers (e.g., `x-otlp-key=xyz`). |
-| `A_SOCIETY_OTLP_METRICS_INTERVAL` | `60000` | Metrics export interval in milliseconds for the OTLP metric exporter. Lower this when validating metrics locally. |
-| `A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE` | `false` | If `true`, captures full system prompts, user turns, and assistant turns as span events. **WARNING: Captured payloads may contain sensitive data.** |
-| `A_SOCIETY_ENVIRONMENT` | `production` | Sets the `deployment.environment` resource attribute. |
+| `A_SOCIETY_TELEMETRY_ENABLED` | `true` | Set to `false` to disable telemetry bootstrapping |
+| `A_SOCIETY_OTLP_ENDPOINT` | (none) | OTLP/HTTP collector endpoint |
+| `A_SOCIETY_OTLP_HEADERS` | (none) | Comma-separated key=value pairs for OTLP export headers |
+| `A_SOCIETY_OTLP_METRICS_INTERVAL` | `60000` | Metrics export interval in milliseconds |
+| `A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE` | `false` | If `true`, capture full prompts and turns as telemetry events |
+| `A_SOCIETY_ENVIRONMENT` | `production` | Sets the `deployment.environment` resource attribute |
 
-### Local Development Setup
+If telemetry configuration is malformed or the SDK fails to initialize, the runtime warns on `stderr` and continues without exported telemetry.
 
-The runtime uses OTLP/HTTP directly and is collector-compatible. You can either point it at an already-running local collector or start the dedicated A-Society stack.
+---
 
-1. **Reuse an existing local collector**:
-   If you already have an OTLP/HTTP collector listening on `http://localhost:4318` (for example from `llm-journey/observability/`), set:
-   ```bash
-   export A_SOCIETY_OTLP_ENDPOINT=http://localhost:4318
-   ```
+## Local Collector Example
 
-2. **Run the dedicated A-Society local stack**:
-   A self-contained collector/Tempo/Prometheus/Grafana setup lives at `a-society/runtime/observability/docker-compose.yaml`. It uses alternate host ports so it can run alongside the LLM Journey stack without container or port collisions.
+To point the runtime at a local OTLP/HTTP collector:
 
-   From the repository root:
-   ```bash
-   docker compose -f a-society/runtime/observability/docker-compose.yaml up -d
-   export A_SOCIETY_OTLP_ENDPOINT=http://localhost:14318
-   export A_SOCIETY_ENVIRONMENT=development
-   ```
-
-   Operator endpoints:
-
-   | Surface | URL |
-   |---|---|
-   | Grafana | `http://localhost:13000` |
-   | Prometheus | `http://localhost:19090` |
-   | Tempo API | `http://localhost:13200` |
-   | OTLP/HTTP ingest | `http://localhost:14318` |
-   | OTLP/gRPC ingest | `http://localhost:14317` |
-
-   The Grafana datasources are provisioned automatically. The local stack currently supports traces and metrics; the runtime does not emit OTLP logs yet.
-
-3. **Validate metrics quickly during local work**:
-   To shorten the wait for exported metrics in a local collector-backed setup:
-   ```bash
-   export A_SOCIETY_OTLP_METRICS_INTERVAL=10000
-   ```
-
-### Integration with External Tools
-
-Any OTLP-compatible backend can ingest A-Society traces. For example, to use **LangSmith** via their OTLP endpoint:
 ```bash
-export A_SOCIETY_OTLP_ENDPOINT=https://api.smith.langchain.com/otel
-export A_SOCIETY_OTLP_HEADERS="x-api-key=ls__..."
+export A_SOCIETY_OTLP_ENDPOINT=http://localhost:4318
 ```
 
-### Operational Behavior
+To shorten the wait for exported metrics during local work:
 
-- **Configuration Errors**: If `A_SOCIETY_OTLP_HEADERS` is malformed, a warning is printed to `stderr` and orchestration proceeds.
-- **Bootstrapping**: If telemetry is enabled but the SDK fails to start (e.g., port conflict), a warning is printed to `stderr` and the runtime continues without telemetry.
-- **Metric Verification**: A-Society emits metrics including `a_society.session.turn.started` and `a_society.provider.latency`. These can be verified using any OTLP-compatible Prometheus exporter or collector.
+```bash
+export A_SOCIETY_OTLP_METRICS_INTERVAL=10000
+```

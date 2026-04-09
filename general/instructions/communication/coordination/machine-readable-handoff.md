@@ -113,9 +113,9 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/03-curator-to-owner
 **Fork-point case (parallel tracks):**
 
 ```handoff
-- role: Tooling Developer
+- role: Framework Services Developer
   artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
-- role: Runtime Developer
+- role: Orchestration Developer
   artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
 ```
 

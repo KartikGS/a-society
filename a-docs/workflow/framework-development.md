@@ -138,7 +138,7 @@ The Owner evaluates the proposal against the five review tests.
 3. **Duplication test** — Does this overlap with existing content? If so, extend rather than create.
 4. **Placement test** — Does the target folder's governing principle (per `$A_SOCIETY_STRUCTURE`) include this?
 5. **Quality test** — Is this written so an unfamiliar agent can read it and produce a correct artifact?
-6. **Coupling Test** — Consult `$A_SOCIETY_TOOLING_COUPLING_MAP`. If the proposed `general/` element appears in the format dependency table, the proposal is not approvable until a tooling update is scoped. The Owner documents the required tooling update scope in the Phase 2 decision artifact. The tooling update follows the TA advisory → Developer path per `$A_SOCIETY_WORKFLOW_TOOLING_DEV`.
+6. **Coupling Test** — Consult `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`. If the proposed `general/` element appears in the format dependency table, the proposal is not approvable until the required executable co-maintenance is scoped. The Owner documents that executable update scope in the Phase 2 decision artifact. The executable follow-through uses `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV`.
 7. **Manifest Check** — If the proposal adds, removes, or renames any file in `general/`, verify whether `$GENERAL_MANIFEST` needs updating. If it does, note this in the Phase 2 decision artifact as a required co-implementation step for the Curator.
 
 If a framework update report draft was included in the Phase 1 proposal, review it as part of this decision. The Phase 2 decision artifact covers both the content change and the update report draft — they are not reviewed separately.

@@ -38,18 +38,18 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_OWNER_CLOSURE` | `a-society/a-docs/roles/owner/forward-pass-closure.md` | A-Society Owner forward-pass closure guidance — loaded when the Owner closes a forward pass |
 | `$A_SOCIETY_CURATOR_ROLE` | `a-society/a-docs/roles/curator.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
 | `$A_SOCIETY_CURATOR_IMPL_PRACTICES` | `a-society/a-docs/roles/curator/implementation-practices.md` | A-Society Curator proposal and implementation practices — loaded when the Curator prepares a proposal or implements approved changes |
-| `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the programmatic tooling layer |
+| `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the executable layer |
 | `$A_SOCIETY_TA_ADVISORY_STANDARDS` | `a-society/a-docs/roles/technical-architect/advisory-standards.md` | A-Society Technical Architect advisory standards — loaded when the TA produces an advisory or integration review |
-| `$A_SOCIETY_TOOLING_DEVELOPER_ROLE` | `a-society/a-docs/roles/tooling-developer.md` | A-Society Tooling Developer Agent role — implementation scope, hard rules, and escalation triggers |
-| `$A_SOCIETY_TOOLING_DEV_INVOCATION` | `a-society/a-docs/roles/tooling-developer/invocation-discipline.md` | A-Society Tooling Developer invocation discipline — loaded at phase handoff and completion-report moments |
-| `$A_SOCIETY_TOOLING` | `a-society/a-docs/tooling/main.md` | A-Society tooling documentation entry point — orientation to the tooling subfolder: what each document is and when an agent reads it |
-| `$A_SOCIETY_TOOLING_PROPOSAL` | `a-society/a-docs/tooling/architecture-proposal.md` | Technical Architect's component designs and automation boundary evaluation — binding specification for all six tooling components |
-| `$A_SOCIETY_TOOLING_COUPLING_MAP` | `a-society/a-docs/tooling/general-coupling-map.md` | Standing reference for tooling/general coupling — format dependencies per component and invocation gap status; updated at Phase 7 after any Type A–F change |
-| `$A_SOCIETY_TOOLING_ADDENDUM` | `a-society/a-docs/tooling/architecture-addendum.md` | Tooling implementation workflow, roles, and phase sequencing — companion to the proposal |
-| `$A_SOCIETY_TA_ASSESSMENT_PHASE1_2` | `a-society/a-docs/tooling/ta-assessment-phase1-2.md` | Technical Architect's Phase 1-2 deviation assessment — formal ruling on two implementation deviations and required spec updates |
-| `$A_SOCIETY_TOOLING_INVOCATION` | `a-society/tooling/INVOCATION.md` | Invocation reference for all tooling components — quick start, entry points, and error conventions |
-| `$A_SOCIETY_TOOLING_BACKWARD_PASS_ORDERER` | `a-society/tooling/src/backward-pass-orderer.ts` | Component 4: Backward Pass Orderer — computes backward pass role traversal order from a workflow graph |
-| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Invocation reference for the A-Society runtime — entry points, CLI commands, UX behaviors, and telemetry configuration |
+| `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE` | `a-society/a-docs/roles/framework-services-developer.md` | A-Society Framework Services Developer role — deterministic executable framework-service implementation scope and escalation |
+| `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE` | `a-society/a-docs/roles/framework-services-developer/implementation-discipline.md` | A-Society Framework Services Developer implementation discipline — completion-report and co-maintenance guidance |
+| `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE` | `a-society/a-docs/roles/orchestration-developer.md` | A-Society Orchestration Developer role — runtime orchestration, operator-surface ownership, and escalation |
+| `$A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE` | `a-society/a-docs/roles/orchestration-developer/implementation-discipline.md` | A-Society Orchestration Developer implementation discipline — runtime implementation and operator-surface co-maintenance guidance |
+| `$A_SOCIETY_EXECUTABLE` | `a-society/a-docs/executable/main.md` | A-Society executable documentation entry point — orientation to the standing executable-layer doc set |
+| `$A_SOCIETY_EXECUTABLE_PROPOSAL` | `a-society/a-docs/executable/architecture-proposal.md` | Standing executable design reference — runtime-root model, role split, capability inventory, and co-maintenance surfaces |
+| `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` | `a-society/a-docs/executable/general-coupling-map.md` | Standing reference for executable/general coupling — format dependencies per capability and maintained-guidance status |
+| `$A_SOCIETY_EXECUTABLE_ADDENDUM` | `a-society/a-docs/executable/architecture-addendum.md` | Executable governance and maintenance rules — placement constraints, ownership boundaries, and extension rules |
+| `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2` | `a-society/a-docs/executable/legacy-ta-assessment-phase1-2.md` | Historical TA deviation rulings preserved for legacy framework-service designs carried into the unified executable layer |
+| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, state location, and telemetry configuration |
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
@@ -101,9 +101,9 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_PRINCIPLES` | `a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
 | `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.md` | A-Society workflow directory — routing index for all permanent A-Society workflows; universal session routing rules |
-| `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` | `a-society/a-docs/workflow/multi-domain-development.md` | A-Society multi-domain development pattern — single flow with parallel tracks across framework, tooling, runtime, and related roles |
+| `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` | `a-society/a-docs/workflow/multi-domain-development.md` | A-Society multi-domain development pattern — single flow with parallel tracks across framework, executable implementation, and related roles |
 | `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV` | `a-society/a-docs/workflow/framework-development.md` | A-Society framework development workflow — phases, handoffs, invariants, session model, and YAML graph for the documentation and library maintenance loop |
-| `$A_SOCIETY_WORKFLOW_TOOLING_DEV` | `a-society/a-docs/workflow/tooling-development.md` | A-Society tooling development workflow — phases, roles, session model, constraints, and YAML graph for the programmatic tooling implementation loop |
+| `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` | `a-society/a-docs/workflow/executable-development.md` | A-Society executable development workflow — executable design gate, framework-services/orchestration implementation, validation, registration, and closure |
 | `$A_SOCIETY_IMPROVEMENT` | `a-society/a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
 | `$A_SOCIETY_RECORDS` | `a-society/a-docs/records/main.md` | A-Society records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking |
 | `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
@@ -124,6 +124,3 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_COMM_HANDOFF_PROTOCOL` | `a-society/a-docs/communication/coordination/handoff-protocol.md` | Status vocabulary, handoff requirements, clarification rules, pre-replacement checks |
 | `$A_SOCIETY_COMM_FEEDBACK_PROTOCOL` | `a-society/a-docs/communication/coordination/feedback-protocol.md` | What to do when a discrepancy or blocker is discovered in prior work |
 | `$A_SOCIETY_COMM_CONFLICT_RESOLUTION` | `a-society/a-docs/communication/coordination/conflict-resolution.md` | Authority matrix, escalation path, human escalation threshold |
-| `$A_SOCIETY_RUNTIME_DEVELOPER_ROLE` | `a-society/a-docs/roles/runtime-developer.md` | A-Society Runtime Developer Agent role — implementation scope, rules, and escalation |
-| `$A_SOCIETY_RUNTIME_DEV_IMPL_DISCIPLINE` | `a-society/a-docs/roles/runtime-developer/implementation-discipline.md` | A-Society Runtime Developer implementation discipline — loaded when the Runtime Developer implements or validates runtime changes |
-| `$A_SOCIETY_WORKFLOW_RUNTIME_DEV` | `a-society/a-docs/workflow/runtime-development.md` | A-Society runtime development workflow — Phase 0 architecture design gate, placeholder implementation phases, session model, and YAML graph for the programmatic runtime implementation loop |

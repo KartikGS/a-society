@@ -65,7 +65,7 @@ Replace the placeholder row once the first update is applied. Each row records: 
 When performing migration tasks:
 
 1. Read `a-docs/a-society-version.md` to determine the project's recorded version (last row of Applied Updates, or baseline if none applied)
-2. Run `$A_SOCIETY_TOOLING_VERSION_COMPARATOR` to identify which update reports have not yet been applied. Pass the path to `a-docs/a-society-version.md`. The comparator reads the project's recorded version and A-Society's current version and returns the list of pending update report filenames in version order. If the tool is unavailable, check `a-society/updates/` manually for all reports whose **Previous Version** ≥ the project's recorded version.
+2. Use the project's executable update-comparison capability, if one exists, to identify which update reports have not yet been applied. Pass the path to `a-docs/a-society-version.md`. The capability reads the project's recorded version and A-Society's current version and returns the list of pending update report filenames in version order. If no such capability exists, check `a-society/updates/` manually for all reports whose **Previous Version** >= the project's recorded version.
 3. Apply update reports in version order — lowest Previous Version first — through to the latest
 4. After implementing each report, add a row to the Applied Updates log with the resulting version, report filename, and date applied
 5. When all pending reports are applied, the project's recorded version matches `$A_SOCIETY_VERSION`

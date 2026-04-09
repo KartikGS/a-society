@@ -20,25 +20,17 @@ These workflow documents are also the delivery surface for phase-specific suppor
 
 ---
 
-### Tooling Development
+### Executable Development
 
-**Summary:** Implementing and extending the programmatic tooling layer — from Phase 0 documentation gate through component implementation, integration validation, and registration.
+**Summary:** Designing, implementing, validating, and registering A-Society's executable layer — deterministic framework services plus orchestration, with `runtime/` as the standing executable root.
 
-**File:** `$A_SOCIETY_WORKFLOW_TOOLING_DEV`
-
----
-
-### Runtime Development
-
-**Summary:** Designing and building A-Society's programmatic runtime orchestration layer — from Phase 0 TA architecture design through implementation, integration validation, registration, and closure.
-
-**File:** `$A_SOCIETY_WORKFLOW_RUNTIME_DEV`
+**File:** `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV`
 
 ---
 
-## Multi-domain pattern
+## Multi-domain Pattern
 
-**Summary:** Single coordinated flow across framework documentation, tooling, runtime, or other domains — parallel tracks where work is independent until a join.
+**Summary:** Single coordinated flow across framework documentation, executable implementation, and related roles — parallel tracks where work is independent until a join.
 
 **Full pattern:** `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`
 
@@ -46,13 +38,13 @@ These workflow documents are also the delivery surface for phase-specific suppor
 
 ## Multi-Domain Flows
 
-When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. A feature that requires documentation changes, tooling changes, and runtime changes belongs in one flow with the right role sequence, not split into separate flows per work type. See `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` for the full pattern.
+When work spans multiple role types or implementation domains, design a single flow that routes through all required roles — using parallel tracks where steps are independent. A feature that requires documentation changes, framework-service changes, and orchestration changes belongs in one flow with the right role sequence, not split into separate flows per work type.
 
 ---
 
 ## Forward Pass Closure
 
-Every workflow defines a forward pass closure step as the terminal node of its forward pass. This step consolidates all closure obligations for that workflow — log updates, tooling invocations, and verification that all approved tasks have been executed, not merely approved — at the point where they are needed. Each workflow document specifies which obligations apply to it.
+Every workflow defines a forward pass closure step as the terminal node of its forward pass. This step consolidates all closure obligations for that workflow — log updates, executable verification, and confirmation that all approved tasks have actually been executed.
 
 ---
 

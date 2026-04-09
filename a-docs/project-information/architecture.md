@@ -2,34 +2,35 @@
 
 ## System Overview
 
-A-Society is a framework for making projects agentic-friendly. Its foundation is documentation — structured context that agents read and follow — but its work product now includes programmatic layers: executable tooling utilities and a runtime that manages agent sessions directly. Understanding the structure is understanding the architecture.
+A-Society is a framework for making projects agentic-friendly. Its foundation is documentation — structured context that agents read and follow — but its work product now also includes a standing executable layer rooted in `runtime/`. Understanding the structure is understanding the architecture.
 
 A-Society has five top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
-- **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal tooling.
-- **`tooling/`** — the programmatic tooling layer. Executable utilities that agents invoke to perform deterministic, rule-derived framework operations. These tools are A-Society's work product: adopting project agents invoke them via paths registered in the public index. Implemented in TypeScript (tsx runtime, ESM); invocation model is agent-invoked (agents call tools and interpret results in natural language — humans do not call tools directly).
-- **`runtime/`** — the programmatic orchestration layer. Manages agent sessions end to end: injecting context from role definitions and workflow documents, routing handoffs between sessions, and triggering framework tools automatically. The runtime calls LLM APIs directly and provides its own interface — it is not a plugin for existing editors. Implemented in TypeScript/Node.js and active in this repository, consistent with the tooling layer.
+- **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal framework-maintenance docs.
+- **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing CLI surface, and is the surviving umbrella executable layer.
+- **`tooling/`** — transitional legacy implementation location. Some deterministic framework-service code may still live here while migrations are phased in, but `tooling/` is no longer a standing peer layer and is not a target for new permanent placements.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
-The tooling layer comprises six components, each covering a distinct deterministic operation:
+The executable layer currently includes six standing deterministic framework services and one orchestration family:
 
-| Component | What it does |
+| Capability | What it does |
 |---|---|
-| Scaffolding System (1) | Creates the folder structure and stub files for a new project's `a-docs/` |
-| Consent Utility (2) | Creates consent files from template and checks consent status |
-| Workflow Graph Schema Validator (3) | Validates that a workflow graph document matches the approved YAML frontmatter format; enforces no same-role neighbors on every edge; optional **strict** mode requires Owner at all start/end nodes for record-folder graphs |
-| Backward Pass Orderer (4) | Computes backward pass traversal order and generates per-role session trigger prompts from `workflow.md` in the active record folder |
-| Path Validator (5) | Checks that every path registered in an index table resolves to an existing file |
-| Version Comparator (6) | Identifies which framework update reports an adopting project has not yet applied |
+| Scaffolding | Creates the folder structure and stub files for a new project's `a-docs/` |
+| Consent handling | Creates consent files from template and checks consent status |
+| Workflow graph validation | Validates approved workflow graph representations and related schema constraints |
+| Backward-pass planning | Computes backward-pass traversal order and related findings-location data from `workflow.md` in the active record folder |
+| Path validation | Checks that every path registered in an index table resolves to an existing file |
+| Update comparison | Identifies which framework update reports an adopting project has not yet applied |
+| Orchestration | Manages agent sessions end to end: context injection, handoff routing, trigger execution, observability, and operator-facing runtime behavior |
 
-Component numbers reflect the implementation phase order (Phases 1–5 in the approved proposal). Full component specifications are in `$A_SOCIETY_TOOLING_PROPOSAL`. Workflow, role definitions, and phase sequencing are in `$A_SOCIETY_TOOLING_ADDENDUM`.
+Standing executable design and coupling references live under `$A_SOCIETY_EXECUTABLE`. During migration, legacy implementation details and historical assessment context may still point back to the transitional `tooling/` paths they describe.
 
-**Node.js project initialization:** The `tooling/` directory is a Node.js project with its own scaffolding (`package.json`, directory structure, and test infrastructure) maintained by the Tooling Developer. This remains a Developer responsibility — the Curator does not write to `tooling/`.
+**Executable implementation ownership:** `runtime/` is the standing executable root. Framework Services Developer and Orchestration Developer work within the executable layer under approved design authority. The Curator maintains the standing docs and indexes but does not author executable implementation surfaces.
 
 Two indexes govern path resolution:
 
-- **`a-society/index.md`** — the public index. Covers all public-facing paths in `general/`, `agents/`, and the operator entry points in `tooling/` and `runtime/`. External agents and project owners resolve paths here.
+- **`a-society/index.md`** — the public index. Covers all public-facing paths in `general/`, `agents/`, and the standing operator entry point in `runtime/`. External agents and project owners resolve paths here.
 - **`a-society/a-docs/indexes/main.md`** — the internal index. Covers A-Society's internal documentation set plus the internal-facing and operator-facing references that A-Society roles maintain directly. Internal agents resolve paths here.
 
 ---
@@ -61,15 +62,16 @@ The following constraints are non-negotiable. An agent that violates one has mad
 
 ### Layer Isolation
 
-`a-docs/` is documentation about A-Society. `general/`, `agents/`, `tooling/`, and `runtime/` are A-Society's work product. These are categorically different things and must not be mixed.
+`a-docs/` is documentation about A-Society. `general/`, `agents/`, and `runtime/` are A-Society's standing work product. `tooling/` may exist as transitional executable implementation state only when an approved migration still requires it. These categories must not be mixed.
 
-- Content that is part of A-Society's deliverable (instructions, templates, active agents, executable utilities) belongs in `general/`, `agents/`, `tooling/`, or `runtime/`, never in `a-docs/`
-- Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/`, `agents/`, `tooling/`, or `runtime/`
-- The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/`, `agents/`, `tooling/`, or `runtime/`
-- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; deterministic executable utilities → `tooling/`; programmatic orchestration and session management → `runtime/`
+- Content that is part of A-Society's deliverable (instructions, templates, active agents, executable capabilities, operator-facing runtime surfaces) belongs in `general/`, `agents/`, or `runtime/`, never in `a-docs/`
+- Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/`, `agents/`, or `runtime/`
+- The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/`, `agents/`, or `runtime/`
+- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; executable capabilities and operator-facing runtime behavior → `runtime/`; `tooling/` only when an approved migration explicitly preserves a legacy implementation location for the current flow
 
 Violation: Placing an A-Society agent role file in `a-docs/roles/` when the agent works for other projects, not on A-Society.
-Violation: Placing tooling or runtime implementation code in `a-docs/` or `general/`.
+Violation: Placing executable implementation code in `a-docs/` or `general/`.
+Violation: Creating new permanent executable placements under `tooling/` after the executable-layer unification decision.
 
 ### Boundary Respect
 

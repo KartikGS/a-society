@@ -14,7 +14,7 @@ Implicit delegation — leaving the field underspecified and expecting the Devel
 
 **Record-folder requirements must note the bootstrapping exemption.** When an advisory establishes a new requirement for record folders (e.g., a new required file, a new schema requirement), the advisory must explicitly note that the current flow's record folder is exempt-by-origin from that requirement. State why the current folder cannot conform and what consequence follows (e.g., Component 4 cannot be invoked for this flow). Future agents encountering the folder need this context to distinguish an expected non-conformance from an error.
 
-**Coupling map consultation for component change advisories.** Before completing an advisory that modifies or redesigns a tooling component, check `$A_SOCIETY_TOOLING_COUPLING_MAP` for that component's entry. If there is an open invocation gap (the component exists but no `general/` instruction directs agents to invoke it), surface it in the advisory output. This consultation is a standing advisory obligation — it does not require the Owner to include it in the brief.
+**Coupling map consultation for executable change advisories.** Before completing an advisory that modifies or redesigns an executable capability, check `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` for that capability's entry. If there is an open guidance or co-maintenance gap, surface it in the advisory output. This consultation is a standing advisory obligation — it does not require the Owner to include it in the brief.
 
 **File-existence claims must be verified with a directory-scoped search.** When an advisory or review states that a file exists, does not exist, or must be created, confirm that claim against the target directory directly before asserting it. Do not classify work as "create" versus "modify" from an indirect or mismatched search scope.
 
@@ -66,11 +66,11 @@ Implicit delegation — leaving the field underspecified and expecting the Devel
 
 ## a-docs/ Format Dependencies
 
-The coupling map change taxonomy (Types A–F) covers `general/` format dependencies. When a component design requires reading from `a-docs/` content, the taxonomy does not apply — but the co-maintenance obligation does.
+The executable coupling-map taxonomy (Types A–F) covers standing executable/general dependencies. When a component design requires reading from `a-docs/` content that is not already captured there, the taxonomy may not be sufficient — but the co-maintenance obligation still applies.
 
 For each `a-docs/` format dependency in a component design:
 
 1. **Identify the dependency explicitly.** State which `a-docs/` file the component reads, which fields or sections it parses, and what format it expects.
 2. **Document it in the component design.** Add a co-maintenance dependency declaration: "This component reads `$[FILE]` and parses [field names]. If those fields change, this component must be updated."
-3. **Recommend handling.** Evaluate whether the component should read the `a-docs/` file directly (appropriate when the format is stable and the parse is simple) or whether a more stable interface is available — such as a `general/` format that encodes the same information. If reading `a-docs/` directly, state in the design that the dependency is not tracked by the coupling map taxonomy and requires manual co-maintenance discipline.
-4. **Flag to Owner.** An `a-docs/` format dependency creates a co-maintenance obligation that may not be visible to future Curators maintaining the referenced file. Flag it explicitly in the proposal so the Owner can decide whether the coupling map taxonomy should be extended to cover `a-docs/` dependencies, or whether the manual co-maintenance declaration in the design is sufficient.
+3. **Recommend handling.** Evaluate whether the component should read the `a-docs/` file directly (appropriate when the format is stable and the parse is simple) or whether a more stable interface is available — such as a `general/` format that encodes the same information. If reading `a-docs/` directly, state whether the dependency is already tracked in `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`; if not, declare the manual co-maintenance requirement explicitly.
+4. **Flag to Owner.** An `a-docs/` format dependency creates a co-maintenance obligation that may not be visible to future Curators maintaining the referenced file. Flag it explicitly in the proposal so the Owner can decide whether `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` should be extended or whether the manual co-maintenance declaration in the design is sufficient.

@@ -25,13 +25,13 @@ test('parse (Single-object): returns array with one target', () => {
     assert.strictEqual(targets[0].artifact_path, 'path/to/file.md');
 });
 test('parse (Array): returns multiple targets', () => {
-    const text = "Fork point reached.\n```handoff\n- role: Tooling Developer\n  artifact_path: path/a.md\n- role: Runtime Developer\n  artifact_path: path/b.md\n```";
+    const text = "Fork point reached.\n```handoff\n- role: Framework Services Developer\n  artifact_path: path/a.md\n- role: Orchestration Developer\n  artifact_path: path/b.md\n```";
     const result = HandoffInterpreter.parse(text);
     assert.strictEqual(result.kind, 'targets');
     const targets = result.targets;
     assert.strictEqual(targets.length, 2);
-    assert.strictEqual(targets[0].role, 'Tooling Developer');
-    assert.strictEqual(targets[1].role, 'Runtime Developer');
+    assert.strictEqual(targets[0].role, 'Framework Services Developer');
+    assert.strictEqual(targets[1].role, 'Orchestration Developer');
     assert.strictEqual(targets[0].artifact_path, 'path/a.md');
     assert.strictEqual(targets[1].artifact_path, 'path/b.md');
 });
@@ -60,13 +60,13 @@ test('parse (Malformed YAML): throws HandoffParseError', () => {
     const text = "```handoff\n - role: Owner\n  - artifact_path: p.md\n```"; // Invalid YAML indent
     assert.throws(() => {
         HandoffInterpreter.parse(text);
-    }, /Malformed YAML/);
+    }, /Handoff block could not be parsed/);
 });
 test('parse (Missing handoff key): throws error', () => {
     const text = "```yaml\nrole: Owner\n```"; // Missing 'handoff:' key
     assert.throws(() => {
         HandoffInterpreter.parse(text);
-    }, /No valid handoff block found/);
+    }, /Handoff block could not be parsed/);
 });
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed > 0)
