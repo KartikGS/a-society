@@ -7,7 +7,7 @@ A file path index is a single table that maps variable names to the current loca
 ```
 | Variable           | Current Path                         | Description          |
 |--------------------|--------------------------------------|----------------------|
-| $TOOLING_STANDARD  | project/docs/tooling/standard.md     | Canonical tool rules |
+| $TOOLING_STANDARD  | project/docs/tooling/standard.md       | Canonical tool rules   |
 ```
 
 When a file moves, one cell in this table changes. Every reference throughout the project — in every document, in every agent session — resolves correctly through the variable. Nothing else needs updating.
@@ -36,7 +36,7 @@ Not every file in a project belongs in the index. Register a file when:
 - It is part of a required reading list or orientation sequence
 
 Do not register:
-- Files that are only ever referenced from one other document (update that one document directly)
+- Files that are only referenced from one other document (update that one document directly)
 - Files that are implementation artifacts unlikely to be linked to by name (e.g., individual data files, generated outputs)
 - Every file in the project — the index is a registry of key files, not a directory listing
 
@@ -84,6 +84,7 @@ Agents need to know the index exists. Add a one-line reference to it in the docu
 - **One row per file.** Do not group or nest entries. The table is a flat registry.
 - **Description is one clause.** Enough to identify the file's purpose without opening it. Not a full sentence, not a paragraph.
 - **Paths must be repo-relative, not machine-specific.** Use paths relative to the repository root (e.g., `project-name/a-docs/agents.md`). Machine-specific absolute paths (e.g., `/home/user/...`, `/Users/...`) are prohibited — they break when the project moves to a different machine or account. When populating an index from file operations that return absolute paths, strip the machine-specific prefix and write only the repo-relative portion.
+- **Paths must omit the leading slash.** Repo-relative paths should never begin with `/`. Write `a-society/a-docs/agents.md`, not `/a-society/a-docs/agents.md`. A leading slash makes the path absolute (rooted at filesystem root), which breaks executable-layer consumers that construct paths relative to the repository root. This rule ensures consistency and prevents silent path-resolution failures.
 - **The index is a declaration, not documentation.** It does not explain why files exist or how they relate to each other. Those explanations belong in the structure document or the files themselves.
 
 ---
