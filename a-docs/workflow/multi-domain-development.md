@@ -89,7 +89,7 @@ Do not use this pattern when the project has two permanent, distinct execution l
 
 A multi-domain flow invokes these workflows' roles and conventions as phases inside one record folder. It does not replace those documents.
 
-**Phase 0 — Intake (required):** Every multi-domain flow begins with Phase 0. The Owner creates the record folder and produces `01-owner-workflow-plan.md` plus `workflow.md` before any other artifact. Use `$INSTRUCTION_WORKFLOW_COMPLEXITY` for intake sizing/routing and `$A_SOCIETY_RECORDS` for record-folder, `workflow.md`, and artifact-sequencing requirements.
+**Phase 0 — Intake (required):** Every multi-domain flow begins with Phase 0. The Owner creates the record folder and produces `01-owner-workflow-plan.md` plus `workflow.md` before any other artifact. Use `$A_SOCIETY_WORKFLOW_COMPLEXITY` for intake sizing/routing and `$A_SOCIETY_RECORDS` for record-folder, `workflow.md`, and artifact-sequencing requirements.
 
 ---
 
@@ -107,7 +107,7 @@ A multi-domain flow invokes these workflows' roles and conventions as phases ins
 
 ## Workflow-Linked Support Docs
 
-- **`owner-intake`** — read `$INSTRUCTION_WORKFLOW_COMPLEXITY` to size the multi-domain flow, `$A_SOCIETY_RECORDS` before opening the record folder and writing `workflow.md`, `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed downstream constraints
+- **`owner-intake`** — read `$A_SOCIETY_WORKFLOW_COMPLEXITY` to size the multi-domain flow, `$A_SOCIETY_RECORDS` before opening the record folder and writing `workflow.md`, `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed downstream constraints
 - **`ta-design`, `ta-integration`** — read `$A_SOCIETY_TA_ADVISORY_STANDARDS`
 - **`framework-services-implementation`** — read `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE`
 - **`orchestration-implementation`** — read `$A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE`
@@ -124,7 +124,7 @@ Every multi-domain flow begins here, before any design, proposal, approval, impl
 
 At intake, the Owner:
 
-- assesses the triggered work against the five axes from `$INSTRUCTION_WORKFLOW_COMPLEXITY`
+- assesses the triggered work against the five axes from `$A_SOCIETY_WORKFLOW_COMPLEXITY`
 - creates the record folder per `$A_SOCIETY_RECORDS`
 - produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 - creates `workflow.md` for the active multi-domain path

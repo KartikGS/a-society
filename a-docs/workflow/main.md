@@ -4,9 +4,9 @@ This directory contains A-Society's permanent execution workflows. Each workflow
 
 ---
 
-## Phase-Linked Guidance
+## Workflow Guidance
 
-These workflow documents are also the delivery surface for phase-specific support docs. When a workflow phase or gate tells a role to read a supporting document, treat that reference as part of the phase definition rather than as optional background reading from the role file.
+These workflow documents are also the delivery surface for node-linked or phase-specific support docs. When a workflow node, phase, or gate tells a role to read a supporting document, treat that reference as part of the workflow definition rather than as optional background reading from the role file.
 
 ---
 
@@ -16,6 +16,8 @@ These workflow documents are also the delivery surface for phase-specific suppor
 
 **Summary:** Growing, maintaining, and quality-gating the reusable instruction library — from intake through proposal, review, implementation, and registration.
 
+**Use it when:** the work targets A-Society's reusable library or documentation surfaces rather than executable implementation.
+
 **File:** `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV`
 
 ---
@@ -23,6 +25,8 @@ These workflow documents are also the delivery surface for phase-specific suppor
 ### Executable Development
 
 **Summary:** Designing, implementing, validating, and registering A-Society's executable layer — deterministic framework services plus orchestration, with `runtime/` as the standing executable root.
+
+**Use it when:** the work changes executable design, runtime behavior, standing executable contracts, or operator-facing executable references.
 
 **File:** `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV`
 

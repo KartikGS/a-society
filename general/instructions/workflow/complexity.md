@@ -2,6 +2,8 @@
 
 *This document is a companion to `$INSTRUCTION_WORKFLOW` and `$INSTRUCTION_WORKFLOW_MODIFY`. Read those documents to understand workflow creation and static modification. Read this document at intake — when the Owner must decide which workflow path a given task requires.*
 
+This is the reusable complexity-routing model. Projects should usually instantiate it in a project-local operational workflow or complexity document and route live execution through that local doc rather than pointing agents here directly.
+
 ---
 
 ## The Problem
@@ -14,7 +16,7 @@ The solution is not a lighter workflow. The solution is **proportional workflow 
 
 ## The Dynamic Complexity Model
 
-At intake, the Owner conducts a complexity analysis and constructs a workflow plan. The plan specifies the roles to engage, the phases to traverse, and the artifacts to produce. For trivial tasks, this may be a single agent with a minimal record. For complex, multi-domain tasks, this is the full pipeline.
+At intake, the Owner conducts a complexity analysis and constructs a workflow plan. The plan specifies the roles to engage, the nodes to traverse, and the artifacts to produce. For trivial tasks, this may be a single agent with a minimal record. For complex, multi-domain tasks, this is the full pipeline.
 
 The workflow is not a fixed template applied uniformly. It is **constructed per task**, governed by the same hard rules, scaled to the task's actual demands.
 
@@ -97,7 +99,7 @@ A workflow plan must specify:
 
 1. **Complexity assessment** — a summary of the five-axis evaluation. Note the axes that are elevated; low-scoring axes require only brief acknowledgment.
 2. **Routing decision** — which tier the task routes to, and why.
-3. **Path definition** — the roles to engage, in order. For Tier 1, this is the Owner alone. For Tier 2 and 3, this is the sequence of handoffs.
+3. **Path definition** — the roles or nodes to engage, in order. For Tier 1, this is the Owner alone. For Tier 2 and 3, this is the sequence of node transitions.
 4. **Known unknowns** — any downstream decisions better made by a later role once engaged. List these explicitly rather than speculating.
 
 The workflow plan is the approval gate for the flow. Implementation does not begin until the plan exists.

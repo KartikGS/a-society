@@ -60,7 +60,7 @@ workflow:
 
 **Companion docs:** `$A_SOCIETY_EXECUTABLE_PROPOSAL`, `$A_SOCIETY_EXECUTABLE_ADDENDUM`
 
-**Phase 0 — Intake (required):** Every executable flow begins with Phase 0. The Owner creates the record folder and produces `01-owner-workflow-plan.md` plus `workflow.md` before any other artifact. Use `$INSTRUCTION_WORKFLOW_COMPLEXITY` for intake sizing/routing and `$A_SOCIETY_RECORDS` for record-folder and `workflow.md` requirements.
+**Phase 0 — Intake (required):** Every executable flow begins with Phase 0. The Owner creates the record folder and produces `01-owner-workflow-plan.md` plus `workflow.md` before any other artifact. Use `$A_SOCIETY_WORKFLOW_COMPLEXITY` for intake sizing/routing and `$A_SOCIETY_RECORDS` for record-folder and `workflow.md` requirements.
 
 ---
 
@@ -78,7 +78,7 @@ workflow:
 
 ## Workflow-Linked Support Docs
 
-- **`owner-intake`** — read `$INSTRUCTION_WORKFLOW_COMPLEXITY` to size the executable flow, `$A_SOCIETY_RECORDS` before opening the record folder and writing `workflow.md`, `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` if intake will produce a detailed written brief or approval artifact
+- **`owner-intake`** — read `$A_SOCIETY_WORKFLOW_COMPLEXITY` to size the executable flow, `$A_SOCIETY_RECORDS` before opening the record folder and writing `workflow.md`, `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` if intake will produce a detailed written brief or approval artifact
 - **`owner-phase0-gate`, `owner-integration-gate`** — read `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed constraints and `$A_SOCIETY_OWNER_TA_REVIEW` when reviewing TA output
 - **`ta-phase0-design`, `ta-integration-review`** — read `$A_SOCIETY_TA_ADVISORY_STANDARDS`
 - **`framework-services-implementation`** — read `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE`
@@ -94,7 +94,7 @@ Every executable flow opens with the Owner and begins here, before any design/ad
 
 At intake, the Owner:
 
-- assesses the triggered executable work against the five axes from `$INSTRUCTION_WORKFLOW_COMPLEXITY`
+- assesses the triggered executable work against the five axes from `$A_SOCIETY_WORKFLOW_COMPLEXITY`
 - creates the record folder per `$A_SOCIETY_RECORDS`
 - produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 - creates `workflow.md` for the active executable path

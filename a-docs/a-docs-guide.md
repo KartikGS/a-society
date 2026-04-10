@@ -356,11 +356,23 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** A-Society's primary ongoing work is framework development: growing, maintaining, and quality-gating the reusable instruction library. This workflow governs that cadence — the Proposal → Review → Implementation → Registration loop that every library addition or a-docs change passes through. Extracting it from the routing index into its own file allows agents working on framework development to load only the workflow they need without reading unrelated executable-implementation workflow material.
 
-**What it owns:** The complete framework development workflow — the YAML graph (five nodes: Owner intake, Curator proposal, Owner review, Curator implementation/registration, Owner closure), all phases (0–5), handoffs table, invariants (Portability, Approval, Single-Source, Index-Before-Reference), and escalation rules.
+**What it owns:** The complete framework development workflow — the YAML graph, the node-by-node operational instructions (inputs, required readings, work, outputs, and transitions), and the invariants and escalation rules that govern the reusable-library loop.
 
 **What breaks without it:** The framework development workflow has no dedicated home. Agents cannot load only the framework workflow without also loading unrelated executable workflow content. The Approval Invariant — the core constraint that prevents the Curator from writing to `general/` without Owner approval — is not discoverable except through role files.
 
 **Do not consolidate with:** `workflow/main.md` (the routing index) — that file routes agents to workflows; this file defines one. Do not consolidate with `workflow/executable-development.md` — the two workflows have different phase sequences, different role compositions, and serve different operational cadences; merging them would force every agent to read irrelevant workflow material.
+
+---
+
+### `workflow/complexity.md` — `$A_SOCIETY_WORKFLOW_COMPLEXITY`
+
+**Why it exists:** A-Society's internal workflows need an internal intake-sizing authority instead of pointing directly at the reusable library instruction. This file instantiates the general complexity model for A-Society's own framework, executable, and multi-domain routing decisions.
+
+**What it owns:** A-Society-specific use of the five complexity axes, tier-selection rules inside this repo, the local constraints that narrow when Tier 1 is allowed, and the intake relationship between workflow sizing, the workflow-plan template, and the records convention.
+
+**What breaks without it:** Internal workflow docs leak across the general/internal boundary. The Owner has to infer whether reusable-library, executable, or multi-domain work can be sized directly from the general instruction instead of reading a project-specific authority.
+
+**Do not consolidate with:** `$INSTRUCTION_WORKFLOW_COMPLEXITY` — that file is the reusable instruction for any project; this file is A-Society's internal instantiation. Do not consolidate with `workflow/main.md` — the routing index chooses the workflow family; this file governs intake sizing inside the chosen family.
 
 ---
 
@@ -600,7 +612,7 @@ These files live in the executable layers rather than in `a-docs/`, but they are
 
 **What breaks without it:** The Owner has no principled framework for sizing a flow at intake. Uniform pipeline application continues. Hard Rule 2's applicability to single-agent flows remains undefined. Backward graph tracking is ad-hoc or absent for lightweight flows.
 
-**Do not consolidate with:** `$INSTRUCTION_WORKFLOW_MODIFY` — that document governs design-time structural change to the graph itself; this document governs intake-time path selection through a defined graph. These are categorically distinct operations. Do not consolidate with `$A_SOCIETY_WORKFLOW` — that document describes A-Society's own workflow structure; this is a general instruction applicable to any project.
+**Do not consolidate with:** `$INSTRUCTION_WORKFLOW_MODIFY` — that document governs design-time structural change to the graph itself; this document governs intake-time path selection through a defined graph. These are categorically distinct operations. Do not consolidate with `$A_SOCIETY_WORKFLOW` — that document describes A-Society's own workflow structure; this is a general instruction applicable to any project. Do not consolidate with `$A_SOCIETY_WORKFLOW_COMPLEXITY` — that document is A-Society's internal instantiation of this reusable model.
 
 ---
 
