@@ -60,6 +60,8 @@ workflow:
 
 **Companion docs:** `$A_SOCIETY_EXECUTABLE_PROPOSAL`, `$A_SOCIETY_EXECUTABLE_ADDENDUM`
 
+**Phase 0 — Intake (required):** Every executable flow begins with Phase 0. The Owner creates the record folder and produces `01-owner-workflow-plan.md` plus `workflow.md` before any other artifact. Use `$INSTRUCTION_WORKFLOW_COMPLEXITY` for intake sizing/routing and `$A_SOCIETY_RECORDS` for record-folder and `workflow.md` requirements.
+
 ---
 
 ## Roles
@@ -76,7 +78,8 @@ workflow:
 
 ## Workflow-Linked Support Docs
 
-- **`owner-intake`, `owner-phase0-gate`, `owner-integration-gate`** — read `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed constraints; read `$A_SOCIETY_OWNER_TA_REVIEW` when reviewing TA output; read `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`
+- **`owner-intake`** — read `$INSTRUCTION_WORKFLOW_COMPLEXITY` to size the executable flow, `$A_SOCIETY_RECORDS` before opening the record folder and writing `workflow.md`, `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` if intake will produce a detailed written brief or approval artifact
+- **`owner-phase0-gate`, `owner-integration-gate`** — read `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed constraints and `$A_SOCIETY_OWNER_TA_REVIEW` when reviewing TA output
 - **`ta-phase0-design`, `ta-integration-review`** — read `$A_SOCIETY_TA_ADVISORY_STANDARDS`
 - **`framework-services-implementation`** — read `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE`
 - **`orchestration-implementation`** — read `$A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE`
@@ -85,14 +88,22 @@ workflow:
 
 ---
 
-## Phase 0 — Executable Design Gate
+## Phase 0 — Intake and Executable Design Gate
 
-Every executable flow opens with the Owner. The Owner scopes the work and decides whether the existing executable design already governs the requested change or whether a TA design/advisory step is required.
+Every executable flow opens with the Owner and begins here, before any design/advisory, approval, or implementation artifact is produced.
+
+At intake, the Owner:
+
+- assesses the triggered executable work against the five axes from `$INSTRUCTION_WORKFLOW_COMPLEXITY`
+- creates the record folder per `$A_SOCIETY_RECORDS`
+- produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`
+- creates `workflow.md` for the active executable path
+- decides whether the existing executable design already governs the requested change or whether a TA design/advisory step is required
+
+`01-owner-workflow-plan.md` and `workflow.md` are required Phase 0 outputs. The workflow plan is the approval gate for the flow. Executable implementation does not begin until these intake artifacts exist and the Owner has approved the executable scope. Omitting the TA node for a scoped implementation changes the downstream path only; it does not waive the Phase 0 record-folder artifacts. Subsequent forward-pass artifacts follow the sequencing rules in `$A_SOCIETY_RECORDS`.
 
 - If the flow changes executable boundaries, adds a new standing capability, changes a stable executable contract, or restructures the executable workflow, route through the TA design step before implementation.
 - If the flow is a scoped implementation that fits an already approved executable design, the record-folder `workflow.md` may omit the TA node and route directly from the Owner gate to the relevant developer track.
-
-The approval gate is explicit either way. No executable implementation begins before the Owner has approved the executable scope.
 
 ---
 

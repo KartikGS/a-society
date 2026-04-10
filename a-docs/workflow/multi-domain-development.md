@@ -89,6 +89,8 @@ Do not use this pattern when the project has two permanent, distinct execution l
 
 A multi-domain flow invokes these workflows' roles and conventions as phases inside one record folder. It does not replace those documents.
 
+**Phase 0 — Intake (required):** Every multi-domain flow begins with Phase 0. The Owner creates the record folder and produces `01-owner-workflow-plan.md` plus `workflow.md` before any other artifact. Use `$INSTRUCTION_WORKFLOW_COMPLEXITY` for intake sizing/routing and `$A_SOCIETY_RECORDS` for record-folder, `workflow.md`, and artifact-sequencing requirements.
+
 ---
 
 ## Role Map (Typical)
@@ -105,7 +107,7 @@ A multi-domain flow invokes these workflows' roles and conventions as phases ins
 
 ## Workflow-Linked Support Docs
 
-- **`owner-intake`** — read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed downstream constraints
+- **`owner-intake`** — read `$INSTRUCTION_WORKFLOW_COMPLEXITY` to size the multi-domain flow, `$A_SOCIETY_RECORDS` before opening the record folder and writing `workflow.md`, `$A_SOCIETY_OWNER_LOG_MANAGEMENT` when intake decisions affect `$A_SOCIETY_LOG`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` when issuing detailed downstream constraints
 - **`ta-design`, `ta-integration`** — read `$A_SOCIETY_TA_ADVISORY_STANDARDS`
 - **`framework-services-implementation`** — read `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE`
 - **`orchestration-implementation`** — read `$A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE`
@@ -113,6 +115,23 @@ A multi-domain flow invokes these workflows' roles and conventions as phases ins
 - **`curator-proposal`, `curator-implementation`** — read `$A_SOCIETY_CURATOR_IMPL_PRACTICES`
 - **`owner-curator-approval`** — read `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`, and `$A_SOCIETY_OWNER_BRIEF_WRITING` when adding detailed downstream constraints
 - **`owner-closure`** — read `$A_SOCIETY_OWNER_LOG_MANAGEMENT` and `$A_SOCIETY_OWNER_CLOSURE`
+
+---
+
+## Phase 0 — Intake
+
+Every multi-domain flow begins here, before any design, proposal, approval, implementation, or registration artifact is produced.
+
+At intake, the Owner:
+
+- assesses the triggered work against the five axes from `$INSTRUCTION_WORKFLOW_COMPLEXITY`
+- creates the record folder per `$A_SOCIETY_RECORDS`
+- produces `01-owner-workflow-plan.md` using `$A_SOCIETY_COMM_TEMPLATE_PLAN`
+- creates `workflow.md` for the active multi-domain path
+- defines the known path, including any parallel tracks, join points, and known unknowns
+- decides whether a TA design phase is required before the parallel implementation tracks begin
+
+`01-owner-workflow-plan.md` and `workflow.md` are required Phase 0 outputs. The workflow plan is the approval gate for the flow. Parallel tracks do not begin until these intake artifacts exist and the Owner has approved the flow shape. When the flow embeds a Curator proposal/approval loop or executable completion artifacts, subsequent forward-pass artifacts still follow the sequencing rules in `$A_SOCIETY_RECORDS` inside the same record folder.
 
 ---
 
@@ -135,6 +154,7 @@ If the only `general/` work is Curator-owned and requires approval, the embedded
 ## Record Folder and `workflow.md`
 
 - Create a record folder under `$A_SOCIETY_RECORDS`
+- Produce `01-owner-workflow-plan.md` as the first sequenced artifact in that folder
 - Author `workflow.md` in the nodes/edges format with YAML frontmatter `workflow:` for this flow only
 - The backward-pass planning capability reads `workflow.md` from the record folder; keep the graph consistent with actual artifacts and handoffs
 
