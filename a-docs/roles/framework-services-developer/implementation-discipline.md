@@ -8,4 +8,4 @@
 
 **Service-contract changes require co-maintenance visibility.** When a framework-service change alters a stable contract consumed by `general/`, `a-docs/`, or operator-facing executable docs, flag the corresponding Curator-maintained surfaces in the completion report. Do not treat code-only completion as sufficient when the contract has changed.
 
-**Migration-boundary discipline.** If a capability still lives under `tooling/` for migration reasons, preserve the approved migration boundary exactly as scoped. Do not invent new permanent placements under `tooling/`, and do not move code into `runtime/` without the flow explicitly authorizing that migration step.
+**Runtime-root discipline.** Standing framework-service code lives under `runtime/`. Do not recreate a parallel executable implementation root or scatter framework-service code across ad hoc package boundaries.

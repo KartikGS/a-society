@@ -4,7 +4,7 @@ This document explains why each folder in `a-society/` exists — the principle 
 
 ---
 
-## The Five-Folder Structure
+## The Four-Folder Structure
 
 A-Society is a project like any other. As with any project using this framework, `a-docs/` sits alongside the project's actual work product — it is not above it or inside it.
 
@@ -18,15 +18,10 @@ A-Society's agent documentation occupies one folder:
 
 - **`a-docs/`** — operational documentation for agents working on A-Society itself
 
-One additional top-level folder may still exist during migration:
-
-- **`tooling/`** — transitional legacy implementation location for executable framework-service code that has not yet been moved or retired. It is not a standing peer layer and is not a target for new permanent placements.
-
 The key placement question is: what kind of thing is this?
 - Content any project can take and use directly → `general/`
 - An A-Society agent deployed to work on other projects → `agents/`
 - A standing executable capability or operator-facing executable surface → `runtime/`
-- Transitional legacy executable implementation explicitly kept during migration → `tooling/`
 - Documentation for agents working on A-Society itself → `a-docs/`
 
 When you are unsure whether something belongs in `general/` vs another project's folder, ask: "Is this true only of A-Society, or would it be true of a legal project, a writing project, and a software project equally?" If the latter — it belongs in `general/`.
@@ -70,26 +65,6 @@ When you are unsure whether something belongs in `general/` vs another project's
 
 ---
 
-### `tooling/`
-
-**Purpose:** Transitional legacy implementation location for executable framework-service code that has not yet been migrated into `runtime/` or retired. This folder persists only to preserve continuity during executable-layer consolidation.
-
-**What belongs here:**
-- Legacy executable framework-service source files still awaiting migration
-- Supporting files required to keep those legacy services runnable during the transition
-
-**What does not belong here:**
-- New permanent executable placements
-- Standing operator-facing executable references
-- Session orchestration or LLM-calling code — that belongs in `runtime/`
-- Content any project can take and use directly as documentation — that belongs in `general/`
-
-**Principle:** Files here exist only by migration exception. If a flow can place the executable work durably in `runtime/`, it must do so instead.
-
-**The key test:** Is this file present only because an approved migration has not yet finished moving or retiring a legacy executable service? → `tooling/`. Otherwise, if it is a standing executable capability or operator-facing executable reference, place it in `runtime/`. If it is guidance agents read and follow in natural language, place it in `general/` or `a-docs/`.
-
----
-
 ### `runtime/`
 
 **Purpose:** A-Society's executable layer root — the standing home for operator-facing runtime behavior, orchestration/session management, and permanent executable framework services. The runtime calls LLM APIs directly, provides the executable CLI surface, and is the surviving umbrella root for executable implementation.
@@ -104,9 +79,9 @@ When you are unsure whether something belongs in `general/` vs another project's
 - Content any project can take and use directly as documentation — that belongs in `general/`
 - Any content that is documentation rather than executable code
 
-**Principle:** `runtime/` is the standing executable root. The Orchestration Developer owns its operator-facing surface and orchestration behavior; Framework Services Developer-owned executable services land here unless an approved migration exception keeps legacy code in `tooling/`.
+**Principle:** `runtime/` is the standing executable root. The Orchestration Developer owns its operator-facing surface and orchestration behavior; Framework Services Developer-owned executable services land here.
 
-**The key test:** Is this part of the standing executable surface A-Society intends to keep? If yes → `runtime/`. Does it exist only as legacy executable implementation preserved during migration? → `tooling/`.
+**The key test:** Is this part of the standing executable surface A-Society intends to keep? If yes → `runtime/`.
 
 ---
 

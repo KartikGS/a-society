@@ -8,7 +8,6 @@ This document is the standing design reference for A-Society's unified executabl
 
 - `runtime/` is the standing executable root
 - `runtime/INVOCATION.md` is the sole default operator-facing executable reference
-- `tooling/` is a transitional legacy implementation location, not a standing peer layer
 - The executable layer has two standing capability families:
   - deterministic framework services
   - orchestration and operator-facing runtime behavior
@@ -36,7 +35,7 @@ This document is the standing design reference for A-Society's unified executabl
 | Path validation | Check that indexed paths resolve to existing files |
 | Update comparison | Determine which framework update reports an adopting project still needs to apply |
 
-These capabilities may still have legacy implementation roots under `tooling/` during migration. Their standing architectural home is the executable layer rooted in `runtime/`.
+These capabilities live under the executable layer rooted in `runtime/`.
 
 ---
 

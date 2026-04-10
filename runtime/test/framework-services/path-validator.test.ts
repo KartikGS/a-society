@@ -1,12 +1,12 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validatePaths } from '../src/path-validator.js';
+import { validatePaths } from '../../src/framework-services/path-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const INTERNAL_INDEX = path.join(REPO_ROOT, 'a-society', 'a-docs', 'indexes', 'main.md');
 const PUBLIC_INDEX = path.join(REPO_ROOT, 'a-society', 'index.md');
 const FIXTURE_INDEX = path.join(__dirname, 'fixtures', 'index-sample.md');

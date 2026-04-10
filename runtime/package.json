@@ -1,14 +1,14 @@
 {
   "name": "a-society-runtime",
   "version": "0.1.0",
-  "description": "Programmatic orchestration layer for the A-Society framework",
+  "description": "Unified executable layer for the A-Society framework",
   "type": "module",
   "bin": {
     "a-society": "./bin/a-society"
   },
   "scripts": {
     "start": "tsx src/cli.ts",
-    "test": "tsx test/types.test.ts"
+    "test": "tsx test/types.test.ts && tsx test/context-injection.test.ts && tsx test/handoff.test.ts && tsx test/visualization.test.ts && tsx test/observability.test.ts && tsx test/integration/unified-routing.test.ts && tsx test/framework-services/utils.test.ts && tsx test/framework-services/path-validator.test.ts && tsx test/framework-services/version-comparator.test.ts && tsx test/framework-services/consent-utility.test.ts && tsx test/framework-services/workflow-graph-validator.test.ts && tsx test/framework-services/backward-pass-orderer.test.ts && tsx test/framework-services/scaffolding-system.test.ts && tsx test/framework-services/integration.test.ts"
   },
   "engines": {
     "node": ">=18"

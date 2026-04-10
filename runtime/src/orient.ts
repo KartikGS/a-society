@@ -118,6 +118,11 @@ export async function runInteractiveSession(
               throw e;
             }
           } catch (error: any) {
+            if (error instanceof HandoffParseError && autonomous) {
+              turnSpan.recordException(error);
+              turnSpan.setStatus({ code: SpanStatusCode.ERROR });
+              throw error;
+            }
             if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
               turnSpan.setAttribute('session.turn.outcome', 'aborted');
               turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
@@ -201,6 +206,11 @@ export async function runInteractiveSession(
                 throw e;
               }
             } catch (error: any) {
+              if (error instanceof HandoffParseError && autonomous) {
+                turnSpan.recordException(error);
+                turnSpan.setStatus({ code: SpanStatusCode.ERROR });
+                throw error;
+              }
               if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
                 turnSpan.setAttribute('session.turn.outcome', 'aborted');
                 turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });

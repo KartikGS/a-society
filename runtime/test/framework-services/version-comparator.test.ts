@@ -2,20 +2,23 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compareVersions, parseVersion, isGreaterThan } from '../src/version-comparator.js';
+import {
+  compareVersions,
+  parseVersion,
+  isGreaterThan,
+} from '../../src/framework-services/version-comparator.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const FRAMEWORK_VERSION = path.join(REPO_ROOT, 'a-society', 'VERSION.md');
-const UPDATES_DIR = path.join(REPO_ROOT, 'a-society', 'updates');
 const FIXTURES = path.join(__dirname, 'fixtures');
+const FRAMEWORK_VERSION = path.join(FIXTURES, 'framework-version-sample.md');
+const UPDATES_DIR = path.join(FIXTURES, 'unused-updates-dir');
 
 function readFrameworkCurrentVersion(): string {
   const content = fs.readFileSync(FRAMEWORK_VERSION, 'utf8');
   const m = content.match(/^\*\*Version:\*\*\s*(v\d+\.\d+)/m);
-  if (!m) throw new Error('Cannot read **Version:** from VERSION.md');
+  if (!m) throw new Error('Cannot read **Version:** from framework version fixture');
   return m[1];
 }
 

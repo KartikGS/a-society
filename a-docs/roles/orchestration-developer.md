@@ -33,7 +33,7 @@ The Orchestration Developer does **NOT** own:
 
 > These cannot be overridden by any other instruction.
 
-- **Write to `runtime/` only.** This role has no write authority over `a-docs/`, `general/`, `agents/`, or legacy `tooling/` implementation surfaces.
+- **Write to `runtime/` only.** This role has no write authority over `a-docs/`, `general/`, or `agents/`.
 
   **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder. This exception does not extend to any other file under `a-docs/`.
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected behavior and escalate.

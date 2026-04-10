@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { extractFrontmatter } from '../src/utils.js';
+import { extractFrontmatter } from '../../src/framework-services/utils.js';
 
 let passed = 0;
 let failed = 0;

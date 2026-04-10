@@ -18,7 +18,6 @@ Implement and maintain deterministic executable framework services — scaffoldi
 
 The Framework Services Developer **owns**:
 - Internal implementation choices within an approved design: library selection, internal code structure, test harness design, error message text, and file naming within the approved executable implementation surface
-- Legacy migration-safe maintenance of framework-service code that still lives under `tooling/`, when the active flow explicitly scopes that transitional location
 - Raising deviations: when an approved design cannot be implemented as specified, the Developer surfaces this to the TA immediately and halts implementation on the affected capability until the deviation is resolved
 - Integration testing for framework-service behavior and service-to-service composition
 
@@ -36,7 +35,7 @@ The Framework Services Developer does **NOT** own:
 > These cannot be overridden by any other instruction.
 
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected capability and escalate.
-- **Write only to approved executable implementation surfaces.** `runtime/` is the standing target. `tooling/` is writable only when the active flow explicitly keeps a transitional legacy implementation there. Do not write to `a-docs/`, `general/`, or `agents/`.
+- **Write only to approved executable implementation surfaces.** `runtime/` is the standing target. Do not write to `a-docs/`, `general/`, or `agents/`.
 
   **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder. This exception does not extend to any other file under `a-docs/`.
 - **Do not open a Developer session before the executable gate clears.** The executable role doc, the relevant standing executable design, and the Owner-approved implementation scope must exist before implementation begins.

@@ -4,12 +4,11 @@
 
 A-Society is a framework for making projects agentic-friendly. Its foundation is documentation — structured context that agents read and follow — but its work product now also includes a standing executable layer rooted in `runtime/`. Understanding the structure is understanding the architecture.
 
-A-Society has five top-level folders, each with a distinct role:
+A-Society has four standing top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
 - **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal framework-maintenance docs.
 - **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing CLI surface, and is the surviving umbrella executable layer.
-- **`tooling/`** — transitional legacy implementation location. Some deterministic framework-service code may still live here while migrations are phased in, but `tooling/` is no longer a standing peer layer and is not a target for new permanent placements.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
 The executable layer currently includes six standing deterministic framework services and one orchestration family:
@@ -24,7 +23,7 @@ The executable layer currently includes six standing deterministic framework ser
 | Update comparison | Identifies which framework update reports an adopting project has not yet applied |
 | Orchestration | Manages agent sessions end to end: context injection, handoff routing, trigger execution, observability, and operator-facing runtime behavior |
 
-Standing executable design and coupling references live under `$A_SOCIETY_EXECUTABLE`. During migration, legacy implementation details and historical assessment context may still point back to the transitional `tooling/` paths they describe.
+Standing executable design and coupling references live under `$A_SOCIETY_EXECUTABLE`. Historical assessment context may still point back to the retired `tooling/` paths it describes, but the standing executable implementation root is now `runtime/` alone.
 
 **Executable implementation ownership:** `runtime/` is the standing executable root. Framework Services Developer and Orchestration Developer work within the executable layer under approved design authority. The Curator maintains the standing docs and indexes but does not author executable implementation surfaces.
 
@@ -62,16 +61,16 @@ The following constraints are non-negotiable. An agent that violates one has mad
 
 ### Layer Isolation
 
-`a-docs/` is documentation about A-Society. `general/`, `agents/`, and `runtime/` are A-Society's standing work product. `tooling/` may exist as transitional executable implementation state only when an approved migration still requires it. These categories must not be mixed.
+`a-docs/` is documentation about A-Society. `general/`, `agents/`, and `runtime/` are A-Society's standing work product. These categories must not be mixed.
 
 - Content that is part of A-Society's deliverable (instructions, templates, active agents, executable capabilities, operator-facing runtime surfaces) belongs in `general/`, `agents/`, or `runtime/`, never in `a-docs/`
 - Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/`, `agents/`, or `runtime/`
 - The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/`, `agents/`, or `runtime/`
-- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; executable capabilities and operator-facing runtime behavior → `runtime/`; `tooling/` only when an approved migration explicitly preserves a legacy implementation location for the current flow
+- The secondary test for work product placement: instructions and templates → `general/`; deployed agents that run on other projects → `agents/`; executable capabilities and operator-facing runtime behavior → `runtime/`
 
 Violation: Placing an A-Society agent role file in `a-docs/roles/` when the agent works for other projects, not on A-Society.
 Violation: Placing executable implementation code in `a-docs/` or `general/`.
-Violation: Creating new permanent executable placements under `tooling/` after the executable-layer unification decision.
+Violation: Creating a new executable implementation root that recreates the retired tooling/runtime split.
 
 ### Boundary Respect
 

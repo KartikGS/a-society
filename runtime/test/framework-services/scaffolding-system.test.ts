@@ -8,7 +8,7 @@ import {
   scaffoldFromManifestFile,
   renderStub,
   detectFeedbackConsentType,
-} from '../src/scaffolding-system.js';
+} from '../../src/framework-services/scaffolding-system.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -226,7 +226,7 @@ test('scaffold: throws if projectName is missing', () => {
 // ── scaffoldFromManifestFile — live manifest ──────────────────────────────────
 
 // Locate the actual framework manifest
-const FRAMEWORK_ROOT = path.resolve(__dirname, '../../..');
+const FRAMEWORK_ROOT = path.resolve(__dirname, '../../..', '..');
 const SOCIETY_ACTUAL_ROOT = path.join(FRAMEWORK_ROOT, 'a-society');
 const MANIFEST_PATH = path.join(SOCIETY_ACTUAL_ROOT, 'general/manifest.yaml');
 

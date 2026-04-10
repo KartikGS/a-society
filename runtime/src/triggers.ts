@@ -1,16 +1,16 @@
 import { SessionStore } from './store.js';
 import type { FlowRun, TriggerRecord } from './types.js';
-import { validateWorkflowFile } from '../../tooling/src/workflow-graph-validator.js';
-import { computeBackwardPassPlan } from '../../tooling/src/backward-pass-orderer.js';
-import { scaffoldFromManifestFile } from '../../tooling/src/scaffolding-system.js';
+import { validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
+import { computeBackwardPassPlan } from './framework-services/backward-pass-orderer.js';
+import { scaffoldFromManifestFile } from './framework-services/scaffolding-system.js';
 import path from 'node:path';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
 /**
  * Component 7: Tool Trigger Engine
- * Coordinates direct in-process invocations of the framework's deterministic tooling
- * utilities when the flow orchestration hits defined boundary rules.
+ * Coordinates direct in-process invocations of the framework's deterministic
+ * framework services when the flow orchestration hits defined boundary rules.
  */
 export class ToolTriggerEngine {
   static async evaluateAndTrigger(flowRun: FlowRun, event: 'START' | 'TERMINAL_FORWARD_PASS' | 'INITIALIZATION', payload: any): Promise<void> {

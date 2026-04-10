@@ -14,7 +14,7 @@ import {
   getMetricDataPoints
 } from './telemetry-test-helper.js';
 import { TelemetryManager } from '../src/observability.js';
-import { HandoffInterpreter } from '../src/handoff.js';
+import { HandoffInterpreter, HandoffParseError } from '../src/handoff.js';
 import { LLMGateway } from '../src/llm.js';
 import { ToolTriggerEngine } from '../src/triggers.js';
 import { ImprovementOrchestrator } from '../src/improvement.js';
@@ -84,6 +84,7 @@ async function test(name: string, fn: () => Promise<void> | void): Promise<void>
 async function run() {
   await setupTestTelemetry();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
+  const stateDir = path.join(tmpDir, '.state');
   
   // registry.ts buildRoleContext(roleKey, workspaceRoot)
   // For roleKey "a-society__curator", it looks for:
@@ -185,7 +186,7 @@ async function run() {
     };
 
     try {
-      const result = await runInteractiveSession(
+      await runInteractiveSession(
         tmpDir,
         'a-society__curator',
         'System prompt',
@@ -193,7 +194,9 @@ async function run() {
         undefined, undefined,
         true
       );
-      assert.strictEqual(result, null);
+      assert.fail('Expected autonomous parse failure to propagate as HandoffParseError.');
+    } catch (error: any) {
+      assert.ok(error instanceof HandoffParseError);
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }
@@ -216,6 +219,8 @@ async function run() {
   await test('Scenario: ToolTriggerEngine.evaluateAndTrigger (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
+    process.env.A_SOCIETY_STATE_DIR = stateDir;
+    SessionStore.init();
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
     const workflowPath = path.join(workflowsDir, 'workflow.md');
@@ -245,7 +250,7 @@ async function run() {
   await test('Scenario: ImprovementOrchestrator closure (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
-    process.env.A_SOCIETY_STATE_DIR = path.join(tmpDir, '.state');
+    process.env.A_SOCIETY_STATE_DIR = stateDir;
     SessionStore.init();
     
     const flowRun: any = {
@@ -280,6 +285,7 @@ async function run() {
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   
   await TelemetryManager.shutdown();
+  delete process.env.A_SOCIETY_STATE_DIR;
   fs.rmSync(tmpDir, { recursive: true, force: true });
   
   if (failed > 0) process.exit(1);

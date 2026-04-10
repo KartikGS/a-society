@@ -7,8 +7,7 @@ This document records the standing governance rules for A-Society's unified exec
 ## Placement Rules
 
 - `runtime/` is the standing executable root
-- new permanent executable placements must target `runtime/`, not `tooling/`
-- `tooling/` may remain only as an approved transitional legacy implementation location during migration
+- all standing executable implementation belongs under `runtime/`
 - standing executable design and coupling references live under `a-docs/executable/`
 
 ---
@@ -49,6 +48,6 @@ When a flow adds a new standing executable capability or changes the executable 
 
 ---
 
-## Migration Rule
+## Historical Reference Rule
 
-During executable-layer unification, some framework-service code and historical references may still point into `tooling/`. Treat those paths as legacy compatibility surfaces, not as evidence of a surviving standalone tooling layer. New work must not recreate that split.
+Historical records and legacy assessments may still cite `tooling/` paths. Treat those references as immutable historical context, not as evidence of a surviving executable root. New work must not recreate that split.

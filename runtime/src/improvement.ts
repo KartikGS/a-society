@@ -1,6 +1,10 @@
 import path from 'node:path';
 import readline from 'node:readline';
-import { computeBackwardPassPlan, locateFindingsFiles, locateAllFindingsFiles } from '../../tooling/src/backward-pass-orderer.js';
+import {
+  computeBackwardPassPlan,
+  locateFindingsFiles,
+  locateAllFindingsFiles,
+} from './framework-services/backward-pass-orderer.js';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { runInteractiveSession } from './orient.js';

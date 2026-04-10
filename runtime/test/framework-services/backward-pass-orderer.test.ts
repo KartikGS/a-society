@@ -6,8 +6,11 @@ import {
   buildBackwardPassPlan,
   locateFindingsFiles,
   locateAllFindingsFiles,
-} from '../src/backward-pass-orderer.js';
-import type { WorkflowNode, WorkflowEdge } from '../src/backward-pass-orderer.js';
+} from '../../src/framework-services/backward-pass-orderer.js';
+import type {
+  WorkflowNode,
+  WorkflowEdge,
+} from '../../src/framework-services/backward-pass-orderer.js';
 
 let passed = 0;
 let failed = 0;

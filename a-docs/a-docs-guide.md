@@ -270,7 +270,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The unified executable layer still needs a pure execution role for deterministic framework services. Without this role, framework-service implementation either collapses into the Curator (wrong authority) or into orchestration work (wrong boundary), recreating the retired tooling/runtime split in a less explicit form.
 
-**What it owns:** Deterministic executable framework-service implementation, migration-safe legacy edits under `tooling/` when explicitly scoped, escalation triggers for design deviation and scope ambiguity, and the boundary that this role does not own a standing operator-facing executable reference by default.
+**What it owns:** Deterministic executable framework-service implementation under `runtime/`, escalation triggers for design deviation and scope ambiguity, and the boundary that this role does not own a standing operator-facing executable reference by default.
 
 **What breaks without it:** No clear behavioral contract for executable framework-service work. The executable role split becomes implicit, and implementation decisions drift across the framework-services/orchestration boundary.
 
@@ -282,7 +282,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Framework-service implementation guidance matters at execution time, not at session start. Keeping it separate preserves a lighter startup role file while giving the implementation phases one canonical completion-report and co-maintenance reference.
 
-**What it owns:** Completion-report shape, exact-path discipline, service-contract co-maintenance guidance, and migration-boundary rules for legacy `tooling/` code.
+**What it owns:** Completion-report shape, exact-path discipline, service-contract co-maintenance guidance, and the standing rule that framework-service implementation lives under `runtime/`.
 
 **What breaks without it:** Framework-service completion artifacts drift in shape, and migration-boundary or co-maintenance mistakes get rediscovered ad hoc.
 

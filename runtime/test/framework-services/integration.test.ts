@@ -1,14 +1,14 @@
 /**
  * Integration test — Phase 6
  *
- * Exercises all six tooling components together against the live A-Society
+ * Exercises the deterministic framework services against the live A-Society
  * framework state. Validates that component interfaces compose correctly:
  *
  *   Scaffold  →  Consent Utility   (scaffold calls consent utility for consent files)
  *   Scaffold  →  Path Validator    (path validator can be run against index files)
  *   Workflow Graph Validator        (validates live permanent workflow docs)
  *   Backward Pass Orderer           (reads record-folder workflow.md input)
- *   Version Comparator              (standalone, reads live VERSION.md)
+ *   Version Comparator              (standalone, fixture-based for hermeticity)
  *
  * Framework state failures (missing files in indexes, etc.) are printed as
  * informational warnings and do not fail the suite, consistent with prior phases.
@@ -20,13 +20,19 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { scaffold, scaffoldFromManifestFile } from '../src/scaffolding-system.js';
-import { checkConsent }                        from '../src/consent-utility.js';
-import { validatePaths }                       from '../src/path-validator.js';
-import { validateWorkflowFile }                from '../src/workflow-graph-validator.js';
-import { orderWithPromptsFromFile }            from '../src/backward-pass-orderer.js';
-import { compareVersions }                     from '../src/version-comparator.js';
-import type { BackwardPassEntry, BackwardPassPlan } from '../src/backward-pass-orderer.js';
+import {
+  scaffold,
+  scaffoldFromManifestFile,
+} from '../../src/framework-services/scaffolding-system.js';
+import { checkConsent } from '../../src/framework-services/consent-utility.js';
+import { validatePaths } from '../../src/framework-services/path-validator.js';
+import { validateWorkflowFile } from '../../src/framework-services/workflow-graph-validator.js';
+import { computeBackwardPassPlan } from '../../src/framework-services/backward-pass-orderer.js';
+import { compareVersions } from '../../src/framework-services/version-comparator.js';
+import type {
+  BackwardPassEntry,
+  BackwardPassPlan,
+} from '../../src/framework-services/backward-pass-orderer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,13 +54,14 @@ function test(name: string, fn: () => void): void {
 
 // ── Path resolution ───────────────────────────────────────────────────────────
 
-const REPO_ROOT         = path.resolve(__dirname, '../../..');
+const REPO_ROOT         = path.resolve(__dirname, '../../..', '..');
 const SOCIETY_ROOT      = path.join(REPO_ROOT, 'a-society');
 const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'general/manifest.yaml');
 const PUBLIC_INDEX      = path.join(SOCIETY_ROOT, 'index.md');
 const INTERNAL_INDEX    = path.join(SOCIETY_ROOT, 'a-docs/indexes/main.md');
-const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/main.md');
-const VERSION_MD        = path.join(SOCIETY_ROOT, 'VERSION.md');
+const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/executable-development.md');
+const FRAMEWORK_VERSION_FIXTURE = path.join(__dirname, 'fixtures', 'framework-version-sample.md');
+const VERSION_RECORD_FIXTURE = path.join(__dirname, 'fixtures', 'version-record-current.md');
 
 // Temp directory for the simulated project
 const TEMP_BASE     = fs.mkdtempSync(path.join(tmpdir(), 'a-society-integration-'));
@@ -95,7 +102,7 @@ workflow:
 // Scaffold → Consent Utility chain: scaffoldFromManifestFile creates consent
 // files via the Consent Utility; checkConsent then reads each of the three back.
 
-import type { ScaffoldResult } from '../src/scaffolding-system.js';
+import type { ScaffoldResult } from '../../src/framework-services/scaffolding-system.js';
 let scaffoldResult: ScaffoldResult | undefined;
 
 test('Scenario 1 — scaffold runs against live manifest without throwing', () => {
@@ -218,7 +225,7 @@ test('Scenario 5 — workflow graph validator runs on live workflow and reports 
 
 test('Scenario 5 — backward pass orderer runs on record-folder workflow.md without throwing', () => {
   assert.doesNotThrow(() => {
-    backwardPlan = orderWithPromptsFromFile(RECORD_FOLDER, 'Curator');
+    backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'Curator', 'graph-based');
     // Flatten 2D plan to flat array for downstream assertions
     backwardOrder = backwardPlan.flat();
   });
@@ -246,31 +253,17 @@ test('Scenario 5 — meta-analysis entries reuse the existing session', () => {
 });
 
 // ── Scenario 6: Version Comparator ────────────────────────────────────────────
-// A-Society's own version record is at v9.0 (fully up to date).
-// compareVersions should return an empty unapplied_reports list.
 
-const A_SOCIETY_VERSION_RECORD = path.join(SOCIETY_ROOT, 'a-docs/a-society-version.md');
+test('Scenario 6 — version comparator runs against hermetic fixtures without throwing', () => {
+  assert.doesNotThrow(() => compareVersions(VERSION_RECORD_FIXTURE, FRAMEWORK_VERSION_FIXTURE));
+});
 
-if (fs.existsSync(A_SOCIETY_VERSION_RECORD) && fs.existsSync(VERSION_MD)) {
-  test('Scenario 6 — version comparator runs against live version files without throwing', () => {
-    assert.doesNotThrow(() => compareVersions(A_SOCIETY_VERSION_RECORD, VERSION_MD));
-  });
-
-  test('Scenario 6 — A-Society is at current version (no unapplied reports)', () => {
-    const result = compareVersions(A_SOCIETY_VERSION_RECORD, VERSION_MD);
-    assert.ok('projectVersion' in result);
-    assert.ok('currentVersion' in result);
-    assert.ok(Array.isArray(result.unappliedReports));
-    if (result.unappliedReports.length > 0) {
-      console.log(`    [info] A-Society has ${result.unappliedReports.length} unapplied report(s) — may be expected if framework was just updated`);
-      result.unappliedReports.forEach(r => console.log(`      - ${r.filename} (${r.version})`));
-    }
-    // Informational — A-Society should be up to date but we don't hard-fail on drift
-    assert.ok(result.unappliedReports.length >= 0);
-  });
-} else {
-  console.log(`  [skip] Scenario 6 — version record or VERSION.md not found at expected path`);
-}
+test('Scenario 6 — fixture project at current version has no unapplied reports', () => {
+  const result = compareVersions(VERSION_RECORD_FIXTURE, FRAMEWORK_VERSION_FIXTURE);
+  assert.strictEqual(result.projectVersion, 'v27.1');
+  assert.strictEqual(result.currentVersion, 'v27.1');
+  assert.deepStrictEqual(result.unappliedReports, []);
+});
 
 // ── Cleanup and summary ───────────────────────────────────────────────────────
 

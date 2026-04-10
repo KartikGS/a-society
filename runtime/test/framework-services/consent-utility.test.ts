@@ -2,7 +2,11 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createConsentFile, checkConsent, FEEDBACK_TYPES } from '../src/consent-utility.js';
+import {
+  createConsentFile,
+  checkConsent,
+  FEEDBACK_TYPES,
+} from '../../src/framework-services/consent-utility.js';
 
 let passed = 0;
 let failed = 0;

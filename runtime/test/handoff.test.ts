@@ -46,6 +46,27 @@ test('parse (Null artifact): handles null artifact_path', () => {
   assert.strictEqual((result as any).targets[0].artifact_path, null);
 });
 
+test('parse (forward-pass-closed): returns closure signal', () => {
+  const text = "```handoff\ntype: forward-pass-closed\nrecord_folder_path: a-society/a-docs/records/example-flow\nartifact_path: a-society/a-docs/records/example-flow/08-owner-closure.md\n```";
+  const result = HandoffInterpreter.parse(text);
+  assert.strictEqual(result.kind, 'forward-pass-closed');
+  assert.strictEqual((result as any).recordFolderPath, 'a-society/a-docs/records/example-flow');
+  assert.strictEqual((result as any).artifactPath, 'a-society/a-docs/records/example-flow/08-owner-closure.md');
+});
+
+test('parse (meta-analysis-complete): returns findings signal', () => {
+  const text = "```handoff\ntype: meta-analysis-complete\nfindings_path: a-society/a-docs/records/example-flow/11-owner-findings.md\n```";
+  const result = HandoffInterpreter.parse(text);
+  assert.strictEqual(result.kind, 'meta-analysis-complete');
+  assert.strictEqual((result as any).findingsPath, 'a-society/a-docs/records/example-flow/11-owner-findings.md');
+});
+
+test('parse (prompt-human): returns awaiting_human signal', () => {
+  const text = "```handoff\ntype: prompt-human\n```";
+  const result = HandoffInterpreter.parse(text);
+  assert.strictEqual(result.kind, 'awaiting_human');
+});
+
 test('parse (Empty array): throws HandoffParseError', () => {
   const text = "```handoff\n[]\n```";
   assert.throws(() => {
@@ -70,6 +91,25 @@ test('parse (Malformed YAML): throws HandoffParseError', () => {
   assert.throws(() => {
     HandoffInterpreter.parse(text);
   }, /Handoff block could not be parsed/);
+});
+
+test('parse (Invalid typed signal): throws on unknown type', () => {
+  const text = "```handoff\ntype: unknown-signal\n```";
+  assert.throws(() => {
+    HandoffInterpreter.parse(text);
+  }, /Unknown handoff signal type/);
+});
+
+test('parse (Typed signal missing required fields): throws field-specific errors', () => {
+  const forwardPassText = "```handoff\ntype: forward-pass-closed\nartifact_path: a-society/a-docs/records/example-flow/08-owner-closure.md\n```";
+  assert.throws(() => {
+    HandoffInterpreter.parse(forwardPassText);
+  }, /missing record_folder_path/);
+
+  const findingsText = "```handoff\ntype: meta-analysis-complete\n```";
+  assert.throws(() => {
+    HandoffInterpreter.parse(findingsText);
+  }, /missing findings_path/);
 });
 
 test('parse (Missing handoff key): throws error', () => {

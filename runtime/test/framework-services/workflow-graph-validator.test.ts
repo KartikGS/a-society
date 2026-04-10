@@ -1,14 +1,17 @@
 import assert from 'node:assert';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateWorkflowFile, validateGraph } from '../src/workflow-graph-validator.js';
-import { extractFrontmatter } from '../src/utils.js';
+import {
+  validateWorkflowFile,
+  validateGraph,
+} from '../../src/framework-services/workflow-graph-validator.js';
+import { extractFrontmatter } from '../../src/framework-services/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const LIVE_WORKFLOW = path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'framework-development.md');
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
+const LIVE_WORKFLOW = path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'executable-development.md');
 const FIXTURES = path.join(__dirname, 'fixtures');
 
 let passed = 0;
