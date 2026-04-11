@@ -16,7 +16,7 @@ import {
 import { TelemetryManager } from '../src/observability.js';
 import { HandoffInterpreter, HandoffParseError } from '../src/handoff.js';
 import { LLMGateway } from '../src/llm.js';
-import { ToolTriggerEngine } from '../src/triggers.js';
+import { validateWorkflowFile } from '../src/framework-services/workflow-graph-validator.js';
 import { ImprovementOrchestrator } from '../src/improvement.js';
 import { runInteractiveSession } from '../src/orient.js';
 import { SessionStore } from '../src/store.js';
@@ -244,35 +244,16 @@ async function run() {
     assert.strictEqual(parseFailurePoint?.value, 1);
   });
 
-  await test('Scenario: ToolTriggerEngine.evaluateAndTrigger (REAL CODE)', async () => {
+  await test('Scenario: validateWorkflowFile (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
-    process.env.A_SOCIETY_STATE_DIR = stateDir;
-    SessionStore.init();
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
     const workflowPath = path.join(workflowsDir, 'workflow.md');
     fs.writeFileSync(workflowPath, '---\nworkflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: Owner\n  edges: []\n---');
 
-    const flowRun: any = {
-      flowId: 'test-flow',
-      workspaceRoot: tmpDir,
-      recordFolderPath: workflowsDir,
-      activeNodes: ['node_1']
-    };
-    
-    await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath: workflowPath });
-
-    const triggerSpan = getSpan('tool_trigger.execute');
-    assert.ok(triggerSpan);
-    assert.strictEqual(triggerSpan.attributes['flow.id'], 'test-flow');
-    assert.strictEqual(triggerSpan.attributes['trigger.event'], 'START');
-    assert.strictEqual(triggerSpan.attributes['trigger.component'], 'Workflow Graph Schema Validator');
-    assert.strictEqual(triggerSpan.attributes['trigger.success'], true);
-    assert.strictEqual(
-      triggerSpan.attributes['trigger.result_summary'],
-      `Component 3 execution success: Validated format at ${workflowPath}`
-    );
+    const result = validateWorkflowFile(workflowPath, true);
+    assert.ok(result.valid);
   });
 
   await test('Scenario: ImprovementOrchestrator closure (REAL CODE)', async () => {

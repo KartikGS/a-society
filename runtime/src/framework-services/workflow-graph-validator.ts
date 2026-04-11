@@ -238,7 +238,7 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
 }
 
 /**
- * Thrown by ToolTriggerEngine when START validation fails; carries the structured
+ * Thrown when workflow validation fails; carries the structured
  * errors list so the orchestrator can route to the validator-owned repair helper.
  */
 export class WorkflowValidationError extends Error {

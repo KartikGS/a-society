@@ -4,13 +4,13 @@ import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import { ToolTriggerEngine } from './triggers.js';
-import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget, RuntimeMessageParam } from './types.js';
+import type { FlowRun, HandoffResult, HandoffTarget, RuntimeMessageParam } from './types.js';
 import { runInteractiveSession } from './orient.js';
 import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
-import { buildWorkflowRepairGuidance, WorkflowValidationError } from './framework-services/workflow-graph-validator.js';
+import { buildWorkflowRepairGuidance, WorkflowValidationError, validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
+import { computeBackwardPassPlan } from './framework-services/backward-pass-orderer.js';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
@@ -177,7 +177,8 @@ export class FlowOrchestrator {
                 };
 
                 try {
-                  await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
+                  const res = validateWorkflowFile(workflowDocumentPath, true);
+                  if (!res.valid) throw new WorkflowValidationError(res.errors, workflowDocumentPath);
                 } catch (e: any) {
                   bootstrapSpan.addEvent('bootstrap.tool_trigger_failed', { error_message: e.message });
                   const errors = e instanceof WorkflowValidationError ? e.errors : [e.message];
@@ -316,7 +317,7 @@ export class FlowOrchestrator {
           span.addEvent('store.session_loaded', { 'session.id': sessionId, 'session.resumed': true });
         }
 
-        const { bundleContent, contextHash } = ContextInjectionService.buildContextBundle(
+        const { bundleContent } = ContextInjectionService.buildContextBundle(
           flowRun.projectNamespace, roleName, flowRun.workspaceRoot
         );
 
@@ -445,20 +446,9 @@ export class FlowOrchestrator {
 
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
 
-              const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));
-              const turnRecord: TurnRecord = {
-                turnNumber: currentTurnNumber,
-                inputArtifactPath: (Array.isArray(resolvedArtifacts) ? resolvedArtifacts.join(', ') : (resolvedArtifacts || '')),
-                injectedContextHash: contextHash,
-                assistantOutput: (injectedHistory[injectedHistory.length - 1] as any)?.content || "Handoff generated.",
-                parsedHandoffResult: handoffs
-              };
-
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session);
-              SessionStore.saveTurnRecord(session.logicalSessionId, turnRecord);
               span.addEvent('store.session_saved', { 'session.id': sessionId });
-              span.addEvent('store.turn_saved', { 'session.id': sessionId, 'turn_number': currentTurnNumber });
               break;
             } else {
               span.setAttribute('node.outcome', 'null_return');
@@ -525,7 +515,7 @@ export class FlowOrchestrator {
       });
 
       if (flowRun.activeNodes.length === 0) {
-        await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'TERMINAL_FORWARD_PASS', {});
+        computeBackwardPassPlan(flowRun.recordFolderPath, 'Curator', 'graph-based');
         flowRun.status = 'completed';
       }
       SessionStore.saveFlowRun(flowRun);

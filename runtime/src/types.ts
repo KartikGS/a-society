@@ -58,21 +58,6 @@ export interface RoleSession {
   isActive: boolean;
 }
 
-export interface TurnRecord {
-  turnNumber: number;
-  inputArtifactPath: string;
-  injectedContextHash: string;
-  assistantOutput: string;
-  parsedHandoffResult: unknown | null;
-}
-
-export interface TriggerRecord {
-  toolComponent: string;
-  inputSummary: string;
-  resultSummary: string;
-  success: boolean;
-  retryStatus: string;
-}
 
 export interface OrientSession {
   sessionId: string;

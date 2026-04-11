@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { FlowRun, RoleSession, TurnRecord, TriggerRecord } from './types.js';
+import type { FlowRun, RoleSession } from './types.js';
 
 // Get the current directory of this module, then resolve up to runtime/.state
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,13 +14,11 @@ function getStateDir() {
 }
 
 function getSessionsDir(stateDir: string) { return path.join(stateDir, 'sessions'); }
-function getTurnsDir(stateDir: string) { return path.join(stateDir, 'turns'); }
-function getTriggersDir(stateDir: string) { return path.join(stateDir, 'triggers'); }
 
 export class SessionStore {
   static init() {
     const stateDir = getStateDir();
-    [stateDir, getSessionsDir(stateDir), getTurnsDir(stateDir), getTriggersDir(stateDir)].forEach(dir => {
+    [stateDir, getSessionsDir(stateDir)].forEach(dir => {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
@@ -80,22 +78,4 @@ export class SessionStore {
     return JSON.parse(fs.readFileSync(p, 'utf8')) as RoleSession;
   }
 
-  static saveTurnRecord(logicalSessionId: string, turn: TurnRecord) {
-    const turnsDir = getTurnsDir(getStateDir());
-    const sessionTurnsDir = path.join(turnsDir, logicalSessionId);
-    if (!fs.existsSync(sessionTurnsDir)) {
-      fs.mkdirSync(sessionTurnsDir, { recursive: true });
-    }
-    fs.writeFileSync(path.join(sessionTurnsDir, `${turn.turnNumber}.json`), JSON.stringify(turn, null, 2));
-  }
-
-  static saveTriggerRecord(flowRunId: string, trigger: TriggerRecord) {
-    const triggersDir = getTriggersDir(getStateDir());
-    const flowTriggersDir = path.join(triggersDir, flowRunId);
-    if (!fs.existsSync(flowTriggersDir)) {
-      fs.mkdirSync(flowTriggersDir, { recursive: true });
-    }
-    const ts = Date.now();
-    fs.writeFileSync(path.join(flowTriggersDir, `${ts}-${trigger.toolComponent.replace(/\s+/g, '-')}.json`), JSON.stringify(trigger, null, 2));
-  }
 }
