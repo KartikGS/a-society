@@ -8,6 +8,8 @@ import { ToolTriggerEngine } from './triggers.js';
 import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget, RuntimeMessageParam } from './types.js';
 import { runInteractiveSession } from './orient.js';
 import { ImprovementOrchestrator } from './improvement.js';
+import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
+import { buildWorkflowRepairGuidance, WorkflowValidationError } from './framework-services/workflow-graph-validator.js';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
@@ -28,15 +30,21 @@ export function parseWorkflow(filePath: string): any {
   }
   const content = fs.readFileSync(filePath, 'utf8');
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) throw new Error('No valid frontmatter found in workflow');
+  if (!match) throw new WorkflowError('No valid frontmatter found in workflow');
   return yaml.load(match[1]);
 }
 
 
 export class FlowOrchestrator {
+  private renderer: OperatorEventRenderer;
+  private pendingRoleActiveEmitted = new Set<string>();
+
+  constructor(renderer?: OperatorEventRenderer) {
+    this.renderer = renderer ?? createDefaultRenderer();
+  }
 
   public async startUnifiedOrchestration(
-    workspaceRoot: string, 
+    workspaceRoot: string,
     roleKey: string,
     inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout
@@ -63,7 +71,8 @@ export class FlowOrchestrator {
 
         if (!flowRun) {
           await tracer.startActiveSpan('bootstrap.session', { kind: SpanKind.INTERNAL, attributes: { role_key: roleKey } }, async (bootstrapSpan) => {
-            console.log(`Bootstrapping flow from interactive session...`);
+            const bootstrapRole = roleKey.split('__')[1] ?? roleKey;
+            this.renderer.emit({ kind: 'flow.bootstrap_started', role: bootstrapRole });
             const bootstrapHistory: RuntimeMessageParam[] = [];
 
             const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
@@ -84,8 +93,9 @@ export class FlowOrchestrator {
                     workspaceRoot, roleKey, bootstrapBundle,
                     bootstrapHistory,
                     inputStream, outputStream,
-                    false,              // interactive — Owner must converse before emitting handoff
-                    controller.signal   // ← externalSignal
+                    false,
+                    controller.signal,
+                    this.renderer
                   );
                 } finally {
                   process.removeListener('SIGINT', sigintHandler);
@@ -108,10 +118,9 @@ export class FlowOrchestrator {
 
                 if (!fs.existsSync(workflowDocumentPath)) {
                   bootstrapSpan.addEvent('bootstrap.workflow_not_found', { record_folder_path: recordFolderPath });
-                  bootstrapHistory.push({
-                    role: 'user',
-                    content: `Error: workflow.md not found in ${recordFolderPath}. This file is required before a handoff can be routed. Please create the record folder, create workflow.md inside it with a valid YAML frontmatter workflow graph, and restate your handoff.`
-                  });
+                  const guidance = buildWorkflowRepairGuidance([`workflow.md not found in ${recordFolderPath}`]);
+                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'missing_workflow', summary: guidance.operatorSummary });
+                  bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
                   continue;
                 }
 
@@ -128,9 +137,11 @@ export class FlowOrchestrator {
                     }
                   }
                   bootstrapSpan.setAttribute('bootstrap.workflow_path', path.relative(workspaceRoot, workflowDocumentPath));
-                } catch(e: any) {
+                } catch (e: any) {
                   bootstrapSpan.addEvent('bootstrap.workflow_parse_failed', { error_message: e.message });
-                  bootstrapHistory.push({ role: 'user', content: `Workflow parsing failed: ${e.message}. Please fix workflow.md so it has valid YAML frontmatter (delimited by ---) with a top-level 'workflow:' key containing 'nodes' and 'edges', then restate your handoff.` });
+                  const guidance = buildWorkflowRepairGuidance([e.message]);
+                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_parse', summary: guidance.operatorSummary });
+                  bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
                   continue;
                 }
 
@@ -152,10 +163,10 @@ export class FlowOrchestrator {
                   await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'START', { workflowDocumentPath });
                 } catch (e: any) {
                   bootstrapSpan.addEvent('bootstrap.tool_trigger_failed', { error_message: e.message });
-                  bootstrapHistory.push({
-                    role: 'user',
-                    content: `workflow.md was found at ${workflowDocumentPath} but failed schema validation. Error: ${e.message}\n\nDo not recreate the file — update it. The workflow.md must contain YAML frontmatter (between --- delimiters) with a top-level 'workflow:' key. Required structure:\n---\nworkflow:\n  nodes:\n    - id: <string>\n      role: <string>\n      description: <string>\n  edges:\n    - from: <node-id>\n      to: <node-id>\n---\nPlease fix workflow.md with this schema and restate your handoff.`
-                  });
+                  const errors = e instanceof WorkflowValidationError ? e.errors : [e.message];
+                  const guidance = buildWorkflowRepairGuidance(errors);
+                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_schema', summary: guidance.operatorSummary });
+                  bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
                   continue;
                 }
                 SessionStore.saveFlowRun(flowRun);
@@ -167,6 +178,20 @@ export class FlowOrchestrator {
               }
             }
           });
+        } else {
+          this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
+          if (flowRun.activeNodes.length > 1) {
+            try {
+              const resumeWf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
+              const activeNodes = flowRun.activeNodes.map(id => {
+                const node = resumeWf.nodes.find((n: any) => n.id === id);
+                return { nodeId: id, role: node?.role ?? '' };
+              });
+              this.renderer.emit({ kind: 'parallel.active_set', activeNodes });
+            } catch (_) {
+              // workflow unreadable on resume — skip parallel notice
+            }
+          }
         }
 
         if (!flowRun) return;
@@ -181,12 +206,12 @@ export class FlowOrchestrator {
           await this.advanceFlow(flowRun, nodeId, undefined, undefined, inputStream, outputStream);
           flowRun = SessionStore.loadFlowRun()!;
         }
-        
+
         rootSpan.setAttribute('flow.status', flowRun.status);
         meter.createCounter('a_society.flow.completed').add(1, { project_namespace: flowRun.projectNamespace, status: flowRun.status });
 
         if (flowRun?.status === 'completed') {
-          console.log("\nOrchestration complete.");
+          this.renderer.emit({ kind: 'flow.completed' });
         }
       } catch (e: any) {
         rootSpan.recordException(e);
@@ -207,9 +232,9 @@ export class FlowOrchestrator {
     outputStream: NodeJS.WritableStream = process.stdout
   ): Promise<void> {
     const tracer = TelemetryManager.getTracer();
-    return tracer.startActiveSpan('flow.node.advance', { 
-      kind: SpanKind.INTERNAL, 
-      attributes: { 
+    return tracer.startActiveSpan('flow.node.advance', {
+      kind: SpanKind.INTERNAL,
+      attributes: {
         'flow.id': flowRun.flowId,
         'node.id': nodeId,
         'session.id': `${flowRun.flowId}__${nodeId}`
@@ -231,15 +256,31 @@ export class FlowOrchestrator {
         const roleKey = `${flowRun.projectNamespace}__${currentNodeDef.role}`;
         span.setAttribute('role', currentNodeDef.role);
         span.setAttribute('role_key', roleKey);
-        
+
         const sessionId = `${flowRun.flowId}__${nodeId}`;
-        
+
         const resolvedArtifacts: string[] =
           activeArtifactPath !== undefined
             ? (Array.isArray(activeArtifactPath) ? activeArtifactPath : [activeArtifactPath])
             : (flowRun.pendingNodeArtifacts[nodeId] ?? []);
 
         span.setAttribute('node.artifact_count', resolvedArtifacts.length);
+
+        // Emit role.active before executing the node.
+        // Suppressed when applyHandoffAndAdvance already emitted it at the handoff boundary.
+        const artifactBasename = resolvedArtifacts.length === 1
+          ? path.basename(resolvedArtifacts[0])
+          : undefined;
+        if (!this.pendingRoleActiveEmitted.has(nodeId)) {
+          this.renderer.emit({
+            kind: 'role.active',
+            nodeId,
+            role: currentNodeDef.role,
+            artifactCount: resolvedArtifacts.length,
+            artifactBasename
+          });
+        }
+        this.pendingRoleActiveEmitted.delete(nodeId);
 
         let session = SessionStore.loadRoleSession(sessionId);
         span.setAttribute('node.session_resumed', session !== null);
@@ -252,9 +293,9 @@ export class FlowOrchestrator {
         const { bundleContent, contextHash } = ContextInjectionService.buildContextBundle(
           roleKey, flowRun.projectRoot, resolvedArtifacts
         );
-        
+
         const injectedHistory = [...session.transcriptHistory];
-        
+
         if (injectedHistory.length === 0) {
           let userMessageContent = "";
           if (humanInput) {
@@ -271,7 +312,7 @@ export class FlowOrchestrator {
         } else if (humanInput) {
           injectedHistory.push({ role: 'user', content: humanInput });
         }
-        
+
         flowRun.status = 'running';
         SessionStore.saveFlowRun(flowRun);
         span.addEvent('store.flow_saved', { 'flow.status': flowRun.status });
@@ -288,20 +329,21 @@ export class FlowOrchestrator {
                 flowRun.projectRoot, roleKey, bundleContent,
                 injectedHistory as any,
                 inputStream, outputStream,
-                true,               // autonomous
-                controller.signal   // ← externalSignal
+                true,
+                controller.signal,
+                this.renderer
               );
             } finally {
               process.removeListener('SIGINT', sigintHandler);
             }
-              
+
             if (handoffResult) {
               if (handoffResult.kind === 'awaiting_human') {
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
+                this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'autonomous' });
                 const humanReply = await this.readHumanInput(inputStream, outputStream);
                 if (humanReply === null) {
-                  // Human exited — suspend flow
                   flowRun.status = 'awaiting_human';
                   session.transcriptHistory = injectedHistory;
                   SessionStore.saveRoleSession(session);
@@ -310,15 +352,20 @@ export class FlowOrchestrator {
                   break;
                 }
                 span.addEvent('human_input.received');
+                this.renderer.emit({ kind: 'human.resumed', nodeId, role: currentNodeDef.role });
                 injectedHistory.push({ role: 'user', content: humanReply });
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session);
-                // Do not save flowRun here — status remains 'running'
                 continue;
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
                 span.setAttribute('node.outcome', 'forward_pass_closed');
+                this.renderer.emit({
+                  kind: 'flow.forward_pass_closed',
+                  recordFolderPath: handoffResult.recordFolderPath,
+                  artifactBasename: path.basename(handoffResult.artifactPath)
+                });
                 await ImprovementOrchestrator.handleForwardPassClosure(
                   flowRun,
                   { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },
@@ -337,8 +384,8 @@ export class FlowOrchestrator {
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
-              await this.applyHandoffAndAdvance(flowRun, nodeId, handoffs);
-              
+              await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
+
               const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));
               const turnRecord: TurnRecord = {
                 turnNumber: currentTurnNumber,
@@ -356,6 +403,7 @@ export class FlowOrchestrator {
               break;
             } else {
               span.setAttribute('node.outcome', 'null_return');
+              this.renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort', mode: 'autonomous' });
               flowRun.status = 'awaiting_human';
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session);
@@ -364,13 +412,22 @@ export class FlowOrchestrator {
               break;
             }
           } catch (e: any) {
-            if (e instanceof HandoffParseError || e instanceof WorkflowError) {
-              span.addEvent('handoff.parse_error_injected', { 
-                error_type: e.name, 
-                error_message: e.message.slice(0, 500) 
+            if (e instanceof HandoffParseError) {
+              span.addEvent('handoff.parse_error_injected', {
+                error_type: e.name,
+                error_message: e.message.slice(0, 500)
               });
-              injectedHistory.push({ role: 'user', content: e.message });
-              // Save session so history is preserved
+              this.renderer.emit({ kind: 'repair.requested', scope: 'node', code: e.details.code, summary: e.details.operatorSummary });
+              injectedHistory.push({ role: 'user', content: e.details.modelRepairMessage });
+              session.transcriptHistory = injectedHistory;
+              SessionStore.saveRoleSession(session);
+              continue;
+            }
+            if (e instanceof WorkflowError) {
+              span.addEvent('workflow.error_injected', { error_message: e.message.slice(0, 500) });
+              const guidance = buildWorkflowRepairGuidance([e.message]);
+              this.renderer.emit({ kind: 'repair.requested', scope: 'node', code: 'workflow_parse', summary: guidance.operatorSummary });
+              injectedHistory.push({ role: 'user', content: guidance.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session);
               continue;
@@ -387,7 +444,7 @@ export class FlowOrchestrator {
   }
 
 
-  public async applyHandoffAndAdvance(flowRun: FlowRun, nodeId: string, handoffs: HandoffTarget[]): Promise<void> {
+  public async applyHandoffAndAdvance(flowRun: FlowRun, nodeId: string, fromRole: string, handoffs: HandoffTarget[]): Promise<void> {
     if (!fs.existsSync(flowRun.recordFolderPath)) {
       throw new WorkflowError(`Error: No record folder found at ${flowRun.recordFolderPath}. A record folder must be created before emitting a handoff. Please create the record folder, create workflow.md inside it, and restate your handoff.`);
     }
@@ -399,7 +456,15 @@ export class FlowOrchestrator {
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
       flowRun.completedNodeArtifacts[nodeId] = handoffs[0]?.artifact_path ?? '';
-      
+
+      // Emit handoff.applied for terminal node (no successors)
+      this.renderer.emit({
+        kind: 'handoff.applied',
+        fromNodeId: nodeId,
+        fromRole,
+        targets: []
+      });
+
       if (flowRun.activeNodes.length === 0) {
         await ToolTriggerEngine.evaluateAndTrigger(flowRun, 'TERMINAL_FORWARD_PASS', {});
         flowRun.status = 'completed';
@@ -425,6 +490,28 @@ export class FlowOrchestrator {
       flowRun.completedNodeArtifacts[nodeId] = handoffs[0].artifact_path ?? '';
 
       this.activateOrDefer(flowRun, wf, successorNode.id, [handoffs[0].artifact_path ?? '']);
+
+      // Emit handoff.applied for linear transition
+      const artifactBasename = handoffs[0].artifact_path ? path.basename(handoffs[0].artifact_path) : undefined;
+      this.renderer.emit({
+        kind: 'handoff.applied',
+        fromNodeId: nodeId,
+        fromRole,
+        targets: [{ nodeId: successorNode.id, role: successorNode.role, artifactBasename }]
+      });
+      // Emit role.active for the successor at the handoff boundary (if it activated, not deferred).
+      // Track it so advanceFlow suppresses the duplicate when it enters this node.
+      if (flowRun.activeNodes.includes(successorNode.id)) {
+        this.renderer.emit({
+          kind: 'role.active',
+          nodeId: successorNode.id,
+          role: successorNode.role,
+          artifactCount: 1,
+          artifactBasename
+        });
+        this.pendingRoleActiveEmitted.add(successorNode.id);
+      }
+
       SessionStore.saveFlowRun(flowRun);
       return;
     }
@@ -441,28 +528,48 @@ export class FlowOrchestrator {
         throw new Error(`Fork node '${nodeId}' has multiple outgoing edges with role '${duplicateRole}'. Non-unique fork-target roles are not supported in this version. Each fork target must have a distinct role.`);
       }
 
-      const activationPairs: Array<{ targetId: string; artifact: string }> = [];
+      const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
       const claimedHandoffs = new Set<number>();
 
       for (const edge of outgoingEdges) {
         const targetNode = wf.nodes.find((n: any) => n.id === edge.to);
         const handoffIdx = handoffs.findIndex((h, idx) => h.role === targetNode.role && !claimedHandoffs.has(idx));
-        
+
         if (handoffIdx === -1) {
           throw new Error(`Fork node '${nodeId}' has no handoff target with role '${targetNode.role}'.`);
         }
-        
+
         claimedHandoffs.add(handoffIdx);
-        activationPairs.push({ targetId: targetNode.id, artifact: handoffs[handoffIdx].artifact_path ?? '' });
+        activationPairs.push({ targetId: targetNode.id, artifact: handoffs[handoffIdx].artifact_path ?? '', role: targetNode.role });
       }
 
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
-      flowRun.completedNodeArtifacts[nodeId] = ''; 
+      flowRun.completedNodeArtifacts[nodeId] = '';
 
       for (const pair of activationPairs) {
         this.activateOrDefer(flowRun, wf, pair.targetId, [pair.artifact]);
       }
+
+      // Emit fork handoff.applied
+      this.renderer.emit({
+        kind: 'handoff.applied',
+        fromNodeId: nodeId,
+        fromRole,
+        targets: activationPairs.map(p => ({
+          nodeId: p.targetId,
+          role: p.role,
+          artifactBasename: p.artifact ? path.basename(p.artifact) : undefined
+        }))
+      });
+
+      // Emit parallel.active_set for the newly active fork targets
+      const activeNodes = flowRun.activeNodes.map(id => {
+        const node = wf.nodes.find((n: any) => n.id === id);
+        return { nodeId: id, role: node?.role ?? '' };
+      });
+      this.renderer.emit({ kind: 'parallel.active_set', activeNodes });
+
       SessionStore.saveFlowRun(flowRun);
       return;
     }
@@ -481,7 +588,6 @@ export class FlowOrchestrator {
         if (line === 'exit' || line === 'quit') {
           resolve(null);
         } else if (line === '') {
-          // Re-prompt on empty (per Owner correction in Phase 0 gate)
           this.readHumanInput(inputStream, outputStream).then(resolve);
         } else {
           resolve(line);
@@ -498,7 +604,7 @@ export class FlowOrchestrator {
 
   private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string, incomingArtifacts: string[]) {
     const incomingEdges = (wf.edges || []).filter((e: any) => e.to === candidateNodeId);
-    
+
     if (incomingEdges.length <= 1) {
       flowRun.pendingNodeArtifacts[candidateNodeId] = incomingArtifacts;
       if (!flowRun.activeNodes.includes(candidateNodeId)) {
@@ -513,11 +619,23 @@ export class FlowOrchestrator {
       const joinArtifacts = incomingEdges
         .map((e: any) => flowRun.completedNodeArtifacts[e.from])
         .filter((a: string) => a !== '');
-      
+
       flowRun.pendingNodeArtifacts[candidateNodeId] = joinArtifacts;
       if (!flowRun.activeNodes.includes(candidateNodeId)) {
         flowRun.activeNodes.push(candidateNodeId);
       }
+    } else {
+      // Join-blocked: emit parallel.join_waiting
+      const candidateNode = wf.nodes.find((n: any) => n.id === candidateNodeId);
+      const waitingFor = incomingEdges
+        .filter((e: any) => !flowRun.completedNodes.includes(e.from))
+        .map((e: any) => e.from);
+      this.renderer.emit({
+        kind: 'parallel.join_waiting',
+        nodeId: candidateNodeId,
+        role: candidateNode?.role ?? '',
+        waitingFor
+      });
     }
   }
 }

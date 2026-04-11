@@ -3,13 +3,22 @@ export class Spinner {
   private index = 0;
   private timer?: NodeJS.Timeout;
   private running = false;
+  private stream: NodeJS.WritableStream;
 
-  start(label = 'Thinking...'): void {
-    if (!process.stderr.isTTY) return;
+  constructor(stream: NodeJS.WritableStream = process.stderr) {
+    this.stream = stream;
+  }
+
+  start(label: string): void {
+    const isTTY = (this.stream as any).isTTY;
+    if (!isTTY) {
+      this.stream.write(`${label}\n`);
+      return;
+    }
     this.running = true;
     this.timer = setInterval(() => {
       const frame = Spinner.frames[this.index % Spinner.frames.length];
-      process.stderr.write(`\r${frame} ${label}`);
+      this.stream.write(`\r${frame} ${label}`);
       this.index++;
     }, 80);
   }
@@ -18,8 +27,9 @@ export class Spinner {
     if (!this.running) return;
     clearInterval(this.timer);
     this.running = false;
-    if (process.stderr.isTTY) {
-      process.stderr.write('\r\x1b[K');
+    const isTTY = (this.stream as any).isTTY;
+    if (isTTY) {
+      this.stream.write('\r\x1b[K');
     }
   }
 }

@@ -15,7 +15,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | **Agents** | | |
 | `$A_SOCIETY_INITIALIZER` | `a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
 | **Runtime** | | |
-| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, state location, and telemetry configuration |
+| `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
 | `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
 | **Feedback** | | |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Template for Initializer signal reports — one report per initialization run |

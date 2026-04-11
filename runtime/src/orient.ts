@@ -1,6 +1,6 @@
 import readline from 'node:readline';
 import crypto from 'node:crypto';
-import type { OrientSession, FlowRun, HandoffResult } from './types.js';
+import type { OrientSession, FlowRun, HandoffResult, OperatorRenderSink, TurnUsage } from './types.js';
 import { ContextInjectionService } from './injection.js';
 import { LLMGateway, type RuntimeMessageParam, LLMGatewayError } from './llm.js';
 import { buildRoleContext } from './registry.js';
@@ -17,6 +17,25 @@ function writeAssistantOutputIfNeeded(
   outputStream.write(text);
 }
 
+function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined): void {
+  if (!renderer) return;
+  if (!usage) {
+    renderer.emit({ kind: 'usage.turn_summary', availability: 'both-unavailable' });
+    return;
+  }
+  const hasIn = usage.inputTokens !== undefined;
+  const hasOut = usage.outputTokens !== undefined;
+  if (hasIn && hasOut) {
+    renderer.emit({ kind: 'usage.turn_summary', availability: 'full', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
+  } else if (hasIn) {
+    renderer.emit({ kind: 'usage.turn_summary', availability: 'output-unavailable', inputTokens: usage.inputTokens });
+  } else if (hasOut) {
+    renderer.emit({ kind: 'usage.turn_summary', availability: 'input-unavailable', outputTokens: usage.outputTokens });
+  } else {
+    renderer.emit({ kind: 'usage.turn_summary', availability: 'both-unavailable' });
+  }
+}
+
 export async function runInteractiveSession(
   workspaceRoot: string,
   roleKey: string,
@@ -25,7 +44,8 @@ export async function runInteractiveSession(
   inputStream: NodeJS.ReadableStream = process.stdin,
   outputStream: NodeJS.WritableStream = process.stdout,
   autonomous: boolean = false,
-  externalSignal?: AbortSignal
+  externalSignal?: AbortSignal,
+  operatorRenderer?: OperatorRenderSink
 ): Promise<HandoffResult | null> {
 
   const tracer = TelemetryManager.getTracer();
@@ -66,14 +86,14 @@ export async function runInteractiveSession(
 
     try {
       if (history.length === 0) {
-        const initialUserMsg: RuntimeMessageParam = { 
-          role: 'user', 
-          content: "A new session has started. Read the project log in your context and give a brief status of where the project is at, then ask what the user wants to work on." 
+        const initialUserMsg: RuntimeMessageParam = {
+          role: 'user',
+          content: "A new session has started. Read the project log in your context and give a brief status of where the project is at, then ask what the user wants to work on."
         };
 
-        const turnResult = await tracer.startActiveSpan('session.turn', { 
-          kind: SpanKind.INTERNAL, 
-          attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous } 
+        const turnResult = await tracer.startActiveSpan('session.turn', {
+          kind: SpanKind.INTERNAL,
+          attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous }
         }, async (turnSpan) => {
           const startTime = Date.now();
           meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey, autonomous: String(autonomous) });
@@ -84,28 +104,23 @@ export async function runInteractiveSession(
 
             const result = await llm.executeTurn(systemPrompt, [initialUserMsg], {
               signal: externalSignal,
-              outputStream
+              outputStream,
+              operatorRenderer
             });
             if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
               turnSpan.addEvent('session.assistant_turn', { content: result.text });
             }
             writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
+            emitUsage(operatorRenderer, result.usage);
 
             history.push(initialUserMsg);
             if (result.intermediateMessages) history.push(...result.intermediateMessages);
             history.push({ role: 'assistant', content: result.text });
 
-            if (result.usage && process.stderr.isTTY) {
-              const inStr = result.usage.inputTokens !== undefined ? String(result.usage.inputTokens) : '?';
-              const outStr = result.usage.outputTokens !== undefined ? String(result.usage.outputTokens) : '?';
-              process.stderr.write(`[tokens: ${inStr} in, ${outStr} out]\n`);
-            }
-
             try {
               const parseResult = HandoffInterpreter.parse(result.text);
               turnSpan.setAttribute('session.turn.outcome', 'handoff');
               turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-              if (outputStream === process.stdout) console.log("Handoff detected. Transitioning node...");
               return { handoff: parseResult };
             } catch (e: any) {
               if (e instanceof HandoffParseError) {
@@ -129,7 +144,7 @@ export async function runInteractiveSession(
               if (error.partialText && providedHistory) {
                 providedHistory.push({ role: 'assistant', content: error.partialText });
               }
-              process.stderr.write('\n[Aborted]\n');
+              operatorRenderer?.emit({ kind: 'human.awaiting_input', reason: 'interactive-abort', mode: autonomous ? 'autonomous' : 'interactive' });
               return { abort: true };
             }
             if (error instanceof LLMGatewayError && error.type === 'AUTH_ERROR') {
@@ -160,9 +175,9 @@ export async function runInteractiveSession(
       } else {
 
         if (history[history.length - 1].role === 'user') {
-          const turnResult = await tracer.startActiveSpan('session.turn', { 
-            kind: SpanKind.INTERNAL, 
-            attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous } 
+          const turnResult = await tracer.startActiveSpan('session.turn', {
+            kind: SpanKind.INTERNAL,
+            attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous }
           }, async (turnSpan) => {
             const startTime = Date.now();
             meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey, autonomous: String(autonomous) });
@@ -173,27 +188,22 @@ export async function runInteractiveSession(
 
               const result = await llm.executeTurn(systemPrompt, history, {
                 signal: externalSignal,
-                outputStream
+                outputStream,
+                operatorRenderer
               });
               if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
                 turnSpan.addEvent('session.assistant_turn', { content: result.text });
               }
               writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
+              emitUsage(operatorRenderer, result.usage);
 
               if (result.intermediateMessages) history.push(...result.intermediateMessages);
               history.push({ role: 'assistant', content: result.text });
-
-              if (result.usage && process.stderr.isTTY) {
-                const inStr = result.usage.inputTokens !== undefined ? String(result.usage.inputTokens) : '?';
-                const outStr = result.usage.outputTokens !== undefined ? String(result.usage.outputTokens) : '?';
-                process.stderr.write(`[tokens: ${inStr} in, ${outStr} out]\n`);
-              }
 
               try {
                 const parseResult = HandoffInterpreter.parse(result.text);
                 turnSpan.setAttribute('session.turn.outcome', 'handoff');
                 turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-                if (outputStream === process.stdout) console.log("Handoff detected. Transitioning node...");
                 return { handoff: parseResult };
               } catch (e: any) {
                 if (e instanceof HandoffParseError) {
@@ -217,7 +227,7 @@ export async function runInteractiveSession(
                 if (error.partialText && providedHistory) {
                   providedHistory.push({ role: 'assistant', content: error.partialText });
                 }
-                process.stderr.write('\n[Aborted]\n');
+                operatorRenderer?.emit({ kind: 'human.awaiting_input', reason: autonomous ? 'autonomous-abort' : 'interactive-abort', mode: autonomous ? 'autonomous' : 'interactive' });
                 return { abort: true };
               }
               if (outputStream === process.stdout) console.error(`\nError during turn: ${error.message}`);
@@ -245,7 +255,7 @@ export async function runInteractiveSession(
 
       if (autonomous) {
         interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
-        return null; // Should not reach here for autonomous turn
+        return null;
       }
 
       const interactiveResult = await new Promise<HandoffResult | null>((resolve) => {
@@ -276,9 +286,9 @@ export async function runInteractiveSession(
 
             history.push({ role: 'user', content: line });
 
-            const turnResult = await tracer.startActiveSpan('session.turn', { 
-              kind: SpanKind.INTERNAL, 
-              attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous } 
+            const turnResult = await tracer.startActiveSpan('session.turn', {
+              kind: SpanKind.INTERNAL,
+              attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous }
             }, async (turnSpan) => {
               const startTime = Date.now();
               meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey, autonomous: String(autonomous) });
@@ -292,27 +302,22 @@ export async function runInteractiveSession(
 
                 const result = await llm.executeTurn(systemPrompt as string, history, {
                   signal,
-                  outputStream
+                  outputStream,
+                  operatorRenderer
                 });
                 if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
                   turnSpan.addEvent('session.assistant_turn', { content: result.text });
                 }
                 writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
+                emitUsage(operatorRenderer, result.usage);
 
                 if (result.intermediateMessages) history.push(...result.intermediateMessages);
                 history.push({ role: 'assistant', content: result.text });
-
-                if (result.usage && process.stderr.isTTY) {
-                  const inStr = result.usage.inputTokens !== undefined ? String(result.usage.inputTokens) : '?';
-                  const outStr = result.usage.outputTokens !== undefined ? String(result.usage.outputTokens) : '?';
-                  process.stderr.write(`[tokens: ${inStr} in, ${outStr} out]\n`);
-                }
 
                 try {
                   const parseResult = HandoffInterpreter.parse(result.text);
                   turnSpan.setAttribute('session.turn.outcome', 'handoff');
                   turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-                  if (outputStream === process.stdout) console.log("Handoff detected. Transitioning node...");
                   return { handoff: parseResult };
                 } catch (e: any) {
                   if (e instanceof HandoffParseError) {
@@ -328,7 +333,7 @@ export async function runInteractiveSession(
                   turnSpan.setAttribute('session.turn.outcome', 'aborted');
                   turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
                   if (error.partialText) history.push({ role: 'assistant', content: error.partialText });
-                  process.stderr.write('\n[Aborted]\n');
+                  operatorRenderer?.emit({ kind: 'human.awaiting_input', reason: 'interactive-abort', mode: 'interactive' });
                   return { abort: true };
                 }
                 if (outputStream === process.stdout) console.error(`\nError during turn: ${error.message}`);
@@ -349,13 +354,6 @@ export async function runInteractiveSession(
               rl.close();
               return;
             }
-            if (turnResult.abort) {
-              // Readline loop continues after abort
-            }
-            if (turnResult.error) {
-              // Readline loop continues after non-critical turn error? 
-              // Actually, the original code recursed on error too.
-            }
             promptUser();
           });
         };
@@ -363,9 +361,6 @@ export async function runInteractiveSession(
         let resolved = false;
 
         rl.on('close', () => {
-          if (!resolved && inputStream === process.stdin && outputStream === process.stdout) {
-            console.log('\nSession closed.');
-          }
           if (!resolved) {
             resolved = true;
             interactionSpan.setAttribute('session.interaction.outcome', 'null_return');

@@ -201,6 +201,53 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
   return errors;
 }
 
+export interface WorkflowRepairGuidance {
+  operatorSummary: string;
+  modelRepairMessage: string;
+}
+
+/**
+ * Produces operator-visible summary and model-facing repair text for workflow validation failures.
+ * Reflects the live schema exactly: node keys are id, role, human-collaborative;
+ * edge keys are from, to, artifact; no description field.
+ */
+export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGuidance {
+  const isParse = errors.some(e =>
+    e.includes('YAML') || e.includes('frontmatter') || e.includes('Cannot read')
+  );
+  const operatorSummary = isParse ? 'Workflow parse failure' : 'Workflow schema invalid';
+  const errorText = errors.join('; ');
+  const modelRepairMessage =
+    `workflow.md failed validation. Error(s): ${errorText}\n\n` +
+    `Do not recreate the file — update it. The workflow.md must contain YAML frontmatter ` +
+    `(between --- delimiters) with a top-level 'workflow:' key. Required structure:\n` +
+    `---\n` +
+    `workflow:\n` +
+    `  name: <string>\n` +
+    `  nodes:\n` +
+    `    - id: <string>\n` +
+    `      role: <string>\n` +
+    `      human-collaborative: <string>  # optional\n` +
+    `  edges:\n` +
+    `    - from: <node-id>\n` +
+    `      to: <node-id>\n` +
+    `      artifact: <string>  # optional\n` +
+    `---\n` +
+    `Please fix workflow.md with this schema and restate your handoff.`;
+  return { operatorSummary, modelRepairMessage };
+}
+
+/**
+ * Thrown by ToolTriggerEngine when START validation fails; carries the structured
+ * errors list so the orchestrator can route to the validator-owned repair helper.
+ */
+export class WorkflowValidationError extends Error {
+  constructor(public readonly errors: string[], public readonly filePath: string) {
+    super(`Workflow validation failed: ${errors.join(', ')}`);
+    this.name = 'WorkflowValidationError';
+  }
+}
+
 /**
  * Validates a workflow document file against the approved workflow graph schema.
  *

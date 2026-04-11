@@ -1,6 +1,6 @@
 import { SessionStore } from './store.js';
 import type { FlowRun, TriggerRecord } from './types.js';
-import { validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
+import { validateWorkflowFile, WorkflowValidationError } from './framework-services/workflow-graph-validator.js';
 import { computeBackwardPassPlan } from './framework-services/backward-pass-orderer.js';
 import { scaffoldFromManifestFile } from './framework-services/scaffolding-system.js';
 import path from 'node:path';
@@ -36,7 +36,7 @@ export class ToolTriggerEngine {
           span.setAttribute('trigger.component', triggerRecord.toolComponent);
           const res = validateWorkflowFile(payload.workflowDocumentPath, true);
           if (!res.valid) {
-            throw new Error('Component 3 Error: ' + res.errors.join(', '));
+            throw new WorkflowValidationError(res.errors, payload.workflowDocumentPath);
           }
           triggerRecord.resultSummary = `Component 3 execution success: Validated format at ${payload.workflowDocumentPath}`;
           triggerRecord.success = true;
@@ -76,7 +76,7 @@ export class ToolTriggerEngine {
         SessionStore.saveTriggerRecord(flowRun.flowId, triggerRecord);
         span.recordException(err);
         span.setStatus({ code: SpanStatusCode.ERROR });
-        throw new Error(`ToolTriggerEngine failed to execute binding rule for ${event}: ${err.message}`);
+        throw err;
       } finally {
         span.setAttribute('trigger.success', triggerRecord.success);
         if (triggerRecord.toolComponent !== 'Unknown') {

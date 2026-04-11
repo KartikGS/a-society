@@ -96,12 +96,12 @@ export class LLMGateway {
 
           span.addEvent('llm.tool_round', { round_index: round, call_count: result.calls.length });
           for (const call of result.calls) {
-            span.addEvent('llm.tool_call', { 
-              'llm.tool_name': call.name, 
-              'llm.tool_id': call.id 
+            span.addEvent('llm.tool_call', {
+              'llm.tool_name': call.name,
+              'llm.tool_id': call.id
             });
             const pathArg = call.input?.path as string | undefined;
-            process.stderr.write(`[${call.name}${pathArg ? ': ' + pathArg : ''}]\n`);
+            options?.operatorRenderer?.emit({ kind: 'activity.tool_call', toolName: call.name, path: pathArg });
           }
 
           const toolResultMessages: RuntimeMessageParam[] = await Promise.all(

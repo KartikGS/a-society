@@ -1,0 +1,184 @@
+import assert from 'node:assert';
+import { FlowOrchestrator } from '../../src/orchestrator.js';
+import { SessionStore } from '../../src/store.js';
+import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { PassThrough } from 'node:stream';
+
+/**
+ * Correction 3 verification: a full linear orchestration run emits exactly one
+ * role.active notice for the successor node, not two.
+ *
+ * applyHandoffAndAdvance emits role.active at the handoff boundary and tracks it
+ * in pendingRoleActiveEmitted. When advanceFlow subsequently enters the same node,
+ * it checks the set and suppresses the duplicate.
+ */
+async function runTest() {
+  console.log("Starting linear-role-active integration test...");
+
+  const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "placeholder" } }] })}\n\n`);
+    res.write(`data: [DONE]\n\n`);
+    res.end();
+  });
+
+  await new Promise<void>(resolve => server.listen(0, resolve));
+  const port = (server.address() as any).port;
+
+  process.env.LLM_PROVIDER = 'openai-compatible';
+  process.env.OPENAI_COMPAT_BASE_URL = `http://127.0.0.1:${port}/v1`;
+  process.env.OPENAI_COMPAT_API_KEY = 'test-key';
+  process.env.OPENAI_COMPAT_MODEL = 'mock-model';
+
+  const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-role-active-test-'));
+  const workspaceRoot = tmpBase;
+  const projectNamespace = 'test-project';
+  const testDir = path.join(workspaceRoot, projectNamespace);
+  const testStateDir = path.join(tmpBase, '.state');
+  fs.mkdirSync(testDir);
+  fs.mkdirSync(testStateDir);
+  process.env.A_SOCIETY_STATE_DIR = testStateDir;
+
+  const recordPath = path.join(testDir, 'records', 'test-flow');
+  fs.mkdirSync(recordPath, { recursive: true });
+  const projectADocsPath = path.join(testDir, 'a-docs');
+  fs.mkdirSync(path.join(projectADocsPath, 'roles'), { recursive: true });
+  fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
+
+  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'required-readings.yaml'), `
+universal:
+  - $A_SOCIETY_AGENTS
+roles:
+  start:
+    - $TEST_PROJECT_START_ROLE
+  next:
+    - $TEST_PROJECT_NEXT_ROLE
+`);
+  fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
+  fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
+    `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
+    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/startrole.md\` |\n` +
+    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/nextrole.md\` |\n`
+  );
+  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'startrole.md'), "Start Role Doc");
+  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'nextrole.md'), "Next Role Doc");
+
+  const workflowGraph = `---
+workflow:
+  name: test-flow
+  nodes:
+    - id: start
+      role: 'start'
+    - id: next
+      role: 'next'
+  edges:
+    - from: start
+      to: next
+---
+`;
+  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+
+  SessionStore.init();
+  SessionStore.saveFlowRun({
+    flowId: 'test-linear-flow-id',
+    projectRoot: workspaceRoot,
+    projectNamespace,
+    recordFolderPath: recordPath,
+    activeNodes: ['start'],
+    completedNodes: [],
+    completedNodeArtifacts: {},
+    pendingNodeArtifacts: { 'start': [] },
+    status: 'running',
+    stateVersion: '2'
+  });
+
+  const operatorStream = new PassThrough();
+  const operatorChunks: string[] = [];
+  operatorStream.on('data', (chunk: Buffer) => {
+    const text = chunk.toString();
+    operatorChunks.push(text);
+    process.stderr.write(text);
+  });
+
+  const renderer = new OperatorEventRenderer(operatorStream as any);
+  const orchestrator = new FlowOrchestrator(renderer);
+
+  const inputStream = new PassThrough();
+  const outputStream = new PassThrough();
+
+  let serverTurn = 0;
+  server.removeAllListeners('request');
+  server.on('request', (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+    serverTurn++;
+
+    if (serverTurn === 1) {
+      // Turn 1: 'start' node produces a valid handoff to 'next'
+      const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'start-output.md'\n```";
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Work done. " + handoffBlock } }] })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      res.end();
+    } else if (serverTurn === 2) {
+      // Turn 2: 'next' node produces a terminal handoff (no outgoing edges)
+      const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'next-output.md'\n```";
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "All done. " + handoffBlock } }] })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      res.end();
+    } else {
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Done." } }] })}\n\n`);
+      res.write(`data: [DONE]\n\n`);
+      res.end();
+    }
+  });
+
+  try {
+    const flowRun = SessionStore.loadFlowRun();
+    if (!flowRun) throw new Error("flowRun not loaded");
+
+    console.log("\n--- Advancing 'start' node ---");
+    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
+
+    const flowAfterStart = SessionStore.loadFlowRun()!;
+    assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
+    assert.ok(flowAfterStart.activeNodes.includes('next'), "Expected 'next' to be active.");
+
+    console.log("\n--- Advancing 'next' node ---");
+    await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, undefined, inputStream, outputStream);
+
+    const operatorOut = operatorChunks.join('');
+    console.log("\nOperator stream output:");
+    console.log(operatorOut);
+
+    // Count how many times 'next' receives a role.active notice
+    const nextRoleActiveMatches = operatorOut.match(/\[runtime\/role\] Active: next/g) || [];
+    const nextRoleActiveCount = nextRoleActiveMatches.length;
+
+    console.log("Validation:");
+    console.log(`- role.active notices for 'next': ${nextRoleActiveCount} (expected: 1)`);
+
+    assert.strictEqual(
+      nextRoleActiveCount,
+      1,
+      `Expected exactly one role.active notice for successor node 'next', got ${nextRoleActiveCount}`
+    );
+
+    console.log("Linear-role-active test PASSED.");
+  } catch (e: any) {
+    console.error("Test execution failed:", e.stack);
+    process.exitCode = 1;
+  } finally {
+    server.close();
+    inputStream.destroy();
+    outputStream.destroy();
+    fs.rmSync(tmpBase, { recursive: true, force: true });
+  }
+}
+
+runTest().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

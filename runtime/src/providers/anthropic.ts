@@ -2,12 +2,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import { LLMGatewayError } from '../types.js';
 import { TelemetryManager } from '../observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { Spinner } from '../spinner.js';
 
-import type { 
-  LLMProvider, 
-  RuntimeMessageParam, 
-  ProviderTurnResult, 
+import type {
+  LLMProvider,
+  RuntimeMessageParam,
+  ProviderTurnResult,
   ToolDefinition,
   TurnOptions
 } from '../types.js';
@@ -29,22 +28,23 @@ export class AnthropicProvider implements LLMProvider {
   ): Promise<ProviderTurnResult> {
     const tracer = TelemetryManager.getTracer();
 
-    return tracer.startActiveSpan('provider.execute_turn', { 
-      kind: SpanKind.CLIENT, 
-      attributes: { 
-        'provider.name': 'anthropic', 
+    return tracer.startActiveSpan('provider.execute_turn', {
+      kind: SpanKind.CLIENT,
+      attributes: {
+        'provider.name': 'anthropic',
         'provider.model': this.model,
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
-      } 
+      }
     }, async (span) => {
-      const spinner = new Spinner();
-      spinner.start();
+      const renderer = options?.operatorRenderer;
       const outputStream = options?.outputStream ?? process.stdout;
       let displayedText = false;
       let fullText = '';
 
       try {
+        renderer?.startWait('anthropic', this.model);
+
         const anthropicMessages: any[] = messages.map(msg => {
           if (msg.role === 'user') return { role: 'user', content: msg.content };
           if (msg.role === 'assistant') return { role: 'assistant', content: msg.content };
@@ -94,12 +94,13 @@ export class AnthropicProvider implements LLMProvider {
             if (block.type === 'tool_use') {
               toolUseBlocks.set(chunk.index, { id: block.id, name: block.name, inputJson: '' });
               span.addEvent('provider.tool_use_block_received', { 'tool.name': block.name, 'tool.id': block.id });
+              renderer?.stopWait();
             }
           } else if (event.type === 'content_block_delta') {
             const chunk = event as any;
             const delta = chunk.delta as any;
             if (delta.type === 'text_delta') {
-              if (fullText === '') spinner.stop();
+              if (fullText === '') renderer?.stopWait();
               outputStream.write(delta.text);
               fullText += delta.text;
               displayedText = true;
@@ -111,7 +112,7 @@ export class AnthropicProvider implements LLMProvider {
         });
 
         const finalMsg = await stream.finalMessage();
-        spinner.stop();
+        renderer?.stopWait();
 
         const inputTokens = finalMsg.usage?.input_tokens;
         const outputTokens = finalMsg.usage?.output_tokens;
@@ -127,13 +128,9 @@ export class AnthropicProvider implements LLMProvider {
 
         if (toolUseBlocks.size > 0) {
           const calls = Array.from(toolUseBlocks.values()).map(b => {
-             let input: any = {};
-             try { input = JSON.parse(b.inputJson); } catch (e) { /* ignore */ }
-             return {
-               id: b.id,
-               name: b.name,
-               input
-             };
+            let input: any = {};
+            try { input = JSON.parse(b.inputJson); } catch (e) { /* ignore */ }
+            return { id: b.id, name: b.name, input };
           });
           span.setAttribute('provider.result_type', 'tool_calls');
           return {
@@ -149,14 +146,14 @@ export class AnthropicProvider implements LLMProvider {
         return { type: 'text' as const, text: fullText, usage, displayedText };
 
       } catch (error: any) {
-        spinner.stop();
+        renderer?.stopWait();
         if (error.name === 'AbortError' || error.type === 'aborted' || options?.signal?.aborted) {
-           span.addEvent('provider.aborted');
-           span.setStatus({ code: SpanStatusCode.OK });
-           throw new LLMGatewayError('ABORTED', 'Turn aborted by operator', fullText || undefined);
+          span.addEvent('provider.aborted');
+          span.setStatus({ code: SpanStatusCode.OK });
+          throw new LLMGatewayError('ABORTED', 'Turn aborted by operator', fullText || undefined);
         } else {
-           span.recordException(error);
-           span.setStatus({ code: SpanStatusCode.ERROR });
+          span.recordException(error);
+          span.setStatus({ code: SpanStatusCode.ERROR });
         }
         throw error;
       } finally {

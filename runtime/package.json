@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "tsx src/cli.ts",
-    "test": "tsx test/types.test.ts && tsx test/context-injection.test.ts && tsx test/handoff.test.ts && tsx test/visualization.test.ts && tsx test/observability.test.ts && tsx test/integration/unified-routing.test.ts && tsx test/framework-services/utils.test.ts && tsx test/framework-services/path-validator.test.ts && tsx test/framework-services/version-comparator.test.ts && tsx test/framework-services/consent-utility.test.ts && tsx test/framework-services/workflow-graph-validator.test.ts && tsx test/framework-services/backward-pass-orderer.test.ts && tsx test/framework-services/scaffolding-system.test.ts && tsx test/framework-services/integration.test.ts"
+    "test": "tsx test/types.test.ts && tsx test/context-injection.test.ts && tsx test/handoff.test.ts && tsx test/operator-renderer.test.ts && tsx test/visualization.test.ts && tsx test/observability.test.ts && tsx test/integration/unified-routing.test.ts && tsx test/integration/resume-parallel.test.ts && tsx test/integration/linear-role-active.test.ts && tsx test/integration/forward-pass-closure.test.ts && tsx test/framework-services/utils.test.ts && tsx test/framework-services/path-validator.test.ts && tsx test/framework-services/version-comparator.test.ts && tsx test/framework-services/consent-utility.test.ts && tsx test/framework-services/workflow-graph-validator.test.ts && tsx test/framework-services/backward-pass-orderer.test.ts && tsx test/framework-services/scaffolding-system.test.ts && tsx test/framework-services/integration.test.ts"
   },
   "engines": {
     "node": ">=18"

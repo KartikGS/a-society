@@ -8,7 +8,11 @@ interface WfGraph {
 export function renderFlowStatus(flowRun: FlowRun, wf: WfGraph): string {
   let output = `=== RUNTIME FLOW STATUS ===\n`;
   output += `Record Folder: ${flowRun.recordFolderPath}\n`;
-  output += `Status: ${flowRun.status}\n\n`;
+  output += `Status: ${flowRun.status}\n`;
+  if (flowRun.status === 'awaiting_human') {
+    output += `Suspended: waiting for operator input\n`;
+  }
+  output += `\n`;
 
   // Active nodes
   output += `Active nodes:\n`;

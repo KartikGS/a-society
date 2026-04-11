@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   validateWorkflowFile,
   validateGraph,
+  buildWorkflowRepairGuidance,
 } from '../../src/framework-services/workflow-graph-validator.js';
 import { extractFrontmatter } from '../../src/framework-services/utils.js';
 
@@ -277,6 +278,42 @@ test('live A-Society workflow passes validation (non-strict)', () => {
   assert.strictEqual(result.valid, true, `Live workflow invalid:\n${result.errors.map(e => '  ' + e).join('\n')}`);
 });
 
+test('buildWorkflowRepairGuidance: schema errors produce Workflow schema invalid summary', () => {
+  const errors = ['workflow.nodes[0].id must be a non-empty string', 'workflow.name must be a non-empty string'];
+  const guidance = buildWorkflowRepairGuidance(errors);
+  assert.strictEqual(guidance.operatorSummary, 'Workflow schema invalid');
+  assert.ok(guidance.modelRepairMessage.includes('workflow.nodes[0].id'));
+});
+
+test('buildWorkflowRepairGuidance: YAML parse errors produce Workflow parse failure summary', () => {
+  const errors = ['YAML parse error: unexpected token'];
+  const guidance = buildWorkflowRepairGuidance(errors);
+  assert.strictEqual(guidance.operatorSummary, 'Workflow parse failure');
+  assert.ok(guidance.modelRepairMessage.includes('YAML parse error'));
+});
+
+test('buildWorkflowRepairGuidance: model repair message does not contain description field', () => {
+  const errors = ['workflow.nodes[0].id must be a non-empty string'];
+  const guidance = buildWorkflowRepairGuidance(errors);
+  assert.ok(!guidance.modelRepairMessage.includes('description'),
+    'model repair message must not mention "description" field — this is the anti-drift test');
+});
+
+test('buildWorkflowRepairGuidance: model repair message mentions all live schema node keys', () => {
+  const errors = ['workflow.name must be a non-empty string'];
+  const guidance = buildWorkflowRepairGuidance(errors);
+  assert.ok(guidance.modelRepairMessage.includes('id:'), 'should mention id key');
+  assert.ok(guidance.modelRepairMessage.includes('role:'), 'should mention role key');
+  assert.ok(guidance.modelRepairMessage.includes('human-collaborative:'), 'should mention human-collaborative key');
+});
+
+test('buildWorkflowRepairGuidance: model repair message mentions live schema edge keys', () => {
+  const errors = ['workflow.edges[0].from must be a non-empty string'];
+  const guidance = buildWorkflowRepairGuidance(errors);
+  assert.ok(guidance.modelRepairMessage.includes('from:'), 'should mention from key');
+  assert.ok(guidance.modelRepairMessage.includes('to:'), 'should mention to key');
+  assert.ok(guidance.modelRepairMessage.includes('artifact:'), 'should mention artifact key');
+});
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);

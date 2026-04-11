@@ -96,9 +96,31 @@ export interface TurnUsage {
   outputTokens?: number;
 }
 
+export type OperatorEvent =
+  | { kind: 'flow.bootstrap_started'; role: string }
+  | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
+  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string }
+  | { kind: 'activity.tool_call'; toolName: string; path?: string }
+  | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
+  | { kind: 'repair.requested'; scope: 'node' | 'bootstrap'; code: string; summary: string }
+  | { kind: 'human.awaiting_input'; reason: 'prompt-human' | 'interactive-abort' | 'autonomous-abort'; mode: 'interactive' | 'autonomous' }
+  | { kind: 'human.resumed'; nodeId: string; role: string }
+  | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }
+  | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
+  | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
+  | { kind: 'flow.completed' };
+
+export interface OperatorRenderSink {
+  emit(event: OperatorEvent): void;
+  startWait(provider: string, model: string): void;
+  stopWait(): void;
+}
+
 export interface TurnOptions {
   signal?: AbortSignal;
   outputStream?: NodeJS.WritableStream;
+  operatorRenderer?: OperatorRenderSink;
 }
 
 export interface GatewayTurnResult {

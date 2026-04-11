@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { HandoffInterpreter } from '../src/handoff.js';
+import { HandoffInterpreter, HandoffParseError } from '../src/handoff.js';
 
 let passed = 0;
 let failed = 0;
@@ -67,56 +67,94 @@ test('parse (prompt-human): returns awaiting_human signal', () => {
   assert.strictEqual(result.kind, 'awaiting_human');
 });
 
-test('parse (Empty array): throws HandoffParseError', () => {
+test('parse (Empty array): throws HandoffParseError with invalid_target_shape code', () => {
   const text = "```handoff\n[]\n```";
+  let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
-  }, /Handoff block must contain at least one target/);
+  }, (e: any) => { err = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(err.details.code, 'invalid_target_shape');
+  assert.ok(err.details.modelRepairMessage.includes('at least one target'));
 });
 
-test('parse (Invalid role): throws error for missing or empty role', () => {
+test('parse (Invalid role): throws missing_required_field for missing or empty role', () => {
   const text = "```handoff\nartifact_path: some/path.md\n```";
+  let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
-  }, /"role" field is required/);
-  
+  }, (e: any) => { err = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(err.details.code, 'missing_required_field');
+  assert.strictEqual(err.details.operatorSummary, 'Handoff block missing required field');
+
   const text2 = "```handoff\n- role: ' '\n  artifact_path: p.md\n```";
   assert.throws(() => {
-      HandoffInterpreter.parse(text2);
-  }, /"role" field is required/);
+    HandoffInterpreter.parse(text2);
+  }, (e: any) => e instanceof HandoffParseError && e.details.code === 'missing_required_field');
 });
 
-test('parse (Malformed YAML): throws HandoffParseError', () => {
-  const text = "```handoff\n - role: Owner\n  - artifact_path: p.md\n```"; // Invalid YAML indent
+test('parse (Malformed YAML): throws HandoffParseError with yaml_parse code', () => {
+  const text = "```handoff\n - role: Owner\n  - artifact_path: p.md\n```";
+  let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
-  }, /Handoff block could not be parsed/);
+  }, (e: any) => { err = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(err.details.code, 'yaml_parse');
+  assert.strictEqual(err.details.operatorSummary, 'Malformed handoff block');
+  assert.ok(err.details.modelRepairMessage.includes('could not be parsed as YAML'));
 });
 
-test('parse (Invalid typed signal): throws on unknown type', () => {
+test('parse (Invalid typed signal): throws unknown_signal_type code with operator summary naming the type', () => {
   const text = "```handoff\ntype: unknown-signal\n```";
+  let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
-  }, /Unknown handoff signal type/);
+  }, (e: any) => { err = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(err.details.code, 'unknown_signal_type');
+  assert.ok(err.details.operatorSummary.includes('unknown-signal'));
+  assert.ok(err.details.modelRepairMessage.includes('forward-pass-closed'));
 });
 
-test('parse (Typed signal missing required fields): throws field-specific errors', () => {
+test('parse (Typed signal missing required fields): throws missing_required_field code', () => {
   const forwardPassText = "```handoff\ntype: forward-pass-closed\nartifact_path: a-society/a-docs/records/example-flow/08-owner-closure.md\n```";
+  let fwdErr: any;
   assert.throws(() => {
     HandoffInterpreter.parse(forwardPassText);
-  }, /missing record_folder_path/);
+  }, (e: any) => { fwdErr = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(fwdErr.details.code, 'missing_required_field');
+  assert.ok(fwdErr.details.modelRepairMessage.includes('missing record_folder_path'));
 
   const findingsText = "```handoff\ntype: meta-analysis-complete\n```";
+  let findErr: any;
   assert.throws(() => {
     HandoffInterpreter.parse(findingsText);
-  }, /missing findings_path/);
+  }, (e: any) => { findErr = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(findErr.details.code, 'missing_required_field');
+  assert.ok(findErr.details.modelRepairMessage.includes('missing findings_path'));
 });
 
-test('parse (Missing handoff key): throws error', () => {
-  const text = "```yaml\nrole: Owner\n```"; // Missing 'handoff:' key
+test('parse (Missing handoff block): throws missing_block code', () => {
+  const text = "```yaml\nrole: Owner\n```";
+  let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
-  }, /Handoff block could not be parsed/);
+  }, (e: any) => { err = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(err.details.code, 'missing_block');
+  assert.strictEqual(err.details.operatorSummary, 'Malformed handoff block');
+});
+
+test('malformed handoff and unsupported signal produce distinct codes and operator summaries', () => {
+  const malformedText = "```handoff\n - role: Owner\n  - bad: yaml\n```";
+  let malformedErr: any;
+  try { HandoffInterpreter.parse(malformedText); } catch (e) { malformedErr = e; }
+
+  const unknownSignalText = "```handoff\ntype: some-future-type\n```";
+  let unknownErr: any;
+  try { HandoffInterpreter.parse(unknownSignalText); } catch (e) { unknownErr = e; }
+
+  assert.ok(malformedErr instanceof HandoffParseError);
+  assert.ok(unknownErr instanceof HandoffParseError);
+  assert.notStrictEqual(malformedErr.details.code, unknownErr.details.code);
+  assert.notStrictEqual(malformedErr.details.operatorSummary, unknownErr.details.operatorSummary);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

@@ -18,9 +18,64 @@ Operator-visible behavior:
 
 ### `a-society flow-status`
 
-Reads the current flow state and prints a rendered status view.
+Reads the current flow state and prints a rendered status view to `stdout`.
+
+The snapshot is the authoritative view of active nodes, completed nodes, and pending joins. It does not include tool-call history, token counts, repair prompts, or wait/spinner state.
 
 If no active flow state exists, the command reports that no active flow state was found.
+
+---
+
+## Operator Output Model
+
+During a live `run`, the runtime separates its output into two channels:
+
+- **`stderr`** — runtime/system notices (flow lifecycle, role activation, tool calls, handoffs, repairs, token summaries, human-input suspension)
+- **`stdout`** — assistant/model text only
+
+The operator can therefore redirect or filter each stream independently.
+
+### Live notice classes
+
+During a live run, operators should expect notices in these classes on `stderr`:
+
+| Class | Example prefix |
+|---|---|
+| Flow lifecycle | `[runtime/flow]` |
+| Role activation | `[runtime/role]` |
+| Wait/liveness | `[runtime/wait]` |
+| Tool activity | `[runtime/tool]` |
+| Handoff success | `[runtime/handoff]` |
+| Repair/retry | `[runtime/repair]` |
+| Human-input suspension/resume | `[runtime/human]` |
+| Parallel-state transition | `[runtime/parallel]` |
+| Token summary | `Tokens: ...` |
+
+### Wait indicator behavior
+
+- TTY sessions show a spinner before first model output; the spinner clears when the first text token or tool-call block arrives.
+- Non-TTY sessions degrade to a one-line wait notice on `stderr`.
+
+### Token summary strings
+
+One token summary is emitted per completed gateway turn. The exact approved strings are:
+
+- `Tokens: <input> in, <output> out` — both available
+- `Tokens: input unavailable, <output> out` — input not reported
+- `Tokens: <input> in, output unavailable` — output not reported
+- `Tokens unavailable (provider did not report usage)` — neither reported
+
+Unavailable never means zero. When the provider does not report a count, the runtime says so explicitly rather than reporting zero.
+
+### Parallel-state visibility
+
+Live execution emits transition notices at fork and join boundaries only. It does not attempt a multi-pane live dashboard.
+
+`a-society flow-status` is the place to inspect the full current parallel state: which nodes are active, which are complete, and which joins are waiting and on whom.
+
+### No new operator-event flags or env vars
+
+Phase 1 introduces no new CLI flags or environment variables for operator-event rendering.
 
 ---
 

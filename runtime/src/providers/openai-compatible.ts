@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import { LLMGatewayError } from '../types.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions, TurnUsage } from '../types.js';
-import { Spinner } from '../spinner.js';
 import { TelemetryManager } from '../observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
@@ -45,17 +44,16 @@ export class OpenAICompatibleProvider implements LLMProvider {
     const meter = TelemetryManager.getMeter();
     const startTime = Date.now();
 
-    return tracer.startActiveSpan('provider.execute_turn', { 
-      kind: SpanKind.CLIENT, 
-      attributes: { 
-        'provider.name': 'openai-compatible', 
+    return tracer.startActiveSpan('provider.execute_turn', {
+      kind: SpanKind.CLIENT,
+      attributes: {
+        'provider.name': 'openai-compatible',
         'provider.model': this.model,
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
-      } 
+      }
     }, async (span) => {
-      const spinner = new Spinner();
-      spinner.start();
+      const renderer = options?.operatorRenderer;
       let fullText = '';
       const outputStream = options?.outputStream ?? process.stdout;
       let displayedText = false;
@@ -63,6 +61,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
       let outputTokens: number | undefined;
 
       try {
+        renderer?.startWait('openai-compatible', this.model);
+
         const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
           { role: 'system' as const, content: systemPrompt },
           ...messages.map(m => {
@@ -122,7 +122,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           const delta = choice.delta;
           if (!delta) continue;
           if (delta.content) {
-            if (fullText === '') spinner.stop();
+            if (fullText === '') renderer?.stopWait();
             outputStream.write(delta.content);
             fullText += delta.content;
             displayedText = true;
@@ -133,19 +133,18 @@ export class OpenAICompatibleProvider implements LLMProvider {
                 toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
                 if (tc.id || tc.function?.name) {
                   span.addEvent('provider.tool_call_received', { 'tool.name': tc.function?.name, 'tool.id': tc.id });
+                  renderer?.stopWait();
                 }
               }
               const acc = toolCallAcc.get(tc.index)!;
-              if (tc.id) {
-                acc.id = tc.id;
-              }
+              if (tc.id) acc.id = tc.id;
               if (tc.function?.name) acc.name = acc.name || tc.function.name;
               if (tc.function?.arguments) acc.args += tc.function.arguments;
             }
           }
         }
 
-        spinner.stop();
+        renderer?.stopWait();
 
         const usage: TurnUsage | undefined = (inputTokens !== undefined || outputTokens !== undefined)
           ? { inputTokens, outputTokens }
@@ -176,13 +175,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
         span.setAttribute('provider.result_type', 'text');
         return { type: 'text' as const, text: fullText, usage, displayedText };
       } catch (err: any) {
+        renderer?.stopWait();
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
-          spinner.stop();
           span.addEvent('provider.aborted');
           span.setStatus({ code: SpanStatusCode.OK });
           throw new LLMGatewayError('ABORTED', 'Turn aborted by operator', fullText || undefined);
         }
-        spinner.stop();
         span.recordException(err);
         span.setStatus({ code: SpanStatusCode.ERROR });
         if (err instanceof LLMGatewayError) throw err;
@@ -219,7 +217,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
         if (err instanceof OpenAI.APIError) {
           throw new LLMGatewayError('PROVIDER_MALFORMED', `Provider API error: ${err.message}`);
         }
-
         throw new LLMGatewayError('UNKNOWN', `Unexpected provider error: ${err?.message || err}`);
       } finally {
         const duration = Date.now() - startTime;
