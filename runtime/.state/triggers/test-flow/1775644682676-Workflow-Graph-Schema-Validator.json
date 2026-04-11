@@ -1,7 +1,0 @@
-{
-  "toolComponent": "Workflow Graph Schema Validator",
-  "inputSummary": "{\"workflowDocumentPath\":\"/tmp/a-society-test-VKYn3U/record/workflow.md\"}",
-  "resultSummary": "Tool trigger exception: Component 3 Error: workflow.name must be a non-empty string, workflow.nodes must be a non-empty array",
-  "success": false,
-  "retryStatus": "none"
-}

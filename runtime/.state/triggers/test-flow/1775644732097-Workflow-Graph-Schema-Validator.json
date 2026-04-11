@@ -1,7 +1,0 @@
-{
-  "toolComponent": "Workflow Graph Schema Validator",
-  "inputSummary": "{\"workflowDocumentPath\":\"/tmp/a-society-test-SGR9zQ/record/workflow.md\"}",
-  "resultSummary": "Tool trigger exception: Component 3 Error: Strict mode violation: sole node role must be \"Owner\" (found \"curator\")",
-  "success": false,
-  "retryStatus": "none"
-}
