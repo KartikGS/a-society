@@ -18,15 +18,17 @@ const RUNTIME_MANAGED_REQUIRED_READING_VARIABLES = new Set([
 
 export class ContextInjectionService {
   /**
-   * Assembles the required-reading set and active artifact(s) into a single context string.
+   * Assembles the stable runtime-owned context into a single system-prompt string.
+   * Scope: role announcement, date, runtime handoff contract, required-reading files.
+   * Does NOT include active artifacts or task-scoped inputs — those are delivered
+   * as node-entry user-message content by the orchestrator and session-entry helpers.
    */
   static buildContextBundle(
     roleKey: string,
-    projectRoot: string,
-    activeArtifactPath: string | string[]
+    projectRoot: string
   ): ContextBundleResult {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
-    
+
     // Extract role display name and project name from roleKey: "namespace__Role Name"
     const parts = roleKey.split('__');
     const projectName = parts[0];
@@ -53,7 +55,8 @@ export class ContextInjectionService {
     const roleEntry = buildRoleContext(roleKey, projectRoot);
 
     if (roleEntry) {
-      bundle += `--- MANDATORY CONTEXT LOADING FOR ${roleKey} ---\n`;
+      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleKey} ---\n`;
+      bundle += `These files are already loaded into this session by the runtime. Use them directly. Do not spend your first turn rereading or re-listing them unless the current task specifically requires close inspection of one file.\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
         if (RUNTIME_MANAGED_REQUIRED_READING_VARIABLES.has(varName)) {
           continue;
@@ -61,7 +64,6 @@ export class ContextInjectionService {
         const resolvedPath = resolveVariableFromIndex(varName, projectRoot);
         if (resolvedPath && fs.existsSync(resolvedPath)) {
           const content = fs.readFileSync(resolvedPath, 'utf8');
-          // Present it clearly as file content
           bundle += `\n[FILE: ${varName} (resolved to ${resolvedPath})]\n`;
           bundle += `${content}\n\n`;
         } else {
@@ -70,23 +72,6 @@ export class ContextInjectionService {
       }
     } else {
       bundle += `--- UNKNOWN ROLE: ${roleKey}. No required reading available. ---\n\n`;
-    }
-
-    // 2. Inject active artifact(s)
-    const paths = Array.isArray(activeArtifactPath) ? activeArtifactPath : (activeArtifactPath ? [activeArtifactPath] : []);
-    const total = paths.length;
-
-    for (let i = 0; i < paths.length; i++) {
-      const p = paths[i];
-      const fullPath = path.resolve(projectRoot, p);
-      bundle += `--- ACTIVE WORKSPACE ARTIFACT${total > 1 ? ` (${i + 1} of ${total})` : ''} ---\n`;
-      bundle += `[FILE: ${p}]\n`;
-      if (fs.existsSync(fullPath)) {
-        const content = fs.readFileSync(fullPath, 'utf8');
-        bundle += `${content}\n\n`;
-      } else {
-        bundle += `(File does not exist yet)\n\n`;
-      }
     }
 
     // Compute hash

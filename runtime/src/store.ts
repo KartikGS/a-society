@@ -40,6 +40,14 @@ export class SessionStore {
       // improvementPhase will be undefined (correct initial state). No data loss.
       flow.stateVersion = '1';
     }
+    // Silently migrate v1 and v2 to v3: initialize empty role-continuity ledger.
+    // Node-keyed session transcripts remain valid and unchanged.
+    if (flow.stateVersion === '1' || flow.stateVersion === '2') {
+      if (!flow.roleContinuity) {
+        flow.roleContinuity = {};
+      }
+      flow.stateVersion = '3';
+    }
     return flow;
   }
 

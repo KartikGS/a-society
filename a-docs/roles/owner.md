@@ -26,7 +26,7 @@ The Owner **owns**:
 - The folder structure — changes to the organization of `a-society/` require Owner review
 - The `agents.md` and `indexes/main.md` for this project
 - Quality review of any addition proposed for `general/` — the test is always: "Does this apply equally to a software project, a writing project, and a research project?"
-- **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, read `$A_SOCIETY_WORKFLOW` to route it.
+- **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, route it per `$A_SOCIETY_WORKFLOW`.
 - The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. Before routing intake work that may update Next Priorities, filing or merging Next Priorities items, or otherwise managing the log, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
 
 The Owner **does NOT**:

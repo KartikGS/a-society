@@ -38,6 +38,8 @@ If the Owner issues a Revise decision, the Curator resubmits at the next availab
 
 If a flow includes an additional Curator → Owner submission after the main decision artifact, that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
 
+**Correction loops do not reserve the originally planned downstream numbers.** The artifact names shown in `workflow.md` are planning descriptors, not permanently reserved sequence positions. If a `REVISE` or correction loop consumes the slots originally expected for later phases, resume the remaining forward-pass artifacts at the next available sequence position in the live record folder while keeping the same functional descriptor. For example, a planned `07-owner-to-curator-brief.md` may correctly become `10-owner-to-curator-brief.md` after `07-09` are used by an implementation correction loop.
+
 **Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-addendum.md`, `owner-addendum.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
 
 **Parallel track sub-labeling:** When the Owner declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the Owner must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The Owner assigns these sub-labels in `workflow.md` and in the record folder convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
@@ -84,6 +86,8 @@ The YAML content must be wrapped in `---` frontmatter delimiters as shown. The B
 **When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
 
 **What Component 4 reads from it:** `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges`. The `human-collaborative` field is present for human orientation and is not parsed by Component 4.
+
+**Artifact names in `workflow.md` are descriptor-level labels, not frozen numeric filenames.** The `artifact` value documents the intended handoff type at intake. Later `REVISE` or correction loops may shift the live sequence numbering. When that happens, preserve the descriptor and use the next available sequence slot in the record folder rather than trying to restore the originally planned number.
 
 **Relationship to the plan's `path` field:** `01-owner-workflow-plan.md` also contains a `path` field — a flat string list combining role and phase descriptor (e.g., `- Owner - Intake & Briefing`). These two representations coexist and serve distinct consumers:
 

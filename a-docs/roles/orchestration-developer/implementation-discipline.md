@@ -10,6 +10,10 @@
 
 **Provider adapters must preserve already-classified gateway errors.** If a provider-level catch block receives an `LLMGatewayError` produced earlier in the call path, re-throw it unchanged before applying SDK-specific remapping.
 
+**Contract migrations require touched-module field sweeps.** When an implementation changes the meaning, source, version, or allowed values of an existing runtime contract field, audit every touched module for pre-existing assignments, derivations, local shadow variables, and version literals tied to that field family before filing completion. Do not verify only the new lines you added.
+
+**Regression fixtures for derivation bugs must be discriminating.** When a test is meant to prove that one field is no longer derived from another, choose fixture values that intentionally differ so the wrong derivation fails. Write the fixture from the approved contract, not from the implementation's current behavior.
+
 **One-shot diagnostic scripts do not belong at the runtime root.** Temporary diagnostics created to probe implementation behavior must live in a dedicated diagnostics subdirectory under the runtime layer, not alongside durable entry points. Remove them before phase completion unless the approved design promotes them into standing test infrastructure.
 
 **History arrays passed by the orchestrator must be mutated directly, not copied.** When `orient.ts` or any session function receives a `providedHistory` array from the orchestrator, treat it as an out-parameter: push new entries directly to `providedHistory` rather than spreading it into a local copy.

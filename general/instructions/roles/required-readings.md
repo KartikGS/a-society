@@ -102,8 +102,10 @@ If a project's `required-readings.yaml` drifts from the project's index or its i
 
 ---
 
-## Human/Manual Orientation
+## Context-Read Timing Rules
 
-While the runtime handles injection for agents, humans or agents performing manual orientation still consult this file. The list ordered within `required-readings.yaml` represents the **correct reading sequence** (e.g., `agents.md` → `$INDEX` → `$VISION` → `$STRUCTURE`).
+**Runtime-managed sessions:** Required-reading files injected at startup by the runtime count as already loaded. Role documents and runtime-owned startup prompts must not instruct default rereads of those injected files.
 
-Do not replicate this list as prose in `agents.md` or role files. Replicating the list creates a maintenance burden where the prose and the machine-readable authority will inevitably drift.
+**Manual orientation:** While the runtime handles injection for agents, humans or agents performing manual orientation may still follow the ordered reading sequence in `required-readings.yaml` to establish context (e.g., `agents.md` → `$INDEX` → `$VISION` → `$STRUCTURE`).
+
+Do not replicate this sequence as prose in `agents.md` or role files. Replicating the list creates a maintenance burden where the prose and the machine-readable authority will inevitably drift.

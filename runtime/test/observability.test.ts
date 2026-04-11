@@ -130,6 +130,28 @@ async function run() {
     assert.strictEqual(providerSpans[0].attributes['provider.result_type'], 'tool_calls');
   });
 
+  await test('Scenario: runInteractiveSession with empty history returns null (no auto-seed)', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    const result = await runInteractiveSession(
+      tmpDir,
+      'a-society__curator',
+      'System prompt',
+      [],
+      undefined,
+      output
+    );
+
+    // With no user message in history, orient.ts must return null rather than injecting a prompt.
+    assert.strictEqual(result, null);
+
+    const intSpan = getSpan('session.interaction');
+    assert.strictEqual(intSpan.attributes['session.interaction.outcome'], 'invalid_history');
+  });
+
   await test('Scenario: Prompt-human suspension in orient.ts (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
@@ -294,10 +316,13 @@ async function run() {
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator.md'), '---\nrole: Curator\n---\nHello');
 
     const recordDir = path.join(tmpDir, 'repair-record');
+    // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:
+    // projectRoot = workspace root, projectNamespace = project folder name.
+    const improvementNamespace = path.basename(tmpDir);
     fs.mkdirSync(recordDir, { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, 'a-docs', 'improvement'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, 'a-docs', 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
-    fs.writeFileSync(path.join(tmpDir, 'a-docs', 'improvement', 'synthesis.md'), 'Synthesis instructions');
+    fs.mkdirSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
+    fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'synthesis.md'), 'Synthesis instructions');
     fs.writeFileSync(
       path.join(recordDir, 'workflow.md'),
       '---\nworkflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n---\n'
@@ -307,8 +332,9 @@ async function run() {
     const flowRun: any = {
       flowId: 'repair-flow',
       projectRoot: tmpDir,
+      projectNamespace: improvementNamespace,
       status: 'running',
-      stateVersion: '2',
+      stateVersion: '3',
       improvementPhase: null,
       recordFolderPath: recordDir
     };
@@ -348,6 +374,7 @@ async function run() {
     }
 
     assert.strictEqual(flowRun.status, 'completed');
+    assert.strictEqual(flowRun.stateVersion, '3', 'improvement initialization must not regress stateVersion below v3');
     assert.ok(capturedOutput.includes('Curator emitted prompt-human during backward pass synthesis. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });

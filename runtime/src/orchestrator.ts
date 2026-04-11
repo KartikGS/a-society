@@ -7,6 +7,7 @@ import { HandoffParseError } from './handoff.js';
 import { ToolTriggerEngine } from './triggers.js';
 import type { FlowRun, TurnRecord, HandoffResult, HandoffTarget, RuntimeMessageParam } from './types.js';
 import { runInteractiveSession } from './orient.js';
+import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
 import { buildWorkflowRepairGuidance, WorkflowValidationError } from './framework-services/workflow-graph-validator.js';
@@ -76,8 +77,11 @@ export class FlowOrchestrator {
             const bootstrapHistory: RuntimeMessageParam[] = [];
 
             const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
-              roleKey, workspaceRoot, []
+              roleKey, workspaceRoot
             );
+
+            // Caller-owned Owner bootstrap message — pushed once before the first session turn.
+            bootstrapHistory.push({ role: 'user', content: buildOwnerBootstrapMessage() });
 
             let retryCount = 0;
             while (true) {
@@ -166,7 +170,8 @@ export class FlowOrchestrator {
                   completedNodeArtifacts: {},
                   pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
                   status: 'running',
-                  stateVersion: '2'
+                  stateVersion: '3',
+                  roleContinuity: {}
                 };
 
                 try {
@@ -310,24 +315,41 @@ export class FlowOrchestrator {
         }
 
         const { bundleContent, contextHash } = ContextInjectionService.buildContextBundle(
-          roleKey, flowRun.projectRoot, resolvedArtifacts
+          roleKey, flowRun.projectRoot
         );
 
         const injectedHistory = [...session.transcriptHistory];
 
         if (injectedHistory.length === 0) {
-          let userMessageContent = "";
-          if (humanInput) {
-            userMessageContent += `Human Input:\n${humanInput}\n\n`;
+          // Determine whether another active node shares this role (parallel isolation).
+          const otherActiveNodeHasSameRole = flowRun.activeNodes
+            .filter(id => id !== nodeId)
+            .some(id => {
+              const nodeDef = wf.nodes.find((n: any) => n.id === id);
+              return nodeDef && `${flowRun.projectNamespace}__${nodeDef.role}` === roleKey;
+            });
+
+          // Inject continuity summary only when safe (no parallel same-role active node).
+          let continuityEntries: Array<{ nodeId: string; outputArtifactPath: string | null }> | undefined;
+          if (!otherActiveNodeHasSameRole) {
+            const continuityState = flowRun.roleContinuity?.[roleKey];
+            if (continuityState && continuityState.completedNodes.length > 0) {
+              continuityEntries = continuityState.completedNodes.map(e => ({
+                nodeId: e.nodeId,
+                outputArtifactPath: e.outputArtifactPath
+              }));
+            }
           }
-          if (resolvedArtifacts.length === 1) {
-            userMessageContent += `Active artifact: ${resolvedArtifacts[0]}\nPlease proceed.`;
-          } else if (resolvedArtifacts.length > 1) {
-            userMessageContent += `Active artifacts (parallel track inputs):\n${resolvedArtifacts.map(a => `- ${a}`).join('\n')}\nPlease proceed.`;
-          } else {
-            userMessageContent += `Please proceed.`;
-          }
-          injectedHistory.push({ role: 'user', content: userMessageContent });
+
+          const nodeEntryMessage = buildForwardNodeEntryMessage({
+            nodeId,
+            role: currentNodeDef.role,
+            projectRoot: flowRun.projectRoot,
+            activeArtifacts: resolvedArtifacts,
+            continuityEntries,
+            humanInput
+          });
+          injectedHistory.push({ role: 'user', content: nodeEntryMessage });
         } else if (humanInput) {
           injectedHistory.push({ role: 'user', content: humanInput });
         }
@@ -406,6 +428,19 @@ export class FlowOrchestrator {
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
+
+              // Update role-continuity ledger before advancing so the save inside
+              // applyHandoffAndAdvance persists it in the same write.
+              if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
+              if (!flowRun.roleContinuity[roleKey]) {
+                flowRun.roleContinuity[roleKey] = { roleKey, completedNodes: [] };
+              }
+              flowRun.roleContinuity[roleKey].completedNodes.push({
+                nodeId,
+                outputArtifactPath: handoffs[0]?.artifact_path ?? null,
+                completedAt: new Date().toISOString()
+              });
+
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
 
               const currentTurnNumber = Math.max(1, Math.floor(injectedHistory.length / 2));

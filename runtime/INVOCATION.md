@@ -92,6 +92,37 @@ When the operator enters `exit` or `quit` at a prompt-human pause, or the input 
 
 ---
 
+## Session Startup and Continuity
+
+### Required reading is loaded once at startup
+
+When a session begins, the runtime loads all required-reading files from `a-docs/roles/required-readings.yaml` into the system prompt. These files are already present in the model's context at the first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
+
+### Fresh Owner bootstrap
+
+A fresh interactive Owner bootstrap uses an explicit first user message that instructs the Owner to use the already-loaded context. The runtime does not inject a generic "read the project log" prompt — the Owner is told directly that the required-reading files are loaded and to use them to summarize status and ask what to work on.
+
+### Same-node `prompt-human` resume
+
+When a `type: prompt-human` handoff pauses execution, the node-scoped session transcript is preserved. On resume, the runtime reuses that transcript and appends only the human reply. The node-entry message is not regenerated.
+
+### Same-role later-node return
+
+When the same role appears again at a later node in the same flow (e.g., an Owner gate after a Technical Architect node), the runtime sends a combined node-entry message containing:
+
+1. A header identifying the workflow node and role
+2. An explicit statement that this is a workflow node entry, not a fresh startup
+3. A role-continuity summary listing prior completed nodes and their output artifacts
+4. The current node's active artifact(s) as task input
+
+This preserves in-flow continuity without reusing prior node-specific turns or repair history.
+
+### Same-role parallel activation
+
+When two nodes with the same role are active simultaneously, each keeps its own node-scoped session. No continuity summary is injected and no transcript is shared. Each node receives its own task inputs only.
+
+---
+
 ## Required Project Surface
 
 The runtime loads context from `a-docs/roles/required-readings.yaml`. If that file is missing or the relevant index variables do not resolve, orchestration cannot start.

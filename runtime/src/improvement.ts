@@ -6,6 +6,7 @@ import {
   locateAllFindingsFiles,
 } from './framework-services/backward-pass-orderer.js';
 import { ContextInjectionService } from './injection.js';
+import { buildImprovementEntryMessage } from './session-entry.js';
 import { SessionStore } from './store.js';
 import { runInteractiveSession } from './orient.js';
 import type { FlowRun, HandoffResult, RuntimeMessageParam } from './types.js';
@@ -158,7 +159,7 @@ export class ImprovementOrchestrator {
           completedRoles: [],
           findingsProduced: {}
         };
-        flowRun.stateVersion = '2';
+        flowRun.stateVersion = '3';
         SessionStore.saveFlowRun(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 
@@ -189,8 +190,7 @@ export class ImprovementOrchestrator {
               if (isSynthesis) stepSpan.addEvent('improvement.synthesis_started');
               // Concurrent roles within step
               await Promise.all(group.map(async (entry) => {
-                const namespace = path.basename(flowRun.projectRoot);
-                const roleKey = `${namespace}__${entry.role}`;
+                const roleKey = `${flowRun.projectNamespace}__${entry.role}`;
 
                 if (entry.stepType === 'meta-analysis') {
                   const findingsRoles = entry.findingsRolesToInject;
@@ -209,16 +209,22 @@ export class ImprovementOrchestrator {
                     }
                   }
 
-                  // $[PROJECT]_IMPROVEMENT_META_ANALYSIS: project root + a-docs/improvement/meta-analysis.md
-                  const metaAnalysisInstructionPath = path.join(flowRun.projectRoot, 'a-docs', 'improvement', 'meta-analysis.md');
+                  // $[PROJECT]_IMPROVEMENT_META_ANALYSIS: project root + namespace + a-docs/improvement/meta-analysis.md
+                  const metaAnalysisInstructionPath = path.join(flowRun.projectRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'meta-analysis.md');
 
                   const { bundleContent } = ContextInjectionService.buildContextBundle(
                     roleKey,
-                    flowRun.projectRoot,
-                    [metaAnalysisInstructionPath, ...findingsFilePaths]
+                    flowRun.projectRoot
                   );
 
-                  const userMessage = `Backward pass meta-analysis. Your record folder is: ${signal.recordFolderPath}.\nProduce your findings artifact at the next available sequence position in the record folder.\nWhen your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set to the repo-relative path of your findings file.`;
+                  const userMessage = buildImprovementEntryMessage({
+                    stepLabel: 'meta-analysis',
+                    recordFolderPath: signal.recordFolderPath,
+                    projectRoot: flowRun.projectRoot,
+                    instructionFilePath: metaAnalysisInstructionPath,
+                    findingsFilePaths,
+                    completionSignal: 'Produce your findings artifact at the next available sequence position in the record folder. When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set to the repo-relative path of your findings file.'
+                  });
                   const result = await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleKey,
@@ -234,16 +240,22 @@ export class ImprovementOrchestrator {
                 } else if (entry.stepType === 'synthesis') {
                   const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
 
-                  // $[PROJECT]_IMPROVEMENT_SYNTHESIS: project root + a-docs/improvement/synthesis.md
-                  const synthesisInstructionPath = path.join(flowRun.projectRoot, 'a-docs', 'improvement', 'synthesis.md');
+                  // $[PROJECT]_IMPROVEMENT_SYNTHESIS: project root + namespace + a-docs/improvement/synthesis.md
+                  const synthesisInstructionPath = path.join(flowRun.projectRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'synthesis.md');
 
                   const { bundleContent } = ContextInjectionService.buildContextBundle(
                     roleKey,
-                    flowRun.projectRoot,
-                    [synthesisInstructionPath, ...allFindingsFiles]
+                    flowRun.projectRoot
                   );
 
-                  const userMessage = `Backward pass synthesis. Your record folder is: ${signal.recordFolderPath}.\nFindings from all roles in this flow are in your context. Produce the synthesis artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the synthesis artifact.`;
+                  const userMessage = buildImprovementEntryMessage({
+                    stepLabel: 'synthesis',
+                    recordFolderPath: signal.recordFolderPath,
+                    projectRoot: flowRun.projectRoot,
+                    instructionFilePath: synthesisInstructionPath,
+                    findingsFilePaths: allFindingsFiles,
+                    completionSignal: 'Findings from all roles in this flow are in your context. Produce the synthesis artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the synthesis artifact.'
+                  });
                   await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleKey,

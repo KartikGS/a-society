@@ -38,11 +38,10 @@ fs.writeFileSync(path.join(projectDir, 'a-docs', 'agents.md'), 'Agent orientatio
 fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner.md'), 'Owner role doc');
 fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
 
-test('buildContextBundle: includes role context and active artifact content', () => {
+test('buildContextBundle: contains role announcement, date, handoff contract, and required-reading files', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society__Owner',
-    tmpDir,
-    'a-society/artifact.md'
+    tmpDir
   );
 
   assert.ok(bundle.bundleContent.includes('You are the Owner agent for a-society.'));
@@ -50,15 +49,34 @@ test('buildContextBundle: includes role context and active artifact content', ()
   assert.ok(bundle.bundleContent.includes('A-Society Runtime Handoff Contract'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));
-  assert.ok(bundle.bundleContent.includes('[FILE: a-society/artifact.md]'));
-  assert.ok(bundle.bundleContent.includes('Artifact body'));
+});
+
+test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and already-loaded statement', () => {
+  const bundle = ContextInjectionService.buildContextBundle(
+    'a-society__Owner',
+    tmpDir
+  );
+
+  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR a-society__Owner ---'));
+  assert.ok(bundle.bundleContent.includes('These files are already loaded into this session by the runtime.'));
+  assert.ok(!bundle.bundleContent.includes('--- MANDATORY CONTEXT LOADING FOR'));
+});
+
+test('buildContextBundle: does not include active artifact content', () => {
+  const bundle = ContextInjectionService.buildContextBundle(
+    'a-society__Owner',
+    tmpDir
+  );
+
+  assert.ok(!bundle.bundleContent.includes('Artifact body'));
+  assert.ok(!bundle.bundleContent.includes('[FILE: a-society/artifact.md]'));
+  assert.ok(!bundle.bundleContent.includes('ACTIVE WORKSPACE ARTIFACT'));
 });
 
 test('buildContextBundle: runtime handoff contract is injected once even if runtime variable appears in required readings', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society__Owner',
-    tmpDir,
-    []
+    tmpDir
   );
 
   const matches = bundle.bundleContent.match(/A-Society Runtime Handoff Contract/g) || [];
@@ -69,14 +87,21 @@ test('buildContextBundle: runtime handoff contract is injected once even if runt
 test('buildContextBundle: does not inject runtime directives', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society__Owner',
-    tmpDir,
-    []
+    tmpDir
   );
 
   assert.ok(!bundle.bundleContent.includes('--- RUNTIME DIRECTIVE ---'));
   assert.ok(!bundle.bundleContent.includes('You are beginning an intake session.'));
   assert.ok(!bundle.bundleContent.includes('When your work for this phase is complete'));
   assert.ok(!bundle.bundleContent.includes('Do NOT emit a handoff block yet.'));
+});
+
+test('buildContextBundle: produces a deterministic hash', () => {
+  const bundle1 = ContextInjectionService.buildContextBundle('a-society__Owner', tmpDir);
+  const bundle2 = ContextInjectionService.buildContextBundle('a-society__Owner', tmpDir);
+
+  assert.strictEqual(bundle1.contextHash, bundle2.contextHash);
+  assert.ok(bundle1.contextHash.length > 0);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

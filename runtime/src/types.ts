@@ -25,6 +25,17 @@ export interface ImprovementPhaseState {
   findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
 }
 
+export interface RoleContinuityEntry {
+  nodeId: string;
+  outputArtifactPath: string | null;
+  completedAt: string;
+}
+
+export interface RoleContinuityState {
+  roleKey: string;
+  completedNodes: RoleContinuityEntry[];
+}
+
 export interface FlowRun {
   flowId: string;
   projectRoot: string;
@@ -35,8 +46,9 @@ export interface FlowRun {
   completedNodeArtifacts: Record<string, string>; // nodeId → artifact_path of that node's output
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "2" for this schema; absent/old = "1"
+  stateVersion: string;                        // Persistence version: "3" for this schema; "2" = prior; absent/"1" = legacy
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
+  roleContinuity?: Record<string, RoleContinuityState>; // roleKey → continuity state for same-role later-node returns
 }
 
 export interface RoleSession {

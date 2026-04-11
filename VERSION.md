@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v33.0
+**Version:** v34.0
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v34.0 | 2026-04-11 | 2026-04-11-startup-context-timing.md — Runtime contract distinguishes startup-injected context and manual reading requirements; role documents prohibited from instructing default rereads of injected files (Breaking). |
 | v33.0 | 2026-04-09 | 2026-04-09-executable-layer-unification.md — Standing executable model unified: separate public tooling/runtime split retired in favor of one executable layer; `runtime/INVOCATION.md` is now the sole default operator-facing executable reference; shared instructions and initializer wording now use executable-capability guidance with manual fallbacks instead of A-Society-specific tooling invocations (Breaking x3). |
 | v32.1 | 2026-04-08 | 2026-04-08-role-guidance-addenda.md — TA Specification Rigor extended to 12 items (5 new advisory-completeness standards); Owner role template gains 13 brief-writing and closure-time precision rules; Curator role template gains 3 precision rules for procedural uncertainty, source-claim verification, and tool-surface normalization (all Recommended). |
 | v32.0 | 2026-04-07 | 2026-04-07-adocs-design-principles.md — New required `a-docs-design.md` artifact and companion instruction added to the general library (Breaking); general meta-analysis template gains mandatory a-docs structure checks (Breaking). |

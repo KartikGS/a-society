@@ -157,13 +157,6 @@ export async function runInteractiveSession(
     const history: RuntimeMessageParam[] = providedHistory ?? [];
 
     try {
-      if (history.length === 0) {
-        history.push({
-          role: 'user',
-          content: 'A new session has started. Read the project log in your context, give a brief status of where the project is at, ask what the user wants to work on, and end with a `type: prompt-human` handoff block.'
-        });
-      }
-
       if (history[history.length - 1]?.role !== 'user') {
         interactionSpan.setAttribute('session.interaction.outcome', 'invalid_history');
         return null;
