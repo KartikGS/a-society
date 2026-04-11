@@ -9,7 +9,7 @@ import { runInteractiveSession } from './orient.js';
 import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
-import { buildWorkflowRepairGuidance, WorkflowValidationError, validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
+import { buildWorkflowRepairGuidance, validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
 import { computeBackwardPassPlan } from './framework-services/backward-pass-orderer.js';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
@@ -127,10 +127,14 @@ export class FlowOrchestrator {
                   throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
                 }
                 const handoffs = handoffResult.targets;
-                const artifactPath = handoffs[0].artifact_path;
-                if (!artifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
+                if (handoffs.length === 0) {
+                  bootstrapHistory.push({ role: 'user', content: 'Bootstrap produced no handoff targets. Re-emit a handoff with artifact_path pointing to your output artifact.' });
+                  continue;
+                }
+                const firstArtifactPath = handoffs[0].artifact_path;
+                if (!firstArtifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
 
-                const recordFolderPath = path.dirname(path.resolve(workspaceRoot, artifactPath));
+                const recordFolderPath = path.dirname(path.resolve(workspaceRoot, firstArtifactPath));
                 const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
 
                 if (!fs.existsSync(workflowDocumentPath)) {
@@ -141,52 +145,45 @@ export class FlowOrchestrator {
                   continue;
                 }
 
-                let startNodeId = 'start';
-                try {
-                  const doc = parseWorkflow(workflowDocumentPath);
-                  if (doc.workflow && doc.workflow.nodes) {
-                    const startingRoleName = handoffs[0].role;
-                    const node = doc.workflow.nodes.find((n: any) => n.role === startingRoleName);
-                    if (node) {
-                      startNodeId = node.id;
-                    } else {
-                      startNodeId = doc.workflow.nodes[0].id;
-                    }
-                  }
-                  bootstrapSpan.setAttribute('bootstrap.workflow_path', path.relative(workspaceRoot, workflowDocumentPath));
-                } catch (e: any) {
-                  bootstrapSpan.addEvent('bootstrap.workflow_parse_failed', { error_message: e.message });
-                  const guidance = buildWorkflowRepairGuidance([e.message]);
-                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_parse', summary: guidance.operatorSummary });
+                const validationRes = validateWorkflowFile(workflowDocumentPath, true);
+                if (!validationRes.valid) {
+                  bootstrapSpan.addEvent('bootstrap.tool_trigger_failed', { error_message: validationRes.errors.join('; ') });
+                  const guidance = buildWorkflowRepairGuidance(validationRes.errors);
+                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_schema', summary: guidance.operatorSummary });
                   bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
                   continue;
                 }
+
+                const doc = parseWorkflow(workflowDocumentPath);
+                const nodes: any[] = doc.workflow?.nodes ?? [];
+                const activeNodes: string[] = [];
+                const pendingNodeArtifacts: Record<string, string[]> = {};
+                for (const handoff of handoffs) {
+                  const node = nodes.find((n: any) => n.role === handoff.role) ?? nodes[0];
+                  if (node) {
+                    if (!activeNodes.includes(node.id)) {
+                      activeNodes.push(node.id);
+                      pendingNodeArtifacts[node.id] = [];
+                    }
+                    pendingNodeArtifacts[node.id].push(handoff.artifact_path ?? '');
+                  }
+                }
+                if (activeNodes.length === 0) activeNodes.push('start');
+                bootstrapSpan.setAttribute('bootstrap.workflow_path', path.relative(workspaceRoot, workflowDocumentPath));
 
                 flowRun = {
                   flowId: crypto.randomUUID(),
                   workspaceRoot,
                   projectNamespace,
                   recordFolderPath,
-                  activeNodes: [startNodeId],
+                  activeNodes,
                   completedNodes: [],
                   completedNodeArtifacts: {},
-                  pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
+                  pendingNodeArtifacts,
                   status: 'running',
                   stateVersion: '4',
                   roleContinuity: {}
                 };
-
-                try {
-                  const res = validateWorkflowFile(workflowDocumentPath, true);
-                  if (!res.valid) throw new WorkflowValidationError(res.errors, workflowDocumentPath);
-                } catch (e: any) {
-                  bootstrapSpan.addEvent('bootstrap.tool_trigger_failed', { error_message: e.message });
-                  const errors = e instanceof WorkflowValidationError ? e.errors : [e.message];
-                  const guidance = buildWorkflowRepairGuidance(errors);
-                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_schema', summary: guidance.operatorSummary });
-                  bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
-                  continue;
-                }
                 SessionStore.saveFlowRun(flowRun);
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
                 break;
