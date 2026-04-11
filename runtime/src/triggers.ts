@@ -53,9 +53,10 @@ export class ToolTriggerEngine {
         } else if (event === 'INITIALIZATION') {
           triggerRecord.toolComponent = 'Scaffolding System';
           span.setAttribute('trigger.component', triggerRecord.toolComponent);
-          const aSocietyRoot = path.resolve(flowRun.projectRoot, '..', '..');
+          const targetProjectRoot = path.join(flowRun.workspaceRoot, flowRun.projectNamespace);
+          const aSocietyRoot = path.join(flowRun.workspaceRoot, 'a-society');
           const res = scaffoldFromManifestFile(
-              flowRun.projectRoot,
+              targetProjectRoot,
               'Active Project', 
               aSocietyRoot, 
               path.join(aSocietyRoot, 'general', 'manifest.yaml'), 

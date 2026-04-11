@@ -85,7 +85,7 @@ workflow:
   SessionStore.init();
   SessionStore.saveFlowRun({
     flowId: 'test-linear-flow-id',
-    projectRoot: workspaceRoot,
+    workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
     activeNodes: ['start'],
@@ -93,7 +93,7 @@ workflow:
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'running',
-    stateVersion: '2'
+    stateVersion: '4'
   });
 
   const operatorStream = new PassThrough();

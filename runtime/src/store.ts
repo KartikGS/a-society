@@ -28,25 +28,42 @@ export class SessionStore {
   }
 
   static saveFlowRun(flow: FlowRun) {
-    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(flow, null, 2));
+    const flowToSave = { ...flow } as FlowRun & { projectRoot?: string };
+    delete flowToSave.projectRoot;
+    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(flowToSave, null, 2));
   }
 
   static loadFlowRun(): FlowRun | null {
     const p = path.join(getStateDir(), 'flow.json');
     if (!fs.existsSync(p)) return null;
-    const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun;
+    const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun & { projectRoot?: string };
     if (!flow.stateVersion) {
       // State version absent — pre-versioning state ("1"). Compatible with current schema.
       // improvementPhase will be undefined (correct initial state). No data loss.
       flow.stateVersion = '1';
     }
-    // Silently migrate v1 and v2 to v3: initialize empty role-continuity ledger.
+
+    if (!flow.workspaceRoot && flow.projectRoot) {
+      flow.workspaceRoot = flow.projectRoot;
+    }
+
+    // Silently migrate v1-v3 state to v4:
+    // - initialize empty role-continuity ledger when absent
+    // - rename projectRoot -> workspaceRoot
     // Node-keyed session transcripts remain valid and unchanged.
-    if (flow.stateVersion === '1' || flow.stateVersion === '2') {
-      if (!flow.roleContinuity) {
-        flow.roleContinuity = {};
+    if (flow.stateVersion === '1' || flow.stateVersion === '2' || flow.stateVersion === '3') {
+      const migratedContinuity: NonNullable<FlowRun['roleContinuity']> = {};
+      for (const [storedKey, storedState] of Object.entries(flow.roleContinuity ?? {})) {
+        const rawState = storedState as { roleName?: string; completedNodes?: any[] };
+        const roleName = rawState.roleName ?? storedKey;
+        migratedContinuity[roleName] = {
+          roleName,
+          completedNodes: Array.isArray(rawState.completedNodes) ? rawState.completedNodes : []
+        };
       }
-      flow.stateVersion = '3';
+      flow.roleContinuity = migratedContinuity;
+      flow.stateVersion = '4';
+      delete flow.projectRoot;
     }
     return flow;
   }

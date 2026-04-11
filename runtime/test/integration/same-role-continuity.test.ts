@@ -31,8 +31,8 @@ import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
 const stateDir = path.join(tmpDir, '.state');
 const projectNamespace = 'test-proj';
-const projectRoot = tmpDir;
-const namespaceDir = path.join(projectRoot, projectNamespace);
+const workspaceRoot = tmpDir;
+const namespaceDir = path.join(workspaceRoot, projectNamespace);
 const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
 const indexDir = path.join(namespaceDir, 'a-docs', 'indexes');
 const recordDir = path.join(namespaceDir, 'records', 'test-flow');
@@ -110,15 +110,15 @@ function patchLLM(provider: MockProvider): () => void {
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   return {
     flowId: 'test-flow-id',
-    projectRoot,
+    workspaceRoot,
     projectNamespace,
     recordFolderPath: recordDir,
     activeNodes: ['owner-intake'],
     completedNodes: [],
     completedNodeArtifacts: {},
-    pendingNodeArtifacts: { 'owner-intake': [path.relative(projectRoot, ownerArtifact1)] },
+    pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     status: 'running',
-    stateVersion: '3',
+    stateVersion: '4',
     roleContinuity: {},
     ...overrides
   };
@@ -153,8 +153,9 @@ async function run() {
 
   await test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
     const { bundleContent } = ContextInjectionService.buildContextBundle(
-      `${projectNamespace}__owner`,
-      projectRoot
+      projectNamespace,
+      'owner',
+      workspaceRoot
     );
 
     assert.ok(bundleContent.includes('RUNTIME-LOADED REQUIRED READING'));
@@ -171,7 +172,7 @@ async function run() {
       { role: 'assistant', content: 'I will proceed.' }
     ];
     SessionStore.saveRoleSession({
-      roleName: `${projectNamespace}__owner`,
+      roleName: 'owner',
       logicalSessionId: sessionId,
       transcriptHistory: priorHistory,
       isActive: true
@@ -192,10 +193,10 @@ async function run() {
     const msg = buildForwardNodeEntryMessage({
       nodeId: 'owner-gate',
       role: 'owner',
-      projectRoot,
-      activeArtifacts: [path.relative(projectRoot, taArtifact)],
+      workspaceRoot,
+      activeArtifacts: [path.relative(workspaceRoot, taArtifact)],
       continuityEntries: [
-        { nodeId: 'owner-intake', outputArtifactPath: path.relative(projectRoot, ownerArtifact1) }
+        { nodeId: 'owner-intake', outputArtifactPath: path.relative(workspaceRoot, ownerArtifact1) }
       ]
     });
 
@@ -210,7 +211,7 @@ async function run() {
     const msg = buildForwardNodeEntryMessage({
       nodeId: 'owner-parallel-b',
       role: 'owner',
-      projectRoot,
+      workspaceRoot,
       activeArtifacts: [],
       continuityEntries: undefined
     });
@@ -225,13 +226,13 @@ async function run() {
     const flowRun = makeFlowRun({ roleContinuity: {} });
     SessionStore.saveFlowRun(flowRun);
 
-    const roleKey = `${projectNamespace}__owner`;
+    const roleName = 'owner';
     if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
-    flowRun.roleContinuity[roleKey] = {
-      roleKey,
+    flowRun.roleContinuity[roleName] = {
+      roleName,
       completedNodes: [{
         nodeId: 'owner-intake',
-        outputArtifactPath: path.relative(projectRoot, ownerArtifact1),
+        outputArtifactPath: path.relative(workspaceRoot, ownerArtifact1),
         completedAt: new Date().toISOString()
       }]
     };
@@ -240,15 +241,15 @@ async function run() {
     const reloaded = SessionStore.loadFlowRun();
     assert.ok(reloaded !== null);
     assert.ok(reloaded!.roleContinuity !== undefined);
-    assert.ok(reloaded!.roleContinuity![roleKey] !== undefined);
-    assert.strictEqual(reloaded!.roleContinuity![roleKey].completedNodes.length, 1);
-    assert.strictEqual(reloaded!.roleContinuity![roleKey].completedNodes[0].nodeId, 'owner-intake');
+    assert.ok(reloaded!.roleContinuity![roleName] !== undefined);
+    assert.strictEqual(reloaded!.roleContinuity![roleName].completedNodes.length, 1);
+    assert.strictEqual(reloaded!.roleContinuity![roleName].completedNodes[0].nodeId, 'owner-intake');
   });
 
-  await test('Store: loading a v2 flow migrates it to v3 with empty roleContinuity', async () => {
+  await test('Store: loading a v2 flow migrates it to v4 with empty roleContinuity', async () => {
     const v2Flow: any = {
       flowId: 'v2-flow',
-      projectRoot,
+      projectRoot: workspaceRoot,
       projectNamespace,
       recordFolderPath: recordDir,
       activeNodes: [],
@@ -262,7 +263,8 @@ async function run() {
 
     const loaded = SessionStore.loadFlowRun();
     assert.ok(loaded !== null);
-    assert.strictEqual(loaded!.stateVersion, '3');
+    assert.strictEqual(loaded!.stateVersion, '4');
+    assert.strictEqual(loaded!.workspaceRoot, workspaceRoot);
     assert.deepStrictEqual(loaded!.roleContinuity, {});
   });
 
@@ -283,7 +285,7 @@ async function run() {
     });
     SessionStore.saveFlowRun(flowRun);
 
-    const artifactRelPath = path.relative(projectRoot, ownerArtifact1);
+    const artifactRelPath = path.relative(workspaceRoot, ownerArtifact1);
     const handoffText = `Done. \`\`\`handoff\nrole: 'ta'\nartifact_path: '${artifactRelPath}'\n\`\`\``;
     const unpatch = patchLLM(new MockProvider([
       { type: 'text', text: handoffText }
@@ -300,11 +302,11 @@ async function run() {
     }
 
     const updated = SessionStore.loadFlowRun()!;
-    const roleKey = `${projectNamespace}__owner`;
+    const roleName = 'owner';
     assert.ok(updated.roleContinuity !== undefined, 'roleContinuity must exist after handoff');
-    assert.ok(updated.roleContinuity![roleKey] !== undefined, `ledger entry for ${roleKey} must exist`);
-    assert.strictEqual(updated.roleContinuity![roleKey].completedNodes.length, 1);
-    assert.strictEqual(updated.roleContinuity![roleKey].completedNodes[0].nodeId, 'owner-intake');
+    assert.ok(updated.roleContinuity![roleName] !== undefined, `ledger entry for ${roleName} must exist`);
+    assert.strictEqual(updated.roleContinuity![roleName].completedNodes.length, 1);
+    assert.strictEqual(updated.roleContinuity![roleName].completedNodes[0].nodeId, 'owner-intake');
     assert.ok(updated.completedNodes.includes('owner-intake'), 'owner-intake must be in completedNodes');
   });
 
@@ -316,23 +318,23 @@ async function run() {
     if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
 
     // Pre-configure roleContinuity with owner-intake already completed
-    const roleKey = `${projectNamespace}__owner`;
+    const roleName = 'owner';
     const flowRun = makeFlowRun({
       activeNodes: ['owner-gate'],
       completedNodes: ['owner-intake', 'ta'],
       completedNodeArtifacts: {
-        'owner-intake': path.relative(projectRoot, ownerArtifact1),
-        'ta': path.relative(projectRoot, taArtifact)
+        'owner-intake': path.relative(workspaceRoot, ownerArtifact1),
+        'ta': path.relative(workspaceRoot, taArtifact)
       },
       pendingNodeArtifacts: {
-        'owner-gate': [path.relative(projectRoot, taArtifact)]
+        'owner-gate': [path.relative(workspaceRoot, taArtifact)]
       },
       roleContinuity: {
-        [roleKey]: {
-          roleKey,
+        [roleName]: {
+          roleName,
           completedNodes: [{
             nodeId: 'owner-intake',
-            outputArtifactPath: path.relative(projectRoot, ownerArtifact1),
+            outputArtifactPath: path.relative(workspaceRoot, ownerArtifact1),
             completedAt: '2026-04-11T00:00:00.000Z'
           }]
         }
@@ -395,18 +397,18 @@ async function run() {
     const sessionFile = path.join(stateDir, 'sessions', 'test-flow-id__owner-intake.json');
     if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
 
-    const roleKey = `${projectNamespace}__owner`;
+    const roleName = 'owner';
     // Both owner-intake and owner-gate are active simultaneously (same role)
     // roleContinuity has an entry that WOULD be injected if not suppressed
     const flowRun = makeFlowRun({
       activeNodes: ['owner-intake', 'owner-gate'],
       pendingNodeArtifacts: {
-        'owner-intake': [path.relative(projectRoot, ownerArtifact1)],
-        'owner-gate': [path.relative(projectRoot, taArtifact)]
+        'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
+        'owner-gate': [path.relative(workspaceRoot, taArtifact)]
       },
       roleContinuity: {
-        [roleKey]: {
-          roleKey,
+        [roleName]: {
+          roleName,
           completedNodes: [{
             nodeId: 'some-prior-owner-node',
             outputArtifactPath: 'records/test-flow/prior.md',

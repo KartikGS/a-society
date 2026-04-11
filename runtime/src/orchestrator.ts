@@ -46,7 +46,8 @@ export class FlowOrchestrator {
 
   public async startUnifiedOrchestration(
     workspaceRoot: string,
-    roleKey: string,
+    projectNamespace: string,
+    roleName: string,
     inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout
   ): Promise<void> {
@@ -62,22 +63,24 @@ export class FlowOrchestrator {
         rootSpan.setAttribute('flow.id', 'pending');
         rootSpan.setAttribute('flow.resumed', flowRun !== null);
 
-        if (flowRun && flowRun.projectRoot !== workspaceRoot) {
-          console.warn(`\n[Warning] Resuming flow from a different project root:`);
-          console.warn(`  Loaded: ${flowRun.projectRoot}`);
+        if (flowRun && flowRun.workspaceRoot !== workspaceRoot) {
+          console.warn(`\n[Warning] Resuming flow from a different workspace root:`);
+          console.warn(`  Loaded: ${flowRun.workspaceRoot}`);
           console.warn(`  Expected: ${workspaceRoot}`);
           console.warn(`Starting a fresh session instead.\n`);
           flowRun = null;
         }
 
         if (!flowRun) {
-          await tracer.startActiveSpan('bootstrap.session', { kind: SpanKind.INTERNAL, attributes: { role_key: roleKey } }, async (bootstrapSpan) => {
-            const bootstrapRole = roleKey.split('__')[1] ?? roleKey;
-            this.renderer.emit({ kind: 'flow.bootstrap_started', role: bootstrapRole });
+          await tracer.startActiveSpan('bootstrap.session', {
+            kind: SpanKind.INTERNAL,
+            attributes: { project_namespace: projectNamespace, role_name: roleName }
+          }, async (bootstrapSpan) => {
+            this.renderer.emit({ kind: 'flow.bootstrap_started', role: roleName });
             const bootstrapHistory: RuntimeMessageParam[] = [];
 
             const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
-              roleKey, workspaceRoot
+              projectNamespace, roleName, workspaceRoot
             );
 
             // Caller-owned Owner bootstrap message — pushed once before the first session turn.
@@ -94,7 +97,7 @@ export class FlowOrchestrator {
                 let handoffResult: HandoffResult | null = null;
                 try {
                   handoffResult = await runInteractiveSession(
-                    workspaceRoot, roleKey, bootstrapBundle,
+                    workspaceRoot, projectNamespace, roleName, bootstrapBundle,
                     bootstrapHistory,
                     inputStream, outputStream,
                     controller.signal,
@@ -159,18 +162,17 @@ export class FlowOrchestrator {
                   continue;
                 }
 
-                const bootstrapNamespace = roleKey.split('__')[0];
                 flowRun = {
                   flowId: crypto.randomUUID(),
-                  projectRoot: workspaceRoot,
-                  projectNamespace: bootstrapNamespace,
+                  workspaceRoot,
+                  projectNamespace,
                   recordFolderPath,
                   activeNodes: [startNodeId],
                   completedNodes: [],
                   completedNodeArtifacts: {},
                   pendingNodeArtifacts: { [startNodeId]: [artifactPath] },
                   status: 'running',
-                  stateVersion: '3',
+                  stateVersion: '4',
                   roleContinuity: {}
                 };
 
@@ -277,9 +279,9 @@ export class FlowOrchestrator {
         const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
         if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
 
-        const roleKey = `${flowRun.projectNamespace}__${currentNodeDef.role}`;
-        span.setAttribute('role', currentNodeDef.role);
-        span.setAttribute('role_key', roleKey);
+        const roleName = currentNodeDef.role;
+        span.setAttribute('role', roleName);
+        span.setAttribute('role_name', roleName);
 
         const sessionId = `${flowRun.flowId}__${nodeId}`;
 
@@ -309,13 +311,13 @@ export class FlowOrchestrator {
         let session = SessionStore.loadRoleSession(sessionId);
         span.setAttribute('node.session_resumed', session !== null);
         if (!session) {
-          session = { roleName: roleKey, logicalSessionId: sessionId, transcriptHistory: [], isActive: true };
+          session = { roleName, logicalSessionId: sessionId, transcriptHistory: [], isActive: true };
         } else {
           span.addEvent('store.session_loaded', { 'session.id': sessionId, 'session.resumed': true });
         }
 
         const { bundleContent, contextHash } = ContextInjectionService.buildContextBundle(
-          roleKey, flowRun.projectRoot
+          flowRun.projectNamespace, roleName, flowRun.workspaceRoot
         );
 
         const injectedHistory = [...session.transcriptHistory];
@@ -326,13 +328,13 @@ export class FlowOrchestrator {
             .filter(id => id !== nodeId)
             .some(id => {
               const nodeDef = wf.nodes.find((n: any) => n.id === id);
-              return nodeDef && `${flowRun.projectNamespace}__${nodeDef.role}` === roleKey;
+              return nodeDef?.role === roleName;
             });
 
           // Inject continuity summary only when safe (no parallel same-role active node).
           let continuityEntries: Array<{ nodeId: string; outputArtifactPath: string | null }> | undefined;
           if (!otherActiveNodeHasSameRole) {
-            const continuityState = flowRun.roleContinuity?.[roleKey];
+            const continuityState = flowRun.roleContinuity?.[roleName];
             if (continuityState && continuityState.completedNodes.length > 0) {
               continuityEntries = continuityState.completedNodes.map(e => ({
                 nodeId: e.nodeId,
@@ -343,8 +345,8 @@ export class FlowOrchestrator {
 
           const nodeEntryMessage = buildForwardNodeEntryMessage({
             nodeId,
-            role: currentNodeDef.role,
-            projectRoot: flowRun.projectRoot,
+            role: roleName,
+            workspaceRoot: flowRun.workspaceRoot,
             activeArtifacts: resolvedArtifacts,
             continuityEntries,
             humanInput
@@ -367,7 +369,7 @@ export class FlowOrchestrator {
             let handoffResult: HandoffResult | null = null;
             try {
               handoffResult = await runInteractiveSession(
-                flowRun.projectRoot, roleKey, bundleContent,
+                flowRun.workspaceRoot, flowRun.projectNamespace, roleName, bundleContent,
                 injectedHistory as any,
                 inputStream, outputStream,
                 controller.signal,
@@ -432,10 +434,10 @@ export class FlowOrchestrator {
               // Update role-continuity ledger before advancing so the save inside
               // applyHandoffAndAdvance persists it in the same write.
               if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
-              if (!flowRun.roleContinuity[roleKey]) {
-                flowRun.roleContinuity[roleKey] = { roleKey, completedNodes: [] };
+              if (!flowRun.roleContinuity[roleName]) {
+                flowRun.roleContinuity[roleName] = { roleName, completedNodes: [] };
               }
-              flowRun.roleContinuity[roleKey].completedNodes.push({
+              flowRun.roleContinuity[roleName].completedNodes.push({
                 nodeId,
                 outputArtifactPath: handoffs[0]?.artifact_path ?? null,
                 completedAt: new Date().toISOString()

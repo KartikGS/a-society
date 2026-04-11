@@ -32,12 +32,14 @@ const args = process.argv.slice(2);
 const command = args[0];
 
 if (command === 'run') {
-  const [workspaceRoot, roleKey] = args.slice(1);
-  if (!workspaceRoot || !roleKey) {
-    console.error('Usage: run <workspaceRoot> <roleKey>');
+  const [workspaceRoot, projectNamespace, ...roleNameParts] = args.slice(1);
+  if (!workspaceRoot || !projectNamespace || roleNameParts.length === 0) {
+    console.error('Usage: run <workspaceRoot> <projectNamespace> <roleName>');
     process.exit(1);
   }
-  orchestrator.startUnifiedOrchestration(path.resolve(workspaceRoot), roleKey).catch(err => {
+  const roleName = roleNameParts.join(' ');
+
+  orchestrator.startUnifiedOrchestration(path.resolve(workspaceRoot), projectNamespace, roleName).catch(err => {
     console.error(`Orchestration stopped: ${err.message}`);
     process.exit(1);
   });

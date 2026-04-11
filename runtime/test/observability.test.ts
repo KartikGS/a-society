@@ -86,10 +86,10 @@ async function run() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
   const stateDir = path.join(tmpDir, '.state');
   
-  // registry.ts buildRoleContext(roleKey, workspaceRoot)
-  // For roleKey "a-society__curator", it looks for:
+  // registry.ts buildRoleContext(projectNamespace, roleName, workspaceRoot)
+  // For projectNamespace "a-society" and roleName "curator", it looks for:
   // [workspaceRoot]/a-society/a-docs/roles/required-readings.yaml
-  // This is because the namespace is prepended.
+  // This is because the namespace selects the project folder under the workspace.
   const namespaceDir = path.join(tmpDir, 'a-society');
   const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
   fs.mkdirSync(rolesDir, { recursive: true });
@@ -138,7 +138,8 @@ async function run() {
 
     const result = await runInteractiveSession(
       tmpDir,
-      'a-society__curator',
+      'a-society',
+      'curator',
       'System prompt',
       [],
       undefined,
@@ -174,8 +175,9 @@ async function run() {
 
     try {
         await runInteractiveSession(
-            tmpDir, 
-            'a-society__curator', 
+            tmpDir,
+            'a-society',
+            'curator',
             'System prompt', 
             [{ role: 'user', content: 'Who are you?' }], 
             undefined,
@@ -210,7 +212,8 @@ async function run() {
     try {
       await runInteractiveSession(
         tmpDir,
-        'a-society__curator',
+        'a-society',
+        'curator',
         'System prompt',
         [{ role: 'user', content: 'Produce a handoff.' }],
         undefined,
@@ -233,7 +236,10 @@ async function run() {
     assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.parse_failed'));
 
     const points = getMetricDataPoints('a_society.handoff.parse_failure');
-    const parseFailurePoint = points.find(point => point.attributes['role_key'] === 'a-society__curator');
+    const parseFailurePoint = points.find(point =>
+      point.attributes['project_namespace'] === 'a-society' &&
+      point.attributes['role_name'] === 'curator'
+    );
     assert.ok(parseFailurePoint);
     assert.strictEqual(parseFailurePoint?.value, 1);
   });
@@ -250,7 +256,7 @@ async function run() {
 
     const flowRun: any = {
       flowId: 'test-flow',
-      projectRoot: tmpDir,
+      workspaceRoot: tmpDir,
       recordFolderPath: workflowsDir,
       activeNodes: ['node_1']
     };
@@ -277,7 +283,7 @@ async function run() {
     
     const flowRun: any = {
       flowId: 'test-flow',
-      projectRoot: tmpDir,
+      workspaceRoot: tmpDir,
       status: 'running',
       improvementPhase: null
     };
@@ -317,7 +323,7 @@ async function run() {
 
     const recordDir = path.join(tmpDir, 'repair-record');
     // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:
-    // projectRoot = workspace root, projectNamespace = project folder name.
+    // workspaceRoot = workspace root, projectNamespace = project folder name.
     const improvementNamespace = path.basename(tmpDir);
     fs.mkdirSync(recordDir, { recursive: true });
     fs.mkdirSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement'), { recursive: true });
@@ -331,10 +337,10 @@ async function run() {
 
     const flowRun: any = {
       flowId: 'repair-flow',
-      projectRoot: tmpDir,
+      workspaceRoot: tmpDir,
       projectNamespace: improvementNamespace,
       status: 'running',
-      stateVersion: '3',
+      stateVersion: '4',
       improvementPhase: null,
       recordFolderPath: recordDir
     };
@@ -374,7 +380,7 @@ async function run() {
     }
 
     assert.strictEqual(flowRun.status, 'completed');
-    assert.strictEqual(flowRun.stateVersion, '3', 'improvement initialization must not regress stateVersion below v3');
+    assert.strictEqual(flowRun.stateVersion, '4', 'improvement initialization must keep the latest state version');
     assert.ok(capturedOutput.includes('Curator emitted prompt-human during backward pass synthesis. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });

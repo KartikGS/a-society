@@ -79,7 +79,7 @@ workflow:
   SessionStore.init();
   SessionStore.saveFlowRun({
     flowId: 'test-flow-id',
-    projectRoot: workspaceRoot,
+    workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
     activeNodes: ['start'],
@@ -87,7 +87,7 @@ workflow:
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'running',
-    stateVersion: '2'
+    stateVersion: '4'
   });
 
   // Capture operator (stderr) and assistant (stdout) streams separately

@@ -44,7 +44,8 @@ async function executeSessionTurn(
   llm: LLMGateway,
   systemPrompt: string,
   history: RuntimeMessageParam[],
-  roleKey: string,
+  projectNamespace: string,
+  roleName: string,
   turnIndex: number,
   outputStream: NodeJS.WritableStream,
   externalSignal: AbortSignal | undefined,
@@ -55,10 +56,13 @@ async function executeSessionTurn(
 
   return tracer.startActiveSpan('session.turn', {
     kind: SpanKind.INTERNAL,
-    attributes: { 'turn.index': turnIndex }
+    attributes: { 'turn.index': turnIndex, 'project_namespace': projectNamespace, 'role_name': roleName }
   }, async (turnSpan): Promise<SessionTurnResult> => {
     const startTime = Date.now();
-    meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey });
+    meter.createCounter('a_society.session.turn.started').add(1, {
+      project_namespace: projectNamespace,
+      role_name: roleName
+    });
     try {
       const latestUserMessage = history[history.length - 1];
       if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true' && latestUserMessage?.role === 'user') {
@@ -85,7 +89,10 @@ async function executeSessionTurn(
       return { handoff: parseResult };
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
-        meter.createCounter('a_society.handoff.parse_failure').add(1, { role_key: roleKey });
+        meter.createCounter('a_society.handoff.parse_failure').add(1, {
+          project_namespace: projectNamespace,
+          role_name: roleName
+        });
         turnSpan.addEvent('session.turn.parse_failed', { error_message: error.message.slice(0, 500) });
         turnSpan.setAttribute('session.turn.outcome', 'repair_requested');
         turnSpan.recordException(error);
@@ -105,7 +112,10 @@ async function executeSessionTurn(
       return { error: true as const };
     } finally {
       const duration = Date.now() - startTime;
-      meter.createHistogram('a_society.session.turn.duration').record(duration, { role_key: roleKey });
+      meter.createHistogram('a_society.session.turn.duration').record(duration, {
+        project_namespace: projectNamespace,
+        role_name: roleName
+      });
       turnSpan.end();
     }
   });
@@ -113,7 +123,8 @@ async function executeSessionTurn(
 
 export async function runInteractiveSession(
   workspaceRoot: string,
-  roleKey: string,
+  projectNamespace: string,
+  roleName: string,
   providedSystemPrompt?: string,
   providedHistory?: RuntimeMessageParam[],
   _inputStream: NodeJS.ReadableStream = process.stdin,
@@ -125,10 +136,10 @@ export async function runInteractiveSession(
   const tracer = TelemetryManager.getTracer();
   let turnIndex = 0;
 
-  const orientRoleEntry = buildRoleContext(roleKey, workspaceRoot);
+  const orientRoleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
   if (!orientRoleEntry) {
     if (outputStream === process.stdout) {
-      console.error(`Could not load role context for '${roleKey}'. Check that the role file exists and contains valid frontmatter.`);
+      console.error(`Could not load role context for '${projectNamespace}/${roleName}'. Check that the role file exists and contains valid frontmatter.`);
     }
     return null;
   }
@@ -136,7 +147,8 @@ export async function runInteractiveSession(
   const session: OrientSession = {
     sessionId: crypto.randomUUID(),
     workspaceRoot,
-    roleKey,
+    projectNamespace,
+    roleName,
     startedAt: new Date().toISOString()
   };
 
@@ -144,7 +156,8 @@ export async function runInteractiveSession(
     kind: SpanKind.INTERNAL,
     attributes: {
       'session.id': session.sessionId,
-      'role_key': roleKey
+      'project_namespace': projectNamespace,
+      'role_name': roleName
     }
   }, async (interactionSpan) => {
 
@@ -166,7 +179,8 @@ export async function runInteractiveSession(
         llm,
         systemPrompt,
         history,
-        roleKey,
+        projectNamespace,
+        roleName,
         turnIndex++,
         outputStream,
         externalSignal,

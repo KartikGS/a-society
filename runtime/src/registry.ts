@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
+function normalizeRoleId(roleName: string): string {
+  return roleName.toLowerCase().replace(/\s+/g, '-');
+}
+
 export interface RoleContextEntry {
   requiredReadingVariables: string[];
 }
@@ -17,16 +21,14 @@ export interface RoleContextEntry {
  * 
  * If the YAML file is missing, an error is thrown.
  */
-export function buildRoleContext(roleKey: string, projectRoot: string): RoleContextEntry | null {
-  // roleKey format: "namespace__Role Name" — namespace is the project subfolder under projectRoot
-  const parts = roleKey.split('__');
-  if (parts.length !== 2) {
-    throw new Error(`Invalid roleKey format: '${roleKey}'. Expected 'namespace__RoleName'.`);
-  }
-  const namespace = parts[0];
-  const roleId = parts[1].toLowerCase().replace(/\s+/g, '-');
+export function buildRoleContext(
+  projectNamespace: string,
+  roleName: string,
+  workspaceRoot: string
+): RoleContextEntry | null {
+  const roleId = normalizeRoleId(roleName);
 
-  const yamlPath = path.join(projectRoot, namespace, 'a-docs', 'roles', 'required-readings.yaml');
+  const yamlPath = path.join(workspaceRoot, projectNamespace, 'a-docs', 'roles', 'required-readings.yaml');
 
   if (!fs.existsSync(yamlPath)) {
     throw new Error(`required-readings.yaml not found at ${yamlPath} — cannot initialize session.`);
@@ -52,4 +54,3 @@ export function buildRoleContext(roleKey: string, projectRoot: string): RoleCont
     requiredReadingVariables: [...new Set([...universalReading, ...roleReading])]
   };
 }
-

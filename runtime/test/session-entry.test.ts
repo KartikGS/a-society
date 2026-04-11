@@ -54,7 +54,7 @@ test('buildForwardNodeEntryMessage: contains node header and non-startup distinc
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: []
   });
 
@@ -69,7 +69,7 @@ test('buildForwardNodeEntryMessage: renders active artifact file block with cont
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: [relPath]
   });
 
@@ -82,7 +82,7 @@ test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missin
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: ['nonexistent/path.md']
   });
 
@@ -93,7 +93,7 @@ test('buildForwardNodeEntryMessage: includes continuity section when entries pro
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: [],
     continuityEntries: [
       { nodeId: 'owner-intake', outputArtifactPath: 'records/flow/01-owner-brief.md' },
@@ -110,7 +110,7 @@ test('buildForwardNodeEntryMessage: omits continuity section when no entries', (
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: []
   });
 
@@ -121,7 +121,7 @@ test('buildForwardNodeEntryMessage: includes human input section when provided',
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: [],
     humanInput: 'Please focus on the security section.'
   });
@@ -134,7 +134,7 @@ test('buildForwardNodeEntryMessage: omits human input section when not provided'
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     activeArtifacts: []
   });
 
@@ -152,7 +152,7 @@ test('buildImprovementEntryMessage: contains step label, record folder, and file
   const msg = buildImprovementEntryMessage({
     stepLabel: 'meta-analysis',
     recordFolderPath: '/project/records/flow',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,
     findingsFilePaths: [findingsFile],
     completionSignal: 'Emit a meta-analysis-complete handoff block.'
@@ -169,7 +169,7 @@ test('buildImprovementEntryMessage: renders instruction file as [FILE: relpath] 
   const msg = buildImprovementEntryMessage({
     stepLabel: 'meta-analysis',
     recordFolderPath: '/project/records/flow',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,
     findingsFilePaths: [],
     completionSignal: 'Done.'
@@ -183,7 +183,7 @@ test('buildImprovementEntryMessage: renders findings files as [FILE: relpath] bl
   const msg = buildImprovementEntryMessage({
     stepLabel: 'synthesis',
     recordFolderPath: '/project/records/flow',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,
     findingsFilePaths: [findingsFile],
     completionSignal: 'Done.'
@@ -198,7 +198,7 @@ test('buildImprovementEntryMessage: renders (File does not exist yet) for missin
   const msg = buildImprovementEntryMessage({
     stepLabel: 'meta-analysis',
     recordFolderPath: '/project/records/flow',
-    projectRoot: tmpDir,
+    workspaceRoot: tmpDir,
     instructionFilePath: path.join(tmpDir, 'missing-instruction.md'),
     findingsFilePaths: [path.join(tmpDir, 'missing-findings.md')],
     completionSignal: 'Done.'

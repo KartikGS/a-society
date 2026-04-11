@@ -21,7 +21,7 @@ console.log('\ntypes');
 test('FlowRun: conforms to new multi-node structure', () => {
   const flowRun: FlowRun = {
     flowId: 'f1',
-    projectRoot: '.',
+    workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
     activeNodes: ['node1'],
@@ -29,7 +29,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'node1': ['artifact.md'] },
     status: 'initialized',
-    stateVersion: '2'
+    stateVersion: '4'
   };
 
   assert.strictEqual(flowRun.activeNodes.length, 1);

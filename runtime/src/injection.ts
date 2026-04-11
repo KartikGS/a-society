@@ -24,18 +24,14 @@ export class ContextInjectionService {
    * as node-entry user-message content by the orchestrator and session-entry helpers.
    */
   static buildContextBundle(
-    roleKey: string,
-    projectRoot: string
+    projectNamespace: string,
+    roleName: string,
+    workspaceRoot: string
   ): ContextBundleResult {
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
 
-    // Extract role display name and project name from roleKey: "namespace__Role Name"
-    const parts = roleKey.split('__');
-    const projectName = parts[0];
-    const roleDisplayName = parts[1] || roleKey;
-
     // 0a. Role announcement
-    bundle += `You are the ${roleDisplayName} agent for ${projectName}. Below is information that will help you play your role.\n\n`;
+    bundle += `You are the ${roleName} agent for ${projectNamespace}. Below is information that will help you play your role.\n\n`;
 
     // 0b. Date injection
     const today = new Date().toISOString().split('T')[0];
@@ -52,16 +48,16 @@ export class ContextInjectionService {
     }
 
     // 1. Resolve and inject required reading
-    const roleEntry = buildRoleContext(roleKey, projectRoot);
+    const roleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
 
     if (roleEntry) {
-      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleKey} ---\n`;
+      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleName} IN ${projectNamespace} ---\n`;
       bundle += `These files are already loaded into this session by the runtime. Use them directly. Do not spend your first turn rereading or re-listing them unless the current task specifically requires close inspection of one file.\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
         if (RUNTIME_MANAGED_REQUIRED_READING_VARIABLES.has(varName)) {
           continue;
         }
-        const resolvedPath = resolveVariableFromIndex(varName, projectRoot);
+        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot);
         if (resolvedPath && fs.existsSync(resolvedPath)) {
           const content = fs.readFileSync(resolvedPath, 'utf8');
           bundle += `\n[FILE: ${varName} (resolved to ${resolvedPath})]\n`;
@@ -71,7 +67,7 @@ export class ContextInjectionService {
         }
       }
     } else {
-      bundle += `--- UNKNOWN ROLE: ${roleKey}. No required reading available. ---\n\n`;
+      bundle += `--- UNKNOWN ROLE: ${roleName} IN ${projectNamespace}. No required reading available. ---\n\n`;
     }
 
     // Compute hash

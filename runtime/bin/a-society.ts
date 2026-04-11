@@ -72,10 +72,9 @@ async function main() {
     choices: projects.map(p => ({ name: p.displayName, value: p.folderName }))
   });
 
-  const roleKey = `${selectedFolderName}__Owner`;
   try {
     const orchestrator = new FlowOrchestrator();
-    await orchestrator.startUnifiedOrchestration(workspaceRoot, roleKey);
+    await orchestrator.startUnifiedOrchestration(workspaceRoot, selectedFolderName, 'Owner');
   } catch (err: any) {
     console.error(`Orchestration stopped: ${err.message}`);
   }

@@ -32,23 +32,23 @@ export interface RoleContinuityEntry {
 }
 
 export interface RoleContinuityState {
-  roleKey: string;
+  roleName: string;
   completedNodes: RoleContinuityEntry[];
 }
 
 export interface FlowRun {
   flowId: string;
-  projectRoot: string;
-  projectNamespace: string;            // project subfolder name (e.g. "a-society"); used to build role keys in advanceFlow
+  workspaceRoot: string;
+  projectNamespace: string;            // project subfolder name (e.g. "a-society")
   recordFolderPath: string;
   activeNodes: string[];                          // node IDs currently executing
   completedNodes: string[];                       // node IDs that have finished
   completedNodeArtifacts: Record<string, string>; // nodeId → artifact_path of that node's output
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "3" for this schema; "2" = prior; absent/"1" = legacy
+  stateVersion: string;                        // Persistence version: "4" for this schema; "3" = prior; "2" and absent/"1" = legacy
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
-  roleContinuity?: Record<string, RoleContinuityState>; // roleKey → continuity state for same-role later-node returns
+  roleContinuity?: Record<string, RoleContinuityState>; // roleName → continuity state for same-role later-node returns
 }
 
 export interface RoleSession {
@@ -77,7 +77,8 @@ export interface TriggerRecord {
 export interface OrientSession {
   sessionId: string;
   workspaceRoot: string;
-  roleKey: string;
+  projectNamespace: string;
+  roleName: string;
   startedAt: string;
 }
 

@@ -40,7 +40,8 @@ fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
 
 test('buildContextBundle: contains role announcement, date, handoff contract, and required-reading files', () => {
   const bundle = ContextInjectionService.buildContextBundle(
-    'a-society__Owner',
+    'a-society',
+    'Owner',
     tmpDir
   );
 
@@ -53,18 +54,20 @@ test('buildContextBundle: contains role announcement, date, handoff contract, an
 
 test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and already-loaded statement', () => {
   const bundle = ContextInjectionService.buildContextBundle(
-    'a-society__Owner',
+    'a-society',
+    'Owner',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR a-society__Owner ---'));
+  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR Owner IN a-society ---'));
   assert.ok(bundle.bundleContent.includes('These files are already loaded into this session by the runtime.'));
   assert.ok(!bundle.bundleContent.includes('--- MANDATORY CONTEXT LOADING FOR'));
 });
 
 test('buildContextBundle: does not include active artifact content', () => {
   const bundle = ContextInjectionService.buildContextBundle(
-    'a-society__Owner',
+    'a-society',
+    'Owner',
     tmpDir
   );
 
@@ -75,7 +78,8 @@ test('buildContextBundle: does not include active artifact content', () => {
 
 test('buildContextBundle: runtime handoff contract is injected once even if runtime variable appears in required readings', () => {
   const bundle = ContextInjectionService.buildContextBundle(
-    'a-society__Owner',
+    'a-society',
+    'Owner',
     tmpDir
   );
 
@@ -86,7 +90,8 @@ test('buildContextBundle: runtime handoff contract is injected once even if runt
 
 test('buildContextBundle: does not inject runtime directives', () => {
   const bundle = ContextInjectionService.buildContextBundle(
-    'a-society__Owner',
+    'a-society',
+    'Owner',
     tmpDir
   );
 
@@ -97,8 +102,8 @@ test('buildContextBundle: does not inject runtime directives', () => {
 });
 
 test('buildContextBundle: produces a deterministic hash', () => {
-  const bundle1 = ContextInjectionService.buildContextBundle('a-society__Owner', tmpDir);
-  const bundle2 = ContextInjectionService.buildContextBundle('a-society__Owner', tmpDir);
+  const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'Owner', tmpDir);
+  const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'Owner', tmpDir);
 
   assert.strictEqual(bundle1.contextHash, bundle2.contextHash);
   assert.ok(bundle1.contextHash.length > 0);

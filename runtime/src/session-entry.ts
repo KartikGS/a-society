@@ -18,7 +18,7 @@ export function buildOwnerBootstrapMessage(): string {
 export interface ForwardNodeEntryOptions {
   nodeId: string;
   role: string;
-  projectRoot: string;
+  workspaceRoot: string;
   activeArtifacts: string[];
   continuityEntries?: Array<{ nodeId: string; outputArtifactPath: string | null }>;
   humanInput?: string;
@@ -30,7 +30,7 @@ export interface ForwardNodeEntryOptions {
  * current task inputs with rendered file blocks, optional human input, and closing instruction.
  */
 export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): string {
-  const { nodeId, role, projectRoot, activeArtifacts, continuityEntries, humanInput } = opts;
+  const { nodeId, role, workspaceRoot, activeArtifacts, continuityEntries, humanInput } = opts;
   const lines: string[] = [];
 
   lines.push(`Workflow node: ${nodeId} (role: ${role})`);
@@ -55,7 +55,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
   lines.push('Current task inputs:');
 
   for (const artifactPath of activeArtifacts) {
-    const fullPath = path.resolve(projectRoot, artifactPath);
+    const fullPath = path.resolve(workspaceRoot, artifactPath);
     lines.push(`[FILE: ${artifactPath}]`);
     if (fs.existsSync(fullPath)) {
       lines.push(fs.readFileSync(fullPath, 'utf8'));
@@ -79,7 +79,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
 export interface ImprovementEntryOptions {
   stepLabel: string;
   recordFolderPath: string;
-  projectRoot: string;
+  workspaceRoot: string;
   instructionFilePath: string;
   findingsFilePaths: string[];
   completionSignal: string;
@@ -91,14 +91,14 @@ export interface ImprovementEntryOptions {
  * not in the system bundle.
  */
 export function buildImprovementEntryMessage(opts: ImprovementEntryOptions): string {
-  const { stepLabel, recordFolderPath, projectRoot, instructionFilePath, findingsFilePaths, completionSignal } = opts;
+  const { stepLabel, recordFolderPath, workspaceRoot, instructionFilePath, findingsFilePaths, completionSignal } = opts;
   const lines: string[] = [];
 
   lines.push(`Backward pass ${stepLabel}.`);
   lines.push(`Record folder: ${recordFolderPath}`);
   lines.push('');
 
-  const instructionRelPath = path.relative(projectRoot, instructionFilePath);
+  const instructionRelPath = path.relative(workspaceRoot, instructionFilePath);
   lines.push(`[FILE: ${instructionRelPath}]`);
   if (fs.existsSync(instructionFilePath)) {
     lines.push(fs.readFileSync(instructionFilePath, 'utf8'));
@@ -108,7 +108,7 @@ export function buildImprovementEntryMessage(opts: ImprovementEntryOptions): str
   lines.push('');
 
   for (const findingsPath of findingsFilePaths) {
-    const relPath = path.relative(projectRoot, findingsPath);
+    const relPath = path.relative(workspaceRoot, findingsPath);
     lines.push(`[FILE: ${relPath}]`);
     if (fs.existsSync(findingsPath)) {
       lines.push(fs.readFileSync(findingsPath, 'utf8'));

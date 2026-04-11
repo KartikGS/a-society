@@ -39,7 +39,7 @@ const WF = {
 test('renderFlowStatus: single active node, no completed', () => {
   const flowRun: FlowRun = {
     flowId: 'uuid',
-    projectRoot: '.',
+    workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
     activeNodes: ['start'],
@@ -47,7 +47,7 @@ test('renderFlowStatus: single active node, no completed', () => {
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'start': ['p.md'] },
     status: 'running',
-    stateVersion: '2'
+    stateVersion: '4'
   };
 
   const output = renderFlowStatus(flowRun, WF);
@@ -61,7 +61,7 @@ test('renderFlowStatus: single active node, no completed', () => {
 test('renderFlowStatus: multiple active, multiple completed, pending join', () => {
     const flowRun: FlowRun = {
       flowId: 'uuid',
-      projectRoot: '.',
+      workspaceRoot: '.',
       projectNamespace: 'test-project',
       recordFolderPath: './records/r1',
       activeNodes: ['t1'],
@@ -69,7 +69,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       completedNodeArtifacts: { 'start': 'p1.md', 'fork': '', 't2': 'p2.md' },
       pendingNodeArtifacts: { 't1': ['p3.md'] },
       status: 'running',
-      stateVersion: '2'
+      stateVersion: '4'
     };
   
     const output = renderFlowStatus(flowRun, WF);
@@ -85,7 +85,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
 test('renderFlowStatus: awaiting_human status renders explicit suspended notice', () => {
   const flowRun: FlowRun = {
     flowId: 'uuid',
-    projectRoot: '.',
+    workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
     activeNodes: ['start'],
@@ -93,7 +93,7 @@ test('renderFlowStatus: awaiting_human status renders explicit suspended notice'
     completedNodeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'awaiting_human',
-    stateVersion: '2'
+    stateVersion: '4'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('Status: awaiting_human'), 'must show awaiting_human status');
@@ -103,7 +103,7 @@ test('renderFlowStatus: awaiting_human status renders explicit suspended notice'
 test('renderFlowStatus: multiple active nodes renders all', () => {
   const flowRun: FlowRun = {
     flowId: 'uuid',
-    projectRoot: '.',
+    workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
     activeNodes: ['t1', 't2'],
@@ -111,7 +111,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     completedNodeArtifacts: { 'start': 'p1.md', 'fork': '' },
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] },
     status: 'running',
-    stateVersion: '2'
+    stateVersion: '4'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('[→] t1 (TD)'));
@@ -122,7 +122,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
 test('renderFlowStatus: completed flow', () => {
     const flowRun: FlowRun = {
         flowId: 'uuid',
-        projectRoot: '.',
+        workspaceRoot: '.',
         projectNamespace: 'test-project',
         recordFolderPath: './records/r1',
         activeNodes: [],
@@ -130,7 +130,7 @@ test('renderFlowStatus: completed flow', () => {
         completedNodeArtifacts: { 'start': 'p1.md', 'fork': '', 't1': 'p4.md', 't2': 'p2.md', 'join': 'p5.md' },
         pendingNodeArtifacts: {},
         status: 'completed',
-        stateVersion: '2'
+        stateVersion: '4'
       };
     
       const output = renderFlowStatus(flowRun, WF);

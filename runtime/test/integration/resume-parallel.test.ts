@@ -60,7 +60,7 @@ workflow:
   SessionStore.init();
   SessionStore.saveFlowRun({
     flowId: 'test-resume-flow-id',
-    projectRoot: workspaceRoot,
+    workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
     activeNodes: ['branch-a', 'branch-b'],
@@ -68,7 +68,7 @@ workflow:
     completedNodeArtifacts: { 'fork-gate': '' },
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] },
     status: 'awaiting_human',
-    stateVersion: '2'
+    stateVersion: '4'
   });
 
   const operatorStream = new PassThrough();
@@ -86,8 +86,7 @@ workflow:
   const outputStream = new PassThrough();
 
   try {
-    const roleKey = `${projectNamespace}__Owner`;
-    await orchestrator.startUnifiedOrchestration(workspaceRoot, roleKey, inputStream, outputStream);
+    await orchestrator.startUnifiedOrchestration(workspaceRoot, projectNamespace, 'Owner', inputStream, outputStream);
 
     const operatorOut = operatorChunks.join('');
     console.log("\nOperator stream output:");
