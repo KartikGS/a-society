@@ -8,12 +8,98 @@ import {
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { runInteractiveSession } from './orient.js';
-import type { FlowRun, HandoffResult } from './types.js';
+import type { FlowRun, HandoffResult, RuntimeMessageParam } from './types.js';
+import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
 // Co-maintenance: update if the synthesis role convention changes for this project.
 const SYNTHESIS_ROLE = 'Curator';
+
+type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-complete';
+
+type ExpectedImprovementSignal<K extends ExpectedImprovementSignalKind> = Extract<HandoffResult, { kind: K }>;
+
+function buildUnexpectedSignalRepairMessage(
+  role: string,
+  expectedKind: ExpectedImprovementSignalKind
+): string {
+  if (expectedKind === 'meta-analysis-complete') {
+    return [
+      `Error: This backward pass meta-analysis session for ${role} must end with a \`type: meta-analysis-complete\` handoff block.`,
+      'Set `findings_path` to the repo-relative path of the findings artifact you produced in this session.',
+      'Do not emit `prompt-human`, `forward-pass-closed`, `backward-pass-complete`, or a routing handoff for this step.'
+    ].join(' ');
+  }
+
+  return [
+    `Error: This backward pass synthesis session for ${role} must end with a \`type: backward-pass-complete\` handoff block.`,
+    'Set `artifact_path` to the repo-relative path of the synthesis artifact you produced in this session.',
+    'Do not emit `prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or a routing handoff for this step.'
+  ].join(' ');
+}
+
+function describeUnexpectedSignal(result: HandoffResult): string {
+  if (result.kind === 'targets') return 'routing handoff';
+  if (result.kind === 'awaiting_human') return 'prompt-human';
+  return result.kind;
+}
+
+function describeExpectedStep(expectedKind: ExpectedImprovementSignalKind): string {
+  return expectedKind === 'meta-analysis-complete' ? 'meta-analysis' : 'synthesis';
+}
+
+async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImprovementSignalKind>(
+  flowRun: FlowRun,
+  roleKey: string,
+  bundleContent: string,
+  initialUserMessage: string,
+  expectedKind: K,
+  role: string,
+  inputStream: NodeJS.ReadableStream,
+  outputStream: NodeJS.WritableStream
+): Promise<ExpectedImprovementSignal<K>> {
+  const history: RuntimeMessageParam[] = [{ role: 'user', content: initialUserMessage }];
+  const stepLabel = describeExpectedStep(expectedKind);
+
+  while (true) {
+    try {
+      const result = await runInteractiveSession(
+        flowRun.projectRoot,
+        roleKey,
+        bundleContent,
+        history,
+        inputStream,
+        outputStream
+      );
+
+      if (result === null) {
+        throw new Error(`[improvement] ${expectedKind} session for ${role} ended unexpectedly without a handoff result.`);
+      }
+
+      if (result.kind === expectedKind) {
+        return result as ExpectedImprovementSignal<K>;
+      }
+
+      outputStream.write(
+        `[improvement] ${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}. Requesting repair.\n`
+      );
+      history.push({
+        role: 'user',
+        content: buildUnexpectedSignalRepairMessage(role, expectedKind)
+      });
+    } catch (error: any) {
+      if (error instanceof HandoffParseError) {
+        outputStream.write(
+          `[improvement] ${role} emitted an invalid handoff block during backward pass ${stepLabel}. Requesting repair.\n`
+        );
+        history.push({ role: 'user', content: error.details.modelRepairMessage });
+        continue;
+      }
+      throw error;
+    }
+  }
+}
 
 export class ImprovementOrchestrator {
   static async handleForwardPassClosure(
@@ -133,21 +219,18 @@ export class ImprovementOrchestrator {
                   );
 
                   const userMessage = `Backward pass meta-analysis. Your record folder is: ${signal.recordFolderPath}.\nProduce your findings artifact at the next available sequence position in the record folder.\nWhen your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set to the repo-relative path of your findings file.`;
-
-                  const result = await runInteractiveSession(
-                    flowRun.projectRoot,
+                  const result = await runBackwardPassSessionUntilExpectedSignal(
+                    flowRun,
                     roleKey,
                     bundleContent,
-                    [{ role: 'user', content: userMessage }],
+                    userMessage,
+                    'meta-analysis-complete',
+                    entry.role,
                     inputStream,
                     outputStream
                   );
 
-                  if (result && result.kind === 'meta-analysis-complete') {
-                    flowRun.improvementPhase!.findingsProduced[entry.role] = result.findingsPath;
-                  } else {
-                    outputStream.write(`[improvement] Meta-analysis for ${entry.role} did not produce a findings signal (session ended with: ${result ? result.kind : 'null'}). Proceeding without findings for this role.\n`);
-                  }
+                  flowRun.improvementPhase!.findingsProduced[entry.role] = result.findingsPath;
                 } else if (entry.stepType === 'synthesis') {
                   const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
 
@@ -160,13 +243,14 @@ export class ImprovementOrchestrator {
                     [synthesisInstructionPath, ...allFindingsFiles]
                   );
 
-                  const userMessage = `Backward pass synthesis. Your record folder is: ${signal.recordFolderPath}.\nFindings from all roles in this flow are in your context. Produce the synthesis artifact.`;
-
-                  await runInteractiveSession(
-                    flowRun.projectRoot,
+                  const userMessage = `Backward pass synthesis. Your record folder is: ${signal.recordFolderPath}.\nFindings from all roles in this flow are in your context. Produce the synthesis artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the synthesis artifact.`;
+                  await runBackwardPassSessionUntilExpectedSignal(
+                    flowRun,
                     roleKey,
                     bundleContent,
-                    [{ role: 'user', content: userMessage }],
+                    userMessage,
+                    'backward-pass-complete',
+                    entry.role,
                     inputStream,
                     outputStream
                   );

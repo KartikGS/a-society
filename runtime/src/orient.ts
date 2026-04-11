@@ -1,8 +1,6 @@
-import readline from 'node:readline';
 import crypto from 'node:crypto';
-import type { OrientSession, FlowRun, HandoffResult, OperatorRenderSink, TurnUsage } from './types.js';
-import { ContextInjectionService } from './injection.js';
-import { LLMGateway, type RuntimeMessageParam, LLMGatewayError } from './llm.js';
+import type { OrientSession, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
+import { LLMGateway, LLMGatewayError } from './llm.js';
 import { buildRoleContext } from './registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
@@ -36,20 +34,95 @@ function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | 
   }
 }
 
+type SessionTurnResult = {
+  handoff?: HandoffResult;
+  abort?: true;
+  error?: true;
+};
+
+async function executeSessionTurn(
+  llm: LLMGateway,
+  systemPrompt: string,
+  history: RuntimeMessageParam[],
+  roleKey: string,
+  turnIndex: number,
+  outputStream: NodeJS.WritableStream,
+  externalSignal: AbortSignal | undefined,
+  operatorRenderer: OperatorRenderSink | undefined
+): Promise<SessionTurnResult> {
+  const tracer = TelemetryManager.getTracer();
+  const meter = TelemetryManager.getMeter();
+
+  return tracer.startActiveSpan('session.turn', {
+    kind: SpanKind.INTERNAL,
+    attributes: { 'turn.index': turnIndex }
+  }, async (turnSpan): Promise<SessionTurnResult> => {
+    const startTime = Date.now();
+    meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey });
+    try {
+      const latestUserMessage = history[history.length - 1];
+      if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true' && latestUserMessage?.role === 'user') {
+        turnSpan.addEvent('session.user_turn', { content: latestUserMessage.content });
+      }
+
+      const result = await llm.executeTurn(systemPrompt, history, {
+        signal: externalSignal,
+        outputStream,
+        operatorRenderer
+      });
+      if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
+        turnSpan.addEvent('session.assistant_turn', { content: result.text });
+      }
+      writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
+      emitUsage(operatorRenderer, result.usage);
+
+      if (result.intermediateMessages) history.push(...result.intermediateMessages);
+      history.push({ role: 'assistant', content: result.text });
+
+      const parseResult = HandoffInterpreter.parse(result.text);
+      turnSpan.setAttribute('session.turn.outcome', 'handoff');
+      turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
+      return { handoff: parseResult };
+    } catch (error: any) {
+      if (error instanceof HandoffParseError) {
+        meter.createCounter('a_society.handoff.parse_failure').add(1, { role_key: roleKey });
+        turnSpan.addEvent('session.turn.parse_failed', { error_message: error.message.slice(0, 500) });
+        turnSpan.setAttribute('session.turn.outcome', 'repair_requested');
+        turnSpan.recordException(error);
+        turnSpan.setStatus({ code: SpanStatusCode.ERROR });
+        throw error;
+      }
+      if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
+        turnSpan.setAttribute('session.turn.outcome', 'aborted');
+        turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
+        if (error.partialText) {
+          history.push({ role: 'assistant', content: error.partialText });
+        }
+        return { abort: true as const };
+      }
+      turnSpan.recordException(error);
+      turnSpan.setStatus({ code: SpanStatusCode.ERROR });
+      return { error: true as const };
+    } finally {
+      const duration = Date.now() - startTime;
+      meter.createHistogram('a_society.session.turn.duration').record(duration, { role_key: roleKey });
+      turnSpan.end();
+    }
+  });
+}
+
 export async function runInteractiveSession(
   workspaceRoot: string,
   roleKey: string,
   providedSystemPrompt?: string,
   providedHistory?: RuntimeMessageParam[],
-  inputStream: NodeJS.ReadableStream = process.stdin,
+  _inputStream: NodeJS.ReadableStream = process.stdin,
   outputStream: NodeJS.WritableStream = process.stdout,
-  autonomous: boolean = false,
   externalSignal?: AbortSignal,
   operatorRenderer?: OperatorRenderSink
 ): Promise<HandoffResult | null> {
 
   const tracer = TelemetryManager.getTracer();
-  const meter = TelemetryManager.getMeter();
   let turnIndex = 0;
 
   const orientRoleEntry = buildRoleContext(roleKey, workspaceRoot);
@@ -71,8 +144,7 @@ export async function runInteractiveSession(
     kind: SpanKind.INTERNAL,
     attributes: {
       'session.id': session.sessionId,
-      'role_key': roleKey,
-      'autonomous': autonomous
+      'role_key': roleKey
     }
   }, async (interactionSpan) => {
 
@@ -86,299 +158,41 @@ export async function runInteractiveSession(
 
     try {
       if (history.length === 0) {
-        const initialUserMsg: RuntimeMessageParam = {
+        history.push({
           role: 'user',
-          content: "A new session has started. Read the project log in your context and give a brief status of where the project is at, then ask what the user wants to work on."
-        };
-
-        const turnResult = await tracer.startActiveSpan('session.turn', {
-          kind: SpanKind.INTERNAL,
-          attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous }
-        }, async (turnSpan) => {
-          const startTime = Date.now();
-          meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey, autonomous: String(autonomous) });
-          try {
-            if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-              turnSpan.addEvent('session.user_turn', { content: initialUserMsg.content });
-            }
-
-            const result = await llm.executeTurn(systemPrompt, [initialUserMsg], {
-              signal: externalSignal,
-              outputStream,
-              operatorRenderer
-            });
-            if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-              turnSpan.addEvent('session.assistant_turn', { content: result.text });
-            }
-            writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
-            emitUsage(operatorRenderer, result.usage);
-
-            history.push(initialUserMsg);
-            if (result.intermediateMessages) history.push(...result.intermediateMessages);
-            history.push({ role: 'assistant', content: result.text });
-
-            try {
-              const parseResult = HandoffInterpreter.parse(result.text);
-              turnSpan.setAttribute('session.turn.outcome', 'handoff');
-              turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-              return { handoff: parseResult };
-            } catch (e: any) {
-              if (e instanceof HandoffParseError) {
-                meter.createCounter('a_society.handoff.parse_failure').add(1, { role_key: roleKey });
-                turnSpan.addEvent('session.turn.parse_failed', { error_message: e.message.slice(0, 500) });
-                if (autonomous) throw e;
-                turnSpan.setAttribute('session.turn.outcome', 'no_handoff');
-                return { handoff: null };
-              }
-              throw e;
-            }
-          } catch (error: any) {
-            if (error instanceof HandoffParseError && autonomous) {
-              turnSpan.recordException(error);
-              turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-              throw error;
-            }
-            if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
-              turnSpan.setAttribute('session.turn.outcome', 'aborted');
-              turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
-              if (error.partialText && providedHistory) {
-                providedHistory.push({ role: 'assistant', content: error.partialText });
-              }
-              operatorRenderer?.emit({ kind: 'human.awaiting_input', reason: 'interactive-abort', mode: autonomous ? 'autonomous' : 'interactive' });
-              return { abort: true };
-            }
-            if (error instanceof LLMGatewayError && error.type === 'AUTH_ERROR') {
-              interactionSpan.addEvent('session.auth_error');
-              if (outputStream === process.stdout) console.error(error.message);
-            } else {
-              if (outputStream === process.stdout) console.error(`Error during initial turn: ${error.message}`);
-            }
-            turnSpan.recordException(error);
-            turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-            return { error: true };
-          } finally {
-            const duration = Date.now() - startTime;
-            meter.createHistogram('a_society.session.turn.duration').record(duration, { role_key: roleKey, autonomous: String(autonomous) });
-            turnSpan.end();
-          }
+          content: 'A new session has started. Read the project log in your context, give a brief status of where the project is at, ask what the user wants to work on, and end with a `type: prompt-human` handoff block.'
         });
-
-        if (turnResult.abort || turnResult.error) {
-          interactionSpan.setAttribute('session.interaction.outcome', turnResult.abort ? 'aborted' : 'error');
-          return null;
-        }
-        if (turnResult.handoff) {
-          const outcome = turnResult.handoff.kind === 'awaiting_human' ? 'awaiting_human' : 'handoff';
-          interactionSpan.setAttribute('session.interaction.outcome', outcome);
-          return turnResult.handoff;
-        }
-      } else {
-
-        if (history[history.length - 1].role === 'user') {
-          const turnResult = await tracer.startActiveSpan('session.turn', {
-            kind: SpanKind.INTERNAL,
-            attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous }
-          }, async (turnSpan) => {
-            const startTime = Date.now();
-            meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey, autonomous: String(autonomous) });
-            try {
-              if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-                turnSpan.addEvent('session.user_turn', { content: (history[history.length - 1] as any).content });
-              }
-
-              const result = await llm.executeTurn(systemPrompt, history, {
-                signal: externalSignal,
-                outputStream,
-                operatorRenderer
-              });
-              if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-                turnSpan.addEvent('session.assistant_turn', { content: result.text });
-              }
-              writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
-              emitUsage(operatorRenderer, result.usage);
-
-              if (result.intermediateMessages) history.push(...result.intermediateMessages);
-              history.push({ role: 'assistant', content: result.text });
-
-              try {
-                const parseResult = HandoffInterpreter.parse(result.text);
-                turnSpan.setAttribute('session.turn.outcome', 'handoff');
-                turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-                return { handoff: parseResult };
-              } catch (e: any) {
-                if (e instanceof HandoffParseError) {
-                  meter.createCounter('a_society.handoff.parse_failure').add(1, { role_key: roleKey });
-                  turnSpan.addEvent('session.turn.parse_failed', { error_message: e.message.slice(0, 500) });
-                  if (autonomous) throw e;
-                  turnSpan.setAttribute('session.turn.outcome', 'no_handoff');
-                  return { handoff: null };
-                }
-                throw e;
-              }
-            } catch (error: any) {
-              if (error instanceof HandoffParseError && autonomous) {
-                turnSpan.recordException(error);
-                turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-                throw error;
-              }
-              if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
-                turnSpan.setAttribute('session.turn.outcome', 'aborted');
-                turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
-                if (error.partialText && providedHistory) {
-                  providedHistory.push({ role: 'assistant', content: error.partialText });
-                }
-                operatorRenderer?.emit({ kind: 'human.awaiting_input', reason: autonomous ? 'autonomous-abort' : 'interactive-abort', mode: autonomous ? 'autonomous' : 'interactive' });
-                return { abort: true };
-              }
-              if (outputStream === process.stdout) console.error(`\nError during turn: ${error.message}`);
-              turnSpan.recordException(error);
-              turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-              return { error: true };
-            } finally {
-              const duration = Date.now() - startTime;
-              meter.createHistogram('a_society.session.turn.duration').record(duration, { role_key: roleKey, autonomous: String(autonomous) });
-              turnSpan.end();
-            }
-          });
-
-          if (turnResult.abort || turnResult.error) {
-            interactionSpan.setAttribute('session.interaction.outcome', turnResult.abort ? 'aborted' : 'error');
-            return null;
-          }
-          if (turnResult.handoff) {
-            const outcome = turnResult.handoff.kind === 'awaiting_human' ? 'awaiting_human' : 'handoff';
-            interactionSpan.setAttribute('session.interaction.outcome', outcome);
-            return turnResult.handoff;
-          }
-        }
       }
 
-      if (autonomous) {
-        interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
+      if (history[history.length - 1]?.role !== 'user') {
+        interactionSpan.setAttribute('session.interaction.outcome', 'invalid_history');
         return null;
       }
 
-      const interactiveResult = await new Promise<HandoffResult | null>((resolve) => {
-        const rl = readline.createInterface({
-          input: inputStream,
-          output: outputStream,
-          terminal: true
-        });
+      const turnResult = await executeSessionTurn(
+        llm,
+        systemPrompt,
+        history,
+        roleKey,
+        turnIndex++,
+        outputStream,
+        externalSignal,
+        operatorRenderer
+      );
 
-        let currentController: AbortController | undefined;
-        rl.on('SIGINT', () => {
-          currentController?.abort();
-        });
+      if (turnResult.abort || turnResult.error) {
+        interactionSpan.setAttribute('session.interaction.outcome', turnResult.abort ? 'aborted' : 'error');
+        return null;
+      }
 
-        const promptUser = () => {
-          rl.question('\n> ', async (input) => {
-            const line = input.trim();
-            if (line === 'exit' || line === 'quit') {
-              interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
-              finish(null);
-              rl.close();
-              return;
-            }
-            if (!line) {
-              promptUser();
-              return;
-            }
+      if (turnResult.handoff) {
+        const outcome = turnResult.handoff.kind === 'awaiting_human' ? 'awaiting_human' : 'handoff';
+        interactionSpan.setAttribute('session.interaction.outcome', outcome);
+        return turnResult.handoff;
+      }
 
-            history.push({ role: 'user', content: line });
-
-            const turnResult = await tracer.startActiveSpan('session.turn', {
-              kind: SpanKind.INTERNAL,
-              attributes: { 'turn.index': turnIndex++, 'autonomous': autonomous }
-            }, async (turnSpan) => {
-              const startTime = Date.now();
-              meter.createCounter('a_society.session.turn.started').add(1, { role_key: roleKey, autonomous: String(autonomous) });
-              try {
-                if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-                  turnSpan.addEvent('session.user_turn', { content: line });
-                }
-
-                currentController = new AbortController();
-                const signal = currentController.signal;
-
-                const result = await llm.executeTurn(systemPrompt as string, history, {
-                  signal,
-                  outputStream,
-                  operatorRenderer
-                });
-                if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-                  turnSpan.addEvent('session.assistant_turn', { content: result.text });
-                }
-                writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
-                emitUsage(operatorRenderer, result.usage);
-
-                if (result.intermediateMessages) history.push(...result.intermediateMessages);
-                history.push({ role: 'assistant', content: result.text });
-
-                try {
-                  const parseResult = HandoffInterpreter.parse(result.text);
-                  turnSpan.setAttribute('session.turn.outcome', 'handoff');
-                  turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-                  return { handoff: parseResult };
-                } catch (e: any) {
-                  if (e instanceof HandoffParseError) {
-                    meter.createCounter('a_society.handoff.parse_failure').add(1, { role_key: roleKey });
-                    turnSpan.addEvent('session.turn.parse_failed', { error_message: e.message.slice(0, 500) });
-                    turnSpan.setAttribute('session.turn.outcome', 'no_handoff');
-                    return { handoff: null };
-                  }
-                  throw e;
-                }
-              } catch (error: any) {
-                if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
-                  turnSpan.setAttribute('session.turn.outcome', 'aborted');
-                  turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
-                  if (error.partialText) history.push({ role: 'assistant', content: error.partialText });
-                  operatorRenderer?.emit({ kind: 'human.awaiting_input', reason: 'interactive-abort', mode: 'interactive' });
-                  return { abort: true };
-                }
-                if (outputStream === process.stdout) console.error(`\nError during turn: ${error.message}`);
-                turnSpan.recordException(error);
-                turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-                return { error: true };
-              } finally {
-                const duration = Date.now() - startTime;
-                meter.createHistogram('a_society.session.turn.duration').record(duration, { role_key: roleKey, autonomous: String(autonomous) });
-                turnSpan.end();
-              }
-            });
-
-            if (turnResult.handoff) {
-              const outcome = turnResult.handoff.kind === 'awaiting_human' ? 'awaiting_human' : 'handoff';
-              interactionSpan.setAttribute('session.interaction.outcome', outcome);
-              finish(turnResult.handoff);
-              rl.close();
-              return;
-            }
-            promptUser();
-          });
-        };
-
-        let resolved = false;
-
-        rl.on('close', () => {
-          if (!resolved) {
-            resolved = true;
-            interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
-            resolve(null);
-          }
-        });
-
-        const finish = (result: HandoffResult | null) => {
-          if (!resolved) {
-            resolved = true;
-            resolve(result);
-          }
-        };
-
-        promptUser();
-      });
-
-      return interactiveResult;
+      interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
+      return null;
 
     } catch (e: any) {
       interactionSpan.recordException(e);

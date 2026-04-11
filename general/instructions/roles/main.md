@@ -82,7 +82,9 @@ This does not mean the agent refuses to work. It means the agent names the discr
 Roles that are always active (e.g., the Owner) do not need this section — they are entry points, not downstream nodes.
 
 ### 8. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
-What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`. The block declares the receiving role and the artifact path the runtime uses to route the next session.
+What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per the runtime-injected handoff contract. The block declares the receiving role and the artifact path the runtime uses to route the next session.
+
+Do not place the runtime handoff contract in `required-readings.yaml`. The runtime injects it separately into runtime-managed sessions.
 
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
@@ -142,7 +144,7 @@ Phase-specific support docs for this role are surfaced from the active workflow 
 The role document does not enumerate "before X, read Y" cues. The workflow does that.
 
 ## Handoff Output
-At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate to Human When
 - A contribution would change direction or scope
@@ -177,7 +179,7 @@ Does not: propose implementation approaches, write deliverables, assign other ro
 - Acceptance criteria must be verifiable — if it cannot be checked, it is not an AC.
 
 ## Handoff Output
-At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate to Human When
 - The requirement contradicts the project vision
@@ -212,7 +214,7 @@ Does not: redefine scope, make design decisions, approve their own output for fi
 - If a blocker is encountered, report it immediately. Do not work around it silently.
 
 ## Handoff Output
-At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate When
 - The specification contains a contradiction
@@ -250,7 +252,7 @@ For each acceptance criterion:
 4. If fail: classify as blocking or non-blocking, with rationale.
 
 ## Handoff Output
-At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate When
 - An AC cannot be verified with available evidence
@@ -287,7 +289,7 @@ Does not: perform any role's substantive work, make design or scope decisions.
 5. Review the report and issue the next handoff.
 
 ## Handoff Output
-At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate When
 - Two roles produce conflicting outputs that cannot be resolved by the coordinator
@@ -323,7 +325,7 @@ Does not: write to a-society/general/ without Owner approval, set project direct
 - If a maintenance change implies a direction decision, stop and escalate.
 
 ## Handoff Output
-At each pause point, emit a machine-readable handoff block per `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate to Owner When
 - A proposal to a-society/general/ is ready for review

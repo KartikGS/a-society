@@ -93,7 +93,6 @@ export class FlowOrchestrator {
                     workspaceRoot, roleKey, bootstrapBundle,
                     bootstrapHistory,
                     inputStream, outputStream,
-                    false,
                     controller.signal,
                     this.renderer
                   );
@@ -104,6 +103,17 @@ export class FlowOrchestrator {
                 if (!handoffResult) {
                   flowRun = null;
                   return;
+                }
+
+                if (handoffResult.kind === 'awaiting_human') {
+                  this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'interactive' });
+                  const humanReply = await this.readHumanInput(inputStream, outputStream);
+                  if (humanReply === null) {
+                    flowRun = null;
+                    return;
+                  }
+                  bootstrapHistory.push({ role: 'user', content: humanReply });
+                  continue;
                 }
 
                 if (handoffResult.kind !== 'targets') {
@@ -173,6 +183,15 @@ export class FlowOrchestrator {
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
                 break;
               } catch (e: any) {
+                if (e instanceof HandoffParseError) {
+                  bootstrapSpan.addEvent('bootstrap.handoff_parse_failed', {
+                    error_type: e.name,
+                    error_message: e.message.slice(0, 500)
+                  });
+                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: e.details.code, summary: e.details.operatorSummary });
+                  bootstrapHistory.push({ role: 'user', content: e.details.modelRepairMessage });
+                  continue;
+                }
                 bootstrapHistory.push({ role: 'user', content: `Unexpected error: ${e.message}` });
                 continue;
               }
@@ -329,7 +348,6 @@ export class FlowOrchestrator {
                 flowRun.projectRoot, roleKey, bundleContent,
                 injectedHistory as any,
                 inputStream, outputStream,
-                true,
                 controller.signal,
                 this.renderer
               );
@@ -377,6 +395,10 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'meta-analysis-complete') {
                 throw new Error(`Unexpected meta-analysis-complete signal during forward pass at node '${nodeId}'.`);
+              }
+
+              if (handoffResult.kind === 'backward-pass-complete') {
+                throw new Error(`Unexpected backward-pass-complete signal during forward pass at node '${nodeId}'.`);
               }
 
               // kind === 'targets'

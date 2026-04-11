@@ -156,8 +156,8 @@ async function run() {
             'a-society__curator', 
             'System prompt', 
             [{ role: 'user', content: 'Who are you?' }], 
-            undefined, output, 
-            true
+            undefined,
+            output
         );
     } finally {
         LLMGateway.prototype.executeTurn = originalExecuteTurn;
@@ -173,7 +173,7 @@ async function run() {
     assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.handoff_detected' && e.attributes['handoff_kind'] === 'awaiting_human'));
   });
 
-  await test('Scenario: Handoff parse failure in autonomous orient.ts (REAL CODE)', async () => {
+  await test('Scenario: Handoff parse failure in orient.ts requests repair (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
     const mockProvider = new MockProvider([
@@ -191,10 +191,10 @@ async function run() {
         'a-society__curator',
         'System prompt',
         [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined, undefined,
-        true
+        undefined,
+        undefined
       );
-      assert.fail('Expected autonomous parse failure to propagate as HandoffParseError.');
+      assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
       assert.ok(error instanceof HandoffParseError);
     } finally {
@@ -207,7 +207,7 @@ async function run() {
     assert.strictEqual(parseSpan.attributes['handoff.parse.success'], false);
 
     const turnSpan = getSpan('session.turn');
-    assert.strictEqual(turnSpan.attributes['session.turn.outcome'], undefined);
+    assert.strictEqual(turnSpan.attributes['session.turn.outcome'], 'repair_requested');
     assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.parse_failed'));
 
     const points = getMetricDataPoints('a_society.handoff.parse_failure');
@@ -280,6 +280,76 @@ async function run() {
     assert.strictEqual(impSpan.attributes['improvement.mode'], 'none');
     assert.ok(getEvents(impSpan).find(e => e.name === 'improvement.mode_selected' && e.attributes['mode'] === 'none'));
     assert.ok(getEvents(impSpan).find(e => e.name === 'store.flow_saved' && e.attributes['stage'] === 'improvement_skipped'));
+  });
+
+  await test('Scenario: ImprovementOrchestrator repairs synthesis until terminal handoff (REAL CODE)', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    process.env.A_SOCIETY_STATE_DIR = stateDir;
+    SessionStore.init();
+
+    const derivedNamespaceDir = path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'roles');
+    fs.mkdirSync(derivedNamespaceDir, { recursive: true });
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'required-readings.yaml'), 'universal: []\nroles: { curator: [] }');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator.md'), '---\nrole: Curator\n---\nHello');
+
+    const recordDir = path.join(tmpDir, 'repair-record');
+    fs.mkdirSync(recordDir, { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, 'a-docs', 'improvement'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'a-docs', 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
+    fs.writeFileSync(path.join(tmpDir, 'a-docs', 'improvement', 'synthesis.md'), 'Synthesis instructions');
+    fs.writeFileSync(
+      path.join(recordDir, 'workflow.md'),
+      '---\nworkflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n---\n'
+    );
+    fs.writeFileSync(path.join(recordDir, '01-curator-findings.md'), 'Existing findings');
+
+    const flowRun: any = {
+      flowId: 'repair-flow',
+      projectRoot: tmpDir,
+      status: 'running',
+      stateVersion: '2',
+      improvementPhase: null,
+      recordFolderPath: recordDir
+    };
+
+    const mockProvider = new MockProvider([
+      { type: 'text', text: 'Saved findings. ```handoff\ntype: meta-analysis-complete\nfindings_path: repair-record/01-curator-findings.md\n```' },
+      { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' },
+      { type: 'text', text: 'Synthesis complete. ```handoff\ntype: backward-pass-complete\nartifact_path: repair-record/02-curator-synthesis.md\n```' }
+    ]);
+
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+    };
+
+    let capturedOutput = '';
+    const { Readable } = await import('node:stream');
+    const input = new Readable();
+    input.push('1\n');
+    input.push(null);
+    const output = new Writable({
+      write(chunk, _encoding, callback) {
+        capturedOutput += chunk.toString();
+        callback();
+      }
+    });
+
+    try {
+      await ImprovementOrchestrator.handleForwardPassClosure(
+        flowRun,
+        { recordFolderPath: recordDir, artifactPath: 'repair-record/00-owner-closure.md' },
+        input,
+        output
+      );
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+
+    assert.strictEqual(flowRun.status, 'completed');
+    assert.ok(capturedOutput.includes('Curator emitted prompt-human during backward pass synthesis. Requesting repair.'));
+    assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);

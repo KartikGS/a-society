@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
 
@@ -8,6 +9,12 @@ export interface ContextBundleResult {
   bundleContent: string;
   contextHash: string;
 }
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const RUNTIME_HANDOFF_CONTRACT_PATH = path.resolve(__dirname, '../HANDOFF-CONTRACT.md');
+const RUNTIME_MANAGED_REQUIRED_READING_VARIABLES = new Set([
+  '$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT'
+]);
 
 export class ContextInjectionService {
   /**
@@ -32,12 +39,25 @@ export class ContextInjectionService {
     const today = new Date().toISOString().split('T')[0];
     bundle += `Today's date is ${today}.\n\n`;
 
+    // 0c. Runtime-owned session contracts
+    bundle += `--- RUNTIME-MANAGED SESSION CONTRACTS ---\n`;
+    if (fs.existsSync(RUNTIME_HANDOFF_CONTRACT_PATH)) {
+      const content = fs.readFileSync(RUNTIME_HANDOFF_CONTRACT_PATH, 'utf8');
+      bundle += `\n[FILE: runtime/HANDOFF-CONTRACT.md]\n`;
+      bundle += `${content}\n\n`;
+    } else {
+      bundle += `\n[FILE ERROR: Could not read runtime/HANDOFF-CONTRACT.md]\n\n`;
+    }
+
     // 1. Resolve and inject required reading
     const roleEntry = buildRoleContext(roleKey, projectRoot);
 
     if (roleEntry) {
       bundle += `--- MANDATORY CONTEXT LOADING FOR ${roleKey} ---\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
+        if (RUNTIME_MANAGED_REQUIRED_READING_VARIABLES.has(varName)) {
+          continue;
+        }
         const resolvedPath = resolveVariableFromIndex(varName, projectRoot);
         if (resolvedPath && fs.existsSync(resolvedPath)) {
           const content = fs.readFileSync(resolvedPath, 'utf8');

@@ -28,7 +28,7 @@ fs.mkdirSync(path.join(projectDir, 'a-docs', 'indexes'), { recursive: true });
 
 fs.writeFileSync(
   path.join(projectDir, 'a-docs', 'roles', 'required-readings.yaml'),
-  `universal:\n  - $TEST_AGENTS\nroles:\n  owner:\n    - $TEST_OWNER_ROLE\n`
+  `universal:\n  - $TEST_AGENTS\n  - $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT\nroles:\n  owner:\n    - $TEST_OWNER_ROLE\n`
 );
 fs.writeFileSync(
   path.join(projectDir, 'a-docs', 'indexes', 'main.md'),
@@ -47,10 +47,23 @@ test('buildContextBundle: includes role context and active artifact content', ()
 
   assert.ok(bundle.bundleContent.includes('You are the Owner agent for a-society.'));
   assert.ok(bundle.bundleContent.includes("Today's date is"));
+  assert.ok(bundle.bundleContent.includes('A-Society Runtime Handoff Contract'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));
   assert.ok(bundle.bundleContent.includes('[FILE: a-society/artifact.md]'));
   assert.ok(bundle.bundleContent.includes('Artifact body'));
+});
+
+test('buildContextBundle: runtime handoff contract is injected once even if runtime variable appears in required readings', () => {
+  const bundle = ContextInjectionService.buildContextBundle(
+    'a-society__Owner',
+    tmpDir,
+    []
+  );
+
+  const matches = bundle.bundleContent.match(/A-Society Runtime Handoff Contract/g) || [];
+  assert.strictEqual(matches.length, 1);
+  assert.ok(!bundle.bundleContent.includes('FILE ERROR: Could not resolve or read $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT'));
 });
 
 test('buildContextBundle: does not inject runtime directives', () => {

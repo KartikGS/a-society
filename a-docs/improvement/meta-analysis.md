@@ -94,3 +94,4 @@ findings_path: <repo-relative path to the findings file you just produced>
 ```
 
 The `findings_path` field must be the repo-relative path to the findings artifact you produced in this session. This signal tells the improvement orchestrator that your meta-analysis is complete and where to find your output.
+Do not end an automated backward-pass meta-analysis session with `type: prompt-human`; the runtime expects this terminal `meta-analysis-complete` signal for the step to close.

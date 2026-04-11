@@ -75,7 +75,6 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 - workflow graph schema used by workflow graph validation
 - record-folder `workflow.md` schema used by backward-pass planning
 - `required-readings.yaml` schema used by runtime context injection
-- machine-readable handoff schema used by runtime handoff interpretation
 
 These dependencies are tracked and maintained via `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 

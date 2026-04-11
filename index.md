@@ -16,6 +16,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_INITIALIZER` | `a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
 | **Runtime** | | |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
+| `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `a-society/runtime/HANDOFF-CONTRACT.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
 | `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
 | **Feedback** | | |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Template for Initializer signal reports — one report per initialization run |
@@ -60,7 +61,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_COMMUNICATION` | `a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols |
-| `$INSTRUCTION_MACHINE_READABLE_HANDOFF` | `a-society/general/instructions/communication/coordination/machine-readable-handoff.md` | How to define and emit a machine-readable handoff block — YAML schema for agent pause-point output, enabling programmatic session routing |
 | `$INSTRUCTION_THINKING` | `a-society/general/instructions/thinking/main.md` | How to create a thinking/ folder for any project |
 | `$INSTRUCTION_IMPROVEMENT` | `a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `a-society/general/instructions/records/main.md` | How to create a records structure for any project |

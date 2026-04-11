@@ -20,7 +20,6 @@ This document is the standing reference for the coupling surface between A-Socie
 | Record-folder `workflow.md` schema | Yes | Backward-pass planning |
 | `$GENERAL_MANIFEST` file format and `copy` source paths | Yes | Scaffolding |
 | `a-docs/roles/required-readings.yaml` schema | Yes | Runtime context injection |
-| `$INSTRUCTION_MACHINE_READABLE_HANDOFF` signal schema | Yes | Runtime handoff interpretation |
 
 Rows that depend on `a-docs/` content are still standing executable dependencies and require the same co-maintenance discipline as `general/` format changes.
 
@@ -50,4 +49,4 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 | **C** | An existing executable capability changes interface or behavior | Executable layer | Coupling-map row updated; affected guidance surfaces updated |
 | **D** | A maintained document changes structure in a way scaffolding or runtime injection must reflect | `general/` or `a-docs/` | Executable implementation and coupling rows updated |
 | **E** | A new consent or feedback contract is added | Either | Consent handling, manifest, and consent guidance updated together |
-| **F** | The backward-pass or handoff contract changes | `general/` or `a-docs/` | Backward-pass planning or handoff interpretation updated together |
+| **F** | The backward-pass contract changes | `general/` or `a-docs/` | Backward-pass planning updated together |

@@ -62,7 +62,7 @@ The `owner-to-curator.md` artifact must contain all mandatory fields from `TEMPL
 
 At every session pause point where natural-language handoff prose is produced, the agent must also emit a machine-readable handoff block. The block follows the prose and is emitted in the same output pass.
 
-See `$INSTRUCTION_MACHINE_READABLE_HANDOFF` for the schema, field definitions, and a worked example.
+In runtime-managed sessions, the runtime injects the handoff contract directly. For A-Society's standing reference, see `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
 
 ---
 

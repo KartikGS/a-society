@@ -30,7 +30,7 @@ function missingBlock(): HandoffParseError {
     code: 'missing_block',
     operatorSummary: 'Malformed handoff block',
     modelRepairMessage:
-      'Error: No handoff block found. Please end your response with a fenced code block tagged `handoff` containing the required fields:\n```handoff\nrole: <role>\nartifact_path: <path>\n```'
+      'Error: No handoff block found. Please end your response with a fenced code block tagged `handoff`. Use either the target form (`role` + `artifact_path`) or an appropriate typed signal (`prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or `backward-pass-complete`).'
   });
 }
 
@@ -39,7 +39,7 @@ function yamlParseError(): HandoffParseError {
     code: 'yaml_parse',
     operatorSummary: 'Malformed handoff block',
     modelRepairMessage:
-      'Error: Handoff block could not be parsed as YAML. Expected fields: role (string), artifact_path (string or null). Please correct the handoff block formatting and restate it.'
+      'Error: Handoff block could not be parsed as YAML. Please correct the handoff block formatting and restate it using either the target form (`role` + `artifact_path`) or an appropriate typed signal.'
   });
 }
 
@@ -64,7 +64,7 @@ function unknownSignalType(type: string): HandoffParseError {
     code: 'unknown_signal_type',
     operatorSummary: `Unsupported handoff signal type "${type}"`,
     modelRepairMessage:
-      `Error: Unknown handoff signal type: "${type}". Supported typed signal forms are: forward-pass-closed, meta-analysis-complete, prompt-human.`
+      `Error: Unknown handoff signal type: "${type}". Supported typed signal forms are: forward-pass-closed, meta-analysis-complete, backward-pass-complete, prompt-human.`
   });
 }
 
@@ -135,6 +135,14 @@ export class HandoffInterpreter {
               result = {
                 kind: 'meta-analysis-complete',
                 findingsPath: payload.findings_path,
+              };
+            } else if (payload.type === 'backward-pass-complete') {
+              if (typeof payload.artifact_path !== 'string' || payload.artifact_path.trim() === '') {
+                throw missingRequiredField('backward-pass-complete block missing artifact_path');
+              }
+              result = {
+                kind: 'backward-pass-complete',
+                artifactPath: payload.artifact_path,
               };
             } else if (payload.type === 'prompt-human') {
               result = { kind: 'awaiting_human' };

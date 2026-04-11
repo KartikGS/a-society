@@ -28,7 +28,8 @@ A list of `$VARIABLE_NAME` references registered in the project's index. These d
 Every project's universal list must include at minimum:
 - The variable for the project's own `agents.md`
 - The variable for the project's own file index (`indexes/main.md`)
-- `$INSTRUCTION_MACHINE_READABLE_HANDOFF`
+
+Do **not** include runtime-owned contract documents in `required-readings.yaml`. The A-Society runtime injects its own standing contracts separately.
 
 ### 2. `roles`
 A map where each key is a **Role ID** and each value is a list of role-specific `$VARIABLE_NAME` references.
@@ -97,6 +98,7 @@ If a project's `required-readings.yaml` drifts from the project's index or its i
 1. When a new universal document is added to the project, add its `$VAR` to the `universal` list.
 2. When a new role is added, create a new key in the `roles` map and populate its required reading list.
 3. When a file is retired or moved, update the index first. If the variable is retired, remove it from `required-readings.yaml`.
+4. Do not add runtime-owned injected contracts to this file, even if agents must follow them during runtime-managed sessions.
 
 ---
 

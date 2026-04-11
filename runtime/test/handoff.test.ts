@@ -61,6 +61,13 @@ test('parse (meta-analysis-complete): returns findings signal', () => {
   assert.strictEqual((result as any).findingsPath, 'a-society/a-docs/records/example-flow/11-owner-findings.md');
 });
 
+test('parse (backward-pass-complete): returns backward pass closure signal', () => {
+  const text = "```handoff\ntype: backward-pass-complete\nartifact_path: a-society/a-docs/records/example-flow/12-curator-synthesis.md\n```";
+  const result = HandoffInterpreter.parse(text);
+  assert.strictEqual(result.kind, 'backward-pass-complete');
+  assert.strictEqual((result as any).artifactPath, 'a-society/a-docs/records/example-flow/12-curator-synthesis.md');
+});
+
 test('parse (prompt-human): returns awaiting_human signal', () => {
   const text = "```handoff\ntype: prompt-human\n```";
   const result = HandoffInterpreter.parse(text);
@@ -130,6 +137,14 @@ test('parse (Typed signal missing required fields): throws missing_required_fiel
   }, (e: any) => { findErr = e; return e instanceof HandoffParseError; });
   assert.strictEqual(findErr.details.code, 'missing_required_field');
   assert.ok(findErr.details.modelRepairMessage.includes('missing findings_path'));
+
+  const backwardPassText = "```handoff\ntype: backward-pass-complete\n```";
+  let backwardErr: any;
+  assert.throws(() => {
+    HandoffInterpreter.parse(backwardPassText);
+  }, (e: any) => { backwardErr = e; return e instanceof HandoffParseError; });
+  assert.strictEqual(backwardErr.details.code, 'missing_required_field');
+  assert.ok(backwardErr.details.modelRepairMessage.includes('missing artifact_path'));
 });
 
 test('parse (Missing handoff block): throws missing_block code', () => {

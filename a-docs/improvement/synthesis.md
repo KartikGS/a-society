@@ -14,7 +14,7 @@ Instructions for the synthesis role.
 
    Do not re-route improvement items through the project's main execution workflow.
 
-   The synthesis role completing synthesis closes the backward pass. No further handoff is required — the flow is complete when synthesis is done.
+   The synthesis role completing synthesis closes the backward pass. End the session with a `type: backward-pass-complete` handoff block whose `artifact_path` points to the synthesis artifact. Do not end an automated backward-pass synthesis session with `type: prompt-human`; the runtime expects this terminal signal for the step to close.
 
 ---
 

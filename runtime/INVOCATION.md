@@ -81,11 +81,12 @@ Phase 1 introduces no new CLI flags or environment variables for operator-event 
 
 ## Runtime Signals
 
-The runtime consumes the machine-readable handoff contract from `$INSTRUCTION_MACHINE_READABLE_HANDOFF`.
+The runtime injects and consumes the machine-readable handoff contract from `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
 
 - `type: prompt-human` pauses execution for terminal input and resumes the same session after a human reply
 - `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
 - `type: meta-analysis-complete` is consumed during backward-pass orchestration
+- `type: backward-pass-complete` closes the backward pass after synthesis
 
 When the operator enters `exit` or `quit` at a prompt-human pause, or the input stream closes, the flow is suspended as `awaiting_human`. Empty input re-prompts without advancing the session.
 
@@ -94,6 +95,8 @@ When the operator enters `exit` or `quit` at a prompt-human pause, or the input 
 ## Required Project Surface
 
 The runtime loads context from `a-docs/roles/required-readings.yaml`. If that file is missing or the relevant index variables do not resolve, orchestration cannot start.
+
+The machine-readable handoff contract is not part of `required-readings.yaml`. The runtime injects it separately as runtime-owned context.
 
 ---
 
