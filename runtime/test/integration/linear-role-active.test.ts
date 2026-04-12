@@ -118,12 +118,14 @@ workflow:
 
     if (serverTurn === 1) {
       // Turn 1: 'start' node produces a valid handoff to 'next'
+      fs.writeFileSync(path.join(workspaceRoot, 'start-output.md'), 'Start output artifact.');
       const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'start-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Work done. " + handoffBlock } }] })}\n\n`);
       res.write(`data: [DONE]\n\n`);
       res.end();
     } else if (serverTurn === 2) {
       // Turn 2: 'next' node produces a terminal handoff (no outgoing edges)
+      fs.writeFileSync(path.join(workspaceRoot, 'next-output.md'), 'Next output artifact.');
       const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'next-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "All done. " + handoffBlock } }] })}\n\n`);
       res.write(`data: [DONE]\n\n`);

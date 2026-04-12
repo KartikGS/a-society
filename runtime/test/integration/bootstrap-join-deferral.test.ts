@@ -134,6 +134,8 @@ workflow:
       const promptHuman = 'What should we work on? ```handoff\ntype: prompt-human\n```';
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: promptHuman } }] })}\n\n`);
     } else if (serverTurn === 2) {
+      fs.writeFileSync(path.join(recordPath, '01-owner-to-curator.md'), 'Owner brief for Curator.');
+      fs.writeFileSync(path.join(recordPath, '01-owner-to-ta.md'), 'Owner brief for TA.');
       const handoffBlock = `Bootstrap routing. \`\`\`handoff
 - role: 'Curator'
   artifact_path: 'test-project/records/test-flow/01-owner-to-curator.md'

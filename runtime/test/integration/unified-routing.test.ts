@@ -129,6 +129,7 @@ workflow:
         res.end();
       } else if (serverTurn === 2) {
         // Model should have received the repair message; now send a valid handoff
+        fs.writeFileSync(path.join(workspaceRoot, 'mock.md'), 'Mock artifact content.');
         const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'mock.md'\n```";
         res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Fixed: " + handoffBlock } }] })}\n\n`);
         res.write(`data: [DONE]\n\n`);

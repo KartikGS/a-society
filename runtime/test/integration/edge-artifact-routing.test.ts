@@ -18,6 +18,11 @@ async function runTest() {
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
   process.env.A_SOCIETY_STATE_DIR = stateDir;
+  const workspaceArtifactDir = path.join(workspaceRoot, 'records', 'test-flow');
+  fs.mkdirSync(workspaceArtifactDir, { recursive: true });
+  fs.writeFileSync(path.join(workspaceArtifactDir, '02-producer-to-a.md'), 'Producer artifact for A');
+  fs.writeFileSync(path.join(workspaceArtifactDir, '02-producer-to-b.md'), 'Producer artifact for B');
+  fs.writeFileSync(path.join(workspaceArtifactDir, '03-c-to-b.md'), 'Branch C artifact for B');
 
   const workflowGraph = `---
 workflow:

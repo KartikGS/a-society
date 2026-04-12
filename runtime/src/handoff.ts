@@ -8,6 +8,7 @@ export type HandoffRepairCode =
   | 'yaml_parse'
   | 'invalid_target_shape'
   | 'missing_required_field'
+  | 'artifact_unavailable'
   | 'unknown_signal_type';
 
 export interface HandoffRepairDetails {

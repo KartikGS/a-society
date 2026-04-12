@@ -130,6 +130,7 @@ export class FlowOrchestrator {
                   bootstrapHistory.push({ role: 'user', content: 'Bootstrap produced no handoff targets. Re-emit a handoff with artifact_path pointing to your output artifact.' });
                   continue;
                 }
+                this.validateTargetArtifactsExist(workspaceRoot, handoffs);
                 const firstArtifactPath = handoffs[0].artifact_path;
                 if (!firstArtifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
 
@@ -416,6 +417,7 @@ export class FlowOrchestrator {
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
+              this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
 
               // Update role-continuity ledger before advancing so the save inside
               // applyHandoffAndAdvance persists it in the same write.
@@ -474,6 +476,7 @@ export class FlowOrchestrator {
     if (!fs.existsSync(flowRun.recordFolderPath)) {
       throw new WorkflowError(`Error: No record folder found at ${flowRun.recordFolderPath}. A record folder must be created before emitting a handoff. Please create the record folder, create workflow.md inside it, and restate your handoff.`);
     }
+    this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
     const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
 
     const outgoingEdges = (wf.edges || []).filter((e: any) => e.from === nodeId);
@@ -667,6 +670,49 @@ export class FlowOrchestrator {
     return incomingEdges
       .map((edge: any) => flowRun.completedEdgeArtifacts[this.edgeKey(edge.from, edge.to)] ?? '')
       .filter((artifact: string) => artifact !== '');
+  }
+
+  private validateTargetArtifactsExist(workspaceRoot: string, handoffs: HandoffTarget[]): void {
+    handoffs.forEach((handoff, index) => {
+      const label = handoffs.length === 1
+        ? 'handoff target'
+        : `handoff target [${index}]`;
+      this.validateArtifactPathExists(workspaceRoot, handoff.artifact_path, label);
+    });
+  }
+
+  private validateArtifactPathExists(
+    workspaceRoot: string,
+    artifactPath: string | null,
+    label: string
+  ): void {
+    if (typeof artifactPath !== 'string' || artifactPath.trim() === '') {
+      throw new HandoffParseError({
+        code: 'missing_required_field',
+        operatorSummary: 'Handoff block missing required field',
+        modelRepairMessage: `Error: ${label} is missing artifact_path. Save the artifact file first, then restate the handoff.`
+      });
+    }
+
+    const resolvedPath = path.isAbsolute(artifactPath)
+      ? artifactPath
+      : path.resolve(workspaceRoot, artifactPath);
+
+    if (!fs.existsSync(resolvedPath)) {
+      throw new HandoffParseError({
+        code: 'artifact_unavailable',
+        operatorSummary: 'Referenced artifact unavailable',
+        modelRepairMessage: `Error: The handoff referenced artifact_path "${artifactPath}", but no file exists at that path. Write the artifact to disk first, then restate the same handoff.`
+      });
+    }
+
+    if (!fs.statSync(resolvedPath).isFile()) {
+      throw new HandoffParseError({
+        code: 'artifact_unavailable',
+        operatorSummary: 'Referenced artifact unavailable',
+        modelRepairMessage: `Error: The handoff referenced artifact_path "${artifactPath}", but that path is not a file. Write the artifact file first, then restate the same handoff.`
+      });
+    }
   }
 
   private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string) {
