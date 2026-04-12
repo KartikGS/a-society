@@ -4,8 +4,8 @@ import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRun, HandoffResult, HandoffTarget, RuntimeMessageParam } from './types.js';
-import { runInteractiveSession } from './orient.js';
+import type { FlowRun, HandoffResult, HandoffTarget, InteractiveSessionResult, RuntimeMessageParam, TurnUsage } from './types.js';
+import { emitUsage, runInteractiveSession } from './orient.js';
 import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
@@ -93,9 +93,9 @@ export class FlowOrchestrator {
                 const sigintHandler = () => controller.abort();
                 process.once('SIGINT', sigintHandler);
 
-                let handoffResult: HandoffResult | null = null;
+                let sessionResult: InteractiveSessionResult | null = null;
                 try {
-                  handoffResult = await runInteractiveSession(
+                  sessionResult = await runInteractiveSession(
                     workspaceRoot, projectNamespace, roleName, bootstrapBundle,
                     bootstrapHistory,
                     inputStream, outputStream,
@@ -106,12 +106,15 @@ export class FlowOrchestrator {
                   process.removeListener('SIGINT', sigintHandler);
                 }
 
-                if (!handoffResult) {
+                if (!sessionResult) {
                   flowRun = null;
                   return;
                 }
+                const handoffResult = sessionResult.handoff;
+                const turnUsage = sessionResult.usage;
 
                 if (handoffResult.kind === 'awaiting_human') {
+                  emitUsage(this.renderer, turnUsage);
                   this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'interactive' });
                   const humanReply = await this.readHumanInput(inputStream, outputStream);
                   if (humanReply === null) {
@@ -173,7 +176,7 @@ export class FlowOrchestrator {
                   roleContinuity: {}
                 };
                 this.recordRoleContinuityCompletion(flowRun, roleName, startNode.id, handoffs);
-                await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs);
+                await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs, turnUsage);
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
                 break;
               } catch (e: any) {
@@ -353,9 +356,9 @@ export class FlowOrchestrator {
             const sigintHandler = () => controller.abort();
             process.once('SIGINT', sigintHandler);
 
-            let handoffResult: HandoffResult | null = null;
+            let sessionResult: InteractiveSessionResult | null = null;
             try {
-              handoffResult = await runInteractiveSession(
+              sessionResult = await runInteractiveSession(
                 flowRun.workspaceRoot, flowRun.projectNamespace, roleName, bundleContent,
                 injectedHistory as any,
                 inputStream, outputStream,
@@ -366,10 +369,13 @@ export class FlowOrchestrator {
               process.removeListener('SIGINT', sigintHandler);
             }
 
-            if (handoffResult) {
+            if (sessionResult) {
+              const handoffResult = sessionResult.handoff;
+              const turnUsage = sessionResult.usage;
               if (handoffResult.kind === 'awaiting_human') {
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
+                emitUsage(this.renderer, turnUsage);
                 this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'autonomous' });
                 const humanReply = await this.readHumanInput(inputStream, outputStream);
                 if (humanReply === null) {
@@ -390,6 +396,7 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'forward-pass-closed') {
                 span.setAttribute('node.outcome', 'forward_pass_closed');
+                emitUsage(this.renderer, turnUsage);
                 this.renderer.emit({
                   kind: 'flow.forward_pass_closed',
                   recordFolderPath: handoffResult.recordFolderPath,
@@ -423,7 +430,7 @@ export class FlowOrchestrator {
               // applyHandoffAndAdvance persists it in the same write.
               this.recordRoleContinuityCompletion(flowRun, roleName, nodeId, handoffs);
 
-              await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
+              await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs, turnUsage);
 
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session);
@@ -472,7 +479,13 @@ export class FlowOrchestrator {
   }
 
 
-  public async applyHandoffAndAdvance(flowRun: FlowRun, nodeId: string, fromRole: string, handoffs: HandoffTarget[]): Promise<void> {
+  public async applyHandoffAndAdvance(
+    flowRun: FlowRun,
+    nodeId: string,
+    fromRole: string,
+    handoffs: HandoffTarget[],
+    turnUsage?: TurnUsage
+  ): Promise<void> {
     if (!fs.existsSync(flowRun.recordFolderPath)) {
       throw new WorkflowError(`Error: No record folder found at ${flowRun.recordFolderPath}. A record folder must be created before emitting a handoff. Please create the record folder, create workflow.md inside it, and restate your handoff.`);
     }
@@ -482,6 +495,7 @@ export class FlowOrchestrator {
     const outgoingEdges = (wf.edges || []).filter((e: any) => e.from === nodeId);
 
     if (outgoingEdges.length === 0) {
+      emitUsage(this.renderer, turnUsage);
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
 
@@ -512,6 +526,7 @@ export class FlowOrchestrator {
         throw new Error(`Unauthorized transition: node '${nodeId}' must hand to '${successorNode.role}' but proposed '${handoffs[0].role}'.`);
       }
 
+      emitUsage(this.renderer, turnUsage);
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
       flowRun.completedEdgeArtifacts[this.edgeKey(nodeId, successorNode.id)] = handoffs[0].artifact_path ?? '';
@@ -574,6 +589,7 @@ export class FlowOrchestrator {
         activationPairs.push({ targetId: targetNode.id, artifact: handoffs[handoffIdx].artifact_path ?? '', role: targetNode.role });
       }
 
+      emitUsage(this.renderer, turnUsage);
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
 

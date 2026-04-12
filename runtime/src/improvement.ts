@@ -65,7 +65,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 
   while (true) {
     try {
-      const result = await runInteractiveSession(
+      const sessionResult = await runInteractiveSession(
         flowRun.workspaceRoot,
         flowRun.projectNamespace,
         roleName,
@@ -75,9 +75,10 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         outputStream
       );
 
-      if (result === null) {
+      if (sessionResult === null) {
         throw new Error(`[improvement] ${expectedKind} session for ${role} ended unexpectedly without a handoff result.`);
       }
+      const result = sessionResult.handoff;
 
       if (result.kind === expectedKind) {
         return result as ExpectedImprovementSignal<K>;

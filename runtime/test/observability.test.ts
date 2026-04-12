@@ -16,6 +16,7 @@ import {
 import { TelemetryManager } from '../src/observability.js';
 import { HandoffInterpreter, HandoffParseError } from '../src/handoff.js';
 import { LLMGateway } from '../src/llm.js';
+import { FlowOrchestrator } from '../src/orchestrator.js';
 import { validateWorkflowFile } from '../src/framework-services/workflow-graph-validator.js';
 import { ImprovementOrchestrator } from '../src/improvement.js';
 import { runInteractiveSession } from '../src/orient.js';
@@ -23,6 +24,8 @@ import { SessionStore } from '../src/store.js';
 
 import type { 
   LLMProvider, 
+  OperatorEvent,
+  OperatorRenderSink,
   RuntimeMessageParam, 
   ProviderTurnResult, 
   ToolDefinition,
@@ -61,6 +64,17 @@ class MockProvider implements LLMProvider {
       return res;
     });
   }
+}
+
+class CaptureRenderer implements OperatorRenderSink {
+  public events: OperatorEvent[] = [];
+
+  emit(event: OperatorEvent): void {
+    this.events.push(event);
+  }
+
+  startWait(_provider: string, _model: string): void {}
+  stopWait(): void {}
 }
 
 // --- Test Harness ---
@@ -197,6 +211,63 @@ async function run() {
     assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.handoff_detected' && e.attributes['handoff_kind'] === 'awaiting_human'));
   });
 
+  await test('Scenario: successful handoff returns usage but does not emit it from orient.ts', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    const mockProvider = new MockProvider([
+      {
+        type: 'text',
+        text: 'I need clarification. ```handoff\ntype: prompt-human\n```',
+        usage: { inputTokens: 12, outputTokens: 34 }
+      }
+    ]);
+    const sequence: string[] = [];
+    const renderer = new CaptureRenderer();
+    const output = new Writable({
+      write(chunk, _encoding, callback) {
+        sequence.push(`assistant:${chunk.toString()}`);
+        callback();
+      }
+    });
+
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+    };
+
+    const originalEmit = renderer.emit.bind(renderer);
+    renderer.emit = (event: OperatorEvent) => {
+      sequence.push(`event:${event.kind}`);
+      originalEmit(event);
+    };
+
+    try {
+      const result = await runInteractiveSession(
+        tmpDir,
+        'a-society',
+        'curator',
+        'System prompt',
+        [{ role: 'user', content: 'Who are you?' }],
+        undefined,
+        output,
+        undefined,
+        renderer
+      );
+      assert.deepStrictEqual(result, {
+        handoff: { kind: 'awaiting_human' },
+        usage: { inputTokens: 12, outputTokens: 34 }
+      });
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+
+    assert.deepStrictEqual(sequence, [
+      'assistant:I need clarification. ```handoff\ntype: prompt-human\n```',
+      'assistant:\n'
+    ]);
+    assert.deepStrictEqual(renderer.events, []);
+  });
+
   await test('Scenario: Handoff parse failure in orient.ts requests repair (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
@@ -242,6 +313,112 @@ async function run() {
     );
     assert.ok(parseFailurePoint);
     assert.strictEqual(parseFailurePoint?.value, 1);
+  });
+
+  await test('Scenario: parse failure in orient.ts does not emit usage summary', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    const mockProvider = new MockProvider([
+      {
+        type: 'text',
+        text: 'I broke the handoff. ```handoff\nrole:\n```',
+        usage: { inputTokens: 21, outputTokens: 8 }
+      }
+    ]);
+    const renderer = new CaptureRenderer();
+    const output = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+    };
+
+    try {
+      await runInteractiveSession(
+        tmpDir,
+        'a-society',
+        'curator',
+        'System prompt',
+        [{ role: 'user', content: 'Produce a handoff.' }],
+        undefined,
+        output,
+        undefined,
+        renderer
+      );
+      assert.fail('Expected parse failure to propagate as HandoffParseError.');
+    } catch (error: any) {
+      assert.ok(error instanceof HandoffParseError);
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+
+    assert.deepStrictEqual(renderer.events, []);
+  });
+
+  await test('Scenario: Orchestrator emits usage only after accepted handoff and before handoff notice', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    process.env.A_SOCIETY_STATE_DIR = stateDir;
+    SessionStore.init();
+
+    const recordDir = path.join(tmpDir, 'accepted-handoff-record');
+    fs.mkdirSync(recordDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(recordDir, 'workflow.md'),
+      '---\nworkflow:\n  name: Accepted Handoff Test\n  nodes:\n    - id: start\n      role: curator\n    - id: next\n      role: owner\n  edges:\n    - from: start\n      to: next\n---\n'
+    );
+    fs.writeFileSync(path.join(tmpDir, 'accepted-output.md'), 'Accepted artifact content.');
+
+    const flowRun: any = {
+      flowId: 'accepted-handoff-flow',
+      workspaceRoot: tmpDir,
+      projectNamespace: 'a-society',
+      recordFolderPath: recordDir,
+      activeNodes: ['start'],
+      completedNodes: [],
+      completedEdgeArtifacts: {},
+      pendingNodeArtifacts: { start: [] },
+      status: 'running',
+      stateVersion: '5',
+      roleContinuity: {}
+    };
+    SessionStore.saveFlowRun(flowRun);
+
+    const mockProvider = new MockProvider([
+      {
+        type: 'text',
+        text: "Accepted. ```handoff\nrole: 'owner'\nartifact_path: 'accepted-output.md'\n```",
+        usage: { inputTokens: 55, outputTokens: 13 }
+      }
+    ]);
+    const renderer = new CaptureRenderer();
+    const output = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+    };
+
+    try {
+      const orchestrator = new FlowOrchestrator(renderer as any);
+      await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, undefined, output);
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+
+    const eventKinds = renderer.events.map(event => event.kind);
+    assert.deepStrictEqual(eventKinds, [
+      'role.active',
+      'usage.turn_summary',
+      'handoff.applied',
+      'role.active'
+    ]);
+    const usageEvent = renderer.events[1];
+    assert.strictEqual(usageEvent.kind, 'usage.turn_summary');
+    assert.deepStrictEqual(
+      usageEvent,
+      { kind: 'usage.turn_summary', availability: 'full', inputTokens: 55, outputTokens: 13 }
+    );
   });
 
   await test('Scenario: validateWorkflowFile (REAL CODE)', async () => {

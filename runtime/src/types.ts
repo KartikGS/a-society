@@ -95,6 +95,11 @@ export interface TurnUsage {
   outputTokens?: number;
 }
 
+export interface InteractiveSessionResult {
+  handoff: HandoffResult;
+  usage?: TurnUsage;
+}
+
 export type OperatorEvent =
   | { kind: 'flow.bootstrap_started'; role: string }
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }

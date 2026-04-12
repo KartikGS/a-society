@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { OrientSession, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
+import type { InteractiveSessionResult, OrientSession, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
 import { LLMGateway, LLMGatewayError } from './llm.js';
 import { buildRoleContext } from './registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
@@ -15,7 +15,15 @@ function writeAssistantOutputIfNeeded(
   outputStream.write(text);
 }
 
-function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined): void {
+function ensureAssistantOutputEndsWithNewline(
+  text: string,
+  outputStream: NodeJS.WritableStream
+): void {
+  if (!text || text.endsWith('\n')) return;
+  outputStream.write('\n');
+}
+
+export function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined): void {
   if (!renderer) return;
   if (!usage) {
     renderer.emit({ kind: 'usage.turn_summary', availability: 'both-unavailable' });
@@ -36,6 +44,7 @@ function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | 
 
 type SessionTurnResult = {
   handoff?: HandoffResult;
+  usage?: TurnUsage;
   abort?: true;
   error?: true;
 };
@@ -78,7 +87,7 @@ async function executeSessionTurn(
         turnSpan.addEvent('session.assistant_turn', { content: result.text });
       }
       writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
-      emitUsage(operatorRenderer, result.usage);
+      ensureAssistantOutputEndsWithNewline(result.text, outputStream);
 
       if (result.intermediateMessages) history.push(...result.intermediateMessages);
       history.push({ role: 'assistant', content: result.text });
@@ -86,7 +95,7 @@ async function executeSessionTurn(
       const parseResult = HandoffInterpreter.parse(result.text);
       turnSpan.setAttribute('session.turn.outcome', 'handoff');
       turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-      return { handoff: parseResult };
+      return { handoff: parseResult, usage: result.usage };
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
         meter.createCounter('a_society.handoff.parse_failure').add(1, {
@@ -131,7 +140,7 @@ export async function runInteractiveSession(
   outputStream: NodeJS.WritableStream = process.stdout,
   externalSignal?: AbortSignal,
   operatorRenderer?: OperatorRenderSink
-): Promise<HandoffResult | null> {
+): Promise<InteractiveSessionResult | null> {
 
   const tracer = TelemetryManager.getTracer();
   let turnIndex = 0;
@@ -195,7 +204,10 @@ export async function runInteractiveSession(
       if (turnResult.handoff) {
         const outcome = turnResult.handoff.kind === 'awaiting_human' ? 'awaiting_human' : 'handoff';
         interactionSpan.setAttribute('session.interaction.outcome', outcome);
-        return turnResult.handoff;
+        return {
+          handoff: turnResult.handoff,
+          usage: turnResult.usage
+        };
       }
 
       interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
