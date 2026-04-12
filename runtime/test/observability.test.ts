@@ -320,8 +320,12 @@ async function run() {
       flowId: 'repair-flow',
       workspaceRoot: tmpDir,
       projectNamespace: improvementNamespace,
+      activeNodes: [],
+      completedNodes: [],
+      completedEdgeArtifacts: {},
+      pendingNodeArtifacts: {},
       status: 'running',
-      stateVersion: '4',
+      stateVersion: '5',
       improvementPhase: null,
       recordFolderPath: recordDir
     };
@@ -361,7 +365,7 @@ async function run() {
     }
 
     assert.strictEqual(flowRun.status, 'completed');
-    assert.strictEqual(flowRun.stateVersion, '4', 'improvement initialization must keep the latest state version');
+    assert.strictEqual(flowRun.stateVersion, '5', 'improvement initialization must keep the latest state version');
     assert.ok(capturedOutput.includes('Curator emitted prompt-human during backward pass synthesis. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });

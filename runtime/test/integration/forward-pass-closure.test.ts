@@ -88,10 +88,10 @@ workflow:
     recordFolderPath: recordPath,
     activeNodes: ['start'],
     completedNodes: [],
-    completedNodeArtifacts: {},
+    completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'running',
-    stateVersion: '4'
+    stateVersion: '5'
   });
 
   const operatorStream = new PassThrough();

@@ -65,10 +65,13 @@ workflow:
     recordFolderPath: recordPath,
     activeNodes: ['branch-a', 'branch-b'],
     completedNodes: ['fork-gate'],
-    completedNodeArtifacts: { 'fork-gate': '' },
+    completedEdgeArtifacts: {
+      'fork-gate=>branch-a': 'art-a.md',
+      'fork-gate=>branch-b': 'art-b.md'
+    },
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] },
     status: 'awaiting_human',
-    stateVersion: '4'
+    stateVersion: '5'
   });
 
   const operatorStream = new PassThrough();

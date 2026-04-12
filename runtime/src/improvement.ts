@@ -160,7 +160,7 @@ export class ImprovementOrchestrator {
           completedRoles: [],
           findingsProduced: {}
         };
-        flowRun.stateVersion = '4';
+        flowRun.stateVersion = '5';
         SessionStore.saveFlowRun(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 

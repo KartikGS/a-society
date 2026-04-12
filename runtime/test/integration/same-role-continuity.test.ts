@@ -115,10 +115,10 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     recordFolderPath: recordDir,
     activeNodes: ['owner-intake'],
     completedNodes: [],
-    completedNodeArtifacts: {},
+    completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     status: 'running',
-    stateVersion: '4',
+    stateVersion: '5',
     roleContinuity: {},
     ...overrides
   };
@@ -246,7 +246,7 @@ async function run() {
     assert.strictEqual(reloaded!.roleContinuity![roleName].completedNodes[0].nodeId, 'owner-intake');
   });
 
-  await test('Store: loading a v2 flow migrates it to v4 with empty roleContinuity', async () => {
+  await test('Store: loading a v2 flow migrates it to v5 with empty roleContinuity and edge artifacts', async () => {
     const v2Flow: any = {
       flowId: 'v2-flow',
       projectRoot: workspaceRoot,
@@ -254,7 +254,6 @@ async function run() {
       recordFolderPath: recordDir,
       activeNodes: [],
       completedNodes: [],
-      completedNodeArtifacts: {},
       pendingNodeArtifacts: {},
       status: 'completed',
       stateVersion: '2'
@@ -263,8 +262,9 @@ async function run() {
 
     const loaded = SessionStore.loadFlowRun();
     assert.ok(loaded !== null);
-    assert.strictEqual(loaded!.stateVersion, '4');
+    assert.strictEqual(loaded!.stateVersion, '5');
     assert.strictEqual(loaded!.workspaceRoot, workspaceRoot);
+    assert.deepStrictEqual(loaded!.completedEdgeArtifacts, {});
     assert.deepStrictEqual(loaded!.roleContinuity, {});
   });
 
@@ -322,9 +322,9 @@ async function run() {
     const flowRun = makeFlowRun({
       activeNodes: ['owner-gate'],
       completedNodes: ['owner-intake', 'ta'],
-      completedNodeArtifacts: {
-        'owner-intake': path.relative(workspaceRoot, ownerArtifact1),
-        'ta': path.relative(workspaceRoot, taArtifact)
+      completedEdgeArtifacts: {
+        'owner-intake=>ta': path.relative(workspaceRoot, ownerArtifact1),
+        'ta=>owner-gate': path.relative(workspaceRoot, taArtifact)
       },
       pendingNodeArtifacts: {
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]

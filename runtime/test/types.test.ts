@@ -26,10 +26,10 @@ test('FlowRun: conforms to new multi-node structure', () => {
     recordFolderPath: './records/r1',
     activeNodes: ['node1'],
     completedNodes: [],
-    completedNodeArtifacts: {},
+    completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'node1': ['artifact.md'] },
     status: 'initialized',
-    stateVersion: '4'
+    stateVersion: '5'
   };
 
   assert.strictEqual(flowRun.activeNodes.length, 1);

@@ -44,10 +44,10 @@ test('renderFlowStatus: single active node, no completed', () => {
     recordFolderPath: './records/r1',
     activeNodes: ['start'],
     completedNodes: [],
-    completedNodeArtifacts: {},
+    completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': ['p.md'] },
     status: 'running',
-    stateVersion: '4'
+    stateVersion: '5'
   };
 
   const output = renderFlowStatus(flowRun, WF);
@@ -66,10 +66,15 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       recordFolderPath: './records/r1',
       activeNodes: ['t1'],
       completedNodes: ['start', 'fork', 't2'],
-      completedNodeArtifacts: { 'start': 'p1.md', 'fork': '', 't2': 'p2.md' },
+      completedEdgeArtifacts: {
+        'start=>fork': 'p1.md',
+        'fork=>t1': 'p3.md',
+        'fork=>t2': 'p2.md',
+        't2=>join': 'p2.md'
+      },
       pendingNodeArtifacts: { 't1': ['p3.md'] },
       status: 'running',
-      stateVersion: '4'
+      stateVersion: '5'
     };
   
     const output = renderFlowStatus(flowRun, WF);
@@ -90,10 +95,10 @@ test('renderFlowStatus: awaiting_human status renders explicit suspended notice'
     recordFolderPath: './records/r1',
     activeNodes: ['start'],
     completedNodes: [],
-    completedNodeArtifacts: {},
+    completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'awaiting_human',
-    stateVersion: '4'
+    stateVersion: '5'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('Status: awaiting_human'), 'must show awaiting_human status');
@@ -108,10 +113,14 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     recordFolderPath: './records/r1',
     activeNodes: ['t1', 't2'],
     completedNodes: ['start', 'fork'],
-    completedNodeArtifacts: { 'start': 'p1.md', 'fork': '' },
+    completedEdgeArtifacts: {
+      'start=>fork': 'p1.md',
+      'fork=>t1': 'p2.md',
+      'fork=>t2': 'p3.md'
+    },
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] },
     status: 'running',
-    stateVersion: '4'
+    stateVersion: '5'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('[→] t1 (TD)'));
@@ -127,10 +136,16 @@ test('renderFlowStatus: completed flow', () => {
         recordFolderPath: './records/r1',
         activeNodes: [],
         completedNodes: ['start', 'fork', 't1', 't2', 'join'],
-        completedNodeArtifacts: { 'start': 'p1.md', 'fork': '', 't1': 'p4.md', 't2': 'p2.md', 'join': 'p5.md' },
+        completedEdgeArtifacts: {
+          'start=>fork': 'p1.md',
+          'fork=>t1': 'p4.md',
+          'fork=>t2': 'p2.md',
+          't1=>join': 'p4.md',
+          't2=>join': 'p2.md'
+        },
         pendingNodeArtifacts: {},
         status: 'completed',
-        stateVersion: '4'
+        stateVersion: '5'
       };
     
       const output = renderFlowStatus(flowRun, WF);

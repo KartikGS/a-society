@@ -43,10 +43,10 @@ export interface FlowRun {
   recordFolderPath: string;
   activeNodes: string[];                          // node IDs currently executing
   completedNodes: string[];                       // node IDs that have finished
-  completedNodeArtifacts: Record<string, string>; // nodeId → artifact_path of that node's output
+  completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "4" for this schema; "3" = prior; "2" and absent/"1" = legacy
+  stateVersion: string;                        // Persistence version: "5" for this schema; "4" and earlier are legacy
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
   roleContinuity?: Record<string, RoleContinuityState>; // roleName → continuity state for same-role later-node returns
 }

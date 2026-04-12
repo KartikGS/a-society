@@ -165,7 +165,9 @@ export class FlowOrchestrator {
                       activeNodes.push(node.id);
                       pendingNodeArtifacts[node.id] = [];
                     }
-                    pendingNodeArtifacts[node.id].push(handoff.artifact_path ?? '');
+                    if (handoff.artifact_path) {
+                      pendingNodeArtifacts[node.id].push(handoff.artifact_path);
+                    }
                   }
                 }
                 if (activeNodes.length === 0) activeNodes.push('start');
@@ -178,10 +180,10 @@ export class FlowOrchestrator {
                   recordFolderPath,
                   activeNodes,
                   completedNodes: [],
-                  completedNodeArtifacts: {},
+                  completedEdgeArtifacts: {},
                   pendingNodeArtifacts,
                   status: 'running',
-                  stateVersion: '4',
+                  stateVersion: '5',
                   roleContinuity: {}
                 };
                 SessionStore.saveFlowRun(flowRun);
@@ -501,7 +503,6 @@ export class FlowOrchestrator {
     if (outgoingEdges.length === 0) {
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
-      flowRun.completedNodeArtifacts[nodeId] = handoffs[0]?.artifact_path ?? '';
 
       // Emit handoff.applied for terminal node (no successors)
       this.renderer.emit({
@@ -533,9 +534,9 @@ export class FlowOrchestrator {
 
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
-      flowRun.completedNodeArtifacts[nodeId] = handoffs[0].artifact_path ?? '';
+      flowRun.completedEdgeArtifacts[this.edgeKey(nodeId, successorNode.id)] = handoffs[0].artifact_path ?? '';
 
-      this.activateOrDefer(flowRun, wf, successorNode.id, [handoffs[0].artifact_path ?? '']);
+      this.activateOrDefer(flowRun, wf, successorNode.id);
 
       // Emit handoff.applied for linear transition
       const artifactBasename = handoffs[0].artifact_path ? path.basename(handoffs[0].artifact_path) : undefined;
@@ -548,12 +549,16 @@ export class FlowOrchestrator {
       // Emit role.active for the successor at the handoff boundary (if it activated, not deferred).
       // Track it so advanceFlow suppresses the duplicate when it enters this node.
       if (flowRun.activeNodes.includes(successorNode.id)) {
+        const activatedArtifacts = flowRun.pendingNodeArtifacts[successorNode.id] ?? [];
+        const activatedArtifactBasename = activatedArtifacts.length === 1 && activatedArtifacts[0]
+          ? path.basename(activatedArtifacts[0])
+          : undefined;
         this.renderer.emit({
           kind: 'role.active',
           nodeId: successorNode.id,
           role: successorNode.role,
-          artifactCount: 1,
-          artifactBasename
+          artifactCount: activatedArtifacts.length,
+          artifactBasename: activatedArtifactBasename
         });
         this.pendingRoleActiveEmitted.add(successorNode.id);
       }
@@ -591,10 +596,10 @@ export class FlowOrchestrator {
 
       this.removeActiveNode(flowRun, nodeId);
       flowRun.completedNodes.push(nodeId);
-      flowRun.completedNodeArtifacts[nodeId] = '';
 
       for (const pair of activationPairs) {
-        this.activateOrDefer(flowRun, wf, pair.targetId, [pair.artifact]);
+        flowRun.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
+        this.activateOrDefer(flowRun, wf, pair.targetId);
       }
 
       // Emit fork handoff.applied
@@ -648,29 +653,26 @@ export class FlowOrchestrator {
     delete flowRun.pendingNodeArtifacts[nodeId];
   }
 
-  private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string, incomingArtifacts: string[]) {
+  private edgeKey(fromNodeId: string, toNodeId: string): string {
+    return `${fromNodeId}=>${toNodeId}`;
+  }
+
+  private collectIncomingArtifacts(flowRun: FlowRun, incomingEdges: any[]): string[] {
+    return incomingEdges
+      .map((edge: any) => flowRun.completedEdgeArtifacts[this.edgeKey(edge.from, edge.to)] ?? '')
+      .filter((artifact: string) => artifact !== '');
+  }
+
+  private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string) {
     const incomingEdges = (wf.edges || []).filter((e: any) => e.to === candidateNodeId);
-
-    if (incomingEdges.length <= 1) {
-      flowRun.pendingNodeArtifacts[candidateNodeId] = incomingArtifacts;
-      if (!flowRun.activeNodes.includes(candidateNodeId)) {
-        flowRun.activeNodes.push(candidateNodeId);
-      }
-      return;
-    }
-
     const allComplete = incomingEdges.every((e: any) => flowRun.completedNodes.includes(e.from));
 
     if (allComplete) {
-      const joinArtifacts = incomingEdges
-        .map((e: any) => flowRun.completedNodeArtifacts[e.from])
-        .filter((a: string) => a !== '');
-
-      flowRun.pendingNodeArtifacts[candidateNodeId] = joinArtifacts;
+      flowRun.pendingNodeArtifacts[candidateNodeId] = this.collectIncomingArtifacts(flowRun, incomingEdges);
       if (!flowRun.activeNodes.includes(candidateNodeId)) {
         flowRun.activeNodes.push(candidateNodeId);
       }
-    } else {
+    } else if (incomingEdges.length > 1) {
       // Join-blocked: emit parallel.join_waiting
       const candidateNode = wf.nodes.find((n: any) => n.id === candidateNodeId);
       const waitingFor = incomingEdges
