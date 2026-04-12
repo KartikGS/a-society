@@ -57,18 +57,21 @@ function findPendingJoins(flowRun: FlowRun, wf: WfGraph): Array<{ id: string; ro
     incomingEdges[edge.to] = [...(incomingEdges[edge.to] ?? []), edge.from];
   }
 
+  const hasRealizedIncomingEdge = (fromId: string, toId: string): boolean =>
+    `${fromId}=>${toId}` in flowRun.completedEdgeArtifacts;
+
   return wf.nodes
     .filter(n => {
       const preds = incomingEdges[n.id] ?? [];
       if (preds.length <= 1) return false;
       if (flowRun.activeNodes.includes(n.id)) return false;
       if (flowRun.completedNodes.includes(n.id)) return false;
-      // At least one predecessor is completed
-      return preds.some(p => flowRun.completedNodes.includes(p));
+      // At least one predecessor has produced its edge to this join.
+      return preds.some(p => hasRealizedIncomingEdge(p, n.id));
     })
     .map(n => ({
       id: n.id,
       role: n.role,
-      waiting: (incomingEdges[n.id] ?? []).filter(p => !flowRun.completedNodes.includes(p)),
+      waiting: (incomingEdges[n.id] ?? []).filter(p => !hasRealizedIncomingEdge(p, n.id)),
     }));
 }

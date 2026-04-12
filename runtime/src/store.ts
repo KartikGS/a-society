@@ -91,4 +91,12 @@ export class SessionStore {
     return JSON.parse(fs.readFileSync(p, 'utf8')) as RoleSession;
   }
 
+  static deleteRoleSession(logicalSessionId: string) {
+    const sessionsDir = getSessionsDir(getStateDir());
+    const p = path.join(sessionsDir, `${logicalSessionId}.json`);
+    if (fs.existsSync(p)) {
+      fs.unlinkSync(p);
+    }
+  }
+
 }

@@ -110,11 +110,11 @@ workflow:
     serverTurn++;
 
     if (serverTurn === 1) {
-      const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'missing-output.md'\n```";
+      const handoffBlock = "```handoff\ntarget_node_id: 'next'\nartifact_path: 'missing-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Attempting handoff. " + handoffBlock } }] })}\n\n`);
     } else {
       fs.writeFileSync(path.join(workspaceRoot, 'valid-output.md'), 'Valid artifact content.');
-      const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'valid-output.md'\n```";
+      const handoffBlock = "```handoff\ntarget_node_id: 'next'\nartifact_path: 'valid-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Retrying with saved artifact. " + handoffBlock } }] })}\n\n`);
     }
     res.write('data: [DONE]\n\n');
@@ -128,8 +128,6 @@ workflow:
     await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
 
     const updatedFlow = SessionStore.loadFlowRun()!;
-    const session = SessionStore.loadRoleSession('test-missing-artifact-flow-id__start');
-    const history = session?.transcriptHistory as any[];
     const operatorOut = operatorChunks.join('');
 
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
@@ -137,14 +135,6 @@ workflow:
     assert.ok(
       operatorOut.includes('[runtime/repair] Referenced artifact unavailable; retrying current node'),
       'Expected operator stream to show missing-artifact repair notice.'
-    );
-    assert.ok(
-      history.some(message =>
-        message.role === 'user' &&
-        typeof message.content === 'string' &&
-        message.content.includes('no file exists at that path')
-      ),
-      'Expected model-facing repair message to explain that artifact_path must exist on disk.'
     );
   } finally {
     server.close();

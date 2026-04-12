@@ -7,7 +7,7 @@ export type FlowStatus =
   | 'failed';
 
 export interface HandoffTarget {
-  role: string;
+  target_node_id: string;
   artifact_path: string | null;
 }
 

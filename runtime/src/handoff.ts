@@ -31,7 +31,7 @@ function missingBlock(): HandoffParseError {
     code: 'missing_block',
     operatorSummary: 'Malformed handoff block',
     modelRepairMessage:
-      'Error: No handoff block found. Please end your response with a fenced code block tagged `handoff`. Use either the target form (`role` + `artifact_path`) or an appropriate typed signal (`prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or `backward-pass-complete`).'
+      'Error: No handoff block found. Please end your response with a fenced code block tagged `handoff`. Use either the target form (`target_node_id` + `artifact_path`) or an appropriate typed signal (`prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or `backward-pass-complete`).'
   });
 }
 
@@ -40,7 +40,7 @@ function yamlParseError(): HandoffParseError {
     code: 'yaml_parse',
     operatorSummary: 'Malformed handoff block',
     modelRepairMessage:
-      'Error: Handoff block could not be parsed as YAML. Please correct the handoff block formatting and restate it using either the target form (`role` + `artifact_path`) or an appropriate typed signal.'
+      'Error: Handoff block could not be parsed as YAML. Please correct the handoff block formatting and restate it using either the target form (`target_node_id` + `artifact_path`) or an appropriate typed signal.'
   });
 }
 
@@ -106,12 +106,15 @@ export class HandoffInterpreter {
             throw invalidTargetShape('Handoff block must contain at least one target.');
           }
           const targets = payload.map((entry: any, i: number) => {
-            if (typeof entry.role !== 'string' || entry.role.trim() === '') {
+            if (typeof entry.target_node_id !== 'string' || entry.target_node_id.trim() === '') {
               throw missingRequiredField(
-                `Handoff array entry [${i}]: "role" field is required and must be a non-empty string.`
+                `Handoff array entry [${i}]: "target_node_id" field is required and must be a non-empty string.`
               );
             }
-            return { role: entry.role, artifact_path: entry.artifact_path ? String(entry.artifact_path) : null };
+            return {
+              target_node_id: entry.target_node_id,
+              artifact_path: entry.artifact_path ? String(entry.artifact_path) : null
+            };
           });
           result = { kind: 'targets', targets };
 
@@ -151,12 +154,15 @@ export class HandoffInterpreter {
               throw unknownSignalType(String(payload.type));
             }
           } else {
-            if (typeof payload.role !== 'string' || payload.role.trim() === '') {
-              throw missingRequiredField('"role" field is required and must be a non-empty string.');
+            if (typeof payload.target_node_id !== 'string' || payload.target_node_id.trim() === '') {
+              throw missingRequiredField('"target_node_id" field is required and must be a non-empty string.');
             }
             result = {
               kind: 'targets',
-              targets: [{ role: payload.role, artifact_path: payload.artifact_path ? String(payload.artifact_path) : null }]
+              targets: [{
+                target_node_id: payload.target_node_id,
+                artifact_path: payload.artifact_path ? String(payload.artifact_path) : null
+              }]
             };
           }
         } else {

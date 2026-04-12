@@ -57,15 +57,19 @@ roles:
     - $TEST_PROJECT_START_ROLE
   next:
     - $TEST_PROJECT_NEXT_ROLE
+  end:
+    - $TEST_PROJECT_END_ROLE
 `);
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
     `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
     `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/startrole.md\` |\n` +
-    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/nextrole.md\` |\n`
+    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/nextrole.md\` |\n` +
+    `| \`$TEST_PROJECT_END_ROLE\` | \`test-project/a-docs/roles/endrole.md\` |\n`
   );
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'startrole.md'), "Start Role Doc");
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'nextrole.md'), "Next Role Doc");
+  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'endrole.md'), "End Role Doc");
 
   const workflowGraph = `---
 workflow:
@@ -75,9 +79,13 @@ workflow:
       role: 'start'
     - id: next
       role: 'next'
+    - id: end
+      role: 'end'
   edges:
     - from: start
       to: next
+    - from: next
+      to: end
 ---
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
@@ -119,14 +127,14 @@ workflow:
     if (serverTurn === 1) {
       // Turn 1: 'start' node produces a valid handoff to 'next'
       fs.writeFileSync(path.join(workspaceRoot, 'start-output.md'), 'Start output artifact.');
-      const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'start-output.md'\n```";
+      const handoffBlock = "```handoff\ntarget_node_id: 'next'\nartifact_path: 'start-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Work done. " + handoffBlock } }] })}\n\n`);
       res.write(`data: [DONE]\n\n`);
       res.end();
     } else if (serverTurn === 2) {
-      // Turn 2: 'next' node produces a terminal handoff (no outgoing edges)
+      // Turn 2: 'next' node produces a valid handoff to 'end'
       fs.writeFileSync(path.join(workspaceRoot, 'next-output.md'), 'Next output artifact.');
-      const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'next-output.md'\n```";
+      const handoffBlock = "```handoff\ntarget_node_id: 'end'\nartifact_path: 'next-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "All done. " + handoffBlock } }] })}\n\n`);
       res.write(`data: [DONE]\n\n`);
       res.end();
@@ -167,6 +175,9 @@ workflow:
       1,
       `Expected exactly one role.active notice for successor node 'next', got ${nextRoleActiveCount}`
     );
+    const flowAfterNext = SessionStore.loadFlowRun()!;
+    assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");
+    assert.ok(flowAfterNext.activeNodes.includes('end'), "Expected successor node 'end' to be active.");
 
     console.log("Linear-role-active test PASSED.");
   } catch (e: any) {

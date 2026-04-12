@@ -19,29 +19,29 @@ function test(name: string, fn: () => void): void {
 console.log('\nhandoff-interpreter');
 
 test('parse (Single-object): returns array with one target', () => {
-  const text = "Some text before.\n```handoff\nrole: Owner\nartifact_path: path/to/file.md\n```";
+  const text = "Some text before.\n```handoff\ntarget_node_id: owner-review\nartifact_path: path/to/file.md\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual(result.kind, 'targets');
   const targets = (result as any).targets;
   assert.strictEqual(targets.length, 1);
-  assert.strictEqual(targets[0].role, 'Owner');
+  assert.strictEqual(targets[0].target_node_id, 'owner-review');
   assert.strictEqual(targets[0].artifact_path, 'path/to/file.md');
 });
 
 test('parse (Array): returns multiple targets', () => {
-  const text = "Fork point reached.\n```handoff\n- role: Framework Services Developer\n  artifact_path: path/a.md\n- role: Orchestration Developer\n  artifact_path: path/b.md\n```";
+  const text = "Fork point reached.\n```handoff\n- target_node_id: framework-services-implementation\n  artifact_path: path/a.md\n- target_node_id: orchestration-implementation\n  artifact_path: path/b.md\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual(result.kind, 'targets');
   const targets = (result as any).targets;
   assert.strictEqual(targets.length, 2);
-  assert.strictEqual(targets[0].role, 'Framework Services Developer');
-  assert.strictEqual(targets[1].role, 'Orchestration Developer');
+  assert.strictEqual(targets[0].target_node_id, 'framework-services-implementation');
+  assert.strictEqual(targets[1].target_node_id, 'orchestration-implementation');
   assert.strictEqual(targets[0].artifact_path, 'path/a.md');
   assert.strictEqual(targets[1].artifact_path, 'path/b.md');
 });
 
 test('parse (Null artifact): handles null artifact_path', () => {
-  const text = "```handoff\nrole: Curator\nartifact_path: null\n```";
+  const text = "```handoff\ntarget_node_id: curator-proposal\nartifact_path: null\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual((result as any).targets[0].artifact_path, null);
 });
@@ -84,7 +84,7 @@ test('parse (Empty array): throws HandoffParseError with invalid_target_shape co
   assert.ok(err.details.modelRepairMessage.includes('at least one target'));
 });
 
-test('parse (Invalid role): throws missing_required_field for missing or empty role', () => {
+test('parse (Invalid target_node_id): throws missing_required_field for missing or empty target_node_id', () => {
   const text = "```handoff\nartifact_path: some/path.md\n```";
   let err: any;
   assert.throws(() => {
@@ -93,14 +93,14 @@ test('parse (Invalid role): throws missing_required_field for missing or empty r
   assert.strictEqual(err.details.code, 'missing_required_field');
   assert.strictEqual(err.details.operatorSummary, 'Handoff block missing required field');
 
-  const text2 = "```handoff\n- role: ' '\n  artifact_path: p.md\n```";
+  const text2 = "```handoff\n- target_node_id: ' '\n  artifact_path: p.md\n```";
   assert.throws(() => {
     HandoffInterpreter.parse(text2);
   }, (e: any) => e instanceof HandoffParseError && e.details.code === 'missing_required_field');
 });
 
 test('parse (Malformed YAML): throws HandoffParseError with yaml_parse code', () => {
-  const text = "```handoff\n - role: Owner\n  - artifact_path: p.md\n```";
+  const text = "```handoff\n - target_node_id: owner-review\n  - artifact_path: p.md\n```";
   let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
@@ -148,7 +148,7 @@ test('parse (Typed signal missing required fields): throws missing_required_fiel
 });
 
 test('parse (Missing handoff block): throws missing_block code', () => {
-  const text = "```yaml\nrole: Owner\n```";
+  const text = "```yaml\ntarget_node_id: owner-review\n```";
   let err: any;
   assert.throws(() => {
     HandoffInterpreter.parse(text);
@@ -158,7 +158,7 @@ test('parse (Missing handoff block): throws missing_block code', () => {
 });
 
 test('malformed handoff and unsupported signal produce distinct codes and operator summaries', () => {
-  const malformedText = "```handoff\n - role: Owner\n  - bad: yaml\n```";
+  const malformedText = "```handoff\n - target_node_id: owner-review\n  - bad: yaml\n```";
   let malformedErr: any;
   try { HandoffInterpreter.parse(malformedText); } catch (e) { malformedErr = e; }
 

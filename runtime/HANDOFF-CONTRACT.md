@@ -21,8 +21,8 @@ Do not emit a block for:
 - intermediate output that does not conclude the current step
 
 **Form selection rule:**
-At fork points, emit one handoff entry per fork target using the array form.
-At non-fork points, emit a single handoff using the single-object form.
+When exactly one target node must receive the handoff, emit a single-object form.
+When multiple target nodes must receive the handoff, emit one handoff entry per target using the array form.
 
 ---
 
@@ -38,25 +38,25 @@ The block is always last in the pause-point output.
 
 ### Single-target form
 
-Use this when the current workflow node has exactly one outgoing edge.
+Use this when the current workflow node has exactly one target node for this pause point.
 
 ```yaml
-role:          <string>
-artifact_path: <string>
+target_node_id: <string>
+artifact_path:   <string>
 ```
 
 ### Array form
 
-Use this when the current workflow node has multiple outgoing edges.
+Use this when the current workflow node has multiple target nodes for this pause point.
 
 ```yaml
-- role:          <string>
-  artifact_path: <string>
-- role:          <string>
-  artifact_path: <string>
+- target_node_id: <string>
+  artifact_path:   <string>
+- target_node_id: <string>
+  artifact_path:   <string>
 ```
 
-Emit one array entry per fork target.
+Emit one array entry per target node.
 
 ### Typed signals
 
@@ -93,7 +93,7 @@ Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis
 
 ## Field Definitions
 
-**`role`** — Non-empty receiving role name matching the project's declared role set.
+**`target_node_id`** — Non-empty workflow node identifier naming the receiving node.
 
 **`artifact_path`** — Repo-relative path to the primary artifact for the next phase or terminal signal.
 
@@ -110,17 +110,24 @@ Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis
 **Single target**
 
 ```handoff
-role: Owner
+target_node_id: owner-review
 artifact_path: [project-name]/a-docs/records/[record-folder]/03-curator-to-owner.md
 ```
 
 **Fork**
 
 ```handoff
-- role: Framework Services Developer
+- target_node_id: framework-services-implementation
   artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
-- role: Orchestration Developer
+- target_node_id: orchestration-implementation
   artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
+```
+
+**Backward revise / resubmission**
+
+```handoff
+target_node_id: curator-proposal
+artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-to-curator.md
 ```
 
 **Forward-pass closure**

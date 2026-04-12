@@ -199,8 +199,7 @@ test('scaffold: overwrites existing files when overwrite is true', () => {
 
 test('scaffold: fails entry with missing path field', () => {
   const projectRoot = path.join(TEMP_BASE, 'invalid-entry-test');
-  // @ts-expect-error intentional missing field to test runtime guard
-  const entries = [{ scaffold: 'stub', source_path: 'general/instructions/something.md' }];
+  const entries = [{ scaffold: 'stub', source_path: 'general/instructions/something.md' }] as any;
   const result = scaffold(projectRoot, 'Test', SOCIETY_ROOT, entries);
   assert.strictEqual(result.failed.length, 1);
   assert.ok(result.failed[0].reason.includes('missing required fields'));

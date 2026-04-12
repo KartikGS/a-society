@@ -69,8 +69,8 @@ workflow:
   const orchestrator = new FlowOrchestrator();
 
   await orchestrator.applyHandoffAndAdvance(flowRun, 'producer', 'Owner', [
-    { role: 'Curator', artifact_path: 'records/test-flow/02-producer-to-a.md' },
-    { role: 'Framework Services Developer', artifact_path: 'records/test-flow/02-producer-to-b.md' },
+    { target_node_id: 'branch-a', artifact_path: 'records/test-flow/02-producer-to-a.md' },
+    { target_node_id: 'branch-b', artifact_path: 'records/test-flow/02-producer-to-b.md' },
   ]);
 
   let updated = SessionStore.loadFlowRun()!;
@@ -93,7 +93,7 @@ workflow:
   );
 
   await orchestrator.applyHandoffAndAdvance(updated, 'branch-c', 'Technical Architect', [
-    { role: 'Framework Services Developer', artifact_path: 'records/test-flow/03-c-to-b.md' },
+    { target_node_id: 'branch-b', artifact_path: 'records/test-flow/03-c-to-b.md' },
   ]);
 
   updated = SessionStore.loadFlowRun()!;

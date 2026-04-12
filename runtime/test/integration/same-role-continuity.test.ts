@@ -286,7 +286,7 @@ async function run() {
     SessionStore.saveFlowRun(flowRun);
 
     const artifactRelPath = path.relative(workspaceRoot, ownerArtifact1);
-    const handoffText = `Done. \`\`\`handoff\nrole: 'ta'\nartifact_path: '${artifactRelPath}'\n\`\`\``;
+    const handoffText = `Done. \`\`\`handoff\ntarget_node_id: 'ta'\nartifact_path: '${artifactRelPath}'\n\`\`\``;
     const unpatch = patchLLM(new MockProvider([
       { type: 'text', text: handoffText }
     ]));

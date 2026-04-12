@@ -137,9 +137,9 @@ workflow:
       fs.writeFileSync(path.join(recordPath, '01-owner-to-curator.md'), 'Owner brief for Curator.');
       fs.writeFileSync(path.join(recordPath, '01-owner-to-ta.md'), 'Owner brief for TA.');
       const handoffBlock = `Bootstrap routing. \`\`\`handoff
-- role: 'Curator'
+- target_node_id: 'curator'
   artifact_path: 'test-project/records/test-flow/01-owner-to-curator.md'
-- role: 'Technical Architect'
+- target_node_id: 'ta'
   artifact_path: 'test-project/records/test-flow/01-owner-to-ta.md'
 \`\`\``;
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: handoffBlock } }] })}\n\n`);

@@ -22,6 +22,8 @@ export class WorkflowError extends Error {
   }
 }
 
+type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
+
 
 export function parseWorkflow(filePath: string): any {
   if (!fs.existsSync(filePath)) {
@@ -175,7 +177,6 @@ export class FlowOrchestrator {
                   stateVersion: '5',
                   roleContinuity: {}
                 };
-                this.recordRoleContinuityCompletion(flowRun, roleName, startNode.id, handoffs);
                 await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs, turnUsage);
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
                 break;
@@ -397,6 +398,11 @@ export class FlowOrchestrator {
               if (handoffResult.kind === 'forward-pass-closed') {
                 span.setAttribute('node.outcome', 'forward_pass_closed');
                 emitUsage(this.renderer, turnUsage);
+                this.removeActiveNode(flowRun, nodeId);
+                this.addCompletedNode(flowRun, nodeId);
+                session.transcriptHistory = injectedHistory;
+                session.isActive = false;
+                SessionStore.saveRoleSession(session);
                 this.renderer.emit({
                   kind: 'flow.forward_pass_closed',
                   recordFolderPath: handoffResult.recordFolderPath,
@@ -426,15 +432,12 @@ export class FlowOrchestrator {
               const handoffs = handoffResult.targets;
               this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
 
-              // Update role-continuity ledger before advancing so the save inside
-              // applyHandoffAndAdvance persists it in the same write.
-              this.recordRoleContinuityCompletion(flowRun, roleName, nodeId, handoffs);
-
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs, turnUsage);
 
               session.transcriptHistory = injectedHistory;
+              session.isActive = false;
               SessionStore.saveRoleSession(session);
-              span.addEvent('store.session_saved', { 'session.id': sessionId });
+              span.addEvent('store.session_saved', { 'session.id': sessionId, 'session.active': false });
               break;
             } else {
               span.setAttribute('node.outcome', 'null_return');
@@ -485,19 +488,58 @@ export class FlowOrchestrator {
     fromRole: string,
     handoffs: HandoffTarget[],
     turnUsage?: TurnUsage
-  ): Promise<void> {
+  ): Promise<AppliedHandoffDirection> {
     if (!fs.existsSync(flowRun.recordFolderPath)) {
       throw new WorkflowError(`Error: No record folder found at ${flowRun.recordFolderPath}. A record folder must be created before emitting a handoff. Please create the record folder, create workflow.md inside it, and restate your handoff.`);
     }
     this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
     const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
 
-    const outgoingEdges = (wf.edges || []).filter((e: any) => e.from === nodeId);
+    const currentNode = this.findNodeById(wf, nodeId);
+    const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
+    const incomingEdges = this.getIncomingEdges(wf, nodeId);
+    const outstandingOutgoingEdges = this.getOutstandingOutgoingEdges(flowRun, wf, nodeId);
 
-    if (outgoingEdges.length === 0) {
+    const forwardTargets: HandoffTarget[] = [];
+    const backwardTargets: HandoffTarget[] = [];
+
+    for (const handoff of handoffs) {
+      const targetNodeId = handoff.target_node_id;
+      const isForward = outstandingOutgoingEdges.some((edge: any) => edge.to === targetNodeId);
+      const isBackward = incomingEdges.some((edge: any) => edge.from === targetNodeId);
+
+      if (isForward && isBackward) {
+        throw new Error(`Target node '${targetNodeId}' is both an unresolved successor and a predecessor of '${nodeId}', which is unsupported.`);
+      }
+      if (isForward) {
+        forwardTargets.push(handoff);
+        continue;
+      }
+      if (isBackward) {
+        backwardTargets.push(handoff);
+        continue;
+      }
+
+      const targetExists = this.findNodeById(wf, targetNodeId);
+      if (!targetExists) {
+        throw new Error(`Target node '${targetNodeId}' not found in workflow.`);
+      }
+      throw new Error(
+        `Unauthorized transition: node '${nodeId}' may hand forward only to unresolved successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
+      );
+    }
+
+    if (forwardTargets.length > 0 && backwardTargets.length > 0) {
+      throw new Error(`Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`);
+    }
+
+    if (handoffs.length === 0) {
+      if (outgoingEdges.length > 0) {
+        throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
+      }
       emitUsage(this.renderer, turnUsage);
       this.removeActiveNode(flowRun, nodeId);
-      flowRun.completedNodes.push(nodeId);
+      this.addCompletedNode(flowRun, nodeId);
 
       // Emit handoff.applied for terminal node (no successors)
       this.renderer.emit({
@@ -511,94 +553,47 @@ export class FlowOrchestrator {
         flowRun.status = 'completed';
       }
       SessionStore.saveFlowRun(flowRun);
-      return;
+      return 'terminal';
     }
 
-    if (outgoingEdges.length === 1) {
-      if (handoffs.length !== 1) {
-        throw new Error(`Non-fork node '${nodeId}' has 1 outgoing edge but agent emitted ${handoffs.length} handoff targets. Use single-target handoff form for non-fork nodes.`);
-      }
-      const edge = outgoingEdges[0];
-      const successorNode = wf.nodes.find((n: any) => n.id === edge.to);
-      if (!successorNode) throw new Error(`Successor node '${edge.to}' not found.`);
-
-      if (successorNode.role !== handoffs[0].role) {
-        throw new Error(`Unauthorized transition: node '${nodeId}' must hand to '${successorNode.role}' but proposed '${handoffs[0].role}'.`);
-      }
-
-      emitUsage(this.renderer, turnUsage);
-      this.removeActiveNode(flowRun, nodeId);
-      flowRun.completedNodes.push(nodeId);
-      flowRun.completedEdgeArtifacts[this.edgeKey(nodeId, successorNode.id)] = handoffs[0].artifact_path ?? '';
-
-      this.activateOrDefer(flowRun, wf, successorNode.id);
-
-      // Emit handoff.applied for linear transition
-      const artifactBasename = handoffs[0].artifact_path ? path.basename(handoffs[0].artifact_path) : undefined;
-      this.renderer.emit({
-        kind: 'handoff.applied',
-        fromNodeId: nodeId,
-        fromRole,
-        targets: [{ nodeId: successorNode.id, role: successorNode.role, artifactBasename }]
-      });
-      // Emit role.active for the successor at the handoff boundary (if it activated, not deferred).
-      // Track it so advanceFlow suppresses the duplicate when it enters this node.
-      if (flowRun.activeNodes.includes(successorNode.id)) {
-        const activatedArtifacts = flowRun.pendingNodeArtifacts[successorNode.id] ?? [];
-        const activatedArtifactBasename = activatedArtifacts.length === 1 && activatedArtifacts[0]
-          ? path.basename(activatedArtifacts[0])
-          : undefined;
-        this.renderer.emit({
-          kind: 'role.active',
-          nodeId: successorNode.id,
-          role: successorNode.role,
-          artifactCount: activatedArtifacts.length,
-          artifactBasename: activatedArtifactBasename
-        });
-        this.pendingRoleActiveEmitted.add(successorNode.id);
-      }
-
-      SessionStore.saveFlowRun(flowRun);
-      return;
-    }
-
-    if (outgoingEdges.length > 1) {
-      if (handoffs.length !== outgoingEdges.length) {
-        throw new Error(`Fork node '${nodeId}' has ${outgoingEdges.length} outgoing edges but agent emitted ${handoffs.length} handoff targets. An array handoff with one entry per fork target is required.`);
-      }
-
-      const roles = outgoingEdges.map((e: any) => wf.nodes.find((n: any) => n.id === e.to)?.role);
-      const uniqueRoles = new Set(roles);
-      if (uniqueRoles.size !== roles.length) {
-        const duplicateRole = roles.find((r: any, i: number) => roles.indexOf(r) !== i);
-        throw new Error(`Fork node '${nodeId}' has multiple outgoing edges with role '${duplicateRole}'. Non-unique fork-target roles are not supported in this version. Each fork target must have a distinct role.`);
+    if (forwardTargets.length > 0) {
+      if (forwardTargets.length !== outstandingOutgoingEdges.length) {
+        throw new Error(
+          `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s).`
+        );
       }
 
       const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
-      const claimedHandoffs = new Set<number>();
+      const claimedTargets = new Set<string>();
 
-      for (const edge of outgoingEdges) {
-        const targetNode = wf.nodes.find((n: any) => n.id === edge.to);
-        const handoffIdx = handoffs.findIndex((h, idx) => h.role === targetNode.role && !claimedHandoffs.has(idx));
-
-        if (handoffIdx === -1) {
-          throw new Error(`Fork node '${nodeId}' has no handoff target with role '${targetNode.role}'.`);
+      for (const edge of outstandingOutgoingEdges) {
+        const targetNode = this.findNodeById(wf, edge.to);
+        const handoff = forwardTargets.find(h => h.target_node_id === targetNode.id);
+        if (!handoff) {
+          throw new Error(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
         }
-
-        claimedHandoffs.add(handoffIdx);
-        activationPairs.push({ targetId: targetNode.id, artifact: handoffs[handoffIdx].artifact_path ?? '', role: targetNode.role });
+        if (claimedTargets.has(handoff.target_node_id)) {
+          throw new Error(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
+        }
+        claimedTargets.add(handoff.target_node_id);
+        activationPairs.push({
+          targetId: targetNode.id,
+          artifact: handoff.artifact_path ?? '',
+          role: targetNode.role
+        });
       }
 
       emitUsage(this.renderer, turnUsage);
       this.removeActiveNode(flowRun, nodeId);
-      flowRun.completedNodes.push(nodeId);
 
       for (const pair of activationPairs) {
         flowRun.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
         this.activateOrDefer(flowRun, wf, pair.targetId);
       }
 
-      // Emit fork handoff.applied
+      this.markNodeCompletedIfSettled(flowRun, wf, nodeId);
+      this.recordRoleContinuityCompletion(flowRun, currentNode.role, nodeId, forwardTargets);
+
       this.renderer.emit({
         kind: 'handoff.applied',
         fromNodeId: nodeId,
@@ -610,16 +605,76 @@ export class FlowOrchestrator {
         }))
       });
 
-      // Emit parallel.active_set for the newly active fork targets
-      const activeNodes = flowRun.activeNodes.map(id => {
-        const node = wf.nodes.find((n: any) => n.id === id);
-        return { nodeId: id, role: node?.role ?? '' };
-      });
-      this.renderer.emit({ kind: 'parallel.active_set', activeNodes });
+      if (activationPairs.length === 1) {
+        this.emitRoleActiveIfActivated(flowRun, wf, activationPairs[0].targetId);
+      } else {
+        this.emitParallelActiveSet(flowRun, wf);
+      }
 
       SessionStore.saveFlowRun(flowRun);
-      return;
+      return 'forward';
     }
+
+    if (backwardTargets.length > 0) {
+      emitUsage(this.renderer, turnUsage);
+      this.removeActiveNode(flowRun, nodeId);
+      this.removeCompletedNode(flowRun, nodeId);
+
+      const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
+      const claimedTargets = new Set<string>();
+
+      for (const handoff of backwardTargets) {
+        if (claimedTargets.has(handoff.target_node_id)) {
+          throw new Error(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
+        }
+        claimedTargets.add(handoff.target_node_id);
+
+        const targetNode = this.findNodeById(wf, handoff.target_node_id);
+        const rejectedEdgeKey = this.edgeKey(targetNode.id, nodeId);
+        const rejectedArtifactPath = flowRun.completedEdgeArtifacts[rejectedEdgeKey];
+
+        if (!rejectedArtifactPath) {
+          throw new Error(
+            `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
+          );
+        }
+
+        delete flowRun.completedEdgeArtifacts[rejectedEdgeKey];
+        this.removeCompletedNode(flowRun, targetNode.id);
+        this.clearRoleContinuityCompletion(flowRun, targetNode.role, targetNode.id);
+        SessionStore.deleteRoleSession(`${flowRun.flowId}__${targetNode.id}`);
+
+        const activationArtifacts = [
+          rejectedArtifactPath,
+          handoff.artifact_path ?? '',
+        ].filter((artifact): artifact is string => artifact.trim() !== '');
+
+        this.activateOrDefer(flowRun, wf, targetNode.id, activationArtifacts);
+        reactivatedTargets.push({ targetId: targetNode.id, role: targetNode.role });
+      }
+
+      this.renderer.emit({
+        kind: 'handoff.applied',
+        fromNodeId: nodeId,
+        fromRole,
+        targets: reactivatedTargets.map(target => ({
+          nodeId: target.targetId,
+          role: target.role,
+          artifactBasename: undefined
+        }))
+      });
+
+      if (reactivatedTargets.length === 1) {
+        this.emitRoleActiveIfActivated(flowRun, wf, reactivatedTargets[0].targetId);
+      } else {
+        this.emitParallelActiveSet(flowRun, wf);
+      }
+
+      SessionStore.saveFlowRun(flowRun);
+      return 'backward';
+    }
+
+    throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
   }
 
 
@@ -651,6 +706,16 @@ export class FlowOrchestrator {
     delete flowRun.pendingNodeArtifacts[nodeId];
   }
 
+  private addCompletedNode(flowRun: FlowRun, nodeId: string) {
+    if (!flowRun.completedNodes.includes(nodeId)) {
+      flowRun.completedNodes.push(nodeId);
+    }
+  }
+
+  private removeCompletedNode(flowRun: FlowRun, nodeId: string) {
+    flowRun.completedNodes = flowRun.completedNodes.filter(id => id !== nodeId);
+  }
+
   private findStrictWorkflowStartNode(wf: any): any {
     const toIds = new Set((wf.edges || []).map((edge: any) => edge.to));
     const startNodes = (wf.nodes || []).filter((node: any) => !toIds.has(node.id));
@@ -671,11 +736,41 @@ export class FlowOrchestrator {
     if (!flowRun.roleContinuity[roleName]) {
       flowRun.roleContinuity[roleName] = { roleName, completedNodes: [] };
     }
+    flowRun.roleContinuity[roleName].completedNodes =
+      flowRun.roleContinuity[roleName].completedNodes.filter(entry => entry.nodeId !== nodeId);
     flowRun.roleContinuity[roleName].completedNodes.push({
       nodeId,
       outputArtifactPath: handoffs[0]?.artifact_path ?? null,
       completedAt: new Date().toISOString()
     });
+  }
+
+  private clearRoleContinuityCompletion(flowRun: FlowRun, roleName: string, nodeId: string): void {
+    if (!flowRun.roleContinuity?.[roleName]) return;
+    flowRun.roleContinuity[roleName].completedNodes =
+      flowRun.roleContinuity[roleName].completedNodes.filter(entry => entry.nodeId !== nodeId);
+  }
+
+  private findNodeById(wf: any, nodeId: string): any {
+    const node = wf.nodes.find((n: any) => n.id === nodeId);
+    if (!node) {
+      throw new Error(`Node '${nodeId}' not found in workflow.`);
+    }
+    return node;
+  }
+
+  private getOutgoingEdges(wf: any, nodeId: string): any[] {
+    return (wf.edges || []).filter((edge: any) => edge.from === nodeId);
+  }
+
+  private getIncomingEdges(wf: any, nodeId: string): any[] {
+    return (wf.edges || []).filter((edge: any) => edge.to === nodeId);
+  }
+
+  private getOutstandingOutgoingEdges(flowRun: FlowRun, wf: any, nodeId: string): any[] {
+    return this.getOutgoingEdges(wf, nodeId).filter(
+      (edge: any) => !(this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts)
+    );
   }
 
   private edgeKey(fromNodeId: string, toNodeId: string): string {
@@ -686,6 +781,34 @@ export class FlowOrchestrator {
     return incomingEdges
       .map((edge: any) => flowRun.completedEdgeArtifacts[this.edgeKey(edge.from, edge.to)] ?? '')
       .filter((artifact: string) => artifact !== '');
+  }
+
+  private mergeArtifacts(...artifactGroups: string[][]): string[] {
+    const seen = new Set<string>();
+    const merged: string[] = [];
+    for (const group of artifactGroups) {
+      for (const artifact of group) {
+        if (!artifact || seen.has(artifact)) continue;
+        seen.add(artifact);
+        merged.push(artifact);
+      }
+    }
+    return merged;
+  }
+
+  private markNodeCompletedIfSettled(flowRun: FlowRun, wf: any, nodeId: string): void {
+    const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
+    if (outgoingEdges.length === 0) return;
+
+    const allSettled = outgoingEdges.every((edge: any) =>
+      this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts
+    );
+
+    if (allSettled) {
+      this.addCompletedNode(flowRun, nodeId);
+    } else {
+      this.removeCompletedNode(flowRun, nodeId);
+    }
   }
 
   private validateTargetArtifactsExist(workspaceRoot: string, handoffs: HandoffTarget[]): void {
@@ -731,20 +854,24 @@ export class FlowOrchestrator {
     }
   }
 
-  private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string) {
-    const incomingEdges = (wf.edges || []).filter((e: any) => e.to === candidateNodeId);
-    const allComplete = incomingEdges.every((e: any) => flowRun.completedNodes.includes(e.from));
+  private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string, extraArtifacts: string[] = []) {
+    const incomingEdges = this.getIncomingEdges(wf, candidateNodeId);
+    const allComplete = incomingEdges.every((edge: any) =>
+      this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts
+    );
 
     if (allComplete) {
-      flowRun.pendingNodeArtifacts[candidateNodeId] = this.collectIncomingArtifacts(flowRun, incomingEdges);
+      const baseArtifacts = this.collectIncomingArtifacts(flowRun, incomingEdges);
+      const priorArtifacts = flowRun.pendingNodeArtifacts[candidateNodeId] ?? [];
+      flowRun.pendingNodeArtifacts[candidateNodeId] = this.mergeArtifacts(baseArtifacts, priorArtifacts, extraArtifacts);
       if (!flowRun.activeNodes.includes(candidateNodeId)) {
         flowRun.activeNodes.push(candidateNodeId);
       }
     } else if (incomingEdges.length > 1) {
       // Join-blocked: emit parallel.join_waiting
-      const candidateNode = wf.nodes.find((n: any) => n.id === candidateNodeId);
+      const candidateNode = this.findNodeById(wf, candidateNodeId);
       const waitingFor = incomingEdges
-        .filter((e: any) => !flowRun.completedNodes.includes(e.from))
+        .filter((edge: any) => !(this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts))
         .map((e: any) => e.from);
       this.renderer.emit({
         kind: 'parallel.join_waiting',
@@ -753,5 +880,30 @@ export class FlowOrchestrator {
         waitingFor
       });
     }
+  }
+
+  private emitRoleActiveIfActivated(flowRun: FlowRun, wf: any, nodeId: string) {
+    if (!flowRun.activeNodes.includes(nodeId)) return;
+    const node = this.findNodeById(wf, nodeId);
+    const activatedArtifacts = flowRun.pendingNodeArtifacts[nodeId] ?? [];
+    const artifactBasename = activatedArtifacts.length === 1 && activatedArtifacts[0]
+      ? path.basename(activatedArtifacts[0])
+      : undefined;
+    this.renderer.emit({
+      kind: 'role.active',
+      nodeId,
+      role: node.role,
+      artifactCount: activatedArtifacts.length,
+      artifactBasename
+    });
+    this.pendingRoleActiveEmitted.add(nodeId);
+  }
+
+  private emitParallelActiveSet(flowRun: FlowRun, wf: any) {
+    const activeNodes = flowRun.activeNodes.map(id => {
+      const node = wf.nodes.find((n: any) => n.id === id);
+      return { nodeId: id, role: node?.role ?? '' };
+    });
+    this.renderer.emit({ kind: 'parallel.active_set', activeNodes });
   }
 }

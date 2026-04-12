@@ -272,7 +272,7 @@ async function run() {
     clearTestSpans();
     clearTestMetrics();
     const mockProvider = new MockProvider([
-      { type: 'text', text: 'I broke the handoff. ```handoff\nrole:\n```' }
+      { type: 'text', text: 'I broke the handoff. ```handoff\ntarget_node_id:\n```' }
     ]);
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
@@ -321,7 +321,7 @@ async function run() {
     const mockProvider = new MockProvider([
       {
         type: 'text',
-        text: 'I broke the handoff. ```handoff\nrole:\n```',
+        text: 'I broke the handoff. ```handoff\ntarget_node_id:\n```',
         usage: { inputTokens: 21, outputTokens: 8 }
       }
     ]);
@@ -387,7 +387,7 @@ async function run() {
     const mockProvider = new MockProvider([
       {
         type: 'text',
-        text: "Accepted. ```handoff\nrole: 'owner'\nartifact_path: 'accepted-output.md'\n```",
+        text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
         usage: { inputTokens: 55, outputTokens: 13 }
       }
     ]);

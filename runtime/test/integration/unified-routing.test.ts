@@ -123,14 +123,14 @@ workflow:
 
       if (serverTurn === 1) {
         // Send malformed handoff to trigger repair loop
-        const content = "Here is a broken handoff: ```handoff\nrole: !!broken\n```";
+        const content = "Here is a broken handoff: ```handoff\ntarget_node_id:\n```";
         res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
         res.write(`data: [DONE]\n\n`);
         res.end();
       } else if (serverTurn === 2) {
         // Model should have received the repair message; now send a valid handoff
         fs.writeFileSync(path.join(workspaceRoot, 'mock.md'), 'Mock artifact content.');
-        const handoffBlock = "```handoff\nrole: 'next'\nartifact_path: 'mock.md'\n```";
+        const handoffBlock = "```handoff\ntarget_node_id: 'next'\nartifact_path: 'mock.md'\n```";
         res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Fixed: " + handoffBlock } }] })}\n\n`);
         res.write(`data: [DONE]\n\n`);
         res.end();
@@ -151,8 +151,8 @@ workflow:
     // The repair message injected into history is the model-facing repair message
     const repairInjected = history.some(m =>
       m.role === 'user' && (
-        m.content.includes('Handoff block') ||
-        m.content.includes('could not be parsed') ||
+        m.content.includes('target_node_id') ||
+        m.content.includes('artifact_path') ||
         m.content.includes('No handoff block found')
       )
     );
