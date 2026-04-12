@@ -10,7 +10,6 @@ import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './sess
 import { ImprovementOrchestrator } from './improvement.js';
 import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
 import { buildWorkflowRepairGuidance, validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
-import { computeBackwardPassPlan } from './framework-services/backward-pass-orderer.js';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
@@ -155,22 +154,8 @@ export class FlowOrchestrator {
                 }
 
                 const doc = parseWorkflow(workflowDocumentPath);
-                const nodes: any[] = doc.workflow?.nodes ?? [];
-                const activeNodes: string[] = [];
-                const pendingNodeArtifacts: Record<string, string[]> = {};
-                for (const handoff of handoffs) {
-                  const node = nodes.find((n: any) => n.role === handoff.role) ?? nodes[0];
-                  if (node) {
-                    if (!activeNodes.includes(node.id)) {
-                      activeNodes.push(node.id);
-                      pendingNodeArtifacts[node.id] = [];
-                    }
-                    if (handoff.artifact_path) {
-                      pendingNodeArtifacts[node.id].push(handoff.artifact_path);
-                    }
-                  }
-                }
-                if (activeNodes.length === 0) activeNodes.push('start');
+                const wf = doc.workflow;
+                const startNode = this.findStrictWorkflowStartNode(wf);
                 bootstrapSpan.setAttribute('bootstrap.workflow_path', path.relative(workspaceRoot, workflowDocumentPath));
 
                 flowRun = {
@@ -178,15 +163,16 @@ export class FlowOrchestrator {
                   workspaceRoot,
                   projectNamespace,
                   recordFolderPath,
-                  activeNodes,
+                  activeNodes: [startNode.id],
                   completedNodes: [],
                   completedEdgeArtifacts: {},
-                  pendingNodeArtifacts,
+                  pendingNodeArtifacts: {},
                   status: 'running',
                   stateVersion: '5',
                   roleContinuity: {}
                 };
-                SessionStore.saveFlowRun(flowRun);
+                this.recordRoleContinuityCompletion(flowRun, roleName, startNode.id, handoffs);
+                await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs);
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
                 break;
               } catch (e: any) {
@@ -433,15 +419,7 @@ export class FlowOrchestrator {
 
               // Update role-continuity ledger before advancing so the save inside
               // applyHandoffAndAdvance persists it in the same write.
-              if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
-              if (!flowRun.roleContinuity[roleName]) {
-                flowRun.roleContinuity[roleName] = { roleName, completedNodes: [] };
-              }
-              flowRun.roleContinuity[roleName].completedNodes.push({
-                nodeId,
-                outputArtifactPath: handoffs[0]?.artifact_path ?? null,
-                completedAt: new Date().toISOString()
-              });
+              this.recordRoleContinuityCompletion(flowRun, roleName, nodeId, handoffs);
 
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
 
@@ -513,7 +491,6 @@ export class FlowOrchestrator {
       });
 
       if (flowRun.activeNodes.length === 0) {
-        computeBackwardPassPlan(flowRun.recordFolderPath, 'Curator', 'graph-based');
         flowRun.status = 'completed';
       }
       SessionStore.saveFlowRun(flowRun);
@@ -633,7 +610,10 @@ export class FlowOrchestrator {
   ): Promise<string | null> {
     return new Promise((resolve) => {
       const rl = readline.createInterface({ input: inputStream, output: outputStream, terminal: true });
+      const onClose = () => resolve(null);
+      rl.once('close', onClose);
       rl.question('\n> ', (answer) => {
+        rl.removeListener('close', onClose);
         rl.close();
         const line = answer.trim();
         if (line === 'exit' || line === 'quit') {
@@ -644,13 +624,39 @@ export class FlowOrchestrator {
           resolve(line);
         }
       });
-      rl.on('close', () => resolve(null));
     });
   }
 
   private removeActiveNode(flowRun: FlowRun, nodeId: string) {
     flowRun.activeNodes = flowRun.activeNodes.filter(id => id !== nodeId);
     delete flowRun.pendingNodeArtifacts[nodeId];
+  }
+
+  private findStrictWorkflowStartNode(wf: any): any {
+    const toIds = new Set((wf.edges || []).map((edge: any) => edge.to));
+    const startNodes = (wf.nodes || []).filter((node: any) => !toIds.has(node.id));
+    const startNode = startNodes[0];
+    if (!startNode) {
+      throw new WorkflowError('Validated workflow has no start node.');
+    }
+    return startNode;
+  }
+
+  private recordRoleContinuityCompletion(
+    flowRun: FlowRun,
+    roleName: string,
+    nodeId: string,
+    handoffs: HandoffTarget[]
+  ): void {
+    if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
+    if (!flowRun.roleContinuity[roleName]) {
+      flowRun.roleContinuity[roleName] = { roleName, completedNodes: [] };
+    }
+    flowRun.roleContinuity[roleName].completedNodes.push({
+      nodeId,
+      outputArtifactPath: handoffs[0]?.artifact_path ?? null,
+      completedAt: new Date().toISOString()
+    });
   }
 
   private edgeKey(fromNodeId: string, toNodeId: string): string {

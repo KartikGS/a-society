@@ -227,6 +227,22 @@ test('strict mode: non-Owner start node produces error', () => {
   assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role "Owner"')));
 });
 
+test('strict mode: multiple start nodes produce error', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Owner' },
+        { id: 'n2', role: 'Owner' },
+        { id: 'n3', role: 'Curator' },
+      ],
+      edges: [{ from: 'n1', to: 'n3' }],
+    },
+  };
+  const errors = validateGraph(graph, true);
+  assert.ok(errors.some((e: string) => e.includes('workflow must have exactly one start node (found 2)')));
+});
+
 test('strict mode: non-Owner end node produces error', () => {
   const graph = {
     workflow: {

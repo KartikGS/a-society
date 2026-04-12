@@ -161,7 +161,7 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
     }
   }
 
-  // 2. Strict checks: Owner at start and end
+  // 2. Strict checks: unique Owner start node; Owner at end
   if (strict) {
     const toIds = new Set<string>();
     const fromIds = new Set<string>();
@@ -176,9 +176,15 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
         errors.push(`Strict mode violation: sole node role must be "Owner" (found "${workflow.nodes[0].role}")`);
       }
     } else {
-      // General case: Any node with no incoming/outgoing edges must be Owner if it's a start/end
+      // General case: workflow must have exactly one start node, and it must be Owner.
       const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
       const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
+
+      if (startNodes.length !== 1) {
+        errors.push(
+          `Strict mode violation: workflow must have exactly one start node (found ${startNodes.length})`
+        );
+      }
 
       for (const node of startNodes) {
         if (node.role !== 'Owner') {
