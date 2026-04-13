@@ -51,17 +51,17 @@ test('INVOCATION.md: documents prompt-human resume behavior (same node session r
   );
 });
 
-test('INVOCATION.md: documents later same-role return with continuity summary', () => {
+test('INVOCATION.md: documents later same-role return with role-scoped session reuse', () => {
   assert.ok(
-    doc.includes('continuity') || doc.includes('continuity summary'),
-    'Expected INVOCATION.md to describe carried-forward continuity for later same-role nodes'
+    doc.includes('role-scoped session') || doc.includes('same flow-scoped role session'),
+    'Expected INVOCATION.md to describe reused role-scoped continuity for later same-role nodes'
   );
 });
 
-test('INVOCATION.md: documents same-role parallel isolation behavior', () => {
+test('INVOCATION.md: documents same-role parallel rejection behavior', () => {
   assert.ok(
-    doc.includes('parallel') || doc.includes('isolation'),
-    'Expected INVOCATION.md to describe parallel same-role isolation'
+    doc.includes('unsupported') || doc.includes('rejects same-role parallel activation'),
+    'Expected INVOCATION.md to describe same-role parallel rejection'
   );
 });
 

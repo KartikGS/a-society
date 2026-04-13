@@ -174,8 +174,7 @@ export class FlowOrchestrator {
                   completedEdgeArtifacts: {},
                   pendingNodeArtifacts: {},
                   status: 'running',
-                  stateVersion: '5',
-                  roleContinuity: {}
+                  stateVersion: '6'
                 };
                 await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs, turnUsage);
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
@@ -196,10 +195,12 @@ export class FlowOrchestrator {
             }
           });
         } else {
+          const resumeWorkflowPath = path.join(flowRun.recordFolderPath, 'workflow.md');
+          const resumeWf = parseWorkflow(resumeWorkflowPath).workflow;
+          this.ensureNoRoleScopedParallelConflictInActiveSet(flowRun, resumeWf);
           this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
           if (flowRun.activeNodes.length > 1) {
             try {
-              const resumeWf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
               const activeNodes = flowRun.activeNodes.map(id => {
                 const node = resumeWf.nodes.find((n: any) => n.id === id);
                 return { nodeId: id, role: node?.role ?? '' };
@@ -253,8 +254,7 @@ export class FlowOrchestrator {
       kind: SpanKind.INTERNAL,
       attributes: {
         'flow.id': flowRun.flowId,
-        'node.id': nodeId,
-        'session.id': `${flowRun.flowId}__${nodeId}`
+        'node.id': nodeId
       }
     }, async (span) => {
       try {
@@ -273,8 +273,11 @@ export class FlowOrchestrator {
         const roleName = currentNodeDef.role;
         span.setAttribute('role', roleName);
         span.setAttribute('role_name', roleName);
+        span.setAttribute('session.id', this.roleSessionId(flowRun, roleName));
 
-        const sessionId = `${flowRun.flowId}__${nodeId}`;
+        this.ensureNoRoleScopedParallelConflict(flowRun, wf, nodeId, roleName);
+
+        const sessionId = this.roleSessionId(flowRun, roleName);
 
         const resolvedArtifacts: string[] =
           activeArtifactPath !== undefined
@@ -302,9 +305,16 @@ export class FlowOrchestrator {
         let session = SessionStore.loadRoleSession(sessionId);
         span.setAttribute('node.session_resumed', session !== null);
         if (!session) {
-          session = { roleName, logicalSessionId: sessionId, transcriptHistory: [], isActive: true };
+          session = {
+            roleName,
+            logicalSessionId: sessionId,
+            transcriptHistory: [],
+            isActive: true,
+            currentNodeId: nodeId
+          };
         } else {
           span.addEvent('store.session_loaded', { 'session.id': sessionId, 'session.resumed': true });
+          session.currentNodeId = session.currentNodeId ?? nodeId;
         }
 
         const { bundleContent } = ContextInjectionService.buildContextBundle(
@@ -312,40 +322,34 @@ export class FlowOrchestrator {
         );
 
         const injectedHistory = [...session.transcriptHistory];
+        const sameNodeResume = session.isActive && session.currentNodeId === nodeId && injectedHistory.length > 0;
 
         if (injectedHistory.length === 0) {
-          // Determine whether another active node shares this role (parallel isolation).
-          const otherActiveNodeHasSameRole = flowRun.activeNodes
-            .filter(id => id !== nodeId)
-            .some(id => {
-              const nodeDef = wf.nodes.find((n: any) => n.id === id);
-              return nodeDef?.role === roleName;
-            });
-
-          // Inject continuity summary only when safe (no parallel same-role active node).
-          let continuityEntries: Array<{ nodeId: string; outputArtifactPath: string | null }> | undefined;
-          if (!otherActiveNodeHasSameRole) {
-            const continuityState = flowRun.roleContinuity?.[roleName];
-            if (continuityState && continuityState.completedNodes.length > 0) {
-              continuityEntries = continuityState.completedNodes.map(e => ({
-                nodeId: e.nodeId,
-                outputArtifactPath: e.outputArtifactPath
-              }));
-            }
-          }
-
           const nodeEntryMessage = buildForwardNodeEntryMessage({
             nodeId,
             role: roleName,
             workspaceRoot: flowRun.workspaceRoot,
             activeArtifacts: resolvedArtifacts,
-            continuityEntries,
+            humanInput
+          });
+          injectedHistory.push({ role: 'user', content: nodeEntryMessage });
+        } else if (!sameNodeResume) {
+          const nodeEntryMessage = buildForwardNodeEntryMessage({
+            nodeId,
+            role: roleName,
+            workspaceRoot: flowRun.workspaceRoot,
+            activeArtifacts: resolvedArtifacts,
+            entryMode: session.currentNodeId === nodeId ? 'reopened-node' : 'role-transition',
+            previousNodeId: session.currentNodeId,
             humanInput
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });
         } else if (humanInput) {
           injectedHistory.push({ role: 'user', content: humanInput });
         }
+
+        session.currentNodeId = nodeId;
+        session.isActive = true;
 
         flowRun.status = 'running';
         SessionStore.saveFlowRun(flowRun);
@@ -583,6 +587,11 @@ export class FlowOrchestrator {
         });
       }
 
+      this.ensureRoleScopedActivationSetIsSupported(flowRun, wf, nodeId, activationPairs.map(pair => ({
+        nodeId: pair.targetId,
+        role: pair.role
+      })));
+
       emitUsage(this.renderer, turnUsage);
       this.removeActiveNode(flowRun, nodeId);
 
@@ -592,7 +601,6 @@ export class FlowOrchestrator {
       }
 
       this.markNodeCompletedIfSettled(flowRun, wf, nodeId);
-      this.recordRoleContinuityCompletion(flowRun, currentNode.role, nodeId, forwardTargets);
 
       this.renderer.emit({
         kind: 'handoff.applied',
@@ -616,11 +624,12 @@ export class FlowOrchestrator {
     }
 
     if (backwardTargets.length > 0) {
-      emitUsage(this.renderer, turnUsage);
-      this.removeActiveNode(flowRun, nodeId);
-      this.removeCompletedNode(flowRun, nodeId);
-
-      const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
+      const reactivationPlans: Array<{
+        targetId: string;
+        role: string;
+        rejectedEdgeKey: string;
+        activationArtifacts: string[];
+      }> = [];
       const claimedTargets = new Set<string>();
 
       for (const handoff of backwardTargets) {
@@ -639,18 +648,33 @@ export class FlowOrchestrator {
           );
         }
 
-        delete flowRun.completedEdgeArtifacts[rejectedEdgeKey];
-        this.removeCompletedNode(flowRun, targetNode.id);
-        this.clearRoleContinuityCompletion(flowRun, targetNode.role, targetNode.id);
-        SessionStore.deleteRoleSession(`${flowRun.flowId}__${targetNode.id}`);
+        reactivationPlans.push({
+          targetId: targetNode.id,
+          role: targetNode.role,
+          rejectedEdgeKey,
+          activationArtifacts: [
+            rejectedArtifactPath,
+            handoff.artifact_path ?? '',
+          ].filter((artifact): artifact is string => artifact.trim() !== '')
+        });
+      }
 
-        const activationArtifacts = [
-          rejectedArtifactPath,
-          handoff.artifact_path ?? '',
-        ].filter((artifact): artifact is string => artifact.trim() !== '');
+      this.ensureRoleScopedActivationSetIsSupported(flowRun, wf, nodeId, reactivationPlans.map(plan => ({
+        nodeId: plan.targetId,
+        role: plan.role
+      })));
 
-        this.activateOrDefer(flowRun, wf, targetNode.id, activationArtifacts);
-        reactivatedTargets.push({ targetId: targetNode.id, role: targetNode.role });
+      emitUsage(this.renderer, turnUsage);
+      this.removeActiveNode(flowRun, nodeId);
+      this.removeCompletedNode(flowRun, nodeId);
+
+      const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
+
+      for (const plan of reactivationPlans) {
+        delete flowRun.completedEdgeArtifacts[plan.rejectedEdgeKey];
+        this.removeCompletedNode(flowRun, plan.targetId);
+        this.activateOrDefer(flowRun, wf, plan.targetId, plan.activationArtifacts);
+        reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
       }
 
       this.renderer.emit({
@@ -726,29 +750,68 @@ export class FlowOrchestrator {
     return startNode;
   }
 
-  private recordRoleContinuityCompletion(
-    flowRun: FlowRun,
-    roleName: string,
-    nodeId: string,
-    handoffs: HandoffTarget[]
-  ): void {
-    if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
-    if (!flowRun.roleContinuity[roleName]) {
-      flowRun.roleContinuity[roleName] = { roleName, completedNodes: [] };
-    }
-    flowRun.roleContinuity[roleName].completedNodes =
-      flowRun.roleContinuity[roleName].completedNodes.filter(entry => entry.nodeId !== nodeId);
-    flowRun.roleContinuity[roleName].completedNodes.push({
-      nodeId,
-      outputArtifactPath: handoffs[0]?.artifact_path ?? null,
-      completedAt: new Date().toISOString()
-    });
+  private roleKey(roleName: string): string {
+    return roleName.toLowerCase().replace(/\s+/g, '-');
   }
 
-  private clearRoleContinuityCompletion(flowRun: FlowRun, roleName: string, nodeId: string): void {
-    if (!flowRun.roleContinuity?.[roleName]) return;
-    flowRun.roleContinuity[roleName].completedNodes =
-      flowRun.roleContinuity[roleName].completedNodes.filter(entry => entry.nodeId !== nodeId);
+  private roleSessionId(flowRun: FlowRun, roleName: string): string {
+    return `${flowRun.flowId}__${this.roleKey(roleName)}`;
+  }
+
+  private findConflictingActiveSameRoleNode(flowRun: FlowRun, wf: any, nodeId: string, roleName: string): string | null {
+    const candidateRoleKey = this.roleKey(roleName);
+    for (const activeNodeId of flowRun.activeNodes) {
+      if (activeNodeId === nodeId) continue;
+      const activeNode = this.findNodeById(wf, activeNodeId);
+      if (this.roleKey(activeNode.role) === candidateRoleKey) {
+        return activeNodeId;
+      }
+    }
+    return null;
+  }
+
+  private ensureNoRoleScopedParallelConflict(flowRun: FlowRun, wf: any, nodeId: string, roleName: string): void {
+    const conflictingNodeId = this.findConflictingActiveSameRoleNode(flowRun, wf, nodeId, roleName);
+    if (!conflictingNodeId) return;
+
+    throw new WorkflowError(
+      `Unsupported same-role parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role '${roleName}'. ` +
+      'The runtime now uses one flow-scoped session per role, so concurrent same-role nodes must be avoided until an explicit parallel design is implemented.'
+    );
+  }
+
+  private ensureNoRoleScopedParallelConflictInActiveSet(flowRun: FlowRun, wf: any): void {
+    for (const nodeId of flowRun.activeNodes) {
+      const node = this.findNodeById(wf, nodeId);
+      this.ensureNoRoleScopedParallelConflict(flowRun, wf, nodeId, node.role);
+    }
+  }
+
+  private ensureRoleScopedActivationSetIsSupported(
+    flowRun: FlowRun,
+    wf: any,
+    currentNodeId: string,
+    activationTargets: Array<{ nodeId: string; role: string }>
+  ): void {
+    const occupiedRoles = new Map<string, string>();
+
+    for (const activeNodeId of flowRun.activeNodes) {
+      if (activeNodeId === currentNodeId) continue;
+      const activeNode = this.findNodeById(wf, activeNodeId);
+      occupiedRoles.set(this.roleKey(activeNode.role), activeNodeId);
+    }
+
+    for (const target of activationTargets) {
+      const targetRoleKey = this.roleKey(target.role);
+      const conflictingNodeId = occupiedRoles.get(targetRoleKey);
+      if (conflictingNodeId && conflictingNodeId !== target.nodeId) {
+        throw new WorkflowError(
+          `Unsupported same-role parallel activation: node '${target.nodeId}' and node '${conflictingNodeId}' both require role '${target.role}'. ` +
+          'The runtime now uses one flow-scoped session per role, so concurrent same-role nodes must be avoided until an explicit parallel design is implemented.'
+        );
+      }
+      occupiedRoles.set(targetRoleKey, target.nodeId);
+    }
   }
 
   private findNodeById(wf: any, nodeId: string): any {
@@ -861,6 +924,8 @@ export class FlowOrchestrator {
     );
 
     if (allComplete) {
+      const candidateNode = this.findNodeById(wf, candidateNodeId);
+      this.ensureNoRoleScopedParallelConflict(flowRun, wf, candidateNodeId, candidateNode.role);
       const baseArtifacts = this.collectIncomingArtifacts(flowRun, incomingEdges);
       const priorArtifacts = flowRun.pendingNodeArtifacts[candidateNodeId] ?? [];
       flowRun.pendingNodeArtifacts[candidateNodeId] = this.mergeArtifacts(baseArtifacts, priorArtifacts, extraArtifacts);

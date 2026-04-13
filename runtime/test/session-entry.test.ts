@@ -50,7 +50,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-session-entry-')
 const artifactPath = path.join(tmpDir, 'test-artifact.md');
 fs.writeFileSync(artifactPath, 'Artifact content here.');
 
-test('buildForwardNodeEntryMessage: contains node header and non-startup distinction line', () => {
+test('buildForwardNodeEntryMessage: contains node header and first-node role-session framing', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
@@ -59,7 +59,7 @@ test('buildForwardNodeEntryMessage: contains node header and non-startup distinc
   });
 
   assert.ok(msg.includes('Workflow node: owner-gate (role: Owner)'));
-  assert.ok(msg.includes('This is a workflow node entry, not a fresh role-orientation session.'));
+  assert.ok(msg.includes('This is the first workflow node for this role in the current flow session.'));
   assert.ok(msg.includes('already loaded startup authority'));
   assert.ok(msg.includes('Proceed from these current node inputs.'));
 });
@@ -89,32 +89,32 @@ test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missin
   assert.ok(msg.includes('(File does not exist yet)'));
 });
 
-test('buildForwardNodeEntryMessage: includes continuity section when entries provided', () => {
+test('buildForwardNodeEntryMessage: includes role-transition framing when previous node provided', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
     activeArtifacts: [],
-    continuityEntries: [
-      { nodeId: 'owner-intake', outputArtifactPath: 'records/flow/01-owner-brief.md' },
-      { nodeId: 'owner-review', outputArtifactPath: null }
-    ]
+    entryMode: 'role-transition',
+    previousNodeId: 'owner-intake'
   });
 
-  assert.ok(msg.includes('Role continuity from earlier nodes in this flow:'));
-  assert.ok(msg.includes('- owner-intake -> records/flow/01-owner-brief.md'));
-  assert.ok(msg.includes('- owner-review -> (no artifact recorded)'));
+  assert.ok(msg.includes('continuing the same role-scoped flow session from workflow node owner-intake to owner-gate'));
+  assert.ok(msg.includes('current task inputs below are authoritative for this node'));
 });
 
-test('buildForwardNodeEntryMessage: omits continuity section when no entries', () => {
+test('buildForwardNodeEntryMessage: includes reopened-node framing when node re-enters', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
-    activeArtifacts: []
+    activeArtifacts: [],
+    entryMode: 'reopened-node',
+    previousNodeId: 'owner-gate'
   });
 
-  assert.ok(!msg.includes('Role continuity from earlier nodes in this flow:'));
+  assert.ok(msg.includes('workflow node has been reopened in the same role-scoped flow session'));
+  assert.ok(msg.includes('may supersede earlier assumptions'));
 });
 
 test('buildForwardNodeEntryMessage: includes human input section when provided', () => {

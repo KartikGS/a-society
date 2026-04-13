@@ -61,8 +61,7 @@ workflow:
       'branch-c': ['records/test-flow/01-ta-brief.md'],
     },
     status: 'running' as const,
-    stateVersion: '5',
-    roleContinuity: {}
+    stateVersion: '6'
   };
   SessionStore.saveFlowRun(flowRun);
 

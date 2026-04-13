@@ -379,8 +379,7 @@ async function run() {
       completedEdgeArtifacts: {},
       pendingNodeArtifacts: { start: [] },
       status: 'running',
-      stateVersion: '5',
-      roleContinuity: {}
+      stateVersion: '6'
     };
     SessionStore.saveFlowRun(flowRun);
 
@@ -502,7 +501,7 @@ async function run() {
       completedEdgeArtifacts: {},
       pendingNodeArtifacts: {},
       status: 'running',
-      stateVersion: '5',
+      stateVersion: '6',
       improvementPhase: null,
       recordFolderPath: recordDir
     };

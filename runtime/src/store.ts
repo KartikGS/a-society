@@ -26,56 +26,31 @@ export class SessionStore {
   }
 
   static saveFlowRun(flow: FlowRun) {
-    const flowToSave = { ...flow } as FlowRun & {
-      projectRoot?: string;
-      completedNodeArtifacts?: Record<string, string>;
-    };
-    delete flowToSave.projectRoot;
-    delete flowToSave.completedNodeArtifacts;
-    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(flowToSave, null, 2));
+    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(flow, null, 2));
   }
 
   static loadFlowRun(): FlowRun | null {
     const p = path.join(getStateDir(), 'flow.json');
     if (!fs.existsSync(p)) return null;
-    const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun & {
-      projectRoot?: string;
-      completedNodeArtifacts?: Record<string, string>;
-    };
-    if (!flow.stateVersion) {
-      // State version absent — pre-versioning state ("1"). Compatible with current schema.
-      // improvementPhase will be undefined (correct initial state). No data loss.
-      flow.stateVersion = '1';
+    const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun;
+
+    if (flow.stateVersion !== '6') {
+      throw new Error(
+        `Unsupported persisted flow state version "${String((flow as any).stateVersion ?? 'missing')}". ` +
+        'This runtime only supports flow state version "6".'
+      );
     }
 
-    if (!flow.workspaceRoot && flow.projectRoot) {
-      flow.workspaceRoot = flow.projectRoot;
+    if (!flow.workspaceRoot || !flow.recordFolderPath) {
+      throw new Error('Persisted flow state is missing required workspaceRoot or recordFolderPath fields.');
     }
-
     if (!flow.completedEdgeArtifacts || typeof flow.completedEdgeArtifacts !== 'object') {
-      flow.completedEdgeArtifacts = {};
+      throw new Error('Persisted flow state is missing completedEdgeArtifacts.');
     }
-    delete flow.completedNodeArtifacts;
+    if (!flow.pendingNodeArtifacts || typeof flow.pendingNodeArtifacts !== 'object') {
+      throw new Error('Persisted flow state is missing pendingNodeArtifacts.');
+    }
 
-    // Silently migrate v1-v4 state to v5:
-    // - initialize empty role-continuity ledger when absent
-    // - initialize empty edge-artifact ledger when absent
-    // - rename projectRoot -> workspaceRoot
-    // Node-keyed session transcripts remain valid and unchanged.
-    if (flow.stateVersion === '1' || flow.stateVersion === '2' || flow.stateVersion === '3' || flow.stateVersion === '4') {
-      const migratedContinuity: NonNullable<FlowRun['roleContinuity']> = {};
-      for (const [storedKey, storedState] of Object.entries(flow.roleContinuity ?? {})) {
-        const rawState = storedState as { roleName?: string; completedNodes?: any[] };
-        const roleName = rawState.roleName ?? storedKey;
-        migratedContinuity[roleName] = {
-          roleName,
-          completedNodes: Array.isArray(rawState.completedNodes) ? rawState.completedNodes : []
-        };
-      }
-      flow.roleContinuity = migratedContinuity;
-      flow.stateVersion = '5';
-      delete flow.projectRoot;
-    }
     return flow;
   }
 

@@ -20,35 +20,44 @@ export interface ForwardNodeEntryOptions {
   role: string;
   workspaceRoot: string;
   activeArtifacts: string[];
-  continuityEntries?: Array<{ nodeId: string; outputArtifactPath: string | null }>;
+  entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
+  previousNodeId?: string;
   humanInput?: string;
 }
 
 /**
- * Builds the combined node-entry user message for a new (not resumed) workflow node.
- * Includes: node header, non-startup distinction line, optional role-continuity section,
- * current task inputs with rendered file blocks, optional human input, and closing instruction.
+ * Builds the combined node-entry user message for a workflow node.
+ * Includes: node header, role-session framing, current task inputs with rendered file blocks,
+ * optional human input, and closing instruction.
  */
 export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): string {
-  const { nodeId, role, workspaceRoot, activeArtifacts, continuityEntries, humanInput } = opts;
+  const {
+    nodeId,
+    role,
+    workspaceRoot,
+    activeArtifacts,
+    entryMode = 'first-node',
+    previousNodeId,
+    humanInput
+  } = opts;
   const lines: string[] = [];
 
   lines.push(`Workflow node: ${nodeId} (role: ${role})`);
-  lines.push(
-    'This is a workflow node entry, not a fresh role-orientation session. ' +
-    'Use the current node inputs and the already loaded startup authority to do this node\'s work.'
-  );
-
-  if (continuityEntries && continuityEntries.length > 0) {
-    lines.push('');
-    lines.push('Role continuity from earlier nodes in this flow:');
-    for (const entry of continuityEntries) {
-      if (entry.outputArtifactPath) {
-        lines.push(`- ${entry.nodeId} -> ${entry.outputArtifactPath}`);
-      } else {
-        lines.push(`- ${entry.nodeId} -> (no artifact recorded)`);
-      }
-    }
+  if (entryMode === 'role-transition' && previousNodeId) {
+    lines.push(
+      `You are continuing the same role-scoped flow session from workflow node ${previousNodeId} to ${nodeId}. ` +
+      'Prior role discussion remains available in this session, but the current task inputs below are authoritative for this node.'
+    );
+  } else if (entryMode === 'reopened-node') {
+    lines.push(
+      'This workflow node has been reopened in the same role-scoped flow session. ' +
+      'Prior discussion for this node remains available, but the current task inputs below are authoritative and may supersede earlier assumptions.'
+    );
+  } else {
+    lines.push(
+      'This is the first workflow node for this role in the current flow session. ' +
+      'Use the current node inputs and the already loaded startup authority to do this node\'s work.'
+    );
   }
 
   lines.push('');

@@ -47,7 +47,7 @@ test('renderFlowStatus: single active node, no completed', () => {
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': ['p.md'] },
     status: 'running',
-    stateVersion: '5'
+    stateVersion: '6'
   };
 
   const output = renderFlowStatus(flowRun, WF);
@@ -74,7 +74,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       },
       pendingNodeArtifacts: { 't1': ['p3.md'] },
       status: 'running',
-      stateVersion: '5'
+      stateVersion: '6'
     };
   
     const output = renderFlowStatus(flowRun, WF);
@@ -98,7 +98,7 @@ test('renderFlowStatus: awaiting_human status renders explicit suspended notice'
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'awaiting_human',
-    stateVersion: '5'
+    stateVersion: '6'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('Status: awaiting_human'), 'must show awaiting_human status');
@@ -120,7 +120,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     },
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] },
     status: 'running',
-    stateVersion: '5'
+    stateVersion: '6'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('[→] t1 (TD)'));
@@ -145,7 +145,7 @@ test('renderFlowStatus: completed flow', () => {
         },
         pendingNodeArtifacts: {},
         status: 'completed',
-        stateVersion: '5'
+        stateVersion: '6'
       };
     
       const output = renderFlowStatus(flowRun, WF);

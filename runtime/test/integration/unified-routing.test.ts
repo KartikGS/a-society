@@ -87,7 +87,7 @@ workflow:
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'running',
-    stateVersion: '5'
+    stateVersion: '6'
   });
 
   // Capture operator (stderr) and assistant (stdout) streams separately

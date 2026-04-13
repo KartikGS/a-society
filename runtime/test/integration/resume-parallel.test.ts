@@ -71,7 +71,7 @@ workflow:
     },
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] },
     status: 'awaiting_human',
-    stateVersion: '5'
+    stateVersion: '6'
   });
 
   const operatorStream = new PassThrough();

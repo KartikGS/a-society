@@ -85,8 +85,7 @@ workflow:
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { start: [] },
     status: 'running',
-    stateVersion: '5',
-    roleContinuity: {}
+    stateVersion: '6'
   });
 
   const operatorStream = new PassThrough();

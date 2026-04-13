@@ -69,24 +69,15 @@ workflow:
       review: [proposalToReviewRel],
     },
     status: 'running',
-    stateVersion: '5',
-    roleContinuity: {
-      Curator: {
-        roleName: 'Curator',
-        completedNodes: [{
-          nodeId: 'proposal',
-          outputArtifactPath: proposalToReviewRel,
-          completedAt: '2026-04-12T00:00:00.000Z',
-        }],
-      },
-    },
+    stateVersion: '6',
   });
 
   SessionStore.saveRoleSession({
     roleName: 'Curator',
-    logicalSessionId: 'backward-flow__proposal',
+    logicalSessionId: 'backward-flow__curator',
     transcriptHistory: [{ role: 'user', content: 'stale proposal session' }],
     isActive: false,
+    currentNodeId: 'proposal',
   });
 
   const flowRun = SessionStore.loadFlowRun()!;
@@ -112,16 +103,10 @@ workflow:
     'reactivated predecessor should receive the rejected artifact plus current feedback'
   );
   assert.ok(!updated.completedNodes.includes('proposal'), 'reactivated predecessor should be removed from completedNodes');
-  assert.deepStrictEqual(
-    updated.roleContinuity?.Curator?.completedNodes ?? [],
-    [],
-    'role continuity entry for the reopened node should be cleared'
-  );
-  assert.strictEqual(
-    SessionStore.loadRoleSession('backward-flow__proposal'),
-    null,
-    'stale predecessor session should be cleared before re-entry'
-  );
+  const reopenedSession = SessionStore.loadRoleSession('backward-flow__curator');
+  assert.ok(reopenedSession, 'role-scoped predecessor session should be preserved for re-entry');
+  assert.strictEqual(reopenedSession!.currentNodeId, 'proposal');
+  assert.strictEqual((reopenedSession!.transcriptHistory[0] as any).content, 'stale proposal session');
 
   console.log('Integration test PASSED.');
 

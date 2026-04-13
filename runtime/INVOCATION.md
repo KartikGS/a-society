@@ -104,22 +104,25 @@ A fresh interactive Owner bootstrap uses an explicit first user message that ins
 
 ### Same-node `prompt-human` resume
 
-When a `type: prompt-human` handoff pauses execution, the node-scoped session transcript is preserved. On resume, the runtime reuses that transcript and appends only the human reply. The node-entry message is not regenerated.
+When a `type: prompt-human` handoff pauses execution, the active role-scoped session transcript is preserved. On resume at the same node, the runtime reuses that transcript and appends only the human reply. The node-entry packet is not regenerated.
 
 ### Same-role later-node return
 
-When the same role appears again at a later node in the same flow (e.g., an Owner gate after a Technical Architect node), the runtime sends a combined node-entry message containing:
+When the same role appears again at a later node in the same flow (e.g., an Owner gate after a Technical Architect node), the runtime reuses the same flow-scoped role session and appends a combined node-transition message containing:
 
 1. A header identifying the workflow node and role
-2. An explicit statement that this is a workflow node entry, not a fresh startup
-3. A role-continuity summary listing prior completed nodes and their output artifacts
-4. The current node's active artifact(s) as task input
+2. An explicit statement that the role is continuing in the same flow session
+3. The current node's active artifact(s) as authoritative task input
 
-This preserves in-flow continuity without reusing prior node-specific turns or repair history.
+This preserves in-flow continuity by keeping prior role discussion and repair history in one session, while still restating the node's current authoritative inputs.
+
+### Reopened node re-entry
+
+When a backward edge reopens a node for the same role, the runtime keeps the existing role-scoped session and appends a reopened-node packet before the next turn. The packet states that the node has been reopened and that the current task inputs may supersede earlier assumptions.
 
 ### Same-role parallel activation
 
-When two nodes with the same role are active simultaneously, each keeps its own node-scoped session. No continuity summary is injected and no transcript is shared. Each node receives its own task inputs only.
+Concurrent activation of two nodes with the same role is currently unsupported. The runtime now uses one flow-scoped session per role, so it rejects same-role parallel activation rather than silently splitting or mixing transcript state.
 
 ---
 

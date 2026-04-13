@@ -1,17 +1,14 @@
 /**
- * Integration test: same-role session continuity behaviors.
+ * Integration test: repeated-role session behavior under role-scoped flow sessions.
  *
- * Uses a repeated-role workflow: Owner-intake → TA → Owner-gate
- * Covers four behaviors from the approved Phase 0 design:
+ * Uses a repeated-role workflow: Owner-intake -> TA -> Owner-gate
+ * Covers:
  *
- *  1. Fresh Owner bootstrap uses the explicit Owner message (not empty-history auto-seed)
- *  2. Same-node prompt-human resume preserves transcript continuity
- *  3. Later same-role node (Owner-gate) receives continuity summary + current task input
- *  4. Same-role parallel activation omits continuity summary (isolation preserved)
- *
- * The unit-level checks (tests 1-7) prove helper/store contracts.
- * The orchestrator-seam checks (tests 8-10) prove that the orchestrator wires
- * these contracts correctly by running advanceFlow against a mock LLM.
+ *  1. Fresh Owner bootstrap uses the explicit Owner message
+ *  2. Same-node prompt-human resume preserves the existing role-scoped transcript
+ *  3. Later same-role node reuses the same role-scoped session and appends a node-transition packet
+ *  4. Reopened same-role node keeps the prior role-scoped session and appends a reopen packet
+ *  5. Same-role parallel activation is explicitly rejected for now
  */
 
 import assert from 'node:assert';
@@ -19,7 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Readable, Writable, PassThrough } from 'node:stream';
-import { FlowOrchestrator } from '../../src/orchestrator.js';
+import { FlowOrchestrator, WorkflowError } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
 import { ContextInjectionService } from '../../src/injection.js';
 import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from '../../src/session-entry.js';
@@ -70,10 +67,18 @@ fs.writeFileSync(path.join(recordDir, 'workflow.md'), workflow);
 
 const ownerArtifact1 = path.join(recordDir, '01-owner-brief.md');
 const taArtifact = path.join(recordDir, '02-ta-design.md');
+const reviewFeedbackArtifact = path.join(recordDir, '03-review-feedback.md');
 fs.writeFileSync(ownerArtifact1, 'Owner brief content.');
 fs.writeFileSync(taArtifact, 'TA design content.');
+fs.writeFileSync(reviewFeedbackArtifact, 'Reviewer requests revision to the Owner brief.');
 
 process.env.A_SOCIETY_STATE_DIR = stateDir;
+
+function resetState() {
+  fs.rmSync(stateDir, { recursive: true, force: true });
+  fs.mkdirSync(stateDir, { recursive: true });
+  SessionStore.init();
+}
 
 // ---- Mock LLM provider ----
 
@@ -105,7 +110,9 @@ function patchLLM(provider: MockProvider): () => void {
   return () => { LLMGateway.prototype.executeTurn = original; };
 }
 
-// ---- Helper: build a flowRun at the specified node ----
+function ownerSessionId(flowId = 'test-flow-id') {
+  return `${flowId}__owner`;
+}
 
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   return {
@@ -118,8 +125,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     status: 'running',
-    stateVersion: '5',
-    roleContinuity: {},
+    stateVersion: '6',
     ...overrides
   };
 }
@@ -138,8 +144,6 @@ function test(name: string, fn: () => void | Promise<void>): Promise<void> {
 
 async function run() {
   console.log('\nsame-role-continuity integration');
-
-  // ---- Unit-level helper and store contract tests ----
 
   await test('Fresh Owner bootstrap message matches approved text', async () => {
     const msg = buildOwnerBootstrapMessage();
@@ -163,10 +167,10 @@ async function run() {
     assert.ok(!bundleContent.includes('MANDATORY CONTEXT LOADING'));
   });
 
-  await test('Same-node resume: existing session transcript is preserved intact', async () => {
-    SessionStore.init();
+  await test('Same-node resume: role-scoped session transcript is preserved intact', async () => {
+    resetState();
 
-    const sessionId = 'test-flow-id__owner-intake';
+    const sessionId = ownerSessionId();
     const priorHistory = [
       { role: 'user', content: 'original node entry message' },
       { role: 'assistant', content: 'I will proceed.' }
@@ -175,150 +179,87 @@ async function run() {
       roleName: 'owner',
       logicalSessionId: sessionId,
       transcriptHistory: priorHistory,
-      isActive: true
+      isActive: true,
+      currentNodeId: 'owner-intake'
     });
 
     const loadedSession = SessionStore.loadRoleSession(sessionId);
     assert.ok(loadedSession !== null, 'Session must be persisted before resume');
     assert.strictEqual(loadedSession!.transcriptHistory.length, 2);
-
-    const historyAfterLoad = [...(loadedSession!.transcriptHistory as any[])];
-    assert.strictEqual((historyAfterLoad[0] as any).content, 'original node entry message');
-
-    const sessFile = path.join(stateDir, 'sessions', `${sessionId}.json`);
-    if (fs.existsSync(sessFile)) fs.unlinkSync(sessFile);
+    assert.strictEqual((loadedSession!.transcriptHistory[0] as any).content, 'original node entry message');
+    assert.strictEqual(loadedSession!.currentNodeId, 'owner-intake');
   });
 
-  await test('buildForwardNodeEntryMessage: later same-role entry includes continuity and artifact', async () => {
+  await test('buildForwardNodeEntryMessage: later same-role entry includes transition framing and artifact', async () => {
     const msg = buildForwardNodeEntryMessage({
       nodeId: 'owner-gate',
       role: 'owner',
       workspaceRoot,
       activeArtifacts: [path.relative(workspaceRoot, taArtifact)],
-      continuityEntries: [
-        { nodeId: 'owner-intake', outputArtifactPath: path.relative(workspaceRoot, ownerArtifact1) }
-      ]
+      entryMode: 'role-transition',
+      previousNodeId: 'owner-intake'
     });
 
-    assert.ok(msg.includes('This is a workflow node entry, not a fresh role-orientation session.'));
-    assert.ok(msg.includes('Role continuity from earlier nodes in this flow:'));
-    assert.ok(msg.includes('owner-intake ->'));
+    assert.ok(msg.includes('continuing the same role-scoped flow session from workflow node owner-intake to owner-gate'));
     assert.ok(msg.includes('TA design content.'));
-    assert.ok(!msg.includes('A fresh interactive Owner session has started.'));
+    assert.ok(!msg.includes('Role continuity from earlier nodes in this flow:'));
   });
 
-  await test('buildForwardNodeEntryMessage: parallel same-role node — no continuity section when entries absent', async () => {
+  await test('buildForwardNodeEntryMessage: reopened node entry includes reopened framing and artifact', async () => {
     const msg = buildForwardNodeEntryMessage({
-      nodeId: 'owner-parallel-b',
+      nodeId: 'owner-intake',
       role: 'owner',
       workspaceRoot,
-      activeArtifacts: [],
-      continuityEntries: undefined
+      activeArtifacts: [
+        path.relative(workspaceRoot, ownerArtifact1),
+        path.relative(workspaceRoot, reviewFeedbackArtifact)
+      ],
+      entryMode: 'reopened-node',
+      previousNodeId: 'owner-intake'
     });
 
-    assert.ok(!msg.includes('Role continuity from earlier nodes in this flow:'));
-    assert.ok(msg.includes('This is a workflow node entry, not a fresh role-orientation session.'));
+    assert.ok(msg.includes('workflow node has been reopened in the same role-scoped flow session'));
+    assert.ok(msg.includes('Owner brief content.'));
+    assert.ok(msg.includes('Reviewer requests revision to the Owner brief.'));
   });
 
-  await test('Store: roleContinuity persisted and reloaded correctly', async () => {
-    SessionStore.init();
+  await test('Store: loading a non-v6 flow is rejected', async () => {
+    resetState();
 
-    const flowRun = makeFlowRun({ roleContinuity: {} });
-    SessionStore.saveFlowRun(flowRun);
-
-    const roleName = 'owner';
-    if (!flowRun.roleContinuity) flowRun.roleContinuity = {};
-    flowRun.roleContinuity[roleName] = {
-      roleName,
-      completedNodes: [{
-        nodeId: 'owner-intake',
-        outputArtifactPath: path.relative(workspaceRoot, ownerArtifact1),
-        completedAt: new Date().toISOString()
-      }]
-    };
-    SessionStore.saveFlowRun(flowRun);
-
-    const reloaded = SessionStore.loadFlowRun();
-    assert.ok(reloaded !== null);
-    assert.ok(reloaded!.roleContinuity !== undefined);
-    assert.ok(reloaded!.roleContinuity![roleName] !== undefined);
-    assert.strictEqual(reloaded!.roleContinuity![roleName].completedNodes.length, 1);
-    assert.strictEqual(reloaded!.roleContinuity![roleName].completedNodes[0].nodeId, 'owner-intake');
-  });
-
-  await test('Store: loading a v2 flow migrates it to v5 with empty roleContinuity and edge artifacts', async () => {
-    const v2Flow: any = {
-      flowId: 'v2-flow',
-      projectRoot: workspaceRoot,
+    const v5Flow: any = {
+      flowId: 'v5-flow',
+      workspaceRoot,
       projectNamespace,
       recordFolderPath: recordDir,
       activeNodes: [],
       completedNodes: [],
+      completedEdgeArtifacts: {},
       pendingNodeArtifacts: {},
       status: 'completed',
-      stateVersion: '2'
+      stateVersion: '5',
     };
-    fs.writeFileSync(path.join(stateDir, 'flow.json'), JSON.stringify(v2Flow, null, 2));
+    fs.writeFileSync(path.join(stateDir, 'flow.json'), JSON.stringify(v5Flow, null, 2));
 
-    const loaded = SessionStore.loadFlowRun();
-    assert.ok(loaded !== null);
-    assert.strictEqual(loaded!.stateVersion, '5');
-    assert.strictEqual(loaded!.workspaceRoot, workspaceRoot);
-    assert.deepStrictEqual(loaded!.completedEdgeArtifacts, {});
-    assert.deepStrictEqual(loaded!.roleContinuity, {});
+    assert.throws(
+      () => SessionStore.loadFlowRun(),
+      /only supports flow state version "6"/
+    );
   });
 
-  // ---- Orchestrator-seam tests ----
-  // These exercise the runtime wiring by calling advanceFlow with a mock LLM
-  // and inspecting persisted session state afterward.
+  await test('Orchestrator: later same-role node reuses role-scoped session and appends transition packet', async () => {
+    resetState();
 
-  await test('Orchestrator: successful targets handoff appends entry to roleContinuity ledger', async () => {
-    SessionStore.init();
-
-    // Clear any prior session for this node
-    const sessionFile = path.join(stateDir, 'sessions', 'test-flow-id__owner-intake.json');
-    if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
-
-    const flowRun = makeFlowRun({
-      activeNodes: ['owner-intake'],
-      roleContinuity: {}
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'Owner intake discussion' }
+      ],
+      isActive: false,
+      currentNodeId: 'owner-intake'
     });
-    SessionStore.saveFlowRun(flowRun);
 
-    const artifactRelPath = path.relative(workspaceRoot, ownerArtifact1);
-    const handoffText = `Done. \`\`\`handoff\ntarget_node_id: 'ta'\nartifact_path: '${artifactRelPath}'\n\`\`\``;
-    const unpatch = patchLLM(new MockProvider([
-      { type: 'text', text: handoffText }
-    ]));
-
-    const orchestrator = new FlowOrchestrator();
-    const input = new PassThrough();
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
-    try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output);
-    } finally {
-      unpatch();
-    }
-
-    const updated = SessionStore.loadFlowRun()!;
-    const roleName = 'owner';
-    assert.ok(updated.roleContinuity !== undefined, 'roleContinuity must exist after handoff');
-    assert.ok(updated.roleContinuity![roleName] !== undefined, `ledger entry for ${roleName} must exist`);
-    assert.strictEqual(updated.roleContinuity![roleName].completedNodes.length, 1);
-    assert.strictEqual(updated.roleContinuity![roleName].completedNodes[0].nodeId, 'owner-intake');
-    assert.ok(updated.completedNodes.includes('owner-intake'), 'owner-intake must be in completedNodes');
-  });
-
-  await test('Orchestrator: later same-role node entry message contains continuity section', async () => {
-    SessionStore.init();
-
-    // Clear prior session for owner-gate
-    const sessionFile = path.join(stateDir, 'sessions', 'test-flow-id__owner-gate.json');
-    if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
-
-    // Pre-configure roleContinuity with owner-intake already completed
-    const roleName = 'owner';
     const flowRun = makeFlowRun({
       activeNodes: ['owner-gate'],
       completedNodes: ['owner-intake', 'ta'],
@@ -328,28 +269,15 @@ async function run() {
       },
       pendingNodeArtifacts: {
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
-      },
-      roleContinuity: {
-        [roleName]: {
-          roleName,
-          completedNodes: [{
-            nodeId: 'owner-intake',
-            outputArtifactPath: path.relative(workspaceRoot, ownerArtifact1),
-            completedAt: '2026-04-11T00:00:00.000Z'
-          }]
-        }
       }
     });
     SessionStore.saveFlowRun(flowRun);
 
-    // Mock returns prompt-human so the session is saved without completing the node;
-    // this avoids triggering TERMINAL_FORWARD_PASS while still exercising node-entry assembly.
     const unpatch = patchLLM(new MockProvider([
       { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' }
     ]));
 
     const orchestrator = new FlowOrchestrator();
-    // Input stream ends immediately → readHumanInput returns null → session saved
     const input = new Readable({ read() {} });
     input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
@@ -360,61 +288,40 @@ async function run() {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession('test-flow-id__owner-gate');
-    assert.ok(session !== null, 'session must be saved after prompt-human + null input');
-    const firstMessage = (session!.transcriptHistory[0] as any).content as string;
+    const session = SessionStore.loadRoleSession(ownerSessionId());
+    assert.ok(session !== null, 'role-scoped Owner session must be preserved');
+    assert.strictEqual((session!.transcriptHistory[0] as any).content, 'owner-intake entry message');
 
-    // Non-startup distinction
-    assert.ok(
-      firstMessage.includes('This is a workflow node entry, not a fresh role-orientation session.'),
-      'node-entry message must include non-startup distinction line'
-    );
-    // Continuity section
-    assert.ok(
-      firstMessage.includes('Role continuity from earlier nodes in this flow:'),
-      'node-entry message must include continuity section for later same-role node'
-    );
-    assert.ok(
-      firstMessage.includes('owner-intake ->'),
-      'continuity section must include the prior owner-intake node entry'
-    );
-    // Current task input
-    assert.ok(
-      firstMessage.includes('TA design content.'),
-      'node-entry message must include current artifact content as task input'
-    );
-    // Must NOT be the bootstrap message
-    assert.ok(
-      !firstMessage.includes('A fresh interactive Owner session has started.'),
-      'later same-role entry must not use the Owner bootstrap message'
-    );
+    const transitionMessage = (session!.transcriptHistory as any[])
+      .find(message => message.role === 'user' && typeof message.content === 'string' &&
+        message.content.includes('continuing the same role-scoped flow session from workflow node owner-intake to owner-gate'));
+
+    assert.ok(transitionMessage, 'expected a role-transition packet in the reused Owner session');
+    assert.ok(transitionMessage.content.includes('TA design content.'));
+    assert.strictEqual(session!.currentNodeId, 'owner-gate');
   });
 
-  await test('Orchestrator: parallel same-role activation suppresses continuity in node-entry message', async () => {
-    SessionStore.init();
+  await test('Orchestrator: reopened same-role node keeps prior session and appends reopened packet', async () => {
+    resetState();
 
-    // Clear prior session for owner-intake
-    const sessionFile = path.join(stateDir, 'sessions', 'test-flow-id__owner-intake.json');
-    if (fs.existsSync(sessionFile)) fs.unlinkSync(sessionFile);
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'Initial owner proposal discussion' }
+      ],
+      isActive: false,
+      currentNodeId: 'owner-intake'
+    });
 
-    const roleName = 'owner';
-    // Both owner-intake and owner-gate are active simultaneously (same role)
-    // roleContinuity has an entry that WOULD be injected if not suppressed
     const flowRun = makeFlowRun({
-      activeNodes: ['owner-intake', 'owner-gate'],
+      activeNodes: ['owner-intake'],
       pendingNodeArtifacts: {
-        'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
-        'owner-gate': [path.relative(workspaceRoot, taArtifact)]
-      },
-      roleContinuity: {
-        [roleName]: {
-          roleName,
-          completedNodes: [{
-            nodeId: 'some-prior-owner-node',
-            outputArtifactPath: 'records/test-flow/prior.md',
-            completedAt: '2026-04-11T00:00:00.000Z'
-          }]
-        }
+        'owner-intake': [
+          path.relative(workspaceRoot, ownerArtifact1),
+          path.relative(workspaceRoot, reviewFeedbackArtifact)
+        ]
       }
     });
     SessionStore.saveFlowRun(flowRun);
@@ -434,19 +341,41 @@ async function run() {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession('test-flow-id__owner-intake');
-    assert.ok(session !== null, 'session must be saved');
-    const firstMessage = (session!.transcriptHistory[0] as any).content as string;
+    const session = SessionStore.loadRoleSession(ownerSessionId());
+    assert.ok(session !== null, 'reopened node should keep the prior role-scoped session');
 
-    // Continuity must be suppressed — the other active node shares the same role
-    assert.ok(
-      !firstMessage.includes('Role continuity from earlier nodes in this flow:'),
-      'parallel same-role activation must suppress continuity section in node-entry message'
-    );
-    // But the node-entry framing must still be present
-    assert.ok(
-      firstMessage.includes('This is a workflow node entry, not a fresh role-orientation session.'),
-      'node-entry framing must still be present even when continuity is suppressed'
+    const reopenedMessage = (session!.transcriptHistory as any[])
+      .find(message => message.role === 'user' && typeof message.content === 'string' &&
+        message.content.includes('workflow node has been reopened in the same role-scoped flow session'));
+
+    assert.ok(reopenedMessage, 'expected a reopened-node packet in the reused Owner session');
+    assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
+    assert.strictEqual(session!.currentNodeId, 'owner-intake');
+  });
+
+  await test('Orchestrator: same-role parallel activation is rejected', async () => {
+    resetState();
+
+    const flowRun = makeFlowRun({
+      activeNodes: ['owner-intake', 'owner-gate'],
+      pendingNodeArtifacts: {
+        'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
+        'owner-gate': [path.relative(workspaceRoot, taArtifact)]
+      }
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const orchestrator = new FlowOrchestrator();
+    const input = new PassThrough();
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    await assert.rejects(
+      () => orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output),
+      (error: any) => {
+        assert.ok(error instanceof WorkflowError);
+        assert.ok(error.message.includes('Unsupported same-role parallel activation'));
+        return true;
+      }
     );
   });
 
