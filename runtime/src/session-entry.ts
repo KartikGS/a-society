@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { resolveVariableFromIndex } from './paths.js';
 
 /**
  * Builds the exact Owner bootstrap first-turn user message.
@@ -19,10 +20,20 @@ export interface ForwardNodeEntryOptions {
   nodeId: string;
   role: string;
   workspaceRoot: string;
+  projectNamespace: string;
   activeArtifacts: string[];
   entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
   previousNodeId?: string;
   humanInput?: string;
+  nodeContext?: {
+    required_readings?: string[];
+    guidance?: string[];
+    inputs?: string[];
+    work?: string[];
+    outputs?: string[];
+    transitions?: string[];
+    notes?: string[];
+  };
 }
 
 /**
@@ -35,10 +46,12 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     nodeId,
     role,
     workspaceRoot,
+    projectNamespace,
     activeArtifacts,
     entryMode = 'first-node',
     previousNodeId,
-    humanInput
+    humanInput,
+    nodeContext
   } = opts;
   const lines: string[] = [];
 
@@ -78,6 +91,42 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     lines.push('Human input:');
     lines.push(humanInput);
     lines.push('');
+  }
+
+  if (nodeContext) {
+    const appendStringList = (heading: string, items?: string[]) => {
+      if (!items || items.length === 0) return;
+      lines.push(heading);
+      for (const item of items) {
+        lines.push(`- ${item}`);
+      }
+      lines.push('');
+    };
+
+    lines.push('Workflow node contract (first entry to this node only):');
+    lines.push('Use this snapshot as the authoritative node contract for this node in the active flow.');
+    lines.push('');
+
+    appendStringList('Guidance:', nodeContext.guidance);
+    appendStringList('Declared inputs:', nodeContext.inputs);
+    appendStringList('Declared work:', nodeContext.work);
+    appendStringList('Declared outputs:', nodeContext.outputs);
+    appendStringList('Transition notes:', nodeContext.transitions);
+    appendStringList('Node notes:', nodeContext.notes);
+
+    if (nodeContext.required_readings && nodeContext.required_readings.length > 0) {
+      lines.push('Node-specific required reading (first entry to this node only):');
+      for (const varName of nodeContext.required_readings) {
+        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
+        if (resolvedPath && fs.existsSync(resolvedPath)) {
+          lines.push(`[FILE: ${varName} (resolved to ${resolvedPath})]`);
+          lines.push(fs.readFileSync(resolvedPath, 'utf8'));
+        } else {
+          lines.push(`[FILE ERROR: Could not resolve or read ${varName}]`);
+        }
+        lines.push('');
+      }
+    }
   }
 
   lines.push('Proceed from these current node inputs.');

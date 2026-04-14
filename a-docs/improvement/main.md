@@ -142,7 +142,7 @@ Manual computation is reserved for cases where Component 4 cannot be invoked (bo
 
 When the project uses the A-Society runtime, backward pass initiation and agent context injection are handled programmatically — agents do not invoke the Backward Pass Orderer directly.
 
-The runtime calls `computeBackwardPassPlan(recordFolderPath, synthesisRole, mode)` to generate the structured backward pass plan. Component 4 reads `workflow.md` from the record folder and returns the plan as a 2D array of entries (sequential step groups containing concurrent meta-analysis or synthesis roles).
+The runtime calls `computeBackwardPassPlan(recordFolderPath, synthesisRole, mode)` to generate the structured backward pass plan. Component 4 reads `workflow.yaml` from the record folder and returns the plan as a 2D array of entries (sequential step groups containing concurrent meta-analysis or synthesis roles).
 
 The role-specific backward pass instructions for this project live in:
 - `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` — injected into findings-producing backward pass sessions for A-Society

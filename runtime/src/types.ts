@@ -32,6 +32,7 @@ export interface FlowRun {
   recordFolderPath: string;
   activeNodes: string[];                          // node IDs currently executing
   completedNodes: string[];                       // node IDs that have finished
+  visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
   completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;

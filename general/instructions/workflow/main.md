@@ -1,31 +1,31 @@
 # How to Create a Workflow Document
 
-## What Is a Workflow Document?
+## What Is a Workflow Definition?
 
-A workflow document describes the repeatable process by which work moves through a project — from raw input to verified, closed output. It answers:
+A workflow definition describes the repeatable process by which work moves through a project — from raw input to verified, closed output. It answers:
 
 > "How does work get done here? What nodes exist, how does work move between them, and who owns each one?"
 
-It is not a role document. It is not a requirements template. It is the living map of the project's execution loop — the document every agent consults when they ask "what do I do next?"
+It is not a role document. It is not a requirements template. It is the living map of the project's execution loop — the definition every agent consults when they ask "what do I do next?"
 
 It is also the delivery surface for node-linked support docs. If a role needs a companion document at proposal time, review time, implementation, or closure, the workflow is the place that says "read this now."
 
-A workflow document is read at workflow entry and referenced during execution. It must be specific enough to prevent guessing and stable enough to survive many CRs without requiring constant updates.
+A workflow definition is read at workflow entry and referenced during execution. In many projects it will be encoded as YAML. It must be specific enough to prevent guessing and stable enough to survive many CRs without requiring constant updates.
 
 ---
 
 ## Why Every Project Needs One
 
-Without a workflow document, agents improvise process. They infer what "done" means, guess transition rules, and make up sequencing logic. The result is inconsistency that compounds across runs:
+Without a workflow definition, agents improvise process. They infer what "done" means, guess transition rules, and make up sequencing logic. The result is inconsistency that compounds across runs:
 
 - One agent marks a task done before verification; another reopens it.
 - Transition artifacts show up in different formats depending on who wrote them.
 - No one agrees on when to escalate vs. proceed.
 - Each new run re-litigates process decisions that were already made.
 
-A workflow document converts implicit process knowledge into explicit, referenceable rules. Once written, every agent — regardless of role or run — operates from the same playbook.
+A workflow definition converts implicit process knowledge into explicit, referenceable rules. Once written, every agent — regardless of role or run — operates from the same playbook.
 
-**Without a workflow document, process is negotiated at runtime. With one, it is declared in advance.**
+**Without a workflow definition, process is negotiated at runtime. With one, it is declared in advance.**
 
 ---
 
@@ -66,7 +66,7 @@ The simplest workflow — a linear sequence of nodes, running once at a time —
 
 The **Owner** is both the universal entry point and the terminal node for every workflow.
 
-**Entry:** users always begin by assigning the Owner role and pointing the agent at `agents.md`. After loading context (which includes the workflow document), the Owner presents the available workflows and helps the user decide what to work on. The Owner routes work into workflows by creating the trigger input and directing the work to the correct entry node.
+**Entry:** users always begin by assigning the Owner role and pointing the agent at `agents.md`. After loading context (which includes the workflow routing surface and relevant workflow definitions), the Owner presents the available workflows and helps the user decide what to work on. The Owner routes work into workflows by creating the trigger input and directing the work to the correct entry node.
 
 **Terminal:** every workflow surfaces back to the Owner on completion. The closing role in a workflow does not silently close — it hands the result to the Owner. The Owner acknowledges completion, logs it, and determines whether any follow-up is needed. This closed loop ensures the Owner is always aware of what has been finished.
 
@@ -79,7 +79,7 @@ This means:
 
 **Exception: delegated-authority flows.** A project may designate certain flow types as delegated-authority — where a specific role has standing authority to close without Owner terminal confirmation. For these flows, that role serves as the terminal node. The scope of delegated-authority flows must be explicitly bounded in the workflow document itself: direction decisions, library-level additions, and structural changes may not fall within them. The Owner-as-terminal principle applies to all other flows.
 
-Every workflow document should include a **one-line summary** suitable for the Owner to present during workflow selection. This summary is how users discover what workflows are available without reading the full workflow document.
+Every workflow definition should include a **one-line summary** suitable for the Owner to present during workflow selection. This summary is how users discover what workflows are available without reading the full workflow definition.
 
 ### Routing means routing, not doing
 
@@ -95,7 +95,7 @@ The workflow exists because the project decided that completeness requires multi
 
 ## What Belongs in a Workflow Document
 
-A workflow document for any project must cover these sections:
+A workflow definition for any project must cover these sections:
 
 ### 1. Nodes (mandatory)
 
@@ -141,7 +141,7 @@ Transition rules prevent work from disappearing between roles. A node without a 
 - What the downstream node's state is while waiting (paused, not complete — distinct from a normal node completion)
 - How the exchange terminates and the downstream node resumes
 
-**For multi-role projects:** the workflow document carries a lightweight summary of transitions only — who passes to whom and what the receiver checks. Artifact formats, status models, and detailed coordination protocols belong in a communication folder, not here. Embedding protocol detail in the workflow document conflates process sequencing with coordination rules and makes both harder to maintain. See `$INSTRUCTION_COMMUNICATION`. Create the communication folder alongside the workflow document for any project with two or more roles.
+**For multi-role projects:** the workflow definition carries a lightweight summary of transitions only — who passes to whom and what the receiver checks. Artifact formats, status models, and detailed coordination protocols belong in a communication folder, not here. Embedding protocol detail in the workflow definition conflates process sequencing with coordination rules and makes both harder to maintain. See `$INSTRUCTION_COMMUNICATION`. Create the communication folder alongside the workflow definition for any project with two or more roles.
 
 ### 3. Invariants (mandatory)
 
@@ -150,7 +150,7 @@ What rules are true for every unit of work, regardless of node? Invariants are n
 - Historical artifacts are immutable once closed.
 - Scope extensions require explicit approval before implementation resumes.
 
-Invariants belong in the workflow document, not in individual role documents, because they apply to all roles.
+Invariants belong in the workflow definition, not in individual role documents, because they apply to all roles.
 
 ### 4. Escalation Rules (mandatory)
 
@@ -161,7 +161,7 @@ When does an agent stop and ask rather than proceed? Define explicit conditions:
 
 ### 5. Forward Pass Closure (mandatory)
 
-What happens when the forward pass ends? Every workflow document must name a forward pass closure step — the terminal node of the forward pass, which runs before the backward pass begins. This step is where the workflow consolidates its closure obligations: updating the project log, invoking any required tooling, and verifying that all approved tasks have been executed, not merely approved. Scattering these obligations across role documents and coordination protocols means they are invisible at the point they are needed; naming a closure step makes them visible and checkable.
+What happens when the forward pass ends? Every workflow definition must name a forward pass closure step — the terminal node of the forward pass, which runs before the backward pass begins. This step is where the workflow consolidates its closure obligations: updating the project log, invoking any required tooling, and verifying that all approved tasks have been executed, not merely approved. Scattering these obligations across role documents and coordination protocols means they are invisible at the point they are needed; naming a closure step makes them visible and checkable.
 
 The two universal rules governing forward pass closure are stated in the project's workflow routing index (see the "Forward Pass Closure" section). Every workflow's closure step inherits those rules without restating them.
 
@@ -169,7 +169,7 @@ The two universal rules governing forward pass closure are stated in the project
 
 What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own node work for what worked, what failed, and what should change.
 
-A backward pass entry in the workflow document names the roles involved and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT` — do not specify ordering locally. The improvement file is the authoritative source for the backward pass algorithm.
+A backward pass entry in the workflow definition names the roles involved and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT` — do not specify ordering locally. The improvement file is the authoritative source for the backward pass algorithm.
 
 ---
 
@@ -181,19 +181,20 @@ A backward pass entry in the workflow document names the roles involved and wher
 - **Specific artifact templates** — how to format a plan or requirement belongs in sub-documents (`workflow/plans/`, `workflow/reports/`, `workflow/requirements/`)
 - **Historical records** — completed work artifacts live alongside the workflow, not inside it
 
-If the workflow document grows sections that describe specific artifact formats or role-specific behaviors in depth, those sections belong in sub-documents. The workflow document describes the process; sub-documents describe the artifacts produced by that process.
+If the workflow definition grows sections that describe specific artifact formats or role-specific behaviors in depth, those sections belong in sub-documents. The workflow definition describes the process; sub-documents describe the artifacts produced by that process.
 
 What does belong here when relevant is the node-entry cue that activates a support doc: the workflow says when a role must read it.
 
 ---
 
-## Sub-Document Structure
+## Folder Structure
 
-A workflow document is a folder, not a single file. The canonical structure is:
+A workflow area is usually a folder. The canonical structure is:
 
 ```
 workflow/
-├── main.md              ← this document: the process map
+├── main.md              ← routing index or human-facing entry point
+├── [workflow-name].yaml ← canonical workflow definition(s)
 ├── plans/
 │   └── main.md          ← how plans are structured and templated
 ├── reports/
@@ -235,10 +236,10 @@ Name the closure obligations for this workflow — what the terminal Owner node 
 Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
 
 **Step 8 — Identify sub-documents.**
-What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow `main.md`.
+What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow routing surface.
 
 **Step 9 — Cut what does not belong.**
-A workflow document that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files. A role document that enumerates node-triggered "before X, read Y" cues has drifted in the other direction; move those cues back into the workflow.
+A workflow definition that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files. A role document that enumerates node-triggered "before X, read Y" cues has drifted in the other direction; move those cues back into the workflow.
 
 ---
 
@@ -252,7 +253,7 @@ This instruction defines the reusable model. A mature project should usually ins
 
 ## Modifying an Existing Workflow
 
-When an existing workflow needs to change — adding a new flow type, modifying a node, changing a transition, or adjusting an invariant — do not edit the workflow document directly. A workflow modification is a structured operation: it must be proposed, reviewed, and approved before implementation.
+When an existing workflow needs to change — adding a new flow type, modifying a node, changing a transition, or adjusting an invariant — do not edit the active workflow definition casually. A workflow modification is a structured operation: it must be proposed, reviewed, and approved before implementation.
 
 For the complete modification procedure, the single-graph model, evaluative principles, and hard rules: see `$INSTRUCTION_WORKFLOW_MODIFY`.
 
@@ -310,7 +311,7 @@ When the project has more than one workflow — a setup workflow and an ongoing 
 
 When a project maintains two or more **permanent, distinct execution loops** — each with its own ongoing operational cadence, distinct node sequence, and distinct role composition — organize them using an index-based structure:
 
-1. Define each workflow as its own named file in `workflow/` (e.g., `workflow/[name].md`), each with its own YAML frontmatter graph.
+1. Define each workflow as its own named file in `workflow/` (for example, `workflow/[name].yaml`).
 2. Convert `workflow/main.md` into a **routing index**: a lightweight file that names each workflow, provides a one-line summary, and links to its file.
 3. Register each workflow file in the project's file path index with its own variable name.
 4. Place any rules that apply universally across all of the project's workflows — particularly routing guidance and workflow-selection cues — in the routing index, not duplicated in each workflow file.

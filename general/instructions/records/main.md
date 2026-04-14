@@ -55,54 +55,59 @@ The project's `records/main.md` defines which artifact types appear at which seq
 
 **Owner decision naming distinction:** Use `NN-owner-decision.md` when the intake role is recording a terminal decision and the previously active role has no subsequent forward-pass action in this flow. Use `NN-owner-to-[role].md` only when the named role has a next action in the forward pass. This distinction applies to forward-pass actions only. Backward-pass findings or synthesis work do not transform a terminal forward-pass closure artifact into an active handoff — a role that produces backward-pass findings later in the same record is not thereby implied to have had pending forward-pass work. Mislabeling a terminal intake-role decision as an active handoff creates ambiguity about whether the named role still has pending work in this flow.
 
-**Parallel track sub-labeling:** When the intake role declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the intake role must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The intake role assigns these sub-labels in `workflow.md` and in the project's records convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
+**Parallel track sub-labeling:** When the intake role declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the intake role must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The intake role assigns these sub-labels in `workflow.yaml` and in the project's records convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
 
 The first sequence position (`01-`) is reserved for the workflow plan — the Phase 0 gate artifact produced by the Owner at flow intake, before any other artifact is created. Projects using the A-Society framework should declare this position explicitly in their `records/main.md` sequence table. See `$INSTRUCTION_WORKFLOW_COMPLEXITY` for the workflow plan format and its role as the Phase 0 gate.
 
 ---
 
-## workflow.md — Forward Pass Path
+## workflow.yaml — Forward Pass Path
 
-Some projects using this framework maintain a `workflow.md` file in each record folder alongside the sequenced artifacts. This is a structured YAML file representing the flow's forward-pass path in machine-readable form. It is not a sequenced artifact — it has no `NN-` prefix.
+Some projects using this framework maintain a `workflow.yaml` file in each record folder alongside the sequenced artifacts. This is a structured YAML file representing the flow's forward-pass path and node contract snapshot for that flow instance. It is not a sequenced artifact — it has no `NN-` prefix.
 
-**When to use `workflow.md`:** When the project has an executable backward-pass ordering capability, `workflow.md` is the input that capability reads. Projects without such a capability do not need `workflow.md`.
+**When to use `workflow.yaml`:** When the project has an executable backward-pass ordering capability or runtime-managed node-entry injection, `workflow.yaml` is the input that capability reads. Projects without such a capability do not need `workflow.yaml`.
 
 **Schema:**
 
 ```yaml
----
 workflow:
-  name: <string>             # Permanent workflow name; include flow identifier when helpful
+  name: <string>
+  summary: <string>            # optional
   nodes:
-    - id: <string>           # Unique node identifier
-      role: <string>         # Role name (for backward pass ordering)
-      human-collaborative: <string>  # Optional; non-empty string describing required human input
+    - id: <string>
+      role: <string>
+      human-collaborative: <string>  # optional
+      required_readings:
+        - $VARIABLE_NAME             # optional
+      guidance: [<string>]           # optional
+      inputs: [<string>]             # optional
+      work: [<string>]               # optional
+      outputs: [<string>]            # optional
+      transitions: [<string>]        # optional
+      notes: [<string>]              # optional
   edges:
-    - from: <string>         # Node id
-      to: <string>           # Node id
-      artifact: <string>     # Optional; artifact type carried by this handoff
----
+    - from: <string>
+      to: <string>
+      artifact: <string>             # optional
 ```
 
-*Schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Record-folder `workflow.md` uses the same nodes/edges schema as permanent workflow graphs, instantiated as a flow-specific subgraph covering only the nodes and edges the flow traverses.*
+*Schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Record-folder `workflow.yaml` uses the same nodes/edges schema as permanent workflow definitions, instantiated as a flow-specific snapshot of the active path.*
 
-The YAML content must be wrapped in `---` frontmatter delimiters: an opening `---` on line 1, and a closing `---` after the final field. A `workflow.md` file missing either delimiter will cause a Component 4 parse failure.
+**Who creates it:** The workflow-authority role, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
 
-**Who creates it:** The role that performs flow intake, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
+**Completeness obligation:** When populating `workflow.yaml` at intake, the workflow-authority role must list every role step they expect, including intermediate review and approval checkpoints between roles. If the workflow-authority role will review or approve work before the next non-workflow-authority role acts, that checkpoint must appear as its own node in `workflow.yaml`, with an incoming edge from the preceding node and an outgoing edge to the following node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.yaml` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
-**Completeness obligation:** When populating `workflow.md` at intake, the intake role must list every role step they expect, including intermediate review and approval checkpoints between roles. If the intake role will review or approve work before the next non-intake role acts, that checkpoint must appear as its own intake-role node in `workflow.md`, with an incoming edge from the preceding node and an outgoing edge to the following node. For example, if a project's workflow includes `RoleA - Deliverable` and the intake role reviews that deliverable before `RoleB` proceeds, `IntakeRole - RoleA Review` must appear as a distinct node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
-
-**Who can edit it:** The intake role and any role the project designates as workflow-authority for this flow. Regular implementer roles do not edit it.
+**Who can edit it:** Any role the project designates as workflow-authority for this flow. Regular implementer roles do not edit it.
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the intake role could not specify at intake.
 
-**What the ordering capability reads from it:** `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges`. The `human-collaborative` and `artifact` fields are for human orientation and are not parsed programmatically.
+**What the executable layer reads from it:** `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges` drive backward-pass ordering. Runtime-managed sessions may also surface the node's `guidance`, `inputs`, `work`, `outputs`, `transitions`, `notes`, and first-entry `required_readings` from this same file.
 
-**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.md` is for executable backward-pass ordering. When creating `workflow.md`, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. `workflow.md` is authoritative for executable ordering; the plan's `path` governs human-oriented planning only.
+**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.yaml` is the executable record snapshot. When creating `workflow.yaml`, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. `workflow.yaml` is authoritative for executable ordering and node-entry delivery for that flow; the plan's `path` governs human-oriented planning only.
 
-**Pre-convention record folders:** Record folders created before the project established the `workflow.md` requirement are exempt from that requirement. The absence of `workflow.md` in a pre-convention folder is not a convention violation — it is expected. An executable backward-pass ordering capability, if the project uses one, cannot be invoked for these folders; use manual backward pass ordering instead. Future agents encountering a record folder without `workflow.md` should verify whether the folder predates this requirement before treating the absence as an error. Projects should record the convention introduction date or version in their `records/main.md` so this determination is unambiguous.
+**Pre-convention record folders:** Record folders created before the project established the `workflow.yaml` requirement are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. An executable backward-pass ordering capability, if the project uses one, cannot be invoked for these folders; use manual backward pass ordering instead. Projects should record the convention introduction date or version in their `records/main.md` so this determination is unambiguous.
 
-**Bootstrapping exemption:** When a flow establishes a new record-folder requirement, such as the introduction of `workflow.md` itself, that flow's record folder is exempt-by-origin from the requirement it creates. The flow that introduces a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts; it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
+**Bootstrapping exemption:** When a flow establishes a new record-folder requirement, such as the introduction of `workflow.yaml` itself, that flow's record folder is exempt-by-origin from the requirement it creates. The flow that introduces a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts; it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
 ---
 
@@ -150,7 +155,7 @@ For projects that do not use records, `improvement/reports/` remains the default
 Write `a-docs/records/main.md`. Declare the identifier format, slug vocabulary, and what happens when two flows begin on the same calendar date.
 
 **Step 2 — Declare the artifact sequence.**
-List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time. The first position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability, also declare `workflow.md` as a non-sequenced artifact created at intake alongside the workflow plan. The schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH` — record-folder `workflow.md` uses the same nodes/edges schema as permanent workflow graphs, instantiated as a flow-specific subgraph covering only the nodes and edges the flow traverses. Document the authoring authority and the capability that reads it in the project's `records/main.md`.
+List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time. The first position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability or runtime-managed node-entry injection, also declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan. The schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Document the workflow-authority role and the capability that reads the file in the project's `records/main.md`.
 
 **Step 3 — Update the conversation layer.**
 Remove live artifact files from `communication/conversation/`. Update template header notes to say artifacts are created into the active record folder.

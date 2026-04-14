@@ -6,7 +6,7 @@ This directory contains A-Society's permanent execution workflows. Each workflow
 
 ## Workflow Guidance
 
-These workflow documents are also the delivery surface for node-linked or phase-specific support docs. When a workflow node, phase, or gate tells a role to read a supporting document, treat that reference as part of the workflow definition rather than as optional background reading from the role file.
+These workflow definitions are also the delivery surface for node-linked or phase-specific support docs. When a workflow node, phase, or gate tells a role to read a supporting document, treat that reference as part of the workflow definition rather than as optional background reading from the role file.
 
 ---
 

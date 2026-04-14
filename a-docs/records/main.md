@@ -38,11 +38,11 @@ If the Owner issues a Revise decision, the Curator resubmits at the next availab
 
 If a flow includes an additional Curator → Owner submission after the main decision artifact, that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
 
-**Correction loops do not reserve the originally planned downstream numbers.** The artifact names shown in `workflow.md` are planning descriptors, not permanently reserved sequence positions. If a `REVISE` or correction loop consumes the slots originally expected for later phases, resume the remaining forward-pass artifacts at the next available sequence position in the live record folder while keeping the same functional descriptor. For example, a planned `07-owner-to-curator-brief.md` may correctly become `10-owner-to-curator-brief.md` after `07-09` are used by an implementation correction loop.
+**Correction loops do not reserve the originally planned downstream numbers.** The artifact names shown in `workflow.yaml` are planning descriptors, not permanently reserved sequence positions. If a `REVISE` or correction loop consumes the slots originally expected for later phases, resume the remaining forward-pass artifacts at the next available sequence position in the live record folder while keeping the same functional descriptor. For example, a planned `07-owner-to-curator-brief.md` may correctly become `10-owner-to-curator-brief.md` after `07-09` are used by an implementation correction loop.
 
 **Naming convention for non-standard slots:** Use `NN-[role]-[descriptor].md`, where `[descriptor]` names the artifact type (e.g., `curator-addendum.md`, `owner-addendum.md`). Do not reuse the standard `[role]-to-[role].md` form for non-standard submissions.
 
-**Parallel track sub-labeling:** When the Owner declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the Owner must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The Owner assigns these sub-labels in `workflow.md` and in the record folder convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
+**Parallel track sub-labeling:** When the Owner declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the workflow-authority role must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The workflow-authority role assigns these sub-labels in `workflow.yaml` and in the record folder convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
 
 **Owner decision naming distinction:** Use `NN-owner-decision.md` when the Owner is recording a decision and the previously active role has no subsequent action in this flow. Use `NN-owner-to-[role].md` only when the named role has a next action in the flow. This distinction applies to forward-pass actions only. The backward pass is governed by `$A_SOCIETY_IMPROVEMENT`; a role's later backward-pass findings or synthesis work does not make a terminal forward-pass closure artifact an active `owner-to-[role]` handoff. Mislabeling a terminal Owner decision as an active handoff creates ambiguity about whether the named role still has pending work in this flow.
 
@@ -54,51 +54,56 @@ If a flow includes an additional Curator → Owner submission after the main dec
 
 ---
 
-## workflow.md — Forward Pass Path
+## workflow.yaml — Forward Pass Path
 
-`workflow.md` is a structured YAML file that lives in the record folder alongside the sequenced artifacts. It is not sequenced — it has no `NN-` prefix and does not appear in the artifact sequence table.
+`workflow.yaml` is a structured YAML file that lives in the record folder alongside the sequenced artifacts. It is not sequenced — it has no `NN-` prefix and does not appear in the artifact sequence table.
 
 **Schema:**
 
 ```yaml
----
 workflow:
   name: <string>             # Permanent workflow name; include flow identifier when helpful
+  summary: <string>          # Optional; one-line workflow summary
   nodes:
     - id: <string>           # Unique node identifier
       role: <string>         # Role name (parsed by Component 4)
       human-collaborative: <string>  # Optional; non-empty string describing required human input
+      required_readings:     # Optional; injected only on first entry to this node
+        - $VARIABLE_NAME
+      guidance: [<string>]   # Optional; node guidance message(s)
+      inputs: [<string>]     # Optional; declared node inputs
+      work: [<string>]       # Optional; declared node work
+      outputs: [<string>]    # Optional; declared node outputs
+      transitions: [<string>] # Optional; node transition notes
+      notes: [<string>]      # Optional; node notes
   edges:
     - from: <string>         # Node id
       to: <string>           # Node id
       artifact: <string>     # Optional; artifact type carried by this handoff
----
 ```
 
-The YAML content must be wrapped in `---` frontmatter delimiters as shown. The Backward Pass Orderer reads `workflow.md` as YAML frontmatter — a file missing the opening or closing `---` delimiter will cause a parse failure.
+**Who creates it:** The workflow-authority role at flow intake, alongside `01-owner-workflow-plan.md`.
 
-**Who creates it:** The Owner, at flow intake, alongside `01-owner-workflow-plan.md`.
+**Completeness obligation:** When populating `workflow.yaml` at intake, the workflow-authority role must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. Because the Owner creates the record folder and opens the flow today, the first node in any A-Society `workflow.yaml` is currently an Owner intake node. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.yaml`, with an incoming edge from the preceding node and an outgoing edge to the following node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.yaml` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
-**Completeness obligation:** When populating `workflow.md` at intake, the Owner must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. Because the Owner creates the record folder and opens the flow, the first node in any A-Society `workflow.md` is always an Owner intake node. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.md`, with an incoming edge from the preceding node and an outgoing edge to the following node. For example, `TA - Advisory` must be followed by an `Owner - TA Review` node when the Owner reviews the advisory before the Curator proceeds. No Owner checkpoint may be omitted because it was implied, and the initial Owner intake node may not be skipped because the record folder already exists. Silent checkpoints produce `workflow.md` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
-
-**Who can edit it:** The Owner and any role explicitly designated as workflow-authority for this flow. Standard implementer roles do not edit `workflow.md`.
+**Who can edit it:** Any role explicitly designated as workflow-authority for the active flow. Standard implementer roles do not edit `workflow.yaml`.
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
 
-**What Component 4 reads from it:** `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges`. The `human-collaborative` field is present for human orientation and is not parsed by Component 4.
+**What the runtime reads from it:** Component 4 reads `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges` for backward-pass planning. At forward-pass node entry, the runtime injects node-specific `required_readings` only on the first visit to that node, and may surface the node's `guidance`, `inputs`, `work`, `outputs`, `transitions`, and `notes` as the node contract snapshot.
 
-**Artifact names in `workflow.md` are descriptor-level labels, not frozen numeric filenames.** The `artifact` value documents the intended handoff type at intake. Later `REVISE` or correction loops may shift the live sequence numbering. When that happens, preserve the descriptor and use the next available sequence slot in the record folder rather than trying to restore the originally planned number.
+**Artifact names in `workflow.yaml` are descriptor-level labels, not frozen numeric filenames.** The `artifact` value documents the intended handoff type at intake. Later `REVISE` or correction loops may shift the live sequence numbering. When that happens, preserve the descriptor and use the next available sequence slot in the record folder rather than trying to restore the originally planned number.
 
 **Relationship to the plan's `path` field:** `01-owner-workflow-plan.md` also contains a `path` field — a flat string list combining role and phase descriptor (e.g., `- Owner - Intake & Briefing`). These two representations coexist and serve distinct consumers:
 
 - **Plan `path`** — human-oriented planning reference used for complexity assessment and routing decisions at intake. Not machine-parsed. Combined role + phase strings.
-- **`workflow.md`** — machine-readable graph parsed by Component 4. Structured nodes and edges. Used to compute backward pass traversal order.
+- **`workflow.yaml`** — machine-readable record snapshot parsed by the runtime. Used to compute backward pass traversal order and to deliver node-entry context.
 
-When creating `workflow.md` at intake, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. Roles must be consistent between the two representations. `workflow.md` is the authoritative source for programmatic backward pass ordering; the plan's `path` governs human-oriented planning only.
+When creating `workflow.yaml` at intake, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. Roles must be consistent between the two representations. `workflow.yaml` is the authoritative runtime snapshot for this flow; the plan's `path` governs human-oriented planning only.
 
-**Pre-convention record folders:** Record folders created before the `workflow.md` requirement was established are exempt from that requirement. The absence of `workflow.md` in a pre-convention folder is not a convention violation — it is expected. Component 4 cannot be invoked for these folders; use manual backward pass ordering. Future agents encountering a record folder without `workflow.md` should verify whether the folder predates this requirement before treating the absence as an error.
+**Pre-convention record folders:** Record folders created before the `workflow.yaml` requirement was established are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. Component 4 cannot be invoked for these folders; use manual backward pass ordering.
 
-**Bootstrapping exemption:** When a flow establishes a new record-folder requirement (such as the introduction of `workflow.md` itself), the current flow's record folder is exempt-by-origin from that requirement. The flow that creates a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts — it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
+**Bootstrapping exemption:** When a flow establishes a new record-folder requirement (such as the introduction of `workflow.yaml` itself), the current flow's record folder is exempt-by-origin from that requirement. The flow that creates a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts — it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
 ---
 
@@ -119,7 +124,7 @@ The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
 2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. Create `workflow.md` using the schema in [## workflow.md — Forward Pass Path] above. Populate `workflow.path` from the plan's `path` field. The first node is always the Owner intake step that created the folder and wrote `01-owner-workflow-plan.md`. Wrap the YAML content in `---` frontmatter delimiters (opening `---` on line 1, closing `---` after the final field). `workflow.md` is required in any record folder where Component 4 will be invoked during the backward pass.
+3. Create `workflow.yaml` using the schema in [## workflow.yaml — Forward Pass Path] above. Populate the node list and edge structure from the plan's `path` field. The first node is currently the Owner intake step that created the folder and wrote `01-owner-workflow-plan.md`. `workflow.yaml` is required in any record folder where Component 4 will be invoked during the backward pass.
 4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
 5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 

@@ -85,7 +85,7 @@ These constraints narrow the tier options inside this project:
 - **Approval Invariant:** Do not choose Tier 1 for work that would require the Curator to write to `general/` without an Owner review node. If the change needs Curator-authored `general/` content, it must route through a review-bearing path.
 - **Workflow selection comes first:** Use `$A_SOCIETY_WORKFLOW` to choose the applicable workflow family. Use this document to size the intake path once the applicable workflow is known.
 - **Executable scope is not framework-only scope:** If the work changes executable design, implementation, operator-facing executable behavior, or stable executable contracts, route through `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` or `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` as appropriate.
-- **Record artifacts are mandatory at intake:** `01-owner-workflow-plan.md` and `workflow.md` are always required at A-Society intake. Tier changes alter the downstream path; they do not waive the intake artifacts.
+- **Record artifacts are mandatory at intake:** `01-owner-workflow-plan.md` and `workflow.yaml` are always required at A-Society intake. Tier changes alter the downstream path; they do not waive the intake artifacts.
 
 ---
 
@@ -95,7 +95,7 @@ At Owner intake:
 
 1. Create the record folder under `$A_SOCIETY_RECORDS`
 2. Produce `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN`
-3. Create `workflow.md` for the active path
+3. Create `workflow.yaml` for the active path
 4. Verify all plan fields are non-null before issuing any Tier 2/3 brief
 
 `$A_SOCIETY_RECORDS` governs record-folder structure and artifact sequencing. `$A_SOCIETY_COMM_TEMPLATE_PLAN` governs the workflow plan schema and prose fields.

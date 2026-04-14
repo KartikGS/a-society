@@ -46,8 +46,7 @@ fs.writeFileSync(
 fs.writeFileSync(path.join(indexDir, 'main.md'), '');
 
 // workflow: owner-intake -> ta -> owner-gate
-const workflow = `---
-workflow:
+const workflow = `workflow:
   name: test-flow
   nodes:
     - id: owner-intake
@@ -61,9 +60,8 @@ workflow:
       to: ta
     - from: ta
       to: owner-gate
----
 `;
-fs.writeFileSync(path.join(recordDir, 'workflow.md'), workflow);
+fs.writeFileSync(path.join(recordDir, 'workflow.yaml'), workflow);
 
 const ownerArtifact1 = path.join(recordDir, '01-owner-brief.md');
 const taArtifact = path.join(recordDir, '02-ta-design.md');
@@ -195,6 +193,7 @@ async function run() {
       nodeId: 'owner-gate',
       role: 'owner',
       workspaceRoot,
+      projectNamespace,
       activeArtifacts: [path.relative(workspaceRoot, taArtifact)],
       entryMode: 'role-transition',
       previousNodeId: 'owner-intake'
@@ -210,6 +209,7 @@ async function run() {
       nodeId: 'owner-intake',
       role: 'owner',
       workspaceRoot,
+      projectNamespace,
       activeArtifacts: [
         path.relative(workspaceRoot, ownerArtifact1),
         path.relative(workspaceRoot, reviewFeedbackArtifact)

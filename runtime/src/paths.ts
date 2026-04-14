@@ -6,9 +6,13 @@ import path from 'node:path';
  * by looking up the public or internal index tables, ensuring
  * we never hardcode framework paths inside the runtime.
  */
-export function resolveVariableFromIndex(variable: string, workspaceRoot: string): string | null {
-  const publicIndex = path.join(workspaceRoot, 'a-society/index.md');
-  const internalIndex = path.join(workspaceRoot, 'a-society/a-docs/indexes/main.md');
+export function resolveVariableFromIndex(
+  variable: string,
+  workspaceRoot: string,
+  projectNamespace: string
+): string | null {
+  const publicIndex = path.join(workspaceRoot, projectNamespace, 'index.md');
+  const internalIndex = path.join(workspaceRoot, projectNamespace, 'a-docs', 'indexes', 'main.md');
   
   const extractPath = (indexFile: string): string | null => {
     if (!fs.existsSync(indexFile)) return null;

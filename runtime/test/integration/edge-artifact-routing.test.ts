@@ -24,8 +24,7 @@ async function runTest() {
   fs.writeFileSync(path.join(workspaceArtifactDir, '02-producer-to-b.md'), 'Producer artifact for B');
   fs.writeFileSync(path.join(workspaceArtifactDir, '03-c-to-b.md'), 'Branch C artifact for B');
 
-  const workflowGraph = `---
-workflow:
+  const workflowGraph = `workflow:
   name: edge-artifact-routing
   nodes:
     - id: producer
@@ -43,9 +42,8 @@ workflow:
       to: branch-b
     - from: branch-c
       to: branch-b
----
 `;
-  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+  fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   SessionStore.init();
   const flowRun = {

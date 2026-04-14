@@ -6,8 +6,8 @@
  *
  *   Scaffold  →  Consent Utility   (scaffold calls consent utility for consent files)
  *   Scaffold  →  Path Validator    (path validator can be run against index files)
- *   Workflow Graph Validator        (validates live permanent workflow docs)
- *   Backward Pass Orderer           (reads record-folder workflow.md input)
+ *   Workflow Graph Validator        (validates live permanent workflow definitions)
+ *   Backward Pass Orderer           (reads record-folder workflow.yaml input)
  *   Version Comparator              (standalone, fixture-based for hermeticity)
  *
  * Framework state failures (missing files in indexes, etc.) are printed as
@@ -59,7 +59,7 @@ const SOCIETY_ROOT      = path.join(REPO_ROOT, 'a-society');
 const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'general/manifest.yaml');
 const PUBLIC_INDEX      = path.join(SOCIETY_ROOT, 'index.md');
 const INTERNAL_INDEX    = path.join(SOCIETY_ROOT, 'a-docs/indexes/main.md');
-const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/executable-development.md');
+const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/executable-development.yaml');
 const FRAMEWORK_VERSION_FIXTURE = path.join(__dirname, 'fixtures', 'framework-version-sample.md');
 const VERSION_RECORD_FIXTURE = path.join(__dirname, 'fixtures', 'version-record-current.md');
 
@@ -68,7 +68,7 @@ const TEMP_BASE     = fs.mkdtempSync(path.join(tmpdir(), 'a-society-integration-
 const PROJECT_ROOT  = path.join(TEMP_BASE, 'test-project');
 const ADOCS_ROOT    = path.join(PROJECT_ROOT, 'a-docs');
 const RECORD_FOLDER = path.join(TEMP_BASE, 'record-folder');
-const RECORD_WORKFLOW = path.join(RECORD_FOLDER, 'workflow.md');
+const RECORD_WORKFLOW = path.join(RECORD_FOLDER, 'workflow.yaml');
 
 function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
 
@@ -77,8 +77,7 @@ console.log('\nintegration');
 fs.mkdirSync(RECORD_FOLDER, { recursive: true });
 fs.writeFileSync(
   RECORD_WORKFLOW,
-  `---
-workflow:
+  `workflow:
   nodes:
     - id: '1'
       role: Owner
@@ -91,9 +90,6 @@ workflow:
       to: '2'
     - from: '2'
       to: '3'
----
-
-# Workflow
 `,
   'utf8',
 );
@@ -223,7 +219,7 @@ test('Scenario 5 — workflow graph validator runs on live workflow and reports 
   }
 });
 
-test('Scenario 5 — backward pass orderer runs on record-folder workflow.md without throwing', () => {
+test('Scenario 5 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
   assert.doesNotThrow(() => {
     backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'Curator', 'graph-based');
     // Flatten 2D plan to flat array for downstream assertions

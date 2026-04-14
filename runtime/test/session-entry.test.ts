@@ -47,14 +47,27 @@ test('buildOwnerBootstrapMessage: does not instruct rereading files by default',
 // --- buildForwardNodeEntryMessage ---
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-session-entry-'));
+const projectNamespace = 'test-project';
+const projectRoot = path.join(tmpDir, projectNamespace);
 const artifactPath = path.join(tmpDir, 'test-artifact.md');
 fs.writeFileSync(artifactPath, 'Artifact content here.');
+fs.mkdirSync(path.join(projectRoot, 'a-docs', 'indexes'), { recursive: true });
+fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles'), { recursive: true });
+fs.writeFileSync(
+  path.join(projectRoot, 'a-docs', 'indexes', 'main.md'),
+  `| \`$TEST_NODE_DOC\` | \`test-project/a-docs/roles/node-doc.md\` |\n`
+);
+fs.writeFileSync(
+  path.join(projectRoot, 'a-docs', 'roles', 'node-doc.md'),
+  'Node-specific reading content.'
+);
 
 test('buildForwardNodeEntryMessage: contains node header and first-node role-session framing', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: []
   });
 
@@ -70,6 +83,7 @@ test('buildForwardNodeEntryMessage: renders active artifact file block with cont
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: [relPath]
   });
 
@@ -83,6 +97,7 @@ test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missin
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: ['nonexistent/path.md']
   });
 
@@ -94,6 +109,7 @@ test('buildForwardNodeEntryMessage: includes role-transition framing when previo
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: [],
     entryMode: 'role-transition',
     previousNodeId: 'owner-intake'
@@ -108,6 +124,7 @@ test('buildForwardNodeEntryMessage: includes reopened-node framing when node re-
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: [],
     entryMode: 'reopened-node',
     previousNodeId: 'owner-gate'
@@ -122,6 +139,7 @@ test('buildForwardNodeEntryMessage: includes human input section when provided',
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: [],
     humanInput: 'Please focus on the security section.'
   });
@@ -130,11 +148,39 @@ test('buildForwardNodeEntryMessage: includes human input section when provided',
   assert.ok(msg.includes('Please focus on the security section.'));
 });
 
+test('buildForwardNodeEntryMessage: renders node contract fields and node-specific required reading on first entry', () => {
+  const msg = buildForwardNodeEntryMessage({
+    nodeId: 'owner-gate',
+    role: 'Owner',
+    workspaceRoot: tmpDir,
+    projectNamespace,
+    activeArtifacts: [],
+    nodeContext: {
+      required_readings: ['$TEST_NODE_DOC'],
+      guidance: ['Use the approved review checklist.'],
+      inputs: ['Curator proposal artifact'],
+      work: ['Apply the approval tests and decide Approved, Revise, or Rejected.'],
+      outputs: ['Owner decision artifact'],
+      transitions: ['Approved -> curator-implementation-registration'],
+      notes: ['Approval is not completion.']
+    }
+  });
+
+  assert.ok(msg.includes('Workflow node contract (first entry to this node only):'));
+  assert.ok(msg.includes('Guidance:'));
+  assert.ok(msg.includes('Use the approved review checklist.'));
+  assert.ok(msg.includes('Declared inputs:'));
+  assert.ok(msg.includes('Curator proposal artifact'));
+  assert.ok(msg.includes('[FILE: $TEST_NODE_DOC'));
+  assert.ok(msg.includes('Node-specific reading content.'));
+});
+
 test('buildForwardNodeEntryMessage: omits human input section when not provided', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
+    projectNamespace,
     activeArtifacts: []
   });
 

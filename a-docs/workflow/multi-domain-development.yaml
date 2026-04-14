@@ -1,0 +1,163 @@
+workflow:
+  name: A-Society Multi-Domain Development
+  summary: Single coordinated flow across framework documentation, executable implementation, and related roles with parallel tracks where work is independent until a join.
+  use_when: One feature or decision thread requires work in more than one of framework docs/general, framework-service implementation, orchestration implementation, or related roles that can proceed in parallel after shared planning or design.
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+      required_readings:
+        - $A_SOCIETY_WORKFLOW_COMPLEXITY
+        - $A_SOCIETY_RECORDS
+      guidance:
+        - Read $A_SOCIETY_OWNER_LOG_MANAGEMENT when intake decisions affect $A_SOCIETY_LOG.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when issuing detailed downstream constraints.
+      inputs:
+        - Human direction for cross-domain work
+      work:
+        - Assess the triggered work against the five axes from $A_SOCIETY_WORKFLOW_COMPLEXITY.
+        - Create the record folder per $A_SOCIETY_RECORDS.
+        - Produce 01-owner-workflow-plan.md using $A_SOCIETY_COMM_TEMPLATE_PLAN.
+        - Create workflow.yaml for the active multi-domain path.
+        - Define the known path, including any parallel tracks, join points, and known unknowns.
+        - Decide whether a TA design phase is required before the parallel implementation tracks begin.
+      outputs:
+        - 01-owner-workflow-plan.md
+        - workflow.yaml
+        - Downstream multi-domain brief(s)
+      notes:
+        - Parallel tracks do not begin until the intake artifacts exist and the Owner has approved the flow shape.
+    - id: ta-design
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - Owner multi-domain brief and active workflow snapshot
+      work:
+        - Produce the shared design/advisory that the parallel tracks depend on.
+      outputs:
+        - TA advisory
+    - id: framework-services-implementation
+      role: Framework Services Developer
+      required_readings:
+        - $A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE
+      inputs:
+        - TA advisory for the framework-services track
+      work:
+        - Implement deterministic executable capabilities for the active feature thread.
+      outputs:
+        - Completion report
+    - id: orchestration-implementation
+      role: Orchestration Developer
+      required_readings:
+        - $A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE
+      inputs:
+        - TA advisory for the orchestration track
+      work:
+        - Implement runtime orchestration and operator-facing executable behavior for the active feature thread.
+      outputs:
+        - Completion report
+    - id: ta-integration
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - Completion artifacts from the executable tracks that ran
+      work:
+        - Review the converged executable output against the approved design.
+      outputs:
+        - TA integration report
+    - id: owner-integration-gate
+      role: Owner
+      human-collaborative: approval
+      guidance:
+        - Read $A_SOCIETY_OWNER_TA_REVIEW for TA-reviewed executable output.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when adding detailed correction constraints.
+      inputs:
+        - TA integration report
+      work:
+        - Decide whether the executable-side work is approved for the Curator checkpoint or follow-on routing.
+      outputs:
+        - Owner integration-gate artifact
+    - id: curator-proposal
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - Owner brief for the framework/general-facing changes in scope
+      work:
+        - Prepare the Curator proposal for the framework or general surfaces that require Owner approval.
+      outputs:
+        - Curator proposal artifact
+      notes:
+        - "When a parallel track includes work that affects general/, the Curator follows the Approval Invariant: no unilateral writes to general/."
+    - id: owner-curator-approval
+      role: Owner
+      human-collaborative: approval
+      guidance:
+        - Read $A_SOCIETY_OWNER_REVIEW_BEHAVIOR for the proposal review.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when adding detailed downstream constraints.
+      inputs:
+        - Curator proposal artifact
+      work:
+        - Review the Curator proposal and decide whether the framework/general changes are approved.
+      outputs:
+        - Owner decision artifact
+    - id: curator-implementation
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - Owner approval for the Curator track
+      work:
+        - Implement and register the approved framework/general-facing changes within the same flow and record folder.
+      outputs:
+        - Curator completion artifact
+    - id: owner-closure
+      role: Owner
+      human-collaborative: closure
+      required_readings:
+        - $A_SOCIETY_OWNER_LOG_MANAGEMENT
+        - $A_SOCIETY_OWNER_CLOSURE
+      inputs:
+        - Curator completion artifact and any other terminal outputs from the active tracks
+      work:
+        - Confirm all approved work across domains actually landed.
+        - Confirm required registrations and publications are complete.
+        - Determine backward-pass routing.
+      outputs:
+        - Forward-pass closure artifact
+  edges:
+    - from: owner-intake
+      to: ta-design
+      artifact: owner-to-ta-brief
+    - from: ta-design
+      to: framework-services-implementation
+      artifact: ta-advisory
+    - from: ta-design
+      to: orchestration-implementation
+      artifact: ta-advisory
+    - from: framework-services-implementation
+      to: ta-integration
+      artifact: completion-report
+    - from: orchestration-implementation
+      to: ta-integration
+      artifact: completion-report
+    - from: ta-integration
+      to: owner-integration-gate
+      artifact: ta-integration-report
+    - from: owner-integration-gate
+      to: curator-proposal
+      artifact: owner-to-curator-brief
+    - from: curator-proposal
+      to: owner-curator-approval
+      artifact: curator-to-owner
+    - from: owner-curator-approval
+      to: curator-implementation
+      artifact: owner-to-curator
+    - from: curator-implementation
+      to: owner-closure
+      artifact: curator-to-owner
+    - from: owner-curator-approval
+      to: curator-proposal
+      artifact: owner-to-curator

@@ -364,8 +364,8 @@ async function run() {
     const recordDir = path.join(tmpDir, 'accepted-handoff-record');
     fs.mkdirSync(recordDir, { recursive: true });
     fs.writeFileSync(
-      path.join(recordDir, 'workflow.md'),
-      '---\nworkflow:\n  name: Accepted Handoff Test\n  nodes:\n    - id: start\n      role: curator\n    - id: next\n      role: owner\n  edges:\n    - from: start\n      to: next\n---\n'
+      path.join(recordDir, 'workflow.yaml'),
+      'workflow:\n  name: Accepted Handoff Test\n  nodes:\n    - id: start\n      role: curator\n    - id: next\n      role: owner\n  edges:\n    - from: start\n      to: next\n'
     );
     fs.writeFileSync(path.join(tmpDir, 'accepted-output.md'), 'Accepted artifact content.');
 
@@ -425,8 +425,8 @@ async function run() {
     clearTestMetrics();
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
-    const workflowPath = path.join(workflowsDir, 'workflow.md');
-    fs.writeFileSync(workflowPath, '---\nworkflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: Owner\n  edges: []\n---');
+    const workflowPath = path.join(workflowsDir, 'workflow.yaml');
+    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: Owner\n  edges: []\n');
 
     const result = validateWorkflowFile(workflowPath, true);
     assert.ok(result.valid);
@@ -487,8 +487,8 @@ async function run() {
     fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
     fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'synthesis.md'), 'Synthesis instructions');
     fs.writeFileSync(
-      path.join(recordDir, 'workflow.md'),
-      '---\nworkflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n---\n'
+      path.join(recordDir, 'workflow.yaml'),
+      'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n'
     );
     fs.writeFileSync(path.join(recordDir, '01-curator-findings.md'), 'Existing findings');
 

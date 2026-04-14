@@ -50,6 +50,9 @@ export class SessionStore {
     if (!flow.pendingNodeArtifacts || typeof flow.pendingNodeArtifacts !== 'object') {
       throw new Error('Persisted flow state is missing pendingNodeArtifacts.');
     }
+    if (!Array.isArray(flow.visitedNodeIds)) {
+      flow.visitedNodeIds = [];
+    }
 
     return flow;
   }

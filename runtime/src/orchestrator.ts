@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import yaml from 'js-yaml';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
@@ -14,6 +13,7 @@ import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { canonicalWorkflowFilename, findWorkflowFilePath, parseWorkflowFile } from './workflow-file.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -28,12 +28,29 @@ type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
 export function parseWorkflow(filePath: string): any {
   if (!fs.existsSync(filePath)) {
     const folder = path.dirname(filePath);
-    throw new WorkflowError(`Error: workflow.md not found in ${folder}. This file is required before a handoff can be routed. Please create workflow.md in the record folder and restate your handoff.`);
+    throw new WorkflowError(
+      `Error: ${canonicalWorkflowFilename()} not found in ${folder}. ` +
+      `This file is required before a handoff can be routed. ` +
+      `Please create ${canonicalWorkflowFilename()} in the record folder and restate your handoff.`
+    );
   }
-  const content = fs.readFileSync(filePath, 'utf8');
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  if (!match) throw new WorkflowError('No valid frontmatter found in workflow');
-  return yaml.load(match[1]);
+  try {
+    return parseWorkflowFile(filePath);
+  } catch (err) {
+    throw new WorkflowError((err as Error).message);
+  }
+}
+
+function requireWorkflowPath(recordFolderPath: string): string {
+  const workflowPath = findWorkflowFilePath(recordFolderPath);
+  if (!workflowPath) {
+    throw new WorkflowError(
+      `Error: ${canonicalWorkflowFilename()} not found in ${recordFolderPath}. ` +
+      `This file is required before a handoff can be routed. ` +
+      `Please create ${canonicalWorkflowFilename()} in the record folder and restate your handoff.`
+    );
+  }
+  return workflowPath;
 }
 
 
@@ -137,14 +154,14 @@ export class FlowOrchestrator {
                 }
                 this.validateTargetArtifactsExist(workspaceRoot, handoffs);
                 const firstArtifactPath = handoffs[0].artifact_path;
-                if (!firstArtifactPath) throw new Error("Initial interactive session did not supply an artifact_path to locate workflow.md.");
+                if (!firstArtifactPath) throw new Error(`Initial interactive session did not supply an artifact_path to locate ${canonicalWorkflowFilename()}.`);
 
                 const recordFolderPath = path.dirname(path.resolve(workspaceRoot, firstArtifactPath));
-                const workflowDocumentPath = path.join(recordFolderPath, 'workflow.md');
+                const workflowDocumentPath = findWorkflowFilePath(recordFolderPath) ?? path.join(recordFolderPath, canonicalWorkflowFilename());
 
                 if (!fs.existsSync(workflowDocumentPath)) {
                   bootstrapSpan.addEvent('bootstrap.workflow_not_found', { record_folder_path: recordFolderPath });
-                  const guidance = buildWorkflowRepairGuidance([`workflow.md not found in ${recordFolderPath}`]);
+                  const guidance = buildWorkflowRepairGuidance([`${canonicalWorkflowFilename()} not found in ${recordFolderPath}`]);
                   this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'missing_workflow', summary: guidance.operatorSummary });
                   bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
                   continue;
@@ -171,6 +188,7 @@ export class FlowOrchestrator {
                   recordFolderPath,
                   activeNodes: [startNode.id],
                   completedNodes: [],
+                  visitedNodeIds: [],
                   completedEdgeArtifacts: {},
                   pendingNodeArtifacts: {},
                   status: 'running',
@@ -195,7 +213,7 @@ export class FlowOrchestrator {
             }
           });
         } else {
-          const resumeWorkflowPath = path.join(flowRun.recordFolderPath, 'workflow.md');
+          const resumeWorkflowPath = requireWorkflowPath(flowRun.recordFolderPath);
           const resumeWf = parseWorkflow(resumeWorkflowPath).workflow;
           this.ensureNoRoleScopedParallelConflictInActiveSet(flowRun, resumeWf);
           this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
@@ -266,7 +284,7 @@ export class FlowOrchestrator {
           throw new Error(`Node '${nodeId}' is not in activeNodes: [${flowRun.activeNodes.join(', ')}]. Only active nodes can be advanced.`);
         }
 
-        const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
+        const wf = parseWorkflow(requireWorkflowPath(flowRun.recordFolderPath)).workflow;
         const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
         if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
 
@@ -323,14 +341,30 @@ export class FlowOrchestrator {
 
         const injectedHistory = [...session.transcriptHistory];
         const sameNodeResume = session.isActive && session.currentNodeId === nodeId && injectedHistory.length > 0;
+        const visitedNodeIds = flowRun.visitedNodeIds ?? (flowRun.visitedNodeIds = []);
+        const firstNodeVisit = !visitedNodeIds.includes(nodeId);
+        const rawNodeContext = firstNodeVisit ? {
+          required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
+          guidance: Array.isArray(currentNodeDef.guidance) ? currentNodeDef.guidance : undefined,
+          inputs: Array.isArray(currentNodeDef.inputs) ? currentNodeDef.inputs : undefined,
+          work: Array.isArray(currentNodeDef.work) ? currentNodeDef.work : undefined,
+          outputs: Array.isArray(currentNodeDef.outputs) ? currentNodeDef.outputs : undefined,
+          transitions: Array.isArray(currentNodeDef.transitions) ? currentNodeDef.transitions : undefined,
+          notes: Array.isArray(currentNodeDef.notes) ? currentNodeDef.notes : undefined,
+        } : undefined;
+        const nodeContext = rawNodeContext && Object.values(rawNodeContext).some(value =>
+          Array.isArray(value) ? value.length > 0 : false
+        ) ? rawNodeContext : undefined;
 
         if (injectedHistory.length === 0) {
           const nodeEntryMessage = buildForwardNodeEntryMessage({
             nodeId,
             role: roleName,
             workspaceRoot: flowRun.workspaceRoot,
+            projectNamespace: flowRun.projectNamespace,
             activeArtifacts: resolvedArtifacts,
-            humanInput
+            humanInput,
+            nodeContext
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });
         } else if (!sameNodeResume) {
@@ -338,14 +372,20 @@ export class FlowOrchestrator {
             nodeId,
             role: roleName,
             workspaceRoot: flowRun.workspaceRoot,
+            projectNamespace: flowRun.projectNamespace,
             activeArtifacts: resolvedArtifacts,
             entryMode: session.currentNodeId === nodeId ? 'reopened-node' : 'role-transition',
             previousNodeId: session.currentNodeId,
-            humanInput
+            humanInput,
+            nodeContext
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });
         } else if (humanInput) {
           injectedHistory.push({ role: 'user', content: humanInput });
+        }
+
+        if (firstNodeVisit && (injectedHistory.length > 0) && !visitedNodeIds.includes(nodeId)) {
+          visitedNodeIds.push(nodeId);
         }
 
         session.currentNodeId = nodeId;
@@ -494,10 +534,14 @@ export class FlowOrchestrator {
     turnUsage?: TurnUsage
   ): Promise<AppliedHandoffDirection> {
     if (!fs.existsSync(flowRun.recordFolderPath)) {
-      throw new WorkflowError(`Error: No record folder found at ${flowRun.recordFolderPath}. A record folder must be created before emitting a handoff. Please create the record folder, create workflow.md inside it, and restate your handoff.`);
+      throw new WorkflowError(
+        `Error: No record folder found at ${flowRun.recordFolderPath}. ` +
+        `A record folder must be created before emitting a handoff. ` +
+        `Please create the record folder, create ${canonicalWorkflowFilename()} inside it, and restate your handoff.`
+      );
     }
     this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-    const wf = parseWorkflow(path.join(flowRun.recordFolderPath, 'workflow.md')).workflow;
+    const wf = parseWorkflow(requireWorkflowPath(flowRun.recordFolderPath)).workflow;
 
     const currentNode = this.findNodeById(wf, nodeId);
     const outgoingEdges = this.getOutgoingEdges(wf, nodeId);

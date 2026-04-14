@@ -6,13 +6,16 @@ import {
   validateGraph,
   buildWorkflowRepairGuidance,
 } from '../../src/framework-services/workflow-graph-validator.js';
-import { extractFrontmatter } from '../../src/framework-services/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
-const LIVE_WORKFLOW = path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'executable-development.md');
+const LIVE_WORKFLOWS = [
+  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'framework-development.yaml'),
+  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'executable-development.yaml'),
+  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'multi-domain-development.yaml'),
+];
 const FIXTURES = path.join(__dirname, 'fixtures');
 
 let passed = 0;
@@ -31,17 +34,6 @@ function test(name: string, fn: () => void): void {
 }
 
 console.log('\nworkflow-graph-validator');
-
-test('extracts frontmatter from valid file', () => {
-  const content = '---\nkey: value\n---\n# Title\n';
-  const result = extractFrontmatter(content);
-  assert.strictEqual(result, 'key: value');
-});
-
-test('returns null when no frontmatter present', () => {
-  const result = extractFrontmatter('# No frontmatter here\n');
-  assert.strictEqual(result, null);
-});
 
 test('valid graph passes validation', () => {
   const graph = {
@@ -102,11 +94,47 @@ test('extra keys on node produces error', () => {
   assert.ok(errors.some((e: string) => e.includes('invalid keys: invalid')));
 });
 
+test('extra keys on workflow produce error', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      graph: 'single-instance',
+      nodes: [{ id: 'n1', role: 'Owner' }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.ok(errors.some((e: string) => e.includes('workflow contains invalid keys: graph')));
+});
+
 test('valid node with human-collaborative passes', () => {
   const graph = {
     workflow: {
       name: 'T',
       nodes: [{ id: 'n1', role: 'R', 'human-collaborative': 'direction' }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.deepStrictEqual(errors, []);
+});
+
+test('node-level workflow guidance fields pass when well-formed', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      summary: 'Test workflow',
+      nodes: [{
+        id: 'n1',
+        role: 'Owner',
+        required_readings: ['$DOC_A'],
+        guidance: ['Use the snapshot.'],
+        inputs: ['Prior artifact'],
+        work: ['Perform the review'],
+        outputs: ['Decision artifact'],
+        transitions: ['Approved -> next-node'],
+        notes: ['First-entry only']
+      }],
       edges: [],
     },
   };
@@ -181,17 +209,17 @@ test('unknown node keys still fail after allowing human-collaborative', () => {
 });
 
 test('existing workflow document without human-collaborative remains valid', () => {
-  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.md'));
-  assert.strictEqual(result.valid, true, `Expected backward compatibility, got errors: ${result.errors.join('; ')}`);
+  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.yaml'));
+  assert.strictEqual(result.valid, true, `Expected valid workflow, got errors: ${result.errors.join('; ')}`);
 });
 
 test('valid fixture file passes', () => {
-  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.md'));
+  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.yaml'));
   assert.strictEqual(result.valid, true, `Expected valid, got errors: ${result.errors.join('; ')}`);
 });
 
 test('file without frontmatter fails', () => {
-  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-no-frontmatter.md'));
+  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-no-frontmatter.yaml'));
   assert.strictEqual(result.valid, false);
 });
 
@@ -289,9 +317,15 @@ test('strict mode: valid graph passes', () => {
   assert.deepStrictEqual(errors, []);
 });
 
-test('live A-Society workflow passes validation (non-strict)', () => {
-  const result = validateWorkflowFile(LIVE_WORKFLOW);
-  assert.strictEqual(result.valid, true, `Live workflow invalid:\n${result.errors.map(e => '  ' + e).join('\n')}`);
+test('live A-Society workflows pass validation (strict)', () => {
+  for (const workflowPath of LIVE_WORKFLOWS) {
+    const result = validateWorkflowFile(workflowPath, true);
+    assert.strictEqual(
+      result.valid,
+      true,
+      `Live workflow ${path.basename(workflowPath)} invalid:\n${result.errors.map(e => '  ' + e).join('\n')}`
+    );
+  }
 });
 
 test('buildWorkflowRepairGuidance: schema errors produce Workflow schema invalid summary', () => {

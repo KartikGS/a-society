@@ -57,7 +57,7 @@ export class ContextInjectionService {
         if (RUNTIME_MANAGED_REQUIRED_READING_VARIABLES.has(varName)) {
           continue;
         }
-        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot);
+        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
         if (resolvedPath && fs.existsSync(resolvedPath)) {
           const content = fs.readFileSync(resolvedPath, 'utf8');
           bundle += `\n[FILE: ${varName} (resolved to ${resolvedPath})]\n`;

@@ -1,0 +1,186 @@
+workflow:
+  name: A-Society Executable Development
+  summary: Designing, implementing, validating, and registering A-Society's executable layer with runtime/ as the standing executable root.
+  use_when: The work changes executable design, runtime behavior, standing executable contracts, or operator-facing executable references.
+  companion_docs:
+    - $A_SOCIETY_EXECUTABLE_PROPOSAL
+    - $A_SOCIETY_EXECUTABLE_ADDENDUM
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+      required_readings:
+        - $A_SOCIETY_WORKFLOW_COMPLEXITY
+        - $A_SOCIETY_RECORDS
+      guidance:
+        - Read $A_SOCIETY_OWNER_LOG_MANAGEMENT when intake decisions affect $A_SOCIETY_LOG.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING if intake will produce a detailed written brief or approval artifact.
+      inputs:
+        - Human direction for executable work
+        - Relevant standing executable design context
+      work:
+        - Assess the triggered executable work against the five axes from $A_SOCIETY_WORKFLOW_COMPLEXITY.
+        - Create the record folder per $A_SOCIETY_RECORDS.
+        - Produce 01-owner-workflow-plan.md using $A_SOCIETY_COMM_TEMPLATE_PLAN.
+        - Create workflow.yaml for the active executable path.
+        - Decide whether the existing executable design already governs the requested change or whether a TA design/advisory step is required.
+      outputs:
+        - 01-owner-workflow-plan.md
+        - workflow.yaml
+        - Downstream executable brief or approval artifact when needed
+      transitions:
+        - Route to ta-phase0-design when the flow changes executable boundaries, adds a new standing capability, changes a stable executable contract, or restructures the executable workflow.
+        - Scoped implementations may omit the TA node and route directly from owner-phase0-gate to the relevant developer track.
+      notes:
+        - Phase 0 artifacts are always required before any later executable artifact.
+    - id: ta-phase0-design
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - Owner executable brief and active workflow snapshot
+      work:
+        - Design executable boundaries, role split, and implementation structure for the active flow.
+      outputs:
+        - Executable design artifact
+      transitions:
+        - Hand off to owner-phase0-gate when the executable design is complete.
+    - id: owner-phase0-gate
+      role: Owner
+      human-collaborative: approval
+      guidance:
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when issuing detailed constraints.
+        - Read $A_SOCIETY_OWNER_TA_REVIEW when reviewing TA output.
+      inputs:
+        - TA executable design, when present
+      work:
+        - Decide whether the executable design is approved for implementation and whether one or both developer tracks are in scope.
+      outputs:
+        - Owner approval artifact for the active implementation tracks
+      transitions:
+        - Approved framework-services scope -> framework-services-implementation
+        - Approved orchestration scope -> orchestration-implementation
+    - id: framework-services-implementation
+      role: Framework Services Developer
+      required_readings:
+        - $A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE
+      inputs:
+        - Approved executable scope for deterministic framework services
+      work:
+        - Implement deterministic executable framework services under runtime/.
+      outputs:
+        - Completion report for the framework-services track
+      transitions:
+        - Hand off to ta-integration-review when the framework-services track is complete.
+    - id: orchestration-implementation
+      role: Orchestration Developer
+      required_readings:
+        - $A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE
+      inputs:
+        - Approved executable scope for orchestration/runtime behavior
+      work:
+        - Implement runtime orchestration behavior and operator-facing executable changes under runtime/.
+      outputs:
+        - Completion report for the orchestration track
+      transitions:
+        - Hand off to ta-integration-review when the orchestration track is complete.
+    - id: ta-integration-review
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - Completion artifacts from the executable tracks that ran
+      work:
+        - Review the integrated executable output against the approved design.
+        - Assess deviations or confirm design alignment.
+        - When $A_SOCIETY_RUNTIME_INVOCATION changed in-flow, compare documented commands, parameters, exposed entry points, and environment-variable names directly against the implementation.
+      outputs:
+        - TA assessment for the integrated executable result
+      transitions:
+        - Hand off to owner-integration-gate when the TA review is complete.
+    - id: owner-integration-gate
+      role: Owner
+      human-collaborative: approval
+      guidance:
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when adding detailed correction constraints.
+        - Read $A_SOCIETY_OWNER_TA_REVIEW when reviewing TA output.
+      inputs:
+        - TA integration assessment
+      work:
+        - Decide whether the integrated executable output is approved for registration.
+      outputs:
+        - Owner integration-gate decision artifact
+      transitions:
+        - Approved -> curator-registration
+    - id: curator-registration
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - Approved executable result
+      work:
+        - Update $A_SOCIETY_INDEX and $A_SOCIETY_PUBLIC_INDEX for standing file changes.
+        - Maintain $A_SOCIETY_AGENT_DOCS_GUIDE accuracy for changed standing docs and operator-facing references.
+        - Update executable design/coupling docs when the approved scope requires it.
+        - Verify $A_SOCIETY_RUNTIME_INVOCATION directly against the implemented operator-facing executable surface when that file changed in-flow.
+        - Publish any approved framework update report and perform the paired $A_SOCIETY_VERSION update when required by $A_SOCIETY_UPDATES_PROTOCOL.
+      outputs:
+        - Registration artifact and updated standing references
+      transitions:
+        - Hand off to owner-forward-pass-closure when registration is complete.
+      notes:
+        - Registration does not mutate $A_SOCIETY_LOG lifecycle sections or $A_SOCIETY_LOG_ARCHIVE.
+    - id: owner-forward-pass-closure
+      role: Owner
+      human-collaborative: closure
+      required_readings:
+        - $A_SOCIETY_OWNER_LOG_MANAGEMENT
+        - $A_SOCIETY_OWNER_CLOSURE
+      inputs:
+        - Curator registration artifact
+      work:
+        - Confirm all approved executable work actually landed.
+        - Confirm all required registrations and publications are complete.
+        - Update overlapping Next Priorities items as needed.
+        - Determine backward-pass routing, including any required executable developer findings.
+      outputs:
+        - Forward-pass closure artifact
+      transitions:
+        - Emit the forward-pass closure signal and hand control to the improvement protocol.
+  edges:
+    - from: owner-intake
+      to: ta-phase0-design
+      artifact: owner-to-ta-brief
+    - from: ta-phase0-design
+      to: owner-phase0-gate
+      artifact: executable-design
+    - from: owner-phase0-gate
+      to: framework-services-implementation
+      artifact: owner-approval
+    - from: owner-phase0-gate
+      to: orchestration-implementation
+      artifact: owner-approval
+    - from: framework-services-implementation
+      to: ta-integration-review
+      artifact: completion-report
+    - from: orchestration-implementation
+      to: ta-integration-review
+      artifact: completion-report
+    - from: ta-integration-review
+      to: owner-integration-gate
+      artifact: ta-assessment
+    - from: owner-integration-gate
+      to: curator-registration
+      artifact: owner-approval
+    - from: curator-registration
+      to: owner-forward-pass-closure
+      artifact: curator-to-owner
+  session_model:
+    - Owner
+    - Technical Architect when a design or integration gate is required
+    - Framework Services Developer when that track is in scope
+    - Orchestration Developer when that track is in scope
+    - Curator
+  forward_pass_closure:
+    - The Owner is the terminal node of the forward pass.
+    - Backward-pass findings are required from each participating executable developer role unless the Owner grants an explicit waiver.

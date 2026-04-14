@@ -65,16 +65,14 @@ roles:
   );
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'startrole.md'), "Start Role Doc");
 
-  const workflowGraph = `---
-workflow:
+  const workflowGraph = `workflow:
   name: test-flow
   nodes:
     - id: start
       role: 'start'
   edges: []
----
 `;
-  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+  fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   // The artifact basename used in the handoff block determines what appears in the notice
   const closureArtifactPath = path.join(recordPath, 'closure-artifact.md');

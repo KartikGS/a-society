@@ -18,7 +18,7 @@ The executable layer currently includes six standing deterministic framework ser
 | Scaffolding | Creates the folder structure and stub files for a new project's `a-docs/` |
 | Consent handling | Creates consent files from template and checks consent status |
 | Workflow graph validation | Validates approved workflow graph representations and related schema constraints |
-| Backward-pass planning | Computes backward-pass traversal order and related findings-location data from `workflow.md` in the active record folder |
+| Backward-pass planning | Computes backward-pass traversal order and related findings-location data from `workflow.yaml` in the active record folder |
 | Path validation | Checks that every path registered in an index table resolves to an existing file |
 | Update comparison | Identifies which framework update reports an adopting project has not yet applied |
 | Orchestration | Manages agent sessions end to end: context injection, handoff routing, trigger execution, observability, and operator-facing runtime behavior |

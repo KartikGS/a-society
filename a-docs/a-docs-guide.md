@@ -308,7 +308,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Runtime-specific implementation rules drift back into role prose or disappear into old artifacts, and `$A_SOCIETY_RUNTIME_INVOCATION` can fall out of sync with the live executable surface.
 
-**Do not consolidate with:** `roles/orchestration-developer.md` — role contract vs. execution guidance. Do not consolidate with `workflow/executable-development.md` — the workflow defines phases; this file defines how the Orchestration Developer executes within them.
+**Do not consolidate with:** `roles/orchestration-developer.md` — role contract vs. execution guidance. Do not consolidate with `workflow/executable-development.yaml` — the workflow defines phases; this file defines how the Orchestration Developer executes within them.
 
 ---
 
@@ -336,31 +336,31 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Agents have no single entry point to the workflow directory.
 
-**Do not consolidate with:** `workflow/framework-development.md` or `workflow/executable-development.md` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
+**Do not consolidate with:** `workflow/framework-development.yaml` or `workflow/executable-development.yaml` — those files contain the full workflow definitions; this file is the routing layer above them. Do not embed phase definitions, handoffs, or invariants here — those belong in the specific workflow files.
 
 ---
 
-### `workflow/multi-domain-development.md` — `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`
+### `workflow/multi-domain-development.yaml` — `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN`
 
 **Why it exists:** Cross-cutting work often touches framework documentation, framework services, and orchestration in one feature thread. The permanent workflows each describe a single-layer cadence; they do not by themselves explain how to stitch layers into one flow with parallel tracks. This pattern document fills that gap so Owner, TA, Framework Services Developer, Orchestration Developer, and Curator agents share one map.
 
-**What it owns:** When to use the pattern, how it composes (not replaces) the permanent workflows, a typical role map, parallel-track and Curator/`general/` checkpoint behavior, and record-folder `workflow.md` expectations — plus an illustrative YAML subgraph.
+**What it owns:** The canonical multi-domain YAML workflow definition — when to use the pattern, how it composes (not replaces) the permanent workflows, a typical role map, parallel-track and Curator/`general/` checkpoint behavior, and record-folder `workflow.yaml` expectations.
 
 **What breaks without it:** Agents infer multi-domain routing from the routing index bullet alone; integration handoffs and approval loops for `general/` are under-specified for complex flows.
 
-**Do not consolidate with:** `workflow/main.md` — the routing index must stay lightweight. Do not consolidate with `workflow/framework-development.md` — that file owns the single-layer framework loop; this file owns cross-layer composition.
+**Do not consolidate with:** `workflow/main.md` — the routing index must stay lightweight. Do not consolidate with `workflow/framework-development.yaml` — that file owns the single-layer framework loop; this file owns cross-layer composition.
 
 ---
 
-### `workflow/framework-development.md` — `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV`
+### `workflow/framework-development.yaml` — `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV`
 
 **Why it exists:** A-Society's primary ongoing work is framework development: growing, maintaining, and quality-gating the reusable instruction library. This workflow governs that cadence — the Proposal → Review → Implementation → Registration loop that every library addition or a-docs change passes through. Extracting it from the routing index into its own file allows agents working on framework development to load only the workflow they need without reading unrelated executable-implementation workflow material.
 
-**What it owns:** The complete framework development workflow — the YAML graph, the node-by-node operational instructions (inputs, required readings, work, outputs, and transitions), and the invariants and escalation rules that govern the reusable-library loop.
+**What it owns:** The complete framework-development YAML workflow definition — node contracts, transitions, invariants, and escalation rules that govern the reusable-library loop.
 
 **What breaks without it:** The framework development workflow has no dedicated home. Agents cannot load only the framework workflow without also loading unrelated executable workflow content. The Approval Invariant — the core constraint that prevents the Curator from writing to `general/` without Owner approval — is not discoverable except through role files.
 
-**Do not consolidate with:** `workflow/main.md` (the routing index) — that file routes agents to workflows; this file defines one. Do not consolidate with `workflow/executable-development.md` — the two workflows have different phase sequences, different role compositions, and serve different operational cadences; merging them would force every agent to read irrelevant workflow material.
+**Do not consolidate with:** `workflow/main.md` (the routing index) — that file routes agents to workflows; this file defines one. Do not consolidate with `workflow/executable-development.yaml` — the two workflows have different phase sequences, different role compositions, and serve different operational cadences; merging them would force every agent to read irrelevant workflow material.
 
 ---
 
@@ -376,15 +376,15 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-### `workflow/executable-development.md` — `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV`
+### `workflow/executable-development.yaml` — `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV`
 
 **Why it exists:** The unified executable layer has one permanent implementation workflow, covering both deterministic framework services and orchestration. Without a dedicated workflow, agents would have to reconstruct the executable path from the retired tooling/runtime split or treat `runtime/` changes as ad hoc exceptions to framework development.
 
-**What it owns:** The executable workflow graph, the executable design gate, the two executable implementation tracks, integration validation, registration expectations, and forward-pass closure requirements.
+**What it owns:** The canonical executable-development YAML workflow definition — the executable design gate, the two executable implementation tracks, integration validation, registration expectations, and forward-pass closure requirements.
 
 **What breaks without it:** The executable implementation path has no authoritative home. The standing role split between Framework Services Developer and Orchestration Developer becomes procedural folklore instead of documented workflow structure.
 
-**Do not consolidate with:** `workflow/framework-development.md` — framework documentation and executable implementation remain different operational cadences. Do not consolidate with `executable/architecture-addendum.md` — that file governs standing executable constraints; this file governs the executable workflow.
+**Do not consolidate with:** `workflow/framework-development.yaml` — framework documentation and executable implementation remain different operational cadences. Do not consolidate with `executable/architecture-addendum.md` — that file governs standing executable constraints; this file governs the executable workflow.
 
 ---
 
@@ -576,7 +576,7 @@ These files live in the executable layers rather than in `a-docs/`, but they are
 
 **What breaks without it:** Operators and reviewers infer runtime behavior from source code or historical artifacts. The Curator, TA, and Owner lose the stable operator-facing document they are expected to compare against the implementation at review and registration time.
 
-**Do not consolidate with:** `workflow/executable-development.md` — the workflow defines how the executable layer is designed and reviewed, not how operators invoke it. Do not consolidate with `project-information/architecture.md` — architecture explains what the runtime is; this file explains how to operate it.
+**Do not consolidate with:** `workflow/executable-development.yaml` — the workflow defines how the executable layer is designed and reviewed, not how operators invoke it. Do not consolidate with `project-information/architecture.md` — architecture explains what the runtime is; this file explains how to operate it.
 
 ---
 

@@ -35,8 +35,7 @@ async function runTest() {
   fs.mkdirSync(recordPath, { recursive: true });
 
   // Workflow: fork-gate forks to branch-a and branch-b (both terminal)
-  const workflowGraph = `---
-workflow:
+  const workflowGraph = `workflow:
   name: test-flow
   nodes:
     - id: fork-gate
@@ -50,9 +49,8 @@ workflow:
       to: branch-a
     - from: fork-gate
       to: branch-b
----
 `;
-  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+  fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   // Pre-save a flow in awaiting_human state with two active fork branches.
   // The while loop in startUnifiedOrchestration skips for status !== 'running',

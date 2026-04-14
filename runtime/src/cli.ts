@@ -8,6 +8,7 @@ import { SessionStore } from './store.js';
 import { FlowOrchestrator, parseWorkflow } from './orchestrator.js';
 import path from 'node:path';
 import { renderFlowStatus } from './visualization.js';
+import { findWorkflowFilePath } from './workflow-file.js';
 
 const orchestrator = new FlowOrchestrator();
 
@@ -20,7 +21,7 @@ function flowStatus() {
   }
 
   try {
-    const workflowPath = path.join(flowRun.recordFolderPath, 'workflow.md');
+    const workflowPath = findWorkflowFilePath(flowRun.recordFolderPath) ?? path.join(flowRun.recordFolderPath, 'workflow.yaml');
     const wf = parseWorkflow(workflowPath).workflow;
     console.log(renderFlowStatus(flowRun, wf));
   } catch (err: any) {

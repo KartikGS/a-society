@@ -1,4 +1,3 @@
----
 workflow:
   name: Test Workflow
   nodes:
@@ -24,8 +23,3 @@ workflow:
     - from: owner-phase-2
       to: curator-phase-3-findings
       artifact: decision
----
-
-# Test Workflow
-
-Prose content here.

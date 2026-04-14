@@ -1,12 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import yaml from 'js-yaml';
-import { extractFrontmatter } from './utils.js';
+import { findWorkflowFilePath, parseWorkflowFile } from '../workflow-file.js';
 
 export interface WorkflowNode {
   id: string;
   role: string;
   'human-collaborative'?: string;
+  required_readings?: string[];
+  guidance?: string[];
+  inputs?: string[];
+  work?: string[];
+  outputs?: string[];
+  transitions?: string[];
+  notes?: string[];
 }
 
 export interface WorkflowEdge {
@@ -38,12 +44,12 @@ export type BackwardPassPlan = BackwardPassEntry[][];
 
 export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter {
   if (!doc || typeof doc !== 'object') {
-    throw new Error('workflow.md frontmatter must parse to an object');
+    throw new Error('workflow file must parse to an object');
   }
 
   const rawWorkflow = (doc as Record<string, unknown>).workflow;
   if (!rawWorkflow || typeof rawWorkflow !== 'object') {
-    throw new Error('workflow.md frontmatter must contain a workflow object');
+    throw new Error('workflow file must contain a workflow object');
   }
 
   const workflowObj = rawWorkflow as Record<string, unknown>;
@@ -74,6 +80,27 @@ export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFron
       id,
       role,
       'human-collaborative': typeof nodeObj['human-collaborative'] === 'string' ? nodeObj['human-collaborative'] : undefined,
+      required_readings: Array.isArray(nodeObj.required_readings)
+        ? nodeObj.required_readings.filter((value): value is string => typeof value === 'string')
+        : undefined,
+      guidance: Array.isArray(nodeObj.guidance)
+        ? nodeObj.guidance.filter((value): value is string => typeof value === 'string')
+        : undefined,
+      inputs: Array.isArray(nodeObj.inputs)
+        ? nodeObj.inputs.filter((value): value is string => typeof value === 'string')
+        : undefined,
+      work: Array.isArray(nodeObj.work)
+        ? nodeObj.work.filter((value): value is string => typeof value === 'string')
+        : undefined,
+      outputs: Array.isArray(nodeObj.outputs)
+        ? nodeObj.outputs.filter((value): value is string => typeof value === 'string')
+        : undefined,
+      transitions: Array.isArray(nodeObj.transitions)
+        ? nodeObj.transitions.filter((value): value is string => typeof value === 'string')
+        : undefined,
+      notes: Array.isArray(nodeObj.notes)
+        ? nodeObj.notes.filter((value): value is string => typeof value === 'string')
+        : undefined,
     };
   });
 
@@ -269,34 +296,23 @@ export function computeBackwardPassPlan(
   synthesisRole: string,
   mode: 'graph-based' | 'parallel',
 ): BackwardPassPlan {
-  const workflowFilePath = path.join(recordFolderPath, 'workflow.md');
+  const workflowFilePath = findWorkflowFilePath(recordFolderPath);
+  if (!workflowFilePath) {
+    throw new Error(`Cannot read workflow file at ${path.join(recordFolderPath, 'workflow.yaml')}: file does not exist`);
+  }
 
-  let content: string;
   try {
-    content = fs.readFileSync(workflowFilePath, 'utf8');
+    const parsed = parseWorkflowFile(workflowFilePath);
+    const frontmatter = parseRecordWorkflowFrontmatter(parsed);
+    return buildBackwardPassPlan(
+      frontmatter.workflow.nodes,
+      frontmatter.workflow.edges,
+      synthesisRole,
+      mode,
+    );
   } catch (err) {
-    throw new Error(`Cannot read workflow.md at ${workflowFilePath}: ${(err as Error).message}`);
+    throw new Error(`Cannot read workflow file at ${workflowFilePath}: ${(err as Error).message}`);
   }
-
-  const yamlStr = extractFrontmatter(content);
-  if (yamlStr === null) {
-    throw new Error(`No YAML frontmatter found in ${workflowFilePath}`);
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = yaml.load(yamlStr);
-  } catch (err) {
-    throw new Error(`Invalid YAML in ${workflowFilePath}: ${(err as Error).message}`);
-  }
-
-  const frontmatter = parseRecordWorkflowFrontmatter(parsed);
-  return buildBackwardPassPlan(
-    frontmatter.workflow.nodes,
-    frontmatter.workflow.edges,
-    synthesisRole,
-    mode,
-  );
 }
 
 function normalizeRoleSlug(role: string): string {

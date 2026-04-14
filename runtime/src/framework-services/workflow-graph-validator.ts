@@ -1,11 +1,17 @@
 import fs from 'node:fs';
 import yaml from 'js-yaml';
-import { extractFrontmatter } from './utils.js';
 
 export interface WorkflowNode {
   id: string;
   role: string;
   'human-collaborative'?: string;
+  required_readings?: string[];
+  guidance?: string[];
+  inputs?: string[];
+  work?: string[];
+  outputs?: string[];
+  transitions?: string[];
+  notes?: string[];
 }
 
 export interface WorkflowEdge {
@@ -16,6 +22,13 @@ export interface WorkflowEdge {
 
 export interface WorkflowGraph {
   name: string;
+  summary?: string;
+  use_when?: string;
+  companion_docs?: string[];
+  invariants?: Array<{ name: string; rule: string }>;
+  escalation?: Array<{ situation: string; escalated_by: string; to: string }>;
+  session_model?: string[];
+  forward_pass_closure?: string[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 }
@@ -37,6 +50,18 @@ export interface ValidationResult {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function validateGraph(doc: unknown, strict?: boolean): string[] {
   const errors: string[] = [];
+  const validateOptionalStringArray = (value: unknown, fieldPath: string) => {
+    if (value === undefined) return;
+    if (!Array.isArray(value)) {
+      errors.push(`${fieldPath} must be an array of non-empty strings if present`);
+      return;
+    }
+    value.forEach((item, index) => {
+      if (typeof item !== 'string' || item.trim() === '') {
+        errors.push(`${fieldPath}[${index}] must be a non-empty string`);
+      }
+    });
+  };
 
   if (!doc || typeof doc !== 'object') {
     errors.push('Document is not an object');
@@ -59,6 +84,74 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
     return errors;
   }
 
+  const workflowKeys = Object.keys(wf);
+  const invalidWorkflowKeys = workflowKeys.filter((key) =>
+    key !== 'name' &&
+    key !== 'summary' &&
+    key !== 'use_when' &&
+    key !== 'companion_docs' &&
+    key !== 'invariants' &&
+    key !== 'escalation' &&
+    key !== 'session_model' &&
+    key !== 'forward_pass_closure' &&
+    key !== 'nodes' &&
+    key !== 'edges'
+  );
+  if (invalidWorkflowKeys.length > 0) {
+    errors.push(`workflow contains invalid keys: ${invalidWorkflowKeys.join(', ')}`);
+  }
+
+  if ('summary' in wf && (typeof wf.summary !== 'string' || wf.summary.trim() === '')) {
+    errors.push('workflow.summary must be a non-empty string if present');
+  }
+  if ('use_when' in wf && (typeof wf.use_when !== 'string' || wf.use_when.trim() === '')) {
+    errors.push('workflow.use_when must be a non-empty string if present');
+  }
+  validateOptionalStringArray(wf.companion_docs, 'workflow.companion_docs');
+  validateOptionalStringArray(wf.session_model, 'workflow.session_model');
+  validateOptionalStringArray(wf.forward_pass_closure, 'workflow.forward_pass_closure');
+
+  if ('invariants' in wf) {
+    if (!Array.isArray(wf.invariants)) {
+      errors.push('workflow.invariants must be an array if present');
+    } else {
+      wf.invariants.forEach((item: any, i: number) => {
+        if (!item || typeof item !== 'object') {
+          errors.push(`workflow.invariants[${i}] must be an object`);
+          return;
+        }
+        if (typeof item.name !== 'string' || item.name.trim() === '') {
+          errors.push(`workflow.invariants[${i}].name must be a non-empty string`);
+        }
+        if (typeof item.rule !== 'string' || item.rule.trim() === '') {
+          errors.push(`workflow.invariants[${i}].rule must be a non-empty string`);
+        }
+      });
+    }
+  }
+
+  if ('escalation' in wf) {
+    if (!Array.isArray(wf.escalation)) {
+      errors.push('workflow.escalation must be an array if present');
+    } else {
+      wf.escalation.forEach((item: any, i: number) => {
+        if (!item || typeof item !== 'object') {
+          errors.push(`workflow.escalation[${i}] must be an object`);
+          return;
+        }
+        if (typeof item.situation !== 'string' || item.situation.trim() === '') {
+          errors.push(`workflow.escalation[${i}].situation must be a non-empty string`);
+        }
+        if (typeof item.escalated_by !== 'string' || item.escalated_by.trim() === '') {
+          errors.push(`workflow.escalation[${i}].escalated_by must be a non-empty string`);
+        }
+        if (typeof item.to !== 'string' || item.to.trim() === '') {
+          errors.push(`workflow.escalation[${i}].to must be a non-empty string`);
+        }
+      });
+    }
+  }
+
   // workflow.name
   if (typeof wf.name !== 'string' || wf.name.trim() === '') {
     errors.push('workflow.name must be a non-empty string');
@@ -78,7 +171,18 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
       }
       
       const keys = Object.keys(node);
-      const invalidKeys = keys.filter((k) => k !== 'id' && k !== 'role' && k !== 'human-collaborative');
+      const invalidKeys = keys.filter((k) =>
+        k !== 'id' &&
+        k !== 'role' &&
+        k !== 'human-collaborative' &&
+        k !== 'required_readings' &&
+        k !== 'guidance' &&
+        k !== 'inputs' &&
+        k !== 'work' &&
+        k !== 'outputs' &&
+        k !== 'transitions' &&
+        k !== 'notes'
+      );
       if (invalidKeys.length > 0) {
         errors.push(`workflow.nodes[${i}] contains invalid keys: ${invalidKeys.join(', ')}`);
       }
@@ -105,6 +209,13 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
           );
         }
       }
+      validateOptionalStringArray(node.required_readings, `workflow.nodes[${i}].required_readings`);
+      validateOptionalStringArray(node.guidance, `workflow.nodes[${i}].guidance`);
+      validateOptionalStringArray(node.inputs, `workflow.nodes[${i}].inputs`);
+      validateOptionalStringArray(node.work, `workflow.nodes[${i}].work`);
+      validateOptionalStringArray(node.outputs, `workflow.nodes[${i}].outputs`);
+      validateOptionalStringArray(node.transitions, `workflow.nodes[${i}].transitions`);
+      validateOptionalStringArray(node.notes, `workflow.nodes[${i}].notes`);
     });
 
     // workflow.edges
@@ -214,32 +325,51 @@ export interface WorkflowRepairGuidance {
 
 /**
  * Produces operator-visible summary and model-facing repair text for workflow validation failures.
- * Reflects the live schema exactly: node keys are id, role, human-collaborative;
- * edge keys are from, to, artifact; no description field.
+ * Reflects the live YAML schema exactly.
  */
 export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGuidance {
   const isParse = errors.some(e =>
-    e.includes('YAML') || e.includes('frontmatter') || e.includes('Cannot read')
+    e.includes('YAML') || e.includes('Cannot read')
   );
   const operatorSummary = isParse ? 'Workflow parse failure' : 'Workflow schema invalid';
   const errorText = errors.join('; ');
   const modelRepairMessage =
-    `workflow.md failed validation. Error(s): ${errorText}\n\n` +
-    `Do not recreate the file — update it. The workflow.md must contain YAML frontmatter ` +
-    `(between --- delimiters) with a top-level 'workflow:' key. Required structure:\n` +
-    `---\n` +
+    `workflow.yaml failed validation. Error(s): ${errorText}\n\n` +
+    `Do not recreate the file — update it. The canonical workflow file is workflow.yaml ` +
+    `with a top-level 'workflow:' key. Required structure:\n` +
     `workflow:\n` +
     `  name: <string>\n` +
+    `  summary: <string>                # optional\n` +
+    `  use_when: <string>               # optional\n` +
+    `  companion_docs:\n` +
+    `    - $VARIABLE_NAME               # optional\n` +
     `  nodes:\n` +
     `    - id: <string>\n` +
     `      role: <string>\n` +
     `      human-collaborative: <string>  # optional\n` +
+    `      required_readings:\n` +
+    `        - $VARIABLE_NAME             # optional\n` +
+    `      guidance:\n` +
+    `        - <string>                   # optional\n` +
+    `      inputs: [<string>]             # optional\n` +
+    `      work: [<string>]               # optional\n` +
+    `      outputs: [<string>]            # optional\n` +
+    `      transitions: [<string>]        # optional\n` +
+    `      notes: [<string>]              # optional\n` +
     `  edges:\n` +
     `    - from: <node-id>\n` +
     `      to: <node-id>\n` +
     `      artifact: <string>  # optional\n` +
-    `---\n` +
-    `Please fix workflow.md with this schema and restate your handoff.`;
+    `  invariants:\n` +
+    `    - name: <string>               # optional\n` +
+    `      rule: <string>\n` +
+    `  escalation:\n` +
+    `    - situation: <string>          # optional\n` +
+    `      escalated_by: <string>\n` +
+    `      to: <string>\n` +
+    `  session_model: [<string>]        # optional\n` +
+    `  forward_pass_closure: [<string>] # optional\n` +
+    `Please fix workflow.yaml with this schema and restate your handoff.`;
   return { operatorSummary, modelRepairMessage };
 }
 
@@ -257,7 +387,7 @@ export class WorkflowValidationError extends Error {
 /**
  * Validates a workflow document file against the approved workflow graph schema.
  *
- * Parses the YAML frontmatter from the file and runs all schema checks.
+ * Parses the YAML file and runs all schema checks.
  */
 export function validateWorkflowFile(filePath: string, strict?: boolean): ValidationResult {
   let content: string;
@@ -267,14 +397,9 @@ export function validateWorkflowFile(filePath: string, strict?: boolean): Valida
     return { valid: false, errors: [`Cannot read file: ${filePath} — ${(err as Error).message}`] };
   }
 
-  const yamlStr = extractFrontmatter(content);
-  if (yamlStr === null) {
-    return { valid: false, errors: ['No YAML frontmatter found (expected content between --- delimiters at start of file)'] };
-  }
-
   let doc: unknown;
   try {
-    doc = yaml.load(yamlStr);
+    doc = yaml.load(content);
   } catch (err) {
     return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }

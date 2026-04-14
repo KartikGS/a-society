@@ -19,8 +19,7 @@ async function runTest() {
   fs.mkdirSync(stateDir, { recursive: true });
   process.env.A_SOCIETY_STATE_DIR = stateDir;
 
-  const workflowGraph = `---
-workflow:
+  const workflowGraph = `workflow:
   name: terminal-backward-resubmission
   nodes:
     - id: proposal
@@ -30,9 +29,8 @@ workflow:
   edges:
     - from: proposal
       to: review
----
 `;
-  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+  fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   const proposalToReviewPath = path.join(recordPath, '02-proposal-to-review.md');
   const reviewFeedbackPath = path.join(recordPath, '03-review-feedback.md');

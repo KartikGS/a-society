@@ -1,151 +1,133 @@
-# How to Create a Workflow Graph Representation
+# How to Create a YAML Workflow Definition
 
-*This document is a companion to `$INSTRUCTION_WORKFLOW`. Read that document to create your project's workflow prose document. Read this document to add a machine-readable graph representation to it.*
+*Read `$INSTRUCTION_WORKFLOW` for the workflow-design guidance. Read this document when you are ready to encode the workflow as the project's canonical YAML definition and, when applicable, as the per-flow record snapshot used by runtime capabilities.*
 
 ---
 
 ## What This Is
 
-A workflow graph representation is a machine-readable encoding of the same workflow your `workflow/main.md` already describes in prose. It captures the structure of the workflow's forward pass — structural nodes (role-owned work blocks) and edges (handoffs) — in a YAML format that executable capabilities can process without reading prose.
+A workflow YAML definition is the canonical machine-readable representation of a workflow. It does not merely mirror the workflow's structure; it can also carry the node contract data that the runtime surfaces at node entry.
 
-This is a companion to the workflow prose document, not a replacement. The prose explains the workflow to agents and humans; the graph enables executable capabilities to compute derived facts (such as backward pass traversal order) deterministically and consistently.
+Use it for two related artifacts:
+
+- **Permanent workflow definitions** — the standing project workflow files
+- **Record-folder workflow snapshots** — the flow-specific `workflow.yaml` file inside an active record folder
+
+The permanent definition expresses the reusable workflow shape. The record snapshot captures the actual active path for one flow instance.
 
 ---
 
 ## Why It Exists
 
-**1. Deterministic backward pass ordering.** The backward pass protocol (see `$GENERAL_IMPROVEMENT`) requires computing traversal order from workflow structure. In simple two-role workflows this is easy to derive by inspection. In complex multi-role workflows, the order is non-obvious and error-prone to derive by reading prose. The graph representation makes that order derivable from nodes and edges without storing backward-pass-only metadata in the schema.
+**1. Runtime-delivered node context.** A workflow should be the delivery surface for node-specific guidance. Encoding the node contract in YAML lets the runtime surface the right node context at the moment the node activates.
 
-**2. Structural legibility.** A YAML representation of the workflow structure is readable at a glance — what structural nodes exist, which roles own them, and how they connect. It complements the prose without replacing it.
+**2. Deterministic backward-pass ordering.** Backward-pass planning still derives role order from `nodes` and `edges`, but now it reads the same YAML snapshot that the forward pass executes from.
+
+**3. Dynamic routing compatibility.** If a project later introduces workflow-authority intermediaries or more dynamic route shaping, the active record snapshot can be updated without requiring the runtime to reconstruct intent from prose.
 
 ---
 
-## Where It Goes
+## Canonical Files
 
-Embed the graph representation as YAML frontmatter at the top of `workflow/main.md`, before all prose content. YAML frontmatter is delimited by triple-dashes:
+Use these conventions:
 
-```
----
-[YAML content here]
----
-
-# Workflow Document Title
-
-...prose content...
-```
-
-Do not create a separate file for the graph representation. The graph and the prose describe the same structure and must stay in sync; co-location enforces that obligation.
+- **Permanent workflow definition:** `workflow/[name].yaml`
+- **Routing index:** `workflow/main.md` may remain a lightweight routing index
+- **Record snapshot:** `records/[flow-id]/workflow.yaml`
 
 ---
 
 ## Schema
 
-The workflow graph representation uses the following schema:
-
 ```yaml
 workflow:
-  name: [string — the graph name; copy from workflow/main.md "Graph:" line, or use the document title]
+  name: <string>
+  summary: <string>            # optional
+  use_when: <string>           # optional
+  companion_docs:              # optional
+    - $VARIABLE_NAME
   nodes:
-    - id: [string — unique identifier for this structural node]
-      role: [string — role name exactly as declared in agents.md]
-      human-collaborative: [string, optional — description of the human input required at this node; null or absent when fully agent-driven]
+    - id: <string>
+      role: <string>
+      human-collaborative: <string>  # optional
+      required_readings:             # optional; injected only on first entry to this node
+        - $VARIABLE_NAME
+      guidance: [<string>]           # optional
+      inputs: [<string>]             # optional
+      work: [<string>]               # optional
+      outputs: [<string>]            # optional
+      transitions: [<string>]        # optional
+      notes: [<string>]              # optional
   edges:
-    - from: [string — node id]
-      to: [string — node id]
-      artifact: [string, optional — artifact type produced at this handoff, e.g. approval-decision]
+    - from: <node-id>
+      to: <node-id>
+      artifact: <string>             # optional
+  invariants:                        # optional
+    - name: <string>
+      rule: <string>
+  escalation:                        # optional
+    - situation: <string>
+      escalated_by: <string>
+      to: <string>
+  session_model: [<string>]          # optional
+  forward_pass_closure: [<string>]   # optional
 ```
 
 ---
 
-## Field Definitions
+## What Each Layer Uses
 
-### `workflow.name`
+### Permanent workflow definition
 
-The graph name. Use the value from the "Graph:" line in your `workflow/main.md` if present, or the document title if not. This is a human-readable label, not a machine key.
+Use the full schema as needed. This is the reusable source that explains the workflow's standing node contracts, invariants, escalation rules, and session model.
 
-### `workflow.nodes`
+### Record-folder `workflow.yaml`
 
-One entry per structural node in the forward pass. A structural node is one contiguous block of work owned by one role. If the same role performs adjacent work with no intervening handoff, model it as one node.
+Use the same schema, but scope it to the active flow instance:
 
-**`id`** — a unique identifier for this node. Convention: combine the role (lowercase) and the structural step, hyphenated (e.g., `owner-intake`, `curator-proposal`, `owner-review`).
+- include only the nodes and edges the flow actually traverses or may still traverse
+- copy the node-contract fields the runtime should use for this flow
+- treat the record snapshot as authoritative for runtime execution of that instance
 
-**`role`** — the role name as declared in `agents.md`, exactly.
-
-**`human-collaborative`** — optional. When present, must be a non-empty string describing the human input required at this node. Null or absent when the node is fully agent-driven.
-
-### `workflow.edges`
-
-One entry per handoff between nodes. `from` and `to` are node ids. The `artifact` field is optional — include it when the handoff is carried by a named artifact type. The specific filename may vary per instance; the artifact field names the type, not the instance.
-
-For branching (e.g., an Approved branch and a Revise branch from the same review node), add one edge per branch, all with the same `from` node.
+The runtime injects node-specific `required_readings` only on the first visit to a node. Reopened or backward-reactivated nodes reuse prior continuity rather than receiving the same node guidance again.
 
 ---
 
 ## How to Fill It In
 
-**Step 1 — List the nodes.** Read the workflow in forward-pass order. Create one node per structural handoff unit. If the same role performs adjacent work with no intervening handoff, keep that work in one node.
+**Step 1 — Define the workflow shape.** List the nodes and edges in forward-pass order.
 
-**Step 2 — List the edges.** For each handoff in your workflow document, add an edge. Add the artifact name if the handoff is carried by a named artifact type. Add branching edges where the workflow branches.
+**Step 2 — Add node contracts.** For each node, include the node-specific readings and the short node contract data the runtime should surface at first entry.
 
-**Step 3 — Validate and verify.** If your project has a workflow graph validator, run it to confirm the frontmatter schema is valid. If your project has an executable backward-pass ordering capability, use it to confirm the backward pass order implied by the graph matches the backward pass order stated in your workflow prose. If no such capability exists, compare the backward pass section of your workflow document against `$GENERAL_IMPROVEMENT` and confirm the prose order is consistent with the graph structure.
+**Step 3 — Add workflow-level fields.** Include summary, use-when guidance, invariants, escalation rules, and session model details where they belong.
+
+**Step 4 — Validate.** Run the workflow validator if your project has one.
+
+**Step 5 — Create the record snapshot.** At intake, the workflow-authority role creates `workflow.yaml` in the active record folder by scoping the permanent definition to the active path and copying the node contract data needed for this specific flow.
 
 ---
 
 ## Maintenance Rules
 
-The following rules govern the graph frontmatter you created following this instruction. When updating your workflow prose, consult this section to determine whether the graph requires a corresponding update.
+Update the permanent YAML definition when:
 
-**Update the graph when:**
-- A structural node is added, removed, renamed, or reassigned to a different role
-- A handoff path is added, removed, or redirected
-- A significant handoff artifact type is added or renamed
+- a structural node is added, removed, renamed, or reassigned
+- a handoff path is added, removed, or redirected
+- a node contract changes
+- a workflow-level invariant, escalation rule, or session-model rule changes
 
-**Do not update the graph for:**
-- Prose phase names or explanatory text that do not change the node/edge structure
-- Invariants, session model details, or escalation rules — these are not captured in the graph
+Update the record snapshot when:
 
-When you update the workflow prose in a way that changes the graph structure, update the frontmatter in the same edit. They are a co-maintained pair: a prose change that restructures the workflow without updating the graph leaves them out of sync.
+- the active flow path changes mid-flow
+- a workflow-authority role adds future nodes that were not knowable at intake
+- the runtime must execute from a newly clarified node contract for an unvisited future node
 
----
-
-## Relationship to the Prose Document
-
-The graph frontmatter and the prose document describe the same workflow from different angles:
-
-- The prose explains what happens at each phase, what decisions are made, and why.
-- The graph captures structure: what structural nodes exist, which role owns each, and how they connect.
-
-If they disagree, the prose governs — it was written first and carries explanatory context the graph cannot. Update the graph to match the prose, not the reverse.
+Do not edit already visited node contracts in the record snapshot unless the project explicitly allows that kind of mutation and records the reason.
 
 ---
 
-## What the Graph Does NOT Capture
+## Relationship to `$INSTRUCTION_WORKFLOW`
 
-The graph captures structure, not behavior or rationale:
+`$INSTRUCTION_WORKFLOW` owns the design guidance: what a workflow is, how to think about nodes and transitions, and what a project needs procedurally.
 
-- Not captured: invariants, escalation rules, session model details, artifact content requirements
-- Not captured: backward-pass-only rules such as synthesis responsibility or traversal policy
-- Not captured: the reasoning behind the workflow design
-- Not captured: conditional branching logic beyond the bare existence of the branch edge
-
-These all belong in the prose workflow document.
-
----
-
-## Record-Folder workflow.md — Subgraph Variant
-
-Projects that maintain per-flow record folders and use an executable backward-pass ordering capability create a `workflow.md` in each record folder alongside the sequenced artifacts. This file uses the same nodes/edges schema defined in this document, with one key difference: it is a **flow-specific subgraph** — it captures only the nodes and edges the flow actually traverses, not the full workflow.
-
-**When to use this.** When your project uses an executable backward-pass ordering capability and records flow artifacts in per-flow record folders (see `$INSTRUCTION_RECORDS`). Projects without such a capability do not need `workflow.md` in record folders.
-
-**Schema.** Same as the permanent workflow graph schema above. `workflow.name` should reflect the permanent workflow name; include the flow identifier when helpful.
-
-**Who creates it.** The role that performs flow intake, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
-
-**What it captures.** Only the nodes the flow traverses and the edges between them. If the full permanent workflow has five nodes but this flow only traverses three, include only those three nodes and their connecting edges. Include branching edges (e.g., a revise loop) if the flow may take that branch.
-
-**What the orderer reads.** `workflow.nodes[].id`, `workflow.nodes[].role`, and `workflow.edges` — the same fields as from a permanent workflow graph — to compute backward pass traversal order specific to this flow instance.
-
-**Relationship to the permanent workflow graph.** The permanent workflow document describes the full workflow structure any flow traversal may follow. The record-folder `workflow.md` scopes that structure to what this flow actually traverses. Both use the same schema; they are not the same artifact. When they disagree, the permanent workflow document governs — it is the maintained source. The record-folder `workflow.md` is a historical artifact for this flow.
-
-**Maintenance.** Record-folder `workflow.md` files are created once at intake and are not modified unless the flow's path changes mid-flow, which requires explicit workflow-authority approval. Unlike the permanent workflow graph, they are not updated as the framework evolves — they record what actually ran.
+This file owns the YAML encoding model: how that workflow is represented as executable data for both standing definitions and record snapshots.

@@ -61,8 +61,7 @@ roles:
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'startrole.md'), "Start Role Doc");
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'nextrole.md'), "Next Role Doc");
 
-  const workflowGraph = `---
-workflow:
+  const workflowGraph = `workflow:
   name: test-flow
   nodes:
     - id: start
@@ -72,9 +71,8 @@ workflow:
   edges:
     - from: start
       to: next
----
 `;
-  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+  fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   SessionStore.init();
   SessionStore.saveFlowRun({

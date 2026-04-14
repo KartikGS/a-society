@@ -64,8 +64,7 @@ roles:
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'curator.md'), 'Curator Role Doc');
   fs.writeFileSync(path.join(projectADocsPath, 'roles', 'technical-architect.md'), 'TA Role Doc');
 
-  const workflowGraph = `---
-workflow:
+  const workflowGraph = `workflow:
   name: bootstrap-join-deferral
   nodes:
     - id: owner-intake
@@ -85,9 +84,8 @@ workflow:
       to: curator
     - from: curator
       to: owner-close
----
 `;
-  fs.writeFileSync(path.join(recordPath, 'workflow.md'), workflowGraph);
+  fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   const inputStream = new PassThrough();
   let bootstrapAnswered = false;

@@ -17,7 +17,7 @@ This document is the standing reference for the coupling surface between A-Socie
 | `$GENERAL_FEEDBACK_CONSENT` template format | Yes | Consent handling |
 | Feedback type identifiers and directory names | Yes | Consent handling |
 | Workflow graph YAML frontmatter schema | Yes | Workflow graph validation |
-| Record-folder `workflow.md` schema | Yes | Backward-pass planning |
+| Record-folder `workflow.yaml` schema | Yes | Backward-pass planning |
 | `$GENERAL_MANIFEST` file format and `copy` source paths | Yes | Scaffolding |
 | `a-docs/roles/required-readings.yaml` schema | Yes | Runtime context injection |
 
