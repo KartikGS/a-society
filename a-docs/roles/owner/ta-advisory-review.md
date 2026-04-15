@@ -2,7 +2,9 @@
 
 ## TA Advisory Review
 
-When reviewing a Technical Architect advisory, apply two distinct criteria: design correctness and spec completeness. Design correctness is not sufficient — the advisory must also be complete enough that the Developer can implement from the Interface Changes section (§4) alone.
+Under the scoped delegation model, the Technical Architect is the domain lead for executable design. The Owner does not review the TA's design decisions for implementation correctness — that is the TA's domain expertise. Instead, the Owner validates that the proposed design meets the stated requirement and does not violate the project vision or cross-domain invariants.
+
+When an advisory requires deeper Owner examination — because it touches vision, scope, or cross-domain coherence — the following checks remain available:
 
 **§4 completeness check.** For every parameter change described in §4 (Interface Changes), verify that the full implementation path is specified. If a new parameter on a public function must be threaded through to an internal call, that threading path must appear in §4 — not only in the §5 Files Changed table. A parameter change that requires the Developer to independently infer threading is an incomplete spec.
 

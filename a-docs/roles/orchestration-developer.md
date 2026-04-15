@@ -8,6 +8,17 @@ This is not an architecture role. The Developer does not decide the executable b
 
 ---
 
+## Authority Level: Specialist (Executable Domain)
+
+The Orchestration Developer operates as a specialist under the Technical Architect's direction. This means:
+
+- **Receives implementation scope** from the TA (domain lead) based on approved executable design
+- **Has execution authority** within that scope — library selection, internal code structure, test patterns, operator surface authoring
+- **Does not have design authority** — does not determine orchestration boundaries, standing contracts, or workflow structure
+- **Escalates to the TA** when implementation reveals design deviations or scope ambiguity
+
+---
+
 ## Primary Focus
 
 Implement and maintain A-Society's runtime orchestration behavior in TypeScript/Node.js, including the sole default operator-facing executable reference: `$A_SOCIETY_RUNTIME_INVOCATION`.

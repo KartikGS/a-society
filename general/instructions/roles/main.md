@@ -36,6 +36,22 @@ A project may add roles beyond these two. It may not operate without them.
 
 ---
 
+## Authority Levels
+
+Every role in the framework operates at one of three authority levels within a given scope:
+
+**Coordinator** — routes work, sets requirements, validates outcomes. Does not design implementation. The Owner is the project-level coordinator. In larger projects, a domain lead can also coordinate within their sub-domain.
+
+**Lead** — owns a domain. Has design authority within scope. Receives requirements from a coordinator, determines how to meet them, may delegate execution to specialists. Accountable for the health of their registered surfaces.
+
+**Specialist** — implements within a domain under a lead's direction. Receives specific direction from a lead. Has execution authority but not unbounded design authority.
+
+These are authority levels, not new role archetypes. The same role can operate at different authority levels depending on context — for example, a Curator is a *lead* for documentation surfaces and a *specialist* when executing Owner-approved changes to surfaces the Owner governs.
+
+Authority levels work together with the **surface ownership registry** (see `$INSTRUCTION_OWNERSHIP`), which maps every project surface to the role(s) accountable for it. The registry tells coordinators *who* to delegate to; the authority levels define *how* delegation works.
+
+---
+
 ## What Every Role Document Must Contain
 
 ### 1. Primary Focus (mandatory)
@@ -101,47 +117,34 @@ The following archetypes cover most project needs. Use the template for the arch
 
 ---
 
-### Archetype 1: Owner
+### Archetype 1: Owner (Coordinator)
 
-**When to use:** One role per project. The keeper of the vision, the final quality gate, and the **universal session entry point**.
+**When to use:** One role per project. The keeper of the vision, the cross-domain coordinator, and the **universal session entry point**.
 
-**Core responsibilities:** Vision interpretation, scope protection, contribution review, structure governance, **workflow routing**.
+**Authority level:** Coordinator — routes work via the surface ownership registry, sets requirement-level directives, validates outcomes.
 
-**Key boundary:** Does not make unilateral direction changes — those require the human. Reviews and approves; does not always execute.
+**Core responsibilities:** Vision interpretation, scope protection, **requirement-level delegation** to domain leads, **outcome validation**, structure governance, **workflow routing**.
 
-**Template:**
+**Key boundary:** Does not make unilateral direction changes — those require the human. Does not write implementation-level constraints for domains that other roles lead — sets requirements, domain leads design solutions. Does not review domain-internal implementation quality.
+
+**Template:** See `$GENERAL_OWNER_ROLE` — a ready-made Owner role document with `[CUSTOMIZE]` markers.
 
 ```markdown
 # Role: [Project] Owner Agent
 
+## Authority Level: Coordinator
+Routes work via surface ownership registry. Sets requirements. Validates outcomes.
+
 ## Primary Focus
-Own the coherence, quality, and direction of [PROJECT]. [One sentence on what coherence means here.]
+Own the coherence, direction, and routing of [PROJECT]. [One sentence on what coherence means here.]
 The Owner is the universal entry point for all project sessions.
 
 ## Authority & Responsibilities
-Owns: vision interpretation, folder structure, agents.md, index, contribution review, workflow routing.
-Does not: make unilateral direction changes, [project-specific exclusions].
+Owns: vision, structure, agents.md, registry governance, workflow routing, requirement-level delegation, outcome validation, cross-domain coherence.
+Does not: write implementation constraints for other domains, review domain-internal quality, make unilateral direction changes, [project-specific exclusions].
 
 ## Post-Confirmation Protocol
-
-After confirming context via the runtime-injected identity, ask what the user wants to work on and route that need into the appropriate workflow by default.
-
-Freeform discussion remains available, but only when the user explicitly asks to stay outside workflow (for example: thinking aloud, exploring options, or discussing before committing to a path). Freeform is a human override, not a co-equal default entry path.
-
-If the workflow list for this project has not yet been customized, do not default to freeform. First establish which workflow should govern the work, then route into it.
-
-[CUSTOMIZE: list the project's actual workflows and their one-line summaries here. The Owner uses this list as the routing map after the user states a need.]
-
-## Workflow-Linked Support Docs
-
-Phase-specific support docs for this role are surfaced from the active workflow at the gate where they apply. Common Owner support-doc categories are:
-- intake and log management
-- contribution review
-- brief or constraint writing
-- review of advisory-role outputs when applicable
-- forward-pass closure
-
-The role document does not enumerate "before X, read Y" cues. The workflow does that.
+Ask what the user wants to work on. Route via workflow. Consult registry to identify affected domain leads. Write requirement-level directives.
 
 ## Handoff Output
 At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
@@ -149,6 +152,7 @@ At each pause point, emit a machine-readable handoff block per the runtime-injec
 ## Escalate to Human When
 - A contribution would change direction or scope
 - Two interpretations of the vision lead to different decisions
+- A surface ownership assignment is contested
 - [project-specific triggers]
 ```
 
@@ -299,29 +303,34 @@ At each pause point, emit a machine-readable handoff block per the runtime-injec
 
 ---
 
-### Archetype 6: Curator
+### Archetype 6: Curator (Lead — Documentation Domain)
 
-**When to use:** When the project needs a dedicated steward for its agent-docs — someone who keeps documentation accurate and navigable, and observes the project's execution for patterns worth proposing to the A-Society general library.
+**When to use:** When the project needs a dedicated leader and steward for its agent-docs — someone who owns the documentation layer, keeps it accurate and navigable, and observes the project's execution for patterns worth proposing to the A-Society general library.
 
-**Core responsibilities:** Agent-docs maintenance, migration execution, pattern observation, proposals to `a-society/general/`.
+**Authority level:** Lead — has design authority for documentation organization, content structure, and registration practices. Receives requirement-level directives from the Owner. Reports outcomes for validation.
 
-**Key boundary:** Proposes additions to `a-society/general/`; never writes there unilaterally. Does not set project direction — that is the Owner's authority. Maintenance changes within scope require no pre-approval; direction-implying changes require escalation.
+**Core responsibilities:** Agent-docs design and maintenance, migration execution, pattern observation, proposals to `a-society/general/`.
+
+**Key boundary:** Proposes additions to `a-society/general/`; never writes there unilaterally (expanding the library is a scope decision, not a documentation decision). Does not set project direction — that is the Owner's authority. Has design authority for *how* to organize documentation within scope.
 
 **Template:** See `$GENERAL_CURATOR_ROLE` — a ready-made Curator role document with `[CUSTOMIZE]` markers.
 
 ```markdown
 # Role: [Project] Curator Agent
 
+## Authority Level: Lead (Documentation Domain)
+Owns design authority for documentation surfaces. Receives requirements. Reports outcomes.
+
 ## Primary Focus
 Maintain the health of [PROJECT_NAME]'s agent-docs and observe the project's execution for patterns worth proposing to the A-Society general instruction library.
 
 ## Authority & Responsibilities
-Owns: agent-docs maintenance within scope, migration tasks, pattern observation, proposals to a-society/general/.
+Owns: documentation design authority within scope, agent-docs maintenance, migration tasks, pattern observation, proposals to a-society/general/.
 Does not: write to a-society/general/ without Owner approval, set project direction, approve its own proposals.
 
 ## Hard Rules
 - Propose, never write to general/ unilaterally. Owner approves before creation.
-- Maintenance changes within scope require no approval — unless a direction decision is implied.
+- Design authority applies to how documentation is organized, not to what the project's direction is.
 - If a maintenance change implies a direction decision, stop and escalate.
 
 ## Handoff Output
@@ -330,7 +339,7 @@ At each pause point, emit a machine-readable handoff block per the runtime-injec
 ## Escalate to Owner When
 - A proposal to a-society/general/ is ready for review
 - A maintenance change implies a direction or scope decision
-- A migration task reveals structural ambiguity requiring Owner judgment
+- A cross-domain dependency requires Owner-level coordination
 ```
 
 ---

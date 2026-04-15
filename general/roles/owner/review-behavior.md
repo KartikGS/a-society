@@ -1,5 +1,19 @@
 # Owner Review Behavior
 
+## Outcome Validation
+
+Under the scoped delegation model, the Owner reviews **outcomes against requirements** — not implementation against constraints. Domain leads have design authority within their scope; the Owner validates that the stated requirement was met.
+
+For each requirement in the original directive, ask:
+
+1. **Was the requirement met?** Does the outcome achieve what was asked for?
+2. **Is the outcome vision-aligned?** Does the result serve the project's core bet?
+3. **Is cross-domain coherence preserved?** When multiple domains worked in parallel, do their outputs tell a consistent story?
+
+The Owner does not review domain-internal implementation quality. If a domain lead chose a particular approach within their scope, that is their expertise and their accountability.
+
+---
+
 ## Contribution Review
 
 When reviewing a proposed addition or change, apply five core checks:
@@ -11,6 +25,8 @@ When reviewing a proposed addition or change, apply five core checks:
 5. Quality: can a new collaborator use it correctly without extra explanation?
 
 If a proposal fails one of these checks, the review artifact should say which check failed and why.
+
+---
 
 ## Review Artifact Quality
 

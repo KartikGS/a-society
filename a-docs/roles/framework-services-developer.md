@@ -8,6 +8,17 @@ This is not a judgment role. The Developer does not decide whether a capability 
 
 ---
 
+## Authority Level: Specialist (Executable Domain)
+
+The Framework Services Developer operates as a specialist under the Technical Architect's direction. This means:
+
+- **Receives implementation scope** from the TA (domain lead) based on approved executable design
+- **Has execution authority** within that scope — library selection, internal code structure, test patterns
+- **Does not have design authority** — does not determine executable boundaries, interfaces, or standing contracts
+- **Escalates to the TA** when implementation reveals design deviations or scope ambiguity
+
+---
+
 ## Primary Focus
 
 Implement and maintain deterministic executable framework services — scaffolding, consent handling, workflow validation, backward-pass planning, path validation, update comparison, and related reusable executable helpers — following the approved executable design.

@@ -92,20 +92,26 @@ files:
     scaffold: stub
     source_path: general/instructions/roles/required-readings.md
 
+  - path: roles/ownership.yaml
+    description: "Surface ownership registry — maps every project surface to accountable role(s); enables registry-based routing and coverage gap validation"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/roles/ownership.md
+
   - path: roles/owner.md
-    description: "Owner role — vision keeper, quality gatekeeper, and structure guardian for this project"
+    description: "Owner role — vision keeper, coordinator, and universal session entry point; routes work via surface ownership registry and validates domain lead outcomes"
     required: true
     scaffold: copy
     source_path: general/roles/owner.md
 
   - path: roles/owner/brief-writing.md
-    description: "Owner support doc — brief-writing and constraint-writing guidance surfaced by the workflow at relevant Owner phases"
+    description: "Owner support doc — requirement-level directive writing and constraint-writing guidance surfaced by the workflow at relevant Owner phases"
     required: false
     scaffold: copy
     source_path: general/roles/owner/brief-writing.md
 
   - path: roles/owner/review-behavior.md
-    description: "Owner support doc — contribution-review guidance surfaced by the workflow at Owner review phases"
+    description: "Owner support doc — outcome validation and contribution-review guidance surfaced by the workflow at Owner review phases"
     required: false
     scaffold: copy
     source_path: general/roles/owner/review-behavior.md
@@ -129,7 +135,7 @@ files:
     source_path: general/roles/owner/forward-pass-closure.md
 
   - path: roles/curator.md
-    description: "Curator role — agent-docs steward; maintenance, migration, and pattern distillation"
+    description: "Curator role — documentation domain lead; design authority over agent-docs, maintenance, migration, and pattern distillation"
     required: true
     scaffold: copy
     source_path: general/roles/curator.md

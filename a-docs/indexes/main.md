@@ -68,7 +68,9 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
 | `$INSTRUCTION_REQUIRED_READINGS` | `a-society/general/instructions/roles/required-readings.md` | How to maintain required-readings.yaml — authority maintenance protocol |
+| `$INSTRUCTION_OWNERSHIP` | `a-society/general/instructions/roles/ownership.md` | How to create and maintain a surface ownership registry — coverage validation and scoped delegation |
 | `$A_SOCIETY_REQUIRED_READINGS` | `a-society/a-docs/roles/required-readings.yaml` | A-Society project required readings authority — single machine-readable source of truth |
+| `$A_SOCIETY_OWNERSHIP` | `a-society/a-docs/roles/ownership.yaml` | A-Society surface ownership registry — maps every project surface to accountable role(s) for routing and validation |
 | `$INSTRUCTION_ARCHITECTURE` | `a-society/general/instructions/project-information/architecture.md` | How to create an architecture document for any project |
 | `$INSTRUCTION_LOG` | `a-society/general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |

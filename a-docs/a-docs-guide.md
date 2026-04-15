@@ -124,13 +124,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner.md` — `$A_SOCIETY_OWNER_ROLE`
 
-**Why it exists:** The Owner role has authority boundaries, pushback posture, escalation triggers, and workflow-linked support-doc routing specific to A-Society. A generic template would not capture A-Society's project-specific review posture or the Owner support documents surfaced at later workflow moments.
+**Why it exists:** The Owner role operates as the project-level coordinator under the scoped delegation model. It has authority boundaries, domain lead definitions, escalation triggers, and workflow-linked support-doc routing specific to A-Society. A generic template would not capture A-Society's domain lead structure, review posture, or the Owner support documents surfaced at later workflow moments.
 
-**What it owns:** The A-Society Owner's authority, what they own and do not own, their standing pushback posture, and the routing guidance that tells the agent to rely on workflow-delivered Owner support documents.
+**What it owns:** The A-Society Owner's coordinator authority, domain lead delegation table, requirement-level directive writing posture, outcome validation approach, and the routing guidance that tells the agent to rely on workflow-delivered Owner support documents and the surface ownership registry.
 
-**What breaks without it:** An Owner agent has no specific behavioral contract or routing guidance for how phase-specific Owner support docs are delivered. They either over-reach (making framework changes beyond their authority), under-reach (asking the human for every small decision), or lose the structure that keeps phase detail out of the role file.
+**What breaks without it:** An Owner agent has no specific behavioral contract for coordinator-level delegation. They either over-reach (writing implementation constraints for domains other roles lead), under-reach (asking the human for every small decision), or miss the delegation model that enables parallel domain work.
 
-**Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific review tests. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
+**Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific domain leads and review posture. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
 
 ---
 
@@ -148,11 +148,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner/brief-writing.md` — `$A_SOCIETY_OWNER_BRIEF_WRITING`
 
-**Why it exists:** Brief-writing and constraint-writing guidance is phase-specific. Keeping it in a dedicated Owner support document means the Owner loads it when needed rather than carrying it in every session.
+**Why it exists:** Under the scoped delegation model, the Owner writes requirement-level directives rather than implementation-level constraints. This guidance is phase-specific — loaded when the Owner is formulating work for domain leads, not at every session start.
 
-**What it owns:** The preserved `## Brief-Writing Quality` and `## Constraint-Writing Quality` guidance extracted from `roles/owner.md`.
+**What it owns:** The requirement-level directive format, domain identification guidance, parallel-ready directive structure, dependency declaration, and retained coordination-level checks. Also retains constraint-writing quality guidance for surfaces the Owner directly governs.
 
-**What breaks without it:** Brief-writing detail returns to the role file, bloating the Owner's startup context and mixing general role identity with a later-phase task surface.
+**What breaks without it:** The Owner reverts to writing implementation-level constraints for every domain, bypassing domain lead design authority and creating unnecessary revision cycles.
 
 **Do not consolidate with:** `roles/owner.md` — role contract vs. phase-specific execution guidance. Do not consolidate with `roles/owner/ta-advisory-review.md` or `roles/owner/forward-pass-closure.md` — each document is loaded for a different Owner moment.
 
@@ -160,13 +160,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner/review-behavior.md` — `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR`
 
-**Why it exists:** Review behavior is conditional guidance. The Owner only needs this surface when reviewing a proposed addition, not at the start of every session. Keeping it in a dedicated support document preserves the routing-guide shape of `roles/owner.md`.
+**Why it exists:** Under the scoped delegation model, the Owner validates outcomes against requirements rather than reviewing implementation against constraints. This review guidance is conditional — loaded when the Owner is validating domain lead output, not at every session start.
 
-**What it owns:** The preserved `## How the Owner Reviews an Addition` and `## Review Artifact Quality` guidance extracted from `roles/owner.md`.
+**What it owns:** The outcome validation test (requirement met, vision-aligned, cross-domain coherent), the addition review checks for `general/` proposals, and the review artifact quality guidance.
 
-**What breaks without it:** Review-specific criteria either bloat the Owner role file again or get split across approval artifacts with no canonical Owner reference.
+**What breaks without it:** The Owner either reviews domain-internal implementation quality (overstepping lead authority) or rubber-stamps everything (no vision guardrail). Review-specific criteria drift into approval artifacts with no canonical reference.
 
-**Do not consolidate with:** `roles/owner.md` — role contract vs. review-phase guidance. Do not consolidate with `roles/owner/brief-writing.md` — drafting and reviewing are distinct Owner moments with different checks.
+**Do not consolidate with:** `roles/owner.md` — role contract vs. review-phase guidance. Do not consolidate with `roles/owner/brief-writing.md` — directive-writing and outcome-validation are distinct Owner moments with different checks.
 
 ---
 
@@ -208,11 +208,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/curator.md` — `$A_SOCIETY_CURATOR_ROLE`
 
-**Why it exists:** The Curator role has hard rules and escalation triggers specific to A-Society's maintenance needs — in particular the prohibition on writing to `general/` without Owner approval, the requirement to use `$VAR` references, and the distillation protocol for proposing patterns from observed projects.
+**Why it exists:** The Curator operates as the domain lead for all documentation surfaces under the scoped delegation model. It has lead authority, hard rules, and escalation triggers specific to A-Society's maintenance needs — in particular the prohibition on writing to `general/` without Owner approval (a scope decision, not a documentation decision), the requirement to use `$VAR` references, and the distillation protocol for proposing patterns from observed projects.
 
-**What it owns:** The A-Society Curator's maintenance scope, hard rules, pattern distillation process, version-aware migration obligations, and the routing pointer to the Curator's implementation-practices document.
+**What it owns:** The A-Society Curator's lead authority declaration, documentation design authority scope, maintenance scope, hard rules, pattern distillation process, version-aware migration obligations, and the routing pointer to the Curator's implementation-practices document.
 
-**What breaks without it:** A Curator agent has no specific behavioral contract. They may write directly to `general/` without approval, hardcode paths, or perform migration work without understanding the framework's boundaries. Role context injection fails.
+**What breaks without it:** A Curator agent has no specific behavioral contract or lead authority declaration. They may write directly to `general/` without approval, hardcode paths, seek unnecessary implementation approval for domain-internal decisions, or perform migration work without understanding the framework's boundaries. Role context injection fails.
 
 **Do not consolidate with:** `general/roles/curator.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
 
@@ -239,6 +239,20 @@ This is not a directory listing. It is a rationale document. Read it before main
 **Who reads it:** The runtime parsing layer (which performs the injection). Humans consult it as a sequence reference.
 
 **What breaks without it:** Programmatic context injection fails. Reading sequence becomes undocumented.
+
+---
+
+### `roles/ownership.yaml` — `$A_SOCIETY_OWNERSHIP`
+
+**Why it exists:** Without explicit surface ownership, the project has no structural mechanism to prevent coverage gaps — surfaces that no role claims fall through the cracks and rot silently. The registry makes routing mechanical: consult the registry, find the accountable role, send the directive. It also enables validation — any project path that lacks a registry entry is a visible gap.
+
+**What it owns:** The mapping of every project surface to the role(s) accountable for its health. Resolution rules (specificity, at-least-one accountability). The registry is the primary routing input for the Owner's coordinator function.
+
+**What breaks without it:** The Owner must hold domain knowledge about every surface in memory to route work correctly. Coverage gaps are invisible. New surfaces added without ownership assignment go unmaintained. Routing is ad hoc instead of registry-based.
+
+**Who reads it:** The Owner loads it at every session start (via required readings) for routing decisions. Domain leads may consult it to understand their accountability scope.
+
+**Do not consolidate with:** `roles/required-readings.yaml` — required readings governs context injection; ownership governs surface accountability. Different mechanisms serving different purposes. Do not consolidate with role files — role files define behavioral contracts; the registry defines surface-to-role mappings as a cross-cutting lookup table.
 
 ---
 
