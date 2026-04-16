@@ -1,26 +1,22 @@
-import { Spinner } from './spinner.js';
 import type { OperatorEvent, OperatorRenderSink } from './types.js';
 
 export class OperatorEventRenderer implements OperatorRenderSink {
-  private spinner: Spinner;
   private stream: NodeJS.WritableStream;
 
   constructor(stream: NodeJS.WritableStream = process.stderr) {
     this.stream = stream;
-    this.spinner = new Spinner(stream);
   }
 
   startWait(provider: string, model: string): void {
     const label = `[runtime/wait] Waiting for first token from ${provider}/${model}`;
-    this.spinner.start(label);
+    this.stream.write(label + '\n');
   }
 
   stopWait(): void {
-    this.spinner.stop();
+    // Plain stderr fallback: wait notices are emitted as static lines.
   }
 
   emit(event: OperatorEvent): void {
-    this.spinner.stop();
     const line = this.renderLine(event);
     if (line !== null) {
       this.stream.write(line + '\n');

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRun, HandoffResult, HandoffTarget, InteractiveSessionResult, RuntimeMessageParam, TurnUsage } from './types.js';
+import type { FlowRun, HandoffResult, HandoffTarget, InteractiveSessionResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
 import { emitUsage, runInteractiveSession } from './orient.js';
 import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
@@ -55,10 +55,10 @@ function requireWorkflowPath(recordFolderPath: string): string {
 
 
 export class FlowOrchestrator {
-  private renderer: OperatorEventRenderer;
+  private renderer: OperatorRenderSink;
   private pendingRoleActiveEmitted = new Set<string>();
 
-  constructor(renderer?: OperatorEventRenderer) {
+  constructor(renderer?: OperatorRenderSink) {
     this.renderer = renderer ?? createDefaultRenderer();
   }
 

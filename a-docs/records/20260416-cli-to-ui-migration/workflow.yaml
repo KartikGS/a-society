@@ -1,0 +1,142 @@
+workflow:
+  name: CLI-to-UI Migration (20260416-cli-to-ui-migration)
+  summary: Replace the CLI operator entry point with a local web server and browser UI — chat mode for Owner bootstrap and node interaction, graph mode for workflow visualization.
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+      required_readings:
+        - $A_SOCIETY_WORKFLOW_COMPLEXITY
+        - $A_SOCIETY_RECORDS
+      work:
+        - Assess complexity against five axes
+        - Create record folder and 01-owner-workflow-plan.md
+        - Create workflow.yaml
+        - Produce 02-owner-to-ta-brief.md
+      outputs:
+        - 01-owner-workflow-plan.md
+        - workflow.yaml
+        - 02-owner-to-ta-brief.md
+
+    - id: ta-phase0-design
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - 02-owner-to-ta-brief.md
+      work:
+        - Design server/WebSocket architecture and UI component contract
+        - Produce file-level change map (files added, deleted, modified)
+        - Specify WebSocket/SSE message protocol
+        - Determine UI package structure and build/serve model
+      outputs:
+        - 03-ta-executable-design.md
+
+    - id: owner-phase0-gate
+      role: Owner
+      human-collaborative: approval
+      guidance:
+        - Read $A_SOCIETY_OWNER_TA_REVIEW when reviewing TA output.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when issuing detailed constraints.
+      inputs:
+        - 03-ta-executable-design.md
+      work:
+        - Review TA design against requirements
+        - Approve or request revision
+        - Authorize Orchestration Developer track
+      outputs:
+        - 04-owner-phase0-decision.md
+
+    - id: orchestration-implementation
+      role: Orchestration Developer
+      required_readings:
+        - $A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE
+      inputs:
+        - 04-owner-phase0-decision.md (carrying approved TA design)
+      work:
+        - Implement server layer, WebSocket/SSE renderer, and frontend UI
+        - Remove CLI files (bin/a-society.ts, src/cli.ts, src/spinner.ts)
+        - Remove @inquirer/prompts dependency
+        - Implement OperatorRenderSink WebSocket implementation
+      outputs:
+        - 05-orchestration-developer-completion.md
+
+    - id: ta-integration-review
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - 05-orchestration-developer-completion.md
+      work:
+        - Review implementation against approved design
+        - Compare INVOCATION.md (or replacement) directly against implemented operator surface
+        - Assess deviations
+      outputs:
+        - 06-ta-integration-review.md
+
+    - id: owner-integration-gate
+      role: Owner
+      human-collaborative: approval
+      guidance:
+        - Read $A_SOCIETY_OWNER_TA_REVIEW when reviewing TA output.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when adding correction constraints.
+      inputs:
+        - 06-ta-integration-review.md
+      work:
+        - Decide whether integrated result is approved for Curator registration
+      outputs:
+        - 07-owner-integration-gate.md
+
+    - id: curator-registration
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - 07-owner-integration-gate.md
+      work:
+        - Update $A_SOCIETY_RUNTIME_INVOCATION to reflect new operator entry point
+        - Update $A_SOCIETY_INDEX and $A_SOCIETY_PUBLIC_INDEX for any new or removed standing files
+        - Update $A_SOCIETY_AGENT_DOCS_GUIDE for changed operator-facing references
+        - Update $A_SOCIETY_ARCHITECTURE if the standing executable model description requires revision
+        - Assess and publish framework update report per $A_SOCIETY_UPDATES_PROTOCOL; bump $A_SOCIETY_VERSION if required
+      outputs:
+        - 08-curator-registration.md
+
+    - id: owner-forward-pass-closure
+      role: Owner
+      human-collaborative: closure
+      required_readings:
+        - $A_SOCIETY_OWNER_LOG_MANAGEMENT
+        - $A_SOCIETY_OWNER_CLOSURE
+      inputs:
+        - 08-curator-registration.md
+      work:
+        - Confirm all approved work landed
+        - Confirm registrations and publications complete
+        - Update overlapping Next Priorities items
+        - Determine backward-pass routing
+      outputs:
+        - 09-owner-forward-pass-closure.md
+
+  edges:
+    - from: owner-intake
+      to: ta-phase0-design
+      artifact: owner-to-ta-brief
+    - from: ta-phase0-design
+      to: owner-phase0-gate
+      artifact: executable-design
+    - from: owner-phase0-gate
+      to: orchestration-implementation
+      artifact: owner-approval
+    - from: orchestration-implementation
+      to: ta-integration-review
+      artifact: completion-report
+    - from: ta-integration-review
+      to: owner-integration-gate
+      artifact: ta-assessment
+    - from: owner-integration-gate
+      to: curator-registration
+      artifact: owner-approval
+    - from: curator-registration
+      to: owner-forward-pass-closure
+      artifact: curator-to-owner

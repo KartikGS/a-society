@@ -4,91 +4,77 @@ This is the sole default operator-facing executable reference for A-Society. It 
 
 ---
 
-## Commands
+## Startup
 
 ### `a-society`
 
-Starts or resumes the unified orchestration flow.
+Starts the local runtime UI server, attempts to open the browser, and prints the local URL to `stderr`.
 
-Operator-visible behavior:
+Default URL:
 
-1. Scan the current working directory for initialized projects by checking for `a-docs/agents.md`
-2. Prompt the operator to select a project
-3. Start or resume orchestration from the selected project's Owner role
+`http://localhost:3000`
 
-### `a-society flow-status`
+Override the port with:
 
-Reads the current flow state and prints a rendered status view to `stdout`.
+`A_SOCIETY_UI_PORT`
 
-The snapshot is the authoritative view of active nodes, completed nodes, and pending joins. It does not include tool-call history, token counts, repair prompts, or wait/spinner state.
+Example:
 
-If no active flow state exists, the command reports that no active flow state was found.
+```bash
+export A_SOCIETY_UI_PORT=4010
+a-society
+```
 
----
-
-## Operator Output Model
-
-During a live `run`, the runtime separates its output into two channels:
-
-- **`stderr`** — runtime/system notices (flow lifecycle, role activation, tool calls, handoffs, repairs, token summaries, human-input suspension)
-- **`stdout`** — assistant/model text only
-
-The operator can therefore redirect or filter each stream independently.
-
-### Live notice classes
-
-During a live run, operators should expect notices in these classes on `stderr`:
-
-| Class | Example prefix |
-|---|---|
-| Flow lifecycle | `[runtime/flow]` |
-| Role activation | `[runtime/role]` |
-| Wait/liveness | `[runtime/wait]` |
-| Tool activity | `[runtime/tool]` |
-| Handoff success | `[runtime/handoff]` |
-| Repair/retry | `[runtime/repair]` |
-| Human-input suspension/resume | `[runtime/human]` |
-| Parallel-state transition | `[runtime/parallel]` |
-| Token summary | `Tokens: ...` |
-
-### Wait indicator behavior
-
-- TTY sessions show a spinner before first model output; the spinner clears when the first text token or tool-call block arrives.
-- Non-TTY sessions degrade to a one-line wait notice on `stderr`.
-
-### Token summary strings
-
-One token summary is emitted per completed gateway turn. The exact approved strings are:
-
-- `Tokens: <input> in, <output> out` — both available
-- `Tokens: input unavailable, <output> out` — input not reported
-- `Tokens: <input> in, output unavailable` — output not reported
-- `Tokens unavailable (provider did not report usage)` — neither reported
-
-Unavailable never means zero. When the provider does not report a count, the runtime says so explicitly rather than reporting zero.
-
-### Parallel-state visibility
-
-Live execution emits transition notices at fork and join boundaries only. It does not attempt a multi-pane live dashboard.
-
-`a-society flow-status` is the place to inspect the full current parallel state: which nodes are active, which are complete, and which joins are waiting and on whom.
-
-### No new operator-event flags or env vars
-
-Phase 1 introduces no new CLI flags or environment variables for operator-event rendering.
+If the selected port is already in use, the runtime prints a clear error and exits non-zero.
 
 ---
 
-## Runtime Signals
+## UI Modes
 
-The runtime injects and consumes the machine-readable handoff contract from `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
+The browser UI has two operator modes.
 
-- `type: prompt-human` pauses execution for terminal input and resumes the same session after a human reply
-- `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
-- `type: meta-analysis-complete` is consumed during backward-pass orchestration
-- `type: backward-pass-complete` closes the backward pass after synthesis
+### 1. Project Selector and Owner Chat
 
-When the operator enters `exit` or `quit` at a prompt-human pause, or the input stream closes, the flow is suspended as `awaiting_human`. Empty input re-prompts without advancing the session.
+Fresh starts open in the project selector. After choosing a project, the UI enters the Owner bootstrap chat.
+
+- The runtime streams assistant text into the chat panel
+- Runtime notices appear inline in the same operator feed
+- Human replies are entered in the browser instead of terminal `readline`
+
+The chat view remains active only until the first workflow node starts.
+
+### 2. Graph Mode
+
+The UI switches to graph mode on the first `role.active` operator event.
+
+- The workflow graph becomes the primary surface
+- Active, completed, and backward/corrective nodes are color-coded
+- The live operator feed remains available beside the graph
+- Human replies still use the browser input box whenever the runtime pauses for input
+
+If the runtime starts with an already active flow state, the client opens directly in graph mode instead of showing the project selector.
+
+---
+
+## Operator Event Model
+
+The browser UI replaces the old stderr/stdout split with a WebSocket event stream plus streamed assistant text.
+
+### Server messages
+
+- `init` — discovered projects plus current `FlowRun` state, if any
+- `operator_event` — flow lifecycle, role activation, tool calls, handoffs, repair requests, human-input pauses, and token summaries
+- `wait_start` / `wait_stop` — waiting for first token from the provider
+- `output_text` — assistant/model text streamed as it arrives
+- `flow_state` — full `FlowRun` snapshot after handoff changes, plus `backwardActive`
+- `error` — non-fatal server/runtime errors
+- `flow_complete` — emitted when orchestration fully completes
+
+### Human input behavior
+
+When the runtime emits a `type: prompt-human` handoff signal, the UI unlocks its input box. The operator replies in the browser, and the runtime resumes the same session without dropping out to a separate terminal prompt.
+
+Improvement-phase menus use the same browser input path. Menu text appears in the operator feed; the human types the response into the same input box.
 
 ---
 
@@ -96,50 +82,70 @@ When the operator enters `exit` or `quit` at a prompt-human pause, or the input 
 
 ### Required reading is loaded once at startup
 
-When a session begins, the runtime loads all required-reading files from `a-docs/roles/required-readings.yaml` into the system prompt. These files are already present in the model's context at the first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
+When a session begins, the runtime loads all required-reading files from `a-docs/roles/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
 
 ### Fresh Owner bootstrap
 
-A fresh interactive Owner bootstrap uses an explicit first user message that instructs the Owner to use the already-loaded context. The runtime does not inject a generic "read the project log" prompt — the Owner is told directly that the required-reading files are loaded and to use them to summarize status and ask what to work on.
+A fresh interactive Owner bootstrap uses an explicit first user message that tells the Owner the required-reading authority is already loaded and available in the session. The runtime does not inject a generic "read the log first" instruction.
 
 ### Same-node `prompt-human` resume
 
-When a `type: prompt-human` handoff pauses execution, the active role-scoped session transcript is preserved. On resume at the same node, the runtime reuses that transcript and appends only the human reply. The node-entry packet is not regenerated.
+When a `type: prompt-human` handoff pauses execution, the active role-scoped transcript is preserved. On resume at the same node, the runtime reuses that same node session and appends only the new human reply.
 
-### Same-role later-node return
+### Later same-role return
 
-When the same role appears again at a later node in the same flow (e.g., an Owner gate after a Technical Architect node), the runtime reuses the same flow-scoped role session and appends a combined node-transition message containing:
-
-1. A header identifying the workflow node and role
-2. An explicit statement that the role is continuing in the same flow session
-3. The current node's active artifact(s) as authoritative task input
-
-This preserves in-flow continuity by keeping prior role discussion and repair history in one session, while still restating the node's current authoritative inputs.
+When the same role appears again at a later node in the same flow, the runtime reuses the same flow-scoped role session and appends a node-transition packet. The current node inputs are authoritative even though earlier discussion remains available.
 
 ### Reopened node re-entry
 
-When a backward edge reopens a node for the same role, the runtime keeps the existing role-scoped session and appends a reopened-node packet before the next turn. The packet states that the node has been reopened and that the current task inputs may supersede earlier assumptions.
+When a backward edge reopens a node for the same role, the runtime keeps the existing role-scoped session and appends a reopened-node packet before continuing.
 
 ### Same-role parallel activation
 
-Concurrent activation of two nodes with the same role is currently unsupported. The runtime now uses one flow-scoped session per role, so it rejects same-role parallel activation rather than silently splitting or mixing transcript state.
+Concurrent same-role parallel activation is currently unsupported. The runtime rejects same-role parallel activation because it now uses one flow-scoped session per role.
 
 ---
 
-## Required Project Surface
+## Session Transcript Access
 
-The runtime loads context from `a-docs/roles/required-readings.yaml`. If that file is missing or the relevant index variables do not resolve, orchestration cannot start.
+In graph mode, clicking an active or completed node fetches that node's persisted role-scoped transcript and displays it in the UI.
 
-The machine-readable handoff contract is not part of `required-readings.yaml`. The runtime injects it separately as runtime-owned context.
+Transcript resolution path:
+
+1. Load the current `FlowRun`
+2. Map node ID to role from the active workflow file
+3. Resolve the logical session ID as `flowId__role-name`
+4. Load the persisted role session from runtime state
+
+If no session exists for the selected node, the UI reports that the transcript is unavailable.
 
 ---
 
-## State Location
+## Runtime Signals
+
+The runtime injects and consumes the machine-readable handoff contract from `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
+
+- `type: prompt-human` pauses execution for browser-entered human input
+- `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
+- `type: meta-analysis-complete` is consumed during backward-pass orchestration
+- `type: backward-pass-complete` closes the backward pass after synthesis
+
+When the runtime is waiting for human input, the UI keeps the current flow state and resumes the same role-scoped session after the reply is submitted.
+
+---
+
+## State Location and Resume
 
 - Default state directory: `a-society/runtime/.state`
 - Override: `A_SOCIETY_STATE_DIR`
 
-The runtime persists flow state, role sessions, turn records, and trigger records in this state directory.
+The runtime persists flow state, role sessions, turn records, and trigger records in this directory.
+
+Resume behavior is unchanged:
+
+- Existing `FlowRun` state is read from `.state/flow.json`
+- Active flows reopen in graph mode
+- Role-scoped session continuity is preserved from persisted session files
 
 ---
 
@@ -162,14 +168,7 @@ If telemetry configuration is malformed or the SDK fails to initialize, the runt
 
 ## Local Collector Example
 
-To point the runtime at a local OTLP/HTTP collector:
-
 ```bash
 export A_SOCIETY_OTLP_ENDPOINT=http://localhost:4318
-```
-
-To shorten the wait for exported metrics during local work:
-
-```bash
 export A_SOCIETY_OTLP_METRICS_INTERVAL=10000
 ```

@@ -8,7 +8,7 @@ A-Society has four standing top-level folders, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
 - **`agents/`** — the active agents. A-Society's deployed products that run on other projects (e.g., the Initializer). These are A-Society's work product, not internal framework-maintenance docs.
-- **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing CLI surface, and is the surviving umbrella executable layer.
+- **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing web server / browser UI surface, and is the surviving umbrella executable layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
 The executable layer currently includes six standing deterministic framework services and one orchestration family:

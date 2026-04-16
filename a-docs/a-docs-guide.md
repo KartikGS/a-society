@@ -586,7 +586,7 @@ These files live in the executable layers rather than in `a-docs/`, but they are
 
 **Why it exists:** The runtime is the sole default operator-facing executable surface. Commands, runtime signals, state location, and environment variables must be discoverable without reading source files.
 
-**What it owns:** Runtime entry points, runtime signal semantics, operator output model (live notices and token formats), state-directory behavior, and environment-driven configuration such as telemetry settings.
+**What it owns:** Runtime entry points, runtime signal semantics, operator UI mode interactions (browser chat vs. graph), state-directory behavior, and environment-driven configuration such as telemetry settings.
 
 **What breaks without it:** Operators and reviewers infer runtime behavior from source code or historical artifacts. The Curator, TA, and Owner lose the stable operator-facing document they are expected to compare against the implementation at review and registration time.
 

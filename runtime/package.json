@@ -7,15 +7,16 @@
     "a-society": "./bin/a-society"
   },
   "scripts": {
-    "start": "tsx src/cli.ts",
-    "test": "tsx test/types.test.ts && tsx test/context-injection.test.ts && tsx test/session-entry.test.ts && tsx test/handoff.test.ts && tsx test/operator-renderer.test.ts && tsx test/visualization.test.ts && tsx test/observability.test.ts && tsx test/invocation-doc.test.ts && tsx test/integration/unified-routing.test.ts && tsx test/integration/missing-artifact-handoff.test.ts && tsx test/integration/bootstrap-join-deferral.test.ts && tsx test/integration/edge-artifact-routing.test.ts && tsx test/integration/backward-resubmission.test.ts && tsx test/integration/terminal-backward-resubmission.test.ts && tsx test/integration/resume-parallel.test.ts && tsx test/integration/linear-role-active.test.ts && tsx test/integration/forward-pass-closure.test.ts && tsx test/integration/same-role-continuity.test.ts && tsx test/framework-services/utils.test.ts && tsx test/framework-services/path-validator.test.ts && tsx test/framework-services/version-comparator.test.ts && tsx test/framework-services/consent-utility.test.ts && tsx test/framework-services/workflow-graph-validator.test.ts && tsx test/framework-services/backward-pass-orderer.test.ts && tsx test/framework-services/scaffolding-system.test.ts && tsx test/framework-services/integration.test.ts && tsx test/tools/file-executor.test.ts && tsx test/tools/bash-executor.test.ts && tsx test/tools/web-search-executor.test.ts"
+    "start": "tsx src/server.ts",
+    "build:ui": "vite build",
+    "build": "tsc && npm run build:ui",
+    "test": "tsx test/types.test.ts && tsx test/context-injection.test.ts && tsx test/session-entry.test.ts && tsx test/handoff.test.ts && tsx test/operator-renderer.test.ts && tsx test/ws-operator-sink.test.ts && tsx test/visualization.test.ts && tsx test/observability.test.ts && tsx test/invocation-doc.test.ts && tsx test/integration/unified-routing.test.ts && tsx test/integration/missing-artifact-handoff.test.ts && tsx test/integration/bootstrap-join-deferral.test.ts && tsx test/integration/edge-artifact-routing.test.ts && tsx test/integration/backward-resubmission.test.ts && tsx test/integration/terminal-backward-resubmission.test.ts && tsx test/integration/resume-parallel.test.ts && tsx test/integration/linear-role-active.test.ts && tsx test/integration/forward-pass-closure.test.ts && tsx test/integration/same-role-continuity.test.ts && tsx test/framework-services/utils.test.ts && tsx test/framework-services/path-validator.test.ts && tsx test/framework-services/version-comparator.test.ts && tsx test/framework-services/consent-utility.test.ts && tsx test/framework-services/workflow-graph-validator.test.ts && tsx test/framework-services/backward-pass-orderer.test.ts && tsx test/framework-services/scaffolding-system.test.ts && tsx test/framework-services/integration.test.ts && tsx test/tools/file-executor.test.ts && tsx test/tools/bash-executor.test.ts && tsx test/tools/web-search-executor.test.ts"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.0",
-    "@inquirer/prompts": "^4.0.0",
     "@opentelemetry/api": "1.7.0",
     "@opentelemetry/context-async-hooks": "^1.30.1",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.47.0",
@@ -25,13 +26,24 @@
     "@opentelemetry/sdk-trace-base": "^1.30.1",
     "@opentelemetry/semantic-conventions": "^1.40.0",
     "dotenv": "^16.0.0",
+    "express": "^4.21.2",
     "js-yaml": "^4.1.0",
-    "openai": "^4.0.0"
+    "openai": "^4.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@types/express": "^5.0.1",
     "@types/js-yaml": "^4.0.0",
     "@types/node": "^20.0.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/ws": "^8.5.14",
+    "@vitejs/plugin-react": "^4.4.1",
+    "@xyflow/react": "^12.6.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vite": "^6.3.5"
   }
 }
