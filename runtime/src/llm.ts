@@ -3,6 +3,8 @@ import { OpenAICompatibleProvider } from './providers/openai-compatible.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult, TurnUsage } from './types.js';
 import { LLMGatewayError } from './types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from './tools/file-executor.js';
+import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from './tools/bash-executor.js';
+import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from './tools/web-search-executor.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
@@ -23,7 +25,9 @@ function createProvider(name: string): LLMProvider {
 
 export class LLMGateway {
   private provider: LLMProvider;
-  private executor?: FileToolExecutor;
+  private fileExecutor?: FileToolExecutor;
+  private bashExecutor?: BashToolExecutor;
+  private webSearchExecutor?: WebSearchExecutor;
   private tools?: ToolDefinition[];
 
   constructor(workspaceRoot?: string, provider?: LLMProvider) {
@@ -34,8 +38,14 @@ export class LLMGateway {
     }
 
     if (workspaceRoot) {
-      this.executor = new FileToolExecutor(workspaceRoot);
-      this.tools = FILE_TOOL_DEFINITIONS;
+      this.fileExecutor = new FileToolExecutor(workspaceRoot);
+      this.bashExecutor = new BashToolExecutor(workspaceRoot);
+      this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
+      const tavilyKey = process.env.TAVILY_API_KEY;
+      if (tavilyKey) {
+        this.webSearchExecutor = new WebSearchExecutor(tavilyKey);
+        this.tools = [...this.tools, ...WEB_SEARCH_TOOL_DEFINITIONS];
+      }
     }
   }
 
@@ -45,8 +55,8 @@ export class LLMGateway {
     options?: TurnOptions
   ): Promise<GatewayTurnResult> {
     const tracer = TelemetryManager.getTracer();
-    const toolsEnabled = !!(this.tools && this.executor);
-    return tracer.startActiveSpan('llm.gateway.execute_turn', { 
+    const toolsEnabled = !!(this.tools && this.fileExecutor);
+    return tracer.startActiveSpan('llm.gateway.execute_turn', {
       kind: SpanKind.INTERNAL,
       attributes: {
         'llm.tools_enabled': toolsEnabled,
@@ -54,7 +64,7 @@ export class LLMGateway {
       }
     }, async (span) => {
       try {
-        if (!this.tools || !this.executor) {
+        if (!this.tools || !this.fileExecutor) {
           const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
           if (result.type === 'text') {
             return { text: result.text, usage: result.usage, displayedText: result.displayedText };
@@ -111,7 +121,11 @@ export class LLMGateway {
                 content = `Error: could not parse tool arguments: ${call.parseError}`;
                 isError = true;
               } else {
-                const res = await this.executor!.execute(call);
+                const res = await (this.bashExecutor!.canHandle(call.name)
+                  ? this.bashExecutor!.execute(call)
+                  : this.webSearchExecutor?.canHandle(call.name)
+                  ? this.webSearchExecutor.execute(call)
+                  : this.fileExecutor!.execute(call));
                 content = res.content;
                 isError = res.isError;
               }
