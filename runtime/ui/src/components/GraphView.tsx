@@ -111,6 +111,7 @@ function buildReactFlowState(
     id: `${edge.from}-${edge.to}`,
     source: edge.from,
     target: edge.to,
+    type: 'straight',
     animated: false,
     style: {
       stroke: 'rgba(35, 48, 63, 0.35)',
@@ -194,6 +195,10 @@ export function GraphView(props: GraphViewProps) {
             edges={graphState.edges}
             fitView
             proOptions={{ hideAttribution: true }}
+            nodesDraggable={false}
+            panOnDrag={true}
+            panOnScroll={false}
+            zoomOnScroll={true}
             onNodeClick={(_event, node) => props.onNodeClick(node.id)}
           >
             <Background gap={20} color="rgba(65, 78, 92, 0.09)" />

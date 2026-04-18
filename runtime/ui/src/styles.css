@@ -527,7 +527,7 @@ textarea {
 }
 
 .graph-canvas {
-  min-height: 620px;
+  height: 620px;
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid rgba(34, 49, 63, 0.08);
@@ -654,6 +654,6 @@ textarea {
   }
 
   .graph-canvas {
-    min-height: 500px;
+    height: 500px;
   }
 }
