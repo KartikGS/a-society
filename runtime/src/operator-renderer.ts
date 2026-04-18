@@ -43,7 +43,8 @@ export class OperatorEventRenderer implements OperatorRenderSink {
 
       case 'activity.tool_call': {
         let line = `[runtime/tool] ${event.toolName}`;
-        if (event.path) line += ` ${event.path}`;
+        if (event.command) line += `: ${event.command}`;
+        else if (event.path) line += ` ${event.path}`;
         return line;
       }
 
@@ -104,6 +105,9 @@ export class OperatorEventRenderer implements OperatorRenderSink {
 
       case 'flow.forward_pass_closed':
         return `[runtime/flow] Forward pass closed via ${event.artifactBasename}; starting improvement phase`;
+
+      case 'flow.improvement_prompt':
+        return `[runtime/improvement] Awaiting improvement mode selection`;
 
       case 'flow.completed':
         return `[runtime/flow] Orchestration complete`;

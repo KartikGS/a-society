@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export interface FeedItem {
   id: string;
@@ -16,6 +17,10 @@ interface ChatInterfaceProps {
   inputDisabled: boolean;
   placeholder: string;
   statusLine?: string;
+  roles?: string[];
+  selectedRole?: string;
+  activeRole?: string;
+  onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
 }
@@ -35,6 +40,22 @@ export function ChatInterface(props: ChatInterfaceProps) {
         <p className="panel-copy">{props.subtitle}</p>
       </div>
 
+      {props.roles && props.roles.length > 0 ? (
+        <div className="role-tabs">
+          {props.roles.map((role) => (
+            <button
+              key={role}
+              className={`role-tab${props.selectedRole === role ? ' role-tab-active' : ''}${props.activeRole === role ? ' role-tab-live' : ''}`}
+              onClick={() => props.onRoleSelect?.(role)}
+              type="button"
+            >
+              {role}
+              {props.activeRole === role ? <span className="role-tab-dot" /> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       <div className="status-row">
         {props.statusLine ? <span className="status-pill">{props.statusLine}</span> : null}
         {props.waitingLabel ? <span className="status-pill status-pill-wait">{props.waitingLabel}</span> : null}
@@ -49,7 +70,13 @@ export function ChatInterface(props: ChatInterfaceProps) {
           props.messages.map((message) => (
             <article key={message.id} className={`feed-item feed-item-${message.type}`}>
               <p className="feed-label">{message.label}</p>
-              <pre className="feed-text">{message.text}</pre>
+              {message.type === 'assistant' ? (
+                <div className="feed-markdown">
+                  <ReactMarkdown>{message.text}</ReactMarkdown>
+                </div>
+              ) : (
+                <pre className="feed-text">{message.text}</pre>
+              )}
             </article>
           ))
         )}

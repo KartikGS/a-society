@@ -9,7 +9,7 @@ import { ContextInjectionService } from './injection.js';
 import { buildImprovementEntryMessage } from './session-entry.js';
 import { SessionStore } from './store.js';
 import { runInteractiveSession } from './orient.js';
-import type { FlowRun, HandoffResult, RuntimeMessageParam } from './types.js';
+import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } from './types.js';
 import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
@@ -110,6 +110,7 @@ export class ImprovementOrchestrator {
     signal: { recordFolderPath: string; artifactPath: string },
     inputStream: NodeJS.ReadableStream,
     outputStream: NodeJS.WritableStream,
+    renderer: OperatorRenderSink,
   ): Promise<void> {
     const tracer = TelemetryManager.getTracer();
     return tracer.startActiveSpan('improvement.orchestrate', {
@@ -122,7 +123,7 @@ export class ImprovementOrchestrator {
       const rl = readline.createInterface({
         input: inputStream,
         output: outputStream,
-        terminal: true
+        terminal: false
       });
 
       const question = (query: string): Promise<string> => {
@@ -130,7 +131,7 @@ export class ImprovementOrchestrator {
       };
 
       try {
-        outputStream.write(`\nForward pass complete.\n\nChoose improvement mode:\n  1) Graph-based  — roles run in reverse topological order; each receives findings from their direct forward successors\n  2) Parallel     — all roles run simultaneously; no cross-role findings injected\n  3) No improvement — close the record now\n\n`);
+        renderer.emit({ kind: 'flow.improvement_prompt' });
 
         let choice = (await question('Enter 1, 2, or 3: ')).trim();
         if (choice !== '1' && choice !== '2' && choice !== '3') {

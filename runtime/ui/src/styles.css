@@ -178,6 +178,26 @@ textarea {
   color: var(--ink-soft);
 }
 
+.view-layer {
+  transition: opacity 280ms ease, transform 280ms ease;
+}
+
+.view-layer-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.view-layer-hidden {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
 .chat-panel {
   display: grid;
   gap: 18px;
@@ -198,6 +218,192 @@ textarea {
 .status-pill-wait {
   background: rgba(255, 237, 213, 0.82);
   color: #9a3412;
+}
+
+.graph-meta-plain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.graph-meta-sep {
+  opacity: 0.4;
+}
+
+.role-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.role-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.role-tab:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+}
+
+.role-tab-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.role-tab-live {
+  border-color: var(--accent);
+}
+
+.role-tab-active.role-tab-live {
+  background: var(--accent);
+}
+
+.role-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.7;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.feed-markdown {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.feed-markdown p { margin: 0 0 10px; }
+.feed-markdown p:last-child { margin-bottom: 0; }
+.feed-markdown h1, .feed-markdown h2, .feed-markdown h3 {
+  margin: 12px 0 6px;
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+  line-height: 1.2;
+}
+.feed-markdown ul, .feed-markdown ol { margin: 0 0 10px; padding-left: 20px; }
+.feed-markdown li { margin-bottom: 4px; }
+.feed-markdown code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  background: rgba(34, 49, 63, 0.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.feed-markdown pre {
+  background: rgba(34, 49, 63, 0.05);
+  border-radius: 10px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0 0 10px;
+}
+.feed-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.feed-markdown blockquote {
+  margin: 0 0 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--border);
+  color: var(--ink-soft);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: rgba(34, 49, 63, 0.4);
+  backdrop-filter: blur(6px);
+  animation: fadeIn 180ms ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-panel {
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  box-shadow: 0 32px 80px rgba(34, 49, 63, 0.18);
+  padding: 32px;
+  max-width: 520px;
+  width: calc(100vw - 48px);
+  animation: slideUp 200ms ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-panel h2 {
+  margin: 8px 0 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.modal-copy {
+  margin: 10px 0 24px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.modal-choices {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-choice {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 118, 110, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(227, 242, 237, 0.88));
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.modal-choice:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.1);
+}
+
+.modal-choice-neutral {
+  border-color: var(--border);
+  background: rgba(249, 250, 251, 0.92);
+}
+
+.modal-choice-label {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.modal-choice-desc {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.4;
 }
 
 .feed,

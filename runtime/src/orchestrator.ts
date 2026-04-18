@@ -195,6 +195,13 @@ export class FlowOrchestrator {
                   stateVersion: '6'
                 };
                 await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs, turnUsage);
+                SessionStore.saveRoleSession({
+                  roleName,
+                  logicalSessionId: this.roleSessionId(flowRun, roleName),
+                  transcriptHistory: bootstrapHistory,
+                  isActive: false,
+                  currentNodeId: startNode.id
+                });
                 bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
                 break;
               } catch (e: any) {
@@ -457,6 +464,7 @@ export class FlowOrchestrator {
                   { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },
                   inputStream,
                   outputStream,
+                  this.renderer,
                 );
                 return;
               }
@@ -751,7 +759,7 @@ export class FlowOrchestrator {
     outputStream: NodeJS.WritableStream
   ): Promise<string | null> {
     return new Promise((resolve) => {
-      const rl = readline.createInterface({ input: inputStream, output: outputStream, terminal: true });
+      const rl = readline.createInterface({ input: inputStream, output: outputStream, terminal: false });
       const onClose = () => resolve(null);
       rl.once('close', onClose);
       rl.question('\n> ', (answer) => {

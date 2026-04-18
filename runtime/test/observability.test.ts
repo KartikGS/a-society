@@ -452,10 +452,11 @@ async function run() {
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     await ImprovementOrchestrator.handleForwardPassClosure(
-      flowRun, 
+      flowRun,
       { recordFolderPath: tmpDir, artifactPath: 'test.md' },
       input,
-      output
+      output,
+      { emit: () => {}, startWait: () => {}, stopWait: () => {} }
     );
 
     const impSpan = getSpan('improvement.orchestrate');
@@ -534,7 +535,8 @@ async function run() {
         flowRun,
         { recordFolderPath: recordDir, artifactPath: 'repair-record/00-owner-closure.md' },
         input,
-        output
+        output,
+        { emit: () => {}, startWait: () => {}, stopWait: () => {} }
       );
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;

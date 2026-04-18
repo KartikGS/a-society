@@ -8,18 +8,10 @@ import type {
   FlowRun,
   OperatorEvent,
   ServerMessage,
-  TranscriptPayload
+  WorkflowGraph,
 } from './types';
 
 type ViewMode = 'selector' | 'chat' | 'graph';
-
-interface SelectedNodeState {
-  nodeId: string;
-  role?: string;
-  transcript?: unknown[];
-  loading: boolean;
-  error?: string;
-}
 
 function nextFeedId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -38,7 +30,7 @@ function formatUsageSummary(event: Extract<OperatorEvent, { kind: 'usage.turn_su
   }
 }
 
-function formatOperatorEvent(event: OperatorEvent): FeedItem {
+function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
   switch (event.kind) {
     case 'flow.bootstrap_started':
       return { id: nextFeedId(), type: 'event', label: 'Bootstrap', text: `Interactive ${event.role} bootstrap started.` };
@@ -56,7 +48,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem {
         id: nextFeedId(),
         type: 'event',
         label: 'Tool Call',
-        text: event.path ? `${event.toolName} ${event.path}` : event.toolName
+        text: event.command ? `${event.toolName}: ${event.command}` : event.path ? `${event.toolName} ${event.path}` : event.toolName
       };
     case 'handoff.applied':
       return {
@@ -108,9 +100,11 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem {
       return {
         id: nextFeedId(),
         type: 'event',
-        label: 'Improvement Phase',
+        label: 'Forward Pass',
         text: `Forward pass closed via ${event.artifactBasename}.`
       };
+    case 'flow.improvement_prompt':
+      return null;
     case 'flow.completed':
       return {
         id: nextFeedId(),
@@ -119,23 +113,6 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem {
         text: 'Orchestration completed.'
       };
   }
-}
-
-function formatTranscriptEntry(entry: unknown): { label: string; text: string } {
-  if (entry && typeof entry === 'object' && 'role' in entry) {
-    const candidate = entry as Record<string, unknown>;
-    const label = typeof candidate.role === 'string' ? candidate.role : 'entry';
-    const text =
-      typeof candidate.content === 'string'
-        ? candidate.content
-        : JSON.stringify(entry, null, 2) ?? '';
-    return { label, text };
-  }
-
-  return {
-    label: 'entry',
-    text: JSON.stringify(entry, null, 2) ?? ''
-  };
 }
 
 export function App() {
@@ -148,51 +125,39 @@ export function App() {
   const [flowRun, setFlowRun] = useState<FlowRun | null>(null);
   const [backwardActive, setBackwardActive] = useState<string[]>([]);
   const [lastHandoff, setLastHandoff] = useState<Extract<OperatorEvent, { kind: 'handoff.applied' }> | null>(null);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [roleFeeds, setRoleFeeds] = useState<Record<string, FeedItem[]>>({});
+  const [activeLiveRole, setActiveLiveRole] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
   const [composerValue, setComposerValue] = useState('');
   const [awaitingInput, setAwaitingInput] = useState(false);
   const [waitLabel, setWaitLabel] = useState<string | null>(null);
-  const [selectedNode, setSelectedNode] = useState<SelectedNodeState | null>(null);
+  const [showImprovementModal, setShowImprovementModal] = useState(false);
 
-  function appendFeedItem(item: FeedItem): void {
-    setFeed((current) => {
-      if (item.type === 'assistant' && current[current.length - 1]?.type === 'assistant') {
-        const previous = current[current.length - 1];
-        return [
-          ...current.slice(0, -1),
-          { ...previous, text: previous.text + item.text }
-        ];
+  function appendToRoleFeed(role: string, item: FeedItem): void {
+    setRoleFeeds((current) => {
+      const existing = current[role] ?? [];
+      if (item.type === 'assistant' && existing[existing.length - 1]?.type === 'assistant') {
+        const previous = existing[existing.length - 1];
+        return {
+          ...current,
+          [role]: [...existing.slice(0, -1), { ...previous, text: previous.text + item.text }]
+        };
       }
-      return [...current, item];
+      return { ...current, [role]: [...existing, item] };
+    });
+  }
+
+  function appendToActiveRole(item: FeedItem): void {
+    setActiveLiveRole((role) => {
+      const target = role ?? '__system__';
+      appendToRoleFeed(target, item);
+      return role;
     });
   }
 
   function sendMessage(message: ClientMessage): void {
     socket.send(message);
-  }
-
-  async function handleNodeClick(nodeId: string): Promise<void> {
-    setSelectedNode({ nodeId, loading: true });
-
-    try {
-      const response = await fetch(`/api/transcripts/${encodeURIComponent(nodeId)}`);
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      const payload = (await response.json()) as TranscriptPayload;
-      setSelectedNode({
-        nodeId: payload.nodeId,
-        role: payload.role,
-        transcript: payload.transcript,
-        loading: false
-      });
-    } catch (error: unknown) {
-      setSelectedNode({
-        nodeId,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Unable to load transcript.'
-      });
-    }
   }
 
   function handleIncomingMessage(message: ServerMessage): void {
@@ -202,10 +167,13 @@ export function App() {
       setFlowRun(message.flowRun);
       setBackwardActive([]);
       setLastHandoff(null);
-      setFeed([]);
+      setRoleFeeds({});
+      setActiveLiveRole(null);
+      setSelectedRole(null);
+      setWorkflow(null);
       setWaitLabel(null);
       setAwaitingInput(message.flowRun?.status === 'awaiting_human');
-      setSelectedNode(null);
+      setShowImprovementModal(false);
       setView(message.flowRun && message.flowRun.status !== 'completed' ? 'graph' : 'selector');
       return;
     }
@@ -215,23 +183,46 @@ export function App() {
     }
 
     switch (message.type) {
-      case 'operator_event':
-        appendFeedItem(formatOperatorEvent(message.event));
+      case 'operator_event': {
+        const event = message.event;
 
-        if (message.event.kind === 'role.active') {
+        if (event.kind === 'flow.bootstrap_started') {
+          setActiveLiveRole(event.role);
+        }
+
+        if (event.kind === 'role.active') {
+          setActiveLiveRole(event.role);
+          setSelectedRole((prev) => prev ?? event.role);
           setView('graph');
           setAwaitingInput(false);
         }
-        if (message.event.kind === 'human.awaiting_input') {
+
+        if (event.kind === 'human.awaiting_input') {
           setAwaitingInput(true);
         }
-        if (message.event.kind === 'human.resumed' || message.event.kind === 'flow.completed') {
+
+        if (event.kind === 'human.resumed') {
+          setActiveLiveRole(event.role);
           setAwaitingInput(false);
         }
-        if (message.event.kind === 'handoff.applied') {
-          setLastHandoff(message.event);
+
+        if (event.kind === 'flow.completed') {
+          setAwaitingInput(false);
         }
+
+        if (event.kind === 'handoff.applied') {
+          setLastHandoff(event);
+        }
+
+        if (event.kind === 'flow.improvement_prompt') {
+          setShowImprovementModal(true);
+          return;
+        }
+
+        const item = formatOperatorEvent(event);
+        if (item) appendToActiveRole(item);
         return;
+      }
       case 'wait_start':
         setWaitLabel(`Waiting for first token from ${message.provider}/${message.model}`);
         return;
@@ -240,7 +231,7 @@ export function App() {
         return;
       case 'output_text':
         setWaitLabel(null);
-        appendFeedItem({
+        appendToActiveRole({
           id: nextFeedId(),
           type: 'assistant',
           label: 'Assistant',
@@ -253,7 +244,7 @@ export function App() {
         setBackwardActive(message.backwardActive);
         return;
       case 'error':
-        appendFeedItem({
+        appendToActiveRole({
           id: nextFeedId(),
           type: 'error',
           label: 'Runtime Error',
@@ -263,8 +254,6 @@ export function App() {
       case 'flow_complete':
         setAwaitingInput(false);
         setWaitLabel(null);
-        return;
-      case 'init':
         return;
     }
   }
@@ -276,10 +265,13 @@ export function App() {
     setFlowRun(null);
     setBackwardActive([]);
     setLastHandoff(null);
-    setFeed([]);
+    setRoleFeeds({});
+    setActiveLiveRole(null);
+    setSelectedRole(null);
+    setWorkflow(null);
     setWaitLabel(null);
     setAwaitingInput(false);
-    setSelectedNode(null);
+    setShowImprovementModal(false);
     setComposerValue('');
     setView('chat');
     sendMessage({ type: 'start_flow', projectNamespace });
@@ -293,6 +285,11 @@ export function App() {
     sendMessage({ type: 'human_input', text });
   }
 
+  function handleImprovementChoice(choice: '1' | '2' | '3'): void {
+    setShowImprovementModal(false);
+    sendMessage({ type: 'human_input', text: choice });
+  }
+
   const statusLine =
     socket.status === 'open'
       ? 'Connected'
@@ -304,6 +301,12 @@ export function App() {
     flowRun && lastHandoff && flowRun.activeNodes.includes(lastHandoff.fromNodeId)
       ? [lastHandoff.fromNodeId]
       : [];
+
+  const roles = workflow
+    ? [...new Set(workflow.nodes.map((n) => n.role))]
+    : [];
+
+  const displayedFeed = selectedRole ? (roleFeeds[selectedRole] ?? []) : (activeLiveRole ? (roleFeeds[activeLiveRole] ?? []) : []);
 
   return (
     <main className="app-shell">
@@ -330,11 +333,11 @@ export function App() {
         />
       ) : null}
 
-      {view === 'chat' ? (
+      <div className={`view-layer${view === 'chat' ? ' view-layer-visible' : ' view-layer-hidden'}`}>
         <ChatInterface
           title={selectedProject ? `Owner bootstrap for ${selectedProject}` : 'Owner bootstrap'}
           subtitle="Fresh starts stay here until the first workflow node activates."
-          messages={feed}
+          messages={activeLiveRole ? (roleFeeds[activeLiveRole] ?? []) : []}
           waitingLabel={waitLabel}
           inputValue={composerValue}
           inputDisabled={!awaitingInput}
@@ -343,73 +346,63 @@ export function App() {
           onInputChange={setComposerValue}
           onSubmit={handleSubmit}
         />
-      ) : null}
+      </div>
 
-      {view === 'graph' && flowRun ? (
-        <section className="workspace-grid">
-          <GraphView
-            flowRun={flowRun}
-            backwardActive={backwardActive}
-            backwardSources={backwardSources}
-            recordFolderPath={flowRun.recordFolderPath}
-            workspaceRoot={flowRun.workspaceRoot}
-            onNodeClick={(nodeId) => void handleNodeClick(nodeId)}
-          />
+      <div className={`view-layer${view === 'graph' && flowRun ? ' view-layer-visible' : ' view-layer-hidden'}`}>
+        {flowRun ? (
+          <section className="workspace-grid">
+            <GraphView
+              flowRun={flowRun}
+              backwardActive={backwardActive}
+              backwardSources={backwardSources}
+              recordFolderPath={flowRun.recordFolderPath}
+              workspaceRoot={flowRun.workspaceRoot}
+              onNodeClick={() => {}}
+              onWorkflowLoaded={setWorkflow}
+            />
 
-          <div className="sidebar-stack">
             <ChatInterface
-              title="Live operator feed"
-              subtitle="Runtime events, assistant output, and human-input entry all live here during graph mode."
-              messages={feed}
+              title="Role feed"
+              subtitle="Select a role to view its conversation."
+              messages={displayedFeed}
               waitingLabel={waitLabel}
               inputValue={composerValue}
               inputDisabled={!awaitingInput}
               placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
               statusLine={statusLine}
+              roles={roles}
+              selectedRole={selectedRole ?? activeLiveRole ?? undefined}
+              activeRole={activeLiveRole ?? undefined}
+              onRoleSelect={setSelectedRole}
               onInputChange={setComposerValue}
               onSubmit={handleSubmit}
             />
+          </section>
+        ) : null}
+      </div>
 
-            <section className="panel transcript-panel">
-              <div className="panel-header">
-                <p className="eyebrow">Node Detail</p>
-                <h2>{selectedNode ? selectedNode.nodeId : 'Select a node'}</h2>
-                <p className="panel-copy">
-                  Click any active or completed node to inspect its persisted session transcript.
-                </p>
-              </div>
-
-              {!selectedNode ? (
-                <div className="feed-empty">No node selected yet.</div>
-              ) : null}
-
-              {selectedNode?.loading ? (
-                <div className="feed-empty">Loading transcript…</div>
-              ) : null}
-
-              {selectedNode?.error ? (
-                <article className="feed-item feed-item-error">
-                  <p className="feed-label">Transcript Error</p>
-                  <pre className="feed-text">{selectedNode.error}</pre>
-                </article>
-              ) : null}
-
-              {!selectedNode?.loading && !selectedNode?.error && selectedNode?.transcript ? (
-                <div className="transcript-list">
-                  {selectedNode.transcript.map((entry, index) => {
-                    const formatted = formatTranscriptEntry(entry);
-                    return (
-                      <article key={`${selectedNode.nodeId}-${index}`} className="feed-item feed-item-event">
-                        <p className="feed-label">{formatted.label}</p>
-                        <pre className="feed-text">{formatted.text}</pre>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : null}
-            </section>
+      {showImprovementModal ? (
+        <div className="modal-overlay">
+          <div className="modal-panel">
+            <p className="eyebrow">Improvement Phase</p>
+            <h2>Choose improvement mode</h2>
+            <p className="modal-copy">Forward pass is complete. How should the backward pass proceed?</p>
+            <div className="modal-choices">
+              <button className="modal-choice" onClick={() => handleImprovementChoice('1')}>
+                <span className="modal-choice-label">Graph-based</span>
+                <span className="modal-choice-desc">Roles run in reverse topological order; each receives findings from their direct forward successors.</span>
+              </button>
+              <button className="modal-choice" onClick={() => handleImprovementChoice('2')}>
+                <span className="modal-choice-label">Parallel</span>
+                <span className="modal-choice-desc">All roles run simultaneously; no cross-role findings injected.</span>
+              </button>
+              <button className="modal-choice modal-choice-neutral" onClick={() => handleImprovementChoice('3')}>
+                <span className="modal-choice-label">No improvement</span>
+                <span className="modal-choice-desc">Close the record now without a backward pass.</span>
+              </button>
+            </div>
           </div>
-        </section>
+        </div>
       ) : null}
     </main>
   );

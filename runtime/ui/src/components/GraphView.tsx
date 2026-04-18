@@ -16,6 +16,7 @@ interface GraphViewProps {
   recordFolderPath: string;
   workspaceRoot: string;
   onNodeClick: (nodeId: string) => void;
+  onWorkflowLoaded?: (graph: WorkflowGraph) => void;
 }
 
 function computeDepths(workflow: WorkflowGraph): Map<string, number> {
@@ -138,6 +139,7 @@ export function GraphView(props: GraphViewProps) {
         if (cancelled) return;
         setWorkflow(graph);
         setError(null);
+        props.onWorkflowLoaded?.(graph);
       })
       .catch((loadError: unknown) => {
         if (cancelled) return;
@@ -177,9 +179,10 @@ export function GraphView(props: GraphViewProps) {
         </div>
       </div>
 
-      <div className="graph-meta">
-        <span className="status-pill">State: {props.flowRun.status}</span>
-        <span className="status-pill">Workspace: {props.workspaceRoot}</span>
+      <div className="graph-meta-plain">
+        <span>State: {props.flowRun.status}</span>
+        <span className="graph-meta-sep">·</span>
+        <span>{props.workspaceRoot}</span>
       </div>
 
       <div className="graph-canvas">

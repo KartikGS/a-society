@@ -111,7 +111,8 @@ export class LLMGateway {
               'llm.tool_id': call.id
             });
             const pathArg = call.input?.path as string | undefined;
-            options?.operatorRenderer?.emit({ kind: 'activity.tool_call', toolName: call.name, path: pathArg });
+            const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
+            options?.operatorRenderer?.emit({ kind: 'activity.tool_call', toolName: call.name, path: pathArg, command: commandArg });
           }
 
           const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
