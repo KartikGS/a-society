@@ -12,9 +12,6 @@ surfaces:
     scope: "Improvement-protocol stewardship"
   - path: a-docs/communication/conversation/
     scope: "Conversation-template stewardship"
-  - path: a-docs/communication/main.md
-    shared_with: [owner]
-    scope: "Transitional mixed entrypoint for coordination policy and conversation templates; split when practical"
   - path: a-docs/updates/
     scope: "Framework update-protocol and template stewardship"
   - path: a-docs/records/main.md

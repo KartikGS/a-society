@@ -24,7 +24,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Curator cannot maintain files it does not understand. This document ensures the Curator knows not just where files are (that is the index's job) but *why each file exists* — so it can maintain them correctly, avoid consolidating things that must stay separate, and recognize when a file's purpose has drifted.
 
-**What it owns:** Rationale for every significant file and folder in this project's internal documentation set, plus the load-bearing operator references the Curator maintains directly.
+**What it owns:** Rationale for every significant file and folder in this project's internal documentation set, plus the load-bearing operator references the Curator tracks for registration and rationale maintenance.
 
 **Do not consolidate with:** `project-information/structure.md` (structure explains folder placement rules; this explains file purpose) or `agents.md` (agents.md is the entry point for all agents; this is deep context for the Curator specifically).
 
@@ -117,6 +117,16 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Archived entries either accumulate in the main log (making it too long to read) or are discarded (losing historical traceability).
 
 **Do not consolidate with:** `project-information/log.md` — the main log is a current-state summary loaded at every session; the archive is historical storage not loaded at orientation.
+
+### `project-information/architecture.md` — `$A_SOCIETY_ARCHITECTURE`
+
+**Why it exists:** The Owner needs one framework-architecture document that explains A-Society's top-level structure, the feedback-signal architecture, and the non-negotiable structural invariants that govern framework changes. This is the project-level architecture surface, not the executable-domain startup reference.
+
+**What it owns:** The four-folder system model, public/internal index split, feedback-signal architecture, and architectural invariants such as layer isolation, portability, information ownership, context-loading scope, and consent-before-signal.
+
+**What breaks without it:** Structural review falls back to scanning many files, and Owner-side decisions about placement, scope, or framework-safe extension lose a single canonical architectural reference.
+
+**Do not consolidate with:** `project-information/structure.md` — structure governs placement decisions; architecture governs system model and invariants. Do not consolidate with `executable/overview.md` — that file exists to give executable-domain roles a narrower startup architecture view without carrying the full framework architecture.
 
 ---
 
@@ -438,18 +448,6 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ## `communication/`
 
-### `communication/main.md` — `$A_SOCIETY_COMM`
-
-**Why it exists:** Roles and workflow phases define what happens and who owns it. The communication folder defines how agents interact — what artifacts they exchange, in what format, under what rules. Without it, agents invent their own handoff formats and apply inconsistent coordination rules across sessions.
-
-**What it owns:** Entry point orienting the Curator and Owner to the two sub-layers (conversation and coordination) and explaining which layer to consult for which question.
-
-**What breaks without it:** The communication folder has no navigable entry point. Agents must scan the sub-folders to understand the structure.
-
-**Do not consolidate with:** `workflow/main.md` — the workflow document describes phase sequencing; this folder describes the communication rules within and between those phases.
-
----
-
 ### `communication/conversation/` — `$A_SOCIETY_COMM_CONVERSATION`
 
 **Why it exists:** Every proposal the Curator submits and every decision the Owner issues follows a defined format. Without templates, handoff formats vary by session. The conversation folder is the stable home for those templates.
@@ -528,6 +526,16 @@ These files live in `a-docs/executable/`. They are the standing design, governan
 
 **Do not consolidate with:** Any of the executable documents — each answers a distinct question (design, governance, coupling state, historical deviation rulings). The main.md is an orientation layer, not a summary of those documents.
 
+### `executable/overview.md` — `$A_SOCIETY_EXECUTABLE_OVERVIEW`
+
+**Why it exists:** The executable-domain roles need a startup architecture view that is narrower than the Owner's framework architecture. This file gives the TA and executable implementers the runtime-root model, capability inventory, and ownership boundary without making them carry the feedback architecture and non-executable framework invariants.
+
+**What it owns:** The standing executable system overview, capability inventory, implementation ownership boundary, and map to deeper executable references.
+
+**What breaks without it:** Executable-domain roles either load owner-oriented framework architecture they do not need, or jump directly into deeper executable design specs for basic orientation.
+
+**Do not consolidate with:** `project-information/architecture.md` — that file is the Owner-side framework architecture. Do not consolidate with `executable/architecture-proposal.md` — the proposal is the deeper standing design reference, while this file is the startup overview.
+
 ---
 
 ### `executable/general-coupling-map.md` — `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`
@@ -580,7 +588,7 @@ These files live in `a-docs/executable/`. They are the standing design, governan
 
 ## Operator References
 
-These files live in the executable layers rather than in `a-docs/`, but they are still Curator-maintained reference surfaces: internal roles verify them against live behavior, index them, and keep their rationale in view.
+These files live in the executable layers rather than in `a-docs/`, but they still need Curator stewardship at the registration layer: the owning executable role keeps the reference correct, while the Curator indexes it and keeps its rationale in view.
 
 ### `runtime/INVOCATION.md` — `$A_SOCIETY_RUNTIME_INVOCATION`
 
@@ -590,7 +598,7 @@ These files live in the executable layers rather than in `a-docs/`, but they are
 
 **What breaks without it:** Operators and reviewers infer runtime behavior from source code or historical artifacts. The Curator, TA, and Owner lose the stable operator-facing document they are expected to compare against the implementation at review and registration time.
 
-**Do not consolidate with:** `workflow/executable-development.yaml` — the workflow defines how the executable layer is designed and reviewed, not how operators invoke it. Do not consolidate with `project-information/architecture.md` — architecture explains what the runtime is; this file explains how to operate it.
+**Do not consolidate with:** `workflow/executable-development.yaml` — the workflow defines how the executable layer is designed and reviewed, not how operators invoke it. Do not consolidate with `executable/overview.md` — the overview explains what the executable layer is; this file explains how to operate it.
 
 ---
 

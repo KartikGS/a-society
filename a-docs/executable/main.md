@@ -6,6 +6,10 @@ This folder contains the standing design, specification, and coupling references
 
 ## Documents
 
+### `overview.md` — `$A_SOCIETY_EXECUTABLE_OVERVIEW`
+
+Startup overview for executable-domain roles: runtime-root model, standing capability inventory, ownership boundary, and the map to deeper executable references.
+
 ### `architecture-proposal.md` — `$A_SOCIETY_EXECUTABLE_PROPOSAL`
 
 Standing executable design reference: runtime-root model, framework-services/orchestration split, capability inventory, and co-maintenance surfaces.

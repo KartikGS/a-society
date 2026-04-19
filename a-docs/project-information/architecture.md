@@ -11,21 +11,7 @@ A-Society has four standing top-level folders, each with a distinct role:
 - **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing web server / browser UI surface, and is the surviving umbrella executable layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
-The executable layer currently includes six standing deterministic framework services and one orchestration family:
-
-| Capability | What it does |
-|---|---|
-| Scaffolding | Creates the folder structure and stub files for a new project's `a-docs/` |
-| Consent handling | Creates consent files from template and checks consent status |
-| Workflow graph validation | Validates approved workflow graph representations and related schema constraints |
-| Backward-pass planning | Computes backward-pass traversal order and related findings-location data from `workflow.yaml` in the active record folder |
-| Path validation | Checks that every path registered in an index table resolves to an existing file |
-| Update comparison | Identifies which framework update reports an adopting project has not yet applied |
-| Orchestration | Manages agent sessions end to end: context injection, handoff routing, trigger execution, observability, and operator-facing runtime behavior |
-
-Standing executable design and coupling references live under `$A_SOCIETY_EXECUTABLE`. Historical assessment context may still point back to the retired `tooling/` paths it describes, but the standing executable implementation root is now `runtime/` alone.
-
-**Executable implementation ownership:** `runtime/` is the standing executable root. Framework Services Developer and Orchestration Developer work within the executable layer under approved design authority. The Curator maintains the standing docs and indexes but does not author executable implementation surfaces.
+Detailed executable architecture, capability inventory, and implementation ownership boundaries live under `$A_SOCIETY_EXECUTABLE`, starting with `$A_SOCIETY_EXECUTABLE_OVERVIEW`.
 
 Two indexes govern path resolution:
 

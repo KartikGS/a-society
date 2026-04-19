@@ -66,7 +66,7 @@ When you need the standing executable design or coupling context, consult `$A_SO
 - **Design deviation** — implementation cannot match the approved orchestration design as specified
 - **TA determines design change is required** — wait for Owner approval before resuming
 - **Scope ambiguity** — it is unclear whether work belongs to orchestration, framework services, or Curator-owned docs
-- **Documentation gap discovered** — executable behavior changed and a required Curator-maintained surface or approval artifact is missing
+- **Documentation gap discovered** — executable behavior changed and a required owned documentation surface, registration surface, or approval artifact is missing
 - **Gate incomplete** — required executable design and approval surfaces are not yet approved and indexed
 
 ---

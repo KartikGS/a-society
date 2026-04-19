@@ -1,8 +1,5 @@
 role: technical-architect
 surfaces:
-  - path: a-docs/project-information/architecture.md
-    shared_with: [owner]
-    scope: "Transitional mixed-truth surface: framework architecture plus executable-layer relationship; split when practical"
   - path: a-docs/roles/technical-architect/
     scope: "Technical Architect role truth, support-doc truth, startup-context file, and ownership file"
   - path: a-docs/executable/
