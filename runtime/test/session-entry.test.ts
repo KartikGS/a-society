@@ -228,7 +228,7 @@ test('buildImprovementEntryMessage: renders instruction file as [FILE: relpath] 
 
 test('buildImprovementEntryMessage: renders findings files as [FILE: relpath] blocks', () => {
   const msg = buildImprovementEntryMessage({
-    stepLabel: 'synthesis',
+    stepLabel: 'feedback',
     recordFolderPath: '/project/records/flow',
     workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,

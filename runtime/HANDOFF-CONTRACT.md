@@ -87,7 +87,7 @@ type: prompt-human
 ```
 
 Emit `type: prompt-human` only when the session cannot continue without a human reply.
-Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis or synthesis sessions; those sessions must end with `meta-analysis-complete` or `backward-pass-complete`.
+Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis or feedback sessions; those sessions must end with `meta-analysis-complete` or `backward-pass-complete`.
 
 ---
 
@@ -149,7 +149,7 @@ findings_path: [project-name]/a-docs/records/[record-folder]/[NN]-[role]-finding
 
 ```handoff
 type: backward-pass-complete
-artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-curator-synthesis.md
+artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-feedback.md
 ```
 
 **Human interaction**
@@ -158,4 +158,4 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-curator-synthe
 type: prompt-human
 ```
 
-When synthesis completes, emit `type: backward-pass-complete` with the synthesis artifact path. This is a terminal signal, not a routing handoff.
+When the final feedback step completes, emit `type: backward-pass-complete` with the feedback artifact path. This is a terminal signal, not a routing handoff.

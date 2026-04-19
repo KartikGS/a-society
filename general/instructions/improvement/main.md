@@ -10,9 +10,11 @@ Every execution cycle in a project has two directions.
 
 **The forward pass** is agents executing their roles: receiving work, producing artifacts, handing off to the next stage. This is the project's normal workflow.
 
-**The backward pass** is agents reflecting on that execution: each agent who participated in the forward pass produces a structured analysis of their experience — what was clear, what was ambiguous, what was missing from their role or context documents, what they had to infer that they shouldn't have had to. The synthesis role (typically the Curator) receives all findings, identifies actionable items, and routes them through the appropriate path.
+**The backward pass** is agents reflecting on that execution at the framework layer: each participating role produces structured findings about what the project's agent infrastructure surfaced clearly, what it failed to surface, and what standing local framework surfaces should be corrected. After those findings are complete, the coordinating Owner produces one final framework-feedback artifact for A-Society.
 
-**The backward pass is not periodic — it is coupled to every forward pass.** The Curator does not independently observe friction and "notice" things to fix. The backward pass is what generates the raw material the Curator synthesizes. Without it, the improvement system has nothing to work from.
+**The backward pass is not periodic — it is coupled to every forward pass.** Roles do not independently "notice" things to fix out of band. The backward pass is what generates the raw material for local framework corrections and upstream A-Society feedback.
+
+**Scope boundary:** The backward pass is for the project's framework surfaces — local `a-docs/`, local workflow/coordination docs, and local agent-facing tooling/runtime guidance. It is not the project's product-delivery workflow, bug tracker, or feature backlog.
 
 ---
 
@@ -22,24 +24,29 @@ In a graph-based workflow, the backward pass is ordered as follows:
 
 1. **Identify first occurrences.** Take each role's *first occurrence* in the forward pass. Subsequent appearances of the same role are not counted separately — that role's backward-pass findings cover all their forward-pass phases.
 2. **Reverse the sequence.** Reverse the first-occurrence sequence to get the backward order.
-3. **Owner is always second-to-last.** Because Owner is the entry point for every workflow, Owner's first occurrence is always first in the forward pass — placing Owner second-to-last in the backward sequence.
-4. **Synthesis role is always last.** The synthesis role (typically the Curator) synthesizes all findings and produces the final backward-pass output. It is always the final node in the backward pass.
-5. **Parallel forks produce concurrent backward-pass nodes.** Roles whose first occurrences are at the same forward-pass position (parallel fork) produce findings concurrently, not sequentially.
+3. **Parallel forks produce concurrent backward-pass nodes.** Roles whose first occurrences are at the same forward-pass position (parallel fork) produce findings concurrently, not sequentially.
+4. **Owner feedback is always last.** After all findings-producing roles complete meta-analysis, the Owner runs the final framework-feedback step.
 
-**Example:** Forward pass `Owner → A → B + C (parallel) → A (reviews) → Owner (confirms)`. First occurrences in order: Owner, A, then B and C together. Backward sequence: B and C simultaneously → A → Owner → Curator synthesizes. A's second appearance (reviews) is absorbed into A's single backward-pass node.
+**Example:** Forward pass `Owner → A → B + C (parallel) → A (reviews) → Owner (confirms)`. First occurrences in order: Owner, A, then B and C together. Backward sequence: B and C simultaneously → A → Owner findings → Owner feedback. A's second appearance (reviews) is absorbed into A's single backward-pass node.
 
 Only the nodes and edges that fired during the instance under review are included. Dead branches are excluded.
 
 ---
 
-## Synthesis Path
+## Local Correction Path + Final Feedback
 
-After the synthesis role collects all findings and identifies actionable items:
+After a role identifies framework friction during meta-analysis:
 
-- **Changes within synthesis role authority** — doc corrections, clarifications, maintenance items the Curator owns: implement directly to a-docs without a formal proposal.
-- **Changes requiring Owner judgment** — structural decisions, additions to `general/`, direction changes: submit to the Owner for approval; implement after approval.
+- **Owned local standing surfaces** — fix them directly during meta-analysis.
+- **Owner-owned local governance surfaces** — the Owner fixes them during Owner meta-analysis.
+- **Historical records** — never rewrite them.
+- **Upstream A-Society changes** — record them for the final framework-feedback artifact instead of editing upstream surfaces directly from the local backward pass.
 
-a-docs improvement is a separate, lightweight path. It does not re-enter the project's main execution workflow — it runs on a shorter approval loop than the project's normal work product.
+The final feedback step is not a local maintenance routing loop. It produces one artifact for A-Society-wide feedback:
+- potential additions or changes to `general/`
+- runtime/tooling feature requests
+- cross-project patterns or anti-patterns
+- framework-level workflow/documentation gaps
 
 ---
 
@@ -49,7 +56,7 @@ An `improvement/` folder contains one required component and up to two optional:
 
 1. **Philosophy and protocol** (`main.md`) — required: the principles that govern how improvement decisions are made, combined with the backward pass protocol
 2. **Reports** (`reports/`) — optional: the storage location for backward pass findings, for projects that do not use a records structure
-3. **Phase-specific instruction files** (`meta-analysis.md`, `synthesis.md`) — optional: present when the project uses a programmatic runtime that injects session context into backward pass agents. See **Project-Specific Phase Files (Runtime)** below.
+3. **Phase-specific instruction files** (`meta-analysis.md`, `feedback.md`) — optional: present when the project uses a programmatic runtime that injects session context into backward pass agents. See **Project-Specific Phase Files (Runtime)** below.
 
 Together they answer: "How does this project's a-docs stay aligned with how the project actually works?"
 
@@ -77,7 +84,7 @@ A dedicated folder separates improvement infrastructure from normal execution in
 - Principles for when to create a new protocol vs. using the user consultation path
 - Principles for keeping documentation single-purpose and cross-referenced
 - The project's stance on doc improvement scope
-- How to run a backward pass: who produces findings, traversal order, output format, synthesis path
+- How to run a backward pass: who produces findings, traversal order, output format, and the final feedback path
 - Reflection categories to guide agents
 - Guardrails
 
@@ -96,7 +103,7 @@ A dedicated folder separates improvement infrastructure from normal execution in
 
 **What it is:** The storage location for backward pass findings in projects that do not use a records structure.
 
-If the project uses a records structure (see `$INSTRUCTION_RECORDS`), backward pass findings are sequenced artifacts within the record folder — not files in `reports/`. In that case, this folder may be omitted or repurposed for non-flow-specific improvement artifacts (e.g., a periodic synthesis that spans multiple flows).
+If the project uses a records structure (see `$INSTRUCTION_RECORDS`), backward pass findings are sequenced artifacts within the record folder — not files in `reports/`. In that case, this folder may be omitted or repurposed for non-flow-specific improvement artifacts (e.g., a periodic framework-feedback review that spans multiple flows).
 
 > **Note on record-folder artifacts:** When a project uses a records structure, backward pass findings are sequenced files within `a-docs/records/[identifier]/`. These are regular repository-tracked files — not system artifact-directory outputs. Do not apply artifact-directory write restrictions to `a-docs/records/` paths. Findings artifacts and completion artifacts in record folders are committed to the project repository alongside all other agent-docs.
 
@@ -125,13 +132,13 @@ When a project uses a programmatic runtime that orchestrates backward pass sessi
 **Two files are required when using the runtime:**
 
 - **`improvement/meta-analysis.md`** — injected into backward pass meta-analysis sessions. Contains the project's reflection categories, output format rules, findings template reference, and completion signal schema.
-- **`improvement/synthesis.md`** — injected into backward pass synthesis sessions. Contains the project's synthesis routing rules, guardrails, and closure behavior.
+- **`improvement/feedback.md`** — injected into the Owner's final backward-pass feedback session. Contains the project's feedback-scope rules, guardrails, and closure behavior.
 
 **Creating these files:**
 
 Base each file on the corresponding general framework template:
 - `meta-analysis.md` → start from `$GENERAL_IMPROVEMENT_META_ANALYSIS`; resolve all `[PROJECT_*]` placeholders with values from the project's index
-- `synthesis.md` → start from `$GENERAL_IMPROVEMENT_SYNTHESIS`; no placeholders to resolve in the current template
+- `feedback.md` → start from `$GENERAL_IMPROVEMENT_FEEDBACK`; no placeholders to resolve in the current template
 
 `[PROJECT_*]` placeholders to resolve for `meta-analysis.md` at minimum:
 - `[PROJECT_RECORDS]` — the path to the project's records folder (e.g., `my-project/a-docs/records`)
@@ -141,7 +148,7 @@ If the project uses a records structure, remove the non-records output path bran
 
 **Registering these files:**
 
-Add both to the project's file path index as `$[PROJECT]_IMPROVEMENT_META_ANALYSIS` and `$[PROJECT]_IMPROVEMENT_SYNTHESIS`. See the Integration with the Index section below.
+Add both to the project's file path index as `$[PROJECT]_IMPROVEMENT_META_ANALYSIS` and `$[PROJECT]_IMPROVEMENT_FEEDBACK`. See the Integration with the Index section below.
 
 **When to create:**
 
@@ -158,7 +165,7 @@ Add all key files to the project's file path index. At minimum:
 | `$[PROJECT]_IMPROVEMENT` | `/[project]/a-docs/improvement/main.md` | Improvement philosophy and backward pass protocol | Required |
 | `$[PROJECT]_IMPROVEMENT_REPORTS` | `/[project]/a-docs/improvement/reports/main.md` | Improvement reports index — naming conventions and template links | Optional: include only if the project uses `reports/` rather than a records structure for findings |
 | `$[PROJECT]_IMPROVEMENT_META_ANALYSIS` | `/[project]/a-docs/improvement/meta-analysis.md` | Project-specific meta-analysis phase instructions — runtime injection target for backward pass meta-analysis sessions | Conditional: required when project uses programmatic runtime |
-| `$[PROJECT]_IMPROVEMENT_SYNTHESIS` | `/[project]/a-docs/improvement/synthesis.md` | Project-specific synthesis phase instructions — runtime injection target for backward pass synthesis sessions | Conditional: required when project uses programmatic runtime |
+| `$[PROJECT]_IMPROVEMENT_FEEDBACK` | `/[project]/a-docs/improvement/feedback.md` | Project-specific feedback phase instructions — runtime injection target for the Owner's final backward-pass feedback session | Conditional: required when project uses programmatic runtime |
 
 ---
 

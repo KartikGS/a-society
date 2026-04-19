@@ -50,6 +50,8 @@ When two documents give conflicting guidance, which takes precedence? **The expe
 ### 7. Project invariants (mandatory)
 Rules that apply across all roles and all sessions, regardless of task. These are the non-negotiable constraints of the project that no role document can override. Keep this list short — if it grows long, some invariants belong in role documents or the vision instead.
 
+If the project uses records, archives, or other historical artifacts, include an invariant stating that agents must use standing documents as task authority for new work. Historical records are immutable traceability artifacts unless the project explicitly designates a specific historical artifact as the authoritative long-lived reference.
+
 ---
 
 ## What Does NOT Belong in agents.md
@@ -83,6 +85,8 @@ List the documents in precedence order. **The expected hierarchy is: project vis
 
 **Step 7 — Write the invariants.**
 Three to seven short rules. These are the project-level constraints that apply to every agent, every session. If you find yourself writing more than seven, some belong in role documents.
+
+If the project keeps historical records, use one invariant to distinguish current authority from historical traceability: standing documents govern new work; records and archives are consulted for traceability, active-flow inputs, or explicitly designated authoritative references.
 
 ---
 
@@ -119,6 +123,7 @@ Each role's required readings are maintained in `a-docs/roles/<role-id>/required
 - Never use npm or yarn — pnpm only.
 - Do not write feature code as Tech Lead.
 - All scope changes require human approval.
+- Use standing documents as task authority for new work; records are traceability artifacts unless explicitly designated authoritative.
 ```
 
 ### Editorial / writing project
@@ -142,6 +147,7 @@ Each role's required readings are maintained in `a-docs/roles/<role-id>/required
 - Never publish without editor approval.
 - Citation format: [standard]. No exceptions.
 - Drafts live in /drafts/ until approved.
+- Use standing documents as task authority for new work; records are traceability artifacts unless explicitly designated authoritative.
 ```
 
 ---

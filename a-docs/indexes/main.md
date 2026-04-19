@@ -104,11 +104,11 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Ready-made keep-in-mind template — operational reminders and hard stops |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
-| `$GENERAL_IMPROVEMENT_SYNTHESIS` | `a-society/general/improvement/synthesis.md` | Synthesis phase instructions — injected into the synthesis (Curator) session by the runtime; contains routing rules, merge assessment, and synthesis closure behavior |
+| `$GENERAL_IMPROVEMENT_FEEDBACK` | `a-society/general/improvement/feedback.md` | Feedback phase instructions — injected into the Owner's final backward-pass feedback session by the runtime; contains scope rules, guardrails, and closure behavior |
 | `$GENERAL_IMPROVEMENT_REPORTS` | `a-society/general/improvement/reports/main.md` | Ready-made improvement reports index template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |
 | `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` | `a-society/a-docs/improvement/meta-analysis.md` | A-Society project-specific meta-analysis phase instructions — runtime injection target for backward pass findings sessions in this project |
-| `$A_SOCIETY_IMPROVEMENT_SYNTHESIS` | `a-society/a-docs/improvement/synthesis.md` | A-Society project-specific synthesis phase instructions — runtime injection target for Curator synthesis sessions in this project |
+| `$A_SOCIETY_IMPROVEMENT_FEEDBACK` | `a-society/a-docs/improvement/feedback.md` | A-Society project-specific feedback phase instructions — runtime injection target for the Owner's final backward-pass feedback session in this project |
 | `$A_SOCIETY_PRINCIPLES` | `a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
 | `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.yaml` | A-Society canonical workflow definition — the single permanent graph for framework, executable, and coordinated multi-role work |
@@ -118,7 +118,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
 | `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Initializer signal reports — filed after initialization runs with project consent |
 | `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
-| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Curator signals from adopting projects — mechanism TBD |
+| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy-named collection for project-level framework feedback from adopting projects |
 | `$A_SOCIETY_VERSION` | `a-society/VERSION.md` | A-Society's current framework version — single source of truth for the vMAJOR.MINOR version stamp |
 | `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |

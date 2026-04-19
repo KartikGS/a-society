@@ -469,7 +469,7 @@ async function run() {
     assert.ok(getEvents(impSpan).find(e => e.name === 'store.flow_saved' && e.attributes['stage'] === 'improvement_skipped'));
   });
 
-  await test('Scenario: ImprovementOrchestrator repairs synthesis until terminal handoff (REAL CODE)', async () => {
+  await test('Scenario: ImprovementOrchestrator repairs feedback until terminal handoff (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
     process.env.A_SOCIETY_STATE_DIR = stateDir;
@@ -477,7 +477,10 @@ async function run() {
 
     const derivedNamespaceDir = path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'roles');
     fs.mkdirSync(derivedNamespaceDir, { recursive: true });
+    fs.mkdirSync(path.join(derivedNamespaceDir, 'owner'), { recursive: true });
     fs.mkdirSync(path.join(derivedNamespaceDir, 'curator'), { recursive: true });
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'main.md'), '---\nrole: Owner\n---\nHello');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
 
@@ -488,7 +491,7 @@ async function run() {
     fs.mkdirSync(recordDir, { recursive: true });
     fs.mkdirSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
-    fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'synthesis.md'), 'Synthesis instructions');
+    fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'feedback.md'), 'Feedback instructions');
     fs.writeFileSync(
       path.join(recordDir, 'workflow.yaml'),
       'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n'
@@ -512,7 +515,7 @@ async function run() {
     const mockProvider = new MockProvider([
       { type: 'text', text: 'Saved findings. ```handoff\ntype: meta-analysis-complete\nfindings_path: repair-record/01-curator-findings.md\n```' },
       { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' },
-      { type: 'text', text: 'Synthesis complete. ```handoff\ntype: backward-pass-complete\nartifact_path: repair-record/02-curator-synthesis.md\n```' }
+      { type: 'text', text: 'Feedback complete. ```handoff\ntype: backward-pass-complete\nartifact_path: repair-record/02-owner-feedback.md\n```' }
     ]);
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
@@ -546,7 +549,7 @@ async function run() {
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.stateVersion, '5', 'improvement initialization must keep the latest state version');
-    assert.ok(capturedOutput.includes('Curator emitted prompt-human during backward pass synthesis. Requesting repair.'));
+    assert.ok(capturedOutput.includes('Owner emitted prompt-human during backward pass feedback. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });
 

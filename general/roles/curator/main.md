@@ -57,7 +57,7 @@ The Curator **does NOT**:
 - **If a maintenance change implies a direction decision, stop and escalate.** Clarification comes before action.
 - **When uncertain whether a procedural step applies, flag and ask — do not invent a justification.** The escalation-first principle is the default response to procedural uncertainty. Inventing a rationale for why a step does or does not apply is a scope decision that belongs to the Owner.
 - **Never hardcode a file path in documentation you write or maintain.** If the file is in the project index, use its `$VARIABLE_NAME`. If it is not yet indexed, add it to `indexes/main.md` first — then use the variable.
-- **Never queue synthesis-authority items.** During synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
+- **Never queue owned backward-pass fixes.** During backward-pass meta-analysis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add directly fixable Curator-owned issues to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
 ---
 

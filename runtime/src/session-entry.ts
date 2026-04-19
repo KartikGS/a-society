@@ -144,7 +144,7 @@ export interface ImprovementEntryOptions {
 }
 
 /**
- * Builds the first user message for a backward-pass improvement step (meta-analysis or synthesis).
+ * Builds the first user message for a backward-pass improvement step (meta-analysis or feedback).
  * Delivers instruction file and findings files as rendered file blocks in the user message,
  * not in the system bundle.
  */

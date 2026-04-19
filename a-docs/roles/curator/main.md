@@ -62,9 +62,9 @@ The Curator **does NOT**:
 - **Only begin implementation when the active workflow authorizes it.** For direct-authority Curator paths, the workflow plan or explicit Owner brief must state that the Curator may implement directly. For proposal-bearing paths, do not begin implementation until an explicit Owner decision artifact approves the change.
 
 - **When a gate condition is met, return to the Owner for session routing.** Do not self-authorize a session switch based on routing instructions in a brief. A brief states when to return to the Owner (the gate condition); it does not authorize the Curator to route sessions directly. If a brief contains next-role-session instructions instead of a gate condition, apply the gate condition reading: return to the Owner when the described work is complete.
-- **Never queue synthesis-authority items.** During a backward pass synthesis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add synthesis-authority fixes to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
+- **Never queue owned backward-pass fixes.** During backward-pass meta-analysis, maintenance items within your authority must be implemented directly. Do not generate a maintenance backlog. Do not add directly fixable Curator-owned issues to the project log's Next Priorities queue. If you have the authority to fix an issue, fix it in the current flow.
 
-- **Never initiate an Owner approval loop from within a backward pass.** Synthesis items outside `a-docs/` go to Next Priorities — not to the Owner for approval. When synthesis surfaces an item that cannot be implemented directly within `a-docs/` (e.g., an addition to `general/` or a structural decision), create a Next Priorities entry in `$A_SOCIETY_LOG`. Do not initiate an Owner approval loop from within a backward pass.
+- **Never initiate an Owner approval loop from within a backward pass.** Items outside your local standing authority do not become Curator-managed approval loops. If your findings surface a need that you cannot implement directly, record it in your findings so the Owner can resolve it during Owner meta-analysis or elevate it in the final feedback step.
 
 ---
 

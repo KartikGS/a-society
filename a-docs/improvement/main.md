@@ -1,6 +1,6 @@
 # A-Society: Improvement Principles and Backward Pass Protocol
 
-This document combines the improvement philosophy and the backward pass protocol for A-Society's agent documentation system. It guides how framework improvement decisions are evaluated and resolved, and standardizes how Owner and Curator reflect on completed work and turn that reflection into documentation improvements.
+This document combines the improvement philosophy and the backward pass protocol for A-Society's agent documentation system. It guides how framework improvement decisions are evaluated and resolved, and standardizes how participating roles reflect on completed work, correct owned standing surfaces, and surface framework-level feedback.
 
 All principles are drawn from the project-agnostic framework in `$GENERAL_IMPROVEMENT`. They apply here without modification; no A-Society-specific exceptions exist.
 
@@ -44,15 +44,15 @@ Organize project agent documentation so that:
 
 ---
 
-## Principle 3: Follow References
+## Principle 3: Surfaced Authority Over Transitive Reference Chasing
 
-**When a doc references another file, that file is required reading — not optional context.**
+**A cross-reference does not automatically become required reading. Load what the role or workflow explicitly surfaces as authority for the task.**
 
-Agents load their required reading list from the project's agents.md and their role doc. But those docs will contain cross-references. These references are not decorative — they point to the authoritative source for a specific topic.
+Cross-references are useful pointers to authoritative homes, but recursively loading every referenced document bloats context and hides what is actually required for the current task.
 
-**Rule for agents:** If a loaded document contains a cross-reference to another file in agent-docs, treat that referenced file as required reading for any task that touches the referenced topic.
+**Rule for agents:** Use standing documents and workflow-delivered context as task authority. Follow a cross-reference when the task specifically requires that topic, not merely because the link exists.
 
-**Rule for doc authors:** Cross-references should use `$VARIABLE_NAME` from the index, not hardcoded paths. Avoid repeating content from the referenced file in the referencing doc — duplication creates drift.
+**Rule for doc authors:** If a role or workflow node truly needs a document every time, surface it explicitly through `required-readings.yaml` or node-specific workflow injection. Do not rely on passive reference chains to deliver required context.
 
 ---
 
@@ -84,9 +84,9 @@ When this drift is identified, split the file — or extract the emergent concer
 
 ---
 
-## How to Apply These Principles in Meta-Synthesis
+## How to Apply These Principles in Improvement Work
 
-When evaluating a proposed fix during meta-synthesis:
+When evaluating a proposed fix during backward-pass work:
 
 1. **Before deciding "add to X"** — ask whether X is the right home. Would a new dedicated file serve the atomic change site principle better?
 2. **Before deciding "add a new protocol"** — ask whether user consultation adequately handles the edge case. Reject the protocol if the informal path is sufficient.
@@ -99,9 +99,9 @@ When evaluating a proposed fix during meta-synthesis:
 
 ### Purpose
 
-Standardize how Owner and Curator reflect on completed framework work and turn that reflection into documentation improvements.
+Standardize how participating roles reflect on completed framework work, correct owned standing surfaces, and turn the remaining cross-project signal into framework feedback.
 
-This protocol is A-Society's instantiation of `$GENERAL_IMPROVEMENT`. A-Society has two roles: Owner and Curator. The Curator is both a forward-pass participant (implementation) and the synthesis role (backward-pass last).
+This protocol is A-Society's instantiation of `$GENERAL_IMPROVEMENT`. Different parts of `a-docs/` are owned by different roles. The backward pass follows those ownership boundaries instead of routing all maintenance through the Curator.
 
 ---
 
@@ -126,15 +126,15 @@ For any flow with two or more participating roles:
 1. **Identify first occurrences.** Take each role's *first occurrence* in the forward pass. Subsequent appearances of the same role do not add a new backward-pass node — that role's findings cover all their forward-pass phases.
 2. **Reverse the sequence.** Reverse the first-occurrence order to get the backward order.
 3. **Owner is always second-to-last.** The Owner is the entry point for every A-Society workflow — its first occurrence is always first in the forward pass, placing it second-to-last in the backward sequence.
-4. **Synthesis role (Curator) is always last.** The Curator synthesizes all findings and is always the final node.
-5. **Parallel forks produce concurrent backward-pass nodes.** Roles whose first occurrences are at the same forward-pass position produce findings concurrently, not sequentially.
+4. **Parallel forks produce concurrent backward-pass nodes.** Roles whose first occurrences are at the same forward-pass position produce findings concurrently, not sequentially.
+5. **Owner feedback is always last.** After all findings-producing roles complete meta-analysis, the Owner runs the final framework-feedback step.
 
 Only nodes that fired during this instance are included. Dead branches are excluded.
 
 #### Standard two-role case (Owner + Curator only)
 
 A-Society's standard two-role flow: Owner first, Curator second.
-Backward pass order: Curator first, Owner second, Curator synthesizes last.
+Backward pass order: Curator findings first, Owner findings second, Owner feedback last.
 
 #### Component 4 (Backward Pass Plan Generator)
 
@@ -142,13 +142,13 @@ Manual computation is reserved for cases where Component 4 cannot be invoked (bo
 
 When the project uses the A-Society runtime, backward pass initiation and agent context injection are handled programmatically — agents do not invoke the Backward Pass Orderer directly.
 
-The runtime calls `computeBackwardPassPlan(recordFolderPath, synthesisRole, mode)` to generate the structured backward pass plan. Component 4 reads `workflow.yaml` from the record folder and returns the plan as a 2D array of entries (sequential step groups containing concurrent meta-analysis or synthesis roles).
+The runtime calls `computeBackwardPassPlan(recordFolderPath, feedbackRole, mode)` to generate the structured backward pass plan. Component 4 reads `workflow.yaml` from the record folder and returns the plan as a 2D array of entries (sequential step groups containing concurrent meta-analysis or feedback roles).
 
 The role-specific backward pass instructions for this project live in:
 - `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` — injected into findings-producing backward pass sessions for A-Society
-- `$A_SOCIETY_IMPROVEMENT_SYNTHESIS` — injected into the Curator synthesis session for A-Society
+- `$A_SOCIETY_IMPROVEMENT_FEEDBACK` — injected into the Owner feedback session for A-Society
 
-`$GENERAL_IMPROVEMENT_META_ANALYSIS` and `$GENERAL_IMPROVEMENT_SYNTHESIS` remain framework templates. They are not A-Society's own runtime injection targets.
+`$GENERAL_IMPROVEMENT_META_ANALYSIS` and `$GENERAL_IMPROVEMENT_FEEDBACK` remain framework templates. They are not A-Society's own runtime injection targets.
 
 **Bootstrapping exemption:** When a flow establishes a new record-folder requirement that the current folder cannot conform to (exempt-by-origin), Component 4 cannot be invoked for that flow's backward pass. This exemption must be acknowledged explicitly — never handled by silence. The Curator must either (a) note the exemption-by-origin in the backward pass initiation artifact, state the reason Component 4 is not being invoked, and proceed with manual ordering; or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
@@ -160,6 +160,6 @@ Project-specific runtime/session instructions for this phase are defined in `$A_
 
 ---
 
-### Synthesis Phase
+### Feedback Phase
 
-Project-specific runtime/session instructions for this phase are defined in `$A_SOCIETY_IMPROVEMENT_SYNTHESIS`.
+Project-specific runtime/session instructions for this phase are defined in `$A_SOCIETY_IMPROVEMENT_FEEDBACK`.

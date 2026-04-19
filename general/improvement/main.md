@@ -44,15 +44,15 @@ Organize project agent documentation so that:
 
 ---
 
-## Principle 3: Follow References
+## Principle 3: Surfaced Authority Over Transitive Reference Chasing
 
-**When a doc references another file, that file is required reading — not optional context.**
+**A cross-reference does not automatically become required reading. Load what the role or workflow explicitly surfaces as authority for the task.**
 
-Agents load their required reading list from the project's agents.md and their role doc. But those docs will contain cross-references. These references are not decorative — they point to the authoritative source for a specific topic.
+Cross-references are useful pointers to authoritative homes, but recursively loading every referenced document bloats context and makes it harder for agents to distinguish "nice to know" from "must act on now."
 
-**Rule for agents:** If a loaded document contains a cross-reference to another file in agent-docs, treat that referenced file as required reading for any task that touches the referenced topic.
+**Rule for agents:** Use standing documents and workflow-delivered context as task authority. Follow a cross-reference when the current task specifically requires that topic, not merely because the reference exists.
 
-**Rule for doc authors:** Cross-references should use `$VARIABLE_NAME` from the index, not hardcoded paths. Avoid repeating content from the referenced file in the referencing doc — duplication creates drift.
+**Rule for doc authors:** If a role or workflow node truly needs a document every time, surface it explicitly through `required-readings.yaml` or node-specific workflow injection. Do not rely on passive reference chains to deliver required context.
 
 ---
 
@@ -84,9 +84,9 @@ When this drift is identified, split the file — or extract the emergent concer
 
 ---
 
-## How to Apply These Principles in Meta-Synthesis
+## How to Apply These Principles in Improvement Work
 
-When evaluating a proposed fix during meta-synthesis:
+When evaluating a proposed fix during backward-pass work:
 
 1. **Before deciding "add to X"** — ask whether X is the right home. Would a new dedicated file serve the atomic change site principle better?
 2. **Before deciding "add a new protocol"** — ask whether user consultation adequately handles the edge case. Reject the protocol if the informal path is sufficient.
@@ -99,6 +99,13 @@ When evaluating a proposed fix during meta-synthesis:
 
 The improvement process runs in two phases, each with its own instruction file:
 - **Meta-analysis:** `$GENERAL_IMPROVEMENT_META_ANALYSIS` — instructions for roles producing backward pass findings.
-- **Synthesis:** `$GENERAL_IMPROVEMENT_SYNTHESIS` — instructions for the synthesis role.
+- **Feedback:** `$GENERAL_IMPROVEMENT_FEEDBACK` — instructions for the coordinating Owner's final framework-feedback step.
+
+The backward pass is only for the project's framework layer:
+- local `a-docs/`
+- local workflow and coordination surfaces
+- local agent-facing tooling/runtime guidance
+
+It is not for the project's domain work product. Product bugs, feature requests, or editorial/content changes belong to the project's normal execution system, not the improvement loop.
 
 When using the A-Society runtime, these files are injected into the appropriate agent sessions automatically. For projects without the runtime, follow the traversal ordering rules in your project's `a-docs/improvement/` instantiation of this framework.

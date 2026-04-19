@@ -4,7 +4,7 @@ This folder holds all backward pass findings produced during improvement cycles 
 
 > [CUSTOMIZE] Update the variable references below with `$VARIABLE_NAME` values from your project's index once it is set up.
 
-See `[IMPROVEMENT_PROTOCOL]` for the backward pass protocol that governs how these reports are produced.
+See `[IMPROVEMENT_MAIN]` for the backward pass protocol that governs how these reports are produced.
 
 ---
 
@@ -25,4 +25,4 @@ See `[IMPROVEMENT_PROTOCOL]` for the backward pass protocol that governs how the
 ## Conventions
 
 - Report files are **not** edited after creation. They are historical artifacts once produced.
-- Do not add non-report files to this folder. Philosophy and protocol documents live at `[IMPROVEMENT_MAIN]` and `[IMPROVEMENT_PROTOCOL]`.
+- Do not add non-report files to this folder. Philosophy and protocol documents live at `[IMPROVEMENT_MAIN]`.

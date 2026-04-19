@@ -29,4 +29,5 @@ If the conflict cannot be resolved using these sources: stop and ask the human.
 - **Do not invent rules.** If a rule is not written in `a-society/`, assume it does not exist. Ask rather than invent.
 - **Do not drift scope.** The framework covers all projects. A proposed addition that only applies to one type of project (e.g., only software, only technical teams) does not belong in `general/`.
 - **Do not modify project-specific content.** Files under `llm-journey/` or any other project folder are not within the scope of an A-Society agent session.
+- **Use standing documents as task authority.** When performing new work, follow the current directions in standing documents, not closed historical records. Standards change over time, and historical records are immutable traceability artifacts. Consult records only for active-flow inputs, historical traceability, or when a record is explicitly designated as the authoritative long-lived reference.
 - **Historical artifacts are immutable.** Once an artifact is superseded and archived, do not rewrite it to match newer conventions.

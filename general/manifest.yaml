@@ -213,13 +213,13 @@ files:
   # ── Improvement ───────────────────────────────────────────────────────────────
 
   - path: improvement/main.md
-    description: "Improvement — philosophy, backward pass protocol, traversal algorithm, and synthesis path"
+    description: "Improvement — philosophy, backward pass protocol, traversal algorithm, and final feedback path"
     required: true
     scaffold: copy
     source_path: general/improvement/main.md
 
   - path: improvement/reports/main.md
-    description: "Improvement reports index — entry point for all backward pass findings and synthesis reports in this project"
+    description: "Improvement reports index — entry point for all backward pass findings reports in this project"
     required: true
     scaffold: copy
     source_path: general/improvement/reports/main.md
@@ -230,11 +230,11 @@ files:
     scaffold: copy
     source_path: general/improvement/meta-analysis.md
 
-  - path: improvement/synthesis.md
-    description: "Project-specific synthesis phase instructions — injected by the runtime into backward pass synthesis sessions; base on $GENERAL_IMPROVEMENT_SYNTHESIS and resolve [PROJECT_*] placeholders; conditional on project using the A-Society programmatic runtime"
+  - path: improvement/feedback.md
+    description: "Project-specific feedback phase instructions — injected by the runtime into the Owner's final backward-pass feedback session; base on $GENERAL_IMPROVEMENT_FEEDBACK and resolve [PROJECT_*] placeholders; conditional on project using the A-Society programmatic runtime"
     required: false
     scaffold: copy
-    source_path: general/improvement/synthesis.md
+    source_path: general/improvement/feedback.md
 
   # ── Communication ─────────────────────────────────────────────────────────────
 
@@ -305,7 +305,7 @@ files:
     source_path: general/feedback/consent.md
 
   - path: feedback/curator-signal/consent.md
-    description: "Curator signal consent — records whether this project consents to curator signal submissions being filed to a-society/feedback/curator-signal/"
+    description: "Framework feedback consent — records whether this project consents to backward-pass framework feedback being filed to a-society/feedback/curator-signal/"
     required: true
     scaffold: copy
     source_path: general/feedback/consent.md

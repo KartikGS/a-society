@@ -1,55 +1,57 @@
-# Curator-Signal Feedback Report — Template
+# Framework Feedback Report — Template
 
 **Project:** [project name]
 **Date:** [YYYY-MM-DD]
-**Produced by:** [Curator role name from this project's a-docs]
+**Produced by:** [Owner or designated feedback-authoring role from this project's a-docs]
 **Context:** [Backward pass / Ongoing observation]
 
 ---
 
-## Patterns Observed
+## Local Corrections Already Applied
 
-Practices from this project's execution that may generalize to other projects and warrant addition to `a-society/general/`.
+Standing local framework-surface fixes already made during this backward pass. This section is optional but helpful context for interpreting the recommendations below.
 
-| Pattern name | Evidence | Problem it solves |
+| Local surface | Correction | Why it mattered |
 |---|---|---|
-| [name] | [where observed, what the Curator did, what resulted] | [what would have gone wrong without it] |
+| [local path] | [what was changed] | [what friction it removed] |
 
-[Or: "No patterns observed in this period."]
+[Or: "No local framework corrections to note."]
 
 ---
 
-## Anti-Patterns Observed
+## General Library Candidates
 
-Practices that created friction or confusion that A-Society's guidance could help prevent in other projects.
+Practices from this project's backward pass that may generalize to other projects and warrant addition to `a-society/general/`.
 
-| Anti-pattern name | Evidence | Suggested guidance |
+| Candidate | Evidence | Problem it solves |
 |---|---|---|
-| [name] | [what happened, what went wrong] | [what guidance would have prevented it] |
+| [name] | [where observed, what happened] | [what would improve for other projects] |
 
-[Or: "No anti-patterns observed in this period."]
+[Or: "No general-library candidates in this period."]
 
 ---
 
-## Documentation Gaps
+## Runtime / Tooling Requests
 
-Areas where `a-society/general/` lacked guidance that was needed during execution.
+Requests for executable framework changes that local backward-pass maintenance could not address.
 
-| Gap | Context | Suggested addition |
+| Request | Context | Suggested capability or change |
 |---|---|---|
-| [what was missing] | [when the gap was encountered, what judgment call was required] | [type of document or addition that would fill it] |
+| [what is needed] | [where the limitation appeared] | [runtime/tooling improvement] |
 
-[Or: "No documentation gaps encountered."]
+[Or: "No runtime or tooling requests."]
 
 ---
 
-## Recommendations
+## Framework Gaps and Anti-Patterns
 
-| Target | Change type | Description |
+Areas where A-Society's current guidance or workflow model created confusion or unnecessary cost.
+
+| Gap or anti-pattern | Evidence | Suggested framework response |
 |---|---|---|
-| [general/ path / a-society process] | Clarify / Add / Remove | [what and why] |
+| [name] | [what happened] | [clarify / add / remove / redesign] |
 
-[Or: "No recommendations at this time."]
+[Or: "No additional framework gaps observed."]
 
 ---
 

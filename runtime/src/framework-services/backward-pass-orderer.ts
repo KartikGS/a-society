@@ -32,7 +32,7 @@ export interface RecordWorkflowFrontmatter {
 
 export interface BackwardPassEntry {
   role: string;
-  stepType: 'meta-analysis' | 'synthesis';
+  stepType: 'meta-analysis' | 'feedback';
   sessionInstruction: 'existing-session' | 'new-session';
   findingsRolesToInject: string[];
 }
@@ -146,7 +146,7 @@ export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFron
 export function buildBackwardPassPlan(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
-  synthesisRole: string,
+  feedbackRole: string,
   mode: 'graph-based' | 'parallel',
 ): BackwardPassPlan {
   const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
@@ -166,14 +166,14 @@ export function buildBackwardPassPlan(
       findingsRolesToInject: [],
     }));
 
-    const synthesisGroup: BackwardPassEntry[] = [{
-      role: synthesisRole,
-      stepType: 'synthesis',
+    const feedbackGroup: BackwardPassEntry[] = [{
+      role: feedbackRole,
+      stepType: 'feedback',
       sessionInstruction: 'new-session',
       findingsRolesToInject: [],
     }];
 
-    return [metaAnalysisGroup, synthesisGroup];
+    return [metaAnalysisGroup, feedbackGroup];
   }
 
   // mode === 'graph-based'
@@ -281,10 +281,10 @@ export function buildBackwardPassPlan(
     plan.push(groupEntries);
   }
 
-  // Final Synthesis Step
+  // Final Feedback Step
   plan.push([{
-    role: synthesisRole,
-    stepType: 'synthesis',
+    role: feedbackRole,
+    stepType: 'feedback',
     sessionInstruction: 'new-session',
     findingsRolesToInject: [],
   }]);
@@ -294,7 +294,7 @@ export function buildBackwardPassPlan(
 
 export function computeBackwardPassPlan(
   recordFolderPath: string,
-  synthesisRole: string,
+  feedbackRole: string,
   mode: 'graph-based' | 'parallel',
 ): BackwardPassPlan {
   const workflowFilePath = findWorkflowFilePath(recordFolderPath);
@@ -308,7 +308,7 @@ export function computeBackwardPassPlan(
     return buildBackwardPassPlan(
       frontmatter.workflow.nodes,
       frontmatter.workflow.edges,
-      synthesisRole,
+      feedbackRole,
       mode,
     );
   } catch (err) {

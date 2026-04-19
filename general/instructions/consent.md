@@ -20,7 +20,7 @@ Consent files are created when a feedback-producing agent is first set up for th
 |---|---|---|
 | `onboarding-signal` | Initializer | During initialization (Phase 5), before closing |
 | `migration` | Initializer | During initialization (Phase 5), if a Curator role was created |
-| `curator-signal` | Initializer | During initialization (Phase 5), if a Curator role was created |
+| `curator-signal` | Initializer | During initialization (Phase 5), for every project that will run backward passes |
 
 Do not create consent files for feedback types that are not yet active in the project.
 
@@ -47,7 +47,7 @@ a-docs/feedback/
     consent.md        ← checked by Curator before filing a migration feedback report
     [local draft migration reports, if any]
   curator-signal/
-    consent.md        ← checked by Curator before submitting patterns to A-Society
+    consent.md        ← checked by the Owner before filing project-level framework feedback to A-Society
 ```
 
 ---
@@ -66,6 +66,7 @@ The consent file is not loaded at session start. It is loaded only at the moment
 
 ## What Does Not Belong Here
 
+- The `curator-signal` directory name is legacy naming for project-level framework feedback; a Curator role is not required to use it
 - Do not store actual feedback reports in `a-docs/feedback/` — filed reports go to `a-society/feedback/[type]/` (A-Society's collection folder)
 - Do not use `a-docs/feedback/` for any purpose other than consent files and in-progress local drafts
 - Do not create a consent file without asking the human — assumed consent is not consent

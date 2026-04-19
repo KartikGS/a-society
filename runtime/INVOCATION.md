@@ -128,7 +128,7 @@ The runtime injects and consumes the machine-readable handoff contract from `$A_
 - `type: prompt-human` pauses execution for browser-entered human input
 - `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
 - `type: meta-analysis-complete` is consumed during backward-pass orchestration
-- `type: backward-pass-complete` closes the backward pass after synthesis
+- `type: backward-pass-complete` closes the backward pass after the final feedback step
 
 When the runtime is waiting for human input, the UI keeps the current flow state and resumes the same role-scoped session after the reply is submitted.
 

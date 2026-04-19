@@ -14,8 +14,8 @@ import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
-// Co-maintenance: update if the synthesis role convention changes for this project.
-const SYNTHESIS_ROLE = 'Curator';
+// Co-maintenance: update if the final backward-pass feedback role convention changes for this project.
+const FEEDBACK_ROLE = 'Owner';
 
 type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-complete';
 
@@ -34,8 +34,8 @@ function buildUnexpectedSignalRepairMessage(
   }
 
   return [
-    `Error: This backward pass synthesis session for ${role} must end with a \`type: backward-pass-complete\` handoff block.`,
-    'Set `artifact_path` to the repo-relative path of the synthesis artifact you produced in this session.',
+    `Error: This backward pass feedback session for ${role} must end with a \`type: backward-pass-complete\` handoff block.`,
+    'Set `artifact_path` to the repo-relative path of the feedback artifact you produced in this session.',
     'Do not emit `prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or a routing handoff for this step.'
   ].join(' ');
 }
@@ -47,7 +47,7 @@ function describeUnexpectedSignal(result: HandoffResult): string {
 }
 
 function describeExpectedStep(expectedKind: ExpectedImprovementSignalKind): string {
-  return expectedKind === 'meta-analysis-complete' ? 'meta-analysis' : 'synthesis';
+  return expectedKind === 'meta-analysis-complete' ? 'meta-analysis' : 'feedback';
 }
 
 async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImprovementSignalKind>(
@@ -166,18 +166,18 @@ export class ImprovementOrchestrator {
         SessionStore.saveFlowRun(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 
-        const plan = computeBackwardPassPlan(signal.recordFolderPath, SYNTHESIS_ROLE, mode);
+        const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
         span.setAttribute('improvement.plan_step_count', plan.length);
 
         // Sequential steps
         for (let i = 0; i < plan.length; i++) {
           flowRun.improvementPhase.currentStep = i;
           const group = plan[i];
-          const isSynthesis = group.some(e => e.stepType === 'synthesis');
-          const spanName = isSynthesis ? 'improvement.synthesis' : 'improvement.meta_analysis.step';
+          const isFeedback = group.some(e => e.stepType === 'feedback');
+          const spanName = isFeedback ? 'improvement.feedback' : 'improvement.meta_analysis.step';
           span.addEvent('improvement.step_started', {
             step_index: i,
-            step_kind: isSynthesis ? 'synthesis' : 'meta-analysis',
+            step_kind: isFeedback ? 'feedback' : 'meta-analysis',
             role_count: group.length,
             roles: group.map(entry => entry.role).join(','),
           });
@@ -186,11 +186,11 @@ export class ImprovementOrchestrator {
             kind: SpanKind.INTERNAL,
             attributes: {
               'improvement.step_index': i,
-              'improvement.step_kind': isSynthesis ? 'synthesis' : 'meta-analysis',
+              'improvement.step_kind': isFeedback ? 'feedback' : 'meta-analysis',
             }
           }, async (stepSpan) => {
             try {
-              if (isSynthesis) stepSpan.addEvent('improvement.synthesis_started');
+              if (isFeedback) stepSpan.addEvent('improvement.feedback_started');
               // Concurrent roles within step
               await Promise.all(group.map(async (entry) => {
                 const roleName = entry.role;
@@ -241,11 +241,11 @@ export class ImprovementOrchestrator {
                   );
 
                   flowRun.improvementPhase!.findingsProduced[entry.role] = result.findingsPath;
-                } else if (entry.stepType === 'synthesis') {
+                } else if (entry.stepType === 'feedback') {
                   const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
 
-                  // $[PROJECT]_IMPROVEMENT_SYNTHESIS: project root + namespace + a-docs/improvement/synthesis.md
-                  const synthesisInstructionPath = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'synthesis.md');
+                  // $[PROJECT]_IMPROVEMENT_FEEDBACK: project root + namespace + a-docs/improvement/feedback.md
+                  const feedbackInstructionPath = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'feedback.md');
 
                   const { bundleContent } = ContextInjectionService.buildContextBundle(
                     flowRun.projectNamespace,
@@ -254,12 +254,12 @@ export class ImprovementOrchestrator {
                   );
 
                   const userMessage = buildImprovementEntryMessage({
-                    stepLabel: 'synthesis',
+                    stepLabel: 'feedback',
                     recordFolderPath: signal.recordFolderPath,
                     workspaceRoot: flowRun.workspaceRoot,
-                    instructionFilePath: synthesisInstructionPath,
+                    instructionFilePath: feedbackInstructionPath,
                     findingsFilePaths: allFindingsFiles,
-                    completionSignal: 'Findings from all roles in this flow are in your context. Produce the synthesis artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the synthesis artifact.'
+                    completionSignal: 'Findings from all roles in this flow are in your context. Produce the feedback artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the feedback artifact.'
                   });
                   await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
@@ -278,7 +278,7 @@ export class ImprovementOrchestrator {
               span.addEvent('store.flow_saved', { stage: 'step_completed', step_index: i });
               span.addEvent('improvement.step_completed', {
                 step_index: i,
-                step_kind: isSynthesis ? 'synthesis' : 'meta-analysis',
+                step_kind: isFeedback ? 'feedback' : 'meta-analysis',
                 completed_roles: group.map(entry => entry.role).join(','),
               });
             } finally {

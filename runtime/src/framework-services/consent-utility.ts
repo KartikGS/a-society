@@ -22,7 +22,7 @@ export const FEEDBACK_TYPES: Record<string, FeedbackTypeMeta> = {
   'curator-signal': {
     displayName: 'curator-signal',
     dirName: 'curator-signal',
-    description: 'The Curator writes a curator-signal report to a-society/feedback/curator-signal/ after backward passes or ongoing observation.',
+    description: 'The project Owner writes project-level framework feedback to a-society/feedback/curator-signal/ after backward passes. The directory name is legacy naming; a Curator role is not required.',
   },
 };
 

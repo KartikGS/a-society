@@ -52,9 +52,9 @@ const REPEATED_EDGES: WorkflowEdge[] = [
 ];
 
 test('buildBackwardPassPlan (Graph-based, Linear): verifies order and injection', () => {
-  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Curator', 'graph-based');
+  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Owner', 'graph-based');
   
-  // Backward order: Curator (meta) -> Owner (meta) -> Curator (synthesis)
+  // Backward order: Curator (meta) -> Owner (meta) -> Owner (feedback)
   assert.strictEqual(result.length, 3);
   
   assert.strictEqual(result[0][0].role, 'Curator');
@@ -63,12 +63,12 @@ test('buildBackwardPassPlan (Graph-based, Linear): verifies order and injection'
   assert.strictEqual(result[1][0].role, 'Owner');
   assert.deepStrictEqual(result[1][0].findingsRolesToInject, ['Curator']); // Owner's successor is Curator (pos 1 > pos 0)
 
-  assert.strictEqual(result[2][0].role, 'Curator');
-  assert.strictEqual(result[2][0].stepType, 'synthesis');
+  assert.strictEqual(result[2][0].role, 'Owner');
+  assert.strictEqual(result[2][0].stepType, 'feedback');
 });
 
 test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace §2.5', () => {
-  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Curator', 'graph-based');
+  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', 'graph-based');
   
   // Distances from c2 (Curator):
   // c2: 0 -> Curator max=0 (initial)
@@ -78,7 +78,7 @@ test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace 
   // o1: 4 -> Owner max=max(1,4)=4
   
   // Groups by max reverse distance:
-  // 0: Synthesis Curator (separate loop)
+  // 0: Final feedback Owner (separate loop)
   // 2: TA
   // 3: Curator
   // 4: Owner
@@ -94,12 +94,12 @@ test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace 
   assert.strictEqual(result[2][0].role, 'Owner');
   assert.deepStrictEqual(result[2][0].findingsRolesToInject, ['Curator']); // Successor c1 (Curator, pos 1) > Owner pos 0 -> Include
 
-  assert.strictEqual(result[3][0].role, 'Curator');
-  assert.strictEqual(result[3][0].stepType, 'synthesis');
+  assert.strictEqual(result[3][0].role, 'Owner');
+  assert.strictEqual(result[3][0].stepType, 'feedback');
 });
 
 test('buildBackwardPassPlan (Parallel Mode): all roles in one group, no injection', () => {
-  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Curator', 'parallel');
+  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', 'parallel');
   
   // Roles: Owner, Curator, Technical Architect
   assert.strictEqual(result.length, 2);
@@ -112,8 +112,8 @@ test('buildBackwardPassPlan (Parallel Mode): all roles in one group, no injectio
   
   assert.ok(result[0].every(e => e.findingsRolesToInject.length === 0));
   
-  assert.strictEqual(result[1][0].role, 'Curator');
-  assert.strictEqual(result[1][0].stepType, 'synthesis');
+  assert.strictEqual(result[1][0].role, 'Owner');
+  assert.strictEqual(result[1][0].stepType, 'feedback');
 });
 
 test('locateFindingsFiles: finds correctly normalized and case-insensitive roles', () => {
@@ -156,14 +156,14 @@ test('locateAllFindingsFiles: returns all matching files', () => {
   }
 });
 
-test('synthesis entry has correct fields', () => {
+test('feedback entry has correct fields', () => {
   const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Admin', 'graph-based');
-  const synthGroup = result[result.length - 1];
-  assert.strictEqual(synthGroup.length, 1);
-  assert.strictEqual(synthGroup[0].role, 'Admin');
-  assert.strictEqual(synthGroup[0].stepType, 'synthesis');
-  assert.strictEqual(synthGroup[0].sessionInstruction, 'new-session');
-  assert.deepStrictEqual(synthGroup[0].findingsRolesToInject, []);
+  const feedbackGroup = result[result.length - 1];
+  assert.strictEqual(feedbackGroup.length, 1);
+  assert.strictEqual(feedbackGroup[0].role, 'Admin');
+  assert.strictEqual(feedbackGroup[0].stepType, 'feedback');
+  assert.strictEqual(feedbackGroup[0].sessionInstruction, 'new-session');
+  assert.deepStrictEqual(feedbackGroup[0].findingsRolesToInject, []);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

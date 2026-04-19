@@ -32,4 +32,5 @@ The agent that produces feedback for this type checks this file before writing. 
 
 - Do not modify this file after consent is recorded without explicit instruction from the human or project Owner
 - If consent changes from Yes to No, update the Date field to the date of the change
+- The `curator-signal` path name is legacy naming for project-level framework feedback to A-Society; projects do not need a Curator role to use it
 - The "Recorded by" field names the role responsible for the consent conversation — typically the Initializer (for onboarding-signal) or the Owner Agent (for other types)

@@ -32,6 +32,23 @@ Ground every finding in a specific moment from your execution. Vague findings ("
 
 ---
 
+### Direct Local Corrections
+
+Backward pass meta-analysis is allowed to directly correct local standing framework surfaces.
+
+- If you own a standing local surface in the project's `ownership.yaml`, update it during this phase when the needed change is clear.
+- The Owner may directly update Owner-owned governance surfaces during this phase as well.
+- Historical records are immutable. Do not rewrite old record artifacts, reports, or archived logs.
+- Upstream A-Society changes are not direct local fixes. Capture them as framework feedback for the final feedback phase.
+
+Your findings artifact should record:
+- what friction you encountered
+- what local correction you made, if any
+- what still needs Owner attention locally
+- what should be elevated as A-Society feedback
+
+---
+
 ### Analysis Quality
 
 **Externally-caught errors are higher priority, not lower.** When an error was caught by another role or the human rather than surfaced by the agent themselves, this is a signal that something failed to prevent the error. The backward pass must ask: "Why wasn't this caught by me?" The answer "the rule was documented" is the start of the analysis, not the end. The next question — "why wasn't the documented rule followed?" — leads to placement gaps, surfacing gaps, or structural gaps, all of which are actionable.
@@ -44,7 +61,7 @@ Ground every finding in a specific moment from your execution. Vague findings ("
 
 When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential framework contribution. Note it in the findings artifact so it is not lost.
 
-The submission mechanism is defined separately — flag the finding explicitly in your findings artifact so it is not silently lost when the mechanism becomes available.
+The project Owner will decide what belongs in the final framework-feedback artifact. Your job here is to flag the candidate clearly, not to route it yourself.
 
 ---
 

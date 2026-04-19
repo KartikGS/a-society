@@ -224,4 +224,4 @@ Refinements are proposed and approved through the standard workflow. The model i
 - **`$INSTRUCTION_WORKFLOW`** — defines what a workflow is and how to write one.
 - **`$INSTRUCTION_WORKFLOW_MODIFY`** — defines how to change a standing workflow safely.
 - **`$INSTRUCTION_WORKFLOW_GRAPH`** — defines the YAML encoding for permanent workflow definitions and record snapshots.
-- **`$INSTRUCTION_IMPROVEMENT`** — owns backward pass ordering and synthesis behavior.
+- **`$INSTRUCTION_IMPROVEMENT`** — owns backward pass ordering and final feedback behavior.

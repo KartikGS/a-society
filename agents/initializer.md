@@ -4,7 +4,7 @@
 
 Bootstrap a new project's `a-docs/` from scratch. The Initializer reads the project as it exists, drafts all foundational agent-documentation, resolves ambiguity with the human through targeted questions, and hands off a complete, verified, agent-ready project. The human reviews and approves — they do not build manually.
 
-This is a one-time role. It ends when the human approves the `a-docs/`. Ongoing maintenance belongs to the Curator; quality gating for future additions belongs to the Owner.
+This is a one-time role. It ends when the human approves the `a-docs/`. Ongoing maintenance belongs to the project's own roles under Owner coordination; quality gating for future additions belongs to the Owner.
 
 ---
 
@@ -86,7 +86,7 @@ Populate all foundational documents in this order:
 9. `a-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`. Read `$INSTRUCTION_AGENT_DOCS_GUIDE` before drafting.
 10. `workflow/main.yaml` — the canonical workflow definition for this project: nodes, handoffs, invariants, escalation rules, and closure model. Read `$INSTRUCTION_WORKFLOW` before drafting.
 11. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
-12. `improvement/main.md` — from `$GENERAL_IMPROVEMENT`; adapt role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items. Read `$INSTRUCTION_IMPROVEMENT` before drafting.
+12. `improvement/main.md` — from `$GENERAL_IMPROVEMENT`; adapt role references to match this project's actual roles. Specify the findings-producing backward-pass model and the final Owner feedback step. Read `$INSTRUCTION_IMPROVEMENT` before drafting.
 13. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files. Read `$INSTRUCTION_RECORDS` before drafting.
 14. `a-society-version.md` — read A-Society's current version from `$A_SOCIETY_VERSION` and create `a-docs/a-society-version.md` stamping the baseline version and initialization date. Use `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` for the format.
 15. `indexes/main.md` — register every document created in this phase; write this last so the registry is complete and accurate. Read `$INSTRUCTION_INDEX` before drafting.
@@ -147,8 +147,8 @@ After human approval:
    - Create `a-docs/feedback/migration/consent.md` using `$GENERAL_FEEDBACK_CONSENT`, recording the answer.
    - Add `$[PROJECT]_FEEDBACK_MIGRATION_CONSENT` → `a-docs/feedback/migration/consent.md` to `indexes/main.md`.
 
-   **Curator-signal feedback** *(only if a Curator role was created in Phase 3)*:
-   - Explain: "During backward improvement passes, your Curator identifies practices worth generalizing across projects. A curator-signal report captures those observations as structured data for A-Society's library."
+   **Curator-signal feedback** *(always)*:
+   - Explain: "During backward improvement passes, your project produces framework feedback for A-Society. This report captures additions to shared guidance, runtime/tooling requests, and cross-project friction. The storage path is historically named `curator-signal/`, but a Curator role is not required."
    - Ask: "May A-Society write a curator-signal report to `a-society/feedback/curator-signal/` after each backward pass?"
    - **Wait for the human's response before proceeding. Do not create this consent file until the human has answered Yes or No in this session.**
    - Create `a-docs/feedback/curator-signal/consent.md` using `$GENERAL_FEEDBACK_CONSENT`, recording the answer.
@@ -163,9 +163,9 @@ The Initializer's job is done when all of the following are true:
 - All foundational documents exist and are populated with real content: vision, structure, log, role folder(s) with `main.md`, `required-readings.yaml`, and `ownership.yaml`, thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.yaml, communication/ (if two or more roles), improvement/main.md, improvement/reports/template-findings.md, and a-society-version.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
-- The feedback consent outcome is explicit for each applicable type: onboarding signal (always), migration feedback (if a Curator role was created), and curator-signal feedback (if a Curator role was created). Each consent is recorded in `a-docs/feedback/[type]/consent.md`. **Consent is verified only when the human's Yes or No was received and recorded in this session — the existence of a consent file does not constitute verified consent.** The onboarding signal report outcome is stated in the completion message.
+- The feedback consent outcome is explicit for each applicable type: onboarding signal (always), migration feedback (if a Curator role was created), and curator-signal feedback (always). Each consent is recorded in `a-docs/feedback/[type]/consent.md`. **Consent is verified only when the human's Yes or No was received and recorded in this session — the existence of a consent file does not constitute verified consent.** The onboarding signal report outcome is stated in the completion message.
 
-When done, state clearly: *"Initialization complete. This project's `a-docs/` is live. Ongoing maintenance belongs to the Curator role. Future additions require Owner review."*
+When done, state clearly: *"Initialization complete. This project's `a-docs/` is live. Ongoing maintenance belongs to the project's own roles under Owner coordination. Future additions require Owner review."*
 
 ---
 

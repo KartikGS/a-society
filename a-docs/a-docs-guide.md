@@ -182,13 +182,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `roles/owner/log-management.md` — `$A_SOCIETY_OWNER_LOG_MANAGEMENT`
 
-**Why it exists:** The Owner manages `$A_SOCIETY_LOG` only at specific moments: intake, synthesis follow-up, and closure. Merge assessment and log-filing obligations are important, but they do not belong in the always-loaded role file.
+**Why it exists:** The Owner manages `$A_SOCIETY_LOG` only at specific moments: intake, backward-pass follow-up, and closure. Merge assessment and log-filing obligations are important, but they do not belong in the always-loaded role file.
 
 **What it owns:** The project-log management and merge-assessment guidance extracted from `roles/owner/main.md`.
 
 **What breaks without it:** Log-management detail returns to the role file, or the merge-assessment procedure becomes implicit and inconsistently applied when filing Next Priorities.
 
-**Do not consolidate with:** `roles/owner/main.md` — role contract vs. log-management procedure. Do not consolidate with `roles/owner/forward-pass-closure.md` — closure uses the log, but log management also occurs at intake and during synthesis follow-up.
+**Do not consolidate with:** `roles/owner/main.md` — role contract vs. log-management procedure. Do not consolidate with `roles/owner/forward-pass-closure.md` — closure uses the log, but log management also occurs at intake and during backward-pass follow-up.
 
 ---
 
@@ -382,7 +382,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Improvement decisions require both principled reasoning (when to split a file, when to add a protocol, when to cross-reference) and a standing project-specific backward pass reference. This file is the canonical home for the philosophy, traversal rules, and the mapping to the project-specific phase files the runtime injects. Without it, improvement philosophy gets buried in role files, the relation between philosophy and runtime-injected phase instructions is implicit, and each cycle reinvents the process.
 
-**What it owns:** The five improvement principles, the decision framework for applying them during meta-synthesis, the backward pass traversal algorithm, and the cross-references to `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` and `$A_SOCIETY_IMPROVEMENT_SYNTHESIS`.
+**What it owns:** The five improvement principles, the decision framework for applying them during backward-pass work, the backward pass traversal algorithm, and the cross-references to `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` and `$A_SOCIETY_IMPROVEMENT_FEEDBACK`.
 
 **What breaks without it:** Improvement sessions reinvent principles each time. Backward passes lack a standard structure. Findings are lost or misrouted instead of flowing through the correct approval path.
 
@@ -398,15 +398,15 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Do not consolidate with:** `improvement/main.md` — that file owns philosophy and traversal rules; this file owns the injected instructions for findings sessions.
 
-### `improvement/synthesis.md` — `$A_SOCIETY_IMPROVEMENT_SYNTHESIS`
+### `improvement/feedback.md` — `$A_SOCIETY_IMPROVEMENT_FEEDBACK`
 
-**Why it exists:** The synthesis session has different responsibilities from findings sessions: direct `a-docs/` maintenance, Next Priorities routing, and closure of the backward pass. It needs its own project-specific runtime injection target.
+**Why it exists:** The final backward-pass session has different responsibilities from findings sessions: confirming local framework maintenance is complete, separating local fixes from upstream changes, and producing one framework-feedback artifact for A-Society as a whole. It needs its own project-specific runtime injection target.
 
-**What it owns:** The A-Society-specific synthesis instructions: direct-vs-queued routing based on structural scope, use of `$A_SOCIETY_LOG` for non-`a-docs/` follow-up work, and the guardrails that apply to closing the backward pass in this project.
+**What it owns:** The A-Society-specific feedback instructions: local-vs-upstream boundary rules, the expected content of the final framework-feedback artifact, and the guardrails that apply to closing the backward pass in this project.
 
-**What breaks without it:** The Curator synthesis session must infer A-Society-specific routing from a generic template or from the full protocol document, increasing the risk of wrong-layer routing or backlog generation.
+**What breaks without it:** The Owner's final feedback session must infer A-Society-specific routing from a generic template or from the full protocol document, increasing the risk of backlog generation or mixing local maintenance with upstream requests.
 
-**Do not consolidate with:** `improvement/main.md` or `improvement/meta-analysis.md` — the philosophy/traversal layer, findings-session layer, and synthesis-session layer serve different consumers and should remain separate.
+**Do not consolidate with:** `improvement/main.md` or `improvement/meta-analysis.md` — the philosophy/traversal layer, findings-session layer, and final feedback layer serve different consumers and should remain separate.
 
 ---
 
