@@ -8,7 +8,7 @@ Under the scoped delegation model, the Owner writes **requirement-level directiv
 
 1. **The requirement** — a clear statement of what must change and what the outcome must look like
 2. **The motivation** — why this change is needed, what problem it solves, what user direction it serves
-3. **Affected domains** — which domain leads need directives (identified via `$A_SOCIETY_OWNERSHIP`)
+3. **Affected domains** — which domain leads need directives (identified via the loaded role ownership files)
 4. **Quality bar** — how the Owner will validate the outcome (observable behaviors, not implementation details)
 5. **Cross-domain dependencies** — if domain A's output depends on domain B's, name the dependency and state whether leads coordinate directly or the Owner sequences the work
 6. **Scope boundaries** — what is explicitly out of scope for this flow
@@ -24,7 +24,7 @@ Under the scoped delegation model, the Owner writes **requirement-level directiv
 
 **Requirement vs. constraint test.** Before including a specific instruction in a directive, ask: "Am I stating what must happen (requirement) or how it must happen (implementation constraint)?" Requirements belong in the directive. Implementation constraints belong to the domain lead receiving the directive.
 
-**Domain identification.** Consult `$A_SOCIETY_OWNERSHIP` at intake to identify all affected surfaces. A directive that misses an affected domain forces a re-routing cycle. When in doubt, name more domains rather than fewer — a domain lead can report "no work required" faster than the Owner can discover a missed domain after the fact.
+**Domain identification.** Consult the loaded role ownership files at intake to identify all affected surfaces. A directive that misses an affected domain forces a re-routing cycle. When in doubt, name more domains rather than fewer — a domain lead can report "no work required" faster than the Owner can discover a missed domain after the fact.
 
 **Parallel-ready structure.** When multiple domains are affected and their work is independent, structure the directive so leads can receive their sections simultaneously. Use a per-domain section format:
 
@@ -53,7 +53,7 @@ Dependency: [Any dependency on another domain's output]
 
 ## Owner-Domain Constraints
 
-The Owner retains full constraint-writing authority for surfaces the Owner directly governs (per `$A_SOCIETY_OWNERSHIP`): project identity documents, workflow definitions, the agents.md entry point, the a-docs design principles, and the README.
+The Owner retains full constraint-writing authority for surfaces the Owner directly governs (per the loaded role ownership files): project identity documents, workflow definitions, the agents.md entry point, the a-docs design principles, and the README.
 
 When the Owner implements changes to their own surfaces, the same precision standards apply as before:
 

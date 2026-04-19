@@ -66,6 +66,18 @@ export function titleFromPath(entryPath: string): string {
  * Renders the content for a stub file.
  */
 export function renderStub(entry: ManifestEntry): string {
+  if (entry.path.endsWith('.yaml') || entry.path.endsWith('.yml')) {
+    const roleMatch = entry.path.match(/^roles\/([^/]+)\/(required-readings|ownership)\.ya?ml$/);
+    if (roleMatch) {
+      const [, roleId, kind] = roleMatch;
+      if (kind === 'required-readings') {
+        return `# Stub — fill in per ${entry.source_path}\nrole: ${roleId}\nrequired_readings: []\n`;
+      }
+      return `# Stub — fill in per ${entry.source_path}\nrole: ${roleId}\nsurfaces: []\n`;
+    }
+    return `# Stub — fill in per ${entry.source_path}\n`;
+  }
+
   const title = titleFromPath(entry.path);
   return `# ${title}\n\n<!-- Stub — fill in per ${entry.source_path} -->\n`;
 }

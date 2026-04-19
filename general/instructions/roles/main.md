@@ -48,7 +48,7 @@ Every role in the framework operates at one of three authority levels within a g
 
 These are authority levels, not new role archetypes. The same role can operate at different authority levels depending on context — for example, a Curator is a *lead* for documentation surfaces and a *specialist* when executing Owner-approved changes to surfaces the Owner governs.
 
-Authority levels work together with the **surface ownership registry** (see `$INSTRUCTION_OWNERSHIP`), which maps every project surface to the role(s) accountable for it. The registry tells coordinators *who* to delegate to; the authority levels define *how* delegation works.
+Authority levels work together with the **distributed ownership registry** (see `$INSTRUCTION_OWNERSHIP`), which maps every project surface to the role(s) accountable for keeping its truth current through per-role ownership files. The registry tells coordinators *who* to delegate to; the authority levels define *how* delegation works.
 
 ---
 
@@ -80,12 +80,12 @@ If the role has guidance that applies only at certain workflow phases — for ex
 
 The role document may include a short section such as "Workflow-Linked Support Docs" that names the categories of moments covered by those support docs. It should not enumerate phase-triggered cues such as "Before X, read Y." Those cues belong in the workflow document, because the workflow is the delivery surface for phase-entry guidance.
 
-Projects often place these companion docs under `roles/[role]/`, but the exact location is less important than the separation of concerns: the role doc stays small, and the workflow delivers the phase-specific guidance.
+Projects often place these companion docs under `roles/[role-id]/`, with the startup role contract at `roles/[role-id]/main.md`, but the exact location is less important than the separation of concerns: the role doc stays small, and the workflow delivers the phase-specific guidance.
 
 Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, `$GENERAL_OWNER_TA_REVIEW`, `$GENERAL_OWNER_CLOSURE`, `$GENERAL_CURATOR_IMPL_PRACTICES`, and `$GENERAL_TA_ADVISORY_STANDARDS`.
 
 ### 5. Context Loading (deprecated)
-Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via `a-docs/roles/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
+Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via each role's `a-docs/roles/<role-id>/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
 
 ### 6. Escalation Triggers (mandatory)
 When must this role escalate to a human or to another role? Be specific. "When uncertain" is not an escalation trigger — it is an invitation to guess. Name the categories of situation that require escalation.
@@ -100,7 +100,7 @@ Roles that are always active (e.g., the Owner) do not need this section — they
 ### 8. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
 What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per the runtime-injected handoff contract. The block declares the receiving role and the artifact path the runtime uses to route the next session.
 
-Do not place the runtime handoff contract in `required-readings.yaml`. The runtime injects it separately into runtime-managed sessions.
+Do not place the runtime handoff contract in any role's `required-readings.yaml`. The runtime injects it separately into runtime-managed sessions.
 
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
@@ -121,7 +121,7 @@ The following archetypes cover most project needs. Use the template for the arch
 
 **When to use:** One role per project. The keeper of the vision, the cross-domain coordinator, and the **universal session entry point**.
 
-**Authority level:** Coordinator — routes work via the surface ownership registry, sets requirement-level directives, validates outcomes.
+**Authority level:** Coordinator — routes work via the distributed ownership registry, sets requirement-level directives, validates outcomes.
 
 **Core responsibilities:** Vision interpretation, scope protection, **requirement-level delegation** to domain leads, **outcome validation**, structure governance, **workflow routing**.
 
@@ -133,7 +133,7 @@ The following archetypes cover most project needs. Use the template for the arch
 # Role: [Project] Owner Agent
 
 ## Authority Level: Coordinator
-Routes work via surface ownership registry. Sets requirements. Validates outcomes.
+Routes work via the distributed ownership registry. Sets requirements. Validates outcomes.
 
 ## Primary Focus
 Own the coherence, direction, and routing of [PROJECT]. [One sentence on what coherence means here.]

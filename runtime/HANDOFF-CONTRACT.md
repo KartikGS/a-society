@@ -2,7 +2,7 @@
 
 This file defines the machine-readable handoff block format used by the A-Society runtime.
 
-The runtime injects this contract into every runtime-managed session. It is runtime-owned context, not part of a project's `required-readings.yaml`.
+The runtime injects this contract into every runtime-managed session. It is runtime-owned context, not part of any role's `required-readings.yaml`.
 
 ---
 

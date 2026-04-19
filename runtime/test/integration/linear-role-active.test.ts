@@ -46,30 +46,25 @@ async function runTest() {
   const recordPath = path.join(testDir, 'records', 'test-flow');
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
-  fs.mkdirSync(path.join(projectADocsPath, 'roles'), { recursive: true });
+  const rolesDir = path.join(projectADocsPath, 'roles');
+  fs.mkdirSync(rolesDir, { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
-
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'required-readings.yaml'), `
-universal:
-  - $A_SOCIETY_AGENTS
-roles:
-  start:
-    - $TEST_PROJECT_START_ROLE
-  next:
-    - $TEST_PROJECT_NEXT_ROLE
-  end:
-    - $TEST_PROJECT_END_ROLE
-`);
+  fs.mkdirSync(path.join(rolesDir, 'start'), { recursive: true });
+  fs.mkdirSync(path.join(rolesDir, 'next'), { recursive: true });
+  fs.mkdirSync(path.join(rolesDir, 'end'), { recursive: true });
+  fs.writeFileSync(path.join(rolesDir, 'start', 'required-readings.yaml'), 'role: start\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_START_ROLE\n');
+  fs.writeFileSync(path.join(rolesDir, 'next', 'required-readings.yaml'), 'role: next\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_NEXT_ROLE\n');
+  fs.writeFileSync(path.join(rolesDir, 'end', 'required-readings.yaml'), 'role: end\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_END_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
     `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
-    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/startrole.md\` |\n` +
-    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/nextrole.md\` |\n` +
-    `| \`$TEST_PROJECT_END_ROLE\` | \`test-project/a-docs/roles/endrole.md\` |\n`
+    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/start/main.md\` |\n` +
+    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/next/main.md\` |\n` +
+    `| \`$TEST_PROJECT_END_ROLE\` | \`test-project/a-docs/roles/end/main.md\` |\n`
   );
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'startrole.md'), "Start Role Doc");
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'nextrole.md'), "Next Role Doc");
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'endrole.md'), "End Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'next', 'main.md'), "Next Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'end', 'main.md'), "End Role Doc");
 
   const workflowGraph = `workflow:
   name: test-flow

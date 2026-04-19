@@ -122,27 +122,27 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ## `roles/`
 
-### `roles/owner.md` — `$A_SOCIETY_OWNER_ROLE`
+### `roles/owner/main.md` — `$A_SOCIETY_OWNER_ROLE`
 
 **Why it exists:** The Owner role operates as the project-level coordinator under the scoped delegation model. It has authority boundaries, domain lead definitions, escalation triggers, and workflow-linked support-doc routing specific to A-Society. A generic template would not capture A-Society's domain lead structure, review posture, or the Owner support documents surfaced at later workflow moments.
 
-**What it owns:** The A-Society Owner's coordinator authority, domain lead delegation table, requirement-level directive writing posture, outcome validation approach, and the routing guidance that tells the agent to rely on workflow-delivered Owner support documents and the surface ownership registry.
+**What it owns:** The A-Society Owner's coordinator authority, domain lead delegation table, requirement-level directive writing posture, outcome validation approach, and the routing guidance that tells the agent to rely on workflow-delivered Owner support documents and the distributed role ownership files.
 
 **What breaks without it:** An Owner agent has no specific behavioral contract for coordinator-level delegation. They either over-reach (writing implementation constraints for domains other roles lead), under-reach (asking the human for every small decision), or miss the delegation model that enables parallel domain work.
 
-**Do not consolidate with:** `general/roles/owner.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific domain leads and review posture. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
+**Do not consolidate with:** `general/roles/owner/main.md` — the general template is for any project; this file is A-Society's specific instantiation with A-Society-specific domain leads and review posture. Do not consolidate with `roles/owner/` — those files are loaded only when a specific Owner moment occurs; this file is the role-level routing guide above them.
 
 ---
 
 ### `roles/owner/` — folder
 
-**Why it exists:** The Owner role now uses workflow-linked support docs for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner.md` can stay a routing guide while the workflow surfaces the right document at the right moment.
+**Why it exists:** The Owner role now uses workflow-linked support docs for phase-specific guidance. This folder groups those Owner-only support documents so `roles/owner/main.md` can stay a routing guide while the workflow surfaces the right document at the right moment.
 
 **What it owns:** The Owner's on-demand support documents: brief/constraint writing, review behavior, log management, TA advisory and integration-gate review, and forward pass closure.
 
-**What breaks without it:** Those instructions either creep back into `roles/owner.md` or stop being reusable as distinct support docs, making the role file harder to maintain and the workflow's delivery cues less clear.
+**What breaks without it:** Those instructions either creep back into `roles/owner/main.md` or stop being reusable as distinct support docs, making the role file harder to maintain and the workflow's delivery cues less clear.
 
-**Do not consolidate with:** `roles/owner.md` — that file is the role contract and routing surface; this folder holds the support docs the workflow surfaces later. Do not consolidate with `workflow/` — the workflow delivers these docs, but they remain Owner-specific support documents rather than shared workflow definitions.
+**Do not consolidate with:** `roles/owner/main.md` — that file is the role contract and routing surface; this folder holds the support docs the workflow surfaces later. Do not consolidate with `workflow/` — the workflow delivers these docs, but they remain Owner-specific support documents rather than shared workflow definitions.
 
 ---
 
@@ -154,7 +154,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** The Owner reverts to writing implementation-level constraints for every domain, bypassing domain lead design authority and creating unnecessary revision cycles.
 
-**Do not consolidate with:** `roles/owner.md` — role contract vs. phase-specific execution guidance. Do not consolidate with `roles/owner/ta-advisory-review.md` or `roles/owner/forward-pass-closure.md` — each document is loaded for a different Owner moment.
+**Do not consolidate with:** `roles/owner/main.md` — role contract vs. phase-specific execution guidance. Do not consolidate with `roles/owner/ta-advisory-review.md` or `roles/owner/forward-pass-closure.md` — each document is loaded for a different Owner moment.
 
 ---
 
@@ -166,7 +166,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** The Owner either reviews domain-internal implementation quality (overstepping lead authority) or rubber-stamps everything (no vision guardrail). Review-specific criteria drift into approval artifacts with no canonical reference.
 
-**Do not consolidate with:** `roles/owner.md` — role contract vs. review-phase guidance. Do not consolidate with `roles/owner/brief-writing.md` — directive-writing and outcome-validation are distinct Owner moments with different checks.
+**Do not consolidate with:** `roles/owner/main.md` — role contract vs. review-phase guidance. Do not consolidate with `roles/owner/brief-writing.md` — directive-writing and outcome-validation are distinct Owner moments with different checks.
 
 ---
 
@@ -174,11 +174,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** The Owner manages `$A_SOCIETY_LOG` only at specific moments: intake, synthesis follow-up, and closure. Merge assessment and log-filing obligations are important, but they do not belong in the always-loaded role file.
 
-**What it owns:** The project-log management and merge-assessment guidance extracted from `roles/owner.md`.
+**What it owns:** The project-log management and merge-assessment guidance extracted from `roles/owner/main.md`.
 
 **What breaks without it:** Log-management detail returns to the role file, or the merge-assessment procedure becomes implicit and inconsistently applied when filing Next Priorities.
 
-**Do not consolidate with:** `roles/owner.md` — role contract vs. log-management procedure. Do not consolidate with `roles/owner/forward-pass-closure.md` — closure uses the log, but log management also occurs at intake and during synthesis follow-up.
+**Do not consolidate with:** `roles/owner/main.md` — role contract vs. log-management procedure. Do not consolidate with `roles/owner/forward-pass-closure.md` — closure uses the log, but log management also occurs at intake and during synthesis follow-up.
 
 ---
 
@@ -186,11 +186,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** TA advisory and integration-gate review guidance only matters when the Owner is reviewing a Technical Architect advisory or deciding whether a TA-reviewed implementation clears the integration gate. It should not be carried inline in the Owner role for sessions that never involve a TA.
 
-**What it owns:** The preserved `## TA Advisory Review` guidance extracted from `roles/owner.md`, plus the Owner's contract-review checks for TA-reviewed integration gates.
+**What it owns:** The preserved `## TA Advisory Review` guidance extracted from `roles/owner/main.md`, plus the Owner's contract-review checks for TA-reviewed integration gates.
 
 **What breaks without it:** TA-specific review instructions either bloat the Owner role file or get misplaced into broader workflow docs where they no longer read as Owner-only obligations. Integration-gate decisions become ad hoc instead of following a stable Owner-side evidence hierarchy.
 
-**Do not consolidate with:** `roles/owner.md` — this is conditional review guidance, not universal role identity. Do not consolidate with `roles/owner/brief-writing.md` — advisory review and brief writing are different phases with different checks.
+**Do not consolidate with:** `roles/owner/main.md` — this is conditional review guidance, not universal role identity. Do not consolidate with `roles/owner/brief-writing.md` — advisory review and brief writing are different phases with different checks.
 
 ---
 
@@ -198,15 +198,15 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Forward pass closure guidance applies only when the Owner is closing a flow. It belongs in a dedicated closure document rather than in the always-loaded Owner role file.
 
-**What it owns:** The preserved `## Forward Pass Closure Discipline` guidance extracted from `roles/owner.md`.
+**What it owns:** The preserved `## Forward Pass Closure Discipline` guidance extracted from `roles/owner/main.md`.
 
-**What breaks without it:** Closure-time verification, log/archive discipline, and update-report path naming either remain inline in `roles/owner.md` or drift into artifacts that are not the canonical Owner closure reference.
+**What breaks without it:** Closure-time verification, log/archive discipline, and update-report path naming either remain inline in `roles/owner/main.md` or drift into artifacts that are not the canonical Owner closure reference.
 
-**Do not consolidate with:** `roles/owner.md` — this is closure-phase guidance, not general role contract. Do not consolidate with `workflow/main.md` — workflows define phase structure; this file defines how the Owner executes one specific phase.
+**Do not consolidate with:** `roles/owner/main.md` — this is closure-phase guidance, not general role contract. Do not consolidate with `workflow/main.md` — workflows define phase structure; this file defines how the Owner executes one specific phase.
 
 ---
 
-### `roles/curator.md` — `$A_SOCIETY_CURATOR_ROLE`
+### `roles/curator/main.md` — `$A_SOCIETY_CURATOR_ROLE`
 
 **Why it exists:** The Curator operates as the domain lead for all documentation surfaces under the scoped delegation model. It has lead authority, hard rules, and escalation triggers specific to A-Society's maintenance needs — in particular the prohibition on writing to `general/` without Owner approval (a scope decision, not a documentation decision), the requirement to use `$VAR` references, and the distillation protocol for proposing patterns from observed projects.
 
@@ -214,49 +214,49 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** A Curator agent has no specific behavioral contract or lead authority declaration. They may write directly to `general/` without approval, hardcode paths, seek unnecessary implementation approval for domain-internal decisions, or perform migration work without understanding the framework's boundaries. Role context injection fails.
 
-**Do not consolidate with:** `general/roles/curator.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
+**Do not consolidate with:** `general/roles/curator/main.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
 
 ---
 
 ### `roles/curator/implementation-practices.md` — `$A_SOCIETY_CURATOR_IMPL_PRACTICES`
 
-**Why it exists:** The Curator's proposal, implementation, and registration checks are phase-specific. Keeping them in a dedicated support document lets `roles/curator.md` stay focused on scope, authority, and escalation while still giving the Curator one canonical execution reference when work begins.
+**Why it exists:** The Curator's proposal, implementation, and registration checks are phase-specific. Keeping them in a dedicated support document lets `roles/curator/main.md` stay focused on scope, authority, and escalation while still giving the Curator one canonical execution reference when work begins.
 
-**What it owns:** The preserved `## Standing Checks` and `## Implementation Practices` guidance extracted from `roles/curator.md`.
+**What it owns:** The preserved `## Standing Checks` and `## Implementation Practices` guidance extracted from `roles/curator/main.md`.
 
 **What breaks without it:** Proposal and implementation detail creeps back into the role file, increasing startup context and weakening the workflow-linked support-doc model.
 
-**Do not consolidate with:** `roles/curator.md` — role contract vs. execution guidance. Do not consolidate with `general/roles/curator.md` — this document is specific to A-Society's own Curator operating on A-Society.
+**Do not consolidate with:** `roles/curator/main.md` — role contract vs. execution guidance. Do not consolidate with `general/roles/curator/main.md` — this document is specific to A-Society's own Curator operating on A-Society.
 
 ---
 
-### `roles/required-readings.yaml` — `$A_SOCIETY_REQUIRED_READINGS`
+### `roles/[role-id]/required-readings.yaml`
 
-**Why it exists:** To ensure every session starts with the correct context without relying on prose checklists or frontmatter duplication. This file is the single, machine-readable authority for context injection.
+**Why it exists:** To ensure every session starts with the correct context without relying on prose checklists or frontmatter duplication. Each role folder carries its own machine-readable startup-context authority.
 
-**What it owns:** The universal reading list and the role-specific mapping of `$VAR` references for all roles in the project.
+**What it owns:** The startup reading list for that role only.
 
-**Who reads it:** The runtime parsing layer (which performs the injection). Humans consult it as a sequence reference.
+**Who reads it:** The runtime parsing layer for the active role. Humans may consult it as a sequence reference.
 
 **What breaks without it:** Programmatic context injection fails. Reading sequence becomes undocumented.
 
 ---
 
-### `roles/ownership.yaml` — `$A_SOCIETY_OWNERSHIP`
+### `roles/[role-id]/ownership.yaml`
 
-**Why it exists:** Without explicit surface ownership, the project has no structural mechanism to prevent coverage gaps — surfaces that no role claims fall through the cracks and rot silently. The registry makes routing mechanical: consult the registry, find the accountable role, send the directive. It also enables validation — any project path that lacks a registry entry is a visible gap.
+**Why it exists:** Without explicit surface ownership, the project has no structural mechanism to prevent coverage gaps — surfaces that no role claims fall through the cracks and rot silently. The distributed ownership files make routing mechanical: consult the role files, find the accountable role, send the directive.
 
-**What it owns:** The mapping of every project surface to the role(s) accountable for its health. Resolution rules (specificity, at-least-one accountability). The registry is the primary routing input for the Owner's coordinator function.
+**What it owns:** The list of surfaces that one role is accountable for, including any explicitly shared surfaces.
 
 **What breaks without it:** The Owner must hold domain knowledge about every surface in memory to route work correctly. Coverage gaps are invisible. New surfaces added without ownership assignment go unmaintained. Routing is ad hoc instead of registry-based.
 
-**Who reads it:** The Owner loads it at every session start (via required readings) for routing decisions. Domain leads may consult it to understand their accountability scope.
+**Who reads it:** The Owner loads the relevant ownership files for routing decisions. Each domain role loads its own ownership file to understand its accountability scope.
 
-**Do not consolidate with:** `roles/required-readings.yaml` — required readings governs context injection; ownership governs surface accountability. Different mechanisms serving different purposes. Do not consolidate with role files — role files define behavioral contracts; the registry defines surface-to-role mappings as a cross-cutting lookup table.
+**Do not consolidate with:** `roles/[role-id]/required-readings.yaml` — required readings governs startup context; ownership governs surface accountability. Different mechanisms serving different purposes. Do not consolidate with `main.md` — the role file defines behavioral contract; the ownership file defines what that role is accountable for keeping current.
 
 ---
 
-### `roles/technical-architect.md` — `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE`
+### `roles/technical-architect/main.md` — `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE`
 
 **Why it exists:** The Technical Architect role has a narrow, pre-implementation mandate that is not covered by Owner or Curator: producing the automation boundary evaluation, component designs, and open question surfaces that must exist before any programmatic tooling is built. Without a dedicated role file, this work either collapses into the Owner (adding implementation-planning scope that the Owner does not own) or proceeds without a behavioral contract, risking implementation before design is verified.
 
@@ -264,7 +264,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** A Technical Architect agent has no behavioral contract. The boundary between design and implementation is undefined. Proposals may bypass Owner review. Direction decisions may be absorbed into technical decisions without escalation. Role context injection fails.
 
-**Do not consolidate with:** `roles/owner.md` — the Owner reviews and approves technical proposals; they do not produce them. Do not consolidate with `roles/curator.md` — the Curator maintains existing documentation; the Technical Architect designs new technical infrastructure that does not yet exist.
+**Do not consolidate with:** `roles/owner/main.md` — the Owner reviews and approves technical proposals; they do not produce them. Do not consolidate with `roles/curator/main.md` — the Curator maintains existing documentation; the Technical Architect designs new technical infrastructure that does not yet exist.
 
 ---
 
@@ -272,15 +272,15 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Advisory standards matter only when the Technical Architect is producing an advisory, component design, or integration review. Keeping them in a support document preserves the TA role file as a startup contract rather than a full advisory-writing manual.
 
-**What it owns:** The preserved `## Advisory Standards` and `## a-docs/ Format Dependencies` guidance extracted from `roles/technical-architect.md`.
+**What it owns:** The preserved `## Advisory Standards` and `## a-docs/ Format Dependencies` guidance extracted from `roles/technical-architect/main.md`.
 
 **What breaks without it:** TA advisory-writing detail returns to the role file, or the advisory-quality standard fragments across old advisories and workflow notes with no canonical home.
 
-**Do not consolidate with:** `roles/technical-architect.md` — role contract vs. advisory-execution guidance. Do not consolidate with `executable/architecture-proposal.md` — this file governs how the TA writes advisories; the proposal records the current approved executable design.
+**Do not consolidate with:** `roles/technical-architect/main.md` — role contract vs. advisory-execution guidance. Do not consolidate with `executable/architecture-proposal.md` — this file governs how the TA writes advisories; the proposal records the current approved executable design.
 
 ---
 
-### `roles/framework-services-developer.md` — `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE`
+### `roles/framework-services-developer/main.md` — `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE`
 
 **Why it exists:** The unified executable layer still needs a pure execution role for deterministic framework services. Without this role, framework-service implementation either collapses into the Curator (wrong authority) or into orchestration work (wrong boundary), recreating the retired tooling/runtime split in a less explicit form.
 
@@ -288,7 +288,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** No clear behavioral contract for executable framework-service work. The executable role split becomes implicit, and implementation decisions drift across the framework-services/orchestration boundary.
 
-**Do not consolidate with:** `roles/orchestration-developer.md` — deterministic framework services and orchestration are different executable subdomains. Do not consolidate with `roles/curator.md` — executable implementation and standing-doc maintenance remain different authorities.
+**Do not consolidate with:** `roles/orchestration-developer/main.md` — deterministic framework services and orchestration are different executable subdomains. Do not consolidate with `roles/curator/main.md` — executable implementation and standing-doc maintenance remain different authorities.
 
 ---
 
@@ -300,11 +300,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Framework-service completion artifacts drift in shape, and migration-boundary or co-maintenance mistakes get rediscovered ad hoc.
 
-**Do not consolidate with:** `roles/framework-services-developer.md` — role contract vs. execution guidance. Do not consolidate with `$A_SOCIETY_EXECUTABLE_PROPOSAL` — the proposal defines the executable design; this file defines how the Developer executes within that design.
+**Do not consolidate with:** `roles/framework-services-developer/main.md` — role contract vs. execution guidance. Do not consolidate with `$A_SOCIETY_EXECUTABLE_PROPOSAL` — the proposal defines the executable design; this file defines how the Developer executes within that design.
 
 ---
 
-### `roles/orchestration-developer.md` — `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE`
+### `roles/orchestration-developer/main.md` — `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE`
 
 **Why it exists:** The executable layer needs a role that explicitly owns orchestration behavior and the surviving operator-facing executable reference. Without this, `runtime/INVOCATION.md` authorship and orchestration ownership fall back into the retired pre-unification role framing or become ambiguous between implementer and Curator.
 
@@ -322,7 +322,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Runtime-specific implementation rules drift back into role prose or disappear into old artifacts, and `$A_SOCIETY_RUNTIME_INVOCATION` can fall out of sync with the live executable surface.
 
-**Do not consolidate with:** `roles/orchestration-developer.md` — role contract vs. execution guidance. Do not consolidate with `workflow/executable-development.yaml` — the workflow defines phases; this file defines how the Orchestration Developer executes within them.
+**Do not consolidate with:** `roles/orchestration-developer/main.md` — role contract vs. execution guidance. Do not consolidate with `workflow/executable-development.yaml` — the workflow defines phases; this file defines how the Orchestration Developer executes within them.
 
 ---
 

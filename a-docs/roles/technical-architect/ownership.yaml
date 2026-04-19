@@ -1,0 +1,12 @@
+role: technical-architect
+surfaces:
+  - path: a-docs/project-information/architecture.md
+    shared_with: [owner]
+    scope: "Transitional mixed-truth surface: framework architecture plus executable-layer relationship; split when practical"
+  - path: a-docs/roles/technical-architect/
+    scope: "Technical Architect role truth, support-doc truth, startup-context file, and ownership file"
+  - path: a-docs/executable/
+    scope: "Executable design truth"
+  - path: a-docs/records/
+    shared_with: [owner, curator, orchestration-developer, framework-services-developer]
+    scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

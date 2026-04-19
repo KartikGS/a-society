@@ -19,7 +19,7 @@ This document is the standing reference for the coupling surface between A-Socie
 | Workflow graph YAML frontmatter schema | Yes | Workflow graph validation |
 | Record-folder `workflow.yaml` schema | Yes | Backward-pass planning |
 | `$GENERAL_MANIFEST` file format and `copy` source paths | Yes | Scaffolding |
-| `a-docs/roles/required-readings.yaml` schema | Yes | Runtime context injection |
+| `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |
 
 Rows that depend on `a-docs/` content are still standing executable dependencies and require the same co-maintenance discipline as `general/` format changes.
 

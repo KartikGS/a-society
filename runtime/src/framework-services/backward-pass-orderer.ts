@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findWorkflowFilePath, parseWorkflowFile } from '../workflow-file.js';
+import { toKebabCaseRoleId } from '../role-id.js';
 
 export interface WorkflowNode {
   id: string;
@@ -315,10 +316,6 @@ export function computeBackwardPassPlan(
   }
 }
 
-function normalizeRoleSlug(role: string): string {
-  return role.toLowerCase().replace(/\s+/g, '-');
-}
-
 export function locateFindingsFiles(
   recordFolderPath: string,
   roleNames: string[],
@@ -331,13 +328,13 @@ export function locateFindingsFiles(
     }
   })();
 
-  const normalizedRequestedRoles = new Set(roleNames.map(normalizeRoleSlug));
+  const normalizedRequestedRoles = new Set(roleNames.map(toKebabCaseRoleId));
   const findingsPattern = /^(\d+)[a-z]?-(.*)-findings\.md$/i;
 
   const matches = filenames.filter(filename => {
     const match = filename.match(findingsPattern);
     if (!match) return false;
-    const roleSlug = normalizeRoleSlug(match[2]);
+    const roleSlug = toKebabCaseRoleId(match[2]);
     return normalizedRequestedRoles.has(roleSlug);
   });
 

@@ -7,7 +7,7 @@ Under the scoped delegation model, the Owner writes **requirement-level directiv
 A directive should contain:
 - The requirement — what must change and what the outcome must look like
 - The motivation — why the change is needed
-- Affected domains — which domain leads need directives (identified via the surface ownership registry)
+- Affected domains — which domain leads need directives (identified via the distributed role ownership files)
 - Quality bar — how the Owner will validate the outcome
 - Cross-domain dependencies — if leads need to coordinate, name the dependency
 - Scope boundaries — what is explicitly out of scope
@@ -42,7 +42,7 @@ When a directive introduces a schema, field, or structural vocabulary change, en
 
 ## Owner-Domain Constraints
 
-The Owner retains full constraint-writing authority for surfaces the Owner directly governs (per the surface ownership registry). When implementing changes to their own surfaces, precision standards apply:
+The Owner retains full constraint-writing authority for surfaces the Owner directly governs (per the distributed role ownership files). When implementing changes to their own surfaces, precision standards apply:
 
 - Literal replacements must quote the live raw string exactly
 - Structured-entry changes must state whether the full entry or a sub-element is in scope

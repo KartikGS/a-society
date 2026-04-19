@@ -11,6 +11,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { TelemetryManager } from './observability.js';
 import { SessionStore } from './store.js';
 import { FlowOrchestrator, parseWorkflow } from './orchestrator.js';
+import { toKebabCaseRoleId } from './role-id.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
 import { findWorkflowFilePath } from './workflow-file.js';
 import type { FlowRun, OperatorEvent } from './types.js';
@@ -83,10 +84,6 @@ function discoverProjects(workspaceRoot: string): ProjectSummary[] {
   }
 }
 
-function normalizeRoleKey(roleName: string): string {
-  return roleName.toLowerCase().replace(/\s+/g, '-');
-}
-
 function isDirectExecution(): boolean {
   if (!process.argv[1]) return false;
   return path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
@@ -127,7 +124,7 @@ function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {
     return null;
   }
 
-  const logicalSessionId = `${flowRun.flowId}__${normalizeRoleKey(node.role)}`;
+  const logicalSessionId = `${flowRun.flowId}__${toKebabCaseRoleId(node.role)}`;
   const session = SessionStore.loadRoleSession(logicalSessionId);
   if (!session) {
     return null;

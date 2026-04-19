@@ -1,0 +1,32 @@
+role: curator
+surfaces:
+  - path: general/
+    scope: "Reusable library stewardship and truth ownership for all general/ surfaces"
+  - path: a-docs/a-docs-guide.md
+    scope: "Guide and rationale stewardship for internal docs"
+  - path: a-docs/roles/curator/
+    scope: "Curator role truth, support-doc truth, startup-context file, and ownership file"
+  - path: a-docs/indexes/
+    scope: "Internal index stewardship"
+  - path: a-docs/improvement/
+    scope: "Improvement-protocol stewardship"
+  - path: a-docs/communication/conversation/
+    scope: "Conversation-template stewardship"
+  - path: a-docs/communication/main.md
+    shared_with: [owner]
+    scope: "Transitional mixed entrypoint for coordination policy and conversation templates; split when practical"
+  - path: a-docs/updates/
+    scope: "Framework update-protocol and template stewardship"
+  - path: a-docs/records/main.md
+    scope: "Records-convention truth"
+  - path: a-docs/records/
+    shared_with: [owner, technical-architect, orchestration-developer, framework-services-developer]
+    scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"
+  - path: VERSION.md
+    scope: "Framework version record"
+  - path: index.md
+    scope: "Public path registry"
+  - path: feedback/
+    scope: "Inbound framework feedback stewardship"
+  - path: updates/
+    scope: "Published framework update reports"

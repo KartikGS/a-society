@@ -86,23 +86,23 @@ files:
 
   # ── Roles ─────────────────────────────────────────────────────────────────────
 
-  - path: roles/required-readings.yaml
-    description: "Required readings authority — sole machine-readable source of truth for all project-wide and role-specific context injection"
+  - path: roles/owner/required-readings.yaml
+    description: "Owner startup-context authority — machine-readable required readings for the Owner role only"
     required: true
     scaffold: stub
     source_path: general/instructions/roles/required-readings.md
 
-  - path: roles/ownership.yaml
-    description: "Surface ownership registry — maps every project surface to accountable role(s); enables registry-based routing and coverage gap validation"
+  - path: roles/owner/ownership.yaml
+    description: "Owner ownership file — surfaces the Owner is accountable for keeping true and current"
     required: true
     scaffold: stub
     source_path: general/instructions/roles/ownership.md
 
-  - path: roles/owner.md
-    description: "Owner role — vision keeper, coordinator, and universal session entry point; routes work via surface ownership registry and validates domain lead outcomes"
+  - path: roles/owner/main.md
+    description: "Owner role — vision keeper, coordinator, and universal session entry point; routes work via distributed role ownership files and validates domain lead outcomes"
     required: true
     scaffold: copy
-    source_path: general/roles/owner.md
+    source_path: general/roles/owner/main.md
 
   - path: roles/owner/brief-writing.md
     description: "Owner support doc — requirement-level directive writing and constraint-writing guidance surfaced by the workflow at relevant Owner phases"
@@ -134,11 +134,23 @@ files:
     scaffold: copy
     source_path: general/roles/owner/forward-pass-closure.md
 
-  - path: roles/curator.md
+  - path: roles/curator/required-readings.yaml
+    description: "Curator startup-context authority — machine-readable required readings for the Curator role only"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/roles/required-readings.md
+
+  - path: roles/curator/ownership.yaml
+    description: "Curator ownership file — surfaces the Curator is accountable for keeping true and current"
+    required: true
+    scaffold: stub
+    source_path: general/instructions/roles/ownership.md
+
+  - path: roles/curator/main.md
     description: "Curator role — documentation domain lead; design authority over agent-docs, maintenance, migration, and pattern distillation"
     required: true
     scaffold: copy
-    source_path: general/roles/curator.md
+    source_path: general/roles/curator/main.md
 
   - path: roles/curator/implementation-practices.md
     description: "Curator support doc — proposal, implementation, and registration practices surfaced by the workflow at Curator phases"
@@ -146,11 +158,23 @@ files:
     scaffold: copy
     source_path: general/roles/curator/implementation-practices.md
 
-  - path: roles/technical-architect.md
+  - path: roles/technical-architect/required-readings.yaml
+    description: "Technical Architect startup-context authority — machine-readable required readings for the Technical Architect role only"
+    required: false
+    scaffold: stub
+    source_path: general/instructions/roles/required-readings.md
+
+  - path: roles/technical-architect/ownership.yaml
+    description: "Technical Architect ownership file — surfaces the Technical Architect is accountable for keeping true and current"
+    required: false
+    scaffold: stub
+    source_path: general/instructions/roles/ownership.md
+
+  - path: roles/technical-architect/main.md
     description: "Technical Architect (advisory-producing) role — authority, boundaries, and workflow-linked support-doc routing for any role that scopes and specifies work for implementing roles"
     required: false
     scaffold: copy
-    source_path: general/roles/technical-architect.md
+    source_path: general/roles/technical-architect/main.md
 
   - path: roles/technical-architect/advisory-standards.md
     description: "Technical Architect support doc — advisory standards surfaced by workflows that use an advisory-producing role"

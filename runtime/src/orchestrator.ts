@@ -12,6 +12,7 @@ import { buildWorkflowRepairGuidance, validateWorkflowFile } from './framework-s
 import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
+import { toKebabCaseRoleId } from './role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, findWorkflowFilePath, parseWorkflowFile } from './workflow-file.js';
 
@@ -803,7 +804,7 @@ export class FlowOrchestrator {
   }
 
   private roleKey(roleName: string): string {
-    return roleName.toLowerCase().replace(/\s+/g, '-');
+    return toKebabCaseRoleId(roleName);
   }
 
   private roleSessionId(flowRun: FlowRun, roleName: string): string {

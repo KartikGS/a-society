@@ -39,30 +39,25 @@ async function runTest() {
   const recordPath = path.join(testDir, 'records', 'test-flow');
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
-  fs.mkdirSync(path.join(projectADocsPath, 'roles'), { recursive: true });
+  const rolesDir = path.join(projectADocsPath, 'roles');
+  fs.mkdirSync(rolesDir, { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
-
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'required-readings.yaml'), `
-universal:
-  - $A_SOCIETY_AGENTS
-roles:
-  owner:
-    - $TEST_PROJECT_OWNER_ROLE
-  curator:
-    - $TEST_PROJECT_CURATOR_ROLE
-  technical-architect:
-    - $TEST_PROJECT_TA_ROLE
-`);
+  fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
+  fs.mkdirSync(path.join(rolesDir, 'curator'), { recursive: true });
+  fs.mkdirSync(path.join(rolesDir, 'technical-architect'), { recursive: true });
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_OWNER_ROLE\n');
+  fs.writeFileSync(path.join(rolesDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_CURATOR_ROLE\n');
+  fs.writeFileSync(path.join(rolesDir, 'technical-architect', 'required-readings.yaml'), 'role: technical-architect\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_TA_ROLE\n');
 
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), 'Hello Agents');
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'), `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |
-| \`$TEST_PROJECT_OWNER_ROLE\` | \`test-project/a-docs/roles/owner.md\` |
-| \`$TEST_PROJECT_CURATOR_ROLE\` | \`test-project/a-docs/roles/curator.md\` |
-| \`$TEST_PROJECT_TA_ROLE\` | \`test-project/a-docs/roles/technical-architect.md\` |
+| \`$TEST_PROJECT_OWNER_ROLE\` | \`test-project/a-docs/roles/owner/main.md\` |
+| \`$TEST_PROJECT_CURATOR_ROLE\` | \`test-project/a-docs/roles/curator/main.md\` |
+| \`$TEST_PROJECT_TA_ROLE\` | \`test-project/a-docs/roles/technical-architect/main.md\` |
 `);
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'owner.md'), 'Owner Role Doc');
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'curator.md'), 'Curator Role Doc');
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'technical-architect.md'), 'TA Role Doc');
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), 'Owner Role Doc');
+  fs.writeFileSync(path.join(rolesDir, 'curator', 'main.md'), 'Curator Role Doc');
+  fs.writeFileSync(path.join(rolesDir, 'technical-architect', 'main.md'), 'TA Role Doc');
 
   const workflowGraph = `workflow:
   name: bootstrap-join-deferral

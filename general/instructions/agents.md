@@ -42,7 +42,7 @@ A table with three columns: Role name, file path, one-line primary focus. Every 
 - An agent operates in exactly one role per session. An agent may not assume a role or shift to a different role mid-session without explicit human instruction.
 
 ### 4. Required readings authority (mandatory)
-Declare that required readings are maintained in `a-docs/roles/required-readings.yaml` as the single authoritative source. Provide a relative link to that file. See `$INSTRUCTION_REQUIRED_READINGS` for the maintenance protocol.
+Declare that required readings are maintained per role in `a-docs/roles/<role-id>/required-readings.yaml`. Give one concrete example path such as `a-docs/roles/owner/required-readings.yaml`. See `$INSTRUCTION_REQUIRED_READINGS` for the maintenance protocol.
 
 ### 6. Authority and conflict resolution (mandatory)
 When two documents give conflicting guidance, which takes precedence? **The expected authority hierarchy is: project vision (highest precedence) → project structure → role document → agents.md.** State this order explicitly. Do not invert it — placing the role document above the vision or structure inverts the intended hierarchy. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
@@ -73,10 +73,10 @@ One paragraph. What is this project? What does it produce? Who does it serve? Cl
 State the index location and explain `$VAR` convention in two to three sentences. Agents see this early, before they encounter any `$VAR` references in the required reading list.
 
 **Step 3 — Build the roles table.**
-List every role. Include: role name, file path, one-line primary focus. Confirm that Owner and Curator are both present — a project missing either is not initialized. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
+List every role. Include: role name, file path, one-line primary focus. Role entry documents should live at `roles/<role-id>/main.md`. Confirm that Owner and Curator are both present — a project missing either is not initialized. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
 
 **Step 4 — Add the required readings authority pointer.**
-State clearly that all universal and role-specific required readings are maintained in `a-docs/roles/required-readings.yaml`. Provide a link to that file.
+State clearly that each role's required readings are maintained in its own `a-docs/roles/<role-id>/required-readings.yaml`. Provide a concrete example link.
 
 **Step 6 — Write authority and conflict resolution.**
 List the documents in precedence order. **The expected hierarchy is: project vision → project structure → role document → agents.md.** Three to five items is typical. End with the escalation to human.
@@ -108,12 +108,12 @@ Key file paths are in `indexes/main.md`. Resolve $VAR references there.
 ## Roles
 | Role | File | Focus |
 |---|---|---|
-| Tech Lead | roles/tech-lead.md | Technical decisions and execution |
-| BA | roles/ba.md | Requirements and scope |
-| Backend | roles/sub-agents/backend.md | API and data layer |
+| Tech Lead | roles/tech-lead/main.md | Technical decisions and execution |
+| BA | roles/ba/main.md | Requirements and scope |
+| Backend | roles/backend/main.md | API and data layer |
 
 ## Required Reading
-All required readings are maintained in `a-docs/roles/required-readings.yaml`.
+Each role's required readings are maintained in `a-docs/roles/<role-id>/required-readings.yaml`.
 
 ## Invariants
 - Never use npm or yarn — pnpm only.
@@ -132,11 +132,11 @@ Key file paths are in `indexes/main.md`. Resolve $VAR references there.
 ## Roles
 | Role | File | Focus |
 |---|---|---|
-| Editor | roles/editor.md | Voice, quality, and final approval |
-| Writer | roles/writer.md | Drafting within approved briefs |
+| Editor | roles/editor/main.md | Voice, quality, and final approval |
+| Writer | roles/writer/main.md | Drafting within approved briefs |
 
 ## Required Reading
-All required readings are maintained in `a-docs/roles/required-readings.yaml`.
+Each role's required readings are maintained in `a-docs/roles/<role-id>/required-readings.yaml`.
 
 ## Invariants
 - Never publish without editor approval.
@@ -157,4 +157,3 @@ All required readings are maintained in `a-docs/roles/required-readings.yaml`.
 **Invariants buried in prose.** If invariants are not visually distinct, agents miss them. They should be a named list, not paragraphs.
 
 **Updated frequently.** A frequently-updated `agents.md` signals that something upstream is unstable. Fix the upstream problem; do not treat `agents.md` as a changelog.
-

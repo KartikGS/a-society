@@ -102,13 +102,14 @@ async function run() {
   
   // registry.ts buildRoleContext(projectNamespace, roleName, workspaceRoot)
   // For projectNamespace "a-society" and roleName "curator", it looks for:
-  // [workspaceRoot]/a-society/a-docs/roles/required-readings.yaml
+  // [workspaceRoot]/a-society/a-docs/roles/curator/required-readings.yaml
   // This is because the namespace selects the project folder under the workspace.
   const namespaceDir = path.join(tmpDir, 'a-society');
   const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
   fs.mkdirSync(rolesDir, { recursive: true });
-  fs.writeFileSync(path.join(rolesDir, 'required-readings.yaml'), 'universal: []\nroles: { curator: [] }');
-  fs.writeFileSync(path.join(rolesDir, 'curator.md'), '---\nrole: Curator\n---\nHello');
+  fs.mkdirSync(path.join(rolesDir, 'curator'), { recursive: true });
+  fs.writeFileSync(path.join(rolesDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
+  fs.writeFileSync(path.join(rolesDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
 
   process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE = 'true';
 
@@ -476,8 +477,9 @@ async function run() {
 
     const derivedNamespaceDir = path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'roles');
     fs.mkdirSync(derivedNamespaceDir, { recursive: true });
-    fs.writeFileSync(path.join(derivedNamespaceDir, 'required-readings.yaml'), 'universal: []\nroles: { curator: [] }');
-    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator.md'), '---\nrole: Curator\n---\nHello');
+    fs.mkdirSync(path.join(derivedNamespaceDir, 'curator'), { recursive: true });
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
 
     const recordDir = path.join(tmpDir, 'repair-record');
     // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:

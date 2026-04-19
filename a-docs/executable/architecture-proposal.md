@@ -74,7 +74,7 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 - consent template and feedback type identifiers used by consent handling
 - workflow graph schema used by workflow graph validation
 - record-folder `workflow.yaml` schema used by backward-pass planning
-- `required-readings.yaml` schema used by runtime context injection
+- per-role `required-readings.yaml` schema used by runtime context injection
 
 These dependencies are tracked and maintained via `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 

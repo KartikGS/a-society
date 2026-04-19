@@ -1,0 +1,11 @@
+role: framework-services-developer
+surfaces:
+  - path: a-docs/roles/framework-services-developer/
+    scope: "Framework Services Developer role truth, support-doc truth, startup-context file, and ownership file"
+  - path: runtime/src/framework-services/
+    scope: "Deterministic framework-service implementation truth"
+  - path: runtime/test/framework-services/
+    scope: "Framework-service verification truth"
+  - path: a-docs/records/
+    shared_with: [owner, curator, technical-architect, orchestration-developer]
+    scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

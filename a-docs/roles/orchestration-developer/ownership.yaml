@@ -1,0 +1,11 @@
+role: orchestration-developer
+surfaces:
+  - path: a-docs/roles/orchestration-developer/
+    scope: "Orchestration Developer role truth, support-doc truth, startup-context file, and ownership file"
+  - path: runtime/
+    scope: "Default ownership for runtime implementation surfaces unless a narrower override exists"
+  - path: install.sh
+    scope: "Runtime and operator installation surface"
+  - path: a-docs/records/
+    shared_with: [owner, curator, technical-architect, framework-services-developer]
+    scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

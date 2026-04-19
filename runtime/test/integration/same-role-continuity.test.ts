@@ -38,11 +38,19 @@ fs.mkdirSync(rolesDir, { recursive: true });
 fs.mkdirSync(indexDir, { recursive: true });
 fs.mkdirSync(recordDir, { recursive: true });
 fs.mkdirSync(stateDir, { recursive: true });
+fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
+fs.mkdirSync(path.join(rolesDir, 'ta'), { recursive: true });
 
 fs.writeFileSync(
-  path.join(rolesDir, 'required-readings.yaml'),
-  `universal: []\nroles:\n  owner: []\n  ta: []\n`
+  path.join(rolesDir, 'owner', 'required-readings.yaml'),
+  'role: owner\nrequired_readings: []\n'
 );
+fs.writeFileSync(
+  path.join(rolesDir, 'ta', 'required-readings.yaml'),
+  'role: ta\nrequired_readings: []\n'
+);
+fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), 'Owner role');
+fs.writeFileSync(path.join(rolesDir, 'ta', 'main.md'), 'TA role');
 fs.writeFileSync(path.join(indexDir, 'main.md'), '');
 
 // workflow: owner-intake -> ta -> owner-gate

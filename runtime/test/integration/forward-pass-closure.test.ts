@@ -48,22 +48,17 @@ async function runTest() {
   const recordPath = path.join(testDir, 'records', 'test-flow');
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
-  fs.mkdirSync(path.join(projectADocsPath, 'roles'), { recursive: true });
+  const rolesDir = path.join(projectADocsPath, 'roles');
+  fs.mkdirSync(rolesDir, { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
-
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'required-readings.yaml'), `
-universal:
-  - $A_SOCIETY_AGENTS
-roles:
-  start:
-    - $TEST_PROJECT_START_ROLE
-`);
+  fs.mkdirSync(path.join(rolesDir, 'start'), { recursive: true });
+  fs.writeFileSync(path.join(rolesDir, 'start', 'required-readings.yaml'), 'role: start\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_START_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
     `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
-    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/startrole.md\` |\n`
+    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/start/main.md\` |\n`
   );
-  fs.writeFileSync(path.join(projectADocsPath, 'roles', 'startrole.md'), "Start Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
 
   const workflowGraph = `workflow:
   name: test-flow
@@ -149,8 +144,9 @@ roles:
     const expectedNotice = '[runtime/flow] Forward pass closed via closure-artifact.md; starting improvement phase';
     const hasForwardPassNotice = operatorOut.includes(expectedNotice);
 
-    // The improvement orchestrator writes to outputStream, not operatorStream
-    const hasImprovementPrompt = assistantOut.includes('Forward pass complete');
+    // The improvement orchestrator writes its menu prompt and closure message to outputStream
+    const hasImprovementPrompt = assistantOut.includes('Enter 1, 2, or 3:');
+    const hasImprovementClosure = assistantOut.includes('[improvement] No improvement selected. Record closed.');
 
     // Verify ordering: forward-pass notice on operator stream appears before
     // improvement orchestration output on output stream (separate streams — the
@@ -159,11 +155,14 @@ roles:
     console.log("Validation:");
     console.log(`- Operator stream has forward-pass-closed notice: ${hasForwardPassNotice ? "Yes" : "No"}`);
     console.log(`- Output stream has improvement prompt: ${hasImprovementPrompt ? "Yes" : "No"}`);
+    console.log(`- Output stream has improvement closure: ${hasImprovementClosure ? "Yes" : "No"}`);
 
     assert.ok(hasForwardPassNotice,
       `Expected operator stream to contain: "${expectedNotice}"`);
     assert.ok(hasImprovementPrompt,
       "Expected output stream to contain improvement orchestrator prompt.");
+    assert.ok(hasImprovementClosure,
+      "Expected output stream to contain no-improvement closure message.");
 
     // The flow should be completed after "no improvement" selection
     const finalFlow = SessionStore.loadFlowRun()!;

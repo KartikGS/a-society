@@ -53,12 +53,13 @@ const artifactPath = path.join(tmpDir, 'test-artifact.md');
 fs.writeFileSync(artifactPath, 'Artifact content here.');
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'indexes'), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles'), { recursive: true });
+fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles', 'node-doc'), { recursive: true });
 fs.writeFileSync(
   path.join(projectRoot, 'a-docs', 'indexes', 'main.md'),
-  `| \`$TEST_NODE_DOC\` | \`test-project/a-docs/roles/node-doc.md\` |\n`
+  `| \`$TEST_NODE_DOC\` | \`test-project/a-docs/roles/node-doc/main.md\` |\n`
 );
 fs.writeFileSync(
-  path.join(projectRoot, 'a-docs', 'roles', 'node-doc.md'),
+  path.join(projectRoot, 'a-docs', 'roles', 'node-doc', 'main.md'),
   'Node-specific reading content.'
 );
 

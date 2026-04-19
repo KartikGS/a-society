@@ -30,19 +30,29 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_AGENTS` | `a-society/a-docs/agents.md` | A-Society agent orientation — entry point for all agents working on this project |
 | `$A_SOCIETY_AGENT_DOCS_GUIDE` | `a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's internal docs and Curator-maintained operator references exists — required reading for the Curator |
 | `$A_SOCIETY_ADOCS_DESIGN` | `a-society/a-docs/a-docs-design.md` | A-Society a-docs design principles — structural rules for authoring and maintaining the a-docs layer |
-| `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner.md` | A-Society Owner Agent role — authority, boundaries, and workflow-linked support-doc routing |
+| `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner/main.md` | A-Society Owner Agent role — authority, boundaries, and workflow-linked support-doc routing |
+| `$A_SOCIETY_OWNER_REQUIRED_READINGS` | `a-society/a-docs/roles/owner/required-readings.yaml` | A-Society Owner startup-context authority — machine-readable required readings for the Owner role |
+| `$A_SOCIETY_OWNER_OWNERSHIP` | `a-society/a-docs/roles/owner/ownership.yaml` | A-Society Owner ownership file — surfaces the Owner is accountable for |
 | `$A_SOCIETY_OWNER_BRIEF_WRITING` | `a-society/a-docs/roles/owner/brief-writing.md` | A-Society Owner brief-writing and constraint-writing guidance — loaded when the Owner drafts briefs or review constraints |
 | `$A_SOCIETY_OWNER_REVIEW_BEHAVIOR` | `a-society/a-docs/roles/owner/review-behavior.md` | A-Society Owner review-behavior guidance — loaded when the Owner reviews a proposed addition |
 | `$A_SOCIETY_OWNER_LOG_MANAGEMENT` | `a-society/a-docs/roles/owner/log-management.md` | A-Society Owner log-management guidance — loaded when the Owner manages the project log or files Next Priorities |
 | `$A_SOCIETY_OWNER_TA_REVIEW` | `a-society/a-docs/roles/owner/ta-advisory-review.md` | A-Society Owner TA advisory and integration-gate review guidance — loaded when the Owner reviews Technical Architect advisories or TA-reviewed integration results |
 | `$A_SOCIETY_OWNER_CLOSURE` | `a-society/a-docs/roles/owner/forward-pass-closure.md` | A-Society Owner forward-pass closure guidance — loaded when the Owner closes a forward pass |
-| `$A_SOCIETY_CURATOR_ROLE` | `a-society/a-docs/roles/curator.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
+| `$A_SOCIETY_CURATOR_ROLE` | `a-society/a-docs/roles/curator/main.md` | A-Society Curator Agent role — maintenance, migration, and pattern distillation |
+| `$A_SOCIETY_CURATOR_REQUIRED_READINGS` | `a-society/a-docs/roles/curator/required-readings.yaml` | A-Society Curator startup-context authority — machine-readable required readings for the Curator role |
+| `$A_SOCIETY_CURATOR_OWNERSHIP` | `a-society/a-docs/roles/curator/ownership.yaml` | A-Society Curator ownership file — surfaces the Curator is accountable for |
 | `$A_SOCIETY_CURATOR_IMPL_PRACTICES` | `a-society/a-docs/roles/curator/implementation-practices.md` | A-Society Curator proposal and implementation practices — loaded when the Curator prepares a proposal or implements approved changes |
-| `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `a-society/a-docs/roles/technical-architect.md` | A-Society Technical Architect role — scoping and planning the executable layer |
+| `$A_SOCIETY_TECHNICAL_ARCHITECT_ROLE` | `a-society/a-docs/roles/technical-architect/main.md` | A-Society Technical Architect role — scoping and planning the executable layer |
+| `$A_SOCIETY_TECHNICAL_ARCHITECT_REQUIRED_READINGS` | `a-society/a-docs/roles/technical-architect/required-readings.yaml` | A-Society Technical Architect startup-context authority — machine-readable required readings for the Technical Architect role |
+| `$A_SOCIETY_TECHNICAL_ARCHITECT_OWNERSHIP` | `a-society/a-docs/roles/technical-architect/ownership.yaml` | A-Society Technical Architect ownership file — surfaces the Technical Architect is accountable for |
 | `$A_SOCIETY_TA_ADVISORY_STANDARDS` | `a-society/a-docs/roles/technical-architect/advisory-standards.md` | A-Society Technical Architect advisory standards — loaded when the TA produces an advisory or integration review |
-| `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE` | `a-society/a-docs/roles/framework-services-developer.md` | A-Society Framework Services Developer role — deterministic executable framework-service implementation scope and escalation |
+| `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_ROLE` | `a-society/a-docs/roles/framework-services-developer/main.md` | A-Society Framework Services Developer role — deterministic executable framework-service implementation scope and escalation |
+| `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_REQUIRED_READINGS` | `a-society/a-docs/roles/framework-services-developer/required-readings.yaml` | A-Society Framework Services Developer startup-context authority — machine-readable required readings for the Framework Services Developer role |
+| `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_OWNERSHIP` | `a-society/a-docs/roles/framework-services-developer/ownership.yaml` | A-Society Framework Services Developer ownership file — surfaces the Framework Services Developer is accountable for |
 | `$A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE` | `a-society/a-docs/roles/framework-services-developer/implementation-discipline.md` | A-Society Framework Services Developer implementation discipline — completion-report and co-maintenance guidance |
-| `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE` | `a-society/a-docs/roles/orchestration-developer.md` | A-Society Orchestration Developer role — runtime orchestration, operator-surface ownership, and escalation |
+| `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE` | `a-society/a-docs/roles/orchestration-developer/main.md` | A-Society Orchestration Developer role — runtime orchestration, operator-surface ownership, and escalation |
+| `$A_SOCIETY_ORCHESTRATION_DEVELOPER_REQUIRED_READINGS` | `a-society/a-docs/roles/orchestration-developer/required-readings.yaml` | A-Society Orchestration Developer startup-context authority — machine-readable required readings for the Orchestration Developer role |
+| `$A_SOCIETY_ORCHESTRATION_DEVELOPER_OWNERSHIP` | `a-society/a-docs/roles/orchestration-developer/ownership.yaml` | A-Society Orchestration Developer ownership file — surfaces the Orchestration Developer is accountable for |
 | `$A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE` | `a-society/a-docs/roles/orchestration-developer/implementation-discipline.md` | A-Society Orchestration Developer implementation discipline — runtime implementation and operator-surface co-maintenance guidance |
 | `$A_SOCIETY_EXECUTABLE` | `a-society/a-docs/executable/main.md` | A-Society executable documentation entry point — orientation to the standing executable-layer doc set |
 | `$A_SOCIETY_EXECUTABLE_PROPOSAL` | `a-society/a-docs/executable/architecture-proposal.md` | Standing executable design reference — runtime-root model, role split, capability inventory, and co-maintenance surfaces |
@@ -53,24 +63,22 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `a-society/runtime/HANDOFF-CONTRACT.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
-| `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner.md` | Ready-made Owner role template for any project |
+| `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner/main.md` | Ready-made Owner role template for any project |
 | `$GENERAL_OWNER_BRIEF_WRITING` | `a-society/general/roles/owner/brief-writing.md` | Ready-made Owner brief-writing and constraint-writing support doc template |
 | `$GENERAL_OWNER_REVIEW_BEHAVIOR` | `a-society/general/roles/owner/review-behavior.md` | Ready-made Owner contribution-review support doc template |
 | `$GENERAL_OWNER_LOG_MANAGEMENT` | `a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
 | `$GENERAL_OWNER_TA_REVIEW` | `a-society/general/roles/owner/ta-advisory-review.md` | Ready-made Owner advisory and integration-gate review support doc template |
 | `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
-| `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator.md` | Ready-made Curator role template for any project |
+| `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator/main.md` | Ready-made Curator role template for any project |
 | `$GENERAL_CURATOR_IMPL_PRACTICES` | `a-society/general/roles/curator/implementation-practices.md` | Ready-made Curator proposal, implementation, and registration-practices support doc template |
-| `$GENERAL_TA_ROLE` | `a-society/general/roles/technical-architect.md` | Ready-made Technical Architect (advisory-producing) role template — authority, boundaries, and workflow-linked support-doc routing |
+| `$GENERAL_TA_ROLE` | `a-society/general/roles/technical-architect/main.md` | Ready-made Technical Architect (advisory-producing) role template — authority, boundaries, and workflow-linked support-doc routing |
 | `$GENERAL_TA_ADVISORY_STANDARDS` | `a-society/general/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_ADOCS_DESIGN` | `a-society/general/instructions/a-docs-design.md` | How to create and maintain an a-docs design-principles file for any project |
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
-| `$INSTRUCTION_REQUIRED_READINGS` | `a-society/general/instructions/roles/required-readings.md` | How to maintain required-readings.yaml — authority maintenance protocol |
-| `$INSTRUCTION_OWNERSHIP` | `a-society/general/instructions/roles/ownership.md` | How to create and maintain a surface ownership registry — coverage validation and scoped delegation |
-| `$A_SOCIETY_REQUIRED_READINGS` | `a-society/a-docs/roles/required-readings.yaml` | A-Society project required readings authority — single machine-readable source of truth |
-| `$A_SOCIETY_OWNERSHIP` | `a-society/a-docs/roles/ownership.yaml` | A-Society surface ownership registry — maps every project surface to accountable role(s) for routing and validation |
+| `$INSTRUCTION_REQUIRED_READINGS` | `a-society/general/instructions/roles/required-readings.md` | How to maintain per-role `required-readings.yaml` files — startup-context authority |
+| `$INSTRUCTION_OWNERSHIP` | `a-society/general/instructions/roles/ownership.md` | How to maintain per-role `ownership.yaml` files — distributed surface accountability |
 | `$INSTRUCTION_ARCHITECTURE` | `a-society/general/instructions/project-information/architecture.md` | How to create an architecture document for any project |
 | `$INSTRUCTION_LOG` | `a-society/general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |

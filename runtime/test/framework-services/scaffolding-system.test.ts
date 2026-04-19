@@ -41,8 +41,8 @@ function seedSourceFile(relativePath: string, content: string): void {
   fs.writeFileSync(full, content, 'utf8');
 }
 
-seedSourceFile('general/roles/owner.md', '# Owner\n\nOwner role content.\n');
-seedSourceFile('general/roles/curator.md', '# Curator\n\nCurator role content.\n');
+seedSourceFile('general/roles/owner/main.md', '# Owner\n\nOwner role content.\n');
+seedSourceFile('general/roles/curator/main.md', '# Curator\n\nCurator role content.\n');
 seedSourceFile('general/thinking/main.md', '# Thinking\n\nThinking content.\n');
 
 console.log('\nscaffolding-system');
@@ -86,6 +86,18 @@ test('renderStub: handles TEMPLATE- prefix in filename', () => {
   assert.ok(content.startsWith('# Template:'), `Expected "# Template:" heading, got: ${content.slice(0, 50)}`);
 });
 
+test('renderStub: creates role required-readings YAML stub', () => {
+  const content = renderStub({
+    path: 'roles/owner/required-readings.yaml',
+    scaffold: 'stub',
+    source_path: 'general/instructions/roles/required-readings.md',
+  });
+  assert.strictEqual(
+    content,
+    '# Stub — fill in per general/instructions/roles/required-readings.md\nrole: owner\nrequired_readings: []\n'
+  );
+});
+
 // ── scaffold — stub entries ───────────────────────────────────────────────────
 
 test('scaffold: creates a stub file at the correct a-docs/ path', () => {
@@ -117,10 +129,10 @@ test('scaffold: creates parent directories for nested stub paths', () => {
 test('scaffold: copies source file verbatim to target path', () => {
   const projectRoot = path.join(TEMP_BASE, 'copy-test');
   const entries = [
-    { path: 'roles/owner.md', scaffold: 'copy', source_path: 'general/roles/owner.md' },
+    { path: 'roles/owner/main.md', scaffold: 'copy', source_path: 'general/roles/owner/main.md' },
   ];
   const result = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
-  const target = path.join(projectRoot, 'a-docs', 'roles', 'owner.md');
+  const target = path.join(projectRoot, 'a-docs', 'roles', 'owner', 'main.md');
   assert.strictEqual(result.created.length, 1);
   assert.ok(fs.existsSync(target));
   assert.strictEqual(fs.readFileSync(target, 'utf8'), '# Owner\n\nOwner role content.\n');
@@ -129,7 +141,7 @@ test('scaffold: copies source file verbatim to target path', () => {
 test('scaffold: fails gracefully when copy source does not exist', () => {
   const projectRoot = path.join(TEMP_BASE, 'copy-missing-test');
   const entries = [
-    { path: 'roles/missing.md', scaffold: 'copy', source_path: 'general/roles/does-not-exist.md' },
+    { path: 'roles/missing/main.md', scaffold: 'copy', source_path: 'general/roles/does-not-exist/main.md' },
   ];
   const result = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   assert.strictEqual(result.failed.length, 1);

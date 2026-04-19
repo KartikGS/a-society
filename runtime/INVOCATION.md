@@ -82,7 +82,7 @@ Improvement-phase menus use the same browser input path. Menu text appears in th
 
 ### Required reading is loaded once at startup
 
-When a session begins, the runtime loads all required-reading files from `a-docs/roles/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
+When a session begins, the runtime resolves the active role to kebab-case and loads that role's file from `a-docs/roles/<role-id>/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
 
 ### Fresh Owner bootstrap
 

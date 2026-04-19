@@ -25,17 +25,18 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-context-injectio
 const projectDir = path.join(tmpDir, 'a-society');
 fs.mkdirSync(path.join(projectDir, 'a-docs', 'roles'), { recursive: true });
 fs.mkdirSync(path.join(projectDir, 'a-docs', 'indexes'), { recursive: true });
+fs.mkdirSync(path.join(projectDir, 'a-docs', 'roles', 'owner'), { recursive: true });
 
 fs.writeFileSync(
-  path.join(projectDir, 'a-docs', 'roles', 'required-readings.yaml'),
-  `universal:\n  - $TEST_AGENTS\n  - $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT\nroles:\n  owner:\n    - $TEST_OWNER_ROLE\n`
+  path.join(projectDir, 'a-docs', 'roles', 'owner', 'required-readings.yaml'),
+  `role: owner\nrequired_readings:\n  - $TEST_AGENTS\n  - $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT\n  - $TEST_OWNER_ROLE\n`
 );
 fs.writeFileSync(
   path.join(projectDir, 'a-docs', 'indexes', 'main.md'),
-  `| \`$TEST_AGENTS\` | \`a-society/a-docs/agents.md\` |\n| \`$TEST_OWNER_ROLE\` | \`a-society/a-docs/roles/owner.md\` |\n`
+  `| \`$TEST_AGENTS\` | \`a-society/a-docs/agents.md\` |\n| \`$TEST_OWNER_ROLE\` | \`a-society/a-docs/roles/owner/main.md\` |\n`
 );
 fs.writeFileSync(path.join(projectDir, 'a-docs', 'agents.md'), 'Agent orientation');
-fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner.md'), 'Owner role doc');
+fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner', 'main.md'), 'Owner role doc');
 fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
 
 test('buildContextBundle: contains role announcement, date, handoff contract, and required-reading files', () => {

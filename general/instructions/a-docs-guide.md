@@ -55,7 +55,7 @@ Use the file's `$VARIABLE_NAME` from the project index when referencing it — n
 Example entry:
 
 ```markdown
-### `roles/owner.md` — `$[PROJECT]_OWNER_ROLE`
+### `roles/owner/main.md` — `$[PROJECT]_OWNER_ROLE`
 
 **Why it exists:** [One sentence — the specific gap this file fills.]
 
@@ -85,7 +85,7 @@ Name it `a-docs-guide.md`.
 
 Register it in the project index as `$[PROJECT]_AGENT_DOCS_GUIDE`.
 
-Add it to the Curator role's required reading — not to `agents.md`.
+Add it to the Curator role's `roles/curator/required-readings.yaml` — not to `agents.md`.
 
 ---
 
