@@ -2,17 +2,19 @@
 
 ## Status Vocabulary
 
+This protocol covers both proposal-bearing and direct-authority Owner/Curator loops. Direct-authority paths skip the proposal/review states and move from `BRIEFED` to `IN_PROGRESS` when the workflow plan or Owner brief explicitly authorizes direct Curator execution.
+
 All agents use exactly these tokens to describe the state of a work item. Natural-language state descriptions are not permitted in conversation artifacts.
 
 | Token | Meaning | Valid prior states | Valid next states |
 |---|---|---|---|
-| `BRIEFED` | Owner has written a briefing for the Curator; Curator has not yet acknowledged | `NO_ACTIVE_ITEM` | `DRAFT` |
+| `BRIEFED` | Owner has written a briefing for the Curator; Curator has not yet acknowledged | `NO_ACTIVE_ITEM` | `DRAFT`, `IN_PROGRESS` |
 | `DRAFT` | Curator has acknowledged the briefing and is preparing a proposal | `BRIEFED` | `PENDING_REVIEW` |
 | `PENDING_REVIEW` | Submitted to Owner; awaiting decision | `DRAFT`, `REVISE` | `APPROVED`, `REVISE`, `REJECTED` |
 | `APPROVED` | Owner approved; Curator may begin implementation | `PENDING_REVIEW` | `IN_PROGRESS` |
 | `REVISE` | Owner requests revision; Curator must update and resubmit | `PENDING_REVIEW` | `PENDING_REVIEW` |
 | `REJECTED` | Owner declined; item is closed | `PENDING_REVIEW` | — (terminal) |
-| `IN_PROGRESS` | Curator is implementing the approved change | `APPROVED` | `REGISTERED` |
+| `IN_PROGRESS` | Curator is implementing the active change | `BRIEFED`, `APPROVED` | `REGISTERED` |
 | `REGISTERED` | Implementation complete; indexes updated | `IN_PROGRESS` | `PUBLISHED` (if update report triggered), or terminal |
 | `PUBLISHED` | Framework update report approved and published | `REGISTERED` | — (terminal) |
 | `NO_ACTIVE_ITEM` | No work item currently in this artifact | — | `DRAFT` |
@@ -34,7 +36,7 @@ The `owner-to-curator-brief.md` artifact must contain all mandatory fields from 
 
 A briefing missing the Agreed Change or Scope fields is malformed. The Curator must not begin drafting until those fields are present.
 
-A briefing cannot substitute for a Phase 2 decision artifact — pre-approval language in a briefing does not authorize implementation. The Curator must not begin implementation without an explicit `APPROVED` status in a Phase 2 decision artifact.
+A briefing authorizes direct implementation only when the workflow plan or the briefing itself explicitly marks the item as Curator direct authority. Otherwise the Curator must not begin implementation without an explicit `APPROVED` status in the Owner decision artifact.
 
 ### Curator → Owner (Phases 1 and 4)
 The `curator-to-owner.md` artifact must contain all mandatory fields from `TEMPLATE-curator-to-owner.md`:
@@ -50,7 +52,7 @@ The `curator-to-owner.md` artifact must contain all mandatory fields from `TEMPL
 
 A submission missing any mandatory field is malformed. The Owner must not issue a decision on a malformed submission — return it as `REVISE` with the missing fields named.
 
-### Owner → Curator (Phase 2)
+### Owner → Curator (Decision node only)
 The `owner-to-curator.md` artifact must contain all mandatory fields from `TEMPLATE-owner-to-curator.md`:
 - Subject (must match the corresponding `curator-to-owner.md`)
 - Status: `APPROVED`, `REVISE`, or `REJECTED`
@@ -68,8 +70,9 @@ In runtime-managed sessions, the runtime injects the handoff contract directly. 
 
 ## Receiver Confirmation
 
-**Curator receiving an Owner briefing:** Before beginning Phase 1, the Curator must state in the session:
-- "Briefing acknowledged. Beginning proposal for [Subject]."
+**Curator receiving an Owner briefing:** Before beginning work, the Curator must state in the session:
+- If the path is proposal-bearing: "Briefing acknowledged. Beginning proposal for [Subject]."
+- If the path is direct authority: "Briefing acknowledged. Beginning direct implementation for [Subject]."
 
 **Curator receiving an Owner decision:** Before acting, the Curator must state in the session:
 - If APPROVED: "Acknowledged. Beginning implementation of [Subject]."

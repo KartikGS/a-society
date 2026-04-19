@@ -31,10 +31,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_VERSION` | `a-society/VERSION.md` | A-Society's current framework version — single source of truth for the vMAJOR.MINOR version stamp |
 | `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when `general/` or `agents/` changes require a-docs review |
 | **Workflows** | | |
-| `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.md` | A-Society workflow directory — routing index for all permanent A-Society workflows; universal session routing rules |
-| `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` | `a-society/a-docs/workflow/multi-domain-development.yaml` | A-Society multi-domain workflow definition — single flow with parallel tracks across framework, executable implementation, and related roles |
-| `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV` | `a-society/a-docs/workflow/framework-development.yaml` | A-Society framework workflow definition — node contracts, transitions, invariants, and escalation for the documentation and library maintenance loop |
-| `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` | `a-society/a-docs/workflow/executable-development.yaml` | A-Society executable workflow definition — executable design gate, framework-services/orchestration implementation, validation, registration, and closure |
+| `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.yaml` | A-Society canonical workflow definition — the single permanent graph for framework, executable, and coordinated multi-role work |
 | **Instructions** | | |
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `a-society/general/instructions/a-society-version-record.md` | How to create and maintain an A-Society version record in any initialized project |
 | `$INSTRUCTION_TOOLING` | `a-society/general/instructions/tooling.md` | How to create a tooling document for any project |

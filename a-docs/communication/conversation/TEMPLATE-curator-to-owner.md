@@ -43,7 +43,7 @@
 
 ## Update Report Draft *(Proposals only — include when the proposed change is likely to qualify per `$A_SOCIETY_UPDATES_PROTOCOL`; omit otherwise)*
 
-[The draft update report, formatted per `$A_SOCIETY_UPDATES_TEMPLATE`. The Owner reviews and approves this draft as part of the Phase 2 decision alongside the content change — they are not reviewed separately.]
+[The draft update report, formatted per `$A_SOCIETY_UPDATES_TEMPLATE`. The Owner reviews and approves this draft as part of the same decision node as the content change — they are not reviewed separately.]
 
 ---
 

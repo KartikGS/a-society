@@ -67,6 +67,9 @@ export function titleFromPath(entryPath: string): string {
  */
 export function renderStub(entry: ManifestEntry): string {
   if (entry.path.endsWith('.yaml') || entry.path.endsWith('.yml')) {
+    if (entry.path === 'workflow/main.yaml' || entry.path === 'workflow/main.yml') {
+      return `# Stub — fill in per ${entry.source_path}\nworkflow:\n  name: <project workflow>\n  summary: <one-line workflow summary>\n  nodes: []\n  edges: []\n`;
+    }
     const roleMatch = entry.path.match(/^roles\/([^/]+)\/(required-readings|ownership)\.ya?ml$/);
     if (roleMatch) {
       const [, roleId, kind] = roleMatch;

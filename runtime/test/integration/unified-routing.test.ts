@@ -41,7 +41,9 @@ async function runTest() {
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
   const rolesDir = path.join(projectADocsPath, 'roles');
+  const workflowDir = path.join(projectADocsPath, 'workflow');
   fs.mkdirSync(rolesDir, { recursive: true });
+  fs.mkdirSync(workflowDir, { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
   fs.mkdirSync(path.join(rolesDir, 'start'), { recursive: true });
   fs.mkdirSync(path.join(rolesDir, 'next'), { recursive: true });
@@ -55,6 +57,19 @@ async function runTest() {
 `);
   fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
   fs.writeFileSync(path.join(rolesDir, 'next', 'main.md'), "Next Role Doc");
+  fs.writeFileSync(path.join(workflowDir, 'main.yaml'), `workflow:
+  name: canonical-test-flow
+  nodes:
+    - id: start
+      role: 'start'
+      guidance:
+        - Use the canonical workflow contract.
+    - id: next
+      role: 'next'
+  edges:
+    - from: start
+      to: next
+`);
 
   const workflowGraph = `workflow:
   name: test-flow
@@ -149,6 +164,10 @@ async function runTest() {
         m.content.includes('No handoff block found')
       )
     );
+    const canonicalGuidanceInjected = history.some(m =>
+      m.role === 'user' &&
+      m.content.includes('Use the canonical workflow contract.')
+    );
 
     const operatorOut = operatorChunks.join('');
     const assistantOut = assistantChunks.join('');
@@ -165,6 +184,7 @@ async function runTest() {
     console.log(`- Node 'start' completed: ${updatedFlow.completedNodes.includes('start') ? "Yes" : "No"}`);
     console.log(`- Node 'next' is active: ${updatedFlow.activeNodes.includes('next') ? "Yes" : "No"}`);
     console.log(`- Repair message injected into history: ${repairInjected ? "Yes" : "No"}`);
+    console.log(`- Canonical node guidance injected from main workflow: ${canonicalGuidanceInjected ? "Yes" : "No"}`);
     console.log(`- Operator stream has handoff notice: ${hasHandoffNotice ? "Yes" : "No"}`);
     console.log(`- Operator stream has role.active notice: ${hasRoleActiveNotice ? "Yes" : "No"}`);
     console.log(`- Operator stream has repair notice: ${hasRepairNotice ? "Yes" : "No"}`);
@@ -173,6 +193,7 @@ async function runTest() {
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed.");
     assert.ok(updatedFlow.activeNodes.includes('next'), "Expected node 'next' to be active.");
     assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
+    assert.ok(canonicalGuidanceInjected, "Expected node contract guidance to be resolved from a-docs/workflow/main.yaml.");
     assert.ok(hasHandoffNotice, "Expected operator stream to contain a handoff notice.");
     assert.ok(hasRoleActiveNotice, "Expected operator stream to contain a role.active notice.");
     assert.ok(hasRepairNotice, "Expected operator stream to contain a repair notice.");

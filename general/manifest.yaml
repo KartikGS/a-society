@@ -184,8 +184,8 @@ files:
 
   # ── Workflow ──────────────────────────────────────────────────────────────────
 
-  - path: workflow/main.md
-    description: "Workflow — phases, handoffs, invariants, and escalation rules for work done in this project"
+  - path: workflow/main.yaml
+    description: "Canonical workflow definition — nodes, handoffs, invariants, escalation rules, and closure model for work done in this project"
     required: true
     scaffold: stub
     source_path: general/instructions/workflow/main.md

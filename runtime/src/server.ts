@@ -10,10 +10,10 @@ import { PassThrough } from 'node:stream';
 import { WebSocketServer, WebSocket } from 'ws';
 import { TelemetryManager } from './observability.js';
 import { SessionStore } from './store.js';
-import { FlowOrchestrator, parseWorkflow } from './orchestrator.js';
+import { FlowOrchestrator } from './orchestrator.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
-import { findWorkflowFilePath } from './workflow-file.js';
+import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
 import type { FlowRun, OperatorEvent } from './types.js';
 
 interface ProjectSummary {
@@ -111,7 +111,7 @@ function resolveCurrentWorkflow(flowRun: FlowRun | null): any | null {
   const workflowPath = findWorkflowFilePath(flowRun.recordFolderPath);
   if (!workflowPath) return null;
   try {
-    return parseWorkflow(workflowPath).workflow;
+    return resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace);
   } catch {
     return null;
   }

@@ -29,6 +29,31 @@ A workflow definition converts implicit process knowledge into explicit, referen
 
 ---
 
+## Surface-Driven Workflow Design
+
+Design workflows from **touched permanent surfaces**, not from inherited phase loops.
+
+The first workflow question is:
+
+> "Which permanent surfaces will this flow change, and which roles own their truth?"
+
+Start from the smallest legal path:
+
+`Owner intake -> touched-surface work -> Owner closure`
+
+Then add nodes only when they contribute unique value that this minimal path cannot provide safely:
+
+- **Design or advisory node** — when standing design does not already govern the work, when boundaries or contracts are changing, or when multiple implementers need a shared design before execution
+- **Independent approval or review node** — when the work changes shared promises, shared-library surfaces, another role's owned truth surfaces, or any other high-impact area where the same role should not both authorize and verify its own change
+- **Registration or stewardship node** — when a separate role owns indexes, guides, update reports, version records, or similar stewardship surfaces that must be updated in-band with the work
+- **Parallel tracks and joins** — when multiple touched-surface tracks are independent enough to run concurrently and later converge
+
+A workflow node that adds no unique decision value, execution value, or closure value should not exist.
+
+This keeps workflows structurally complete without forcing unnecessary gates into every flow.
+
+---
+
 ## The Workflow as a Graph
 
 A workflow is a **graph**: a named set of nodes connected by transitions.
@@ -58,7 +83,7 @@ A workflow is a **graph**: a named set of nodes connected by transitions.
 
 **Unit-of-work ID format:** `[short-slug]-[sequential-number]` (e.g., `acme-001`, `rebrand-003`). The slug is a human-readable label for the unit of work; the number disambiguates across time. The project defines its own slug vocabulary. In single-instance workflows, the unit-of-work ID is optional.
 
-The simplest workflow — a linear sequence of nodes, running once at a time — is a linear graph with a single active instance. It is the default case. Most of what follows describes how to build that case. Extended patterns (concurrent instances, branching, multiple graphs) are described at the end of this document.
+The simplest workflow — a linear sequence of nodes, running once at a time — is a linear graph with a single active instance. It is the default case. Most of what follows describes how to build that case. Extended patterns (concurrent instances and branching) are described at the end of this document.
 
 ---
 
@@ -66,7 +91,7 @@ The simplest workflow — a linear sequence of nodes, running once at a time —
 
 The **Owner** is both the universal entry point and the terminal node for every workflow.
 
-**Entry:** users always begin by assigning the Owner role and pointing the agent at `agents.md`. After loading context (which includes the workflow routing surface and relevant workflow definitions), the Owner presents the available workflows and helps the user decide what to work on. The Owner routes work into workflows by creating the trigger input and directing the work to the correct entry node.
+**Entry:** users always begin by assigning the Owner role and pointing the agent at `agents.md`. After loading context (which includes the canonical workflow definition and related routing guidance), the Owner identifies the touched surfaces, scopes the active path, and routes work into the correct entry node.
 
 **Terminal:** every workflow surfaces back to the Owner on completion. The closing role in a workflow does not silently close — it hands the result to the Owner. The Owner acknowledges completion, logs it, and determines whether any follow-up is needed. This closed loop ensures the Owner is always aware of what has been finished.
 
@@ -79,7 +104,7 @@ This means:
 
 **Exception: delegated-authority flows.** A project may designate certain flow types as delegated-authority — where a specific role has standing authority to close without Owner terminal confirmation. For these flows, that role serves as the terminal node. The scope of delegated-authority flows must be explicitly bounded in the workflow document itself: direction decisions, library-level additions, and structural changes may not fall within them. The Owner-as-terminal principle applies to all other flows.
 
-Every workflow definition should include a **one-line summary** suitable for the Owner to present during workflow selection. This summary is how users discover what workflows are available without reading the full workflow definition.
+Every workflow definition should include a **one-line summary** suitable for the Owner to present during routing. This summary lets the Owner explain the workflow quickly without re-reading the full graph.
 
 ### Routing means routing, not doing
 
@@ -123,7 +148,7 @@ The agent authors every artifact regardless of how much of the underlying work o
 
 **Structural rule:** The entry node of every workflow carries the `Human-collaborative` field. The direction source is always the human — the human identifies the need, direction change, or trigger that initiates the flow. The entry node's assigned agent (typically the Owner) is always the interface for this initiation. No other nodes carry this field by default; add it to a node only when the human must actively contribute content, decisions, or direction within that node.
 
-Typical nodes in a project with multi-role execution: intake → planning → implementation → verification → closure. The names and count will vary by project type.
+Common node types in a multi-role project are: intake, optional design, domain execution, optional independent review, optional registration/stewardship, and closure. The names and count will vary by project type because they should be derived from touched surfaces and gate triggers, not copied from a default loop.
 
 ### 2. Transitions (mandatory)
 
@@ -163,7 +188,7 @@ When does an agent stop and ask rather than proceed? Define explicit conditions:
 
 What happens when the forward pass ends? Every workflow definition must name a forward pass closure step — the terminal node of the forward pass, which runs before the backward pass begins. This step is where the workflow consolidates its closure obligations: updating the project log, invoking any required tooling, and verifying that all approved tasks have been executed, not merely approved. Scattering these obligations across role documents and coordination protocols means they are invisible at the point they are needed; naming a closure step makes them visible and checkable.
 
-The two universal rules governing forward pass closure are stated in the project's workflow routing index (see the "Forward Pass Closure" section). Every workflow's closure step inherits those rules without restating them.
+The workflow definition itself should carry the project's forward-pass closure rules. Do not split universal closure rules into a separate routing layer.
 
 ### 6. Backward Pass (mandatory)
 
@@ -193,8 +218,7 @@ A workflow area is usually a folder. The canonical structure is:
 
 ```
 workflow/
-├── main.md              ← routing index or human-facing entry point
-├── [workflow-name].yaml ← canonical workflow definition(s)
+├── main.yaml            ← canonical workflow definition
 ├── plans/
 │   └── main.md          ← how plans are structured and templated
 ├── reports/
@@ -218,7 +242,7 @@ Do not create sub-folders preemptively. If a project has no requirements artifac
 Give the workflow a name. Decide whether it runs once at a time (single-instance) or may have multiple traversals running simultaneously (multi-instance). If multi-instance, define the unit-of-work ID slug vocabulary the project will use.
 
 **Step 2 — Define the nodes.**
-List every node that a unit of work passes through. For each node: name it, assign an owner role, list required readings, define its inputs and outputs, define the work performed there, note whether the node requires human collaboration (see the Human-Collaborative Node Pattern in Section 1), and record any node-specific notes. The entry node always carries the `Human-collaborative` field as a structural rule. If a node has no owner, it is not a node — it is a gap.
+List every node that a unit of work passes through. Derive this list from the touched permanent surfaces and the gates the work actually needs. For each node: name it, assign an owner role, list required readings, define its inputs and outputs, define the work performed there, note whether the node requires human collaboration (see the Human-Collaborative Node Pattern in Section 1), and record any node-specific notes. The entry node always carries the `Human-collaborative` field as a structural rule. If a node has no owner, it is not a node — it is a gap.
 
 **Step 3 — Define transitions.**
 For each outgoing transition from each node, define: the transition condition (when does the transition fire), the artifact that carries it, what that artifact must contain, and what the receiving role checks before acting.
@@ -230,13 +254,13 @@ What rules apply to all work in this project, regardless of node? Write them as 
 Define what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note." Add node-specific escalation notes only when a node truly needs special handling.
 
 **Step 6 — Define the forward pass closure step.**
-Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Do not restate the two universal rules (current-flow scoping and synthesis-is-terminal) — reference the workflow routing index instead.
+Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Keep the closure rules in the workflow definition itself rather than splitting them into a separate routing surface.
 
 **Step 7 — Define the backward pass.**
 Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
 
 **Step 8 — Identify sub-documents.**
-What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the workflow routing surface.
+What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the canonical workflow definition or the surrounding project indexes as appropriate.
 
 **Step 9 — Cut what does not belong.**
 A workflow definition that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files. A role document that enumerates node-triggered "before X, read Y" cues has drifted in the other direction; move those cues back into the workflow.
@@ -247,7 +271,7 @@ A workflow definition that describes role responsibilities, vision, or tool choi
 
 When routing incoming work into an existing workflow, the Owner determines the proportional path through the graph — not all work warrants the full pipeline. For the five complexity axes, the three-tier routing model, and the intake routing procedure: see `$INSTRUCTION_WORKFLOW_COMPLEXITY`.
 
-This instruction defines the reusable model. A mature project should usually instantiate it in a project-local operational complexity document and point live workflow docs to that local document, rather than sending agents directly to the general instruction during execution.
+This instruction defines the reusable model. A mature project should usually instantiate it in a project-local operational complexity document and have the canonical workflow definition reference that local document, rather than sending agents directly to the general instruction during execution.
 
 ---
 
@@ -262,7 +286,7 @@ For the complete modification procedure, the single-graph model, evaluative prin
 ## Format Rules
 
 - **Process-first, not role-first.** Describe what happens to work, not what roles do. Roles are described in role documents.
-- **One-line summary at the top.** Every workflow document should begin with a one-line summary of the workflow — what kind of work it processes, stated in one sentence. The Owner reads this to present the workflow options at routing time. Without a summary, the Owner must read and synthesize the full workflow to describe it, which wastes context.
+- **One-line summary at the top.** Every workflow definition should carry a one-line summary — typically in the YAML `summary` field — stating what kind of work it processes. Without a summary, the Owner must read and synthesize the full workflow to describe it, which wastes context.
 - **Node-first structure.** Organize the workflow around named node contracts with explicit outgoing transitions. Number nodes only when order itself carries meaning; do not rely on phase numbering as the primary model.
 - **Named invariants.** Each invariant should have a short name (e.g., "Traceability Invariant") so agents can reference it precisely in transitions and reports.
 - **Instance-scoped references.** In multi-instance workflows only: every artifact reference (transition artifacts, status tokens, pre-replacement checks) must include the unit-of-work ID so that artifacts from concurrent instances do not collide. Single-instance workflows do not need unit-of-work IDs.
@@ -303,41 +327,13 @@ When the same workflow runs N times simultaneously — parallel client engagemen
 
 **Parallel fork and join:** a parallel fork fires multiple outgoing transitions simultaneously — work continues in parallel branches without waiting for the other branches to complete. A join node waits for all required incoming transitions before proceeding — partial arrival is a waiting state, not a transition condition. Use parallel forks when independent work can run concurrently and must be synchronized before the workflow continues. Define at the join node exactly what constitutes "all required inputs."
 
-### Multiple distinct workflows
-
-When the project has more than one workflow — a setup workflow and an ongoing execution workflow, for example — define each as a separate named graph with its own entry node and terminal node. Each workflow surfaces back to the Owner on completion; the Owner is the cross-workflow routing layer, deciding what to trigger next. Workflows do not hand off directly to each other.
-
-#### Index-based routing
-
-When a project maintains two or more **permanent, distinct execution loops** — each with its own ongoing operational cadence, distinct node sequence, and distinct role composition — organize them using an index-based structure:
-
-1. Define each workflow as its own named file in `workflow/` (for example, `workflow/[name].yaml`).
-2. Convert `workflow/main.md` into a **routing index**: a lightweight file that names each workflow, provides a one-line summary, and links to its file.
-3. Register each workflow file in the project's file path index with its own variable name.
-4. Place any rules that apply universally across all of the project's workflows — particularly routing guidance and workflow-selection cues — in the routing index, not duplicated in each workflow file.
-
-**When to use this structure:**
-- Two or more distinct workflow types exist simultaneously and are both active
-- Each represents a permanent, ongoing cadence (not a one-off, setup, or temporary process)
-- The workflows are structurally distinct enough that a single `main.md` would force agents to read irrelevant material to reach the workflow governing their current work
-
-**When not to use this structure:**
-- Only one workflow exists (a workflow with conditional branching is not "multiple workflows")
-- The second workflow is transient — a one-time setup or initialization workflow does not warrant an index structure
-
-**Routing index format:** The index is not a summary of each workflow — it gives the Owner exactly what they need to present the available workflows and route work: the workflow name, a one-line summary, a file reference, an optional "use it when" cue, and any universal cross-workflow rules. It does not duplicate node definitions, transitions, or invariants from the workflow files.
-
-**Variable naming:** When registering multiple workflows, use a naming convention that makes the role of each variable clear (e.g., `$PROJECT_WORKFLOW` for the index, `$PROJECT_WORKFLOW_[NAME]` for each workflow file).
-
-**Cross-reference updates:** When splitting a single `workflow/main.md` into an index plus workflow files, audit all existing references to the original variable (e.g., `$PROJECT_WORKFLOW`) for section citations (e.g., *"See `$PROJECT_WORKFLOW` 'Use it when'"*). Determine whether the cited section moves to a specific workflow file or belongs in the index. Update references accordingly, or ensure the index owns the cited content so existing references remain valid.
-
 ### Multi-domain parallel-track flows (single workflow)
 
 When **one unit of work** spans **multiple domains or role types** (e.g., documentation, implementation track A, implementation track B) that can proceed **in parallel until a synchronization point**, model it as **a single workflow graph** with **parallel forks and at least one join** — not as separate workflows chosen because the work "touches more than one area."
 
 **What this is:** One instance, one workflow name, one record of the work. Branches run concurrently where transitions are independent; a join node waits for all required inputs before the workflow continues toward closure.
 
-**What this is not:** It is not the same as **multiple distinct workflows** (separate named graphs with separate entry/terminal behavior). If the work is truly one feature or one decision thread, splitting it into multiple workflows fragments accountability and obscures transitions. Use multiple workflows only when the project maintains **permanent, distinct execution loops** that meet the criteria in the "Multiple distinct workflows" section above.
+**What this is not:** It is not a justification for introducing multiple permanent workflow files. If the work is truly one feature or one decision thread, splitting it into multiple workflows fragments accountability and obscures transitions.
 
 **When to use:** Independent implementation or review tracks exist; a single planning or architecture node can feed all tracks; convergence is required before verification, acceptance, or publication.
 
@@ -349,11 +345,7 @@ When **one unit of work** spans **multiple domains or role types** (e.g., docume
 
 **Parallel-track declaration:** State explicitly which tracks may run in parallel and where joins force ordering. Parallelism is a graph property, not a separate coordination model.
 
-### Cross-workflow transitions
-
-When a terminal node in one graph transitions to an entry node in another: use the same transition mechanics as within a single graph. Define the artifact, the transition condition, and the receiving node's input contract. The transition crosses graph boundaries; the mechanics do not change. Cross-workflow transitions surface to the Owner before the next workflow is triggered.
-
-These patterns are not separate complexity tiers. They are all graph traversal with decision points at transitions. A project that starts with a linear graph can extend to any of these patterns without changing the underlying model — only the graph definition expands.
+These patterns are not separate complexity tiers. They are all graph traversal with decision points at transitions. A project should strongly prefer one canonical workflow definition whose record snapshots activate only the relevant nodes and edges for each flow.
 
 ---
 

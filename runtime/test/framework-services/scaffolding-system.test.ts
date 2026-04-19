@@ -98,6 +98,18 @@ test('renderStub: creates role required-readings YAML stub', () => {
   );
 });
 
+test('renderStub: creates workflow YAML stub', () => {
+  const content = renderStub({
+    path: 'workflow/main.yaml',
+    scaffold: 'stub',
+    source_path: 'general/instructions/workflow/main.md',
+  });
+  assert.strictEqual(
+    content,
+    '# Stub — fill in per general/instructions/workflow/main.md\nworkflow:\n  name: <project workflow>\n  summary: <one-line workflow summary>\n  nodes: []\n  edges: []\n'
+  );
+});
+
 // ── scaffold — stub entries ───────────────────────────────────────────────────
 
 test('scaffold: creates a stub file at the correct a-docs/ path', () => {

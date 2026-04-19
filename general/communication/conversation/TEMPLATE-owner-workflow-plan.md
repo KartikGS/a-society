@@ -43,13 +43,21 @@ known_unknowns: [] # List of strings; empty list [] is valid if none
 
 ## Routing Decision
 
-[Which tier and why. Reference the elevated axes that drove the decision. If a project invariant overrides the complexity-derived tier, name it explicitly.]
+[Which tier and why. Reference the elevated axes that drove the decision. If a project invariant or touched-surface ownership rule overrides the complexity-derived tier, name it explicitly.]
+
+---
+
+## Touched Surfaces and Truth Owners
+
+[List the permanent surfaces in scope and which role owns their truth. This is the routing foundation for the flow.]
+
+- [Path or surface] — [truth owner]
 
 ---
 
 ## Path Definition
 
-[Roles to engage, in order. For Tier 1: Owner only. For Tier 2 and 3: the full sequence of handoffs.]
+[List only the roles and gate nodes activated by the touched surfaces. Start from the smallest legal path and add design, review, registration, or parallel tracks only where they add unique value.]
 
 1. [Role] — [action]
 

@@ -1,0 +1,286 @@
+workflow:
+  name: A-Society Development
+  summary: Canonical surface-driven workflow for A-Society — Owner intake, optional Curator and TA gates, optional executable tracks, optional stewardship, and Owner closure.
+  use_when: The work changes A-Society framework documentation, executable implementation, shared library surfaces, operator-facing references, or any coordinated combination of those surfaces.
+  companion_docs:
+    - $A_SOCIETY_WORKFLOW_COMPLEXITY
+    - $A_SOCIETY_RECORDS
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+      required_readings:
+        - $A_SOCIETY_WORKFLOW_COMPLEXITY
+        - $A_SOCIETY_RECORDS
+      guidance:
+        - Read $A_SOCIETY_OWNER_LOG_MANAGEMENT when intake decisions affect $A_SOCIETY_LOG or $A_SOCIETY_LOG_ARCHIVE.
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when another role will be engaged or when the plan defines an explicit approval or review gate.
+        - Read $A_SOCIETY_OWNER_CLOSURE when a direct Owner path reaches forward-pass closure from this node in the record snapshot.
+      inputs:
+        - Human direction
+        - Backward-pass findings requiring Owner judgment
+        - Feedback signal
+        - Any overlapping Next Priorities context in $A_SOCIETY_LOG
+      work:
+        - Assess the triggered work against the five axes from $A_SOCIETY_WORKFLOW_COMPLEXITY.
+        - Identify the touched permanent surfaces and their truth owners from the relevant role ownership files.
+        - Select the tier, define the known path, and surface known unknowns.
+        - Create the record folder per $A_SOCIETY_RECORDS.
+        - Produce 01-owner-workflow-plan.md using $A_SOCIETY_COMM_TEMPLATE_PLAN.
+        - Create workflow.yaml for the active path.
+        - Perform direct Owner work at permanent file locations when all touched surfaces remain within Owner authority and no downstream gate adds unique value.
+        - Issue the scoped handoff artifacts for any Curator, TA, or executable developer tracks activated by the touched-surface map.
+      outputs:
+        - 01-owner-workflow-plan.md
+        - workflow.yaml
+        - Scoped handoff artifact(s) for any downstream role that is activated
+        - Direct implementation at permanent file locations when the record snapshot collapses to an Owner-only path
+      transitions:
+        - Route to curator-work when Curator-owned or Curator-stewarded surfaces are in scope.
+        - Route to ta-design when executable design is required before implementation.
+        - Route directly to the relevant developer track(s) when standing executable design already governs the work.
+      notes:
+        - 01-owner-workflow-plan.md and workflow.yaml must exist before any later artifact in the record folder.
+        - Direct Owner-only flows are represented in the record snapshot by a sole Owner node rather than by an Owner-to-Owner edge in this permanent graph.
+    - id: curator-work
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - Completed workflow plan
+        - Owner-to-Curator handoff artifact, when the Curator is engaged
+      work:
+        - Implement directly when the touched Curator-owned surfaces fall within Curator authority and no independent Owner decision is required.
+        - When the requested change adds to general/ or otherwise changes a shared framework promise outside Curator direct authority, produce a proposal artifact instead of implementing.
+        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide entries, update-report surfaces, version/reporting surfaces, and related registrations.
+      outputs:
+        - Curator proposal artifact when an independent Owner decision is required
+        - Or Curator completion artifact when direct Curator implementation and stewardship are complete
+      transitions:
+        - Owner decision required -> owner-framework-decision when the Curator path affects general/ or another shared-promise surface requiring explicit Owner review.
+        - Direct Curator authority path -> owner-closure when implementation and stewardship are complete.
+      notes:
+        - A proposal node is not required when the workflow plan or Owner handoff explicitly authorizes direct Curator execution within Curator-owned surfaces.
+        - Additions to general/ always require an explicit Owner decision before implementation.
+    - id: owner-framework-decision
+      role: Owner
+      human-collaborative: approval
+      required_readings:
+        - $A_SOCIETY_OWNER_REVIEW_BEHAVIOR
+      guidance:
+        - Read $A_SOCIETY_OWNER_BRIEF_WRITING when the decision artifact adds downstream implementation constraints or file-specific directions.
+        - Read $A_SOCIETY_EXECUTABLE_COUPLING_MAP when the proposal changes a general/ element with executable format dependencies.
+      inputs:
+        - Curator proposal artifact
+        - Update report draft, when one was included in the proposal
+      work:
+        - Validate the proposed change against vision, placement, touched-surface ownership, shared-library promises, and any executable coupling that the change implicates.
+        - Review any included framework update report draft as part of the same decision.
+        - Decide whether the proposal is Approved, Revise, or Rejected.
+      outputs:
+        - Owner decision artifact
+      transitions:
+        - Approved -> curator-finalize
+        - Revise -> curator-work
+        - Rejected -> terminate the forward pass with no further forward-pass node
+    - id: curator-finalize
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - Approved Owner decision artifact
+      work:
+        - Write the approved content at the correct location per $A_SOCIETY_STRUCTURE.
+        - Publish any approved framework update report during implementation and before registration.
+        - Add or verify $A_SOCIETY_AGENT_DOCS_GUIDE rationale coverage for new or significantly modified Curator-stewarded files.
+      outputs:
+        - Curator completion artifact
+      transitions:
+        - Hand off to owner-closure when implementation and stewardship are complete.
+    - id: ta-design
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - Owner executable handoff artifact and active workflow snapshot
+      work:
+        - Design executable boundaries, role split, and implementation structure for the active flow.
+        - Flag any design conclusion that exceeds the approved problem statement or changes framework direction back to the Owner instead of self-routing.
+      outputs:
+        - Executable design artifact
+      transitions:
+        - Hand off to the active developer track(s) when the executable design is complete.
+    - id: framework-services-implementation
+      role: Framework Services Developer
+      required_readings:
+        - $A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE
+      inputs:
+        - Owner executable handoff artifact or TA executable design for deterministic framework services
+      work:
+        - Implement deterministic executable framework services under runtime/.
+      outputs:
+        - Completion report for the framework-services track
+      transitions:
+        - Hand off to ta-review when an independent executable review is required.
+        - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
+        - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
+    - id: orchestration-implementation
+      role: Orchestration Developer
+      required_readings:
+        - $A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE
+      inputs:
+        - Owner executable handoff artifact or TA executable design for orchestration/runtime behavior
+      work:
+        - Implement runtime orchestration behavior and operator-facing executable changes under runtime/.
+      outputs:
+        - Completion report for the orchestration track
+      transitions:
+        - Hand off to ta-review when an independent executable review is required.
+        - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
+        - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
+    - id: ta-review
+      role: Technical Architect
+      required_readings:
+        - $A_SOCIETY_TA_ADVISORY_STANDARDS
+      inputs:
+        - Completion artifacts from the executable tracks that ran
+      work:
+        - Review the integrated executable output against the approved design or standing executable constraints.
+        - Assess deviations or confirm design alignment.
+        - When $A_SOCIETY_RUNTIME_INVOCATION changed in-flow, compare documented commands, parameters, exposed entry points, and environment-variable names directly against the implementation.
+      outputs:
+        - TA assessment for the integrated executable result
+      transitions:
+        - Hand off to curator-registration when Curator-owned stewardship surfaces are also touched.
+        - Hand off to owner-closure when TA review is complete and no Curator stewardship node is needed.
+    - id: curator-registration
+      role: Curator
+      required_readings:
+        - $A_SOCIETY_CURATOR_IMPL_PRACTICES
+      inputs:
+        - Approved executable result or TA-reviewed executable result, depending on the active path
+      work:
+        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide coverage, update-report surfaces, version/reporting surfaces, and runtime-reference registrations.
+        - Verify $A_SOCIETY_RUNTIME_INVOCATION directly against the implemented operator-facing executable surface when that file changed in-flow.
+        - Publish any approved framework update report and perform the paired $A_SOCIETY_VERSION update when required by $A_SOCIETY_UPDATES_PROTOCOL.
+      outputs:
+        - Registration artifact and updated standing references
+      transitions:
+        - Hand off to owner-closure when stewardship is complete.
+      notes:
+        - Registration does not mutate $A_SOCIETY_LOG lifecycle sections or $A_SOCIETY_LOG_ARCHIVE.
+        - Curator participation is required only when Curator-owned stewardship surfaces are touched.
+    - id: owner-closure
+      role: Owner
+      human-collaborative: closure
+      required_readings:
+        - $A_SOCIETY_OWNER_LOG_MANAGEMENT
+        - $A_SOCIETY_OWNER_CLOSURE
+      inputs:
+        - Terminal framework, executable, review, or stewardship artifact(s) from the active path
+      work:
+        - Confirm all touched permanent surfaces were updated, explicitly verified unchanged, or explicitly deferred with a named owner.
+        - Verify that approved work was actually executed; approval is not completion.
+        - Confirm all required stewardship and publications are complete.
+        - Update $A_SOCIETY_LOG, including lifecycle sections and Next Priorities as appropriate.
+        - Determine backward-pass routing per $A_SOCIETY_IMPROVEMENT.
+      outputs:
+        - Closure artifact or forward-pass completion confirmation
+      transitions:
+        - Emit the forward-pass closure signal and hand control to the improvement protocol when closure is confirmed.
+      notes:
+        - The Owner is the terminal node of the forward pass.
+        - When multiple implementation tracks ran, closure waits for all active terminal artifacts.
+        - If any touched-surface obligation is still missing, do not close the flow; route the missing work explicitly.
+  edges:
+    - from: owner-intake
+      to: curator-work
+      artifact: owner-to-curator
+    - from: curator-work
+      to: owner-framework-decision
+      artifact: curator-to-owner
+    - from: owner-framework-decision
+      to: curator-finalize
+      artifact: owner-to-curator
+    - from: owner-framework-decision
+      to: curator-work
+      artifact: owner-to-curator
+    - from: curator-work
+      to: owner-closure
+      artifact: curator-to-owner
+    - from: curator-finalize
+      to: owner-closure
+      artifact: curator-to-owner
+    - from: owner-intake
+      to: ta-design
+      artifact: owner-to-ta
+    - from: owner-intake
+      to: framework-services-implementation
+      artifact: owner-to-framework-services-developer
+    - from: owner-intake
+      to: orchestration-implementation
+      artifact: owner-to-orchestration-developer
+    - from: ta-design
+      to: framework-services-implementation
+      artifact: executable-design
+    - from: ta-design
+      to: orchestration-implementation
+      artifact: executable-design
+    - from: framework-services-implementation
+      to: ta-review
+      artifact: completion-report
+    - from: orchestration-implementation
+      to: ta-review
+      artifact: completion-report
+    - from: framework-services-implementation
+      to: curator-registration
+      artifact: completion-report
+    - from: orchestration-implementation
+      to: curator-registration
+      artifact: completion-report
+    - from: ta-review
+      to: curator-registration
+      artifact: ta-assessment
+    - from: framework-services-implementation
+      to: owner-closure
+      artifact: completion-report
+    - from: orchestration-implementation
+      to: owner-closure
+      artifact: completion-report
+    - from: ta-review
+      to: owner-closure
+      artifact: ta-assessment
+    - from: curator-registration
+      to: owner-closure
+      artifact: curator-to-owner
+  invariants:
+    - name: Shared-Library Approval Invariant
+      rule: Additions to general/ and changes to shared framework promises require an explicit Owner decision before implementation.
+    - name: Single-Source Invariant
+      rule: Information lives in exactly one file. Cross-references use $VARIABLE_NAME from the relevant index. Hardcoded paths are not permitted.
+    - name: Index-Before-Reference Invariant
+      rule: A file must be registered in the relevant index before any document references it by variable name.
+    - name: Touched-Surface Closure Invariant
+      rule: A flow cannot close while a touched permanent surface is stale, unverified, or missing a named owner for deferred follow-up.
+  escalation:
+    - situation: A proposed addition would change the framework's scope or direction.
+      escalated_by: Owner
+      to: Human
+    - situation: A structural change to a-society/ would affect adopting projects.
+      escalated_by: Owner
+      to: Human
+    - situation: Two reasonable interpretations of the vision lead to different decisions.
+      escalated_by: Owner
+      to: Human
+    - situation: A conflict between touched-surface ownership and standing workflow routing cannot be resolved by reference.
+      escalated_by: Owner
+      to: Human
+  session_model:
+    - Owner
+    - Curator when Curator-owned framework or stewardship surfaces are touched
+    - Technical Architect when executable design or review is required
+    - Framework Services Developer when that track is in scope
+    - Orchestration Developer when that track is in scope
+  forward_pass_closure:
+    - The Owner is the terminal node of the forward pass.
+    - Backward-pass findings are required from each participating non-Owner role unless the Owner grants an explicit waiver.

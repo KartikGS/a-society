@@ -14,7 +14,7 @@ import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { canonicalWorkflowFilename, findWorkflowFilePath, parseWorkflowFile } from './workflow-file.js';
+import { canonicalWorkflowFilename, findWorkflowFilePath, parseWorkflowFile, resolveFlowWorkflow } from './workflow-file.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -221,8 +221,7 @@ export class FlowOrchestrator {
             }
           });
         } else {
-          const resumeWorkflowPath = requireWorkflowPath(flowRun.recordFolderPath);
-          const resumeWf = parseWorkflow(resumeWorkflowPath).workflow;
+          const resumeWf = this.resolveActiveWorkflow(flowRun);
           this.ensureNoRoleScopedParallelConflictInActiveSet(flowRun, resumeWf);
           this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
           if (flowRun.activeNodes.length > 1) {
@@ -292,7 +291,7 @@ export class FlowOrchestrator {
           throw new Error(`Node '${nodeId}' is not in activeNodes: [${flowRun.activeNodes.join(', ')}]. Only active nodes can be advanced.`);
         }
 
-        const wf = parseWorkflow(requireWorkflowPath(flowRun.recordFolderPath)).workflow;
+        const wf = this.resolveActiveWorkflow(flowRun);
         const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
         if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
 
@@ -550,7 +549,7 @@ export class FlowOrchestrator {
       );
     }
     this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-    const wf = parseWorkflow(requireWorkflowPath(flowRun.recordFolderPath)).workflow;
+    const wf = this.resolveActiveWorkflow(flowRun);
 
     const currentNode = this.findNodeById(wf, nodeId);
     const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
@@ -805,6 +804,18 @@ export class FlowOrchestrator {
 
   private roleKey(roleName: string): string {
     return toKebabCaseRoleId(roleName);
+  }
+
+  private resolveActiveWorkflow(flowRun: FlowRun): any {
+    try {
+      return resolveFlowWorkflow(
+        flowRun.recordFolderPath,
+        flowRun.workspaceRoot,
+        flowRun.projectNamespace
+      );
+    } catch (error) {
+      throw new WorkflowError((error as Error).message);
+    }
   }
 
   private roleSessionId(flowRun: FlowRun, roleName: string): string {

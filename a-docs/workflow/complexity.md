@@ -11,8 +11,8 @@ Read this at Owner intake, before creating `01-owner-workflow-plan.md`.
 This document owns:
 
 - the five intake axes as they are applied inside A-Society
-- the tier-selection rules for A-Society framework, executable, and multi-domain flows
-- the A-Society-specific constraints that narrow when Tier 1 is allowed
+- the tier-selection rules for direct, targeted, and coordinated paths through A-Society's single canonical workflow
+- the A-Society-specific gate triggers that determine when Curator and Technical Architect nodes are required
 - the relationship between workflow sizing, `$A_SOCIETY_RECORDS`, and `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 
 It does not replace `$INSTRUCTION_WORKFLOW_COMPLEXITY`. The general instruction remains the reusable library source; this file is the internal project instantiation.
@@ -24,7 +24,7 @@ It does not replace `$INSTRUCTION_WORKFLOW_COMPLEXITY`. The general instruction 
 Assess each triggered work item against these five axes:
 
 1. **Domain spread** — how many A-Society domains the work touches (`general/`, `agents/`, `a-docs/`, `runtime/`, or multi-domain combinations)
-2. **Shared artifact impact** — whether the work changes standing shared artifacts, reusable library surfaces, or operator-facing executable references
+2. **Shared artifact impact** — whether the work changes standing shared artifacts, reusable library surfaces, operator-facing executable references, or role-routing policy
 3. **Step dependency** — whether later steps depend on design or approval decisions made earlier in the flow
 4. **Reversibility** — how safely the work can be undone if the approach proves wrong
 5. **Scope size** — how many files, roles, and maintained surfaces are affected
@@ -33,48 +33,68 @@ The plan template at `$A_SOCIETY_COMM_TEMPLATE_PLAN` provides the required field
 
 ---
 
+## Surface-Driven Routing First
+
+Before choosing a tier, map the touched permanent surfaces and their truth owners from the role ownership files.
+
+At A-Society intake, these two trigger checks matter most:
+
+- **Curator required:** when the flow touches Curator-owned stewardship surfaces such as indexes, `a-docs-guide`, update-report surfaces, version/reporting surfaces, feedback/update registries, or conversation-template surfaces
+- **Technical Architect required:** when the flow changes executable boundaries, standing executable capabilities, stable executable contracts, executable workflow topology, or otherwise needs shared executable design before implementation
+
+Owner review is required when the work changes project direction, modifies shared framework promises, adds to `general/`, or otherwise creates a high-impact case where the same role should not both authorize and verify its own change.
+
+If none of those triggers apply, do not force the extra node into the path.
+
+---
+
 ## Tier Selection in A-Society
 
-### Tier 1
+### Tier 1 — Direct Flow
 
-Use Tier 1 only when the work is genuinely Owner-only and the workflow plan can safely serve as the sole approval gate.
+Use Tier 1 when the work is tightly bounded to one truth-owner path and no extra gate adds unique value.
 
 Typical Tier 1 characteristics:
 
-- bounded internal maintenance or clarification
-- one role
-- no proposal/review loop required
-- no Curator write to `general/`
-- no executable design or multi-domain coordination requirement
+- one role or one tightly bounded ownership area
+- no parallel tracks
+- no Curator stewardship surfaces touched
+- no executable design or independent review trigger
+- no `general/` addition or project-direction decision
 
-Expected path: Owner intake/direct work -> Owner closure -> backward pass.
+Expected path: Owner intake -> direct owner/domain work -> Owner closure -> backward pass.
 
-### Tier 2
+### Tier 2 — Targeted Routed Flow
 
-Use Tier 2 for the standard framework-development loop when the work needs Curator proposal, Owner review, and Curator implementation/registration, but does not require a larger multi-role or multi-domain structure.
+Use Tier 2 when the work is still mostly linear but needs one additional gate type beyond direct execution.
 
 Typical Tier 2 characteristics:
 
-- bounded `general/`, `agents/`, or `a-docs/` work
-- one Curator proposal/review/implementation loop
+- one primary domain path
+- one optional Curator stewardship step, or one optional TA design/review step, or one optional Owner approval step
 - clear sequence at intake
-- no parallel executable tracks
+- no meaningful parallelism benefit
 
-Expected path: Owner intake -> Curator proposal -> Owner review -> Curator implementation/registration -> Owner closure.
+Expected path: Owner intake -> targeted domain path -> Owner closure.
 
-### Tier 3
+Examples:
 
-Use Tier 3 when the work exceeds the lightweight library loop and requires a larger structure.
+- Owner -> Curator -> Owner for stewardship or registration work
+- Owner -> Curator -> Owner review -> Curator -> Owner for `general/` additions
+- Owner -> TA -> Developer -> Owner when executable design is required but no registration node is touched
+
+### Tier 3 — Coordinated Flow
+
+Use Tier 3 when the work truly requires multiple coordinated tracks or multiple gate types.
 
 Typical Tier 3 characteristics:
 
-- structural or high-impact reusable-library changes
-- executable design or implementation tracks
-- parallel or converging paths
-- multiple role families
-- meaningful cross-domain coordination
+- structural or high-impact changes spanning framework and executable domains
+- parallel framework-service and orchestration work
+- Curator stewardship plus executable implementation in the same flow
+- joins, multiple role families, or significant cross-domain coordination
 
-Expected path: route through the applicable permanent workflow or multi-domain pattern declared in `$A_SOCIETY_WORKFLOW`.
+Expected path: activate a coordinated subset of nodes inside `$A_SOCIETY_WORKFLOW`, including parallel tracks where the touched surfaces are independent until a join.
 
 ---
 
@@ -82,9 +102,10 @@ Expected path: route through the applicable permanent workflow or multi-domain p
 
 These constraints narrow the tier options inside this project:
 
-- **Approval Invariant:** Do not choose Tier 1 for work that would require the Curator to write to `general/` without an Owner review node. If the change needs Curator-authored `general/` content, it must route through a review-bearing path.
-- **Workflow selection comes first:** Use `$A_SOCIETY_WORKFLOW` to choose the applicable workflow family. Use this document to size the intake path once the applicable workflow is known.
-- **Executable scope is not framework-only scope:** If the work changes executable design, implementation, operator-facing executable behavior, or stable executable contracts, route through `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` or `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` as appropriate.
+- **Touched-surface routing comes first:** Use the role ownership files to identify which truth owners are implicated before selecting the tier.
+- **Curator is not the default documentation hop:** Engage the Curator only when Curator-owned stewardship surfaces are touched or when the flow explicitly routes a proposal/registration node through Curator authority.
+- **Executable scope is not framework-only scope:** If the work changes executable design, implementation, operator-facing executable behavior, or stable executable contracts, activate the TA and/or executable developer nodes inside `$A_SOCIETY_WORKFLOW` as appropriate.
+- **`general/` additions still require Owner decision:** Work that adds to `general/` cannot go straight from Curator proposal to implementation without an explicit Owner decision node.
 - **Record artifacts are mandatory at intake:** `01-owner-workflow-plan.md` and `workflow.yaml` are always required at A-Society intake. Tier changes alter the downstream path; they do not waive the intake artifacts.
 
 ---
@@ -96,7 +117,7 @@ At Owner intake:
 1. Create the record folder under `$A_SOCIETY_RECORDS`
 2. Produce `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 3. Create `workflow.yaml` for the active path
-4. Verify all plan fields are non-null before issuing any Tier 2/3 brief
+4. Verify all plan fields are non-null before issuing any downstream brief or handoff artifact
 
 `$A_SOCIETY_RECORDS` governs record-folder structure and artifact sequencing. `$A_SOCIETY_COMM_TEMPLATE_PLAN` governs the workflow plan schema and prose fields.
 

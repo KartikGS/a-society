@@ -2,7 +2,7 @@
 
 > **Template** — do not modify this file. When instantiating, omit all header blocks above the first `---`. Create from this template into the active record folder as `01-owner-to-curator-brief.md` (or the next available sequence position if `01-` is taken).
 
-> **Authorization scope:** A briefing establishes scope and direction alignment only. It does not authorize implementation. A Phase 2 Owner decision artifact (`APPROVED` status) is required before the Curator begins implementation. A briefing may state that a direction is acceptable in principle; it must not state or imply that implementation may proceed without that decision.
+> **Authorization scope:** A briefing establishes scope and direction alignment. It authorizes implementation only when the workflow plan or the brief itself explicitly marks the item as Curator direct authority. Otherwise it authorizes proposal drafting only, and the Curator must wait for an explicit Owner decision artifact before implementing.
 
 > **Update report classification:** If this change may trigger a framework update report, do not state an expected classification in this brief. Classification is Curator-determined post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Pre-specifying it creates framing the Curator must override.
 
@@ -27,7 +27,7 @@
 |---|---|
 | `$[VAR]` | [additive / replace / insert / modify] |
 
-> **Item authority marking:** Each item in this section must be marked with its authority level — either `[Requires Owner approval]` or `[Curator authority — implement directly]`. This marking makes the Approval Invariant's scope unambiguous for every item in the brief without requiring the Curator to infer it. An item without a marking is assumed to require Owner approval.
+> **Item authority marking:** Each item in this section must be marked with its authority level — either `[Requires Owner approval]` or `[Curator authority — implement directly]`. This marking makes the required gate explicit for every item in the brief without requiring the Curator to infer it. An item without a marking is assumed to require Owner approval.
 > **Edit-mode marking:** Where applicable, tag the requested change with its expected edit mode (e.g., `[additive]`, `[replace target X]`, `[insert before X]`) to streamline implementation.
 
 [What the Owner and human aligned on. Describe the change clearly enough that the Curator can draft a proposal without needing to re-derive the rationale from scratch. Include: what is changing, what problem it solves, and why it is worth doing.]
@@ -53,14 +53,15 @@
 
 ## Open Questions for the Curator
 
-[Things the Curator should research or decide during proposal formulation. If none, state "None" explicitly — this tells the Curator that no judgment calls are required and the proposal round is mechanical, not that questions were forgotten.]
+[Things the Curator should research or decide during the active Curator node. If none, state "None" explicitly.]
 
 ---
 
 ## Curator Confirmation Required
 
-Before beginning Phase 1, the Curator must acknowledge this briefing in the session:
+Before beginning the Curator node, the Curator must acknowledge this briefing in the session:
 
-> "Briefing acknowledged. Beginning proposal for [Subject]."
+- If the path is proposal-bearing: "Briefing acknowledged. Beginning proposal for [Subject]."
+- If the path is direct authority: "Briefing acknowledged. Beginning direct implementation for [Subject]."
 
-The Curator does not begin drafting until they have read this brief in full and confirmed acknowledgment.
+The Curator does not begin work until they have read this brief in full and confirmed acknowledgment.

@@ -111,11 +111,8 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_IMPROVEMENT_SYNTHESIS` | `a-society/a-docs/improvement/synthesis.md` | A-Society project-specific synthesis phase instructions — runtime injection target for Curator synthesis sessions in this project |
 | `$A_SOCIETY_PRINCIPLES` | `a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_INITIALIZER_ROLE` | `a-society/agents/initializer.md` | A-Society Initializer Agent role — bootstraps a new project's a-docs/ |
-| `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.md` | A-Society workflow directory — routing index for all permanent A-Society workflows; universal session routing rules |
+| `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.yaml` | A-Society canonical workflow definition — the single permanent graph for framework, executable, and coordinated multi-role work |
 | `$A_SOCIETY_WORKFLOW_COMPLEXITY` | `a-society/a-docs/workflow/complexity.md` | A-Society workflow complexity guidance — internal intake sizing rules, tier-selection boundaries, and project-specific routing constraints |
-| `$A_SOCIETY_WORKFLOW_MULTI_DOMAIN` | `a-society/a-docs/workflow/multi-domain-development.yaml` | A-Society multi-domain workflow definition — single flow with parallel tracks across framework, executable implementation, and related roles |
-| `$A_SOCIETY_WORKFLOW_FRAMEWORK_DEV` | `a-society/a-docs/workflow/framework-development.yaml` | A-Society framework workflow definition — node contracts, transitions, invariants, and escalation for the documentation and library maintenance loop |
-| `$A_SOCIETY_WORKFLOW_EXECUTABLE_DEV` | `a-society/a-docs/workflow/executable-development.yaml` | A-Society executable workflow definition — executable design gate, framework-services/orchestration implementation, validation, registration, and closure |
 | `$A_SOCIETY_IMPROVEMENT` | `a-society/a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
 | `$A_SOCIETY_RECORDS` | `a-society/a-docs/records/main.md` | A-Society records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking |
 | `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |

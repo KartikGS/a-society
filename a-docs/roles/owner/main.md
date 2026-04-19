@@ -31,7 +31,7 @@ The Owner ensures that work reaches the right domain leads, that requirements ar
 ## Authority & Responsibilities
 
 The Owner **owns**:
-- All content under `a-society/a-docs/project-information/` and `a-society/a-docs/workflow/` — the project's identity and routing layer
+- All content under `a-society/a-docs/project-information/` and `a-society/a-docs/workflow/` — the project's identity and canonical workflow definition
 - The A-Society vision — its interpretation, application, and protection from scope creep
 - The `agents.md` and role-ownership governance — deciding which role owns which surface
 - **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, route it per `$A_SOCIETY_WORKFLOW`.

@@ -8,7 +8,7 @@
 
 A workflow is a single directed graph. The Owner node is the invariant entry point — it never changes.
 
-What appears to be "adding a new workflow" is structurally a graph modification: adding new branches from the Owner node. There is no add-vs-modify distinction. There is one operation: **graph modification**.
+What appears to be "adding a new workflow" is usually structurally a graph modification: adding new branches from the Owner node inside the same canonical workflow definition. There is no default add-vs-modify distinction. The normal operation is **graph modification**.
 
 This model collapses a false binary. "Should I add a new workflow or modify the existing one?" is not the right question. The right question is: "what branch or structural change does this graph require?"
 
@@ -22,9 +22,9 @@ These are the evaluative criteria every modification must be held against. A mod
 
 1. **Agents don't carry context between sessions.** Every modification must be completable from written artifacts alone. A workflow step that requires undocumented institutional knowledge is a broken step.
 
-2. **Different expertise catches different problems.** Role separation must be preserved in any modified structure. A modified graph that collapses roles — combining proposal and approval into the same role, or merging review and implementation — removes the perspective-checking that makes the workflow reliable.
+2. **Different expertise catches different problems.** Preserve the role separations that add unique decision, review, or stewardship value. A modified graph that collapses a genuinely needed perspective is a bad modification; a modified graph that removes a ceremonial gate is an improvement.
 
-3. **Quality gates prevent compounding errors.** Modifications cannot remove review steps. Every approval gate that exists in the graph has a reason; removing it removes the protection it provides.
+3. **Quality gates must justify their cost.** A workflow may remove or collapse a gate only when authorization remains explicit and the removed step adds no unique decision, review, or stewardship value for the touched surfaces.
 
 4. **Workflows are the structure that makes the core bet true.** The A-Society core bet is that structured projects produce better agent output than unstructured ones. Modifications must preserve or improve this structure, never degrade it. A modification that makes the workflow faster but less structurally sound has traded the core bet away.
 
@@ -38,7 +38,7 @@ These are non-negotiable constraints that every node, edge, and phase in a modif
 
 1. **Every handoff must produce a written artifact.** An edge without a carried artifact is a silent transition — undiscoverable by agents in subsequent sessions.
 
-2. **Every workflow must have at least one approval gate before implementation.** A graph without a review node has no second perspective. No exceptions.
+2. **Every workflow must have explicit authorization before implementation.** The authorization may be the Owner's intake plan for a direct flow or an independent approval node for higher-impact work. When the touched surfaces require a second perspective, that gate must be explicit in the graph.
 
 3. **Each step must be owned by exactly one role.** Shared ownership is undefined ownership. If two roles both "own" a step, neither can be held to it.
 
@@ -60,10 +60,10 @@ These are non-negotiable constraints that every node, edge, and phase in a modif
 
 Classify the modification:
 
-- **Add a branch:** a new flow type entering the graph from the Owner node. Define the new nodes and edges from Owner through to a terminal node, including all handoffs, roles, and invariants.
+- **Add a branch:** a new route or optional node path entering the graph from the Owner node. Define the new nodes and edges from Owner through to a terminal node, including all handoffs, roles, and invariants.
 - **Modify a node:** a phase's input, output, owner, or human-collaborative designation changes. Define what the node looks like before and after. Identify which edges are affected.
 - **Modify an edge:** a handoff's transition condition, artifact format, or direction changes. Identify the upstream and downstream nodes. Confirm no node contract is broken.
-- **Remove a node or edge:** the most structurally significant operation. Before removing, verify that no hard rule is violated — especially Hard Rule 2 (at least one approval gate must remain) and Hard Rule 3 (each remaining step is owned by exactly one role). Document why the removal is safe.
+- **Remove a node or edge:** the most structurally significant operation. Before removing, verify that no hard rule is violated — especially Hard Rule 2 (authorization remains explicit and any needed second perspective is still present) and Hard Rule 3 (each remaining step is owned by exactly one role). Document why the removal is safe.
 - **Modify a structural rule:** an invariant or escalation rule changes. Justify the change against all five principles explicitly — invariants are the non-negotiable layer of the workflow and require the highest scrutiny.
 
 ### Step 2 — Draft the modified graph
@@ -82,15 +82,15 @@ Before proposing, run each check:
 **Principles:**
 1. Is every modified step completable from written artifacts alone?
 2. Is role separation preserved? Are any perspectives collapsed by the modification?
-3. Are all approval gates intact? Has any been removed?
+3. If a gate was removed or collapsed, did it truly add no unique value, and is authorization still explicit?
 4. Does the modified structure preserve or improve structural quality?
 5. Is this modification being routed through the workflow as a proposal?
 
 **Hard Rules:**
 1. Does every handoff in the modified graph produce a written artifact?
-2. Does the graph still have at least one approval gate before implementation?
+2. Does the graph still have explicit authorization before implementation, and an independent gate wherever the touched surfaces require one?
 3. Is every step owned by exactly one role?
-4. Will any new workflow or sub-flow be indexed before being referenced?
+4. Will the canonical workflow definition and any related references remain indexed correctly after the change?
 5. Is every node's input contract satisfiable from its upstream artifacts?
 6. Is every step defined in terms of a role, not a named agent?
 7. Are all existing records treated as immutable?
@@ -110,16 +110,16 @@ Submit the modification as a proposal through the standard project workflow. Inc
 
 Once the proposal is approved:
 
-- Update `workflow/main.md` with the approved changes
+- Update `workflow/main.yaml` with the approved changes
 - Update the machine-readable graph frontmatter if present
 - Update any downstream documents that reference the modified nodes or edges (role documents that specify phase inputs/outputs, communication templates tied to handoff formats)
-- Register any new named workflow in the project's index
+- Update any workflow-related index rows or references affected by the change
 
 ### Step 6 — Confirm index and cross-references
 
 After implementation, verify:
 
-- Any new workflow is registered in the project's index
+- The canonical workflow definition is still registered correctly in the project's index
 - Cross-references to modified sections still resolve correctly
 - The backward pass order is still computable from the updated graph (use the project's executable backward-pass ordering capability if available; otherwise derive manually per `$INSTRUCTION_IMPROVEMENT`)
 

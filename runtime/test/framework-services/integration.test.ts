@@ -59,7 +59,7 @@ const SOCIETY_ROOT      = path.join(REPO_ROOT, 'a-society');
 const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'general/manifest.yaml');
 const PUBLIC_INDEX      = path.join(SOCIETY_ROOT, 'index.md');
 const INTERNAL_INDEX    = path.join(SOCIETY_ROOT, 'a-docs/indexes/main.md');
-const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/executable-development.yaml');
+const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/main.yaml');
 const FRAMEWORK_VERSION_FIXTURE = path.join(__dirname, 'fixtures', 'framework-version-sample.md');
 const VERSION_RECORD_FIXTURE = path.join(__dirname, 'fixtures', 'version-record-current.md');
 

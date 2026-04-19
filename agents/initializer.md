@@ -84,7 +84,7 @@ Populate all foundational documents in this order:
 7. `thinking/` — the three files: `main.md` (general principles), `reasoning.md` (reasoning framework), and `keep-in-mind.md` (operational reminders). Use `$GENERAL_THINKING`, `$GENERAL_THINKING_REASONING`, and `$GENERAL_THINKING_KEEP_IN_MIND` as starting points. Read `$INSTRUCTION_THINKING` before drafting. Customize role name references and project-specific content; remove any template items that do not apply.
 8. `agents.md` — the agent entry point, referencing all of the above. Read `$INSTRUCTION_AGENTS` before drafting.
 9. `a-docs-guide.md` — rationale for each major file/folder in this project's `a-docs/`. Read `$INSTRUCTION_AGENT_DOCS_GUIDE` before drafting.
-10. `workflow/main.md` — how work flows through this project: what triggers new work, how it is decided, how it is delivered. Read `$INSTRUCTION_WORKFLOW` before drafting.
+10. `workflow/main.yaml` — the canonical workflow definition for this project: nodes, handoffs, invariants, escalation rules, and closure model. Read `$INSTRUCTION_WORKFLOW` before drafting.
 11. `communication/` — if the project has two or more roles, create the communication folder alongside the workflow document. Read `$INSTRUCTION_COMMUNICATION` and its sub-instructions to build it. If the project has only one role, skip this step.
 12. `improvement/main.md` — from `$GENERAL_IMPROVEMENT`; adapt role references to match this project's actual roles. Specify which role produces findings first (typically the role closest to implementation friction) and which role synthesizes actionable items. Read `$INSTRUCTION_IMPROVEMENT` before drafting.
 13. `improvement/reports/main.md` and `template-findings.md` — initialize from `$GENERAL_IMPROVEMENT_REPORTS` and `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` so all indexed improvement-report paths resolve to real files. Read `$INSTRUCTION_RECORDS` before drafting.
@@ -160,7 +160,7 @@ After human approval:
 
 The Initializer's job is done when all of the following are true:
 
-- All foundational documents exist and are populated with real content: vision, structure, log, role folder(s) with `main.md`, `required-readings.yaml`, and `ownership.yaml`, thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.md, communication/ (if two or more roles), improvement/main.md, improvement/reports/template-findings.md, and a-society-version.md
+- All foundational documents exist and are populated with real content: vision, structure, log, role folder(s) with `main.md`, `required-readings.yaml`, and `ownership.yaml`, thinking/ (main.md, reasoning.md, keep-in-mind.md), agents.md, a-docs-guide.md, workflow/main.yaml, communication/ (if two or more roles), improvement/main.md, improvement/reports/template-findings.md, and a-society-version.md
 - The human has reviewed and explicitly approved the `a-docs/`
 - The context confirmation test passes: a fresh agent reading `agents.md` produces the correct confirmation statement without additional guidance
 - The feedback consent outcome is explicit for each applicable type: onboarding signal (always), migration feedback (if a Curator role was created), and curator-signal feedback (if a Curator role was created). Each consent is recorded in `a-docs/feedback/[type]/consent.md`. **Consent is verified only when the human's Yes or No was received and recorded in this session — the existence of a consent file does not constitute verified consent.** The onboarding signal report outcome is stated in the completion message.
@@ -187,5 +187,5 @@ Then read the target project's existing files to begin Phase 1.
 
 - The project's purpose cannot be determined from files and one round of questions
 - Human answers conflict with each other or with what the project's files show
-- A decision would significantly shape the project's direction and the Initializer is not authorized to make it (e.g., whether to split the project into multiple repos, whether to add roles that imply significant new workflows)
+- A decision would significantly shape the project's direction and the Initializer is not authorized to make it (e.g., whether to split the project into multiple repos, whether to add roles that imply significant workflow expansion)
 - The human requests changes that would require modifying files outside `a-docs/`

@@ -67,15 +67,15 @@ workflow:
   nodes:
     - id: <string>           # Unique node identifier
       role: <string>         # Role name (parsed by Component 4)
-      human-collaborative: <string>  # Optional; non-empty string describing required human input
-      required_readings:     # Optional; injected only on first entry to this node
+      human-collaborative: <string>  # Optional override; usually sourced from the canonical workflow by node id
+      required_readings:     # Optional override; usually sourced from the canonical workflow by node id
         - $VARIABLE_NAME
-      guidance: [<string>]   # Optional; node guidance message(s)
-      inputs: [<string>]     # Optional; declared node inputs
-      work: [<string>]       # Optional; declared node work
-      outputs: [<string>]    # Optional; declared node outputs
-      transitions: [<string>] # Optional; node transition notes
-      notes: [<string>]      # Optional; node notes
+      guidance: [<string>]   # Optional override
+      inputs: [<string>]     # Optional override
+      work: [<string>]       # Optional override
+      outputs: [<string>]    # Optional override
+      transitions: [<string>] # Optional override
+      notes: [<string>]      # Optional override
   edges:
     - from: <string>         # Node id
       to: <string>           # Node id
@@ -90,16 +90,16 @@ workflow:
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
 
-**What the runtime reads from it:** Component 4 reads `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges` for backward-pass planning. At forward-pass node entry, the runtime injects node-specific `required_readings` only on the first visit to that node, and may surface the node's `guidance`, `inputs`, `work`, `outputs`, `transitions`, and `notes` as the node contract snapshot.
+**What the runtime reads from it:** Component 4 reads `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges` for backward-pass planning. At forward-pass node entry, the runtime uses `workflow.nodes[].id` to resolve the standing node contract from the canonical workflow definition, then applies any override fields present in the record snapshot for that node. Record snapshots should therefore stay minimal by default: path topology first, node-contract overrides only when this flow truly needs them.
 
 **Artifact names in `workflow.yaml` are descriptor-level labels, not frozen numeric filenames.** The `artifact` value documents the intended handoff type at intake. Later `REVISE` or correction loops may shift the live sequence numbering. When that happens, preserve the descriptor and use the next available sequence slot in the record folder rather than trying to restore the originally planned number.
 
 **Relationship to the plan's `path` field:** `01-owner-workflow-plan.md` also contains a `path` field — a flat string list combining role and phase descriptor (e.g., `- Owner - Intake & Briefing`). These two representations coexist and serve distinct consumers:
 
 - **Plan `path`** — human-oriented planning reference used for complexity assessment and routing decisions at intake. Not machine-parsed. Combined role + phase strings.
-- **`workflow.yaml`** — machine-readable record snapshot parsed by the runtime. Used to compute backward pass traversal order and to deliver node-entry context.
+- **`workflow.yaml`** — machine-readable record snapshot parsed by the runtime. Used to compute backward pass traversal order and to define the active flow path the runtime executes.
 
-When creating `workflow.yaml` at intake, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. Roles must be consistent between the two representations. `workflow.yaml` is the authoritative runtime snapshot for this flow; the plan's `path` governs human-oriented planning only.
+When creating `workflow.yaml` at intake, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. Roles must be consistent between the two representations. Keep node entries minimal by default, typically `id`, `role`, and any needed edge artifacts. Add node-level fields only when the active flow needs an explicit override to the canonical workflow definition. `workflow.yaml` is the authoritative runtime topology snapshot for this flow; the plan's `path` governs human-oriented planning only.
 
 **Pre-convention record folders:** Record folders created before the `workflow.yaml` requirement was established are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. Component 4 cannot be invoked for these folders; use manual backward pass ordering.
 
@@ -124,7 +124,7 @@ The Owner creates the record folder at flow intake:
 
 1. Name the folder: `YYYYMMDD-slug`
 2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. Create `workflow.yaml` using the schema in [## workflow.yaml — Forward Pass Path] above. Populate the node list and edge structure from the plan's `path` field. The first node is currently the Owner intake step that created the folder and wrote `01-owner-workflow-plan.md`. `workflow.yaml` is required in any record folder where Component 4 will be invoked during the backward pass.
+3. Create `workflow.yaml` using the schema in [## workflow.yaml — Forward Pass Path] above. Populate the node list and edge structure from the plan's `path` field. Keep the node entries minimal unless the active flow needs a node-level override to the canonical workflow definition. The first node is currently the Owner intake step that created the folder and wrote `01-owner-workflow-plan.md`. `workflow.yaml` is required in any record folder where Component 4 will be invoked during the backward pass.
 4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
 5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
 

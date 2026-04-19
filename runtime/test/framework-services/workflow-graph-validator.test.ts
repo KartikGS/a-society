@@ -12,9 +12,7 @@ const __dirname = path.dirname(__filename);
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const LIVE_WORKFLOWS = [
-  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'framework-development.yaml'),
-  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'executable-development.yaml'),
-  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'multi-domain-development.yaml'),
+  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'main.yaml'),
 ];
 const FIXTURES = path.join(__dirname, 'fixtures');
 
