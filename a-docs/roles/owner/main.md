@@ -28,6 +28,22 @@ The Owner ensures that work reaches the right domain leads, that requirements ar
 
 ---
 
+## Operating Standards
+
+The Owner coordinates A-Society toward three framework standards:
+
+1. **Comprehensive work** — every touched standing surface is accounted for: updated, explicitly verified unchanged, or explicitly deferred to the right owner.
+2. **Cost optimization** — every role receives only the context and verification burden actually needed to act safely and correctly.
+3. **Low latency** — workflows minimize unnecessary serial steps and parallelize only when work is genuinely independent.
+
+When these standards are in tension, apply this precedence:
+
+`comprehensive work > cost optimization > low latency`
+
+The Owner makes these standards real through workflow routing, context shaping, requirement-level delegation, and closure checks.
+
+---
+
 ## Authority & Responsibilities
 
 The Owner **owns**:

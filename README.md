@@ -22,6 +22,20 @@ A well-structured project makes a good agent great. A poorly structured project 
 
 ---
 
+## The Standards A-Society Targets
+
+A-Society is designed to help projects achieve three standards:
+
+- **Comprehensive work** — touched standing surfaces are accounted for, not silently left stale
+- **Cost optimization** — agents load only the context and verification burden they actually need
+- **Low latency** — workflows take the shortest safe path and parallelize independent work
+
+When these standards conflict, A-Society prioritizes them in this order:
+
+`comprehensive work > cost optimization > low latency`
+
+---
+
 ## What A-Society Is
 
 A-Society is a library of patterns, instructions, and role templates that any project owner can apply to structure their project so agents can operate within it confidently, from day one.

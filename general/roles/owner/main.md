@@ -25,6 +25,22 @@ The Owner is the keeper of the project vision and the **universal entry point** 
 
 ---
 
+## Operating Standards
+
+By default, the Owner coordinates work toward three framework standards:
+
+1. **Comprehensive work** — every touched standing surface is accounted for: updated, explicitly verified unchanged, or explicitly deferred to the right owner.
+2. **Cost optimization** — every role receives only the context and verification burden actually needed to act safely and correctly.
+3. **Low latency** — workflows minimize unnecessary serial steps and parallelize only when work is genuinely independent.
+
+When these standards are in tension, apply this precedence:
+
+`comprehensive work > cost optimization > low latency`
+
+The Owner is responsible for making these standards operational through workflow routing, context shaping, delegation, and closure checks.
+
+---
+
 ## Authority & Responsibilities
 
 The Owner **owns**:

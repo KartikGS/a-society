@@ -33,6 +33,20 @@ The investment is in the project setup — not in the agent itself.
 
 ---
 
+## The Standards We Aim to Provide
+
+A-Society is designed to provide three standards to the projects that adopt it:
+
+1. **Comprehensive work** — work should close with all touched standing surfaces accounted for, not just the most obvious implementation artifact.
+2. **Cost optimization** — agents should not be burdened with redundant context, redundant verification, or unnecessary participation in a flow.
+3. **Low latency** — work should move through the shortest safe path, with independent work happening in parallel when appropriate.
+
+These are not equal in conflict. The framework prioritizes them in this order:
+
+`comprehensive work > cost optimization > low latency`
+
+---
+
 ## Why Roles and Workflows Exist
 
 A single agent can do many things. But a single agent doing everything produces work that is complete by its own assessment — not by structural verification. It plans, implements, and reviews its own work without friction, without a second perspective, without anyone checking whether something was missed. The work feels done. It may not be done.
