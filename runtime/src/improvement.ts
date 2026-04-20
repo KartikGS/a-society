@@ -13,6 +13,7 @@ import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } 
 import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
 
 // Co-maintenance: update if the final backward-pass feedback role convention changes for this project.
 const FEEDBACK_ROLE = 'Owner';
@@ -58,7 +59,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   expectedKind: K,
   role: string,
   inputStream: NodeJS.ReadableStream,
-  outputStream: NodeJS.WritableStream
+  outputStream: NodeJS.WritableStream,
+  renderer: OperatorRenderSink
 ): Promise<ExpectedImprovementSignal<K>> {
   const history: RuntimeMessageParam[] = [{ role: 'user', content: initialUserMessage }];
   const stepLabel = describeExpectedStep(expectedKind);
@@ -81,12 +83,39 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       const result = sessionResult.handoff;
 
       if (result.kind === expectedKind) {
+        if (expectedKind === 'backward-pass-complete') {
+          const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
+          if (!healthCheck.ok) {
+            const guidance = buildRuntimeHealthRepairGuidance(
+              healthCheck.errors,
+              'backward-pass-complete'
+            );
+            outputStream.write(
+              `[improvement] ${role} completed backward pass but runtime health checks failed. Requesting repair.\n`
+            );
+            renderer.emit({
+              kind: 'repair.requested',
+              scope: 'improvement',
+              code: 'runtime_health',
+              summary: guidance.operatorSummary
+            });
+            history.push({ role: 'user', content: guidance.modelRepairMessage });
+            continue;
+          }
+        }
+
         return result as ExpectedImprovementSignal<K>;
       }
 
       outputStream.write(
         `[improvement] ${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}. Requesting repair.\n`
       );
+      renderer.emit({
+        kind: 'repair.requested',
+        scope: 'improvement',
+        code: 'unexpected_signal',
+        summary: `${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}`
+      });
       history.push({
         role: 'user',
         content: buildUnexpectedSignalRepairMessage(role, expectedKind)
@@ -96,6 +125,12 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         outputStream.write(
           `[improvement] ${role} emitted an invalid handoff block during backward pass ${stepLabel}. Requesting repair.\n`
         );
+        renderer.emit({
+          kind: 'repair.requested',
+          scope: 'improvement',
+          code: error.details.code,
+          summary: error.details.operatorSummary
+        });
         history.push({ role: 'user', content: error.details.modelRepairMessage });
         continue;
       }
@@ -237,7 +272,8 @@ export class ImprovementOrchestrator {
                     'meta-analysis-complete',
                     entry.role,
                     inputStream,
-                    outputStream
+                    outputStream,
+                    renderer
                   );
 
                   flowRun.improvementPhase!.findingsProduced[entry.role] = result.findingsPath;
@@ -269,7 +305,8 @@ export class ImprovementOrchestrator {
                     'backward-pass-complete',
                     entry.role,
                     inputStream,
-                    outputStream
+                    outputStream,
+                    renderer
                   );
                 }
                 flowRun.improvementPhase!.completedRoles.push(entry.role);

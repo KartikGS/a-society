@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView } from './components/GraphView';
 import { ProjectSelector } from './components/ProjectSelector';
@@ -11,7 +11,7 @@ import type {
   WorkflowGraph,
 } from './types';
 
-type ViewMode = 'selector' | 'chat' | 'graph';
+type ViewMode = 'selector' | 'graph';
 
 function nextFeedId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -178,10 +178,6 @@ export function App() {
       return;
     }
 
-    if (view === 'selector' && message.type !== 'flow_state') {
-      setView('chat');
-    }
-
     switch (message.type) {
       case 'operator_event': {
         const event = message.event;
@@ -242,6 +238,9 @@ export function App() {
         setFlowRun(message.flowRun);
         setSelectedProject(message.flowRun.projectNamespace);
         setBackwardActive(message.backwardActive);
+        if (message.flowRun.status !== 'completed') {
+          setView('graph');
+        }
         return;
       case 'error':
         appendToActiveRole({
@@ -260,6 +259,43 @@ export function App() {
 
   const socket = useWebSocket(socketUrl, { onMessage: handleIncomingMessage });
 
+  useEffect(() => {
+    if (view !== 'graph' || socket.status !== 'open' || !selectedProject) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncFlowState = async () => {
+      try {
+        const response = await fetch('/api/flow-state');
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const nextFlowRun = await response.json() as FlowRun | null;
+        if (cancelled) return;
+
+        setFlowRun(nextFlowRun);
+        if (nextFlowRun) {
+          setSelectedProject(nextFlowRun.projectNamespace);
+        }
+      } catch {
+        // Ignore poll errors and keep the last known state.
+      }
+    };
+
+    void syncFlowState();
+    const timer = window.setInterval(() => {
+      void syncFlowState();
+    }, 1500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [view, socket.status, selectedProject]);
+
   function handleProjectSelect(projectNamespace: string): void {
     setSelectedProject(projectNamespace);
     setFlowRun(null);
@@ -273,7 +309,7 @@ export function App() {
     setAwaitingInput(false);
     setShowImprovementModal(false);
     setComposerValue('');
-    setView('chat');
+    setView('graph');
     sendMessage({ type: 'start_flow', projectNamespace });
   }
 
@@ -333,22 +369,7 @@ export function App() {
         />
       ) : null}
 
-      <div className={`view-layer${view === 'chat' ? ' view-layer-visible' : ' view-layer-hidden'}`}>
-        <ChatInterface
-          title={selectedProject ? `Owner bootstrap for ${selectedProject}` : 'Owner bootstrap'}
-          subtitle="Fresh starts stay here until the first workflow node activates."
-          messages={activeLiveRole ? (roleFeeds[activeLiveRole] ?? []) : []}
-          waitingLabel={waitLabel}
-          inputValue={composerValue}
-          inputDisabled={!awaitingInput}
-          placeholder={awaitingInput ? 'Reply to the current runtime prompt…' : 'Input unlocks when the runtime requests it.'}
-          statusLine={statusLine}
-          onInputChange={setComposerValue}
-          onSubmit={handleSubmit}
-        />
-      </div>
-
-      <div className={`view-layer${view === 'graph' && flowRun ? ' view-layer-visible' : ' view-layer-hidden'}`}>
+      <div className={`view-layer${view === 'graph' ? ' view-layer-visible' : ' view-layer-hidden'}`}>
         {flowRun ? (
           <section className="workspace-grid">
             <GraphView
@@ -378,7 +399,40 @@ export function App() {
               onSubmit={handleSubmit}
             />
           </section>
-        ) : null}
+        ) : (
+          <section className="workspace-grid">
+            <section className="panel graph-panel">
+              <div className="graph-panel-header">
+                <div>
+                  <p className="eyebrow">Workflow Graph</p>
+                  <h2>{selectedProject ?? 'Preparing flow'}</h2>
+                  <p className="panel-copy">Creating the draft record and default Owner intake node…</p>
+                </div>
+              </div>
+
+              <div className="graph-canvas">
+                <div className="graph-empty">Waiting for flow state…</div>
+              </div>
+            </section>
+
+            <ChatInterface
+              title="Role feed"
+              subtitle="The first Owner conversation will appear here once the runtime activates the default node."
+              messages={displayedFeed}
+              waitingLabel={waitLabel}
+              inputValue={composerValue}
+              inputDisabled={!awaitingInput}
+              placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
+              statusLine={statusLine}
+              roles={[]}
+              selectedRole={selectedRole ?? activeLiveRole ?? undefined}
+              activeRole={activeLiveRole ?? undefined}
+              onRoleSelect={setSelectedRole}
+              onInputChange={setComposerValue}
+              onSubmit={handleSubmit}
+            />
+          </section>
+        )}
       </div>
 
       {showImprovementModal ? (

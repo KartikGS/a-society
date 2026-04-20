@@ -51,6 +51,8 @@ async function runTest() {
   const rolesDir = path.join(projectADocsPath, 'roles');
   fs.mkdirSync(rolesDir, { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
+  fs.mkdirSync(path.join(projectADocsPath, 'workflow'), { recursive: true });
+  fs.mkdirSync(path.join(projectADocsPath, 'improvement'), { recursive: true });
   fs.mkdirSync(path.join(rolesDir, 'start'), { recursive: true });
   fs.writeFileSync(path.join(rolesDir, 'start', 'required-readings.yaml'), 'role: start\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_START_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
@@ -58,8 +60,6 @@ async function runTest() {
     `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
     `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/start/main.md\` |\n`
   );
-  fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
-
   const workflowGraph = `workflow:
   name: test-flow
   nodes:
@@ -67,6 +67,11 @@ async function runTest() {
       role: 'start'
   edges: []
 `;
+  fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'start', 'ownership.yaml'), 'role: start\nsurfaces: []\n');
+  fs.writeFileSync(path.join(projectADocsPath, 'workflow', 'main.yaml'), workflowGraph);
+  fs.writeFileSync(path.join(projectADocsPath, 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
+  fs.writeFileSync(path.join(projectADocsPath, 'improvement', 'feedback.md'), 'Feedback instructions');
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   // The artifact basename used in the handoff block determines what appears in the notice

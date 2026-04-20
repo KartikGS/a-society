@@ -129,27 +129,32 @@ export function GraphView(props: GraphViewProps) {
   useEffect(() => {
     let cancelled = false;
 
-    fetch('/api/workflow')
-      .then(async (response) => {
+    const loadWorkflow = async () => {
+      try {
+        const response = await fetch('/api/workflow');
         if (!response.ok) {
           throw new Error(await response.text());
         }
-        return response.json() as Promise<WorkflowGraph>;
-      })
-      .then((graph) => {
+        const graph = await response.json() as WorkflowGraph;
         if (cancelled) return;
         setWorkflow(graph);
         setError(null);
         props.onWorkflowLoaded?.(graph);
-      })
-      .catch((loadError: unknown) => {
+      } catch (loadError: unknown) {
         if (cancelled) return;
         setWorkflow(null);
         setError(loadError instanceof Error ? loadError.message : 'Unable to load workflow graph.');
-      });
+      }
+    };
+
+    void loadWorkflow();
+    const timer = window.setInterval(() => {
+      void loadWorkflow();
+    }, 1500);
 
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [props.recordFolderPath]);
 

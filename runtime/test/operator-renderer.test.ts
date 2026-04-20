@@ -106,6 +106,12 @@ test('repair.requested bootstrap scope ends with retrying bootstrap interaction'
   assert.ok(output().includes('[runtime/repair] Workflow parse failure; retrying bootstrap interaction\n'));
 });
 
+test('repair.requested improvement scope ends with retrying backward pass step', () => {
+  const { renderer, output } = makeRenderer();
+  renderer.emit({ kind: 'repair.requested', scope: 'improvement', code: 'runtime_health', summary: 'A-docs runtime health checks failed' });
+  assert.ok(output().includes('[runtime/repair] A-docs runtime health checks failed; retrying backward pass step\n'));
+});
+
 test('human.awaiting_input prompt-human renders waiting line', () => {
   const { renderer, output } = makeRenderer();
   renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'autonomous' });

@@ -63,7 +63,9 @@ export class OperatorEventRenderer implements OperatorRenderSink {
       case 'repair.requested': {
         const suffix = event.scope === 'bootstrap'
           ? 'retrying bootstrap interaction'
-          : 'retrying current node';
+          : event.scope === 'improvement'
+            ? 'retrying backward pass step'
+            : 'retrying current node';
         return `[runtime/repair] ${event.summary}; ${suffix}`;
       }
 

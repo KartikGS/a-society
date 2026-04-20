@@ -476,27 +476,42 @@ async function run() {
     SessionStore.init();
 
     const derivedNamespaceDir = path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'roles');
+    const projectRoot = path.join(tmpDir, path.basename(tmpDir));
+    const aDocsRoot = path.join(projectRoot, 'a-docs');
     fs.mkdirSync(derivedNamespaceDir, { recursive: true });
     fs.mkdirSync(path.join(derivedNamespaceDir, 'owner'), { recursive: true });
     fs.mkdirSync(path.join(derivedNamespaceDir, 'curator'), { recursive: true });
     fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'main.md'), '---\nrole: Owner\n---\nHello');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'ownership.yaml'), 'role: curator\nsurfaces: []\n');
 
-    const recordDir = path.join(tmpDir, 'repair-record');
+    const recordDir = path.join(aDocsRoot, 'records', 'repair-record');
     // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:
     // workspaceRoot = workspace root, projectNamespace = project folder name.
     const improvementNamespace = path.basename(tmpDir);
     fs.mkdirSync(recordDir, { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement'), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
-    fs.writeFileSync(path.join(tmpDir, improvementNamespace, 'a-docs', 'improvement', 'feedback.md'), 'Feedback instructions');
+    fs.mkdirSync(path.join(aDocsRoot, 'improvement'), { recursive: true });
+    fs.mkdirSync(path.join(aDocsRoot, 'indexes'), { recursive: true });
+    fs.mkdirSync(path.join(aDocsRoot, 'workflow'), { recursive: true });
+    fs.writeFileSync(path.join(aDocsRoot, 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
+    fs.writeFileSync(path.join(aDocsRoot, 'improvement', 'feedback.md'), 'Feedback instructions');
+    fs.writeFileSync(path.join(aDocsRoot, 'indexes', 'main.md'), '');
+    fs.writeFileSync(
+      path.join(aDocsRoot, 'workflow', 'main.yaml'),
+      'workflow:\n  name: Canonical Improvement Workflow\n  nodes:\n    - id: owner-feedback\n      role: Owner\n  edges: []\n'
+    );
     fs.writeFileSync(
       path.join(recordDir, 'workflow.yaml'),
       'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n'
     );
     fs.writeFileSync(path.join(recordDir, '01-curator-findings.md'), 'Existing findings');
+
+    const findingsPath = path.relative(tmpDir, path.join(recordDir, '01-curator-findings.md'));
+    const feedbackArtifactPath = path.relative(tmpDir, path.join(recordDir, '02-owner-feedback.md'));
+    const closureArtifactPath = path.relative(tmpDir, path.join(recordDir, '00-owner-closure.md'));
 
     const flowRun: any = {
       flowId: 'repair-flow',
@@ -513,9 +528,9 @@ async function run() {
     };
 
     const mockProvider = new MockProvider([
-      { type: 'text', text: 'Saved findings. ```handoff\ntype: meta-analysis-complete\nfindings_path: repair-record/01-curator-findings.md\n```' },
+      { type: 'text', text: `Saved findings. \`\`\`handoff\ntype: meta-analysis-complete\nfindings_path: ${findingsPath}\n\`\`\`` },
       { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' },
-      { type: 'text', text: 'Feedback complete. ```handoff\ntype: backward-pass-complete\nartifact_path: repair-record/02-owner-feedback.md\n```' }
+      { type: 'text', text: `Feedback complete. \`\`\`handoff\ntype: backward-pass-complete\nartifact_path: ${feedbackArtifactPath}\n\`\`\`` }
     ]);
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
@@ -538,7 +553,7 @@ async function run() {
     try {
       await ImprovementOrchestrator.handleForwardPassClosure(
         flowRun,
-        { recordFolderPath: recordDir, artifactPath: 'repair-record/00-owner-closure.md' },
+        { recordFolderPath: recordDir, artifactPath: closureArtifactPath },
         input,
         output,
         { emit: () => {}, startWait: () => {}, stopWait: () => {} }

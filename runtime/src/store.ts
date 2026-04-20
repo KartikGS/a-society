@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { FlowRun, RoleSession } from './types.js';
+import { repairMovedRecordFolder } from './draft-flow.js';
 
 // Get the current directory of this module, then resolve up to runtime/.state
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,11 @@ export class SessionStore {
 
     if (!flow.workspaceRoot || !flow.recordFolderPath) {
       throw new Error('Persisted flow state is missing required workspaceRoot or recordFolderPath fields.');
+    }
+    const repairedRecordFolderPath = repairMovedRecordFolder(flow);
+    if (repairedRecordFolderPath && repairedRecordFolderPath !== flow.recordFolderPath) {
+      flow.recordFolderPath = repairedRecordFolderPath;
+      SessionStore.saveFlowRun(flow);
     }
     if (!flow.completedEdgeArtifacts || typeof flow.completedEdgeArtifacts !== 'object') {
       throw new Error('Persisted flow state is missing completedEdgeArtifacts.');

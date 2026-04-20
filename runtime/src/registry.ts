@@ -62,23 +62,25 @@ export function buildRoleContext(
   }
 
   const directRoleReadings = Array.isArray(config.required_readings)
-    ? config.required_readings
+    ? config.required_readings.filter((value: unknown): value is string => typeof value === 'string')
     : Array.isArray(config)
-      ? config
+      ? config.filter((value: unknown): value is string => typeof value === 'string')
       : null;
 
   if (directRoleReadings) {
     return {
-      requiredReadingVariables: [...new Set(directRoleReadings)]
+      requiredReadingVariables: Array.from(new Set<string>(directRoleReadings))
     };
   }
 
-  const universalReading = Array.isArray(config.universal) ? config.universal : [];
+  const universalReading = Array.isArray(config.universal)
+    ? config.universal.filter((value: unknown): value is string => typeof value === 'string')
+    : [];
   const roleReading = config.roles && Array.isArray(config.roles[roleId])
-    ? config.roles[roleId]
+    ? config.roles[roleId].filter((value: unknown): value is string => typeof value === 'string')
     : [];
 
   return {
-    requiredReadingVariables: [...new Set([...universalReading, ...roleReading])]
+    requiredReadingVariables: Array.from(new Set<string>([...universalReading, ...roleReading]))
   };
 }

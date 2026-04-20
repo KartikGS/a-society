@@ -9,6 +9,7 @@ import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './sess
 import { ImprovementOrchestrator } from './improvement.js';
 import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
 import { buildWorkflowRepairGuidance, validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
+import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
@@ -447,6 +448,30 @@ export class FlowOrchestrator {
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
+                const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
+                if (!healthCheck.ok) {
+                  span.addEvent('runtime.health_check_failed', {
+                    signal: 'forward-pass-closed',
+                    error_count: healthCheck.errors.length,
+                    errors: healthCheck.errors.join('; ').slice(0, 2000)
+                  });
+                  emitUsage(this.renderer, turnUsage);
+                  const guidance = buildRuntimeHealthRepairGuidance(
+                    healthCheck.errors,
+                    'forward-pass-closed'
+                  );
+                  this.renderer.emit({
+                    kind: 'repair.requested',
+                    scope: 'node',
+                    code: 'runtime_health',
+                    summary: guidance.operatorSummary
+                  });
+                  injectedHistory.push({ role: 'user', content: guidance.modelRepairMessage });
+                  session.transcriptHistory = injectedHistory;
+                  SessionStore.saveRoleSession(session);
+                  continue;
+                }
+
                 span.setAttribute('node.outcome', 'forward_pass_closed');
                 emitUsage(this.renderer, turnUsage);
                 this.removeActiveNode(flowRun, nodeId);

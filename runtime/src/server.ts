@@ -13,6 +13,7 @@ import { SessionStore } from './store.js';
 import { FlowOrchestrator } from './orchestrator.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
+import { initializeDraftFlow } from './draft-flow.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
 import type { FlowRun, OperatorEvent } from './types.js';
 
@@ -321,7 +322,11 @@ function buildServer(workspaceRoot: string) {
       return;
     }
 
+    const flowRun = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
+    SessionStore.saveFlowRun(flowRun);
+
     const session = createSession(projectNamespace);
+    emitFlowState(session);
     void attachSessionTask(session, () =>
       session.orchestrator.startUnifiedOrchestration(
         workspaceRoot,
