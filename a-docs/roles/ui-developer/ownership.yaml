@@ -1,0 +1,9 @@
+role: ui-developer
+surfaces:
+  - path: a-docs/roles/ui-developer/
+    scope: "UI Developer role truth, support-doc truth, startup-context file, and ownership file"
+  - path: runtime/ui/
+    scope: "Operator-facing browser UI implementation truth"
+  - path: a-docs/records/
+    shared_with: [owner, curator, technical-architect, orchestration-developer, framework-services-developer]
+    scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

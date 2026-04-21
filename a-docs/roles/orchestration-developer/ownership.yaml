@@ -3,9 +3,9 @@ surfaces:
   - path: a-docs/roles/orchestration-developer/
     scope: "Orchestration Developer role truth, support-doc truth, startup-context file, and ownership file"
   - path: runtime/
-    scope: "Default ownership for runtime implementation surfaces unless a narrower override exists"
+    scope: "Default ownership for runtime implementation surfaces; runtime/src/framework-services/ is overridden by the Framework Services Developer; runtime/ui/ is overridden by the UI Developer"
   - path: install.sh
     scope: "Runtime and operator installation surface"
   - path: a-docs/records/
-    shared_with: [owner, curator, technical-architect, framework-services-developer]
+    shared_with: [owner, curator, technical-architect, framework-services-developer, ui-developer]
     scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

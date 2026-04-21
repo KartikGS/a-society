@@ -314,6 +314,42 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
+### `roles/ui-developer/main.md` — `$A_SOCIETY_UI_DEVELOPER_ROLE`
+
+**Why it exists:** The `runtime/ui/` surface (React/Vite frontend) is a genuinely independent implementation sub-domain from the Orchestration Developer's server-side orchestration scope. Splitting them enables parallel execution on flows that touch both sub-domains and removes the coordination overhead of forcing a single role to sequence work that has no dependency. Without this role, UI implementation either collapses back into the Orchestration Developer (creating a single-threaded bottleneck) or proceeds without a behavioral contract.
+
+**What it owns:** Operator-facing browser UI implementation in `runtime/ui/`, the hard stop on the server/WebSocket contract boundary, and escalation triggers for cross-role dependencies.
+
+**What breaks without it:** No clear behavioral contract for UI work. The executable role split becomes implicit and the parallel-track potential for flows that span both UI and orchestration is lost.
+
+**Do not consolidate with:** `roles/orchestration-developer/main.md` — the OD owns the server/WebSocket layer and orchestration core; this role owns the frontend consumer of that layer. Do not consolidate with `roles/framework-services-developer/main.md` — framework services are deterministic helpers; UI is the operator-facing interactive surface.
+
+---
+
+### `roles/ui-developer/implementation-discipline.md` — `$A_SOCIETY_UI_DEV_IMPL_DISCIPLINE`
+
+**Why it exists:** UI implementation guidance is execution-time detail, not startup identity. Keeping it separate preserves a lighter startup role file while giving UI implementation phases one canonical reference for completion artifacts, server-contract boundary rules, and UI-specific implementation constraints.
+
+**What it owns:** Completion-report shape, exact-path discipline, the server/WebSocket contract hard stop, and the prohibition on re-deriving server-authoritative state in the UI.
+
+**What breaks without it:** UI-specific implementation rules drift back into role prose or disappear, and the server-contract boundary becomes ambiguous between the UI Developer and Orchestration Developer.
+
+**Do not consolidate with:** `roles/ui-developer/main.md` — role contract vs. execution guidance. Do not consolidate with `roles/ui-developer/style-guide.md` — discipline governs process obligations; the style guide governs code and design conventions.
+
+---
+
+### `roles/ui-developer/style-guide.md` — `$A_SOCIETY_UI_DEV_STYLE_GUIDE`
+
+**Why it exists:** Without a style guide, every UI Developer session must infer the project's TypeScript conventions, CSS architecture, palette, component structure, and ReactFlow usage from the existing source. Convention drift accumulates silently — new components introduce CSS Modules, new colors, conflicting naming patterns — and reviewing those drifts becomes an Owner or TA burden rather than a structural check.
+
+**What it owns:** The authoritative conventions for `runtime/ui/`: TypeScript import style, component structure, state model, event handler naming, async patterns, CSS token usage, class naming, border radius, typography, ReactFlow node/edge conventions, and the explicit list of libraries and patterns that must not be introduced.
+
+**What breaks without it:** UI implementation sessions produce stylistically inconsistent code. The palette, font stack, and component patterns — all of which are intentional design decisions — erode across flows without a canonical reference point.
+
+**Do not consolidate with:** `roles/ui-developer/implementation-discipline.md` — discipline governs process obligations (completion reports, escalation, boundary rules); the style guide governs code and design conventions. They are loaded together but serve different purposes.
+
+---
+
 ### `roles/orchestration-developer/main.md` — `$A_SOCIETY_ORCHESTRATION_DEVELOPER_ROLE`
 
 **Why it exists:** The executable layer needs a role that explicitly owns orchestration behavior and the surviving operator-facing executable reference. Without this, `runtime/INVOCATION.md` authorship and orchestration ownership fall back into the retired pre-unification role framing or become ambiguous between implementer and Curator.

@@ -17,7 +17,7 @@ surfaces:
   - path: a-docs/communication/coordination/
     scope: "Coordination and authority-policy truth"
   - path: a-docs/records/
-    shared_with: [curator, technical-architect, orchestration-developer, framework-services-developer]
+    shared_with: [curator, technical-architect, orchestration-developer, framework-services-developer, ui-developer]
     scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"
   - path: README.md
     scope: "External project framing and promise"

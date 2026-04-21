@@ -138,6 +138,21 @@ workflow:
         - Hand off to ta-review when an independent executable review is required.
         - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
         - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
+    - id: ui-implementation
+      role: UI Developer
+      required_readings:
+        - $A_SOCIETY_UI_DEV_IMPL_DISCIPLINE
+        - $A_SOCIETY_UI_DEV_STYLE_GUIDE
+      inputs:
+        - Owner executable handoff artifact or TA executable design for UI/operator-surface behavior
+      work:
+        - Implement operator-facing browser UI changes under runtime/ui/.
+      outputs:
+        - Completion report for the UI track
+      transitions:
+        - Hand off to ta-review when an independent executable review is required.
+        - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
+        - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
     - id: ta-review
       role: Technical Architect
       required_readings:
@@ -220,22 +235,34 @@ workflow:
     - from: owner-intake
       to: orchestration-implementation
       artifact: owner-to-orchestration-developer
+    - from: owner-intake
+      to: ui-implementation
+      artifact: owner-to-ui-developer
     - from: ta-design
       to: framework-services-implementation
       artifact: executable-design
     - from: ta-design
       to: orchestration-implementation
       artifact: executable-design
+    - from: ta-design
+      to: ui-implementation
+      artifact: executable-design
     - from: framework-services-implementation
       to: ta-review
       artifact: completion-report
     - from: orchestration-implementation
+      to: ta-review
+      artifact: completion-report
+    - from: ui-implementation
       to: ta-review
       artifact: completion-report
     - from: framework-services-implementation
       to: curator-registration
       artifact: completion-report
     - from: orchestration-implementation
+      to: curator-registration
+      artifact: completion-report
+    - from: ui-implementation
       to: curator-registration
       artifact: completion-report
     - from: ta-review
@@ -245,6 +272,9 @@ workflow:
       to: owner-closure
       artifact: completion-report
     - from: orchestration-implementation
+      to: owner-closure
+      artifact: completion-report
+    - from: ui-implementation
       to: owner-closure
       artifact: completion-report
     - from: ta-review
@@ -281,6 +311,7 @@ workflow:
     - Technical Architect when executable design or review is required
     - Framework Services Developer when that track is in scope
     - Orchestration Developer when that track is in scope
+    - UI Developer when that track is in scope
   forward_pass_closure:
     - The Owner is the terminal node of the forward pass.
     - Backward-pass findings are required from each participating non-Owner role unless the Owner grants an explicit waiver.

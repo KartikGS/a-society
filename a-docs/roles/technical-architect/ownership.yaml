@@ -5,5 +5,5 @@ surfaces:
   - path: a-docs/executable/
     scope: "Executable design truth"
   - path: a-docs/records/
-    shared_with: [owner, curator, orchestration-developer, framework-services-developer]
+    shared_with: [owner, curator, orchestration-developer, framework-services-developer, ui-developer]
     scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

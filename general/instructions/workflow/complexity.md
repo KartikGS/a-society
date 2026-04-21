@@ -118,7 +118,7 @@ Use these triggers when deciding whether the smallest legal path needs additiona
 - **Design node:** add when standing design does not already govern the work, when the change alters boundaries or contracts, or when multiple implementers need a shared design.
 - **Independent approval or review node:** add when the work changes shared promises, shared library surfaces, another role's owned truth surfaces, or any other high-impact area where the same role should not both authorize and verify its own change.
 - **Registration or stewardship node:** add when a separate role owns indexes, guides, update reports, version records, or other stewardship surfaces that must be updated in-band with the work.
-- **Parallel tracks and join:** add when multiple touched-surface tracks are independent enough to proceed concurrently and later converge.
+- **Parallel tracks and join:** add when multiple touched-surface tracks are independent enough to proceed concurrently and later converge. When a single role's scope within the flow spans genuinely independent sub-domains, split those sub-domains into separate parallel tracks rather than forcing a sequential single-role path. Ask: could two agents work on these simultaneously without producing a conflict or dependency? If yes, split the track and assign a dedicated lead per sub-domain.
 
 If none of these triggers apply, do not add the node.
 
@@ -208,6 +208,19 @@ All hard rules from `$INSTRUCTION_WORKFLOW_MODIFY` apply unchanged to the dynami
 | 5. No step requires context not produced by a prior step | Applies unchanged. |
 | 6. Role-defined, not agent-defined | Applies unchanged. |
 | 7. Records immutable once produced | Applies unchanged. |
+
+---
+
+## Role Surface Decomposition
+
+When a single role's scope consistently spans genuinely independent sub-domains across multiple flows, this is a standing signal that the role's permanent surface warrants decomposition. A role surface should be split when two conditions are both true:
+
+1. **Independence:** The sub-domains can be worked concurrently by separate agents without conflict.
+2. **Recurrence:** The combination recurs across flows often enough that a permanent split reduces routing friction rather than adding it.
+
+When both conditions are met, the appropriate action is a structural decision: add a new specialist role, narrow the existing role's ownership file, and update ownership surfaces accordingly. This is an Owner-level architectural decision and requires its own intake flow rather than being resolved inline within an unrelated flow.
+
+The inverse also applies: if a role's surface has shrunk or its sub-domains have converged, evaluate merging rather than preserving artificial separation.
 
 ---
 

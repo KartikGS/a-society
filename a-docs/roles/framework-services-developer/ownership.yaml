@@ -7,5 +7,5 @@ surfaces:
   - path: runtime/test/framework-services/
     scope: "Framework-service verification truth"
   - path: a-docs/records/
-    shared_with: [owner, curator, technical-architect, orchestration-developer]
+    shared_with: [owner, curator, technical-architect, orchestration-developer, ui-developer]
     scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"
