@@ -4,11 +4,10 @@
  * Uses a repeated-role workflow: Owner-intake -> TA -> Owner-gate
  * Covers:
  *
- *  1. Fresh Owner bootstrap uses the explicit Owner message
- *  2. Same-node prompt-human resume preserves the existing role-scoped transcript
- *  3. Later same-role node reuses the same role-scoped session and appends a node-transition packet
- *  4. Reopened same-role node keeps the prior role-scoped session and appends a reopen packet
- *  5. Same-role parallel activation is explicitly rejected for now
+ *  1. Same-node prompt-human resume preserves the existing role-scoped transcript
+ *  2. Later same-role node reuses the same role-scoped session and appends a node-transition packet
+ *  3. Reopened same-role node keeps the prior role-scoped session and appends a reopen packet
+ *  4. Same-role parallel activation is explicitly rejected for now
  */
 
 import assert from 'node:assert';
@@ -19,7 +18,7 @@ import { Readable, Writable, PassThrough } from 'node:stream';
 import { FlowOrchestrator, WorkflowError } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
 import { ContextInjectionService } from '../../src/injection.js';
-import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from '../../src/session-entry.js';
+import { buildForwardNodeEntryMessage } from '../../src/session-entry.js';
 import { LLMGateway } from '../../src/llm.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/types.js';
 
@@ -150,16 +149,6 @@ function test(name: string, fn: () => void | Promise<void>): Promise<void> {
 
 async function run() {
   console.log('\nsame-role-continuity integration');
-
-  await test('Fresh Owner bootstrap message matches approved text', async () => {
-    const msg = buildOwnerBootstrapMessage();
-
-    assert.ok(msg.includes('A fresh interactive Owner session has started.'));
-    assert.ok(msg.includes('The runtime already loaded your required-reading authority files into context.'));
-    assert.ok(msg.includes('type: prompt-human'));
-    assert.ok(!msg.includes('Read the project log'));
-    assert.ok(!msg.includes('Read $A_SOCIETY'));
-  });
 
   await test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
     const { bundleContent } = ContextInjectionService.buildContextBundle(

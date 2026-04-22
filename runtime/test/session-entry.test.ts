@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {
-  buildOwnerBootstrapMessage,
   buildForwardNodeEntryMessage,
   buildImprovementEntryMessage
 } from '../src/session-entry.js';
@@ -24,25 +23,6 @@ function test(name: string, fn: () => void): void {
 }
 
 console.log('\nsession-entry');
-
-// --- buildOwnerBootstrapMessage ---
-
-test('buildOwnerBootstrapMessage: contains the approved startup contract text', () => {
-  const msg = buildOwnerBootstrapMessage();
-
-  assert.ok(msg.includes('A fresh interactive Owner session has started.'));
-  assert.ok(msg.includes('The runtime already loaded your required-reading authority files into context.'));
-  assert.ok(msg.includes('summarize the project log'));
-  assert.ok(msg.includes('type: prompt-human'));
-  assert.ok(msg.includes('Do not spend this first turn rereading'));
-});
-
-test('buildOwnerBootstrapMessage: does not instruct rereading files by default', () => {
-  const msg = buildOwnerBootstrapMessage();
-
-  assert.ok(!msg.includes('Read the project log'));
-  assert.ok(!msg.includes('Read $A_SOCIETY'));
-});
 
 // --- buildForwardNodeEntryMessage ---
 

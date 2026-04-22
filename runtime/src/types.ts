@@ -91,13 +91,12 @@ export interface InteractiveSessionResult {
 }
 
 export type OperatorEvent =
-  | { kind: 'flow.bootstrap_started'; role: string }
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string }
   | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
-  | { kind: 'repair.requested'; scope: 'node' | 'bootstrap' | 'improvement'; code: string; summary: string }
-  | { kind: 'human.awaiting_input'; reason: 'prompt-human' | 'interactive-abort' | 'autonomous-abort'; mode: 'interactive' | 'autonomous' }
+  | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string }
+  | { kind: 'human.awaiting_input'; reason: 'prompt-human' | 'autonomous-abort' }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }

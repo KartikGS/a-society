@@ -11,7 +11,7 @@ import { PassThrough } from 'node:stream';
  * Correction 1 verification: resumed multi-node flows emit parallel.active_set.
  *
  * Pre-saves a flow with two active nodes and status='awaiting_human'.
- * Calls startUnifiedOrchestration, which takes the resume path and skips
+ * Calls runStoredFlow, which takes the resume path and skips
  * the while loop (status !== 'running'). Asserts that both flow.resumed
  * and parallel.active_set are emitted in order.
  */
@@ -53,7 +53,7 @@ async function runTest() {
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
   // Pre-save a flow in awaiting_human state with two active fork branches.
-  // The while loop in startUnifiedOrchestration skips for status !== 'running',
+  // The while loop in runStoredFlow skips for status !== 'running',
   // so no LLM calls are made — this test only exercises the resume emit path.
   SessionStore.init();
   SessionStore.saveFlowRun({
@@ -87,7 +87,7 @@ async function runTest() {
   const outputStream = new PassThrough();
 
   try {
-    await orchestrator.startUnifiedOrchestration(workspaceRoot, projectNamespace, 'Owner', inputStream, outputStream);
+    await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, 'Owner', inputStream, outputStream);
 
     const operatorOut = operatorChunks.join('');
     console.log("\nOperator stream output:");

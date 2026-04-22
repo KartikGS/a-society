@@ -25,9 +25,6 @@ export class OperatorEventRenderer implements OperatorRenderSink {
 
   private renderLine(event: OperatorEvent): string | null {
     switch (event.kind) {
-      case 'flow.bootstrap_started':
-        return `[runtime/flow] Bootstrapping from interactive ${event.role} session`;
-
       case 'flow.resumed':
         return `[runtime/flow] Resuming flow ${event.flowId} with ${event.activeNodeCount} active node(s)`;
 
@@ -61,19 +58,15 @@ export class OperatorEventRenderer implements OperatorRenderSink {
       }
 
       case 'repair.requested': {
-        const suffix = event.scope === 'bootstrap'
-          ? 'retrying bootstrap interaction'
-          : event.scope === 'improvement'
-            ? 'retrying backward pass step'
-            : 'retrying current node';
+        const suffix = event.scope === 'improvement'
+          ? 'retrying backward pass step'
+          : 'retrying current node';
         return `[runtime/repair] ${event.summary}; ${suffix}`;
       }
 
       case 'human.awaiting_input': {
         if (event.reason === 'prompt-human') {
           return `[runtime/human] Waiting for operator input`;
-        } else if (event.reason === 'interactive-abort') {
-          return `[runtime/human] Turn aborted by operator; waiting for revised input`;
         } else {
           return `[runtime/human] Flow suspended; waiting for later operator input`;
         }

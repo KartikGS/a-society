@@ -3,19 +3,18 @@ import path from 'node:path';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRun, HandoffResult, HandoffTarget, InteractiveSessionResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
+import type { FlowRun, HandoffResult, HandoffTarget, InteractiveSessionResult, OperatorRenderSink, TurnUsage } from './types.js';
 import { emitUsage, runInteractiveSession } from './orient.js';
-import { buildOwnerBootstrapMessage, buildForwardNodeEntryMessage } from './session-entry.js';
+import { buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
-import { OperatorEventRenderer, createDefaultRenderer } from './operator-renderer.js';
-import { buildWorkflowRepairGuidance, validateWorkflowFile } from './framework-services/workflow-graph-validator.js';
+import { createDefaultRenderer } from './operator-renderer.js';
+import { buildWorkflowRepairGuidance } from './framework-services/workflow-graph-validator.js';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
-import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { canonicalWorkflowFilename, findWorkflowFilePath, parseWorkflowFile, resolveFlowWorkflow } from './workflow-file.js';
+import { canonicalWorkflowFilename, resolveFlowWorkflow } from './workflow-file.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -26,36 +25,6 @@ export class WorkflowError extends Error {
 
 type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
 
-
-export function parseWorkflow(filePath: string): any {
-  if (!fs.existsSync(filePath)) {
-    const folder = path.dirname(filePath);
-    throw new WorkflowError(
-      `Error: ${canonicalWorkflowFilename()} not found in ${folder}. ` +
-      `This file is required before a handoff can be routed. ` +
-      `Please create ${canonicalWorkflowFilename()} in the record folder and restate your handoff.`
-    );
-  }
-  try {
-    return parseWorkflowFile(filePath);
-  } catch (err) {
-    throw new WorkflowError((err as Error).message);
-  }
-}
-
-function requireWorkflowPath(recordFolderPath: string): string {
-  const workflowPath = findWorkflowFilePath(recordFolderPath);
-  if (!workflowPath) {
-    throw new WorkflowError(
-      `Error: ${canonicalWorkflowFilename()} not found in ${recordFolderPath}. ` +
-      `This file is required before a handoff can be routed. ` +
-      `Please create ${canonicalWorkflowFilename()} in the record folder and restate your handoff.`
-    );
-  }
-  return workflowPath;
-}
-
-
 export class FlowOrchestrator {
   private renderer: OperatorRenderSink;
   private pendingRoleActiveEmitted = new Set<string>();
@@ -64,10 +33,10 @@ export class FlowOrchestrator {
     this.renderer = renderer ?? createDefaultRenderer();
   }
 
-  public async startUnifiedOrchestration(
+  public async runStoredFlow(
     workspaceRoot: string,
     projectNamespace: string,
-    roleName: string,
+    _roleName: string,
     inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout
   ): Promise<void> {
@@ -83,162 +52,40 @@ export class FlowOrchestrator {
         rootSpan.setAttribute('flow.id', 'pending');
         rootSpan.setAttribute('flow.resumed', flowRun !== null);
 
-        if (flowRun && flowRun.workspaceRoot !== workspaceRoot) {
-          console.warn(`\n[Warning] Resuming flow from a different workspace root:`);
-          console.warn(`  Loaded: ${flowRun.workspaceRoot}`);
-          console.warn(`  Expected: ${workspaceRoot}`);
-          console.warn(`Starting a fresh session instead.\n`);
-          flowRun = null;
+        if (!flowRun) {
+          throw new Error(
+            'No active flow state found. Create and persist a draft flow before starting orchestration.'
+          );
         }
 
-        if (!flowRun) {
-          await tracer.startActiveSpan('bootstrap.session', {
-            kind: SpanKind.INTERNAL,
-            attributes: { project_namespace: projectNamespace, role_name: roleName }
-          }, async (bootstrapSpan) => {
-            this.renderer.emit({ kind: 'flow.bootstrap_started', role: roleName });
-            const bootstrapHistory: RuntimeMessageParam[] = [];
+        if (flowRun.workspaceRoot !== workspaceRoot) {
+          throw new Error(
+            `Persisted flow workspace root mismatch: loaded "${flowRun.workspaceRoot}" but expected "${workspaceRoot}". ` +
+            'Clear runtime state or create a fresh draft flow for this workspace before starting orchestration.'
+          );
+        }
 
-            const { bundleContent: bootstrapBundle } = ContextInjectionService.buildContextBundle(
-              projectNamespace, roleName, workspaceRoot
-            );
+        if (flowRun.projectNamespace !== projectNamespace) {
+          throw new Error(
+            `Persisted flow project mismatch: loaded "${flowRun.projectNamespace}" but expected "${projectNamespace}". ` +
+            'Clear runtime state or create a fresh draft flow for this project before starting orchestration.'
+          );
+        }
 
-            // Caller-owned Owner bootstrap message — pushed once before the first session turn.
-            bootstrapHistory.push({ role: 'user', content: buildOwnerBootstrapMessage() });
-
-            let retryCount = 0;
-            while (true) {
-              retryCount++;
-              try {
-                const controller = new AbortController();
-                const sigintHandler = () => controller.abort();
-                process.once('SIGINT', sigintHandler);
-
-                let sessionResult: InteractiveSessionResult | null = null;
-                try {
-                  sessionResult = await runInteractiveSession(
-                    workspaceRoot, projectNamespace, roleName, bootstrapBundle,
-                    bootstrapHistory,
-                    inputStream, outputStream,
-                    controller.signal,
-                    this.renderer
-                  );
-                } finally {
-                  process.removeListener('SIGINT', sigintHandler);
-                }
-
-                if (!sessionResult) {
-                  flowRun = null;
-                  return;
-                }
-                const handoffResult = sessionResult.handoff;
-                const turnUsage = sessionResult.usage;
-
-                if (handoffResult.kind === 'awaiting_human') {
-                  emitUsage(this.renderer, turnUsage);
-                  this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'interactive' });
-                  const humanReply = await this.readHumanInput(inputStream, outputStream);
-                  if (humanReply === null) {
-                    flowRun = null;
-                    return;
-                  }
-                  bootstrapHistory.push({ role: 'user', content: humanReply });
-                  continue;
-                }
-
-                if (handoffResult.kind !== 'targets') {
-                  throw new Error(`Initial interactive session must return a 'targets' handoff, but got '${handoffResult.kind}'.`);
-                }
-                const handoffs = handoffResult.targets;
-                if (handoffs.length === 0) {
-                  bootstrapHistory.push({ role: 'user', content: 'Bootstrap produced no handoff targets. Re-emit a handoff with artifact_path pointing to your output artifact.' });
-                  continue;
-                }
-                this.validateTargetArtifactsExist(workspaceRoot, handoffs);
-                const firstArtifactPath = handoffs[0].artifact_path;
-                if (!firstArtifactPath) throw new Error(`Initial interactive session did not supply an artifact_path to locate ${canonicalWorkflowFilename()}.`);
-
-                const recordFolderPath = path.dirname(path.resolve(workspaceRoot, firstArtifactPath));
-                const workflowDocumentPath = findWorkflowFilePath(recordFolderPath) ?? path.join(recordFolderPath, canonicalWorkflowFilename());
-
-                if (!fs.existsSync(workflowDocumentPath)) {
-                  bootstrapSpan.addEvent('bootstrap.workflow_not_found', { record_folder_path: recordFolderPath });
-                  const guidance = buildWorkflowRepairGuidance([`${canonicalWorkflowFilename()} not found in ${recordFolderPath}`]);
-                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'missing_workflow', summary: guidance.operatorSummary });
-                  bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
-                  continue;
-                }
-
-                const validationRes = validateWorkflowFile(workflowDocumentPath, true);
-                if (!validationRes.valid) {
-                  bootstrapSpan.addEvent('bootstrap.tool_trigger_failed', { error_message: validationRes.errors.join('; ') });
-                  const guidance = buildWorkflowRepairGuidance(validationRes.errors);
-                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_schema', summary: guidance.operatorSummary });
-                  bootstrapHistory.push({ role: 'user', content: guidance.modelRepairMessage });
-                  continue;
-                }
-
-                const doc = parseWorkflow(workflowDocumentPath);
-                const wf = doc.workflow;
-                const startNode = this.findStrictWorkflowStartNode(wf);
-                bootstrapSpan.setAttribute('bootstrap.workflow_path', path.relative(workspaceRoot, workflowDocumentPath));
-
-                flowRun = {
-                  flowId: crypto.randomUUID(),
-                  workspaceRoot,
-                  projectNamespace,
-                  recordFolderPath,
-                  activeNodes: [startNode.id],
-                  completedNodes: [],
-                  visitedNodeIds: [],
-                  completedEdgeArtifacts: {},
-                  pendingNodeArtifacts: {},
-                  status: 'running',
-                  stateVersion: '6'
-                };
-                await this.applyHandoffAndAdvance(flowRun, startNode.id, roleName, handoffs, turnUsage);
-                SessionStore.saveRoleSession({
-                  roleName,
-                  logicalSessionId: this.roleSessionId(flowRun, roleName),
-                  transcriptHistory: bootstrapHistory,
-                  isActive: false,
-                  currentNodeId: startNode.id
-                });
-                bootstrapSpan.setAttribute('bootstrap.retry_count', retryCount);
-                break;
-              } catch (e: any) {
-                if (e instanceof HandoffParseError) {
-                  bootstrapSpan.addEvent('bootstrap.handoff_parse_failed', {
-                    error_type: e.name,
-                    error_message: e.message.slice(0, 500)
-                  });
-                  this.renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: e.details.code, summary: e.details.operatorSummary });
-                  bootstrapHistory.push({ role: 'user', content: e.details.modelRepairMessage });
-                  continue;
-                }
-                bootstrapHistory.push({ role: 'user', content: `Unexpected error: ${e.message}` });
-                continue;
-              }
-            }
-          });
-        } else {
-          const resumeWf = this.resolveActiveWorkflow(flowRun);
-          this.ensureNoRoleScopedParallelConflictInActiveSet(flowRun, resumeWf);
-          this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
-          if (flowRun.activeNodes.length > 1) {
-            try {
-              const activeNodes = flowRun.activeNodes.map(id => {
-                const node = resumeWf.nodes.find((n: any) => n.id === id);
-                return { nodeId: id, role: node?.role ?? '' };
-              });
-              this.renderer.emit({ kind: 'parallel.active_set', activeNodes });
-            } catch (_) {
-              // workflow unreadable on resume — skip parallel notice
-            }
+        const resumeWf = this.resolveActiveWorkflow(flowRun);
+        this.ensureNoRoleScopedParallelConflictInActiveSet(flowRun, resumeWf);
+        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
+        if (flowRun.activeNodes.length > 1) {
+          try {
+            const activeNodes = flowRun.activeNodes.map(id => {
+              const node = resumeWf.nodes.find((n: any) => n.id === id);
+              return { nodeId: id, role: node?.role ?? '' };
+            });
+            this.renderer.emit({ kind: 'parallel.active_set', activeNodes });
+          } catch (_) {
+            // workflow unreadable on resume — skip parallel notice
           }
         }
-
-        if (!flowRun) return;
 
         rootSpan.setAttribute('flow.id', flowRun.flowId);
         rootSpan.setAttribute('flow.project_namespace', flowRun.projectNamespace);
@@ -429,7 +276,7 @@ export class FlowOrchestrator {
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
                 emitUsage(this.renderer, turnUsage);
-                this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'autonomous' });
+                this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human' });
                 const humanReply = await this.readHumanInput(inputStream, outputStream);
                 if (humanReply === null) {
                   flowRun.status = 'awaiting_human';
@@ -518,7 +365,7 @@ export class FlowOrchestrator {
               break;
             } else {
               span.setAttribute('node.outcome', 'null_return');
-              this.renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort', mode: 'autonomous' });
+              this.renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort' });
               flowRun.status = 'awaiting_human';
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session);
@@ -815,16 +662,6 @@ export class FlowOrchestrator {
 
   private removeCompletedNode(flowRun: FlowRun, nodeId: string) {
     flowRun.completedNodes = flowRun.completedNodes.filter(id => id !== nodeId);
-  }
-
-  private findStrictWorkflowStartNode(wf: any): any {
-    const toIds = new Set((wf.edges || []).map((edge: any) => edge.to));
-    const startNodes = (wf.nodes || []).filter((node: any) => !toIds.has(node.id));
-    const startNode = startNodes[0];
-    if (!startNode) {
-      throw new WorkflowError('Validated workflow has no start node.');
-    }
-    return startNode;
   }
 
   private roleKey(roleName: string): string {

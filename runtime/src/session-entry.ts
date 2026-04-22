@@ -2,20 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { resolveVariableFromIndex } from './paths.js';
 
-/**
- * Builds the exact Owner bootstrap first-turn user message.
- * Called by the orchestrator at fresh interactive Owner bootstrap only.
- */
-export function buildOwnerBootstrapMessage(): string {
-  return (
-    'A fresh interactive Owner session has started. ' +
-    'The runtime already loaded your required-reading authority files into context. ' +
-    'Using that loaded context, summarize the project log, give a brief status of where the project is at, ' +
-    'ask what the user wants to work on, and end with a `type: prompt-human` handoff block. ' +
-    'Do not spend this first turn rereading the log or workflow unless close inspection is necessary for the status you give.'
-  );
-}
-
 export interface ForwardNodeEntryOptions {
   nodeId: string;
   role: string;

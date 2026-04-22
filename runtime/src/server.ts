@@ -328,7 +328,7 @@ function buildServer(workspaceRoot: string) {
     const session = createSession(projectNamespace);
     emitFlowState(session);
     void attachSessionTask(session, () =>
-      session.orchestrator.startUnifiedOrchestration(
+      session.orchestrator.runStoredFlow(
         workspaceRoot,
         projectNamespace,
         'Owner',
@@ -345,7 +345,7 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(flowRun.projectNamespace);
     void attachSessionTask(session, () =>
-      session.orchestrator.startUnifiedOrchestration(
+      session.orchestrator.runStoredFlow(
         workspaceRoot,
         flowRun.projectNamespace,
         'Owner',

@@ -27,12 +27,6 @@ function makeRenderer(): { renderer: OperatorEventRenderer; output: () => string
 
 console.log('\noperator-renderer');
 
-test('flow.bootstrap_started renders correct line', () => {
-  const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'flow.bootstrap_started', role: 'Owner' });
-  assert.ok(output().includes('[runtime/flow] Bootstrapping from interactive Owner session\n'));
-});
-
 test('flow.resumed renders correct line', () => {
   const { renderer, output } = makeRenderer();
   renderer.emit({ kind: 'flow.resumed', flowId: 'abc-123', activeNodeCount: 2 });
@@ -100,12 +94,6 @@ test('repair.requested node scope ends with retrying current node', () => {
   assert.ok(output().includes('[runtime/repair] Malformed handoff block; retrying current node\n'));
 });
 
-test('repair.requested bootstrap scope ends with retrying bootstrap interaction', () => {
-  const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'repair.requested', scope: 'bootstrap', code: 'workflow_parse', summary: 'Workflow parse failure' });
-  assert.ok(output().includes('[runtime/repair] Workflow parse failure; retrying bootstrap interaction\n'));
-});
-
 test('repair.requested improvement scope ends with retrying backward pass step', () => {
   const { renderer, output } = makeRenderer();
   renderer.emit({ kind: 'repair.requested', scope: 'improvement', code: 'runtime_health', summary: 'A-docs runtime health checks failed' });
@@ -114,19 +102,13 @@ test('repair.requested improvement scope ends with retrying backward pass step',
 
 test('human.awaiting_input prompt-human renders waiting line', () => {
   const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human', mode: 'autonomous' });
+  renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human' });
   assert.ok(output().includes('[runtime/human] Waiting for operator input\n'));
-});
-
-test('human.awaiting_input interactive-abort renders abort line', () => {
-  const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'human.awaiting_input', reason: 'interactive-abort', mode: 'interactive' });
-  assert.ok(output().includes('[runtime/human] Turn aborted by operator; waiting for revised input\n'));
 });
 
 test('human.awaiting_input autonomous-abort renders suspended line', () => {
   const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort', mode: 'autonomous' });
+  renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort' });
   assert.ok(output().includes('[runtime/human] Flow suspended; waiting for later operator input\n'));
 });
 

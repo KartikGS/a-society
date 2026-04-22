@@ -32,8 +32,6 @@ function formatUsageSummary(event: Extract<OperatorEvent, { kind: 'usage.turn_su
 
 function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
   switch (event.kind) {
-    case 'flow.bootstrap_started':
-      return { id: nextFeedId(), type: 'event', label: 'Bootstrap', text: `Interactive ${event.role} bootstrap started.` };
     case 'flow.resumed':
       return { id: nextFeedId(), type: 'event', label: 'Resume', text: `Flow ${event.flowId} resumed with ${event.activeNodeCount} active node(s).` };
     case 'role.active':
@@ -181,10 +179,6 @@ export function App() {
     switch (message.type) {
       case 'operator_event': {
         const event = message.event;
-
-        if (event.kind === 'flow.bootstrap_started') {
-          setActiveLiveRole(event.role);
-        }
 
         if (event.kind === 'role.active') {
           setActiveLiveRole(event.role);
