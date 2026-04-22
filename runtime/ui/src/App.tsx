@@ -7,6 +7,7 @@ import type {
   ClientMessage,
   FlowRun,
   OperatorEvent,
+  ProjectDiscovery,
   ServerMessage,
   WorkflowGraph,
 } from './types';
@@ -118,8 +119,10 @@ export function App() {
   const socketUrl = `${protocol}://${window.location.host}`;
 
   const [view, setView] = useState<ViewMode>('selector');
-  const [projects, setProjects] = useState<Array<{ displayName: string; folderName: string }>>([]);
+  const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [selectorError, setSelectorError] = useState<string | null>(null);
   const [flowRun, setFlowRun] = useState<FlowRun | null>(null);
   const [backwardActive, setBackwardActive] = useState<string[]>([]);
   const [lastHandoff, setLastHandoff] = useState<Extract<OperatorEvent, { kind: 'handoff.applied' }> | null>(null);
@@ -162,6 +165,8 @@ export function App() {
     if (message.type === 'init') {
       setProjects(message.projects);
       setSelectedProject(message.flowRun?.projectNamespace ?? null);
+      setNewProjectName('');
+      setSelectorError(null);
       setFlowRun(message.flowRun);
       setBackwardActive([]);
       setLastHandoff(null);
@@ -183,6 +188,7 @@ export function App() {
         if (event.kind === 'role.active') {
           setActiveLiveRole(event.role);
           setSelectedRole((prev) => prev ?? event.role);
+          setSelectorError(null);
           setView('graph');
           setAwaitingInput(false);
         }
@@ -237,6 +243,10 @@ export function App() {
         }
         return;
       case 'error':
+        if (!flowRun) {
+          setSelectorError(message.message);
+          setView('selector');
+        }
         appendToActiveRole({
           id: nextFeedId(),
           type: 'error',
@@ -292,6 +302,8 @@ export function App() {
 
   function handleProjectSelect(projectNamespace: string): void {
     setSelectedProject(projectNamespace);
+    setNewProjectName('');
+    setSelectorError(null);
     setFlowRun(null);
     setBackwardActive([]);
     setLastHandoff(null);
@@ -304,7 +316,47 @@ export function App() {
     setShowImprovementModal(false);
     setComposerValue('');
     setView('graph');
-    sendMessage({ type: 'start_flow', projectNamespace });
+    sendMessage({ type: 'start_initialized_flow', projectNamespace });
+  }
+
+  function handleExistingInitialization(projectNamespace: string): void {
+    setSelectedProject(projectNamespace);
+    setNewProjectName('');
+    setSelectorError(null);
+    setFlowRun(null);
+    setBackwardActive([]);
+    setLastHandoff(null);
+    setRoleFeeds({});
+    setActiveLiveRole(null);
+    setSelectedRole(null);
+    setWorkflow(null);
+    setWaitLabel(null);
+    setAwaitingInput(false);
+    setShowImprovementModal(false);
+    setComposerValue('');
+    setView('graph');
+    sendMessage({ type: 'start_takeover_initialization', projectNamespace });
+  }
+
+  function handleCreateNewProject(): void {
+    const projectName = newProjectName.trim();
+    if (!projectName) return;
+
+    setSelectedProject(projectName);
+    setSelectorError(null);
+    setFlowRun(null);
+    setBackwardActive([]);
+    setLastHandoff(null);
+    setRoleFeeds({});
+    setActiveLiveRole(null);
+    setSelectedRole(null);
+    setWorkflow(null);
+    setWaitLabel(null);
+    setAwaitingInput(false);
+    setShowImprovementModal(false);
+    setComposerValue('');
+    setView('graph');
+    sendMessage({ type: 'start_greenfield_initialization', projectName });
   }
 
   function handleSubmit(): void {
@@ -337,6 +389,7 @@ export function App() {
     : [];
 
   const displayedFeed = selectedRole ? (roleFeeds[selectedRole] ?? []) : (activeLiveRole ? (roleFeeds[activeLiveRole] ?? []) : []);
+  const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (roleFeeds.__system__ ?? []);
 
   return (
     <main className="app-shell">
@@ -356,10 +409,16 @@ export function App() {
 
       {view === 'selector' ? (
         <ProjectSelector
-          projects={projects}
+          projectsWithADocs={projects.withADocs}
+          projectsWithoutADocs={projects.withoutADocs}
           selectedProject={selectedProject}
+          newProjectName={newProjectName}
+          errorMessage={selectorError}
           disabled={socket.status !== 'open'}
-          onSelect={handleProjectSelect}
+          onSelectInitialized={handleProjectSelect}
+          onInitializeExisting={handleExistingInitialization}
+          onNewProjectNameChange={setNewProjectName}
+          onCreateNew={handleCreateNewProject}
         />
       ) : null}
 
@@ -379,7 +438,7 @@ export function App() {
             <ChatInterface
               title="Role feed"
               subtitle="Select a role to view its conversation."
-              messages={displayedFeed}
+              messages={visibleFeed}
               waitingLabel={waitLabel}
               inputValue={composerValue}
               inputDisabled={!awaitingInput}
@@ -400,7 +459,7 @@ export function App() {
                 <div>
                   <p className="eyebrow">Workflow Graph</p>
                   <h2>{selectedProject ?? 'Preparing flow'}</h2>
-                  <p className="panel-copy">Creating the draft record and default Owner intake node…</p>
+                  <p className="panel-copy">Preparing the runtime-owned flow and waiting for the first Owner node to activate…</p>
                 </div>
               </div>
 
@@ -411,7 +470,7 @@ export function App() {
 
             <ChatInterface
               title="Role feed"
-              subtitle="The first Owner conversation will appear here once the runtime activates the default node."
+              subtitle="The first Owner conversation will appear here once the runtime activates the initialization or intake node."
               messages={displayedFeed}
               waitingLabel={waitLabel}
               inputValue={composerValue}

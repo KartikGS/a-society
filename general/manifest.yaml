@@ -293,7 +293,7 @@ files:
   # scaffold time. The Consent Utility (Component 2) may also be used to create these files.
 
   - path: feedback/onboarding/consent.md
-    description: "Onboarding feedback consent — records whether this project consents to Initializer signal reports being filed to a-society/feedback/onboarding/"
+    description: "Onboarding feedback consent — records whether this project consents to initialization signal reports being filed to a-society/feedback/onboarding/"
     required: true
     scaffold: copy
     source_path: general/feedback/consent.md

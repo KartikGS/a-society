@@ -35,7 +35,15 @@ The browser UI has two operator modes.
 
 ### 1. Project Selector and Owner Chat
 
-Fresh starts open in the project selector. After choosing a project, the UI enters the Owner bootstrap chat.
+Fresh starts open in the project selector. The selector now has three startup paths:
+
+- Existing projects with `a-docs/`
+- Existing projects without `a-docs/`
+- Create a new project
+
+Selecting a project with `a-docs/` starts the normal stored Owner draft flow.
+
+Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder and single-node Owner workflow, injects initialization guidance as active artifacts, and then runs that stored flow.
 
 - The runtime streams assistant text into the chat panel
 - Runtime notices appear inline in the same operator feed
@@ -84,9 +92,14 @@ Improvement-phase menus use the same browser input path. Menu text appears in th
 
 When a session begins, the runtime resolves the active role to kebab-case and loads that role's file from `a-docs/roles/<role-id>/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
 
-### Fresh Owner bootstrap
+### Stored-flow startup only
 
-A fresh interactive Owner bootstrap uses an explicit first user message that tells the Owner the required-reading authority is already loaded and available in the session. The runtime does not inject a generic "read the log first" instruction.
+The runtime no longer bootstraps from empty orchestration state. A project must have a persisted flow before orchestration starts:
+
+- initialized projects use a stored draft flow created by the server
+- initialization runs use a stored single-node Owner flow created after scaffold
+
+The runtime then resumes or advances that stored flow until it pauses or completes.
 
 ### Same-node `prompt-human` resume
 

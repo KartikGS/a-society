@@ -13,17 +13,16 @@ import { SessionStore } from './store.js';
 import { FlowOrchestrator } from './orchestrator.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
+import { bootstrapInitializationFlow } from './initialization-bootstrap.js';
 import { initializeDraftFlow } from './draft-flow.js';
+import { discoverProjects, type ProjectDiscovery } from './project-discovery.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
 import type { FlowRun, OperatorEvent } from './types.js';
 
-interface ProjectSummary {
-  displayName: string;
-  folderName: string;
-}
-
 type ClientMessage =
-  | { type: 'start_flow'; projectNamespace: string }
+  | { type: 'start_initialized_flow'; projectNamespace: string }
+  | { type: 'start_takeover_initialization'; projectNamespace: string }
+  | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'human_input'; text: string };
 
 type FlowStateMessage = {
@@ -33,7 +32,7 @@ type FlowStateMessage = {
 };
 
 type ServerMessage =
-  | { type: 'init'; projects: ProjectSummary[]; flowRun: FlowRun | null }
+  | { type: 'init'; projects: ProjectDiscovery; flowRun: FlowRun | null }
   | RuntimeServerMessage
   | { type: 'output_text'; text: string }
   | FlowStateMessage
@@ -63,27 +62,6 @@ const UI_DIST = path.resolve(
 );
 const UI_INDEX = path.join(UI_DIST, 'index.html');
 const HISTORY_LIMIT = 400;
-
-function discoverProjects(workspaceRoot: string): ProjectSummary[] {
-  try {
-    const entries = fs.readdirSync(workspaceRoot, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => ({
-        displayName: entry.name,
-        folderName: entry.name,
-        agentsPath: path.join(workspaceRoot, entry.name, 'a-docs', 'agents.md')
-      }))
-      .filter((entry) => fs.existsSync(entry.agentsPath))
-      .sort((left, right) => left.displayName.localeCompare(right.displayName))
-      .map(({ displayName, folderName }) => ({ displayName, folderName }));
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
-}
 
 function isDirectExecution(): boolean {
   if (!process.argv[1]) return false;
@@ -338,6 +316,29 @@ function buildServer(workspaceRoot: string) {
     ).catch(() => {});
   }
 
+  function startInitializationFlow(projectNamespace: string, mode: 'takeover' | 'greenfield'): void {
+    const startBlocker = canStartFreshFlow();
+    if (startBlocker) {
+      broadcast({ type: 'error', message: startBlocker });
+      return;
+    }
+
+    const { flowRun } = bootstrapInitializationFlow(workspaceRoot, projectNamespace, mode);
+    SessionStore.saveFlowRun(flowRun);
+
+    const session = createSession(projectNamespace);
+    emitFlowState(session);
+    void attachSessionTask(session, () =>
+      session.orchestrator.runStoredFlow(
+        workspaceRoot,
+        projectNamespace,
+        'Owner',
+        session.inputBridge,
+        session.outputBridge
+      )
+    ).catch(() => {});
+  }
+
   function resumeRunningFlow(): void {
     const flowRun = readCurrentFlowRun();
     if (!flowRun || flowRun.status !== 'running') return;
@@ -453,7 +454,13 @@ function buildServer(workspaceRoot: string) {
   function parseClientMessage(raw: string): ClientMessage | null {
     try {
       const parsed = JSON.parse(raw);
-      if (parsed?.type === 'start_flow' && typeof parsed.projectNamespace === 'string') {
+      if (parsed?.type === 'start_initialized_flow' && typeof parsed.projectNamespace === 'string') {
+        return parsed;
+      }
+      if (parsed?.type === 'start_takeover_initialization' && typeof parsed.projectNamespace === 'string') {
+        return parsed;
+      }
+      if (parsed?.type === 'start_greenfield_initialization' && typeof parsed.projectName === 'string') {
         return parsed;
       }
       if (parsed?.type === 'human_input' && typeof parsed.text === 'string') {
@@ -537,19 +544,54 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      if (message.type === 'start_flow') {
-        const projectExists = discoverProjects(workspaceRoot).some(
+      if (message.type === 'start_initialized_flow') {
+        const projectExists = discoverProjects(workspaceRoot).withADocs.some(
           (project) => project.folderName === message.projectNamespace
         );
         if (!projectExists) {
           sendToSocket(socket, {
             type: 'error',
-            message: `Project "${message.projectNamespace}" was not found in the workspace.`
+            message: `Project "${message.projectNamespace}" with a-docs was not found in the workspace.`
           });
           return;
         }
 
         startFreshFlow(message.projectNamespace);
+        return;
+      }
+
+      if (message.type === 'start_takeover_initialization') {
+        const projectExists = discoverProjects(workspaceRoot).withoutADocs.some(
+          (project) => project.folderName === message.projectNamespace
+        );
+        if (!projectExists) {
+          sendToSocket(socket, {
+            type: 'error',
+            message: `Project "${message.projectNamespace}" without a-docs was not found in the workspace.`
+          });
+          return;
+        }
+
+        try {
+          startInitializationFlow(message.projectNamespace, 'takeover');
+        } catch (error: any) {
+          sendToSocket(socket, {
+            type: 'error',
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
+        return;
+      }
+
+      if (message.type === 'start_greenfield_initialization') {
+        try {
+          startInitializationFlow(message.projectName, 'greenfield');
+        } catch (error: any) {
+          sendToSocket(socket, {
+            type: 'error',
+            message: error instanceof Error ? error.message : String(error)
+          });
+        }
         return;
       }
 

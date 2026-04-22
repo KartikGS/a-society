@@ -13,7 +13,7 @@ It is the project's ledger for its position in the A-Society version history. Wi
 
 ## Who Creates It
 
-The Initializer creates this file during Phase 3 — after all other `a-docs/` documents are drafted but before the index is finalized. The Initializer reads A-Society's current version from `$A_SOCIETY_VERSION` and records it as the baseline.
+The Owner creates this file during initialization — after the other foundational `a-docs/` documents are drafted but before the index is finalized. The Owner reads A-Society's current version from `$A_SOCIETY_VERSION` and records it as the baseline.
 
 ---
 
@@ -52,7 +52,7 @@ Replace the placeholder row once the first update is applied. Each row records: 
 
 ---
 
-## How to Create It (Initializer)
+## How to Create It During Initialization
 
 1. Read `$A_SOCIETY_VERSION` to get the current framework version
 2. Create `a-docs/a-society-version.md` using the format above, stamping the current version as the baseline and today's date as the initialization date

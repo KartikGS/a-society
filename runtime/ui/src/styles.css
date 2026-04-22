@@ -134,6 +134,18 @@ textarea {
   padding: 24px;
 }
 
+.selector-stack {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 18px;
+}
+
+.selector-error-panel {
+  border-color: rgba(187, 62, 3, 0.2);
+  background: rgba(255, 247, 237, 0.92);
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

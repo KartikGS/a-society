@@ -1,8 +1,8 @@
 # A-Society — Public Index
 
-This is the single source of truth for all public-facing file paths in `a-society/` — the `general/` library, the `agents/` layer, and the standing executable operator surface.
+This is the single source of truth for all public-facing file paths in `a-society/` — the `general/` library and the standing executable operator surface.
 
-External agents (e.g., the Initializer) and project owners resolve file paths from this index. Internal A-Society agents working on the framework itself use `a-society/a-docs/indexes/main.md` for internal paths.
+Project owners, runtime initialization flows, and other public-facing A-Society surfaces resolve file paths from this index. Internal A-Society agents working on the framework itself use `a-society/a-docs/indexes/main.md` for internal paths.
 
 When a file moves, update **only the relevant row here**. All docs referencing a variable name (`$VAR`) will resolve correctly from a single change.
 
@@ -12,24 +12,23 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 
 | Variable | Current Path | Description |
 |---|---|---|
-| **Agents** | | |
-| `$A_SOCIETY_INITIALIZER` | `a-society/agents/initializer.md` | A-Society Initializer Agent — bootstraps a new project's `a-docs/` |
 | **Runtime** | | |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `a-society/runtime/HANDOFF-CONTRACT.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
+| `$A_SOCIETY_RUNTIME_INITIALIZATION` | `a-society/runtime/INITIALIZATION.md` | Runtime-owned initialization contract — used by the browser runtime when taking over an existing project without `a-docs/` or starting a greenfield project |
 | `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
 | **Feedback** | | |
-| `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Template for Initializer signal reports — one report per initialization run |
+| `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Template for initialization signal reports — one report per initialization run |
 | `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
 | `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
 | `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
 | `$GENERAL_FEEDBACK_CURATOR_SIGNAL_TEMPLATE` | `a-society/general/feedback/template-curator-signal.md` | Framework-feedback report template for the legacy `curator-signal` collection — used after backward passes to capture project-level feedback for A-Society |
-| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Initializer signal reports — filed after initialization runs with project consent |
+| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Initialization signal reports — filed after initialization runs with project consent |
 | `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
 | `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy-named collection for project-level framework feedback from adopting projects after backward passes |
 | **Framework Updates** | | |
 | `$A_SOCIETY_VERSION` | `a-society/VERSION.md` | A-Society's current framework version — single source of truth for the vMAJOR.MINOR version stamp |
-| `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when `general/` or `agents/` changes require a-docs review |
+| `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | **Workflows** | | |
 | `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.yaml` | A-Society canonical workflow definition — the single permanent graph for framework, executable, and coordinated multi-role work |
 | **Instructions** | | |

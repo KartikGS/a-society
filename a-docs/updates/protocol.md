@@ -2,7 +2,7 @@
 
 ## What a Framework Update Report Is
 
-A framework update report is an artifact published by A-Society when changes to `general/` or `agents/` are significant enough that adopting projects may need to update their own `a-docs/`. It is the outbound communication channel from A-Society to its ecosystem: a structured record of what changed, why it changed, and what each project's Curator should assess.
+A framework update report is an artifact published by A-Society when changes to `general/` or runtime-owned initialization behavior are significant enough that adopting projects may need to update their own `a-docs/`. It is the outbound communication channel from A-Society to its ecosystem: a structured record of what changed, why it changed, and what each project's Curator should assess.
 
 It is not a changelog for A-Society's own development. It is a migration guide for projects that have already been initialized.
 
@@ -14,7 +14,7 @@ Publish a framework update report when one or more of the following is true:
 
 - A new artifact type has been added to `general/` that initialized projects should have but do not
 - An existing `general/` instruction or template has changed in a way that affects the guidance adopting projects received at initialization
-- The Initializer protocol has changed in a way that affects what a correct `a-docs/` contains
+- The runtime initialization contract has changed in a way that affects what a correct `a-docs/` contains
 - A new mandatory section has been added to any general template or instruction
 
 Do NOT publish for:

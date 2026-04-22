@@ -12,7 +12,7 @@ export const FEEDBACK_TYPES: Record<string, FeedbackTypeMeta> = {
   'onboarding': {
     displayName: 'onboarding-signal',
     dirName: 'onboarding',
-    description: 'The Initializer writes a signal report to a-society/feedback/onboarding/ after completing an initialization run.',
+    description: 'The Owner initialization flow writes a signal report to a-society/feedback/onboarding/ after completing a project initialization run.',
   },
   'migration': {
     displayName: 'migration',

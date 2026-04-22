@@ -4,14 +4,13 @@ This document explains why each folder in `a-society/` exists — the principle 
 
 ---
 
-## The Four-Folder Structure
+## The Three-Layer Structure
 
 A-Society is a project like any other. As with any project using this framework, `a-docs/` sits alongside the project's actual work product — it is not above it or inside it.
 
-A-Society's standing work product occupies three folders:
+A-Society's standing work product occupies two folders:
 
 - **`general/`** — the library: distributable instructions, templates, and patterns that any project can adopt
-- **`agents/`** — the active agents: A-Society's deployed products that run on other projects
 - **`runtime/`** — the executable layer root: deterministic framework services plus programmatic orchestration, operator-facing runtime behavior, and the standing executable reference surface
 
 A-Society's agent documentation occupies one folder:
@@ -20,7 +19,6 @@ A-Society's agent documentation occupies one folder:
 
 The key placement question is: what kind of thing is this?
 - Content any project can take and use directly → `general/`
-- An A-Society agent deployed to work on other projects → `agents/`
 - A standing executable capability or operator-facing executable surface → `runtime/`
 - Documentation for agents working on A-Society itself → `a-docs/`
 
@@ -44,24 +42,6 @@ When you are unsure whether something belongs in `general/` vs another project's
 - Content specific to a project using the framework (e.g., LLM Journey) — that belongs in its own project folder
 
 **Principle:** Documents here are about A-Society, not produced by it.
-
----
-
-### `agents/`
-
-**Purpose:** A-Society's active agents — the products A-Society deploys to work on other projects. These are not templates for other projects to adopt; they are A-Society's own agents that operate externally.
-
-**What belongs here:**
-- Agent role files for A-Society-deployed agents (e.g., the Initializer)
-- Any future A-Society agent that runs on a target project rather than on A-Society itself
-
-**What does not belong here:**
-- Internal operational roles for agents working on A-Society — those live in `a-docs/roles/`
-- Distributable role templates for other projects to adopt — those live in `general/roles/`
-
-**Principle:** Files here are A-Society's work product deployed externally. An agent in `agents/` serves other projects; an agent in `a-docs/roles/` serves A-Society.
-
-**The key test:** Does this agent work *on A-Society* (maintaining, extending, or operating the framework)? → `a-docs/roles/`. Does this agent work *for other projects* on behalf of A-Society? → `agents/`.
 
 ---
 
@@ -119,7 +99,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **The key test:** Would an adopting project instantiate this role inside their own `a-docs/`? If yes — `general/roles/` is correct. If the role is a service A-Society provides to other projects (not something they own themselves) — it belongs in `a-society/a-docs/roles/`.
 
-**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator. The Initializer belongs in `a-society/a-docs/roles/` because it is A-Society's own agent — other projects receive the Initializer's output, they do not run one themselves.
+**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator. Runtime-owned initialization guidance belongs in `runtime/INITIALIZATION.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
 
 ---
 

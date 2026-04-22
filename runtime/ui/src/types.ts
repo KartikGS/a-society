@@ -3,6 +3,11 @@ export interface ProjectSummary {
   folderName: string;
 }
 
+export interface ProjectDiscovery {
+  withADocs: ProjectSummary[];
+  withoutADocs: ProjectSummary[];
+}
+
 export interface FlowRun {
   flowId: string;
   workspaceRoot: string;
@@ -33,11 +38,13 @@ export type OperatorEvent =
   | { kind: 'flow.completed' };
 
 export type ClientMessage =
-  | { type: 'start_flow'; projectNamespace: string }
+  | { type: 'start_initialized_flow'; projectNamespace: string }
+  | { type: 'start_takeover_initialization'; projectNamespace: string }
+  | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'human_input'; text: string };
 
 export type ServerMessage =
-  | { type: 'init'; projects: ProjectSummary[]; flowRun: FlowRun | null }
+  | { type: 'init'; projects: ProjectDiscovery; flowRun: FlowRun | null }
   | { type: 'operator_event'; event: OperatorEvent }
   | { type: 'wait_start'; provider: string; model: string }
   | { type: 'wait_stop' }

@@ -1,6 +1,6 @@
 # A-Society
 
-A portable framework for making any project agentic-friendly — before agents are deployed.
+A portable framework for making any project agentic-friendly — with runtime-guided initialization and role-based ongoing work.
 
 ---
 
@@ -49,12 +49,12 @@ It is:
 
 ## How It Works
 
-A-Society is a standalone repository that sits alongside your project. You initialize an `a-docs/` folder inside your project using the framework's instructions — giving agents the structure they need to operate confidently.
+A-Society is a standalone repository that sits alongside your project. You initialize an `a-docs/` folder inside your project through the runtime UI, which scaffolds the compulsory surfaces and then runs an Owner-led initialization flow that fills them with project truth.
 
 ```
 a-society/          ← this repo (the framework)
   general/          ← reusable instructions, templates, role archetypes
-  agents/           ← a-society's active agents (e.g., the Initializer)
+  runtime/          ← executable layer, browser UI, and initialization contract
   a-docs/           ← a-society's own agent documentation
 
 my-project/         ← your project
@@ -68,7 +68,7 @@ my-project/         ← your project
 
 | Folder | Contents |
 |---|---|
-| `agents/` | A-Society's active agents — start here to initialize your project |
+| `runtime/` | The executable layer — browser runtime, orchestration, scaffolding entry path, and initialization contract |
 | `general/instructions/` | How to create each agent-doc artifact for any project |
 | `general/roles/` | Ready-made role templates (Owner, Curator) |
 | `general/thinking/` | Reasoning frameworks and operational principles for agents |
@@ -91,16 +91,17 @@ your-workspace/
 └── a-society/        ← this repo
 ```
 
-**2. Run the Initializer**
+**2. Start the runtime**
 
-Using any agentic tool that can read files (Claude Code, Cursor, Copilot, etc.), run this prompt — replacing `your-project` with your project's folder name:
+From the workspace root, run:
 
+```bash
+a-society
 ```
-You are an A-Society Initializer Agent.
-Read @a-society/agents/initializer.md and initialize a-docs/ for your-project.
-```
 
-The Initializer will read your project, ask only what it cannot infer, and build your `a-docs/`. You review and approve.
+The browser UI lists existing projects with `a-docs/`, existing projects without `a-docs/`, and a create-new-project path.
+
+Choose your existing project. If it does not yet have `a-docs/`, the runtime scaffolds the compulsory files and then starts an Owner initialization flow that reads the project, asks only what it cannot infer, and fills the scaffolded files.
 
 **3. Done**
 
@@ -112,31 +113,24 @@ Once approved, your project has a structured agent layer. Any agent you assign a
 
 You do not need a finished project to use A-Society. A rough idea is enough to start.
 
-**1. Create a project folder and a seed file**
-
-Create a folder for your project. Inside it, create a `README.md` with a few sentences covering:
-- What is this project?
-- What does it produce or deliver?
-- Who does it serve?
-
-That is all. You do not need to have answers to everything — write what you know, leave the rest blank.
-
-**2. Clone A-Society alongside your project folder**
+**1. Clone A-Society into your workspace**
 
 ```
 your-workspace/
-├── your-project/     ← your new project folder (with seed README)
 └── a-society/        ← this repo
 ```
 
-**3. Run the Initializer**
+**2. Start the runtime**
 
-```
-You are an A-Society Initializer Agent.
-Read @a-society/agents/initializer.md and initialize a-docs/ for your-project.
+```bash
+a-society
 ```
 
-The Initializer will read your seed file and ask about what it cannot infer. The resulting `a-docs/` will be rough — that is expected and fine.
+**3. Create the project in the UI**
+
+Choose `Create New Project`, enter the project name, and let the runtime create the project folder and scaffold the compulsory `a-docs/`.
+
+The runtime then starts an Owner initialization flow. The Owner asks the startup questions interactively, fills the scaffolded files with real project truth, and leaves you with a usable first-pass `a-docs/`.
 
 **4. Improve as you go**
 
