@@ -241,6 +241,7 @@ export class FlowOrchestrator {
             role: roleName,
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
+            recordFolderPath: flowRun.recordFolderPath,
             activeArtifacts: resolvedArtifacts,
             humanInput,
             nodeContext
@@ -252,6 +253,7 @@ export class FlowOrchestrator {
             role: roleName,
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
+            recordFolderPath: flowRun.recordFolderPath,
             activeArtifacts: resolvedArtifacts,
             entryMode: session.currentNodeId === nodeId ? 'reopened-node' : 'role-transition',
             previousNodeId: session.currentNodeId,

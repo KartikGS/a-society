@@ -474,7 +474,7 @@ textarea {
 }
 
 .feed-item-user {
-  justify-self: start;
+  justify-self: end;
   width: fit-content;
   max-width: min(82%, 560px);
   border-color: rgba(36, 99, 235, 0.18);
@@ -501,6 +501,7 @@ textarea {
 
 .feed-item-user .feed-label {
   color: rgba(255, 255, 255, 0.78);
+  text-align: right;
 }
 
 .feed-text {
@@ -521,25 +522,72 @@ textarea {
 }
 
 .composer {
-  display: grid;
-  gap: 12px;
+  flex-shrink: 0;
 }
 
-.composer textarea {
-  resize: vertical;
-  min-height: 84px;
-  padding: 14px 16px;
+.composer-box {
+  display: flex;
+  flex-direction: column;
   border: 1px solid rgba(34, 49, 63, 0.14);
   border-radius: 18px;
   background: var(--surface-strong);
+  transition: border-color 0.15s;
+}
+
+.composer-box:focus-within {
+  border-color: rgba(15, 118, 110, 0.4);
+}
+
+.composer textarea {
+  resize: none;
+  overflow: hidden;
+  min-height: unset;
+  padding: 14px 16px 8px;
+  border: none;
+  background: transparent;
   color: var(--ink);
+  line-height: 1.55;
 }
 
 .composer textarea:disabled {
-  background: rgba(249, 250, 251, 0.85);
+  opacity: 0.6;
 }
 
-.composer button,
+.composer-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
+}
+
+.composer-btn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.composer-btn-send {
+  border: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: white;
+}
+
+.composer-btn-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.composer-btn-stop {
+  border: 1px solid rgba(187, 62, 3, 0.22);
+  background: rgba(255, 237, 213, 0.92);
+  color: #9a3412;
+}
+
+.composer-btn-stop:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 .transcript-panel button {
   justify-self: flex-start;
   padding: 12px 18px;
@@ -548,11 +596,6 @@ textarea {
   background: linear-gradient(135deg, var(--accent), var(--accent-deep));
   color: white;
   cursor: pointer;
-}
-
-.composer button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .workspace-grid {

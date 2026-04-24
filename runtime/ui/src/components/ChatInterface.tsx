@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 export interface FeedItem {
@@ -31,6 +31,14 @@ interface ChatInterfaceProps {
 export function ChatInterface(props: ChatInterfaceProps) {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [props.inputValue]);
 
   const handleFeedScroll = useCallback(() => {
     const element = feedRef.current;
@@ -71,20 +79,12 @@ export function ChatInterface(props: ChatInterfaceProps) {
         </div>
       ) : null}
 
-      <div className="status-row">
-        {props.statusLine ? <span className="status-pill">{props.statusLine}</span> : null}
-        {props.waitingLabel ? <span className="status-pill status-pill-wait">{props.waitingLabel}</span> : null}
-        {props.canStop ? (
-          <button
-            type="button"
-            className="status-action status-action-stop"
-            onClick={props.onStop}
-            disabled={props.stopRequested}
-          >
-            {props.stopRequested ? 'Stopping...' : 'Stop'}
-          </button>
-        ) : null}
-      </div>
+      {(props.statusLine || props.waitingLabel) ? (
+        <div className="status-row">
+          {props.statusLine ? <span className="status-pill">{props.statusLine}</span> : null}
+          {props.waitingLabel ? <span className="status-pill status-pill-wait">{props.waitingLabel}</span> : null}
+        </div>
+      ) : null}
 
       <div className="feed" ref={feedRef} onScroll={handleFeedScroll}>
         {props.messages.length === 0 ? (
@@ -118,16 +118,36 @@ export function ChatInterface(props: ChatInterfaceProps) {
           props.onSubmit();
         }}
       >
-        <textarea
-          value={props.inputValue}
-          onChange={(event) => props.onInputChange(event.target.value)}
-          disabled={props.inputDisabled}
-          placeholder={props.placeholder}
-          rows={3}
-        />
-        <button type="submit" disabled={props.inputDisabled || props.inputValue.trim().length === 0}>
-          Send reply
-        </button>
+        <div className="composer-box">
+          <textarea
+            ref={textareaRef}
+            value={props.inputValue}
+            onChange={(event) => props.onInputChange(event.target.value)}
+            disabled={props.inputDisabled}
+            placeholder={props.placeholder}
+            rows={1}
+          />
+          <div className="composer-footer">
+            {props.canStop ? (
+              <button
+                type="button"
+                className="composer-btn composer-btn-stop"
+                onClick={props.onStop}
+                disabled={props.stopRequested}
+              >
+                {props.stopRequested ? 'Stopping…' : 'Stop'}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="composer-btn composer-btn-send"
+                disabled={props.inputDisabled || props.inputValue.trim().length === 0}
+              >
+                Send
+              </button>
+            )}
+          </div>
+        </div>
       </form>
     </section>
   );

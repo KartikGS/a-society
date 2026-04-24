@@ -238,8 +238,9 @@ function GraphViewComponent({
             onlyRenderVisibleElements
             nodesDraggable={false}
             panOnDrag={true}
-            panOnScroll={false}
-            zoomOnScroll={true}
+            panOnScroll={true}
+            zoomOnScroll={false}
+            zoomOnPinch={true}
             onNodeClick={(_event, node) => onNodeClick(node.id)}
           >
             <Background gap={20} color="rgba(65, 78, 92, 0.09)" />

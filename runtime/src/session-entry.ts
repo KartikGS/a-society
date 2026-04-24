@@ -7,6 +7,7 @@ export interface ForwardNodeEntryOptions {
   role: string;
   workspaceRoot: string;
   projectNamespace: string;
+  recordFolderPath?: string;
   activeArtifacts: string[];
   entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
   previousNodeId?: string;
@@ -33,6 +34,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     role,
     workspaceRoot,
     projectNamespace,
+    recordFolderPath,
     activeArtifacts,
     entryMode = 'first-node',
     previousNodeId,
@@ -42,6 +44,9 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
   const lines: string[] = [];
 
   lines.push(`Workflow node: ${nodeId} (role: ${role})`);
+  if (recordFolderPath) {
+    lines.push(`Record folder: ${recordFolderPath}`);
+  }
   if (entryMode === 'role-transition' && previousNodeId) {
     lines.push(
       `You are continuing the same role-scoped flow session from workflow node ${previousNodeId} to ${nodeId}. ` +
