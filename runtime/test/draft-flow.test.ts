@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { initializeDraftFlow, repairMovedRecordFolder, resolveProjectRecordsRoot } from '../src/draft-flow.js';
+import { readRecordMetadata, syncRecordMetadataFromWorkflow } from '../src/record-metadata.js';
 import { SessionStore } from '../src/store.js';
 import { parseWorkflowFile } from '../src/workflow-file.js';
 
@@ -37,15 +38,19 @@ fs.writeFileSync(path.join(projectRoot, 'a-docs', 'indexes', 'main.md'), '');
 process.env.A_SOCIETY_STATE_DIR = stateDir;
 SessionStore.init();
 
-test('initializeDraftFlow creates the default record folder, marker, and single Owner node workflow', () => {
+test('initializeDraftFlow creates an opaque-id record folder, record metadata, and single Owner node workflow', () => {
   const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
 
   assert.ok(flow.recordFolderPath.startsWith(path.join(projectRoot, 'a-docs', 'records')));
+  assert.strictEqual(path.basename(flow.recordFolderPath), flow.flowId);
   assert.deepStrictEqual(flow.activeNodes, ['owner-intake']);
   assert.strictEqual(flow.status, 'running');
 
-  const markerPath = path.join(flow.recordFolderPath, '.a-society-flow.json');
-  assert.ok(fs.existsSync(markerPath), 'draft flow marker should exist');
+  const metadata = readRecordMetadata(flow.recordFolderPath);
+  assert.ok(metadata, 'record metadata should exist');
+  assert.strictEqual(metadata?.id, flow.flowId);
+  assert.strictEqual(metadata?.name, undefined);
+  assert.strictEqual(metadata?.summary, undefined);
 
   const workflowPath = path.join(flow.recordFolderPath, 'workflow.yaml');
   assert.ok(fs.existsSync(workflowPath), 'default workflow.yaml should exist');
@@ -54,6 +59,37 @@ test('initializeDraftFlow creates the default record folder, marker, and single 
   assert.strictEqual(workflowDoc.workflow.nodes.length, 1);
   assert.strictEqual(workflowDoc.workflow.nodes[0].id, 'owner-intake');
   assert.strictEqual(workflowDoc.workflow.nodes[0].role, 'Owner');
+});
+
+test('syncRecordMetadataFromWorkflow seeds name and summary once from workflow.yaml', () => {
+  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
+  const workflowPath = path.join(flow.recordFolderPath, 'workflow.yaml');
+
+  fs.writeFileSync(workflowPath, `workflow:
+  name: Record Metadata Sync
+  summary: Capture a durable title and summary from workflow.yaml.
+  nodes:
+    - id: owner-intake
+      role: Owner
+  edges: []
+`, 'utf8');
+
+  const firstSync = syncRecordMetadataFromWorkflow(flow.recordFolderPath, flow.flowId);
+  assert.strictEqual(firstSync.name, 'Record Metadata Sync');
+  assert.strictEqual(firstSync.summary, 'Capture a durable title and summary from workflow.yaml.');
+
+  fs.writeFileSync(workflowPath, `workflow:
+  name: Different Name
+  summary: Different summary.
+  nodes:
+    - id: owner-intake
+      role: Owner
+  edges: []
+`, 'utf8');
+
+  const secondSync = syncRecordMetadataFromWorkflow(flow.recordFolderPath, flow.flowId);
+  assert.strictEqual(secondSync.name, 'Record Metadata Sync');
+  assert.strictEqual(secondSync.summary, 'Capture a durable title and summary from workflow.yaml.');
 });
 
 test('resolveProjectRecordsRoot falls back to legacy records/ when present and a-docs/records is absent', () => {

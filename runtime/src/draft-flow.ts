@@ -1,21 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import yaml from 'js-yaml';
 import type { FlowRun } from './types.js';
+import { buildRecordId, readRecordMetadata, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 
-const FLOW_MARKER_FILENAME = '.a-society-flow.json';
-
-function formatDateStamp(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-function shortFlowId(flowId: string): string {
-  return flowId.replace(/-/g, '').slice(0, 8);
-}
+const LEGACY_FLOW_MARKER_FILENAME = '.a-society-flow.json';
 
 export function resolveProjectRoot(workspaceRoot: string, projectNamespace: string): string {
   return path.join(workspaceRoot, projectNamespace);
@@ -36,14 +25,6 @@ export function resolveProjectRecordsRoot(workspaceRoot: string, projectNamespac
   return preferred;
 }
 
-export function flowMarkerFilename(): string {
-  return FLOW_MARKER_FILENAME;
-}
-
-export function buildDraftRecordFolderName(flowId: string, now = new Date()): string {
-  return `draft-${formatDateStamp(now)}-${shortFlowId(flowId)}`;
-}
-
 export function buildDraftWorkflowDocument(roleName: string): string {
   return yaml.dump({
     workflow: {
@@ -57,7 +38,8 @@ export function buildDraftWorkflowDocument(roleName: string): string {
           guidance: [
             'This draft flow exists so the initial Owner conversation is durable from the first turn.',
             'Use the already loaded startup authority to understand the current project state before routing work.',
-            'Once the human intent is clear, rename the active record folder to a meaningful human-readable name.',
+            'The runtime assigned this flow a stable record ID and maintains record.yaml for this folder.',
+            'Once the human intent is clear, replace the runtime draft workflow name and summary with flow-specific values.',
             'If the real path needs additional nodes, update workflow.yaml before emitting any downstream handoff.',
             'If the work remains Owner-only or purely conversational, write a summary artifact in this record folder and close the forward pass from this node.'
           ],
@@ -69,8 +51,7 @@ export function buildDraftWorkflowDocument(roleName: string): string {
           work: [
             'Clarify what the human wants to achieve.',
             'Decide whether the work stays Owner-only or expands to additional workflow nodes.',
-            'Rename the record folder once the scope is clear.',
-            'Edit workflow.yaml to reflect the real path before any downstream handoff.',
+            'Edit workflow.yaml to reflect the real flow name, summary, and path before any downstream handoff.',
             'Create the appropriate artifact or artifacts in the record folder for the chosen path.'
           ],
           outputs: [
@@ -79,7 +60,7 @@ export function buildDraftWorkflowDocument(roleName: string): string {
           ],
           notes: [
             'The runtime already created this record folder so the initial conversation is not lost.',
-            'Do not delete or rewrite hidden runtime marker files inside the record folder.'
+            'Do not edit record.yaml directly unless the runtime or a standing instruction explicitly requires it.'
           ]
         }
       ],
@@ -93,29 +74,19 @@ export function initializeDraftFlow(
   projectNamespace: string,
   roleName: string
 ): FlowRun {
-  const flowId = crypto.randomUUID();
+  const flowId = buildRecordId();
   const recordsRoot = resolveProjectRecordsRoot(workspaceRoot, projectNamespace);
   fs.mkdirSync(recordsRoot, { recursive: true });
 
-  const recordFolderPath = path.join(recordsRoot, buildDraftRecordFolderName(flowId));
+  const recordFolderPath = path.join(recordsRoot, flowId);
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(recordFolderPath, FLOW_MARKER_FILENAME),
-    JSON.stringify(
-      {
-        flowId,
-        projectNamespace
-      },
-      null,
-      2
-    )
-  );
   fs.writeFileSync(
     path.join(recordFolderPath, 'workflow.yaml'),
     buildDraftWorkflowDocument(roleName),
     'utf8'
   );
+  syncRecordMetadataFromWorkflow(recordFolderPath, flowId);
 
   return {
     flowId,
@@ -146,7 +117,16 @@ export function repairMovedRecordFolder(flow: FlowRun): string | null {
   for (const entry of candidates) {
     if (!entry.isDirectory()) continue;
     const candidatePath = path.join(recordsRoot, entry.name);
-    const markerPath = path.join(candidatePath, FLOW_MARKER_FILENAME);
+    if (entry.name === flow.flowId) {
+      return candidatePath;
+    }
+
+    const metadata = readRecordMetadata(candidatePath);
+    if (metadata?.id === flow.flowId) {
+      return candidatePath;
+    }
+
+    const markerPath = path.join(candidatePath, LEGACY_FLOW_MARKER_FILENAME);
     if (!fs.existsSync(markerPath)) continue;
 
     try {

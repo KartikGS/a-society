@@ -18,4 +18,4 @@ Templates are never modified during use. Create from a template into the active 
 
 ## Artifact Lifecycle
 
-All conversation artifacts for a flow are created in that flow's record folder under `$A_SOCIETY_RECORDS`. See `$A_SOCIETY_RECORDS` for the identifier format, sequencing convention, and the canonical artifact sequence for A-Society flows.
+All conversation artifacts for a flow are created in that flow's record folder under `$A_SOCIETY_RECORDS`. See `$A_SOCIETY_RECORDS` for the record ID and metadata convention, sequencing model, and the canonical artifact sequence for A-Society flows.

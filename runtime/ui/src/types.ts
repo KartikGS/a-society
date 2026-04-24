@@ -13,6 +13,8 @@ export interface FlowRun {
   workspaceRoot: string;
   projectNamespace: string;
   recordFolderPath: string;
+  recordName?: string;
+  recordSummary?: string;
   activeNodes: string[];
   completedNodes: string[];
   visitedNodeIds?: string[];

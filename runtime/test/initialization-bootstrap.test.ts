@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bootstrapInitializationFlow } from '../src/initialization-bootstrap.js';
+import { readRecordMetadata } from '../src/record-metadata.js';
 import { parseWorkflowFile } from '../src/workflow-file.js';
 
 let passed = 0;
@@ -42,12 +43,19 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
   assert.strictEqual(result.flowRun.projectNamespace, projectName);
   assert.deepStrictEqual(result.flowRun.activeNodes, ['owner-intake']);
   assert.strictEqual(result.flowRun.status, 'running');
+  assert.strictEqual(path.basename(result.flowRun.recordFolderPath), result.flowRun.flowId);
 
   const workflowPath = path.join(result.flowRun.recordFolderPath, 'workflow.yaml');
   const workflowDoc = parseWorkflowFile(workflowPath) as any;
   assert.strictEqual(workflowDoc.workflow.nodes.length, 1);
   assert.strictEqual(workflowDoc.workflow.nodes[0].id, 'owner-intake');
   assert.strictEqual(workflowDoc.workflow.nodes[0].role, 'Owner');
+
+  const metadata = readRecordMetadata(result.flowRun.recordFolderPath);
+  assert.ok(metadata, 'record metadata should exist');
+  assert.strictEqual(metadata?.id, result.flowRun.flowId);
+  assert.strictEqual(metadata?.name, undefined);
+  assert.strictEqual(metadata?.summary, undefined);
 
   const pendingArtifacts = result.flowRun.pendingNodeArtifacts['owner-intake'] ?? [];
   assert.deepStrictEqual(

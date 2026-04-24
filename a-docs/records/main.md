@@ -6,37 +6,41 @@ See `$INSTRUCTION_RECORDS` for the general pattern this instantiates.
 
 ---
 
-## Identifier Format
+## Record ID Format
 
-`YYYYMMDD-slug`
+`YYYYMMDDTHHmmssSSSZ-xxxxxx`
 
-- `YYYYMMDD` — the date the flow begins (when the Owner creates the record folder at intake)
-- `slug` — a short, descriptive kebab-case label for the flow (e.g., `records-infrastructure`, `role-minimum-set`)
+- `YYYYMMDDTHHmmssSSSZ` — the UTC timestamp when the runtime opens the flow
+- `xxxxxx` — a short random hex suffix for collision resistance
 
-If two flows begin on the same calendar date: append a disambiguating suffix to the slug (e.g., `20260308-records-infrastructure`, `20260308-tooling-update`).
+The runtime uses this opaque record ID directly as the record folder basename. Human-facing meaning lives in `record.yaml`, not in the folder name.
 
-The identifier is assigned when the Owner creates the record folder. It does not change after creation.
+The record ID is assigned when the runtime creates the record folder. It does not change after creation.
+
+---
+
+## `record.yaml` — Record Metadata
+
+Each record folder contains a non-sequenced `record.yaml` file:
+
+```yaml
+record:
+  id: <string>
+  name: <string|null>
+  summary: <string|null>
+```
+
+- `record.id` is the durable record identifier and should match the record folder basename for runtime-created A-Society flows
+- `record.name` is the human-facing flow title
+- `record.summary` is the one-line flow description
+
+The runtime creates `record.yaml` when it opens the flow. When a runtime-drafted `workflow.yaml` later receives a real flow name or summary, the runtime copies those values into `record.yaml` once and then treats the metadata file as the durable record-identity surface.
 
 ---
 
 ## Artifact Sequence
 
-Within each record folder, artifacts are named with a zero-padded two-digit sequence prefix:
-
-| Artifact | Produced By | Trigger | Must Follow |
-|---|---|---|---|
-| `owner-workflow-plan.md` | Owner | Flow intake — Phase 0 gate; all tiers | — (first artifact in every flow) |
-| `owner-to-curator-brief.md` | Owner | Tier 2/3: plan complete, tier confirmed | `owner-workflow-plan.md` |
-| `curator-to-owner.md` (proposal) | Curator | Proposal drafted | Brief; or backward-pass direct-entry conditions met |
-| `owner-to-curator.md` | Owner | Review decision issued (Approved / Revise / Rejected) | `curator-to-owner.md` proposal |
-| `curator-to-owner.md` (implementation confirmation) | Curator | Implementation and registration complete (Phase 4 exit) | `owner-to-curator.md` with Approved status |
-| `[role]-findings.md` (one per participating role) | Each role, per Component 4 traversal order | Backward pass | All forward-pass submissions resolved |
-
-**Tier 1 flows** use a shortened sequence: `owner-workflow-plan.md` (Phase 0 gate) followed by `owner-backward-pass.md` (findings). No brief, proposal, or decision artifacts are produced.
-
-If the Owner issues a Revise decision, the Curator resubmits at the next available position (e.g., `05-curator-to-owner.md`), the Owner re-decides at `06-owner-to-curator.md`, and backward pass findings shift to `07-` and `08-`. The sequence continues as long as the flow requires.
-
-If a flow includes an additional Curator → Owner submission after the main decision artifact, that submission takes the next available sequence slot **before** backward-pass findings. Backward-pass findings always occupy the final positions in the sequence.
+Within each record folder, sequenced artifacts are named with a zero-padded two-digit prefix: `01-`, `02-`, ... followed by a descriptor. `record.yaml` and `workflow.yaml` are non-sequenced sidecar files and do not consume sequence positions.
 
 **Correction loops do not reserve the originally planned downstream numbers.** The artifact names shown in `workflow.yaml` are planning descriptors, not permanently reserved sequence positions. If a `REVISE` or correction loop consumes the slots originally expected for later phases, resume the remaining forward-pass artifacts at the next available sequence position in the live record folder while keeping the same functional descriptor. For example, a planned `07-owner-to-curator-brief.md` may correctly become `10-owner-to-curator-brief.md` after `07-09` are used by an implementation correction loop.
 
@@ -44,11 +48,7 @@ If a flow includes an additional Curator → Owner submission after the main dec
 
 **Parallel track sub-labeling:** When the Owner declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the workflow-authority role must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The workflow-authority role assigns these sub-labels in `workflow.yaml` and in the record folder convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.
 
-**Owner decision naming distinction:** Use `NN-owner-decision.md` when the Owner is recording a decision and the previously active role has no subsequent action in this flow. Use `NN-owner-to-[role].md` only when the named role has a next action in the flow. This distinction applies to forward-pass actions only. The backward pass is governed by `$A_SOCIETY_IMPROVEMENT`; a role's later backward-pass findings or synthesis work does not make a terminal forward-pass closure artifact an active `owner-to-[role]` handoff. Mislabeling a terminal Owner decision as an active handoff creates ambiguity about whether the named role still has pending work in this flow.
-
 **Reference stability:** Do not use hardcoded sequence IDs (e.g., `05-findings.md`) in standing instructions or templates to refer to trailing artifacts like backward-pass findings. Intermediate submissions or revisions will shift their sequence position. Always refer to them by function (e.g., "the backward-pass findings artifact after all submissions have resolved").
-
-**Prerequisite before filing findings:** Confirm all submissions in this flow are resolved — meaning the Owner has responded to every Curator → Owner artifact produced after the main decision. Do not begin backward-pass findings until this check passes.
 
 **Sequence verification before filing any artifact:** Before selecting a sequence number for a new artifact, read the record folder's current contents to identify the actual next available number. Do not derive the number from an expected preceding artifact's position — intermediate submissions (revisions, registration artifacts, forward-pass closure artifacts) filed before the artifact you are about to produce may have shifted the sequence forward. This obligation applies at backward pass entry: every role producing findings or synthesis must read the record folder before selecting a sequence number, because forward-pass closure artifacts and registration artifacts may have been filed since the forward pass began.
 
@@ -82,9 +82,9 @@ workflow:
       artifact: <string>     # Optional; artifact type carried by this handoff
 ```
 
-**Who creates it:** The workflow-authority role at flow intake, alongside `01-owner-workflow-plan.md`.
+**Who creates it:** The workflow-authority role or runtime intake surface at flow intake, alongside `01-owner-workflow-plan.md`.
 
-**Completeness obligation:** When populating `workflow.yaml` at intake, the workflow-authority role must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. Because the Owner creates the record folder and opens the flow today, the first node in any A-Society `workflow.yaml` is currently an Owner intake node. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.yaml`, with an incoming edge from the preceding node and an outgoing edge to the following node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.yaml` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
+**Completeness obligation:** When populating `workflow.yaml` at intake, the workflow-authority role must list every role step they expect, including intermediate Owner review and approval checkpoints between roles. Because the runtime opens the flow at Owner intake today, the first node in any A-Society `workflow.yaml` is currently an Owner intake node. If the Owner will review or approve work before the next non-Owner role acts, that checkpoint must appear as its own Owner node in `workflow.yaml`, with an incoming edge from the preceding node and an outgoing edge to the following node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.yaml` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
 **Who can edit it:** Any role explicitly designated as workflow-authority for the active flow. Standard implementer roles do not edit `workflow.yaml`.
 
@@ -118,14 +118,10 @@ Not in a record:
 
 ---
 
-## Creating a Record Folder
+## Initializing the Active Record
 
-The Owner creates the record folder at flow intake:
+In runtime-managed A-Society flows, the runtime creates the active record folder at intake and seeds `record.yaml` with the opaque record ID.
 
-1. Name the folder: `YYYYMMDD-slug`
-2. Create `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN` — this is the Phase 0 gate; it must exist before any other artifact in the folder
-3. Create `workflow.yaml` using the schema in [## workflow.yaml — Forward Pass Path] above. Populate the node list and edge structure from the plan's `path` field. Keep the node entries minimal unless the active flow needs a node-level override to the canonical workflow definition. The first node is currently the Owner intake step that created the folder and wrote `01-owner-workflow-plan.md`. `workflow.yaml` is required in any record folder where Component 4 will be invoked during the backward pass.
-4. **Tier 2/3 only:** Create `02-owner-to-curator-brief.md` from `$A_SOCIETY_COMM_TEMPLATE_BRIEF`
-5. **Tier 2/3 only:** Point the Curator at `02-owner-to-curator-brief.md`
+The active workflow then determines which artifacts are created inside that folder and which role is responsible for them. Flow-specific intake gates, brief requirements, and routing obligations are defined by `$A_SOCIETY_WORKFLOW` and its linked support documents, not by this records convention.
 
-Each subsequent artifact is created at the next available sequence position by the role responsible for it.
+When a flow uses `workflow.yaml`, the workflow-authority role creates or updates it in this folder using the schema above. Every sequenced artifact created after intake must use the next available sequence position in the live folder.

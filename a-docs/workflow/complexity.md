@@ -115,9 +115,9 @@ These constraints narrow the tier options inside this project:
 
 At Owner intake:
 
-1. Create the record folder under `$A_SOCIETY_RECORDS`
+1. Work inside the active record folder under `$A_SOCIETY_RECORDS`
 2. Produce `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN`
-3. Create `workflow.yaml` for the active path
+3. Create or update `workflow.yaml` for the active path
 4. Verify all plan fields are non-null before issuing any downstream brief or handoff artifact
 
 `$A_SOCIETY_RECORDS` governs record-folder structure and artifact sequencing. `$A_SOCIETY_COMM_TEMPLATE_PLAN` governs the workflow plan schema and prose fields.

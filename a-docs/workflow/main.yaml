@@ -25,7 +25,7 @@ workflow:
         - Assess the triggered work against the five axes from $A_SOCIETY_WORKFLOW_COMPLEXITY.
         - Identify the touched permanent surfaces and their truth owners from the relevant role ownership files.
         - Select the tier, define the known path, and surface known unknowns.
-        - Create the record folder per $A_SOCIETY_RECORDS.
+        - Work inside the active record folder per $A_SOCIETY_RECORDS, including the required intake artifacts.
         - Produce 01-owner-workflow-plan.md using $A_SOCIETY_COMM_TEMPLATE_PLAN.
         - Create workflow.yaml for the active path.
         - Perform direct Owner work at permanent file locations when all touched surfaces remain within Owner authority and no downstream gate adds unique value.

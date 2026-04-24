@@ -283,7 +283,7 @@ files:
   # ── Records ───────────────────────────────────────────────────────────────────
 
   - path: records/main.md
-    description: "Records convention — identifier format, artifact sequence, and placement rules for flow-level artifact tracking"
+    description: "Records convention — record ID and metadata model, artifact sequence, and placement rules for flow-level artifact tracking"
     required: true
     scaffold: stub
     source_path: general/instructions/records/main.md

@@ -1,10 +1,10 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { FlowRun } from './types.js';
-import { flowMarkerFilename, resolveProjectRecordsRoot, resolveProjectRoot } from './draft-flow.js';
+import { resolveProjectRecordsRoot, resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from './framework-services/scaffolding-system.js';
+import { buildRecordId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 
 export type InitializationMode = 'takeover' | 'greenfield';
 
@@ -14,21 +14,6 @@ export interface InitializationBootstrapResult {
 }
 
 const RUNTIME_INITIALIZATION_RELATIVE_PATH = path.join('a-society', 'runtime', 'INITIALIZATION.md');
-
-function formatDateStamp(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-function shortFlowId(flowId: string): string {
-  return flowId.replace(/-/g, '').slice(0, 8);
-}
-
-function buildInitializationRecordFolderName(flowId: string, now = new Date()): string {
-  return `initialize-${formatDateStamp(now)}-${shortFlowId(flowId)}`;
-}
 
 function sanitizeProjectVariablePrefix(projectNamespace: string): string {
   const normalized = projectNamespace
@@ -342,22 +327,19 @@ export function bootstrapInitializationFlow(
 
   seedBootstrapContextFiles(projectRoot, namespace);
 
-  const flowId = crypto.randomUUID();
+  const flowId = buildRecordId();
   const recordsRoot = resolveProjectRecordsRoot(workspaceRoot, namespace);
   fs.mkdirSync(recordsRoot, { recursive: true });
 
-  const recordFolderPath = path.join(recordsRoot, buildInitializationRecordFolderName(flowId));
+  const recordFolderPath = path.join(recordsRoot, flowId);
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(recordFolderPath, flowMarkerFilename()),
-    JSON.stringify({ flowId, projectNamespace: namespace }, null, 2)
-  );
   fs.writeFileSync(
     path.join(recordFolderPath, 'workflow.yaml'),
     buildInitializationWorkflowDocument(),
     'utf8'
   );
+  syncRecordMetadataFromWorkflow(recordFolderPath, flowId);
 
   const activeArtifacts = buildInitializationArtifacts(
     workspaceRoot,

@@ -7,7 +7,7 @@ A record is a sequenced folder that contains all artifacts produced during a sin
 Records solve two problems:
 
 1. **Traceability** — all artifacts for one unit of work live in one place, in chronological order. Any agent or human can reconstruct the full context of a completed flow from its record folder alone.
-2. **Identifier stability** — the record folder name *is* the flow identifier. There is no separate `<task-id>` field to define elsewhere. A reference to a flow simply resolves to that folder.
+2. **Identifier stability** — the record has one stable ID, stored in `record.yaml` and typically reused as the folder basename. Human-facing meaning lives in the record metadata, not in an inferred slug.
 
 ---
 
@@ -19,27 +19,48 @@ Records live under `a-docs/records/`:
       records/
         main.md                           ← this project's records convention
         [identifier]/                     ← one folder per flow
+          record.yaml                     ← record metadata: id, name, summary
+          workflow.yaml                   ← optional flow snapshot for executable/runtime consumers
           01-[artifact-type].md           ← sequenced artifacts (chronological)
           02-[artifact-type].md
           ...
 
-Each record folder is named by the project's identifier convention. Files within it are named with a zero-padded two-digit sequence prefix (`01-`, `02-`, ...) followed by a descriptor. The prefix ensures lexicographic ordering matches chronological order.
+Each record folder is named by the project's record-ID convention. Files within it are named with a zero-padded two-digit sequence prefix (`01-`, `02-`, ...) followed by a descriptor. The prefix ensures lexicographic ordering matches chronological order.
 
 ---
 
 ## Identifier Convention
 
-Projects define their own identifier format in their `a-docs/records/main.md`. The identifier must be:
+Projects define their own record-ID format in their `a-docs/records/main.md`. The ID must be:
 
 - **Unique** — no two flows share the same identifier
-- **Human-readable** — a reader can identify the flow from the folder name alone
 - **Stable** — the identifier does not change after the record folder is created
+- **Filesystem-safe** — it can be used directly as the folder basename without further rewriting
 
 Common conventions:
-- `YYYYMMDD-slug` — date-based with a short kebab-case descriptor (e.g., `20260308-records-infrastructure`)
+- `YYYYMMDDTHHmmssSSSZ-xxxxxx` — UTC timestamp plus short random suffix (for example, `20260424T094512123Z-8f3a91`)
 - `[project]-NNN` — project-code with sequential number (e.g., `acme-001`)
 
-The project's `records/main.md` declares the identifier format and any slug vocabulary conventions.
+The project's `records/main.md` declares the record-ID format. Human-facing titles and summaries belong in `record.yaml`, not in the folder naming convention.
+
+---
+
+## `record.yaml` — Record Metadata
+
+Each record folder should contain a non-sequenced `record.yaml` file:
+
+```yaml
+record:
+  id: <string>
+  name: <string|null>
+  summary: <string|null>
+```
+
+- `record.id` is the durable record identifier
+- `record.name` is the human-facing record title
+- `record.summary` is the one-line record description
+
+The record ID is the stable identity surface. The name and summary may be seeded by runtime-managed tooling, derived from intake artifacts, or written directly by the workflow-authority role, depending on the project's executable model.
 
 ---
 
@@ -93,11 +114,11 @@ workflow:
 
 *Schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Record-folder `workflow.yaml` uses the same nodes/edges schema as permanent workflow definitions, instantiated as a flow-specific snapshot of the active path.*
 
-**Who creates it:** The workflow-authority role, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
+**Who creates it:** The workflow-authority role or runtime-managed intake system, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
 
 **Completeness obligation:** When populating `workflow.yaml` at intake, the workflow-authority role must list every role step they expect, including intermediate review and approval checkpoints between roles. If the workflow-authority role will review or approve work before the next non-workflow-authority role acts, that checkpoint must appear as its own node in `workflow.yaml`, with an incoming edge from the preceding node and an outgoing edge to the following node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.yaml` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
-**Who can edit it:** Any role the project designates as workflow-authority for this flow. Regular implementer roles do not edit it.
+**Who can edit it:** Any role or runtime surface the project designates as workflow-authority for this flow. Regular implementer roles do not edit it.
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the intake role could not specify at intake.
 
@@ -151,11 +172,11 @@ For projects that do not use records, `improvement/reports/` remains the default
 
 ## How to Create a Records Structure
 
-**Step 1 — Define the identifier convention.**
-Write `a-docs/records/main.md`. Declare the identifier format, slug vocabulary, and what happens when two flows begin on the same calendar date.
+**Step 1 — Define the record-ID convention.**
+Write `a-docs/records/main.md`. Declare the record-ID format and how uniqueness is guaranteed when two flows begin at nearly the same time.
 
-**Step 2 — Declare the artifact sequence.**
-List which artifact types appear at which sequence positions. This is a commitment — agents producing artifacts follow it without deciding each time. The first position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability or runtime-managed node-entry injection, also declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan. The schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Document the workflow-authority role and the capability that reads the file in the project's `records/main.md`.
+**Step 2 — Declare the record metadata and artifact sequence.**
+List which non-sequenced files (`record.yaml`, and optionally `workflow.yaml`) and which sequenced artifact types appear in each record folder. The first sequenced position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability or runtime-managed node-entry injection, also declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan. The schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Document the workflow-authority role and the capability that reads the file in the project's `records/main.md`.
 
 **Step 3 — Update the conversation layer.**
 Remove live artifact files from `communication/conversation/`. Update template header notes to say artifacts are created into the active record folder.

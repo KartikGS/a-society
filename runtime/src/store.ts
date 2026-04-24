@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { FlowRun, RoleSession } from './types.js';
 import { repairMovedRecordFolder } from './draft-flow.js';
+import { syncRecordMetadataFromWorkflow } from './record-metadata.js';
 
 // Get the current directory of this module, then resolve up to runtime/.state
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,7 +28,8 @@ export class SessionStore {
   }
 
   static saveFlowRun(flow: FlowRun) {
-    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(flow, null, 2));
+    const { recordName, recordSummary, ...persisted } = flow;
+    fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(persisted, null, 2));
   }
 
   static loadFlowRun(): FlowRun | null {
@@ -49,6 +51,19 @@ export class SessionStore {
     if (repairedRecordFolderPath && repairedRecordFolderPath !== flow.recordFolderPath) {
       flow.recordFolderPath = repairedRecordFolderPath;
       SessionStore.saveFlowRun(flow);
+    }
+    if (fs.existsSync(flow.recordFolderPath)) {
+      const metadata = syncRecordMetadataFromWorkflow(flow.recordFolderPath, flow.flowId);
+      if (metadata.name) {
+        flow.recordName = metadata.name;
+      } else {
+        delete flow.recordName;
+      }
+      if (metadata.summary) {
+        flow.recordSummary = metadata.summary;
+      } else {
+        delete flow.recordSummary;
+      }
     }
     if (!flow.completedEdgeArtifacts || typeof flow.completedEdgeArtifacts !== 'object') {
       throw new Error('Persisted flow state is missing completedEdgeArtifacts.');

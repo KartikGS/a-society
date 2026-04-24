@@ -15,6 +15,7 @@ import { TelemetryManager } from './observability.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, resolveFlowWorkflow } from './workflow-file.js';
+import { syncRecordMetadataFromWorkflow } from './record-metadata.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -137,6 +138,20 @@ export class FlowOrchestrator {
 
         if (!flowRun.activeNodes.includes(nodeId)) {
           throw new Error(`Node '${nodeId}' is not in activeNodes: [${flowRun.activeNodes.join(', ')}]. Only active nodes can be advanced.`);
+        }
+
+        if (fs.existsSync(flowRun.recordFolderPath)) {
+          const metadata = syncRecordMetadataFromWorkflow(flowRun.recordFolderPath, flowRun.flowId);
+          if (metadata.name) {
+            flowRun.recordName = metadata.name;
+          } else {
+            delete flowRun.recordName;
+          }
+          if (metadata.summary) {
+            flowRun.recordSummary = metadata.summary;
+          } else {
+            delete flowRun.recordSummary;
+          }
         }
 
         const wf = this.resolveActiveWorkflow(flowRun);

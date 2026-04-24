@@ -30,6 +30,8 @@ export interface FlowRun {
   workspaceRoot: string;
   projectNamespace: string;            // project subfolder name (e.g. "a-society")
   recordFolderPath: string;
+  recordName?: string;
+  recordSummary?: string;
   activeNodes: string[];                          // node IDs currently executing
   completedNodes: string[];                       // node IDs that have finished
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered

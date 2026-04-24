@@ -172,9 +172,9 @@ export function GraphView(props: GraphViewProps) {
       <div className="graph-panel-header">
         <div>
           <p className="eyebrow">Workflow Graph</p>
-          <h2>{props.flowRun.projectNamespace}</h2>
+          <h2>{props.flowRun.recordName ?? props.flowRun.flowId}</h2>
           <p className="panel-copy">
-            {props.recordFolderPath}
+            {props.flowRun.recordSummary ?? props.flowRun.projectNamespace}
           </p>
         </div>
         <div className="legend">
@@ -186,9 +186,13 @@ export function GraphView(props: GraphViewProps) {
       </div>
 
       <div className="graph-meta-plain">
+        <span>Project: {props.flowRun.projectNamespace}</span>
+        <span className="graph-meta-sep">·</span>
+        <span>Record: {props.flowRun.flowId}</span>
+        <span className="graph-meta-sep">·</span>
         <span>State: {props.flowRun.status}</span>
         <span className="graph-meta-sep">·</span>
-        <span>{props.workspaceRoot}</span>
+        <span>{props.recordFolderPath}</span>
       </div>
 
       <div className="graph-canvas">
