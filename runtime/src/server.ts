@@ -23,6 +23,7 @@ type ClientMessage =
   | { type: 'start_initialized_flow'; projectNamespace: string }
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
+  | { type: 'stop_active_turn' }
   | { type: 'human_input'; text: string };
 
 type FlowStateMessage = {
@@ -434,6 +435,18 @@ function buildServer(workspaceRoot: string) {
     broadcast({ type: 'error', message: 'No active runtime session is waiting for human input.' });
   }
 
+  function handleStopActiveTurn(): void {
+    if (!activeSession || activeSession.finished) {
+      broadcast({ type: 'error', message: 'No active runtime session is currently running.' });
+      return;
+    }
+
+    const stopped = activeSession.orchestrator.abortActiveTurn();
+    if (!stopped) {
+      broadcast({ type: 'error', message: 'No active turn is currently stoppable.' });
+    }
+  }
+
   function replaySessionState(socket: WebSocket): void {
     if (!activeSession) return;
 
@@ -461,6 +474,9 @@ function buildServer(workspaceRoot: string) {
         return parsed;
       }
       if (parsed?.type === 'start_greenfield_initialization' && typeof parsed.projectName === 'string') {
+        return parsed;
+      }
+      if (parsed?.type === 'stop_active_turn') {
         return parsed;
       }
       if (parsed?.type === 'human_input' && typeof parsed.text === 'string') {
@@ -592,6 +608,11 @@ function buildServer(workspaceRoot: string) {
             message: error instanceof Error ? error.message : String(error)
           });
         }
+        return;
+      }
+
+      if (message.type === 'stop_active_turn') {
+        handleStopActiveTurn();
         return;
       }
 

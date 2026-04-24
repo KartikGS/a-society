@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
@@ -7,6 +7,7 @@ import {
   type Edge,
   type Node
 } from '@xyflow/react';
+import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
 import type { FlowRun, WorkflowGraph } from '../types';
 
 interface GraphViewProps {
@@ -14,10 +15,12 @@ interface GraphViewProps {
   backwardActive: string[];
   backwardSources?: string[];
   recordFolderPath: string;
-  workspaceRoot: string;
   onNodeClick: (nodeId: string) => void;
   onWorkflowLoaded?: (graph: WorkflowGraph) => void;
 }
+
+const EMPTY_GRAPH_STATE: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
+const EMPTY_STRINGS: string[] = [];
 
 function computeDepths(workflow: WorkflowGraph): Map<string, number> {
   const incomingCount = new Map<string, number>();
@@ -122,9 +125,23 @@ function buildReactFlowState(
   return { nodes, edges };
 }
 
-export function GraphView(props: GraphViewProps) {
+function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
+  return (
+    left.flowId === right.flowId &&
+    left.projectNamespace === right.projectNamespace &&
+    left.recordFolderPath === right.recordFolderPath &&
+    left.recordName === right.recordName &&
+    left.recordSummary === right.recordSummary &&
+    left.status === right.status &&
+    areStringArraysEqual(left.activeNodes, right.activeNodes) &&
+    areStringArraysEqual(left.completedNodes, right.completedNodes)
+  );
+}
+
+function GraphViewComponent(props: GraphViewProps) {
   const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const workflowRef = useRef<WorkflowGraph | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,11 +154,15 @@ export function GraphView(props: GraphViewProps) {
         }
         const graph = await response.json() as WorkflowGraph;
         if (cancelled) return;
-        setWorkflow(graph);
+        if (!areWorkflowGraphsEqual(workflowRef.current, graph)) {
+          workflowRef.current = graph;
+          setWorkflow(graph);
+          props.onWorkflowLoaded?.(graph);
+        }
         setError(null);
-        props.onWorkflowLoaded?.(graph);
       } catch (loadError: unknown) {
         if (cancelled) return;
+        workflowRef.current = null;
         setWorkflow(null);
         setError(loadError instanceof Error ? loadError.message : 'Unable to load workflow graph.');
       }
@@ -156,16 +177,19 @@ export function GraphView(props: GraphViewProps) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [props.recordFolderPath]);
+  }, [props.recordFolderPath, props.onWorkflowLoaded]);
 
-  const backwardSources =
+  const backwardSources = useMemo(() => (
     workflow && props.backwardSources && props.backwardSources.length > 0
       ? props.backwardSources
-      : [];
+      : EMPTY_STRINGS
+  ), [workflow, props.backwardSources]);
 
-  const graphState = workflow
-    ? buildReactFlowState(workflow, props.flowRun, props.backwardActive, backwardSources)
-    : { nodes: [], edges: [] };
+  const graphState = useMemo(() => (
+    workflow
+      ? buildReactFlowState(workflow, props.flowRun, props.backwardActive, backwardSources)
+      : EMPTY_GRAPH_STATE
+  ), [workflow, props.flowRun.activeNodes, props.flowRun.completedNodes, props.backwardActive, backwardSources]);
 
   return (
     <section className="panel graph-panel">
@@ -204,6 +228,7 @@ export function GraphView(props: GraphViewProps) {
             edges={graphState.edges}
             fitView
             proOptions={{ hideAttribution: true }}
+            onlyRenderVisibleElements
             nodesDraggable={false}
             panOnDrag={true}
             panOnScroll={false}
@@ -219,3 +244,16 @@ export function GraphView(props: GraphViewProps) {
     </section>
   );
 }
+
+function areGraphViewPropsEqual(prev: GraphViewProps, next: GraphViewProps): boolean {
+  return (
+    prev.recordFolderPath === next.recordFolderPath &&
+    prev.onNodeClick === next.onNodeClick &&
+    prev.onWorkflowLoaded === next.onWorkflowLoaded &&
+    areGraphFlowRunsEqual(prev.flowRun, next.flowRun) &&
+    areStringArraysEqual(prev.backwardActive, next.backwardActive) &&
+    areStringArraysEqual(prev.backwardSources, next.backwardSources)
+  );
+}
+
+export const GraphView = memo(GraphViewComponent, areGraphViewPropsEqual);

@@ -1,3 +1,4 @@
+import { LLMGatewayError } from '../types.js';
 import type { ToolDefinition, ToolCall } from '../types.js';
 
 const TAVILY_API_URL = 'https://api.tavily.com/search';
@@ -46,7 +47,7 @@ export class WebSearchExecutor {
     return name === 'web_search';
   }
 
-  async execute(call: ToolCall): Promise<{ content: string; isError: boolean }> {
+  async execute(call: ToolCall, signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
     if (call.name !== 'web_search') {
       return { content: `Error: unknown tool '${call.name}'`, isError: true };
     }
@@ -59,18 +60,22 @@ export class WebSearchExecutor {
     const rawMax = call.input.max_results as number | undefined;
     const maxResults = Math.min(Math.max(1, rawMax ?? DEFAULT_MAX_RESULTS), 10);
 
-    return this.search(query, maxResults);
+    return this.search(query, maxResults, signal);
   }
 
-  private async search(query: string, maxResults: number): Promise<{ content: string; isError: boolean }> {
+  private async search(query: string, maxResults: number, signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
     let response: Response;
     try {
       response = await fetch(TAVILY_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ api_key: this.apiKey, query, max_results: maxResults })
+        body: JSON.stringify({ api_key: this.apiKey, query, max_results: maxResults }),
+        signal
       });
     } catch (err: any) {
+      if (signal?.aborted || err?.name === 'AbortError') {
+        throw new LLMGatewayError('ABORTED', 'Tool execution aborted by operator');
+      }
       return { content: `Error: network request failed: ${err.message}`, isError: true };
     }
 

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { LLMGatewayError } from '../types.js';
 import type { ToolDefinition, ToolCall } from '../types.js';
 
 const TIMEOUT_MS = 60_000;
@@ -33,7 +34,7 @@ export class BashToolExecutor {
     return name === 'run_command';
   }
 
-  async execute(call: ToolCall): Promise<{ content: string; isError: boolean }> {
+  async execute(call: ToolCall, signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
     if (call.name !== 'run_command') {
       return { content: `Error: unknown tool '${call.name}'`, isError: true };
     }
@@ -41,11 +42,11 @@ export class BashToolExecutor {
     if (!command || typeof command !== 'string') {
       return { content: `Error: 'command' is required and must be a string.`, isError: true };
     }
-    return this.runCommand(command);
+    return this.runCommand(command, signal);
   }
 
-  private runCommand(command: string): Promise<{ content: string; isError: boolean }> {
-    return new Promise((resolve) => {
+  private runCommand(command: string, signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
+    return new Promise((resolve, reject) => {
       const child = spawn('bash', ['-c', command], {
         cwd: this.workspaceRoot,
         env: process.env,
@@ -73,13 +74,42 @@ export class BashToolExecutor {
       child.stdout.on('data', collect(stdoutChunks));
       child.stderr.on('data', collect(stderrChunks));
 
+      let settled = false;
+
+      const finalizeResolve = (value: { content: string; isError: boolean }) => {
+        if (settled) return;
+        settled = true;
+        signal?.removeEventListener('abort', abortHandler);
+        resolve(value);
+      };
+
+      const finalizeReject = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        signal?.removeEventListener('abort', abortHandler);
+        reject(error);
+      };
+
+      const abortHandler = () => {
+        child.kill('SIGTERM');
+        finalizeReject(new LLMGatewayError('ABORTED', 'Tool execution aborted by operator'));
+      };
+
+      if (signal?.aborted) {
+        abortHandler();
+        return;
+      }
+
+      signal?.addEventListener('abort', abortHandler, { once: true });
+
       const timer = setTimeout(() => {
         child.kill('SIGTERM');
-        resolve({ content: `Error: command timed out after ${TIMEOUT_MS / 1000}s.`, isError: true });
+        finalizeResolve({ content: `Error: command timed out after ${TIMEOUT_MS / 1000}s.`, isError: true });
       }, TIMEOUT_MS);
 
       child.on('close', (code) => {
         clearTimeout(timer);
+        if (settled) return;
         const stdout = Buffer.concat(stdoutChunks).toString('utf8');
         const stderr = Buffer.concat(stderrChunks).toString('utf8');
 
@@ -92,12 +122,12 @@ export class BashToolExecutor {
         const output = parts.join('\n');
         const isError = code !== 0;
         const header = isError ? `exit code ${code}\n` : '';
-        resolve({ content: header + output, isError });
+        finalizeResolve({ content: header + output, isError });
       });
 
       child.on('error', (err) => {
         clearTimeout(timer);
-        resolve({ content: `Error: failed to spawn command: ${err.message}`, isError: true });
+        finalizeResolve({ content: `Error: failed to spawn command: ${err.message}`, isError: true });
       });
     });
   }

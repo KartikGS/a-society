@@ -43,6 +43,7 @@ export type ClientMessage =
   | { type: 'start_initialized_flow'; projectNamespace: string }
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
+  | { type: 'stop_active_turn' }
   | { type: 'human_input'; text: string };
 
 export type ServerMessage =

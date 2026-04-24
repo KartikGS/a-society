@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 export interface FeedItem {
   id: string;
-  type: 'assistant' | 'event' | 'error';
+  type: 'assistant' | 'event' | 'error' | 'user';
   label: string;
   text: string;
 }
@@ -17,19 +17,34 @@ interface ChatInterfaceProps {
   inputDisabled: boolean;
   placeholder: string;
   statusLine?: string;
+  canStop?: boolean;
+  stopRequested?: boolean;
   roles?: string[];
   selectedRole?: string;
   activeRole?: string;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
+  onStop?: () => void;
 }
 
 export function ChatInterface(props: ChatInterfaceProps) {
-  const feedEndRef = useRef<HTMLDivElement | null>(null);
+  const feedRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScrollRef = useRef(true);
 
-  useEffect(() => {
-    feedEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  const handleFeedScroll = useCallback(() => {
+    const element = feedRef.current;
+    if (!element) return;
+
+    const distanceFromBottom =
+      element.scrollHeight - element.scrollTop - element.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 48;
+  }, []);
+
+  useLayoutEffect(() => {
+    const element = feedRef.current;
+    if (!element || !shouldAutoScrollRef.current) return;
+    element.scrollTop = element.scrollHeight;
   }, [props.messages, props.waitingLabel]);
 
   return (
@@ -59,9 +74,19 @@ export function ChatInterface(props: ChatInterfaceProps) {
       <div className="status-row">
         {props.statusLine ? <span className="status-pill">{props.statusLine}</span> : null}
         {props.waitingLabel ? <span className="status-pill status-pill-wait">{props.waitingLabel}</span> : null}
+        {props.canStop ? (
+          <button
+            type="button"
+            className="status-action status-action-stop"
+            onClick={props.onStop}
+            disabled={props.stopRequested}
+          >
+            {props.stopRequested ? 'Stopping...' : 'Stop'}
+          </button>
+        ) : null}
       </div>
 
-      <div className="feed">
+      <div className="feed" ref={feedRef} onScroll={handleFeedScroll}>
         {props.messages.length === 0 ? (
           <div className="feed-empty">
             Waiting for runtime output.
@@ -74,13 +99,16 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 <div className="feed-markdown">
                   <ReactMarkdown>{message.text}</ReactMarkdown>
                 </div>
+              ) : message.type === 'user' ? (
+                <div className="feed-user-text">
+                  {message.text}
+                </div>
               ) : (
                 <pre className="feed-text">{message.text}</pre>
               )}
             </article>
           ))
         )}
-        <div ref={feedEndRef} />
       </div>
 
       <form

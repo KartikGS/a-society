@@ -29,9 +29,18 @@ type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
 export class FlowOrchestrator {
   private renderer: OperatorRenderSink;
   private pendingRoleActiveEmitted = new Set<string>();
+  private activeTurnController: AbortController | null = null;
 
   constructor(renderer?: OperatorRenderSink) {
     this.renderer = renderer ?? createDefaultRenderer();
+  }
+
+  public abortActiveTurn(): boolean {
+    if (!this.activeTurnController || this.activeTurnController.signal.aborted) {
+      return false;
+    }
+    this.activeTurnController.abort();
+    return true;
   }
 
   public async runStoredFlow(
@@ -268,6 +277,7 @@ export class FlowOrchestrator {
         while (true) {
           try {
             const controller = new AbortController();
+            this.activeTurnController = controller;
             const sigintHandler = () => controller.abort();
             process.once('SIGINT', sigintHandler);
 
@@ -282,6 +292,9 @@ export class FlowOrchestrator {
               );
             } finally {
               process.removeListener('SIGINT', sigintHandler);
+              if (this.activeTurnController === controller) {
+                this.activeTurnController = null;
+              }
             }
 
             if (sessionResult) {

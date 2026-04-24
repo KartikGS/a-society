@@ -83,6 +83,8 @@ export class AnthropicProvider implements LLMProvider {
             description: t.description,
             input_schema: t.inputSchema
           }))
+        }, {
+          signal: options?.signal
         });
 
         const toolUseBlocks = new Map<number, { id: string, name: string, inputJson: string }>();

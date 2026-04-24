@@ -123,10 +123,10 @@ export class LLMGateway {
                 isError = true;
               } else {
                 const res = await (this.bashExecutor!.canHandle(call.name)
-                  ? this.bashExecutor!.execute(call)
+                  ? this.bashExecutor!.execute(call, options?.signal)
                   : this.webSearchExecutor?.canHandle(call.name)
-                  ? this.webSearchExecutor.execute(call)
-                  : this.fileExecutor!.execute(call));
+                  ? this.webSearchExecutor.execute(call, options?.signal)
+                  : this.fileExecutor!.execute(call, options?.signal));
                 content = res.content;
                 isError = res.isError;
               }

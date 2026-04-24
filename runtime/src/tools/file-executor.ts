@@ -102,7 +102,7 @@ export class FileToolExecutor {
     this.workspaceRoot = path.resolve(workspaceRoot);
   }
 
-  async execute(call: ToolCall): Promise<{ content: string; isError: boolean }> {
+  async execute(call: ToolCall, _signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
     try {
       if (call.name === 'read_file') {
         const reqPath = call.input.path as string;

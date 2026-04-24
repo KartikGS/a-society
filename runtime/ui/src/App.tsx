@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView } from './components/GraphView';
 import { ProjectSelector } from './components/ProjectSelector';
+import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
 import type {
   ClientMessage,
@@ -13,6 +14,7 @@ import type {
 } from './types';
 
 type ViewMode = 'selector' | 'graph';
+const EMPTY_STRINGS: string[] = [];
 
 function nextFeedId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -73,12 +75,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         text: 'The runtime is waiting for a human reply.'
       };
     case 'human.resumed':
-      return {
-        id: nextFeedId(),
-        type: 'event',
-        label: 'Resume',
-        text: `${event.nodeId} (${event.role}) resumed after human input.`
-      };
+      return null;
     case 'parallel.active_set':
       return {
         id: nextFeedId(),
@@ -134,6 +131,7 @@ export function App() {
   const [awaitingInput, setAwaitingInput] = useState(false);
   const [waitLabel, setWaitLabel] = useState<string | null>(null);
   const [showImprovementModal, setShowImprovementModal] = useState(false);
+  const [stopRequested, setStopRequested] = useState(false);
 
   function appendToRoleFeed(role: string, item: FeedItem): void {
     setRoleFeeds((current) => {
@@ -157,6 +155,16 @@ export function App() {
     });
   }
 
+  function resolveInputTargetRole(): string {
+    if (activeLiveRole) return activeLiveRole;
+    if (flowRun && workflow && flowRun.activeNodes.length === 1) {
+      const activeNode = workflow.nodes.find((node) => node.id === flowRun.activeNodes[0]);
+      if (activeNode) return activeNode.role;
+    }
+    if (selectedRole) return selectedRole;
+    return '__system__';
+  }
+
   function sendMessage(message: ClientMessage): void {
     socket.send(message);
   }
@@ -177,6 +185,7 @@ export function App() {
       setWaitLabel(null);
       setAwaitingInput(message.flowRun?.status === 'awaiting_human');
       setShowImprovementModal(false);
+      setStopRequested(false);
       setView(message.flowRun && message.flowRun.status !== 'completed' ? 'graph' : 'selector');
       return;
     }
@@ -191,19 +200,23 @@ export function App() {
           setSelectorError(null);
           setView('graph');
           setAwaitingInput(false);
+          setStopRequested(false);
         }
 
         if (event.kind === 'human.awaiting_input') {
           setAwaitingInput(true);
+          setStopRequested(false);
         }
 
         if (event.kind === 'human.resumed') {
           setActiveLiveRole(event.role);
           setAwaitingInput(false);
+          setStopRequested(false);
         }
 
         if (event.kind === 'flow.completed') {
           setAwaitingInput(false);
+          setStopRequested(false);
         }
 
         if (event.kind === 'handoff.applied') {
@@ -235,14 +248,20 @@ export function App() {
         });
         return;
       case 'flow_state':
-        setFlowRun(message.flowRun);
+        setFlowRun((current) => (areFlowRunsEqual(current, message.flowRun) ? current : message.flowRun));
         setSelectedProject(message.flowRun.projectNamespace);
-        setBackwardActive(message.backwardActive);
+        setBackwardActive((current) => (
+          areStringArraysEqual(current, message.backwardActive) ? current : message.backwardActive
+        ));
+        if (message.flowRun.status !== 'running') {
+          setStopRequested(false);
+        }
         if (message.flowRun.status !== 'completed') {
           setView('graph');
         }
         return;
       case 'error':
+        setStopRequested(false);
         if (!flowRun) {
           setSelectorError(message.message);
           setView('selector');
@@ -280,7 +299,7 @@ export function App() {
         const nextFlowRun = await response.json() as FlowRun | null;
         if (cancelled) return;
 
-        setFlowRun(nextFlowRun);
+        setFlowRun((current) => (areFlowRunsEqual(current, nextFlowRun) ? current : nextFlowRun));
         if (nextFlowRun) {
           setSelectedProject(nextFlowRun.projectNamespace);
         }
@@ -315,6 +334,7 @@ export function App() {
     setAwaitingInput(false);
     setShowImprovementModal(false);
     setComposerValue('');
+    setStopRequested(false);
     setView('graph');
     sendMessage({ type: 'start_initialized_flow', projectNamespace });
   }
@@ -334,6 +354,7 @@ export function App() {
     setAwaitingInput(false);
     setShowImprovementModal(false);
     setComposerValue('');
+    setStopRequested(false);
     setView('graph');
     sendMessage({ type: 'start_takeover_initialization', projectNamespace });
   }
@@ -355,6 +376,7 @@ export function App() {
     setAwaitingInput(false);
     setShowImprovementModal(false);
     setComposerValue('');
+    setStopRequested(false);
     setView('graph');
     sendMessage({ type: 'start_greenfield_initialization', projectName });
   }
@@ -362,6 +384,12 @@ export function App() {
   function handleSubmit(): void {
     const text = composerValue.trim();
     if (!text) return;
+    appendToRoleFeed(resolveInputTargetRole(), {
+      id: nextFeedId(),
+      type: 'user',
+      label: 'You',
+      text
+    });
     setComposerValue('');
     setAwaitingInput(false);
     sendMessage({ type: 'human_input', text });
@@ -372,6 +400,18 @@ export function App() {
     sendMessage({ type: 'human_input', text: choice });
   }
 
+  function handleStopActiveTurn(): void {
+    if (stopRequested) return;
+    setStopRequested(true);
+    sendMessage({ type: 'stop_active_turn' });
+  }
+
+  const handleWorkflowLoaded = useCallback((graph: WorkflowGraph) => {
+    setWorkflow((current) => (areWorkflowGraphsEqual(current, graph) ? current : graph));
+  }, []);
+
+  const handleGraphNodeClick = useCallback((_nodeId: string) => {}, []);
+
   const statusLine =
     socket.status === 'open'
       ? 'Connected'
@@ -379,17 +419,26 @@ export function App() {
         ? 'Reconnecting to runtime'
         : 'Connection lost';
 
-  const backwardSources =
+  const backwardSources = useMemo(() => (
     flowRun && lastHandoff && flowRun.activeNodes.includes(lastHandoff.fromNodeId)
       ? [lastHandoff.fromNodeId]
-      : [];
+      : EMPTY_STRINGS
+  ), [flowRun?.activeNodes, lastHandoff?.fromNodeId]);
 
-  const roles = workflow
-    ? [...new Set(workflow.nodes.map((n) => n.role))]
-    : [];
+  const roles = useMemo(() => (
+    workflow
+      ? [...new Set(workflow.nodes.map((node) => node.role))]
+      : EMPTY_STRINGS
+  ), [workflow]);
 
   const displayedFeed = selectedRole ? (roleFeeds[selectedRole] ?? []) : (activeLiveRole ? (roleFeeds[activeLiveRole] ?? []) : []);
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (roleFeeds.__system__ ?? []);
+  const canStop =
+    !!flowRun &&
+    flowRun.status === 'running' &&
+    !awaitingInput &&
+    !showImprovementModal &&
+    socket.status === 'open';
 
   return (
     <main className="app-shell">
@@ -430,9 +479,8 @@ export function App() {
               backwardActive={backwardActive}
               backwardSources={backwardSources}
               recordFolderPath={flowRun.recordFolderPath}
-              workspaceRoot={flowRun.workspaceRoot}
-              onNodeClick={() => {}}
-              onWorkflowLoaded={setWorkflow}
+              onNodeClick={handleGraphNodeClick}
+              onWorkflowLoaded={handleWorkflowLoaded}
             />
 
             <ChatInterface
@@ -444,12 +492,15 @@ export function App() {
               inputDisabled={!awaitingInput}
               placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
               statusLine={statusLine}
+              canStop={canStop}
+              stopRequested={stopRequested}
               roles={roles}
               selectedRole={selectedRole ?? activeLiveRole ?? undefined}
               activeRole={activeLiveRole ?? undefined}
               onRoleSelect={setSelectedRole}
               onInputChange={setComposerValue}
               onSubmit={handleSubmit}
+              onStop={handleStopActiveTurn}
             />
           </section>
         ) : (
@@ -477,12 +528,15 @@ export function App() {
               inputDisabled={!awaitingInput}
               placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
               statusLine={statusLine}
+              canStop={canStop}
+              stopRequested={stopRequested}
               roles={[]}
               selectedRole={selectedRole ?? activeLiveRole ?? undefined}
               activeRole={activeLiveRole ?? undefined}
               onRoleSelect={setSelectedRole}
               onInputChange={setComposerValue}
               onSubmit={handleSubmit}
+              onStop={handleStopActiveTurn}
             />
           </section>
         )}
