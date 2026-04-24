@@ -1,11 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import yaml from 'js-yaml';
 import { resolveProjectRecordsRoot, resolveProjectRoot } from '../draft-flow.js';
 import { toKebabCaseRoleId } from '../role-id.js';
 import { validatePaths } from './path-validator.js';
 import { validateWorkflowFile } from './workflow-graph-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../workflow-file.js';
+import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../required-reading.js';
 
 export interface RuntimeHealthCheckResult {
   ok: boolean;
@@ -22,6 +24,11 @@ type CompletionSignalKind = 'forward-pass-closed' | 'backward-pass-complete';
 interface IndexEntry {
   variable: string;
   registeredPath: string;
+}
+
+interface OwnershipSurface {
+  roleId: string;
+  surfacePath: string;
 }
 
 function readIndexEntries(indexFilePath: string): IndexEntry[] {
@@ -94,6 +101,24 @@ function collectRoleRequiredReadingVariables(filePath: string): string[] {
   return collectStringArray(doc.required_readings);
 }
 
+function collectOwnershipSurfacePaths(filePath: string): string[] {
+  const parsed = readYamlFile(filePath);
+
+  if (!parsed || typeof parsed !== 'object') {
+    return [];
+  }
+
+  const doc = parsed as Record<string, unknown>;
+  if (!Array.isArray(doc.surfaces)) {
+    return [];
+  }
+
+  return doc.surfaces
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object')
+    .map((entry) => entry.path)
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '');
+}
+
 function collectWorkflowVariables(workflowDoc: unknown): string[] {
   if (!workflowDoc || typeof workflowDoc !== 'object' || !('workflow' in workflowDoc)) {
     return [];
@@ -151,6 +176,57 @@ function collectWorkflowRoles(workflowDoc: unknown): string[] {
   return Array.from(roles);
 }
 
+function collectWorkflowNodeReadingOverlapErrors(
+  workflowDoc: unknown,
+  roleRequiredReadingsByRoleId: Map<string, Set<string>>
+): string[] {
+  if (!workflowDoc || typeof workflowDoc !== 'object' || !('workflow' in workflowDoc)) {
+    return [];
+  }
+
+  const workflow = (workflowDoc as { workflow?: unknown }).workflow;
+  if (!workflow || typeof workflow !== 'object') {
+    return [];
+  }
+
+  const workflowRecord = workflow as Record<string, unknown>;
+  if (!Array.isArray(workflowRecord.nodes)) {
+    return [];
+  }
+
+  const errors: string[] = [];
+
+  for (const node of workflowRecord.nodes) {
+    if (!node || typeof node !== 'object') continue;
+    const nodeRecord = node as Record<string, unknown>;
+    const nodeId = typeof nodeRecord.id === 'string' ? nodeRecord.id : '<unknown>';
+    const roleName = typeof nodeRecord.role === 'string' ? nodeRecord.role : '<unknown>';
+    const roleId = toKebabCaseRoleId(roleName);
+    const startupVariables = new Set<string>([
+      ...RUNTIME_MANAGED_REQUIRED_READING_VARIABLES,
+      ...(roleRequiredReadingsByRoleId.get(roleId) || [])
+    ]);
+
+    for (const variable of collectStringArray(nodeRecord.required_readings)) {
+      if (!startupVariables.has(variable)) {
+        continue;
+      }
+
+      if (roleRequiredReadingsByRoleId.get(roleId)?.has(variable)) {
+        errors.push(
+          `a-docs/workflow/main.yaml node "${nodeId}" repeats ${variable} in required_readings, but that variable is already startup-loaded for role "${roleName}" via a-docs/roles/${roleId}/required-readings.yaml`
+        );
+      } else {
+        errors.push(
+          `a-docs/workflow/main.yaml node "${nodeId}" repeats ${variable} in required_readings, but that variable is already injected by the runtime before node entry`
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
 function addUnregisteredVariableErrors(
   errors: string[],
   ownerLabel: string,
@@ -162,6 +238,78 @@ function addUnregisteredVariableErrors(
       errors.push(`${ownerLabel} references ${variable}, but that variable is not registered in a-docs/indexes/main.md`);
     }
   }
+}
+
+function normalizeOwnershipSurfacePath(surfacePath: string): string {
+  return surfacePath.replace(/\\/g, '/').replace(/^\.\/+/, '');
+}
+
+function fileIsCoveredByOwnershipSurface(filePath: string, surfacePath: string): boolean {
+  const normalizedFilePath = filePath.replace(/\\/g, '/');
+  const normalizedSurfacePath = normalizeOwnershipSurfacePath(surfacePath);
+
+  if (normalizedSurfacePath.endsWith('/')) {
+    return normalizedFilePath.startsWith(normalizedSurfacePath);
+  }
+
+  return normalizedFilePath === normalizedSurfacePath || normalizedFilePath.startsWith(`${normalizedSurfacePath}/`);
+}
+
+function readGitTrackedFiles(projectRoot: string): string[] | null {
+  const topLevelResult = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd: projectRoot,
+    encoding: 'utf8'
+  });
+
+  if (topLevelResult.status !== 0) {
+    return null;
+  }
+
+  const topLevel = topLevelResult.stdout.trim();
+  if (!topLevel || path.resolve(topLevel) !== path.resolve(projectRoot)) {
+    return null;
+  }
+
+  const listResult = spawnSync('git', ['ls-files', '-z'], {
+    cwd: projectRoot,
+    encoding: 'utf8'
+  });
+
+  if (listResult.status !== 0) {
+    return null;
+  }
+
+  return listResult.stdout.split('\0').filter((entry) => entry.trim() !== '');
+}
+
+function shouldIgnoreOwnershipCoverageEntry(entryPath: string): boolean {
+  const parts = entryPath.split(path.sep).filter(Boolean);
+  return parts.some((part) => part === '.git' || part === 'node_modules' || part === 'dist' || part === '.state');
+}
+
+function walkProjectFiles(projectRoot: string, relativeDir = ''): string[] {
+  const currentDir = path.join(projectRoot, relativeDir);
+  const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+  const files: string[] = [];
+
+  for (const entry of entries) {
+    const nextRelativePath = relativeDir ? path.join(relativeDir, entry.name) : entry.name;
+    if (shouldIgnoreOwnershipCoverageEntry(nextRelativePath)) {
+      continue;
+    }
+
+    if (entry.isDirectory()) {
+      files.push(...walkProjectFiles(projectRoot, nextRelativePath));
+    } else if (entry.isFile()) {
+      files.push(nextRelativePath.replace(/\\/g, '/'));
+    }
+  }
+
+  return files;
+}
+
+function collectProjectFilesForOwnershipCoverage(projectRoot: string): string[] {
+  return readGitTrackedFiles(projectRoot) || walkProjectFiles(projectRoot);
 }
 
 export function runRuntimeHealthChecks(
@@ -221,6 +369,8 @@ export function runRuntimeHealthChecks(
   }
 
   let registeredVariables: Set<string> | null = null;
+  const roleRequiredReadingsByRoleId = new Map<string, Set<string>>();
+  const ownershipSurfaces: OwnershipSurface[] = [];
   if (isFile(indexPath)) {
     try {
       const indexEntries = readIndexEntries(indexPath);
@@ -268,17 +418,30 @@ export function runRuntimeHealthChecks(
       }
       if (!isFile(roleRequiredReadingsPath)) {
         addMissingFileError(errors, `Role ${roleId} required readings file`, roleRequiredReadingsPath, workspaceRoot);
-      } else if (registeredVariables) {
+      } else {
         try {
           const variables = collectRoleRequiredReadingVariables(roleRequiredReadingsPath);
-          addUnregisteredVariableErrors(
-            errors,
-            `a-docs/roles/${roleId}/required-readings.yaml`,
-            variables,
-            registeredVariables
-          );
+          roleRequiredReadingsByRoleId.set(roleId, new Set(variables));
+          if (registeredVariables) {
+            addUnregisteredVariableErrors(
+              errors,
+              `a-docs/roles/${roleId}/required-readings.yaml`,
+              variables,
+              registeredVariables
+            );
+          }
         } catch (error: any) {
           errors.push(`Cannot parse a-docs/roles/${roleId}/required-readings.yaml: ${error.message}`);
+        }
+      }
+
+      if (isFile(roleOwnershipPath)) {
+        try {
+          for (const surfacePath of collectOwnershipSurfacePaths(roleOwnershipPath)) {
+            ownershipSurfaces.push({ roleId, surfacePath });
+          }
+        } catch (error: any) {
+          errors.push(`Cannot parse a-docs/roles/${roleId}/ownership.yaml: ${error.message}`);
         }
       }
     }
@@ -303,6 +466,13 @@ export function runRuntimeHealthChecks(
         );
       }
 
+      for (const overlapError of collectWorkflowNodeReadingOverlapErrors(
+        workflowDoc,
+        roleRequiredReadingsByRoleId
+      )) {
+        errors.push(overlapError);
+      }
+
       if (isDirectory(rolesRoot)) {
         for (const roleName of collectWorkflowRoles(workflowDoc)) {
           const roleFolder = toKebabCaseRoleId(roleName);
@@ -314,6 +484,16 @@ export function runRuntimeHealthChecks(
       }
     } catch (error: any) {
       errors.push(`Cannot parse a-docs/workflow/main.yaml: ${error.message}`);
+    }
+  }
+
+  if (ownershipSurfaces.length > 0) {
+    const uncoveredFiles = collectProjectFilesForOwnershipCoverage(projectRoot)
+      .filter((filePath) => !ownershipSurfaces.some((surface) => fileIsCoveredByOwnershipSurface(filePath, surface.surfacePath)))
+      .sort();
+
+    for (const uncoveredFile of uncoveredFiles) {
+      errors.push(`Project file ${uncoveredFile} is not covered by any ownership.yaml surface`);
     }
   }
 

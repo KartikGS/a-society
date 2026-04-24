@@ -42,7 +42,11 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
 
   fs.writeFileSync(path.join(aDocsRoot, 'agents.md'), '# Agents\n', 'utf8');
   fs.writeFileSync(path.join(rolesRoot, 'main.md'), '# Owner\n', 'utf8');
-  fs.writeFileSync(path.join(rolesRoot, 'ownership.yaml'), 'role: owner\nsurfaces: []\n', 'utf8');
+  fs.writeFileSync(
+    path.join(rolesRoot, 'ownership.yaml'),
+    'role: owner\nsurfaces:\n  - path: a-docs/\n    scope: Project documentation\n',
+    'utf8'
+  );
   fs.writeFileSync(
     path.join(rolesRoot, 'required-readings.yaml'),
     'role: owner\nrequired_readings:\n  - $TEST_PROJECT_AGENTS\n',
@@ -63,8 +67,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
       '  nodes:',
       '    - id: owner-intake',
       '      role: Owner',
-      '      required_readings:',
-      '        - $TEST_PROJECT_AGENTS',
       '  edges: []',
       ''
     ].join('\n'),
@@ -139,6 +141,50 @@ test('fails when the index points to a missing path', () => {
     assert.ok(
       result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> test-project/a-docs/agents.md, but that path is missing')),
       `expected missing index target error, got: ${result.errors.join('; ')}`
+    );
+  } finally {
+    cleanup(fixture.tmpRoot);
+  }
+});
+
+test('fails when a workflow node required reading duplicates startup role reading', () => {
+  const fixture = makeProjectFixture();
+  try {
+    fs.writeFileSync(
+      path.join(fixture.projectRoot, 'a-docs', 'workflow', 'main.yaml'),
+      [
+        'workflow:',
+        '  name: Test Workflow',
+        '  nodes:',
+        '    - id: owner-intake',
+        '      role: Owner',
+        '      required_readings:',
+        '        - $TEST_PROJECT_AGENTS',
+        '  edges: []',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+    const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
+    assert.strictEqual(result.ok, false);
+    assert.ok(
+      result.errors.some((error) => error.includes('repeats $TEST_PROJECT_AGENTS in required_readings')),
+      `expected required-reading overlap error, got: ${result.errors.join('; ')}`
+    );
+  } finally {
+    cleanup(fixture.tmpRoot);
+  }
+});
+
+test('fails when a project file is not covered by any ownership surface', () => {
+  const fixture = makeProjectFixture();
+  try {
+    fs.writeFileSync(path.join(fixture.projectRoot, 'LICENSE'), 'Test license\n', 'utf8');
+    const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
+    assert.strictEqual(result.ok, false);
+    assert.ok(
+      result.errors.some((error) => error.includes('Project file LICENSE is not covered by any ownership.yaml surface')),
+      `expected uncovered file error, got: ${result.errors.join('; ')}`
     );
   } finally {
     cleanup(fixture.tmpRoot);

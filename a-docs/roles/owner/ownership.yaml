@@ -19,5 +19,9 @@ surfaces:
   - path: a-docs/records/
     shared_with: [curator, technical-architect, orchestration-developer, framework-services-developer, ui-developer]
     scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"
+  - path: .gitignore
+    scope: "Repository ignore-policy surface"
+  - path: LICENSE
+    scope: "Repository license and distribution promise"
   - path: README.md
     scope: "External project framing and promise"

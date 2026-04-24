@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
+import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from './required-reading.js';
 
 export interface ContextBundleResult {
   bundleContent: string;
@@ -12,9 +13,6 @@ export interface ContextBundleResult {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_HANDOFF_CONTRACT_PATH = path.resolve(__dirname, '../HANDOFF-CONTRACT.md');
-const RUNTIME_MANAGED_REQUIRED_READING_VARIABLES = new Set([
-  '$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT'
-]);
 
 export class ContextInjectionService {
   /**

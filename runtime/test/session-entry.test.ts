@@ -34,13 +34,22 @@ fs.writeFileSync(artifactPath, 'Artifact content here.');
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'indexes'), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles'), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles', 'node-doc'), { recursive: true });
+fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles', 'owner'), { recursive: true });
 fs.writeFileSync(
   path.join(projectRoot, 'a-docs', 'indexes', 'main.md'),
-  `| \`$TEST_NODE_DOC\` | \`test-project/a-docs/roles/node-doc/main.md\` |\n`
+  `| \`$TEST_NODE_DOC\` | \`test-project/a-docs/roles/node-doc/main.md\` |\n| \`$TEST_STARTUP_DOC\` | \`test-project/a-docs/roles/owner/startup.md\` |\n`
 );
 fs.writeFileSync(
   path.join(projectRoot, 'a-docs', 'roles', 'node-doc', 'main.md'),
   'Node-specific reading content.'
+);
+fs.writeFileSync(
+  path.join(projectRoot, 'a-docs', 'roles', 'owner', 'required-readings.yaml'),
+  'role: owner\nrequired_readings:\n  - $TEST_STARTUP_DOC\n'
+);
+fs.writeFileSync(
+  path.join(projectRoot, 'a-docs', 'roles', 'owner', 'startup.md'),
+  'Startup reading content that should not be re-injected.'
 );
 
 test('buildForwardNodeEntryMessage: contains node header and first-node role-session framing', () => {
