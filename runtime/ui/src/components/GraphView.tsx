@@ -138,7 +138,14 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
   );
 }
 
-function GraphViewComponent(props: GraphViewProps) {
+function GraphViewComponent({
+  flowRun,
+  backwardActive,
+  backwardSources: providedBackwardSources,
+  recordFolderPath,
+  onNodeClick,
+  onWorkflowLoaded
+}: GraphViewProps) {
   const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const workflowRef = useRef<WorkflowGraph | null>(null);
@@ -157,7 +164,7 @@ function GraphViewComponent(props: GraphViewProps) {
         if (!areWorkflowGraphsEqual(workflowRef.current, graph)) {
           workflowRef.current = graph;
           setWorkflow(graph);
-          props.onWorkflowLoaded?.(graph);
+          onWorkflowLoaded?.(graph);
         }
         setError(null);
       } catch (loadError: unknown) {
@@ -177,28 +184,28 @@ function GraphViewComponent(props: GraphViewProps) {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [props.recordFolderPath, props.onWorkflowLoaded]);
+  }, [recordFolderPath, onWorkflowLoaded]);
 
   const backwardSources = useMemo(() => (
-    workflow && props.backwardSources && props.backwardSources.length > 0
-      ? props.backwardSources
+    workflow && providedBackwardSources && providedBackwardSources.length > 0
+      ? providedBackwardSources
       : EMPTY_STRINGS
-  ), [workflow, props.backwardSources]);
+  ), [workflow, providedBackwardSources]);
 
   const graphState = useMemo(() => (
     workflow
-      ? buildReactFlowState(workflow, props.flowRun, props.backwardActive, backwardSources)
+      ? buildReactFlowState(workflow, flowRun, backwardActive, backwardSources)
       : EMPTY_GRAPH_STATE
-  ), [workflow, props.flowRun.activeNodes, props.flowRun.completedNodes, props.backwardActive, backwardSources]);
+  ), [workflow, flowRun, backwardActive, backwardSources]);
 
   return (
     <section className="panel graph-panel">
       <div className="graph-panel-header">
         <div>
           <p className="eyebrow">Workflow Graph</p>
-          <h2>{props.flowRun.recordName ?? props.flowRun.flowId}</h2>
+          <h2>{flowRun.recordName ?? flowRun.flowId}</h2>
           <p className="panel-copy">
-            {props.flowRun.recordSummary ?? props.flowRun.projectNamespace}
+            {flowRun.recordSummary ?? flowRun.projectNamespace}
           </p>
         </div>
         <div className="legend">
@@ -210,13 +217,13 @@ function GraphViewComponent(props: GraphViewProps) {
       </div>
 
       <div className="graph-meta-plain">
-        <span>Project: {props.flowRun.projectNamespace}</span>
+        <span>Project: {flowRun.projectNamespace}</span>
         <span className="graph-meta-sep">·</span>
-        <span>Record: {props.flowRun.flowId}</span>
+        <span>Record: {flowRun.flowId}</span>
         <span className="graph-meta-sep">·</span>
-        <span>State: {props.flowRun.status}</span>
+        <span>State: {flowRun.status}</span>
         <span className="graph-meta-sep">·</span>
-        <span>{props.recordFolderPath}</span>
+        <span>{recordFolderPath}</span>
       </div>
 
       <div className="graph-canvas">
@@ -233,7 +240,7 @@ function GraphViewComponent(props: GraphViewProps) {
             panOnDrag={true}
             panOnScroll={false}
             zoomOnScroll={true}
-            onNodeClick={(_event, node) => props.onNodeClick(node.id)}
+            onNodeClick={(_event, node) => onNodeClick(node.id)}
           >
             <Background gap={20} color="rgba(65, 78, 92, 0.09)" />
             <MiniMap pannable zoomable />

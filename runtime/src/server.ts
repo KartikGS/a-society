@@ -224,6 +224,8 @@ function buildServer(workspaceRoot: string) {
   }
 
   function createSession(projectNamespace: string): ActiveSession {
+    // The WebSocket sink closes over the session before the session object is assembled.
+    // eslint-disable-next-line prefer-const
     let session!: ActiveSession;
 
     const inputBridge = new PassThrough();

@@ -28,7 +28,7 @@ export class SessionStore {
   }
 
   static saveFlowRun(flow: FlowRun) {
-    const { recordName, recordSummary, ...persisted } = flow;
+    const { recordName: _recordName, recordSummary: _recordSummary, ...persisted } = flow;
     fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(persisted, null, 2));
   }
 

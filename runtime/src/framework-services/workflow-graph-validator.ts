@@ -47,7 +47,6 @@ export interface ValidationResult {
  *
  * Uses runtime type checks; accepts unknown input and reports all violations.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function validateGraph(doc: unknown, strict?: boolean): string[] {
   const errors: string[] = [];
   const validateOptionalStringArray = (value: unknown, fieldPath: string) => {
@@ -69,7 +68,6 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
   }
 
   // Use any for internal traversal of this runtime-validated structure
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = doc as any;
 
   if (!('workflow' in d)) {
@@ -163,7 +161,6 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
   } else {
     const nodeIds = new Set<string>();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     wf.nodes.forEach((node: any, i: number) => {
       if (!node || typeof node !== 'object') {
         errors.push(`workflow.nodes[${i}] must be an object`);
@@ -222,7 +219,6 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
     if (!Array.isArray(wf.edges)) {
       errors.push('workflow.edges must be an array');
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       wf.edges.forEach((edge: any, i: number) => {
         if (!edge || typeof edge !== 'object') {
           errors.push(`workflow.edges[${i}] must be an object`);

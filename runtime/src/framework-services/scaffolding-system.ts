@@ -209,14 +209,11 @@ export function scaffoldFromManifestFile(
   } catch (err) {
     throw new Error(`Cannot parse manifest YAML: ${(err as Error).message}`);
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = doc as any;
   if (!d || !Array.isArray(d.files)) {
     throw new Error('Manifest must contain a "files" array');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const entries: ManifestEntry[] = includeOptional ? d.files : d.files.filter((f: any) => f.required === true);
 
   return scaffold(projectRoot, projectName, aSocietyRoot, entries, options);

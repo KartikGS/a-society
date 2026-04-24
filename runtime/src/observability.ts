@@ -4,7 +4,8 @@ import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import * as opentelemetry from '@opentelemetry/api';
-import { SpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
+import type { SpanExporter } from '@opentelemetry/sdk-trace-base';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,7 +19,7 @@ try {
   const versionFile = fs.readFileSync(versionFilePath, 'utf-8');
   const frameworkVersionMatch = versionFile.match(/v\d+\.\d+/);
   if (frameworkVersionMatch) frameworkVersion = frameworkVersionMatch[0];
-} catch (e) {
+} catch (_e) {
   // VERSION.md might not be reachable from certain execution contexts
 }
 
@@ -70,12 +71,16 @@ export class TelemetryManager {
 
     try {
       this.instance.start();
-    } catch (e) {
+    } catch (_e) {
       process.stderr.write(`[telemetry] Warning: Failed to initialize OpenTelemetry SDK. Traces and metrics will not be exported.\n`);
     }
 
-    process.on('SIGTERM', () => this.shutdown());
-    process.on('beforeExit', () => this.shutdown());
+    process.on('SIGTERM', () => {
+      void this.shutdown();
+    });
+    process.on('beforeExit', () => {
+      void this.shutdown();
+    });
   }
 
   static async initForTest(traceExporter: SpanExporter, metricExporter?: any): Promise<void> {
