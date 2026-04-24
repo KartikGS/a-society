@@ -419,11 +419,13 @@ export function App() {
         ? 'Reconnecting to runtime'
         : 'Connection lost';
 
+  const activeNodeIds = flowRun?.activeNodes;
+  const lastHandoffFromNodeId = lastHandoff?.fromNodeId;
   const backwardSources = useMemo(() => (
-    flowRun && lastHandoff && flowRun.activeNodes.includes(lastHandoff.fromNodeId)
-      ? [lastHandoff.fromNodeId]
+    activeNodeIds && lastHandoffFromNodeId && activeNodeIds.includes(lastHandoffFromNodeId)
+      ? [lastHandoffFromNodeId]
       : EMPTY_STRINGS
-  ), [flowRun?.activeNodes, lastHandoff?.fromNodeId]);
+  ), [activeNodeIds, lastHandoffFromNodeId]);
 
   const roles = useMemo(() => (
     workflow

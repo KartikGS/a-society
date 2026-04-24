@@ -21,7 +21,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  scaffold,
   scaffoldFromManifestFile,
 } from '../../src/framework-services/scaffolding-system.js';
 import { checkConsent } from '../../src/framework-services/consent-utility.js';

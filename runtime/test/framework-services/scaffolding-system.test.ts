@@ -30,7 +30,6 @@ function test(name: string, fn: () => void): void {
 
 // Temp directories: one as project root, one as fake a-society root with source templates
 const TEMP_BASE = fs.mkdtempSync(path.join(tmpdir(), 'a-society-scaffold-'));
-const PROJECT_ROOT = path.join(TEMP_BASE, 'my-project');
 const SOCIETY_ROOT = path.join(TEMP_BASE, 'a-society-src');
 function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
 

@@ -131,7 +131,7 @@ export class AnthropicProvider implements LLMProvider {
         if (toolUseBlocks.size > 0) {
           const calls = Array.from(toolUseBlocks.values()).map(b => {
             let input: any = {};
-            try { input = JSON.parse(b.inputJson); } catch (e) { /* ignore */ }
+            try { input = JSON.parse(b.inputJson); } catch (_e) { /* ignore */ }
             return { id: b.id, name: b.name, input };
           });
           span.setAttribute('provider.result_type', 'tool_calls');

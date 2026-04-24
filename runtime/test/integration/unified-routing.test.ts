@@ -170,8 +170,6 @@ async function runTest() {
     );
 
     const operatorOut = operatorChunks.join('');
-    const assistantOut = assistantChunks.join('');
-
     // Verify operator stream contains the handoff notice and role.active notice
     const hasHandoffNotice = operatorOut.includes('[runtime/handoff]');
     const hasRoleActiveNotice = operatorOut.includes('[runtime/role]');

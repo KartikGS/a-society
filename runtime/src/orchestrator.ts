@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRun, HandoffResult, HandoffTarget, InteractiveSessionResult, OperatorRenderSink, TurnUsage } from './types.js';
+import type { FlowRun, HandoffTarget, InteractiveSessionResult, OperatorRenderSink, TurnUsage } from './types.js';
 import { emitUsage, runInteractiveSession } from './orient.js';
 import { buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
@@ -451,7 +451,7 @@ export class FlowOrchestrator {
     this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
     const wf = this.resolveActiveWorkflow(flowRun);
 
-    const currentNode = this.findNodeById(wf, nodeId);
+    this.findNodeById(wf, nodeId);
     const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
     const incomingEdges = this.getIncomingEdges(wf, nodeId);
     const outstandingOutgoingEdges = this.getOutstandingOutgoingEdges(flowRun, wf, nodeId);
@@ -669,7 +669,7 @@ export class FlowOrchestrator {
         if (line === 'exit' || line === 'quit') {
           resolve(null);
         } else if (line === '') {
-          this.readHumanInput(inputStream, outputStream).then(resolve);
+          void this.readHumanInput(inputStream, outputStream).then(resolve, () => resolve(null));
         } else {
           resolve(line);
         }

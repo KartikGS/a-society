@@ -14,7 +14,7 @@ import {
   getMetricDataPoints
 } from './telemetry-test-helper.js';
 import { TelemetryManager } from '../src/observability.js';
-import { HandoffInterpreter, HandoffParseError } from '../src/handoff.js';
+import { HandoffParseError } from '../src/handoff.js';
 import { LLMGateway } from '../src/llm.js';
 import { FlowOrchestrator } from '../src/orchestrator.js';
 import { validateWorkflowFile } from '../src/framework-services/workflow-graph-validator.js';

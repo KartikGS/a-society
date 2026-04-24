@@ -95,6 +95,8 @@ export class OperatorEventRenderer implements OperatorRenderSink {
             return `Tokens: ${event.inputTokens} in, output unavailable`;
           case 'both-unavailable':
             return `Tokens unavailable (provider did not report usage)`;
+          default:
+            return null;
         }
       }
 
