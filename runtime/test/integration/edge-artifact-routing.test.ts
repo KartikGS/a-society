@@ -51,7 +51,9 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['producer', 'branch-c'],
+    readyNodes: ['producer', 'branch-c'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: {
@@ -59,25 +61,31 @@ async function runTest() {
       'branch-c': ['records/test-flow/01-ta-brief.md'],
     },
     status: 'running' as const,
-    stateVersion: '6'
+    stateVersion: '7'
   };
   SessionStore.saveFlowRun(flowRun);
 
   const orchestrator = new FlowOrchestrator();
 
-  await orchestrator.applyHandoffAndAdvance(flowRun, 'producer', 'Owner', [
-    { target_node_id: 'branch-a', artifact_path: 'records/test-flow/02-producer-to-a.md' },
-    { target_node_id: 'branch-b', artifact_path: 'records/test-flow/02-producer-to-b.md' },
+  await Promise.all([
+    orchestrator.applyHandoffAndAdvance(flowRun, 'producer', 'Owner', [
+      { target_node_id: 'branch-a', artifact_path: 'records/test-flow/02-producer-to-a.md' },
+      { target_node_id: 'branch-b', artifact_path: 'records/test-flow/02-producer-to-b.md' },
+    ]),
+    orchestrator.applyHandoffAndAdvance(flowRun, 'branch-c', 'Technical Architect', [
+      { target_node_id: 'branch-b', artifact_path: 'records/test-flow/03-c-to-b.md' },
+    ])
   ]);
 
-  let updated = SessionStore.loadFlowRun()!;
+  const updated = SessionStore.loadFlowRun()!;
   assert.deepStrictEqual(
     updated.completedEdgeArtifacts,
     {
       'producer=>branch-a': 'records/test-flow/02-producer-to-a.md',
       'producer=>branch-b': 'records/test-flow/02-producer-to-b.md',
+      'branch-c=>branch-b': 'records/test-flow/03-c-to-b.md',
     },
-    'fork handoff should persist artifacts by edge'
+    'concurrent handoffs should persist all artifacts by edge'
   );
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts['branch-a'],
@@ -85,16 +93,9 @@ async function runTest() {
     'branch-a should receive only its own edge artifact'
   );
   assert.ok(
-    !updated.activeNodes.includes('branch-b'),
-    'branch-b should remain deferred until branch-c completes'
+    updated.readyNodes.includes('branch-b'),
+    'branch-b should activate once both concurrent predecessors complete'
   );
-
-  await orchestrator.applyHandoffAndAdvance(updated, 'branch-c', 'Technical Architect', [
-    { target_node_id: 'branch-b', artifact_path: 'records/test-flow/03-c-to-b.md' },
-  ]);
-
-  updated = SessionStore.loadFlowRun()!;
-  assert.ok(updated.activeNodes.includes('branch-b'), 'branch-b should activate once all predecessors complete');
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts['branch-b'],
     ['records/test-flow/02-producer-to-b.md', 'records/test-flow/03-c-to-b.md'],

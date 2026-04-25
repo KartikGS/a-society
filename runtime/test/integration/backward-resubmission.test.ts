@@ -57,7 +57,9 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['review'],
+    readyNodes: ['review'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: ['proposal'],
     completedEdgeArtifacts: {
       'proposal=>review': proposalToReviewRel,
@@ -67,7 +69,7 @@ async function runTest() {
       review: [proposalToReviewRel],
     },
     status: 'running',
-    stateVersion: '6',
+    stateVersion: '7',
   });
 
   SessionStore.saveRoleSession({
@@ -87,8 +89,8 @@ async function runTest() {
 
   const updated = SessionStore.loadFlowRun()!;
 
-  assert.ok(updated.activeNodes.includes('proposal'), 'proposal should reactivate after backward handoff');
-  assert.ok(!updated.activeNodes.includes('review'), 'review should no longer be active after sending work back');
+  assert.ok(updated.readyNodes.includes('proposal'), 'proposal should reactivate after backward handoff');
+  assert.ok(!updated.readyNodes.includes('review'), 'review should no longer be active after sending work back');
   assert.ok(!('proposal=>review' in updated.completedEdgeArtifacts), 'rejected edge must be invalidated');
   assert.strictEqual(
     updated.completedEdgeArtifacts['proposal=>audit'],

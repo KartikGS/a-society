@@ -46,7 +46,9 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['review'],
+    readyNodes: ['review'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: ['proposal'],
     completedEdgeArtifacts: {
       'proposal=>review': proposalToReviewRelPath,
@@ -55,7 +57,7 @@ async function runTest() {
       review: [proposalToReviewRelPath],
     },
     status: 'running',
-    stateVersion: '6',
+    stateVersion: '7',
   });
 
   SessionStore.saveRoleSession({
@@ -75,8 +77,8 @@ async function runTest() {
 
   const updated = SessionStore.loadFlowRun()!;
 
-  assert.ok(updated.activeNodes.includes('proposal'), 'proposal should reactivate after terminal-node backward handoff');
-  assert.ok(!updated.activeNodes.includes('review'), 'terminal review node should stop being active after sending work back');
+  assert.ok(updated.readyNodes.includes('proposal'), 'proposal should reactivate after terminal-node backward handoff');
+  assert.ok(!updated.readyNodes.includes('review'), 'terminal review node should stop being active after sending work back');
   assert.ok(!('proposal=>review' in updated.completedEdgeArtifacts), 'realized predecessor edge must be invalidated');
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts.proposal,

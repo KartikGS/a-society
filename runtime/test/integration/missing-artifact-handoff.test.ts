@@ -73,12 +73,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['start'],
+    readyNodes: ['start'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { start: [] },
     status: 'running',
-    stateVersion: '6'
+    stateVersion: '7'
   });
 
   const operatorStream = new PassThrough();
@@ -123,7 +125,7 @@ async function runTest() {
     const operatorOut = operatorChunks.join('');
 
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
-    assert.ok(updatedFlow.activeNodes.includes('next'), "Expected node 'next' to activate after repaired handoff.");
+    assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to activate after repaired handoff.");
     assert.ok(
       operatorOut.includes('[runtime/repair] Referenced artifact unavailable; retrying current node'),
       'Expected operator stream to show missing-artifact repair notice.'

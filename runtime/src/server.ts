@@ -23,8 +23,8 @@ type ClientMessage =
   | { type: 'start_initialized_flow'; projectNamespace: string }
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
-  | { type: 'stop_active_turn' }
-  | { type: 'human_input'; text: string };
+  | { type: 'stop_active_turn'; nodeId?: string; role?: string }
+  | { type: 'human_input'; text: string; nodeId?: string; role?: string };
 
 type FlowStateMessage = {
   type: 'flow_state';
@@ -86,7 +86,7 @@ function readCurrentFlowRun(): FlowRun | null {
   return SessionStore.loadFlowRun();
 }
 
-function resolveCurrentWorkflow(flowRun: FlowRun | null): any | null {
+  function resolveCurrentWorkflow(flowRun: FlowRun | null): any | null {
   if (!flowRun) return null;
   const workflowPath = findWorkflowFilePath(flowRun.recordFolderPath);
   if (!workflowPath) return null;
@@ -95,6 +95,49 @@ function resolveCurrentWorkflow(flowRun: FlowRun | null): any | null {
   } catch {
     return null;
   }
+}
+
+function getOpenNodeIds(flowRun: FlowRun): string[] {
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    for (const nodeId of [
+      ...flowRun.readyNodes,
+      ...flowRun.runningNodes,
+      ...Object.keys(flowRun.awaitingHumanNodes)
+    ]) {
+      if (seen.has(nodeId)) continue;
+      seen.add(nodeId);
+      ids.push(nodeId);
+    }
+    return ids;
+  }
+
+function resolveAwaitingHumanNode(flowRun: FlowRun, target?: { nodeId?: string; role?: string }): string {
+    const awaitingNodeIds = Object.keys(flowRun.awaitingHumanNodes);
+    if (target?.nodeId) {
+      if (!flowRun.awaitingHumanNodes[target.nodeId]) {
+        throw new Error(`Node '${target.nodeId}' is not awaiting human input.`);
+      }
+      return target.nodeId;
+    }
+
+    if (target?.role) {
+      const roleKey = toKebabCaseRoleId(target.role);
+      const matches = awaitingNodeIds.filter((nodeId) =>
+        toKebabCaseRoleId(flowRun.awaitingHumanNodes[nodeId].role) === roleKey
+      );
+      if (matches.length === 1) return matches[0];
+      if (matches.length === 0) {
+        throw new Error(`Role '${target.role}' is not awaiting human input.`);
+      }
+      throw new Error(`Role '${target.role}' has multiple awaiting nodes. Specify nodeId.`);
+    }
+
+    if (awaitingNodeIds.length === 1) {
+      return awaitingNodeIds[0];
+    }
+
+    throw new Error('Multiple nodes are awaiting human input. Specify nodeId or role.');
 }
 
 function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {
@@ -153,7 +196,7 @@ function buildServer(workspaceRoot: string) {
     const flowRun = readCurrentFlowRun();
     if (!flowRun) return null;
     const backwardActive = session
-      ? Array.from(session.backwardActive).filter((nodeId) => flowRun.activeNodes.includes(nodeId))
+      ? Array.from(session.backwardActive).filter((nodeId) => getOpenNodeIds(flowRun).includes(nodeId))
       : [];
     return {
       type: 'flow_state',
@@ -359,17 +402,20 @@ function buildServer(workspaceRoot: string) {
     ).catch(() => {});
   }
 
-  function resumeAwaitingHumanInput(text: string): void {
+  function resumeAwaitingHumanInput(text: string, target?: { nodeId?: string; role?: string }): void {
     const flowRun = readCurrentFlowRun();
     if (!flowRun || flowRun.status !== 'awaiting_human') {
       broadcast({ type: 'error', message: 'No suspended flow is waiting for operator input.' });
       return;
     }
 
-    if (flowRun.activeNodes.length !== 1) {
+    let targetNodeId: string;
+    try {
+      targetNodeId = resolveAwaitingHumanNode(flowRun, target);
+    } catch (error: any) {
       broadcast({
         type: 'error',
-        message: 'Suspended multi-node flows are not resumable from the UI yet. Resume them from the runtime debug surface.'
+        message: error instanceof Error ? error.message : String(error)
       });
       return;
     }
@@ -390,60 +436,83 @@ function buildServer(workspaceRoot: string) {
 
       await session.orchestrator.advanceFlow(
         currentFlow,
-        currentFlow.activeNodes[0],
+        targetNodeId,
         undefined,
         text,
         session.inputBridge,
         session.outputBridge
       );
 
-      currentFlow = readCurrentFlowRun();
-      while (currentFlow && currentFlow.status === 'running' && currentFlow.activeNodes.length > 0) {
-        await session.orchestrator.advanceFlow(
-          currentFlow,
-          currentFlow.activeNodes[0],
-          undefined,
-          undefined,
-          session.inputBridge,
-          session.outputBridge
-        );
-        currentFlow = readCurrentFlowRun();
-      }
+      await session.orchestrator.runStoredFlow(
+        workspaceRoot,
+        currentFlow.projectNamespace,
+        'Owner',
+        session.inputBridge,
+        session.outputBridge
+      );
 
+      currentFlow = readCurrentFlowRun();
       if (currentFlow?.status === 'completed') {
         session.sink.emit({ kind: 'flow.completed' });
       }
     }).catch(() => {});
   }
 
-  function handleHumanInput(text: string): void {
+  function handleHumanInput(text: string, target?: { nodeId?: string; role?: string }): void {
     if (activeSession && !activeSession.finished) {
-      if (!activeSession.awaitingHumanInput) {
+      const flowRun = readCurrentFlowRun();
+      if (!flowRun || Object.keys(flowRun.awaitingHumanNodes).length === 0) {
         broadcast({ type: 'error', message: 'The runtime is not currently waiting for human input.' });
         return;
       }
 
+      let targetNodeId: string;
+      try {
+        targetNodeId = resolveAwaitingHumanNode(flowRun, target);
+      } catch (error: any) {
+        broadcast({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+
       activeSession.awaitingHumanInput = false;
-      activeSession.inputBridge.write(text + '\n');
+      void activeSession.orchestrator.advanceFlow(
+        flowRun,
+        targetNodeId,
+        undefined,
+        text,
+        activeSession.inputBridge,
+        activeSession.outputBridge
+      ).then(() => activeSession?.orchestrator.runStoredFlow(
+        workspaceRoot,
+        flowRun.projectNamespace,
+        'Owner',
+        activeSession.inputBridge,
+        activeSession.outputBridge
+      )).catch((error: any) => {
+        emitHistoricalMessage(activeSession!, {
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      });
       return;
     }
 
     const flowRun = readCurrentFlowRun();
     if (flowRun?.status === 'awaiting_human') {
-      resumeAwaitingHumanInput(text);
+      resumeAwaitingHumanInput(text, target);
       return;
     }
 
     broadcast({ type: 'error', message: 'No active runtime session is waiting for human input.' });
   }
 
-  function handleStopActiveTurn(): void {
+  function handleStopActiveTurn(target?: { nodeId?: string; role?: string }): void {
     if (!activeSession || activeSession.finished) {
       broadcast({ type: 'error', message: 'No active runtime session is currently running.' });
       return;
     }
 
-    const stopped = activeSession.orchestrator.abortActiveTurn();
+    const stopped = activeSession.orchestrator.abortActiveTurn(target);
     if (!stopped) {
       broadcast({ type: 'error', message: 'No active turn is currently stoppable.' });
     }
@@ -614,11 +683,11 @@ function buildServer(workspaceRoot: string) {
       }
 
       if (message.type === 'stop_active_turn') {
-        handleStopActiveTurn();
+        handleStopActiveTurn({ nodeId: message.nodeId, role: message.role });
         return;
       }
 
-      handleHumanInput(message.text);
+      handleHumanInput(message.text, { nodeId: message.nodeId, role: message.role });
     });
 
     socket.on('close', () => {

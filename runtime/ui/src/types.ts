@@ -15,7 +15,9 @@ export interface FlowRun {
   recordFolderPath: string;
   recordName?: string;
   recordSummary?: string;
-  activeNodes: string[];
+  readyNodes: string[];
+  runningNodes: string[];
+  awaitingHumanNodes: Record<string, { role: string; reason: 'prompt-human' | 'autonomous-abort' }>;
   completedNodes: string[];
   visitedNodeIds?: string[];
   completedEdgeArtifacts: Record<string, string>;
@@ -30,7 +32,7 @@ export type OperatorEvent =
   | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string }
-  | { kind: 'human.awaiting_input'; reason: 'prompt-human' | 'autonomous-abort' }
+  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
@@ -43,8 +45,8 @@ export type ClientMessage =
   | { type: 'start_initialized_flow'; projectNamespace: string }
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
-  | { type: 'stop_active_turn' }
-  | { type: 'human_input'; text: string };
+  | { type: 'stop_active_turn'; nodeId?: string; role?: string }
+  | { type: 'human_input'; text: string; nodeId?: string; role?: string };
 
 export type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery; flowRun: FlowRun | null }

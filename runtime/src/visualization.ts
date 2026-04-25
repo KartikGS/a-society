@@ -14,15 +14,38 @@ export function renderFlowStatus(flowRun: FlowRun, wf: WfGraph): string {
   }
   output += `\n`;
 
-  // Active nodes
-  output += `Active nodes:\n`;
-  if (flowRun.activeNodes.length === 0) {
+  // Ready/running/waiting nodes
+  output += `Ready nodes:\n`;
+  if (flowRun.readyNodes.length === 0) {
     output += `  (none)\n`;
   } else {
     // List in wf.nodes order
-    const active = wf.nodes.filter(n => flowRun.activeNodes.includes(n.id));
-    for (const n of active) {
+    const ready = wf.nodes.filter(n => flowRun.readyNodes.includes(n.id));
+    for (const n of ready) {
       output += `  [→] ${n.id} (${n.role})\n`;
+    }
+  }
+  output += `\n`;
+
+  output += `Running nodes:\n`;
+  if (flowRun.runningNodes.length === 0) {
+    output += `  (none)\n`;
+  } else {
+    const running = wf.nodes.filter(n => flowRun.runningNodes.includes(n.id));
+    for (const n of running) {
+      output += `  [~] ${n.id} (${n.role})\n`;
+    }
+  }
+  output += `\n`;
+
+  output += `Awaiting human nodes:\n`;
+  const awaitingIds = Object.keys(flowRun.awaitingHumanNodes);
+  if (awaitingIds.length === 0) {
+    output += `  (none)\n`;
+  } else {
+    const awaiting = wf.nodes.filter(n => awaitingIds.includes(n.id));
+    for (const n of awaiting) {
+      output += `  [?] ${n.id} (${n.role})\n`;
     }
   }
   output += `\n`;
@@ -64,7 +87,9 @@ function findPendingJoins(flowRun: FlowRun, wf: WfGraph): Array<{ id: string; ro
     .filter(n => {
       const preds = incomingEdges[n.id] ?? [];
       if (preds.length <= 1) return false;
-      if (flowRun.activeNodes.includes(n.id)) return false;
+      if (flowRun.readyNodes.includes(n.id)) return false;
+      if (flowRun.runningNodes.includes(n.id)) return false;
+      if (n.id in flowRun.awaitingHumanNodes) return false;
       if (flowRun.completedNodes.includes(n.id)) return false;
       // At least one predecessor has produced its edge to this join.
       return preds.some(p => hasRealizedIncomingEdge(p, n.id));

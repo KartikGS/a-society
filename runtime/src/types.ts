@@ -32,13 +32,15 @@ export interface FlowRun {
   recordFolderPath: string;
   recordName?: string;
   recordSummary?: string;
-  activeNodes: string[];                          // node IDs currently executing
+  readyNodes: string[];                           // node IDs eligible to execute
+  runningNodes: string[];                         // node IDs claimed by a live runtime turn
+  awaitingHumanNodes: Record<string, { role: string; reason: 'prompt-human' | 'autonomous-abort' }>;
   completedNodes: string[];                       // node IDs that have finished
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
   completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "6" for the current runtime schema
+  stateVersion: string;                        // Persistence version: "7" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
 }
 
@@ -98,7 +100,7 @@ export type OperatorEvent =
   | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string }
-  | { kind: 'human.awaiting_input'; reason: 'prompt-human' | 'autonomous-abort' }
+  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }

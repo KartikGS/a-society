@@ -24,6 +24,21 @@ interface GraphViewProps {
 const EMPTY_GRAPH_STATE: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 const EMPTY_STRINGS: string[] = [];
 
+function getOpenNodeIds(flowRun: FlowRun): string[] {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const nodeId of [
+    ...flowRun.readyNodes,
+    ...flowRun.runningNodes,
+    ...Object.keys(flowRun.awaitingHumanNodes)
+  ]) {
+    if (seen.has(nodeId)) continue;
+    seen.add(nodeId);
+    ids.push(nodeId);
+  }
+  return ids;
+}
+
 function computeDepths(workflow: WorkflowGraph): Map<string, number> {
   const incomingCount = new Map<string, number>();
   const outgoing = new Map<string, string[]>();
@@ -81,8 +96,9 @@ function buildReactFlowState(
     group.forEach((node, index) => {
       const isCompleted = flowRun.completedNodes.includes(node.id);
       const isBackward = backwardActive.includes(node.id);
-      const isBackwardSource = backwardSources.includes(node.id) && flowRun.activeNodes.includes(node.id);
-      const isActive = flowRun.activeNodes.includes(node.id);
+      const openNodeIds = getOpenNodeIds(flowRun);
+      const isBackwardSource = backwardSources.includes(node.id) && openNodeIds.includes(node.id);
+      const isActive = openNodeIds.includes(node.id);
 
       let tone = 'node-neutral';
       if (isCompleted) tone = 'node-completed';
@@ -137,7 +153,9 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
     left.recordName === right.recordName &&
     left.recordSummary === right.recordSummary &&
     left.status === right.status &&
-    areStringArraysEqual(left.activeNodes, right.activeNodes) &&
+    areStringArraysEqual(left.readyNodes, right.readyNodes) &&
+    areStringArraysEqual(left.runningNodes, right.runningNodes) &&
+    areStringArraysEqual(Object.keys(left.awaitingHumanNodes), Object.keys(right.awaitingHumanNodes)) &&
     areStringArraysEqual(left.completedNodes, right.completedNodes)
   );
 }

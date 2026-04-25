@@ -356,7 +356,9 @@ export function bootstrapInitializationFlow(
       workspaceRoot,
       projectNamespace: namespace,
       recordFolderPath,
-      activeNodes: ['owner-intake'],
+      readyNodes: ['owner-intake'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       completedNodes: [],
       visitedNodeIds: [],
       completedEdgeArtifacts: {},
@@ -364,7 +366,7 @@ export function bootstrapInitializationFlow(
         'owner-intake': activeArtifacts
       },
       status: 'running',
-      stateVersion: '6'
+      stateVersion: '7'
     },
     scaffoldResult
   };

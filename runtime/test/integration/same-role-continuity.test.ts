@@ -125,12 +125,14 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordDir,
-    activeNodes: ['owner-intake'],
+    readyNodes: ['owner-intake'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     status: 'running',
-    stateVersion: '6',
+    stateVersion: '7',
     ...overrides
   };
 }
@@ -220,7 +222,7 @@ async function run() {
     assert.ok(msg.includes('Reviewer requests revision to the Owner brief.'));
   });
 
-  await test('Store: loading a non-v6 flow is rejected', async () => {
+  await test('Store: loading a non-v7 flow is rejected', async () => {
     resetState();
 
     const v5Flow: any = {
@@ -228,7 +230,9 @@ async function run() {
       workspaceRoot,
       projectNamespace,
       recordFolderPath: recordDir,
-      activeNodes: [],
+      readyNodes: [],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       completedNodes: [],
       completedEdgeArtifacts: {},
       pendingNodeArtifacts: {},
@@ -239,7 +243,7 @@ async function run() {
 
     assert.throws(
       () => SessionStore.loadFlowRun(),
-      /only supports flow state version "6"/
+      /only supports flow state version "7"/
     );
   });
 
@@ -258,7 +262,9 @@ async function run() {
     });
 
     const flowRun = makeFlowRun({
-      activeNodes: ['owner-gate'],
+      readyNodes: ['owner-gate'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       completedNodes: ['owner-intake', 'ta'],
       completedEdgeArtifacts: {
         'owner-intake=>ta': path.relative(workspaceRoot, ownerArtifact1),
@@ -313,7 +319,9 @@ async function run() {
     });
 
     const flowRun = makeFlowRun({
-      activeNodes: ['owner-intake'],
+      readyNodes: ['owner-intake'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       pendingNodeArtifacts: {
         'owner-intake': [
           path.relative(workspaceRoot, ownerArtifact1),
@@ -354,7 +362,9 @@ async function run() {
     resetState();
 
     const flowRun = makeFlowRun({
-      activeNodes: ['owner-intake', 'owner-gate'],
+      readyNodes: ['owner-intake', 'owner-gate'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       pendingNodeArtifacts: {
         'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]

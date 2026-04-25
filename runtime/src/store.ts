@@ -18,6 +18,8 @@ function getStateDir() {
 function getSessionsDir(stateDir: string) { return path.join(stateDir, 'sessions'); }
 
 export class SessionStore {
+  private static flowUpdateLock: Promise<void> = Promise.resolve();
+
   static init() {
     const stateDir = getStateDir();
     [stateDir, getSessionsDir(stateDir)].forEach(dir => {
@@ -32,15 +34,38 @@ export class SessionStore {
     fs.writeFileSync(path.join(getStateDir(), 'flow.json'), JSON.stringify(persisted, null, 2));
   }
 
+  static async updateFlowRun(mutator: (flow: FlowRun) => FlowRun | void | Promise<FlowRun | void>): Promise<FlowRun> {
+    const previous = SessionStore.flowUpdateLock;
+    let release!: () => void;
+    SessionStore.flowUpdateLock = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      const flow = SessionStore.loadFlowRun();
+      if (!flow) {
+        throw new Error('No active flow state found.');
+      }
+
+      const mutated = await mutator(flow);
+      const nextFlow = mutated ?? flow;
+      SessionStore.saveFlowRun(nextFlow);
+      return nextFlow;
+    } finally {
+      release();
+    }
+  }
+
   static loadFlowRun(): FlowRun | null {
     const p = path.join(getStateDir(), 'flow.json');
     if (!fs.existsSync(p)) return null;
     const flow = JSON.parse(fs.readFileSync(p, 'utf8')) as FlowRun;
 
-    if (flow.stateVersion !== '6') {
+    if (flow.stateVersion !== '7') {
       throw new Error(
         `Unsupported persisted flow state version "${String((flow as any).stateVersion ?? 'missing')}". ` +
-        'This runtime only supports flow state version "6".'
+        'This runtime only supports flow state version "7".'
       );
     }
 
@@ -64,6 +89,15 @@ export class SessionStore {
       } else {
         delete flow.recordSummary;
       }
+    }
+    if (!Array.isArray(flow.readyNodes)) {
+      throw new Error('Persisted flow state is missing readyNodes.');
+    }
+    if (!Array.isArray(flow.runningNodes)) {
+      throw new Error('Persisted flow state is missing runningNodes.');
+    }
+    if (!flow.awaitingHumanNodes || typeof flow.awaitingHumanNodes !== 'object') {
+      throw new Error('Persisted flow state is missing awaitingHumanNodes.');
     }
     if (!flow.completedEdgeArtifacts || typeof flow.completedEdgeArtifacts !== 'object') {
       throw new Error('Persisted flow state is missing completedEdgeArtifacts.');
