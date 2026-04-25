@@ -40,6 +40,13 @@ export const ChatInterface = (props: ChatInterfaceProps) => { ... }
 
 **Components in `src/components/`.** Hooks in `src/hooks/`. Do not create additional subdirectory levels unless the folder would exceed five files.
 
+**3-Pane IDE Layout.** The main workspace uses a persistent 3-pane layout:
+- **Left Pane (Sidebar):** Project explorer and creation (`ProjectSelector` acting as a sidebar).
+- **Center Pane (Main Editor):** Workflow graph (`GraphView`) or extra project information.
+- **Right Pane (Secondary Sidebar):** Role chat interface (`ChatInterface`).
+
+This layout is managed by the `.workspace-grid` class (`280px minmax(0, 1fr) 360px`). Do not implement full-screen toggle views that obscure this persistent layout.
+
 ---
 
 ## State Model
@@ -134,22 +141,22 @@ color: var(--ink-soft);
 color: rgba(34, 49, 63, 0.72);
 ```
 
-**Palette — do not introduce new hues.** The palette is intentional. Extend the existing token set before adding new values.
+**Palette — do not introduce new hues.** The palette is intentional and supports a dual-theme (light/dark) model via `@media (prefers-color-scheme: dark)`. Extend the existing token set before adding new values, and always ensure both light and dark mode variables are defined.
 
-| Token | Value | Use |
-|---|---|---|
-| `--bg` | `#f4efe6` | Page background base |
-| `--surface` | `rgba(255,251,245,0.88)` | Panel fill (frosted) |
-| `--surface-strong` | `#fffdf9` | Modal/input fill |
-| `--border` | `rgba(42,54,68,0.12)` | Default border |
-| `--ink` | `#22313f` | Primary text |
-| `--ink-soft` | `rgba(34,49,63,0.72)` | Secondary text, labels |
-| `--accent` | `#0f766e` | Primary interactive |
-| `--accent-deep` | `#0b5f58` | Gradient end for buttons |
-| `--warning` | `#bb3e03` | Error/warning text |
-| `--node-active` | `#3b82f6` | Active workflow node |
-| `--node-backward` | `#d9485f` | Backward-pass node |
-| `--node-complete` | `#2f855a` | Completed node |
+| Token | Light Value | Dark Value | Use |
+|---|---|---|---|
+| `--bg` | `#f4efe6` | `#0f1115` | Page background base |
+| `--surface` | `rgba(255,251,245,0.88)` | `rgba(22,27,34,0.65)` | Panel fill (frosted glassmorphism) |
+| `--surface-strong` | `#fffdf9` | `#1c2128` | Modal/input fill |
+| `--border` | `rgba(42,54,68,0.12)` | `rgba(205,217,229,0.1)` | Default border |
+| `--ink` | `#22313f` | `#cdd9e5` | Primary text |
+| `--ink-soft` | `rgba(34,49,63,0.72)` | `rgba(205,217,229,0.65)` | Secondary text, labels |
+| `--accent` | `#0f766e` | `#2dd4bf` | Primary interactive |
+| `--accent-deep` | `#0b5f58` | `#14b8a6` | Gradient end for buttons |
+| `--warning` | `#bb3e03` | `#fb923c` | Error/warning text |
+| `--node-active` | `#3b82f6` | `#3b82f6` | Active workflow node |
+| `--node-backward` | `#d9485f` | `#f43f5e` | Backward-pass node |
+| `--node-complete` | `#2f855a` | `#22c55e` | Completed node |
 
 **Typography — do not introduce new font families.** Three families are in use:
 
