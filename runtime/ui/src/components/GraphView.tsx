@@ -255,8 +255,9 @@ function GraphViewComponent({
             onlyRenderVisibleElements
             nodesDraggable={false}
             panOnDrag={true}
-            panOnScroll={false}
+            panOnScroll={true}
             zoomOnScroll={false}
+            zoomOnPinch={true}
             onInit={(instance) => {
               reactFlowRef.current = instance;
             }}
