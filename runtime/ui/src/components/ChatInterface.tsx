@@ -9,14 +9,13 @@ export interface FeedItem {
 }
 
 interface ChatInterfaceProps {
-  title: string;
   subtitle: string;
   messages: FeedItem[];
   waitingLabel: string | null;
   inputValue: string;
   inputDisabled: boolean;
   placeholder: string;
-  statusLine?: string;
+  showComposer?: boolean;
   canStop?: boolean;
   stopRequested?: boolean;
   roles?: string[];
@@ -28,8 +27,32 @@ interface ChatInterfaceProps {
   onStop?: () => void;
 }
 
+function normalizeAssistantMarkdown(text: string): string {
+  return text.replace(/\$?\\(?:rightarrow|to)\$?/g, '→');
+}
+
+function SendIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path
+        d="M3.4 16.6 17 10 3.4 3.4l.2 5.1 8.2 1.5-8.2 1.5-.2 5.1Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function StopIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <rect x="5" y="5" width="10" height="10" rx="2.5" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function ChatInterface(props: ChatInterfaceProps) {
   const feedRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -55,13 +78,21 @@ export function ChatInterface(props: ChatInterfaceProps) {
     element.scrollTop = element.scrollHeight;
   }, [props.messages, props.waitingLabel]);
 
+  useLayoutEffect(() => {
+    const element = textareaRef.current;
+    if (!element) return;
+
+    element.style.height = '0px';
+    const nextHeight = Math.min(Math.max(element.scrollHeight, 72), 220);
+    element.style.height = `${nextHeight}px`;
+    element.style.overflowY = element.scrollHeight > 220 ? 'auto' : 'hidden';
+  }, [props.inputValue, props.showComposer]);
+
+  const showActionButton = props.canStop || !props.inputDisabled;
+
   return (
     <section className="panel chat-panel">
-      <div className="panel-header">
-        <p className="eyebrow">Conversation</p>
-        <h2>{props.title}</h2>
-        <p className="panel-copy">{props.subtitle}</p>
-      </div>
+      <p className="panel-copy chat-subtitle">{props.subtitle}</p>
 
       {props.roles && props.roles.length > 0 ? (
         <div className="role-tabs">
@@ -79,14 +110,17 @@ export function ChatInterface(props: ChatInterfaceProps) {
         </div>
       ) : null}
 
-      {(props.statusLine || props.waitingLabel) ? (
-        <div className="status-row">
-          {props.statusLine ? <span className="status-pill">{props.statusLine}</span> : null}
-          {props.waitingLabel ? <span className="status-pill status-pill-wait">{props.waitingLabel}</span> : null}
+      {props.waitingLabel ? (
+        <div className="status-row chat-status-row">
+          <span className="status-pill status-pill-wait">{props.waitingLabel}</span>
         </div>
       ) : null}
 
-      <div className="feed" ref={feedRef} onScroll={handleFeedScroll}>
+      <div
+        className={`feed${props.messages.length > 0 ? ' feed-has-messages' : ''}`}
+        ref={feedRef}
+        onScroll={handleFeedScroll}
+      >
         {props.messages.length === 0 ? (
           <div className="feed-empty">
             Waiting for runtime output.
@@ -97,7 +131,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
               <p className="feed-label">{message.label}</p>
               {message.type === 'assistant' ? (
                 <div className="feed-markdown">
-                  <ReactMarkdown>{message.text}</ReactMarkdown>
+                  <ReactMarkdown>{normalizeAssistantMarkdown(message.text)}</ReactMarkdown>
                 </div>
               ) : message.type === 'user' ? (
                 <div className="feed-user-text">
@@ -111,44 +145,39 @@ export function ChatInterface(props: ChatInterfaceProps) {
         )}
       </div>
 
-      <form
-        className="composer"
-        onSubmit={(event) => {
-          event.preventDefault();
-          props.onSubmit();
-        }}
-      >
-        <div className="composer-box">
-          <textarea
-            ref={textareaRef}
-            value={props.inputValue}
-            onChange={(event) => props.onInputChange(event.target.value)}
-            disabled={props.inputDisabled}
-            placeholder={props.placeholder}
-            rows={1}
-          />
-          <div className="composer-footer">
-            {props.canStop ? (
+      {props.showComposer ? (
+        <form
+          className="composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (props.canStop) return;
+            props.onSubmit();
+          }}
+        >
+          <div className="composer-shell">
+            <textarea
+              ref={textareaRef}
+              value={props.inputValue}
+              onChange={(event) => props.onInputChange(event.target.value)}
+              disabled={props.inputDisabled}
+              placeholder={props.placeholder}
+              rows={1}
+            />
+            {showActionButton ? (
               <button
-                type="button"
-                className="composer-btn composer-btn-stop"
-                onClick={props.onStop}
-                disabled={props.stopRequested}
+                type={props.canStop ? 'button' : 'submit'}
+                className={`composer-action${props.canStop ? ' composer-action-stop' : ''}`}
+                onClick={props.canStop ? props.onStop : undefined}
+                disabled={props.canStop ? props.stopRequested : props.inputDisabled || props.inputValue.trim().length === 0}
+                aria-label={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
+                title={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
               >
-                {props.stopRequested ? 'Stopping…' : 'Stop'}
+                {props.canStop ? <StopIcon /> : <SendIcon />}
               </button>
-            ) : (
-              <button
-                type="submit"
-                className="composer-btn composer-btn-send"
-                disabled={props.inputDisabled || props.inputValue.trim().length === 0}
-              >
-                Send
-              </button>
-            )}
+            ) : null}
           </div>
-        </div>
-      </form>
+        </form>
+      ) : null}
     </section>
   );
 }

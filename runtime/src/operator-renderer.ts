@@ -8,7 +8,7 @@ export class OperatorEventRenderer implements OperatorRenderSink {
   }
 
   startWait(provider: string, model: string): void {
-    const label = `[runtime/wait] Waiting for first token from ${provider}/${model}`;
+    const label = `[runtime/wait] Waiting for ${model} response`;
     this.stream.write(label + '\n');
   }
 
