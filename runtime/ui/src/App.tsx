@@ -13,7 +13,6 @@ import type {
   WorkflowGraph,
 } from './types';
 
-type ViewMode = 'selector' | 'graph';
 const EMPTY_STRINGS: string[] = [];
 
 function nextFeedId(): string {
@@ -138,7 +137,6 @@ export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const socketUrl = `${protocol}://${window.location.host}`;
 
-  const [view, setView] = useState<ViewMode>('selector');
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [newProjectName, setNewProjectName] = useState('');
@@ -212,7 +210,6 @@ export function App() {
       setAwaitingInput(message.flowRun?.status === 'awaiting_human');
       setShowImprovementModal(false);
       setStopRequested(false);
-      setView(message.flowRun && message.flowRun.status !== 'completed' ? 'graph' : 'selector');
       return;
     }
 
@@ -224,7 +221,6 @@ export function App() {
           setActiveLiveRole(event.role);
           setSelectedRole((prev) => prev ?? event.role);
           setSelectorError(null);
-          setView('graph');
           setAwaitingInput(false);
           setStopRequested(false);
           const item = formatOperatorEvent(event);
@@ -291,15 +287,11 @@ export function App() {
         if (message.flowRun.status !== 'running') {
           setStopRequested(false);
         }
-        if (message.flowRun.status !== 'completed') {
-          setView('graph');
-        }
         return;
       case 'error':
         setStopRequested(false);
         if (!flowRun) {
           setSelectorError(message.message);
-          setView('selector');
         }
         appendToActiveRole({
           id: nextFeedId(),
@@ -318,7 +310,7 @@ export function App() {
   const socket = useWebSocket(socketUrl, { onMessage: handleIncomingMessage });
 
   useEffect(() => {
-    if (view !== 'graph' || socket.status !== 'open' || !selectedProject) {
+    if (socket.status !== 'open' || !selectedProject) {
       return;
     }
 
@@ -352,7 +344,7 @@ export function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [view, socket.status, selectedProject]);
+  }, [socket.status, selectedProject]);
 
   function handleProjectSelect(projectNamespace: string): void {
     setSelectedProject(projectNamespace);
@@ -370,7 +362,6 @@ export function App() {
     setShowImprovementModal(false);
     setComposerValue('');
     setStopRequested(false);
-    setView('graph');
     sendMessage({ type: 'start_initialized_flow', projectNamespace });
   }
 
@@ -390,7 +381,6 @@ export function App() {
     setShowImprovementModal(false);
     setComposerValue('');
     setStopRequested(false);
-    setView('graph');
     sendMessage({ type: 'start_takeover_initialization', projectNamespace });
   }
 
@@ -412,7 +402,6 @@ export function App() {
     setShowImprovementModal(false);
     setComposerValue('');
     setStopRequested(false);
-    setView('graph');
     sendMessage({ type: 'start_greenfield_initialization', projectName });
   }
 
@@ -512,7 +501,7 @@ export function App() {
         </div>
       </header>
 
-      {view === 'selector' ? (
+      <div className="workspace-grid">
         <ProjectSelector
           projectsWithADocs={projects.withADocs}
           projectsWithoutADocs={projects.withoutADocs}
@@ -525,75 +514,59 @@ export function App() {
           onNewProjectNameChange={setNewProjectName}
           onCreateNew={handleCreateNewProject}
         />
-      ) : null}
 
-      <div className={`view-layer${view === 'graph' ? ' view-layer-visible' : ' view-layer-hidden'}`}>
         {flowRun ? (
-          <section className="workspace-grid">
-            <GraphView
-              flowRun={flowRun}
-              backwardActive={backwardActive}
-              backwardSources={backwardSources}
-              recordFolderPath={flowRun.recordFolderPath}
-              onNodeClick={handleGraphNodeClick}
-              onWorkflowLoaded={handleWorkflowLoaded}
-            />
-
-            <ChatInterface
-              subtitle="Select a role to view its conversation."
-              messages={visibleFeed}
-              waitingLabel={visibleWaitLabel}
-              inputValue={composerValue}
-              inputDisabled={inputDisabled}
-              placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
-              showComposer={isViewedRoleActive}
-              canStop={canStopViewedRole}
-              stopRequested={stopRequested}
-              roles={roles}
-              selectedRole={viewedRole ?? undefined}
-              activeRole={activeLiveRole ?? undefined}
-              onRoleSelect={setSelectedRole}
-              onInputChange={setComposerValue}
-              onSubmit={handleSubmit}
-              onStop={handleStopActiveTurn}
-            />
-          </section>
+          <GraphView
+            flowRun={flowRun}
+            backwardActive={backwardActive}
+            backwardSources={backwardSources}
+            recordFolderPath={flowRun.recordFolderPath}
+            onNodeClick={handleGraphNodeClick}
+            onWorkflowLoaded={handleWorkflowLoaded}
+          />
         ) : (
-          <section className="workspace-grid">
-            <section className="panel graph-panel">
-              <div className="graph-panel-header">
-                <div>
-                  <p className="eyebrow">Workflow Graph</p>
-                  <h2>{selectedProject ?? 'Preparing flow'}</h2>
-                  <p className="panel-copy">Preparing the runtime-owned flow and waiting for the first Owner node to activate…</p>
-                </div>
+          <section className="panel center-panel graph-panel">
+            <div className="graph-panel-header">
+              <div>
+                <p className="eyebrow">Workflow Graph</p>
+                <h2>{selectedProject ? selectedProject : 'No project selected'}</h2>
+                <p className="panel-copy">
+                  {selectedProject 
+                    ? 'Preparing the runtime-owned flow and waiting for the first Owner node to activate…' 
+                    : 'Select a project from the left sidebar to load its workflow graph and role chat.'}
+                </p>
               </div>
-
-              <div className="graph-canvas">
-                <div className="graph-empty">Waiting for flow state…</div>
+            </div>
+            <div className="graph-canvas">
+              <div className="graph-empty">
+                {selectedProject ? 'Waiting for flow state…' : 'Select a project to begin'}
               </div>
-            </section>
-
-            <ChatInterface
-              subtitle="The first Owner conversation will appear here once the runtime activates the initialization or intake node."
-              messages={displayedFeed}
-              waitingLabel={visibleWaitLabel}
-              inputValue={composerValue}
-              inputDisabled={inputDisabled}
-              placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
-              showComposer={isViewedRoleActive}
-              canStop={canStopViewedRole}
-              stopRequested={stopRequested}
-              roles={[]}
-              selectedRole={viewedRole ?? undefined}
-              activeRole={activeLiveRole ?? undefined}
-              onRoleSelect={setSelectedRole}
-              onInputChange={setComposerValue}
-              onSubmit={handleSubmit}
-              onStop={handleStopActiveTurn}
-            />
+            </div>
           </section>
         )}
+
+        <ChatInterface
+          subtitle={
+            flowRun 
+              ? "Select a role to view its conversation." 
+              : "The first Owner conversation will appear here once the runtime activates the initialization or intake node."
+          }
+          messages={visibleFeed}
+          waitingLabel={visibleWaitLabel}
+          inputValue={composerValue}
+          inputDisabled={inputDisabled}
+          placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
+          showComposer={isViewedRoleActive}
+          canStop={canStopViewedRole}
+          stopRequested={stopRequested}
+          roles={roles}
+          selectedRole={viewedRole ?? undefined}
+          activeRole={activeLiveRole ?? undefined}
+          onRoleSelect={setSelectedRole}
+          onInputChange={setComposerValue}
+          onSubmit={handleSubmit}
+          onStop={handleStopActiveTurn}
+        />
       </div>
 
       {showImprovementModal ? (
