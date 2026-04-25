@@ -14,8 +14,6 @@ At forward pass closure, after the flow's changes are confirmed, the Owner sweep
 
 **Closure artifact numbering uses sequence slots, not raw file count.** Before naming a forward-pass closure artifact, read the active record folder and identify the next available numeric slot from the actual sequence positions. Sub-labeled artifacts such as `02a` / `02b` share slot `02`; they do not consume additional whole-number positions. Do not derive the closure artifact number by counting filenames.
 
-**Archive the displaced Previous entry, not the closing flow.** When updating `$A_SOCIETY_LOG` and `$A_SOCIETY_LOG_ARCHIVE` at closure, the archive target is the oldest item displaced from the `Previous` list by the new Recent Focus entry. Do not archive the flow that is currently closing unless it is itself the item being displaced by a later closure.
-
 **Multi-track path portability.** For flows with multiple parallel tracks, verify at closure that all track convergence artifacts (e.g., completion artifacts filed by non-Curator roles) do not contain machine-specific absolute paths or `file://` URLs. Confirming functional completeness is not sufficient — handoff artifact format portability must also be confirmed. A `file://` path in a terminal track artifact violates the path portability rule even if the path was not used for routing.
 
 **Update-report path naming.** When a forward pass closure artifact instructs the Curator to publish a framework update report, specify the filename using the `$A_SOCIETY_UPDATES_PROTOCOL` contract: `[YYYY-MM-DD]-[brief-descriptor].md` within `$A_SOCIETY_UPDATES_DIR`. A date-only filename is non-compliant with the programmatic parsing contract and will be ignored by the executable update-comparison capability.

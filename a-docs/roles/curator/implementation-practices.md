@@ -1,5 +1,16 @@
 # Curator Implementation Practices
 
+## Scope Routing
+
+**general/ change type determines path.** Not all `general/` changes require an Owner proposal. Route based on change type, not surface name:
+
+- **Clarifications, precision fixes, worked examples, vocabulary alignment within existing structure** — implement directly. These are within Curator direct authority.
+- **New scope additions** — new instruction types, new role templates, new structural categories, or any change that expands what `general/` promises to adopting projects — require an Owner proposal before implementation.
+
+When in doubt about classification, propose rather than implement.
+
+---
+
 ## Standing Checks
 
 **Cross-layer consistency.** When working on a file in `a-society/general/instructions/`, verify that the corresponding A-Society `a-docs/` artifact aligns with any change made — and vice versa. When cross-layer drift is found, apply the following rule based on scope:
@@ -38,6 +49,6 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 **Implementation stage — public/internal index changes require direct comparison.** When a change adds, retires, or revises a variable that appears in `$A_SOCIETY_PUBLIC_INDEX`, compare the affected rows in both `$A_SOCIETY_INDEX` and `$A_SOCIETY_PUBLIC_INDEX` before closing the implementation pass. Do not assume that updating one index propagates to the other automatically.
 
-**Implementation stage — registration must not mutate closure-owned log lifecycle sections.** During registration, do not write or reorder `$A_SOCIETY_LOG`'s `Recent Focus` or `Previous` sections and do not append to `$A_SOCIETY_LOG_ARCHIVE`. Those lifecycle updates belong to the Owner at forward-pass closure. If registration reveals a needed closure-time log update, note it in the registration artifact and return to the Owner with the lifecycle sections still untouched.
+**Implementation stage — registration must not mutate closure-owned log lifecycle sections.** During registration, do not write or reorder `$A_SOCIETY_LOG`'s `Recent Focus` section. Those lifecycle updates belong to the Owner at forward-pass closure. If registration reveals a needed closure-time log update, note it in the registration artifact and return to the Owner with the lifecycle sections still untouched.
 
 **Implementation stage — choose the least-fragile edit strategy for large removals.** When a modification removes a large section (roughly more than ten lines of formatted content), prefer the least-fragile editing strategy available in the current environment — for example, a scoped rewrite instead of a tightly anchored targeted patch. Large removals are error-prone when they depend on a long exact-match anchor.

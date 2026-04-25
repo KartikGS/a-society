@@ -74,6 +74,13 @@ The project's `records/main.md` defines which artifact types appear at which seq
 
 **Reference stability:** Do not use hardcoded sequence IDs (e.g., `05-findings.md`) in standing instructions or templates to refer to trailing artifacts like backward-pass findings. Intermediate submissions or revisions will shift their sequence position. Always refer to them by function (e.g., "the backward-pass findings artifact after all submissions have resolved").
 
+**Correction loops and sequence shifting:** Artifact names provided in a `workflow.yaml` plan (e.g., `07-owner-to-curator-brief.md`) are descriptors for planning, not frozen filename reservations. If a correction loop (REVISE) or intermediate submission consumes sequence numbers originally planned for downstream artifacts, subsequent artifacts must resume at the actual next available numeric slot in the record folder.
+
+**Example:**
+- Planned: `05-proposal`, `06-decision`, `07-implementation`
+- Actual: `06-decision` is revised $\rightarrow$ `06-decision-v2`, `07-owner-to-curator-correction`.
+- Result: The implementation artifact now becomes `08-implementation.md`.
+
 **Owner decision naming distinction:** Use `NN-owner-decision.md` when the intake role is recording a terminal decision and the previously active role has no subsequent forward-pass action in this flow. Use `NN-owner-to-[role].md` only when the named role has a next action in the forward pass. This distinction applies to forward-pass actions only. Backward-pass findings or feedback work do not transform a terminal forward-pass closure artifact into an active handoff — a role that produces backward-pass artifacts later in the same record is not thereby implied to have had pending forward-pass work. Mislabeling a terminal intake-role decision as an active handoff creates ambiguity about whether the named role still has pending work in this flow.
 
 **Parallel track sub-labeling:** When the intake role declares parallel tracks at intake, meaning the forward-pass path includes two or more roles working concurrently before a convergence point, the intake role must pre-assign sub-labeled sequence positions for the convergence artifacts expected from those tracks. Use `NNa-`, `NNb-`, and so on (for example, `08a-curator-findings.md`, `08b-developer-findings.md`). The intake role assigns these sub-labels in `workflow.yaml` and in the project's records convention at intake, before any parallel work begins. This is an intake obligation, not a post-hoc correction after a collision is discovered.

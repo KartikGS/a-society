@@ -12,7 +12,7 @@ workflow:
       required_readings:
         - $A_SOCIETY_WORKFLOW_COMPLEXITY
       guidance:
-        - Read $A_SOCIETY_OWNER_LOG_MANAGEMENT when intake decisions affect $A_SOCIETY_LOG or $A_SOCIETY_LOG_ARCHIVE.
+        - Read $A_SOCIETY_OWNER_LOG_MANAGEMENT when intake decisions affect $A_SOCIETY_LOG.
         - Read $A_SOCIETY_OWNER_BRIEF_WRITING when another role will be engaged or when the plan defines an explicit approval or review gate.
         - Read $A_SOCIETY_OWNER_CLOSURE when a direct Owner path reaches forward-pass closure from this node in the record snapshot.
       inputs:
@@ -50,13 +50,14 @@ workflow:
         - Owner-to-Curator handoff artifact, when the Curator is engaged
       work:
         - Implement directly when the touched Curator-owned surfaces fall within Curator authority and no independent Owner decision is required.
-        - When the requested change adds to general/ or otherwise changes a shared framework promise outside Curator direct authority, produce a proposal artifact instead of implementing.
+        - When the requested change adds new scope or surface area to general/ — new instruction types, role templates, or structural categories — produce a proposal artifact instead of implementing directly.
+        - When the requested change clarifies, refines, or extends existing general/ content without expanding its surface area — precision fixes, worked examples, vocabulary alignment — implement directly within Curator authority.
         - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide entries, update-report surfaces, version/reporting surfaces, and related registrations.
       outputs:
         - Curator proposal artifact when an independent Owner decision is required
         - Or Curator completion artifact when direct Curator implementation and stewardship are complete
       transitions:
-        - Owner decision required -> owner-framework-decision when the Curator path affects general/ or another shared-promise surface requiring explicit Owner review.
+        - Owner decision required -> owner-framework-decision when the Curator path adds new scope or surface area to general/ or another shared-promise surface.
         - Direct Curator authority path -> owner-closure when implementation and stewardship are complete.
       notes:
         - A proposal node is not required when the workflow plan or Owner handoff explicitly authorizes direct Curator execution within Curator-owned surfaces.
@@ -182,7 +183,7 @@ workflow:
       transitions:
         - Hand off to owner-closure when stewardship is complete.
       notes:
-        - Registration does not mutate $A_SOCIETY_LOG lifecycle sections or $A_SOCIETY_LOG_ARCHIVE.
+        - Registration does not mutate $A_SOCIETY_LOG lifecycle sections.
         - Curator participation is required only when Curator-owned stewardship surfaces are touched.
     - id: owner-closure
       role: Owner
@@ -284,7 +285,7 @@ workflow:
       artifact: curator-to-owner
   invariants:
     - name: Shared-Library Approval Invariant
-      rule: Additions to general/ and changes to shared framework promises require an explicit Owner decision before implementation.
+      rule: Changes to general/ that add new scope or surface area — new instruction types, role templates, or structural categories — require an explicit Owner decision before implementation. Clarifications, precision fixes, and worked examples within existing general/ structure fall within Curator direct authority.
     - name: Single-Source Invariant
       rule: Information lives in exactly one file. Cross-references use $VARIABLE_NAME from the relevant index. Hardcoded paths are not permitted.
     - name: Index-Before-Reference Invariant

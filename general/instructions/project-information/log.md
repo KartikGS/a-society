@@ -8,7 +8,7 @@ A project log answers two questions for any agent at the start of a session:
 
 It is not a changelog. It is not a requirements document. It is the rolling, current-state anchor that every agent reads to orient themselves before beginning work. When an agent asks "where did we leave off?" or "what's the next priority?" — the project log is what they consult.
 
-A project log is read at orientation, every session. It is updated at the end of each unit of work (a completed change request, a completed phase). It is not an archive — it is a window onto the present, with a bounded view into the recent past and a clear list of what comes next.
+A project log is read at orientation, every session. It is updated at the end of each unit of work. It is not an archive — it is a window onto the present with a clear list of what comes next.
 
 ---
 
@@ -30,20 +30,16 @@ A project log is the fix for all of these. It surfaces the current state in one 
 
 ## What Belongs in a Project Log
 
-A project log has four sections.
+A project log has three sections.
 
 ### 1. Current State
 A brief summary of where the project stands right now. Include:
 - A status label (e.g., "Vision & Roadmap Finalized", "In Active Development", "Stabilization Phase")
-- The most recent completed unit of work, labeled `Recent Focus` — one entry only
-- Up to three prior completed entries, labeled `Previous`
+- The most recently completed unit of work, labeled `Recent Focus` — one entry only
+
+When a new unit of work completes, its entry replaces the previous `Recent Focus`. Historical flow records live in the project's records folder, not in the log.
 
 ### 2. Entry Lifecycle
-Each entry follows a rolling window:
-- When a new unit of work completes, it becomes `Recent Focus`
-- The previous `Recent Focus` is demoted to `Previous`
-- When there are already three `Previous` entries, the oldest is moved to the companion archive file (see Archive File below)
-- Validation: exactly one `Recent Focus`, at most three `Previous`
 
 **Validity Sweeps**
 
@@ -69,25 +65,6 @@ Before adding any Next Priorities item — whether at intake or while resolving 
 3. **Same workflow type and role path, or routable as parallel tracks in a single multi-domain flow** — both items would run through the same workflow type with the same role sequence, or are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict.
 
 When a merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
-
-### 4. Archive File
-
-The archive lives in a companion file: `[project]/a-docs/project-information/log-archive.md` — a separate file from the main log. The main log does not contain an `## Archive` section. Instead, it ends with a single pointer line:
-
-> Archived flows are recorded in `$[VARIABLE_NAME]`. One entry per flow. Entries are immutable once written. Most recent at top.
-
-The archive file uses this format for each entry:
-
-```
-[scope-tags] — **slug** (YYYY-MM-DD): one sentence describing what changed.
-```
-
-- **Date** — the close date of the flow.
-- **Slug** — matches the record folder identifier (if the project uses records).
-- **Sentence** — covers the primary change at the highest level; no sub-items, no artifact lists.
-- **Order** — most recent at top. Entries are immutable once written.
-
-The archive is not read at orientation. It exists for historical traceability when agents need to understand what predates the rolling window.
 
 ---
 
@@ -115,7 +92,7 @@ Tags may be combined. Define only the tags your project uses — do not copy a t
 - **Conversation transcripts** — historical traceability belongs in CR artifacts, not in the log
 - **Aspirational state** — the log describes what is actually true now, not what you hope to achieve
 
-If the log starts growing sections that describe planned features in detail, or accumulates entries that are never archived, it has become a backlog — not a log. Keep it trimmed.
+If the log starts growing sections that describe planned features in detail, it has become a backlog — not a log. Keep it trimmed.
 
 ---
 
@@ -127,22 +104,15 @@ What is actually true about this project right now? What was the last completed 
 **Step 2 — Define your scope tags.**
 Choose 4–6 tags that reflect the kinds of changes your project makes. Document them in the log itself so any agent reading it can interpret the entries without external reference.
 
-**Step 3 — Define your entry lifecycle.**
-Write out the rolling window rules explicitly: how many `Previous` entries are shown, when entries move to archive. The rules need to be stated so any agent maintaining the log can apply them correctly without asking.
-
-**Step 4 — List next priorities in order.**
+**Step 3 — List next priorities in order.**
 Write the most important items first. For each item, include enough context that an agent could start work on it without needing to ask what it means. If an item is blocked or deferred, say why — briefly.
-
-**Step 5 — Create the archive file.**
-Create `log-archive.md` as a companion file in the same `project-information/` folder as the main log. Start it empty, or pre-populate it with completed flows that predate the log's creation, using the one-liner format above. Add the pointer line at the bottom of the main log referencing the archive file by `$VARIABLE_NAME` from the project's index.
 
 ---
 
 ## Format Rules
 
 - **Current state is current.** The log must reflect the actual present state of the project. An outdated log is worse than no log — it misdirects agents confidently.
-- **One `Recent Focus`.** Never allow two entries to claim `Recent Focus`. The discipline of the rolling window is what keeps the log useful.
-- **Archive everything, delete nothing.** When an entry ages out of the rolling window, prepend it to `log-archive.md` in one-liner format. This preserves traceability while keeping the active log scannable.
+- **One `Recent Focus`.** Never allow two entries to claim `Recent Focus`. When a flow closes, replace the previous `Recent Focus` entry. Historical traceability lives in the records folder.
 - **Next priorities are actionable.** Each item should be specific enough that an agent could pick it up and start. Vague items like "improve performance" are not next priorities — they are topics for a planning session.
 - **Maintained at the end of each unit of work.** The log is updated when work closes, not periodically. The agent responsible for closure (the BA, the owner, whoever closes work in your project) owns the update.
 
@@ -164,8 +134,6 @@ A log tracking experimental runs, analysis phases, and findings reviews. `Recent
 ## What Makes a Project Log Fail
 
 **Updated too infrequently.** A log that is three CRs behind is not a log — it is a stale artifact. The log must be updated at the close of every unit of work, without exception.
-
-**Allowed to grow unbounded.** When `Previous` entries accumulate past the defined window, the log becomes a timeline — and agents must read all of it to find current state. The rolling window discipline is what keeps it scannable.
 
 **Aspirational entries.** Writing "In Progress: feature X" when feature X has not actually started is aspirational, not descriptive. Agents who read this will act on incorrect state. Write only what is actually true.
 

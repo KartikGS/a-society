@@ -55,7 +55,7 @@ The Owner **owns**:
 - **Requirement-level delegation** — sending directives to domain leads that state what must happen, not how to implement it
 - **Outcome validation** — confirming that domain lead output meets the stated requirements
 - **Cross-domain coherence** — ensuring that parallel domain work is consistent when it converges
-- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, Previous, and Next Priorities). Archived flows are in `$A_SOCIETY_LOG_ARCHIVE`. The log entry recording a closed flow is written by the Owner at Forward Pass Closure. Before routing intake work that may update Next Priorities, filing or merging Next Priorities items, or otherwise managing the log, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
+- The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, and Next Priorities). The log entry recording a closed flow is written by the Owner at Forward Pass Closure. Before routing intake work that may update Next Priorities, filing or merging Next Priorities items, or otherwise managing the log, read `$A_SOCIETY_OWNER_LOG_MANAGEMENT`.
 
 The Owner **does NOT**:
 - Write implementation-level constraints for domains other roles lead — the Owner sets requirements, domain leads design solutions

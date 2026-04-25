@@ -98,25 +98,13 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Without a project log, the Owner must reconstruct current state at every session start by scanning record folders and backward pass findings. The log surfaces current status, recently completed flows, and ordered next priorities in one read. It is the answer to "where did we leave off?" and "what should I work on next?"
 
-**What it owns:** Current project status label, the rolling window of completed flows (one Recent Focus, up to three Previous), the ordered next priorities list with scope tags and source references, and a pointer to the companion archive file.
+**What it owns:** Current project status label, the most recently completed flow (Recent Focus), and the ordered next priorities list with scope tags and source references.
 
 **What breaks without it:** The Owner reconstructs state from scattered artifacts every session — slow, error-prone, and inconsistent. Next priorities buried in backward pass findings are easy to miss or re-discover as new.
 
 **Who reads it:** The Owner loads it at every session start. The Curator loads it at the start of maintenance sessions. Not universal required reading for all roles.
 
 **Do not consolidate with:** `project-information/vision.md` — the vision describes what A-Society is and its strategic direction; the log describes current execution state and next concrete steps. Do not consolidate with `a-docs/records/` — records contain the full artifact history of completed flows; the log is a current-state summary for orientation.
-
----
-
-### `project-information/log-archive.md` — `$A_SOCIETY_LOG_ARCHIVE`
-
-**Why it exists:** The main log is bounded — one Recent Focus, up to three Previous. As flows accumulate, older entries must have a permanent home that is not the main log. Without a companion archive file, the main log grows without bound and eventually exceeds agent read limits. The archive file is not loaded at orientation; it is consulted only when historical traceability is needed.
-
-**What it owns:** All closed flow entries older than the rolling window, in one-liner format: `[scope-tags] — **slug** (YYYY-MM-DD): one sentence`. Most recent at top. Entries are immutable once written.
-
-**What breaks without it:** Archived entries either accumulate in the main log (making it too long to read) or are discarded (losing historical traceability).
-
-**Do not consolidate with:** `project-information/log.md` — the main log is a current-state summary loaded at every session; the archive is historical storage not loaded at orientation.
 
 ### `project-information/architecture.md` — `$A_SOCIETY_ARCHITECTURE`
 

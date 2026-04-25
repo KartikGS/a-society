@@ -52,7 +52,7 @@ The Owner **owns**:
 - **Requirement-level delegation** — sending directives to domain leads that state what must happen, not how
 - **Outcome validation** — confirming that domain lead output meets stated requirements
 - **Cross-domain coherence** — ensuring parallel domain work is consistent when it converges
-- The project log — all sections (Current State, Recent Focus, Previous, and Next Priorities); the log entry for a closed flow is written at Forward Pass Closure
+- The project log — all sections (Current State, Recent Focus, and Next Priorities); the log entry for a closed flow is written at Forward Pass Closure
 - [CUSTOMIZE: list any project-specific owned artifacts, e.g., a standards document, a glossary]
 
 The Owner **does NOT**:

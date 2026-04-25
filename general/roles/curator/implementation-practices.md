@@ -1,5 +1,16 @@
 # Curator Implementation Practices
 
+## Scope Routing
+
+Not all changes to `general/` require an Owner proposal. Route based on change type:
+
+- **Clarifications, precision fixes, worked examples, vocabulary alignment within existing structure** — implement directly within Curator authority.
+- **New scope additions** — new instruction types, role templates, structural categories, or anything that expands what `general/` promises — require an Owner proposal before implementation.
+
+When in doubt, propose rather than implement.
+
+---
+
 ## Proposal Stage
 
 Before submitting a proposal:
