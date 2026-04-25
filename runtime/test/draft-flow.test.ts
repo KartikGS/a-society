@@ -43,7 +43,7 @@ test('initializeDraftFlow creates an opaque-id record folder, record metadata, a
 
   assert.ok(flow.recordFolderPath.startsWith(path.join(projectRoot, 'a-docs', 'records')));
   assert.strictEqual(path.basename(flow.recordFolderPath), flow.flowId);
-  assert.deepStrictEqual(flow.activeNodes, ['owner-intake']);
+  assert.deepStrictEqual(flow.readyNodes, ['owner-intake']);
   assert.strictEqual(flow.status, 'running');
 
   const metadata = readRecordMetadata(flow.recordFolderPath);

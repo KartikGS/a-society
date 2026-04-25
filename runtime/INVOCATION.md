@@ -56,9 +56,9 @@ The chat view remains active only until the first workflow node starts.
 The UI switches to graph mode on the first `role.active` operator event.
 
 - The workflow graph becomes the primary surface
-- Active, completed, and backward/corrective nodes are color-coded
+- Ready, running, awaiting-human, completed, and backward/corrective nodes are color-coded
 - The live operator feed remains available beside the graph
-- Human replies still use the browser input box whenever the runtime pauses for input
+- Human replies are routed to the role/node chat that requested input
 
 If the runtime starts with an already active flow state, the client opens directly in graph mode instead of showing the project selector.
 
@@ -80,7 +80,9 @@ The browser UI replaces the old stderr/stdout split with a WebSocket event strea
 
 ### Human input behavior
 
-When the runtime emits a `type: prompt-human` handoff signal, the UI unlocks its input box. The operator replies in the browser, and the runtime resumes the same session without dropping out to a separate terminal prompt.
+When the runtime emits a `type: prompt-human` handoff signal, the runtime persists that node under `awaitingHumanNodes`. The operator replies in the browser from the requesting role/node chat, and the runtime resumes the same session without dropping out to a separate terminal prompt.
+
+If more than one role is awaiting input, the browser message must identify the target role or node. Because same-role parallel activation is rejected, a role target resolves to at most one awaiting node.
 
 Improvement-phase menus use the same browser input path. Menu text appears in the operator feed; the human types the response into the same input box.
 
@@ -99,7 +101,17 @@ The runtime no longer bootstraps from empty orchestration state. A project must 
 - initialized projects use a stored draft flow created by the server
 - initialization runs use a stored single-node Owner flow created after scaffold
 
-The runtime then resumes or advances that stored flow until it pauses or completes.
+The runtime then claims every ready node whose role is not already open, runs distinct-role nodes concurrently, and continues until the flow pauses or completes.
+
+### Flow state scheduler fields
+
+Forward-pass flow state uses explicit scheduler fields:
+
+- `readyNodes` — nodes eligible to start
+- `runningNodes` — nodes currently claimed by live runtime turns
+- `awaitingHumanNodes` — nodes suspended for targeted operator input
+
+On runtime resume, persisted `runningNodes` are treated as stale process-local work and returned to `readyNodes` before scheduling continues.
 
 ### Same-node `prompt-human` resume
 
@@ -115,13 +127,13 @@ When a backward edge reopens a node for the same role, the runtime keeps the exi
 
 ### Same-role parallel activation
 
-Concurrent same-role parallel activation is currently unsupported. The runtime rejects same-role parallel activation because it now uses one flow-scoped session per role.
+Concurrent same-role parallel activation is unsupported. The runtime rejects same-role parallel activation because it uses one flow-scoped session per role. Distinct-role ready nodes may run in parallel.
 
 ---
 
 ## Session Transcript Access
 
-In graph mode, clicking an active or completed node fetches that node's persisted role-scoped transcript and displays it in the UI.
+In graph mode, clicking a ready, running, awaiting-human, or completed node fetches that node's persisted role-scoped transcript and displays it in the UI when a session file exists.
 
 Transcript resolution path:
 
@@ -138,12 +150,12 @@ If no session exists for the selected node, the UI reports that the transcript i
 
 The runtime injects and consumes the machine-readable handoff contract from `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
 
-- `type: prompt-human` pauses execution for browser-entered human input
+- `type: prompt-human` pauses the emitting node for targeted browser-entered human input
 - `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
 - `type: meta-analysis-complete` is consumed during backward-pass orchestration
 - `type: backward-pass-complete` closes the backward pass after the final feedback step
 
-When the runtime is waiting for human input, the UI keeps the current flow state and resumes the same role-scoped session after the reply is submitted.
+When the runtime is waiting for human input, the UI keeps the current flow state and resumes the same role-scoped session after a reply is submitted to the requesting role/node.
 
 ---
 
@@ -154,11 +166,12 @@ When the runtime is waiting for human input, the UI keeps the current flow state
 
 The runtime persists flow state, role sessions, turn records, and trigger records in this directory.
 
-Resume behavior is unchanged:
+Resume behavior:
 
 - Existing `FlowRun` state is read from `.state/flow.json`
 - Active flows reopen in graph mode
 - Role-scoped session continuity is preserved from persisted session files
+- Stale persisted `runningNodes` are returned to `readyNodes`
 
 ---
 

@@ -52,16 +52,21 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  // Pre-save a flow in awaiting_human state with two active fork branches.
-  // The while loop in runStoredFlow skips for status !== 'running',
-  // so no LLM calls are made — this test only exercises the resume emit path.
+  // Pre-save a flow in awaiting_human state with two suspended fork branches.
+  // No nodes are ready, so no LLM calls are made — this test only exercises
+  // the resume emit path for a multi-node open set.
   SessionStore.init();
   SessionStore.saveFlowRun({
     flowId: 'test-resume-flow-id',
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['branch-a', 'branch-b'],
+    readyNodes: [],
+    runningNodes: [],
+    awaitingHumanNodes: {
+      'branch-a': { role: 'Developer', reason: 'prompt-human' },
+      'branch-b': { role: 'Reviewer', reason: 'prompt-human' }
+    },
     completedNodes: ['fork-gate'],
     completedEdgeArtifacts: {
       'fork-gate=>branch-a': 'art-a.md',
@@ -69,7 +74,7 @@ async function runTest() {
     },
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] },
     status: 'awaiting_human',
-    stateVersion: '6'
+    stateVersion: '7'
   });
 
   const operatorStream = new PassThrough();

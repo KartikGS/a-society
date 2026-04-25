@@ -90,12 +90,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['start'],
+    readyNodes: ['start'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'running',
-    stateVersion: '6'
+    stateVersion: '7'
   });
 
   // Capture operator (stderr) and assistant (stdout) streams separately
@@ -180,7 +182,7 @@ async function runTest() {
 
     console.log("Validation:");
     console.log(`- Node 'start' completed: ${updatedFlow.completedNodes.includes('start') ? "Yes" : "No"}`);
-    console.log(`- Node 'next' is active: ${updatedFlow.activeNodes.includes('next') ? "Yes" : "No"}`);
+    console.log(`- Node 'next' is active: ${updatedFlow.readyNodes.includes('next') ? "Yes" : "No"}`);
     console.log(`- Repair message injected into history: ${repairInjected ? "Yes" : "No"}`);
     console.log(`- Canonical node guidance injected from main workflow: ${canonicalGuidanceInjected ? "Yes" : "No"}`);
     console.log(`- Operator stream has handoff notice: ${hasHandoffNotice ? "Yes" : "No"}`);
@@ -189,7 +191,7 @@ async function runTest() {
     console.log(`- Assistant text leaked into operator stream: ${assistantTextInOperator ? "Yes (FAIL)" : "No"}`);
 
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed.");
-    assert.ok(updatedFlow.activeNodes.includes('next'), "Expected node 'next' to be active.");
+    assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to be active.");
     assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
     assert.ok(canonicalGuidanceInjected, "Expected node contract guidance to be resolved from a-docs/workflow/main.yaml.");
     assert.ok(hasHandoffNotice, "Expected operator stream to contain a handoff notice.");

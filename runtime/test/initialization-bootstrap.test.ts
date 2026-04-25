@@ -41,7 +41,7 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
   assert.ok(result.scaffoldResult.created.length > 0, 'scaffold should create required files');
 
   assert.strictEqual(result.flowRun.projectNamespace, projectName);
-  assert.deepStrictEqual(result.flowRun.activeNodes, ['owner-intake']);
+  assert.deepStrictEqual(result.flowRun.readyNodes, ['owner-intake']);
   assert.strictEqual(result.flowRun.status, 'running');
   assert.strictEqual(path.basename(result.flowRun.recordFolderPath), result.flowRun.flowId);
 

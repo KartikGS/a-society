@@ -72,7 +72,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         id: nextFeedId(),
         type: 'event',
         label: 'Awaiting Input',
-        text: 'The runtime is waiting for a human reply.'
+        text: `${event.nodeId} (${event.role}) is waiting for a human reply.`
       };
     case 'human.resumed':
       return null;
@@ -111,6 +111,29 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
   }
 }
 
+function getOpenNodeIds(flowRun: FlowRun): string[] {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+  for (const nodeId of [
+    ...flowRun.readyNodes,
+    ...flowRun.runningNodes,
+    ...Object.keys(flowRun.awaitingHumanNodes)
+  ]) {
+    if (seen.has(nodeId)) continue;
+    seen.add(nodeId);
+    ids.push(nodeId);
+  }
+  return ids;
+}
+
+function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
+  if (!flowRun || !role) return null;
+  const roleKey = role.toLowerCase();
+  const match = Object.entries(flowRun.awaitingHumanNodes)
+    .find(([, state]) => state.role.toLowerCase() === roleKey);
+  return match?.[0] ?? null;
+}
+
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const socketUrl = `${protocol}://${window.location.host}`;
@@ -128,7 +151,7 @@ export function App() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
   const [composerValue, setComposerValue] = useState('');
-  const [awaitingInput, setAwaitingInput] = useState(false);
+  const [, setAwaitingInput] = useState(false);
   const [waitLabel, setWaitLabel] = useState<string | null>(null);
   const [showImprovementModal, setShowImprovementModal] = useState(false);
   const [stopRequested, setStopRequested] = useState(false);
@@ -156,9 +179,12 @@ export function App() {
   }
 
   function resolveInputTargetRole(): string {
+    if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {
+      return selectedRole;
+    }
     if (activeLiveRole) return activeLiveRole;
-    if (flowRun && workflow && flowRun.activeNodes.length === 1) {
-      const activeNode = workflow.nodes.find((node) => node.id === flowRun.activeNodes[0]);
+    if (flowRun && workflow && getOpenNodeIds(flowRun).length === 1) {
+      const activeNode = workflow.nodes.find((node) => node.id === getOpenNodeIds(flowRun)[0]);
       if (activeNode) return activeNode.role;
     }
     if (selectedRole) return selectedRole;
@@ -201,11 +227,19 @@ export function App() {
           setView('graph');
           setAwaitingInput(false);
           setStopRequested(false);
+          const item = formatOperatorEvent(event);
+          if (item) appendToRoleFeed(event.role, item);
+          return;
         }
 
         if (event.kind === 'human.awaiting_input') {
+          setActiveLiveRole(event.role);
+          setSelectedRole((prev) => prev ?? event.role);
           setAwaitingInput(true);
           setStopRequested(false);
+          const item = formatOperatorEvent(event);
+          if (item) appendToRoleFeed(event.role, item);
+          return;
         }
 
         if (event.kind === 'human.resumed') {
@@ -250,6 +284,7 @@ export function App() {
       case 'flow_state':
         setFlowRun((current) => (areFlowRunsEqual(current, message.flowRun) ? current : message.flowRun));
         setSelectedProject(message.flowRun.projectNamespace);
+        setAwaitingInput(Object.keys(message.flowRun.awaitingHumanNodes).length > 0);
         setBackwardActive((current) => (
           areStringArraysEqual(current, message.backwardActive) ? current : message.backwardActive
         ));
@@ -384,7 +419,8 @@ export function App() {
   function handleSubmit(): void {
     const text = composerValue.trim();
     if (!text) return;
-    appendToRoleFeed(resolveInputTargetRole(), {
+    const targetRole = resolveInputTargetRole();
+    appendToRoleFeed(targetRole, {
       id: nextFeedId(),
       type: 'user',
       label: 'You',
@@ -392,7 +428,7 @@ export function App() {
     });
     setComposerValue('');
     setAwaitingInput(false);
-    sendMessage({ type: 'human_input', text });
+    sendMessage({ type: 'human_input', text, role: targetRole === '__system__' ? undefined : targetRole });
   }
 
   function handleImprovementChoice(choice: '1' | '2' | '3'): void {
@@ -403,7 +439,7 @@ export function App() {
   function handleStopActiveTurn(): void {
     if (stopRequested) return;
     setStopRequested(true);
-    sendMessage({ type: 'stop_active_turn' });
+    sendMessage({ type: 'stop_active_turn', role: viewedRole ?? undefined });
   }
 
   const handleWorkflowLoaded = useCallback((graph: WorkflowGraph) => {
@@ -419,7 +455,7 @@ export function App() {
         ? 'Reconnecting to runtime'
         : 'Connection lost';
 
-  const activeNodeIds = flowRun?.activeNodes;
+  const activeNodeIds = flowRun ? getOpenNodeIds(flowRun) : undefined;
   const lastHandoffFromNodeId = lastHandoff?.fromNodeId;
   const backwardSources = useMemo(() => (
     activeNodeIds && lastHandoffFromNodeId && activeNodeIds.includes(lastHandoffFromNodeId)
@@ -439,7 +475,7 @@ export function App() {
     }
 
     return [...new Set(
-      flowRun.activeNodes
+      getOpenNodeIds(flowRun)
         .map((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.role)
         .filter((role): role is string => role !== undefined)
     )];
@@ -449,11 +485,13 @@ export function App() {
   const displayedFeed = viewedRole ? (roleFeeds[viewedRole] ?? []) : [];
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (roleFeeds.__system__ ?? []);
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
+  const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
   const visibleWaitLabel = isViewedRoleActive ? waitLabel : null;
+  const inputDisabled = !viewedRoleAwaitingNodeId;
   const canStop =
     !!flowRun &&
     flowRun.status === 'running' &&
-    !awaitingInput &&
+    !viewedRoleAwaitingNodeId &&
     !showImprovementModal &&
     socket.status === 'open';
   const canStopViewedRole = canStop && isViewedRoleActive;
@@ -506,8 +544,8 @@ export function App() {
               messages={visibleFeed}
               waitingLabel={visibleWaitLabel}
               inputValue={composerValue}
-              inputDisabled={!awaitingInput}
-              placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
+              inputDisabled={inputDisabled}
+              placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
               showComposer={isViewedRoleActive}
               canStop={canStopViewedRole}
               stopRequested={stopRequested}
@@ -541,8 +579,8 @@ export function App() {
               messages={displayedFeed}
               waitingLabel={visibleWaitLabel}
               inputValue={composerValue}
-              inputDisabled={!awaitingInput}
-              placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
+              inputDisabled={inputDisabled}
+              placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
               showComposer={isViewedRoleActive}
               canStop={canStopViewedRole}
               stopRequested={stopRequested}

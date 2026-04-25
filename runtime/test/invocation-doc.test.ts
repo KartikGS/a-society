@@ -65,6 +65,16 @@ test('INVOCATION.md: documents same-role parallel rejection behavior', () => {
   );
 });
 
+test('INVOCATION.md: documents explicit scheduler fields and distinct-role parallelism', () => {
+  assert.ok(doc.includes('readyNodes'), 'Expected INVOCATION.md to document readyNodes');
+  assert.ok(doc.includes('runningNodes'), 'Expected INVOCATION.md to document runningNodes');
+  assert.ok(doc.includes('awaitingHumanNodes'), 'Expected INVOCATION.md to document awaitingHumanNodes');
+  assert.ok(
+    doc.includes('Distinct-role ready nodes may run in parallel') || doc.includes('distinct-role nodes concurrently'),
+    'Expected INVOCATION.md to describe distinct-role parallel execution'
+  );
+});
+
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 
 if (failed > 0) process.exit(1);

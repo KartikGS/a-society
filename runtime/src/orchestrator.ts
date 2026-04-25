@@ -10,7 +10,6 @@ import { ImprovementOrchestrator } from './improvement.js';
 import { createDefaultRenderer } from './operator-renderer.js';
 import { buildWorkflowRepairGuidance } from './framework-services/workflow-graph-validator.js';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
-import readline from 'node:readline';
 import { TelemetryManager } from './observability.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
@@ -29,18 +28,22 @@ type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
 export class FlowOrchestrator {
   private renderer: OperatorRenderSink;
   private pendingRoleActiveEmitted = new Set<string>();
-  private activeTurnController: AbortController | null = null;
+  private activeTurnControllers = new Map<string, { role: string; controller: AbortController }>();
 
   constructor(renderer?: OperatorRenderSink) {
     this.renderer = renderer ?? createDefaultRenderer();
   }
 
-  public abortActiveTurn(): boolean {
-    if (!this.activeTurnController || this.activeTurnController.signal.aborted) {
-      return false;
+  public abortActiveTurn(target?: { nodeId?: string; role?: string }): boolean {
+    let stopped = false;
+    for (const [nodeId, entry] of this.activeTurnControllers.entries()) {
+      if (target?.nodeId && target.nodeId !== nodeId) continue;
+      if (target?.role && this.roleKey(target.role) !== this.roleKey(entry.role)) continue;
+      if (entry.controller.signal.aborted) continue;
+      entry.controller.abort();
+      stopped = true;
     }
-    this.activeTurnController.abort();
-    return true;
+    return stopped;
   }
 
   public async runStoredFlow(
@@ -82,12 +85,14 @@ export class FlowOrchestrator {
           );
         }
 
+        flowRun = await this.releaseStaleRunningNodes();
         const resumeWf = this.resolveActiveWorkflow(flowRun);
-        this.ensureNoRoleScopedParallelConflictInActiveSet(flowRun, resumeWf);
-        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: flowRun.activeNodes.length });
-        if (flowRun.activeNodes.length > 1) {
+        this.ensureNoRoleScopedParallelConflictInOpenSet(flowRun, resumeWf);
+        const resumedOpenNodes = this.getOpenNodeIds(flowRun);
+        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: resumedOpenNodes.length });
+        if (resumedOpenNodes.length > 1) {
           try {
-            const activeNodes = flowRun.activeNodes.map(id => {
+            const activeNodes = resumedOpenNodes.map(id => {
               const node = resumeWf.nodes.find((n: any) => n.id === id);
               return { nodeId: id, role: node?.role ?? '' };
             });
@@ -102,11 +107,8 @@ export class FlowOrchestrator {
         rootSpan.addEvent('flow.established', { 'flow.id': flowRun.flowId, 'record_folder_path': path.relative(workspaceRoot, flowRun.recordFolderPath) });
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
-        while (flowRun.status === 'running' && flowRun.activeNodes.length > 0) {
-          const nodeId = flowRun.activeNodes[0];
-          await this.advanceFlow(flowRun, nodeId, undefined, undefined, inputStream, outputStream);
-          flowRun = SessionStore.loadFlowRun()!;
-        }
+        await this.runReadyNodesUntilBlocked(inputStream, outputStream);
+        flowRun = SessionStore.loadFlowRun()!;
 
         rootSpan.setAttribute('flow.status', flowRun.status);
         meter.createCounter('a_society.flow.completed').add(1, { project_namespace: flowRun.projectNamespace, status: flowRun.status });
@@ -132,6 +134,8 @@ export class FlowOrchestrator {
     inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout
   ): Promise<void> {
+    const claim = await this.claimNodeForAdvance(nodeId, humanInput !== undefined);
+    flowRun = claim.flowRun;
     const tracer = TelemetryManager.getTracer();
     return tracer.startActiveSpan('flow.node.advance', {
       kind: SpanKind.INTERNAL,
@@ -145,8 +149,8 @@ export class FlowOrchestrator {
           throw new Error(`Cannot advance flow in state: ${flowRun.status}`);
         }
 
-        if (!flowRun.activeNodes.includes(nodeId)) {
-          throw new Error(`Node '${nodeId}' is not in activeNodes: [${flowRun.activeNodes.join(', ')}]. Only active nodes can be advanced.`);
+        if (!flowRun.runningNodes.includes(nodeId)) {
+          throw new Error(`Node '${nodeId}' is not in runningNodes: [${flowRun.runningNodes.join(', ')}]. Only running nodes can be advanced.`);
         }
 
         if (fs.existsSync(flowRun.recordFolderPath)) {
@@ -171,6 +175,10 @@ export class FlowOrchestrator {
         span.setAttribute('role', roleName);
         span.setAttribute('role_name', roleName);
         span.setAttribute('session.id', this.roleSessionId(flowRun, roleName));
+        if (claim.resumedFromHuman) {
+          span.addEvent('human_input.received');
+          this.renderer.emit({ kind: 'human.resumed', nodeId, role: currentNodeDef.role });
+        }
 
         this.ensureNoRoleScopedParallelConflict(flowRun, wf, nodeId, roleName);
 
@@ -265,21 +273,25 @@ export class FlowOrchestrator {
           injectedHistory.push({ role: 'user', content: humanInput });
         }
 
-        if (firstNodeVisit && (injectedHistory.length > 0) && !visitedNodeIds.includes(nodeId)) {
-          visitedNodeIds.push(nodeId);
+        if (firstNodeVisit && (injectedHistory.length > 0)) {
+          flowRun = await SessionStore.updateFlowRun((latest) => {
+            const latestVisitedNodeIds = latest.visitedNodeIds ?? [];
+            if (!latestVisitedNodeIds.includes(nodeId)) {
+              latestVisitedNodeIds.push(nodeId);
+            }
+            latest.visitedNodeIds = latestVisitedNodeIds;
+            this.reconcileFlowStatus(latest);
+          });
         }
 
         session.currentNodeId = nodeId;
         session.isActive = true;
-
-        flowRun.status = 'running';
-        SessionStore.saveFlowRun(flowRun);
         span.addEvent('store.flow_saved', { 'flow.status': flowRun.status });
 
         while (true) {
           try {
             const controller = new AbortController();
-            this.activeTurnController = controller;
+            this.activeTurnControllers.set(nodeId, { role: roleName, controller });
             const sigintHandler = () => controller.abort();
             process.once('SIGINT', sigintHandler);
 
@@ -294,8 +306,9 @@ export class FlowOrchestrator {
               );
             } finally {
               process.removeListener('SIGINT', sigintHandler);
-              if (this.activeTurnController === controller) {
-                this.activeTurnController = null;
+              const activeController = this.activeTurnControllers.get(nodeId);
+              if (activeController?.controller === controller) {
+                this.activeTurnControllers.delete(nodeId);
               }
             }
 
@@ -306,22 +319,11 @@ export class FlowOrchestrator {
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
                 emitUsage(this.renderer, turnUsage);
-                this.renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human' });
-                const humanReply = await this.readHumanInput(inputStream, outputStream);
-                if (humanReply === null) {
-                  flowRun.status = 'awaiting_human';
-                  session.transcriptHistory = injectedHistory;
-                  SessionStore.saveRoleSession(session);
-                  SessionStore.saveFlowRun(flowRun);
-                  span.addEvent('human_input.exit');
-                  break;
-                }
-                span.addEvent('human_input.received');
-                this.renderer.emit({ kind: 'human.resumed', nodeId, role: currentNodeDef.role });
-                injectedHistory.push({ role: 'user', content: humanReply });
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session);
-                continue;
+                flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'prompt-human');
+                this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: 'prompt-human' });
+                break;
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
@@ -351,8 +353,11 @@ export class FlowOrchestrator {
 
                 span.setAttribute('node.outcome', 'forward_pass_closed');
                 emitUsage(this.renderer, turnUsage);
-                this.removeActiveNode(flowRun, nodeId);
-                this.addCompletedNode(flowRun, nodeId);
+                flowRun = await SessionStore.updateFlowRun((latest) => {
+                  this.removeOpenNode(latest, nodeId);
+                  this.addCompletedNode(latest, nodeId);
+                  this.reconcileFlowStatus(latest);
+                });
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;
                 SessionStore.saveRoleSession(session);
@@ -395,11 +400,10 @@ export class FlowOrchestrator {
               break;
             } else {
               span.setAttribute('node.outcome', 'null_return');
-              this.renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort' });
-              flowRun.status = 'awaiting_human';
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session);
-              SessionStore.saveFlowRun(flowRun);
+              flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'autonomous-abort');
+              this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: 'autonomous-abort' });
               span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'null_session_return' });
               break;
             }
@@ -451,236 +455,354 @@ export class FlowOrchestrator {
       );
     }
     this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-    const wf = this.resolveActiveWorkflow(flowRun);
 
-    this.findNodeById(wf, nodeId);
-    const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
-    const incomingEdges = this.getIncomingEdges(wf, nodeId);
-    const outstandingOutgoingEdges = this.getOutstandingOutgoingEdges(flowRun, wf, nodeId);
+    let direction: AppliedHandoffDirection | null = null;
+    let eventTargets: Array<{ nodeId: string; role: string; artifactBasename?: string }> = [];
+    let activationNotice: { kind: 'role'; nodeId: string } | { kind: 'parallel' } | null = null;
 
-    const forwardTargets: HandoffTarget[] = [];
-    const backwardTargets: HandoffTarget[] = [];
+    const updatedFlow = await SessionStore.updateFlowRun((latest) => {
+      const wf = this.resolveActiveWorkflow(latest);
 
-    for (const handoff of handoffs) {
-      const targetNodeId = handoff.target_node_id;
-      const isForward = outstandingOutgoingEdges.some((edge: any) => edge.to === targetNodeId);
-      const isBackward = incomingEdges.some((edge: any) => edge.from === targetNodeId);
+      this.findNodeById(wf, nodeId);
+      const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
+      const incomingEdges = this.getIncomingEdges(wf, nodeId);
+      const outstandingOutgoingEdges = this.getOutstandingOutgoingEdges(latest, wf, nodeId);
 
-      if (isForward && isBackward) {
-        throw new Error(`Target node '${targetNodeId}' is both an unresolved successor and a predecessor of '${nodeId}', which is unsupported.`);
-      }
-      if (isForward) {
-        forwardTargets.push(handoff);
-        continue;
-      }
-      if (isBackward) {
-        backwardTargets.push(handoff);
-        continue;
-      }
+      const forwardTargets: HandoffTarget[] = [];
+      const backwardTargets: HandoffTarget[] = [];
 
-      const targetExists = this.findNodeById(wf, targetNodeId);
-      if (!targetExists) {
-        throw new Error(`Target node '${targetNodeId}' not found in workflow.`);
-      }
-      throw new Error(
-        `Unauthorized transition: node '${nodeId}' may hand forward only to unresolved successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
-      );
-    }
+      for (const handoff of handoffs) {
+        const targetNodeId = handoff.target_node_id;
+        const isForward = outstandingOutgoingEdges.some((edge: any) => edge.to === targetNodeId);
+        const isBackward = incomingEdges.some((edge: any) => edge.from === targetNodeId);
 
-    if (forwardTargets.length > 0 && backwardTargets.length > 0) {
-      throw new Error(`Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`);
-    }
+        if (isForward && isBackward) {
+          throw new Error(`Target node '${targetNodeId}' is both an unresolved successor and a predecessor of '${nodeId}', which is unsupported.`);
+        }
+        if (isForward) {
+          forwardTargets.push(handoff);
+          continue;
+        }
+        if (isBackward) {
+          backwardTargets.push(handoff);
+          continue;
+        }
 
-    if (handoffs.length === 0) {
-      if (outgoingEdges.length > 0) {
-        throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
-      }
-      emitUsage(this.renderer, turnUsage);
-      this.removeActiveNode(flowRun, nodeId);
-      this.addCompletedNode(flowRun, nodeId);
-
-      // Emit handoff.applied for terminal node (no successors)
-      this.renderer.emit({
-        kind: 'handoff.applied',
-        fromNodeId: nodeId,
-        fromRole,
-        targets: []
-      });
-
-      if (flowRun.activeNodes.length === 0) {
-        flowRun.status = 'completed';
-      }
-      SessionStore.saveFlowRun(flowRun);
-      return 'terminal';
-    }
-
-    if (forwardTargets.length > 0) {
-      if (forwardTargets.length !== outstandingOutgoingEdges.length) {
+        const targetExists = this.findNodeById(wf, targetNodeId);
+        if (!targetExists) {
+          throw new Error(`Target node '${targetNodeId}' not found in workflow.`);
+        }
         throw new Error(
-          `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s).`
+          `Unauthorized transition: node '${nodeId}' may hand forward only to unresolved successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
         );
       }
 
-      const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
-      const claimedTargets = new Set<string>();
-
-      for (const edge of outstandingOutgoingEdges) {
-        const targetNode = this.findNodeById(wf, edge.to);
-        const handoff = forwardTargets.find(h => h.target_node_id === targetNode.id);
-        if (!handoff) {
-          throw new Error(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
-        }
-        if (claimedTargets.has(handoff.target_node_id)) {
-          throw new Error(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
-        }
-        claimedTargets.add(handoff.target_node_id);
-        activationPairs.push({
-          targetId: targetNode.id,
-          artifact: handoff.artifact_path ?? '',
-          role: targetNode.role
-        });
+      if (forwardTargets.length > 0 && backwardTargets.length > 0) {
+        throw new Error(`Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`);
       }
 
-      this.ensureRoleScopedActivationSetIsSupported(flowRun, wf, nodeId, activationPairs.map(pair => ({
-        nodeId: pair.targetId,
-        role: pair.role
-      })));
-
-      emitUsage(this.renderer, turnUsage);
-      this.removeActiveNode(flowRun, nodeId);
-
-      for (const pair of activationPairs) {
-        flowRun.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
-        this.activateOrDefer(flowRun, wf, pair.targetId);
-      }
-
-      this.markNodeCompletedIfSettled(flowRun, wf, nodeId);
-
-      this.renderer.emit({
-        kind: 'handoff.applied',
-        fromNodeId: nodeId,
-        fromRole,
-        targets: activationPairs.map(p => ({
-          nodeId: p.targetId,
-          role: p.role,
-          artifactBasename: p.artifact ? path.basename(p.artifact) : undefined
-        }))
-      });
-
-      if (activationPairs.length === 1) {
-        this.emitRoleActiveIfActivated(flowRun, wf, activationPairs[0].targetId);
-      } else {
-        this.emitParallelActiveSet(flowRun, wf);
-      }
-
-      SessionStore.saveFlowRun(flowRun);
-      return 'forward';
-    }
-
-    if (backwardTargets.length > 0) {
-      const reactivationPlans: Array<{
-        targetId: string;
-        role: string;
-        rejectedEdgeKey: string;
-        activationArtifacts: string[];
-      }> = [];
-      const claimedTargets = new Set<string>();
-
-      for (const handoff of backwardTargets) {
-        if (claimedTargets.has(handoff.target_node_id)) {
-          throw new Error(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
+      if (handoffs.length === 0) {
+        if (outgoingEdges.length > 0) {
+          throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
         }
-        claimedTargets.add(handoff.target_node_id);
+        this.removeOpenNode(latest, nodeId);
+        this.addCompletedNode(latest, nodeId);
+        direction = 'terminal';
+        eventTargets = [];
+        if (this.getOpenNodeIds(latest).length === 0) {
+          latest.status = 'completed';
+        } else {
+          this.reconcileFlowStatus(latest);
+        }
+        return;
+      }
 
-        const targetNode = this.findNodeById(wf, handoff.target_node_id);
-        const rejectedEdgeKey = this.edgeKey(targetNode.id, nodeId);
-        const rejectedArtifactPath = flowRun.completedEdgeArtifacts[rejectedEdgeKey];
-
-        if (!rejectedArtifactPath) {
+      if (forwardTargets.length > 0) {
+        if (forwardTargets.length !== outstandingOutgoingEdges.length) {
           throw new Error(
-            `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
+            `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s).`
           );
         }
 
-        reactivationPlans.push({
-          targetId: targetNode.id,
-          role: targetNode.role,
-          rejectedEdgeKey,
-          activationArtifacts: [
-            rejectedArtifactPath,
-            handoff.artifact_path ?? '',
-          ].filter((artifact): artifact is string => artifact.trim() !== '')
-        });
+        const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
+        const claimedTargets = new Set<string>();
+
+        for (const edge of outstandingOutgoingEdges) {
+          const targetNode = this.findNodeById(wf, edge.to);
+          const handoff = forwardTargets.find(h => h.target_node_id === targetNode.id);
+          if (!handoff) {
+            throw new Error(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
+          }
+          if (claimedTargets.has(handoff.target_node_id)) {
+            throw new Error(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
+          }
+          claimedTargets.add(handoff.target_node_id);
+          activationPairs.push({
+            targetId: targetNode.id,
+            artifact: handoff.artifact_path ?? '',
+            role: targetNode.role
+          });
+        }
+
+        this.ensureRoleScopedActivationSetIsSupported(latest, wf, nodeId, activationPairs.map(pair => ({
+          nodeId: pair.targetId,
+          role: pair.role
+        })));
+
+        this.removeOpenNode(latest, nodeId);
+
+        for (const pair of activationPairs) {
+          latest.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
+          this.activateOrDefer(latest, wf, pair.targetId);
+        }
+
+        this.markNodeCompletedIfSettled(latest, wf, nodeId);
+        this.reconcileFlowStatus(latest);
+        direction = 'forward';
+        eventTargets = activationPairs.map(p => ({
+          nodeId: p.targetId,
+          role: p.role,
+          artifactBasename: p.artifact ? path.basename(p.artifact) : undefined
+        }));
+        activationNotice = activationPairs.length === 1
+          ? { kind: 'role', nodeId: activationPairs[0].targetId }
+          : { kind: 'parallel' };
+        return;
       }
 
-      this.ensureRoleScopedActivationSetIsSupported(flowRun, wf, nodeId, reactivationPlans.map(plan => ({
-        nodeId: plan.targetId,
-        role: plan.role
-      })));
+      if (backwardTargets.length > 0) {
+        const reactivationPlans: Array<{
+          targetId: string;
+          role: string;
+          rejectedEdgeKey: string;
+          activationArtifacts: string[];
+        }> = [];
+        const claimedTargets = new Set<string>();
 
-      emitUsage(this.renderer, turnUsage);
-      this.removeActiveNode(flowRun, nodeId);
-      this.removeCompletedNode(flowRun, nodeId);
+        for (const handoff of backwardTargets) {
+          if (claimedTargets.has(handoff.target_node_id)) {
+            throw new Error(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
+          }
+          claimedTargets.add(handoff.target_node_id);
 
-      const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
+          const targetNode = this.findNodeById(wf, handoff.target_node_id);
+          const rejectedEdgeKey = this.edgeKey(targetNode.id, nodeId);
+          const rejectedArtifactPath = latest.completedEdgeArtifacts[rejectedEdgeKey];
 
-      for (const plan of reactivationPlans) {
-        delete flowRun.completedEdgeArtifacts[plan.rejectedEdgeKey];
-        this.removeCompletedNode(flowRun, plan.targetId);
-        this.activateOrDefer(flowRun, wf, plan.targetId, plan.activationArtifacts);
-        reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
-      }
+          if (!rejectedArtifactPath) {
+            throw new Error(
+              `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
+            );
+          }
 
-      this.renderer.emit({
-        kind: 'handoff.applied',
-        fromNodeId: nodeId,
-        fromRole,
-        targets: reactivatedTargets.map(target => ({
+          reactivationPlans.push({
+            targetId: targetNode.id,
+            role: targetNode.role,
+            rejectedEdgeKey,
+            activationArtifacts: [
+              rejectedArtifactPath,
+              handoff.artifact_path ?? '',
+            ].filter((artifact): artifact is string => artifact.trim() !== '')
+          });
+        }
+
+        this.ensureRoleScopedActivationSetIsSupported(latest, wf, nodeId, reactivationPlans.map(plan => ({
+          nodeId: plan.targetId,
+          role: plan.role
+        })));
+
+        this.removeOpenNode(latest, nodeId);
+        this.removeCompletedNode(latest, nodeId);
+
+        const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
+
+        for (const plan of reactivationPlans) {
+          delete latest.completedEdgeArtifacts[plan.rejectedEdgeKey];
+          this.removeCompletedNode(latest, plan.targetId);
+          this.activateOrDefer(latest, wf, plan.targetId, plan.activationArtifacts);
+          reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
+        }
+
+        this.reconcileFlowStatus(latest);
+        direction = 'backward';
+        eventTargets = reactivatedTargets.map(target => ({
           nodeId: target.targetId,
           role: target.role,
           artifactBasename: undefined
-        }))
-      });
-
-      if (reactivatedTargets.length === 1) {
-        this.emitRoleActiveIfActivated(flowRun, wf, reactivatedTargets[0].targetId);
-      } else {
-        this.emitParallelActiveSet(flowRun, wf);
+        }));
+        activationNotice = reactivatedTargets.length === 1
+          ? { kind: 'role', nodeId: reactivatedTargets[0].targetId }
+          : { kind: 'parallel' };
+        return;
       }
 
-      SessionStore.saveFlowRun(flowRun);
-      return 'backward';
+      throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
+    });
+
+    if (!direction) {
+      throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
     }
 
-    throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
+    emitUsage(this.renderer, turnUsage);
+    this.renderer.emit({
+      kind: 'handoff.applied',
+      fromNodeId: nodeId,
+      fromRole,
+      targets: eventTargets
+    });
+
+    const wf = this.resolveActiveWorkflow(updatedFlow);
+    const notice = activationNotice as { kind: 'role'; nodeId: string } | { kind: 'parallel' } | null;
+    if (notice?.kind === 'role') {
+      this.emitRoleActiveIfActivated(updatedFlow, wf, notice.nodeId);
+    } else if (notice?.kind === 'parallel') {
+      this.emitParallelActiveSet(updatedFlow, wf);
+    }
+
+    return direction;
   }
 
-
-  private readHumanInput(
+  private async runReadyNodesUntilBlocked(
     inputStream: NodeJS.ReadableStream,
     outputStream: NodeJS.WritableStream
-  ): Promise<string | null> {
-    return new Promise((resolve) => {
-      const rl = readline.createInterface({ input: inputStream, output: outputStream, terminal: false });
-      const onClose = () => resolve(null);
-      rl.once('close', onClose);
-      rl.question('\n> ', (answer) => {
-        rl.removeListener('close', onClose);
-        rl.close();
-        const line = answer.trim();
-        if (line === 'exit' || line === 'quit') {
-          resolve(null);
-        } else if (line === '') {
-          void this.readHumanInput(inputStream, outputStream).then(resolve, () => resolve(null));
-        } else {
-          resolve(line);
-        }
-      });
+  ): Promise<void> {
+    const runningTasks = new Map<string, Promise<void>>();
+    let firstError: unknown = null;
+
+    while (true) {
+      const claimedNodeIds = await this.claimReadyNodesForParallelRun();
+      for (const claimedNodeId of claimedNodeIds) {
+        if (runningTasks.has(claimedNodeId)) continue;
+        const task = this.advanceFlow(
+          SessionStore.loadFlowRun()!,
+          claimedNodeId,
+          undefined,
+          undefined,
+          inputStream,
+          outputStream
+        ).catch((error) => {
+          if (!firstError) firstError = error;
+        }).finally(() => {
+          runningTasks.delete(claimedNodeId);
+        });
+        runningTasks.set(claimedNodeId, task);
+      }
+
+      if (firstError) {
+        await Promise.allSettled(runningTasks.values());
+        throw firstError;
+      }
+
+      if (runningTasks.size === 0) {
+        return;
+      }
+
+      await Promise.race(runningTasks.values());
+    }
+  }
+
+  private async releaseStaleRunningNodes(): Promise<FlowRun> {
+    return SessionStore.updateFlowRun((flowRun) => {
+      if (flowRun.runningNodes.length > 0) {
+        flowRun.readyNodes = this.mergeNodeIds(flowRun.readyNodes, flowRun.runningNodes);
+        flowRun.runningNodes = [];
+      }
+      this.reconcileFlowStatus(flowRun);
     });
   }
 
-  private removeActiveNode(flowRun: FlowRun, nodeId: string) {
-    flowRun.activeNodes = flowRun.activeNodes.filter(id => id !== nodeId);
+  private async claimReadyNodesForParallelRun(): Promise<string[]> {
+    let claimedNodeIds: string[] = [];
+    await SessionStore.updateFlowRun((flowRun) => {
+      if (flowRun.status !== 'running' || flowRun.readyNodes.length === 0) {
+        claimedNodeIds = [];
+        this.reconcileFlowStatus(flowRun);
+        return;
+      }
+
+      const wf = this.resolveActiveWorkflow(flowRun);
+      const occupiedRoles = new Map<string, string>();
+      for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
+        const node = this.findNodeById(wf, nodeId);
+        occupiedRoles.set(this.roleKey(node.role), nodeId);
+      }
+
+      const selected: string[] = [];
+      for (const nodeId of flowRun.readyNodes) {
+        const node = this.findNodeById(wf, nodeId);
+        const nodeRoleKey = this.roleKey(node.role);
+        const conflictingNodeId = occupiedRoles.get(nodeRoleKey);
+        if (conflictingNodeId && conflictingNodeId !== nodeId) {
+          throw new WorkflowError(
+            `Unsupported same-role parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role '${node.role}'. ` +
+            'The runtime uses one flow-scoped session per role, so concurrent same-role nodes are not supported.'
+          );
+        }
+        occupiedRoles.set(nodeRoleKey, nodeId);
+        selected.push(nodeId);
+      }
+
+      flowRun.readyNodes = flowRun.readyNodes.filter(id => !selected.includes(id));
+      flowRun.runningNodes = this.mergeNodeIds(flowRun.runningNodes, selected);
+      flowRun.status = 'running';
+      claimedNodeIds = selected;
+    });
+    return claimedNodeIds;
+  }
+
+  private async claimNodeForAdvance(nodeId: string, hasHumanInput: boolean): Promise<{ flowRun: FlowRun; resumedFromHuman: boolean }> {
+    let resumedFromHuman = false;
+    const flowRun = await SessionStore.updateFlowRun((latest) => {
+      if (latest.status === 'completed' || latest.status === 'failed') {
+        throw new Error(`Cannot advance flow in state: ${latest.status}`);
+      }
+
+      if (latest.runningNodes.includes(nodeId)) {
+        latest.status = 'running';
+        return;
+      }
+
+      if (hasHumanInput && latest.awaitingHumanNodes[nodeId]) {
+        delete latest.awaitingHumanNodes[nodeId];
+        latest.runningNodes = this.mergeNodeIds(latest.runningNodes, [nodeId]);
+        latest.status = 'running';
+        resumedFromHuman = true;
+        return;
+      }
+
+      if (latest.awaitingHumanNodes[nodeId]) {
+        throw new Error(`Node '${nodeId}' is awaiting targeted human input and cannot advance without a reply.`);
+      }
+
+      if (!latest.readyNodes.includes(nodeId)) {
+        throw new Error(`Node '${nodeId}' is not ready, running, or awaiting human input.`);
+      }
+
+      latest.readyNodes = latest.readyNodes.filter(id => id !== nodeId);
+      latest.runningNodes = this.mergeNodeIds(latest.runningNodes, [nodeId]);
+      latest.status = 'running';
+    });
+
+    return { flowRun, resumedFromHuman };
+  }
+
+  private async markNodeAwaitingHuman(
+    nodeId: string,
+    role: string,
+    reason: 'prompt-human' | 'autonomous-abort'
+  ): Promise<FlowRun> {
+    return SessionStore.updateFlowRun((flowRun) => {
+      flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
+      flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
+      flowRun.awaitingHumanNodes[nodeId] = { role, reason };
+      this.reconcileFlowStatus(flowRun);
+    });
+  }
+
+  private removeOpenNode(flowRun: FlowRun, nodeId: string) {
+    flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
+    flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
+    delete flowRun.awaitingHumanNodes[nodeId];
     delete flowRun.pendingNodeArtifacts[nodeId];
   }
 
@@ -714,30 +836,30 @@ export class FlowOrchestrator {
     return `${flowRun.flowId}__${this.roleKey(roleName)}`;
   }
 
-  private findConflictingActiveSameRoleNode(flowRun: FlowRun, wf: any, nodeId: string, roleName: string): string | null {
+  private findConflictingOpenSameRoleNode(flowRun: FlowRun, wf: any, nodeId: string, roleName: string): string | null {
     const candidateRoleKey = this.roleKey(roleName);
-    for (const activeNodeId of flowRun.activeNodes) {
-      if (activeNodeId === nodeId) continue;
-      const activeNode = this.findNodeById(wf, activeNodeId);
-      if (this.roleKey(activeNode.role) === candidateRoleKey) {
-        return activeNodeId;
+    for (const openNodeId of this.getOpenNodeIds(flowRun)) {
+      if (openNodeId === nodeId) continue;
+      const openNode = this.findNodeById(wf, openNodeId);
+      if (this.roleKey(openNode.role) === candidateRoleKey) {
+        return openNodeId;
       }
     }
     return null;
   }
 
   private ensureNoRoleScopedParallelConflict(flowRun: FlowRun, wf: any, nodeId: string, roleName: string): void {
-    const conflictingNodeId = this.findConflictingActiveSameRoleNode(flowRun, wf, nodeId, roleName);
+    const conflictingNodeId = this.findConflictingOpenSameRoleNode(flowRun, wf, nodeId, roleName);
     if (!conflictingNodeId) return;
 
     throw new WorkflowError(
       `Unsupported same-role parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role '${roleName}'. ` +
-      'The runtime now uses one flow-scoped session per role, so concurrent same-role nodes must be avoided until an explicit parallel design is implemented.'
+      'The runtime uses one flow-scoped session per role, so concurrent same-role nodes are not supported.'
     );
   }
 
-  private ensureNoRoleScopedParallelConflictInActiveSet(flowRun: FlowRun, wf: any): void {
-    for (const nodeId of flowRun.activeNodes) {
+  private ensureNoRoleScopedParallelConflictInOpenSet(flowRun: FlowRun, wf: any): void {
+    for (const nodeId of this.getOpenNodeIds(flowRun)) {
       const node = this.findNodeById(wf, nodeId);
       this.ensureNoRoleScopedParallelConflict(flowRun, wf, nodeId, node.role);
     }
@@ -751,10 +873,10 @@ export class FlowOrchestrator {
   ): void {
     const occupiedRoles = new Map<string, string>();
 
-    for (const activeNodeId of flowRun.activeNodes) {
-      if (activeNodeId === currentNodeId) continue;
-      const activeNode = this.findNodeById(wf, activeNodeId);
-      occupiedRoles.set(this.roleKey(activeNode.role), activeNodeId);
+    for (const openNodeId of this.getOpenNodeIds(flowRun)) {
+      if (openNodeId === currentNodeId) continue;
+      const openNode = this.findNodeById(wf, openNodeId);
+      occupiedRoles.set(this.roleKey(openNode.role), openNodeId);
     }
 
     for (const target of activationTargets) {
@@ -763,7 +885,7 @@ export class FlowOrchestrator {
       if (conflictingNodeId && conflictingNodeId !== target.nodeId) {
         throw new WorkflowError(
           `Unsupported same-role parallel activation: node '${target.nodeId}' and node '${conflictingNodeId}' both require role '${target.role}'. ` +
-          'The runtime now uses one flow-scoped session per role, so concurrent same-role nodes must be avoided until an explicit parallel design is implemented.'
+          'The runtime uses one flow-scoped session per role, so concurrent same-role nodes are not supported.'
         );
       }
       occupiedRoles.set(targetRoleKey, target.nodeId);
@@ -813,6 +935,40 @@ export class FlowOrchestrator {
       }
     }
     return merged;
+  }
+
+  private mergeNodeIds(...nodeGroups: string[][]): string[] {
+    const seen = new Set<string>();
+    const merged: string[] = [];
+    for (const group of nodeGroups) {
+      for (const nodeId of group) {
+        if (!nodeId || seen.has(nodeId)) continue;
+        seen.add(nodeId);
+        merged.push(nodeId);
+      }
+    }
+    return merged;
+  }
+
+  private getOpenNodeIds(flowRun: FlowRun): string[] {
+    return this.mergeNodeIds(
+      flowRun.readyNodes,
+      flowRun.runningNodes,
+      Object.keys(flowRun.awaitingHumanNodes)
+    );
+  }
+
+  private reconcileFlowStatus(flowRun: FlowRun): void {
+    if (flowRun.status === 'completed' || flowRun.status === 'failed') return;
+    if (flowRun.readyNodes.length > 0 || flowRun.runningNodes.length > 0) {
+      flowRun.status = 'running';
+      return;
+    }
+    if (Object.keys(flowRun.awaitingHumanNodes).length > 0) {
+      flowRun.status = 'awaiting_human';
+      return;
+    }
+    flowRun.status = 'running';
   }
 
   private markNodeCompletedIfSettled(flowRun: FlowRun, wf: any, nodeId: string): void {
@@ -885,8 +1041,8 @@ export class FlowOrchestrator {
       const baseArtifacts = this.collectIncomingArtifacts(flowRun, incomingEdges);
       const priorArtifacts = flowRun.pendingNodeArtifacts[candidateNodeId] ?? [];
       flowRun.pendingNodeArtifacts[candidateNodeId] = this.mergeArtifacts(baseArtifacts, priorArtifacts, extraArtifacts);
-      if (!flowRun.activeNodes.includes(candidateNodeId)) {
-        flowRun.activeNodes.push(candidateNodeId);
+      if (!this.getOpenNodeIds(flowRun).includes(candidateNodeId)) {
+        flowRun.readyNodes.push(candidateNodeId);
       }
     } else if (incomingEdges.length > 1) {
       // Join-blocked: emit parallel.join_waiting
@@ -904,7 +1060,7 @@ export class FlowOrchestrator {
   }
 
   private emitRoleActiveIfActivated(flowRun: FlowRun, wf: any, nodeId: string) {
-    if (!flowRun.activeNodes.includes(nodeId)) return;
+    if (!flowRun.readyNodes.includes(nodeId)) return;
     const node = this.findNodeById(wf, nodeId);
     const activatedArtifacts = flowRun.pendingNodeArtifacts[nodeId] ?? [];
     const artifactBasename = activatedArtifacts.length === 1 && activatedArtifacts[0]
@@ -921,7 +1077,7 @@ export class FlowOrchestrator {
   }
 
   private emitParallelActiveSet(flowRun: FlowRun, wf: any) {
-    const activeNodes = flowRun.activeNodes.map(id => {
+    const activeNodes = this.getOpenNodeIds(flowRun).map(id => {
       const node = wf.nodes.find((n: any) => n.id === id);
       return { nodeId: id, role: node?.role ?? '' };
     });

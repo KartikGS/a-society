@@ -89,12 +89,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    activeNodes: ['start'],
+    readyNodes: ['start'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'running',
-    stateVersion: '6'
+    stateVersion: '7'
   });
 
   const operatorStream = new PassThrough();
@@ -147,7 +149,7 @@ async function runTest() {
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
-    assert.ok(flowAfterStart.activeNodes.includes('next'), "Expected 'next' to be active.");
+    assert.ok(flowAfterStart.readyNodes.includes('next'), "Expected 'next' to be active.");
 
     console.log("\n--- Advancing 'next' node ---");
     await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, undefined, inputStream, outputStream);
@@ -170,7 +172,7 @@ async function runTest() {
     );
     const flowAfterNext = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");
-    assert.ok(flowAfterNext.activeNodes.includes('end'), "Expected successor node 'end' to be active.");
+    assert.ok(flowAfterNext.readyNodes.includes('end'), "Expected successor node 'end' to be active.");
 
     console.log("Linear-role-active test PASSED.");
   } catch (e: any) {

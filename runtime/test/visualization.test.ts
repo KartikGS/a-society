@@ -42,16 +42,18 @@ test('renderFlowStatus: single active node, no completed', () => {
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    activeNodes: ['start'],
+    readyNodes: ['start'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': ['p.md'] },
     status: 'running',
-    stateVersion: '6'
+    stateVersion: '7'
   };
 
   const output = renderFlowStatus(flowRun, WF);
-  assert.ok(output.includes('Active nodes:'));
+  assert.ok(output.includes('Ready nodes:'));
   assert.ok(output.includes('[→] start (Owner)'));
   assert.ok(output.includes('Completed nodes:'));
   assert.ok(output.includes('(none)'));
@@ -64,7 +66,9 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       workspaceRoot: '.',
       projectNamespace: 'test-project',
       recordFolderPath: './records/r1',
-      activeNodes: ['t1'],
+      readyNodes: ['t1'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       completedNodes: ['start', 'fork', 't2'],
       completedEdgeArtifacts: {
         'start=>fork': 'p1.md',
@@ -74,7 +78,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       },
       pendingNodeArtifacts: { 't1': ['p3.md'] },
       status: 'running',
-      stateVersion: '6'
+      stateVersion: '7'
     };
   
     const output = renderFlowStatus(flowRun, WF);
@@ -93,12 +97,14 @@ test('renderFlowStatus: awaiting_human status renders explicit suspended notice'
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    activeNodes: ['start'],
+    readyNodes: [],
+    runningNodes: [],
+    awaitingHumanNodes: { start: { role: 'Owner', reason: 'prompt-human' } },
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
     status: 'awaiting_human',
-    stateVersion: '6'
+    stateVersion: '7'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('Status: awaiting_human'), 'must show awaiting_human status');
@@ -111,7 +117,9 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    activeNodes: ['t1', 't2'],
+    readyNodes: ['t1', 't2'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: ['start', 'fork'],
     completedEdgeArtifacts: {
       'start=>fork': 'p1.md',
@@ -120,7 +128,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     },
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] },
     status: 'running',
-    stateVersion: '6'
+    stateVersion: '7'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('[→] t1 (TD)'));
@@ -134,7 +142,9 @@ test('renderFlowStatus: completed flow', () => {
         workspaceRoot: '.',
         projectNamespace: 'test-project',
         recordFolderPath: './records/r1',
-        activeNodes: [],
+        readyNodes: [],
+        runningNodes: [],
+        awaitingHumanNodes: {},
         completedNodes: ['start', 'fork', 't1', 't2', 'join'],
         completedEdgeArtifacts: {
           'start=>fork': 'p1.md',
@@ -145,12 +155,12 @@ test('renderFlowStatus: completed flow', () => {
         },
         pendingNodeArtifacts: {},
         status: 'completed',
-        stateVersion: '6'
+        stateVersion: '7'
       };
     
       const output = renderFlowStatus(flowRun, WF);
       assert.ok(output.includes('Status: completed'));
-      assert.ok(output.includes('Active nodes:'));
+      assert.ok(output.includes('Ready nodes:'));
       assert.ok(output.includes('(none)'));
       assert.ok(output.includes('[✓] join (Curator)'));
       assert.ok(!output.includes('Pending joins:'));

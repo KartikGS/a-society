@@ -93,13 +93,15 @@ export function initializeDraftFlow(
     workspaceRoot,
     projectNamespace,
     recordFolderPath,
-    activeNodes: ['owner-intake'],
+    readyNodes: ['owner-intake'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
     completedNodes: [],
     visitedNodeIds: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: {},
     status: 'running',
-    stateVersion: '6'
+    stateVersion: '7'
   };
 }
 

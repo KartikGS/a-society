@@ -375,12 +375,14 @@ async function run() {
       workspaceRoot: tmpDir,
       projectNamespace: 'a-society',
       recordFolderPath: recordDir,
-      activeNodes: ['start'],
+      readyNodes: ['start'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       completedNodes: [],
       completedEdgeArtifacts: {},
       pendingNodeArtifacts: { start: [] },
       status: 'running',
-      stateVersion: '6'
+      stateVersion: '7'
     };
     SessionStore.saveFlowRun(flowRun);
 
@@ -517,12 +519,14 @@ async function run() {
       flowId: 'repair-flow',
       workspaceRoot: tmpDir,
       projectNamespace: improvementNamespace,
-      activeNodes: [],
+      readyNodes: [],
+      runningNodes: [],
+      awaitingHumanNodes: {},
       completedNodes: [],
       completedEdgeArtifacts: {},
       pendingNodeArtifacts: {},
       status: 'running',
-      stateVersion: '6',
+      stateVersion: '7',
       improvementPhase: null,
       recordFolderPath: recordDir
     };
@@ -563,7 +567,7 @@ async function run() {
     }
 
     assert.strictEqual(flowRun.status, 'completed');
-    assert.strictEqual(flowRun.stateVersion, '5', 'improvement initialization must keep the latest state version');
+    assert.strictEqual(flowRun.stateVersion, '7', 'improvement initialization must keep the latest state version');
     assert.ok(capturedOutput.includes('Owner emitted prompt-human during backward pass feedback. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });

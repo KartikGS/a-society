@@ -66,9 +66,9 @@ export class OperatorEventRenderer implements OperatorRenderSink {
 
       case 'human.awaiting_input': {
         if (event.reason === 'prompt-human') {
-          return `[runtime/human] Waiting for operator input`;
+          return `[runtime/human] Waiting for operator input for ${event.nodeId} (${event.role})`;
         } else {
-          return `[runtime/human] Flow suspended; waiting for later operator input`;
+          return `[runtime/human] ${event.nodeId} (${event.role}) suspended; waiting for later operator input`;
         }
       }
 

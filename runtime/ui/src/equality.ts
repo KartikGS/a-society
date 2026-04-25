@@ -44,6 +44,24 @@ function areStringArrayMapsEqual(
   return true;
 }
 
+function areAwaitingHumanMapsEqual(
+  left: FlowRun['awaitingHumanNodes'],
+  right: FlowRun['awaitingHumanNodes']
+): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (!(key in right)) return false;
+    if (left[key].role !== right[key].role) return false;
+    if (left[key].reason !== right[key].reason) return false;
+  }
+
+  return true;
+}
+
 export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
@@ -57,7 +75,9 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     left.recordSummary === right.recordSummary &&
     left.status === right.status &&
     left.stateVersion === right.stateVersion &&
-    areStringArraysEqual(left.activeNodes, right.activeNodes) &&
+    areStringArraysEqual(left.readyNodes, right.readyNodes) &&
+    areStringArraysEqual(left.runningNodes, right.runningNodes) &&
+    areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
     areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringMapsEqual(left.completedEdgeArtifacts, right.completedEdgeArtifacts) &&

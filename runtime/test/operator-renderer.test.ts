@@ -102,14 +102,14 @@ test('repair.requested improvement scope ends with retrying backward pass step',
 
 test('human.awaiting_input prompt-human renders waiting line', () => {
   const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'human.awaiting_input', reason: 'prompt-human' });
-  assert.ok(output().includes('[runtime/human] Waiting for operator input\n'));
+  renderer.emit({ kind: 'human.awaiting_input', nodeId: 'n1', role: 'Owner', reason: 'prompt-human' });
+  assert.ok(output().includes('[runtime/human] Waiting for operator input for n1 (Owner)\n'));
 });
 
 test('human.awaiting_input autonomous-abort renders suspended line', () => {
   const { renderer, output } = makeRenderer();
-  renderer.emit({ kind: 'human.awaiting_input', reason: 'autonomous-abort' });
-  assert.ok(output().includes('[runtime/human] Flow suspended; waiting for later operator input\n'));
+  renderer.emit({ kind: 'human.awaiting_input', nodeId: 'n1', role: 'Owner', reason: 'autonomous-abort' });
+  assert.ok(output().includes('[runtime/human] n1 (Owner) suspended; waiting for later operator input\n'));
 });
 
 test('human.resumed renders resume line', () => {
