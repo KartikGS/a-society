@@ -19,6 +19,7 @@ export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
 
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
+      if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
 
       const summary = {
         displayName: entry.name,

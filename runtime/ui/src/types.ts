@@ -26,6 +26,19 @@ export interface FlowRun {
   stateVersion: string;
 }
 
+export interface FlowRef {
+  projectNamespace: string;
+  flowId: string;
+}
+
+export interface FlowSummary extends FlowRef {
+  status: FlowRun['status'];
+  recordFolderPath: string;
+  recordName?: string;
+  recordSummary?: string;
+  updatedAt?: string;
+}
+
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string }
@@ -42,21 +55,24 @@ export type OperatorEvent =
   | { kind: 'flow.completed' };
 
 export type ClientMessage =
+  | { type: 'open_flow'; flowRef: FlowRef }
+  | { type: 'resume_flow'; flowRef: FlowRef }
   | { type: 'start_initialized_flow'; projectNamespace: string }
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
-  | { type: 'stop_active_turn'; nodeId?: string; role?: string }
-  | { type: 'human_input'; text: string; nodeId?: string; role?: string };
+  | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
+  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string };
 
 export type ServerMessage =
-  | { type: 'init'; projects: ProjectDiscovery; flowRun: FlowRun | null }
-  | { type: 'operator_event'; event: OperatorEvent }
-  | { type: 'wait_start'; provider: string; model: string }
-  | { type: 'wait_stop' }
-  | { type: 'output_text'; text: string }
-  | { type: 'flow_state'; flowRun: FlowRun; backwardActive: string[] }
-  | { type: 'error'; message: string }
-  | { type: 'flow_complete' };
+  | { type: 'init'; projects: ProjectDiscovery }
+  | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
+  | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }
+  | { type: 'wait_start'; flowRef: FlowRef; provider: string; model: string }
+  | { type: 'wait_stop'; flowRef: FlowRef }
+  | { type: 'output_text'; flowRef: FlowRef; text: string }
+  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[] }
+  | { type: 'error'; flowRef: FlowRef; message: string }
+  | { type: 'flow_complete'; flowRef: FlowRef };
 
 export interface WorkflowGraph {
   nodes: Array<{ id: string; role: string }>;

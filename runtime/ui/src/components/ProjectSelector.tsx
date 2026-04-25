@@ -1,14 +1,18 @@
-import type { ProjectSummary } from '../types';
+import type { FlowSummary, ProjectSummary } from '../types';
 
 interface ProjectSelectorProps {
   projectsWithADocs: ProjectSummary[];
   projectsWithoutADocs: ProjectSummary[];
   selectedProject: string | null;
+  selectedFlowId: string | null;
+  projectFlows: FlowSummary[];
   newProjectName: string;
   errorMessage: string | null;
   disabled: boolean;
   onSelectInitialized: (projectNamespace: string) => void;
   onInitializeExisting: (projectNamespace: string) => void;
+  onOpenFlow: (flow: FlowSummary) => void;
+  onNewFlow: (projectNamespace: string) => void;
   onNewProjectNameChange: (value: string) => void;
   onCreateNew: () => void;
 }
@@ -48,6 +52,51 @@ function ProjectSection(props: ProjectSectionProps) {
   );
 }
 
+function FlowList(props: {
+  selectedProject: string | null;
+  selectedFlowId: string | null;
+  flows: FlowSummary[];
+  disabled: boolean;
+  onOpenFlow: (flow: FlowSummary) => void;
+  onNewFlow: (projectNamespace: string) => void;
+}) {
+  if (!props.selectedProject) return null;
+
+  return (
+    <div className="sidebar-section">
+      <div className="sidebar-section-row">
+        <h3 className="sidebar-section-title">Records</h3>
+        <button
+          type="button"
+          className="sidebar-mini-btn"
+          disabled={props.disabled}
+          onClick={() => props.onNewFlow(props.selectedProject!)}
+        >
+          New
+        </button>
+      </div>
+      <div className="sidebar-project-list">
+        {props.flows.map((flow) => (
+          <button
+            key={flow.flowId}
+            type="button"
+            className="sidebar-project-item"
+            disabled={props.disabled}
+            data-active={props.selectedFlowId === flow.flowId}
+            onClick={() => props.onOpenFlow(flow)}
+          >
+            <span className="sidebar-project-name">{flow.recordName ?? flow.flowId}</span>
+            <span className="sidebar-project-path">{flow.status}</span>
+          </button>
+        ))}
+      </div>
+      {props.flows.length === 0 ? (
+        <p className="sidebar-empty-state">No saved records yet.</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProjectSelector(props: ProjectSelectorProps) {
   return (
     <aside className="panel sidebar-panel">
@@ -70,6 +119,15 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           disabled={props.disabled}
           onSelect={props.onSelectInitialized}
           emptyMessage="No initialized projects."
+        />
+
+        <FlowList
+          selectedProject={props.selectedProject}
+          selectedFlowId={props.selectedFlowId}
+          flows={props.projectFlows}
+          disabled={props.disabled}
+          onOpenFlow={props.onOpenFlow}
+          onNewFlow={props.onNewFlow}
         />
 
         <ProjectSection
@@ -97,7 +155,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
             value={props.newProjectName}
             onChange={(event) => props.onNewProjectNameChange(event.target.value)}
             disabled={props.disabled}
-            placeholder="New project name…"
+            placeholder="New project name..."
           />
           <button type="submit" className="sidebar-create-btn" disabled={props.disabled || props.newProjectName.trim().length === 0}>
             Create
@@ -107,4 +165,3 @@ export function ProjectSelector(props: ProjectSelectorProps) {
     </aside>
   );
 }
-

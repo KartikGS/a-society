@@ -60,7 +60,9 @@ The UI switches to graph mode on the first `role.active` operator event.
 - The live operator feed remains available beside the graph
 - Human replies are routed to the role/node chat that requested input
 
-If the runtime starts with an already active flow state, the client opens directly in graph mode instead of showing the project selector.
+When a project has existing flow state, the client lists the project's saved records in the left pane. Selecting a record opens it as an in-app tab and scopes the URL to that active tab.
+
+The active tab is mirrored in the URL with `project` and `flow` query parameters. Switching tabs updates those parameters; loading a URL with both parameters reopens that flow.
 
 ---
 
@@ -70,13 +72,14 @@ The browser UI replaces the old stderr/stdout split with a WebSocket event strea
 
 ### Server messages
 
-- `init` — discovered projects plus current `FlowRun` state, if any
-- `operator_event` — flow lifecycle, role activation, tool calls, handoffs, repair requests, human-input pauses, and token summaries
-- `wait_start` / `wait_stop` — waiting for first token from the provider
-- `output_text` — assistant/model text streamed as it arrives
-- `flow_state` — full `FlowRun` snapshot after handoff changes, plus `backwardActive`
-- `error` — non-fatal server/runtime errors
-- `flow_complete` — emitted when orchestration fully completes
+- `init` — discovered projects
+- `flow_summaries` — saved flow records for a selected project
+- `operator_event` — flow lifecycle, role activation, tool calls, handoffs, repair requests, human-input pauses, and token summaries; includes `flowRef`
+- `wait_start` / `wait_stop` — waiting for first token from the provider; includes `flowRef`
+- `output_text` — assistant/model text streamed as it arrives; includes `flowRef`
+- `flow_state` — full `FlowRun` snapshot after handoff changes, plus `backwardActive`; includes `flowRef`
+- `error` — non-fatal server/runtime errors; includes `flowRef`
+- `flow_complete` — emitted when orchestration fully completes; includes `flowRef`
 
 ### Human input behavior
 
@@ -161,15 +164,20 @@ When the runtime is waiting for human input, the UI keeps the current flow state
 
 ## State Location and Resume
 
-- Default state directory: `a-society/runtime/.state`
+- Default state directory: `{workspace}/.a-society/state`
 - Override: `A_SOCIETY_STATE_DIR`
 
-The runtime persists flow state, role sessions, turn records, and trigger records in this directory.
+The runtime persists flow state and role sessions under `{stateDir}/{projectNamespace}/{flowId}/`.
+
+Per-flow layout:
+
+- `flow.json` — persisted `FlowRun`
+- `sessions/` — persisted role-scoped session files for that flow
 
 Resume behavior:
 
-- Existing `FlowRun` state is read from `.state/flow.json`
-- Active flows reopen in graph mode
+- Existing `FlowRun` state is read from `{stateDir}/{projectNamespace}/{flowId}/flow.json`
+- Selecting a flow opens it in graph mode
 - Role-scoped session continuity is preserved from persisted session files
 - Stale persisted `runningNodes` are returned to `readyNodes`
 

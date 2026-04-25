@@ -22,6 +22,13 @@ type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-c
 
 type ExpectedImprovementSignal<K extends ExpectedImprovementSignalKind> = Extract<HandoffResult, { kind: K }>;
 
+function saveImprovementFlow(flowRun: FlowRun): void {
+  if (!flowRun.workspaceRoot || !flowRun.projectNamespace || !flowRun.flowId) {
+    return;
+  }
+  SessionStore.saveFlowRun(flowRun, SessionStore.flowRef(flowRun), flowRun.workspaceRoot);
+}
+
 function buildUnexpectedSignalRepairMessage(
   role: string,
   expectedKind: ExpectedImprovementSignalKind
@@ -168,9 +175,9 @@ export class ImprovementOrchestrator {
       try {
         renderer.emit({ kind: 'flow.improvement_prompt' });
 
-        let choice = (await question('Enter 1, 2, or 3: ')).trim();
+        let choice = String((await question('Enter 1, 2, or 3: ')) ?? '').trim();
         if (choice !== '1' && choice !== '2' && choice !== '3') {
-          choice = (await question('Invalid selection. Enter 1, 2, or 3: ')).trim();
+          choice = String((await question('Invalid selection. Enter 1, 2, or 3: ')) ?? '').trim();
           if (choice !== '1' && choice !== '2' && choice !== '3') {
             outputStream.write(`[improvement] Could not read valid selection. Defaulting to no improvement.\n`);
             choice = '3';
@@ -183,7 +190,7 @@ export class ImprovementOrchestrator {
           span.addEvent('improvement.mode_selected', { mode: 'none' });
           outputStream.write(`[improvement] No improvement selected. Record closed.\n`);
           flowRun.status = 'completed';
-          SessionStore.saveFlowRun(flowRun);
+          saveImprovementFlow(flowRun);
           span.addEvent('store.flow_saved', { stage: 'improvement_skipped' });
           return;
         }
@@ -198,7 +205,7 @@ export class ImprovementOrchestrator {
           findingsProduced: {}
         };
         flowRun.stateVersion = '7';
-        SessionStore.saveFlowRun(flowRun);
+        saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 
         const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
@@ -311,7 +318,7 @@ export class ImprovementOrchestrator {
                 }
                 flowRun.improvementPhase!.completedRoles.push(entry.role);
               }));
-              SessionStore.saveFlowRun(flowRun);
+              saveImprovementFlow(flowRun);
               span.addEvent('store.flow_saved', { stage: 'step_completed', step_index: i });
               span.addEvent('improvement.step_completed', {
                 step_index: i,
@@ -325,7 +332,7 @@ export class ImprovementOrchestrator {
         }
 
         flowRun.status = 'completed';
-        SessionStore.saveFlowRun(flowRun);
+        saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
         outputStream.write(`[improvement] Improvement phase complete. Flow closed.\n`);
       } catch (e: any) {

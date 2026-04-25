@@ -161,6 +161,33 @@ textarea {
   color: var(--ink);
 }
 
+.sidebar-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sidebar-section-row .sidebar-section-title {
+  margin-bottom: 10px;
+}
+
+.sidebar-mini-btn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sidebar-mini-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .sidebar-project-list {
   display: flex;
   flex-direction: column;
@@ -696,6 +723,54 @@ textarea {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 360px;
   gap: 20px;
+}
+
+.flow-tab-strip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 0 14px;
+  margin-top: -8px;
+}
+
+.flow-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+  max-width: 260px;
+  padding: 8px 12px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--border);
+  border-bottom-color: rgba(34, 49, 63, 0.06);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.flow-tab[data-active="true"] {
+  background: var(--surface-strong);
+  border-color: rgba(15, 118, 110, 0.3);
+  color: var(--ink);
+}
+
+.flow-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flow-tab-project {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--ink-soft);
 }
 
 .sidebar-stack {

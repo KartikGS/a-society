@@ -10,10 +10,11 @@ import {
   type Node
 } from '@xyflow/react';
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
-import type { FlowRun, WorkflowGraph } from '../types';
+import type { FlowRef, FlowRun, WorkflowGraph } from '../types';
 
 interface GraphViewProps {
   flowRun: FlowRun;
+  flowRef: FlowRef;
   backwardActive: string[];
   backwardSources?: string[];
   recordFolderPath: string;
@@ -162,6 +163,7 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
 
 function GraphViewComponent({
   flowRun,
+  flowRef,
   backwardActive,
   backwardSources: providedBackwardSources,
   recordFolderPath,
@@ -178,7 +180,9 @@ function GraphViewComponent({
 
     const loadWorkflow = async () => {
       try {
-        const response = await fetch('/api/workflow');
+        const response = await fetch(
+          `/api/flows/${encodeURIComponent(flowRef.projectNamespace)}/${encodeURIComponent(flowRef.flowId)}/workflow`
+        );
         if (!response.ok) {
           throw new Error(await response.text());
         }
@@ -207,7 +211,7 @@ function GraphViewComponent({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [recordFolderPath, onWorkflowLoaded]);
+  }, [flowRef.projectNamespace, flowRef.flowId, recordFolderPath, onWorkflowLoaded]);
 
   const backwardSources = useMemo(() => (
     workflow && providedBackwardSources && providedBackwardSources.length > 0
@@ -294,6 +298,8 @@ function GraphViewComponent({
 function areGraphViewPropsEqual(prev: GraphViewProps, next: GraphViewProps): boolean {
   return (
     prev.recordFolderPath === next.recordFolderPath &&
+    prev.flowRef.projectNamespace === next.flowRef.projectNamespace &&
+    prev.flowRef.flowId === next.flowRef.flowId &&
     prev.onNodeClick === next.onNodeClick &&
     prev.onWorkflowLoaded === next.onWorkflowLoaded &&
     areGraphFlowRunsEqual(prev.flowRun, next.flowRun) &&

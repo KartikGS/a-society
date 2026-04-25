@@ -44,6 +44,19 @@ export interface FlowRun {
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
 }
 
+export interface FlowRef {
+  projectNamespace: string;
+  flowId: string;
+}
+
+export interface FlowSummary extends FlowRef {
+  status: FlowStatus;
+  recordFolderPath: string;
+  recordName?: string;
+  recordSummary?: string;
+  updatedAt?: string;
+}
+
 export interface RoleSession {
   roleName: string;
   logicalSessionId: string;

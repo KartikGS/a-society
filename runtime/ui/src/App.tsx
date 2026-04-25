@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView } from './components/GraphView';
 import { ProjectSelector } from './components/ProjectSelector';
@@ -6,7 +6,9 @@ import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from '
 import { useWebSocket } from './hooks/useWebSocket';
 import type {
   ClientMessage,
+  FlowRef,
   FlowRun,
+  FlowSummary,
   OperatorEvent,
   ProjectDiscovery,
   ServerMessage,
@@ -15,8 +17,77 @@ import type {
 
 const EMPTY_STRINGS: string[] = [];
 
+interface FlowTab {
+  key: string;
+  ref: FlowRef;
+  title: string;
+}
+
+interface FlowUiState {
+  flowRun: FlowRun | null;
+  backwardActive: string[];
+  lastHandoff: Extract<OperatorEvent, { kind: 'handoff.applied' }> | null;
+  roleFeeds: Record<string, FeedItem[]>;
+  activeLiveRole: string | null;
+  selectedRole: string | null;
+  workflow: WorkflowGraph | null;
+  composerValue: string;
+  awaitingInput: boolean;
+  waitLabel: string | null;
+  showImprovementModal: boolean;
+  stopRequested: boolean;
+}
+
 function nextFeedId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function flowKey(ref: FlowRef): string {
+  return `${ref.projectNamespace}/${ref.flowId}`;
+}
+
+function flowRefFromRun(flowRun: FlowRun): FlowRef {
+  return {
+    projectNamespace: flowRun.projectNamespace,
+    flowId: flowRun.flowId,
+  };
+}
+
+function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
+  return {
+    flowRun,
+    backwardActive: [],
+    lastHandoff: null,
+    roleFeeds: {},
+    activeLiveRole: null,
+    selectedRole: null,
+    workflow: null,
+    composerValue: '',
+    awaitingInput: flowRun?.status === 'awaiting_human',
+    waitLabel: null,
+    showImprovementModal: false,
+    stopRequested: false,
+  };
+}
+
+function parseUrlFlowRef(): FlowRef | null {
+  const params = new URLSearchParams(window.location.search);
+  const projectNamespace = params.get('project');
+  const flowId = params.get('flow');
+  if (!projectNamespace || !flowId) return null;
+  return { projectNamespace, flowId };
+}
+
+function writeUrlFlowRef(ref: FlowRef | null): void {
+  const url = new URL(window.location.href);
+  if (ref) {
+    url.searchParams.set('project', ref.projectNamespace);
+    url.searchParams.set('flow', ref.flowId);
+  } else {
+    url.searchParams.delete('project');
+    url.searchParams.delete('flow');
+  }
+  window.history.replaceState({}, '', url);
 }
 
 function formatUsageSummary(event: Extract<OperatorEvent, { kind: 'usage.turn_summary' }>): string {
@@ -133,48 +204,275 @@ function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string | null):
   return match?.[0] ?? null;
 }
 
+function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
+  const existing = feeds[role] ?? [];
+  if (item.type === 'assistant' && existing[existing.length - 1]?.type === 'assistant') {
+    const previous = existing[existing.length - 1];
+    return {
+      ...feeds,
+      [role]: [...existing.slice(0, -1), { ...previous, text: previous.text + item.text }]
+    };
+  }
+  return { ...feeds, [role]: [...existing, item] };
+}
+
+function titleForFlow(flowRun: FlowRun | FlowSummary | FlowRef): string {
+  if ('recordName' in flowRun && flowRun.recordName) return flowRun.recordName;
+  return flowRun.flowId;
+}
+
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const socketUrl = `${protocol}://${window.location.host}`;
+  const initialUrlFlowRef = useRef<FlowRef | null>(parseUrlFlowRef());
+  const openedInitialFlow = useRef(false);
 
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
-  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(initialUrlFlowRef.current?.projectNamespace ?? null);
+  const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
   const [newProjectName, setNewProjectName] = useState('');
   const [selectorError, setSelectorError] = useState<string | null>(null);
-  const [flowRun, setFlowRun] = useState<FlowRun | null>(null);
-  const [backwardActive, setBackwardActive] = useState<string[]>([]);
-  const [lastHandoff, setLastHandoff] = useState<Extract<OperatorEvent, { kind: 'handoff.applied' }> | null>(null);
-  const [roleFeeds, setRoleFeeds] = useState<Record<string, FeedItem[]>>({});
-  const [activeLiveRole, setActiveLiveRole] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
-  const [composerValue, setComposerValue] = useState('');
-  const [, setAwaitingInput] = useState(false);
-  const [waitLabel, setWaitLabel] = useState<string | null>(null);
-  const [showImprovementModal, setShowImprovementModal] = useState(false);
-  const [stopRequested, setStopRequested] = useState(false);
+  const [tabs, setTabs] = useState<FlowTab[]>([]);
+  const [activeTabKey, setActiveTabKey] = useState<string | null>(initialUrlFlowRef.current ? flowKey(initialUrlFlowRef.current) : null);
+  const [flowUiByKey, setFlowUiByKey] = useState<Record<string, FlowUiState>>({});
 
-  function appendToRoleFeed(role: string, item: FeedItem): void {
-    setRoleFeeds((current) => {
-      const existing = current[role] ?? [];
-      if (item.type === 'assistant' && existing[existing.length - 1]?.type === 'assistant') {
-        const previous = existing[existing.length - 1];
-        return {
-          ...current,
-          [role]: [...existing.slice(0, -1), { ...previous, text: previous.text + item.text }]
-        };
+  function sendMessage(message: ClientMessage): void {
+    socket.send(message);
+  }
+
+  function updateFlowUi(key: string, updater: (state: FlowUiState) => FlowUiState): void {
+    setFlowUiByKey((current) => {
+      const base = current[key] ?? createFlowUiState();
+      return { ...current, [key]: updater(base) };
+    });
+  }
+
+  function ensureTab(ref: FlowRef, title: string): void {
+    const key = flowKey(ref);
+    setTabs((current) => {
+      const existing = current.find((tab) => tab.key === key);
+      if (existing) {
+        return current.map((tab) => tab.key === key ? { ...tab, title } : tab);
       }
-      return { ...current, [role]: [...existing, item] };
+      return [...current, { key, ref, title }];
     });
+    setActiveTabKey(key);
+    setSelectedProject(ref.projectNamespace);
+    writeUrlFlowRef(ref);
   }
 
-  function appendToActiveRole(item: FeedItem): void {
-    setActiveLiveRole((role) => {
-      const target = role ?? '__system__';
-      appendToRoleFeed(target, item);
-      return role;
-    });
+  async function fetchProjectFlows(projectNamespace: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/flows`);
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const flows = await response.json() as FlowSummary[];
+      setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: flows }));
+    } catch {
+      setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: current[projectNamespace] ?? [] }));
+    }
   }
+
+  function openFlow(ref: FlowRef, title = ref.flowId): void {
+    ensureTab(ref, title);
+    updateFlowUi(flowKey(ref), (state) => state);
+    sendMessage({ type: 'open_flow', flowRef: ref });
+  }
+
+  function handleIncomingMessage(message: ServerMessage): void {
+    if (message.type === 'init') {
+      setProjects(message.projects);
+      setNewProjectName('');
+      setSelectorError(null);
+      return;
+    }
+
+    if (message.type === 'flow_summaries') {
+      setProjectFlowsByProject((current) => ({ ...current, [message.projectNamespace]: message.flows }));
+      return;
+    }
+
+    const key = flowKey(message.flowRef);
+
+    switch (message.type) {
+      case 'operator_event': {
+        const event = message.event;
+
+        if (event.kind === 'role.active') {
+          updateFlowUi(key, (state) => {
+            const item = formatOperatorEvent(event);
+            return {
+              ...state,
+              activeLiveRole: event.role,
+              selectedRole: state.selectedRole ?? event.role,
+              awaitingInput: false,
+              stopRequested: false,
+              roleFeeds: item ? appendFeedItem(state.roleFeeds, event.role, item) : state.roleFeeds,
+            };
+          });
+          setSelectorError(null);
+          return;
+        }
+
+        if (event.kind === 'human.awaiting_input') {
+          updateFlowUi(key, (state) => {
+            const item = formatOperatorEvent(event);
+            return {
+              ...state,
+              activeLiveRole: event.role,
+              selectedRole: state.selectedRole ?? event.role,
+              awaitingInput: true,
+              stopRequested: false,
+              roleFeeds: item ? appendFeedItem(state.roleFeeds, event.role, item) : state.roleFeeds,
+            };
+          });
+          return;
+        }
+
+        if (event.kind === 'flow.improvement_prompt') {
+          updateFlowUi(key, (state) => ({ ...state, showImprovementModal: true }));
+          return;
+        }
+
+        updateFlowUi(key, (state) => {
+          const item = formatOperatorEvent(event);
+          const activeRole = event.kind === 'human.resumed'
+            ? event.role
+            : state.activeLiveRole;
+          return {
+            ...state,
+            activeLiveRole: activeRole,
+            awaitingInput: event.kind === 'flow.completed' ? false : state.awaitingInput,
+            stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
+            lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
+            roleFeeds: item ? appendFeedItem(state.roleFeeds, activeRole ?? '__system__', item) : state.roleFeeds,
+          };
+        });
+        return;
+      }
+      case 'wait_start':
+        updateFlowUi(key, (state) => ({ ...state, waitLabel: `Waiting for ${message.model} response.` }));
+        return;
+      case 'wait_stop':
+        updateFlowUi(key, (state) => ({ ...state, waitLabel: null }));
+        return;
+      case 'output_text':
+        updateFlowUi(key, (state) => ({
+          ...state,
+          waitLabel: null,
+          roleFeeds: appendFeedItem(state.roleFeeds, state.activeLiveRole ?? '__system__', {
+            id: nextFeedId(),
+            type: 'assistant',
+            label: 'Assistant',
+            text: message.text
+          })
+        }));
+        return;
+      case 'flow_state':
+        ensureTab(message.flowRef, titleForFlow(message.flowRun));
+        updateFlowUi(key, (state) => ({
+          ...state,
+          flowRun: areFlowRunsEqual(state.flowRun, message.flowRun) ? state.flowRun : message.flowRun,
+          backwardActive: areStringArraysEqual(state.backwardActive, message.backwardActive)
+            ? state.backwardActive
+            : message.backwardActive,
+          awaitingInput: Object.keys(message.flowRun.awaitingHumanNodes).length > 0,
+          stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
+        }));
+        void fetchProjectFlows(message.flowRef.projectNamespace);
+        return;
+      case 'error':
+        updateFlowUi(key, (state) => ({
+          ...state,
+          stopRequested: false,
+          roleFeeds: appendFeedItem(state.roleFeeds, state.activeLiveRole ?? '__system__', {
+            id: nextFeedId(),
+            type: 'error',
+            label: 'Runtime Error',
+            text: message.message
+          })
+        }));
+        if (message.flowRef.flowId === '__new__' || message.flowRef.flowId === '__system__') {
+          setSelectorError(message.message);
+        }
+        return;
+      case 'flow_complete':
+        updateFlowUi(key, (state) => ({
+          ...state,
+          awaitingInput: false,
+          waitLabel: null,
+        }));
+        return;
+    }
+  }
+
+  const socket = useWebSocket(socketUrl, { onMessage: handleIncomingMessage });
+
+  useEffect(() => {
+    const ref = initialUrlFlowRef.current;
+    if (socket.status !== 'open' || openedInitialFlow.current || !ref) return;
+    openedInitialFlow.current = true;
+    openFlow(ref);
+  }, [socket.status]);
+
+  useEffect(() => {
+    if (selectedProject) {
+      void fetchProjectFlows(selectedProject);
+    }
+  }, [selectedProject]);
+
+  const activeTab = useMemo(() => (
+    activeTabKey ? tabs.find((tab) => tab.key === activeTabKey) ?? null : null
+  ), [activeTabKey, tabs]);
+
+  const activeUi = activeTabKey ? flowUiByKey[activeTabKey] ?? null : null;
+  const flowRun = activeUi?.flowRun ?? null;
+  const workflow = activeUi?.workflow ?? null;
+  const activeLiveRole = activeUi?.activeLiveRole ?? null;
+  const selectedRole = activeUi?.selectedRole ?? null;
+  const lastHandoff = activeUi?.lastHandoff ?? null;
+  const backwardActive = activeUi?.backwardActive ?? EMPTY_STRINGS;
+  const projectFlows = selectedProject ? projectFlowsByProject[selectedProject] ?? [] : [];
+
+  useEffect(() => {
+    if (socket.status !== 'open' || !activeTab) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncFlowState = async () => {
+      try {
+        const response = await fetch(
+          `/api/flows/${encodeURIComponent(activeTab.ref.projectNamespace)}/${encodeURIComponent(activeTab.ref.flowId)}/state`
+        );
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const nextFlowRun = await response.json() as FlowRun | null;
+        if (cancelled || !nextFlowRun) return;
+
+        updateFlowUi(activeTab.key, (state) => ({
+          ...state,
+          flowRun: areFlowRunsEqual(state.flowRun, nextFlowRun) ? state.flowRun : nextFlowRun,
+        }));
+      } catch {
+        // Keep the last known state while the server catches up.
+      }
+    };
+
+    void syncFlowState();
+    const timer = window.setInterval(() => {
+      void syncFlowState();
+    }, 1500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [socket.status, activeTab?.key, activeTab?.ref.projectNamespace, activeTab?.ref.flowId]);
 
   function resolveInputTargetRole(): string {
     if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {
@@ -189,198 +487,17 @@ export function App() {
     return '__system__';
   }
 
-  function sendMessage(message: ClientMessage): void {
-    socket.send(message);
-  }
-
-  function handleIncomingMessage(message: ServerMessage): void {
-    if (message.type === 'init') {
-      setProjects(message.projects);
-      setSelectedProject(message.flowRun?.projectNamespace ?? null);
-      setNewProjectName('');
-      setSelectorError(null);
-      setFlowRun(message.flowRun);
-      setBackwardActive([]);
-      setLastHandoff(null);
-      setRoleFeeds({});
-      setActiveLiveRole(null);
-      setSelectedRole(null);
-      setWorkflow(null);
-      setWaitLabel(null);
-      setAwaitingInput(message.flowRun?.status === 'awaiting_human');
-      setShowImprovementModal(false);
-      setStopRequested(false);
-      return;
-    }
-
-    switch (message.type) {
-      case 'operator_event': {
-        const event = message.event;
-
-        if (event.kind === 'role.active') {
-          setActiveLiveRole(event.role);
-          setSelectedRole((prev) => prev ?? event.role);
-          setSelectorError(null);
-          setAwaitingInput(false);
-          setStopRequested(false);
-          const item = formatOperatorEvent(event);
-          if (item) appendToRoleFeed(event.role, item);
-          return;
-        }
-
-        if (event.kind === 'human.awaiting_input') {
-          setActiveLiveRole(event.role);
-          setSelectedRole((prev) => prev ?? event.role);
-          setAwaitingInput(true);
-          setStopRequested(false);
-          const item = formatOperatorEvent(event);
-          if (item) appendToRoleFeed(event.role, item);
-          return;
-        }
-
-        if (event.kind === 'human.resumed') {
-          setActiveLiveRole(event.role);
-          setAwaitingInput(false);
-          setStopRequested(false);
-        }
-
-        if (event.kind === 'flow.completed') {
-          setAwaitingInput(false);
-          setStopRequested(false);
-        }
-
-        if (event.kind === 'handoff.applied') {
-          setLastHandoff(event);
-        }
-
-        if (event.kind === 'flow.improvement_prompt') {
-          setShowImprovementModal(true);
-          return;
-        }
-
-        const item = formatOperatorEvent(event);
-        if (item) appendToActiveRole(item);
-        return;
-      }
-      case 'wait_start':
-        setWaitLabel(`Waiting for ${message.model} response.`);
-        return;
-      case 'wait_stop':
-        setWaitLabel(null);
-        return;
-      case 'output_text':
-        setWaitLabel(null);
-        appendToActiveRole({
-          id: nextFeedId(),
-          type: 'assistant',
-          label: 'Assistant',
-          text: message.text
-        });
-        return;
-      case 'flow_state':
-        setFlowRun((current) => (areFlowRunsEqual(current, message.flowRun) ? current : message.flowRun));
-        setSelectedProject(message.flowRun.projectNamespace);
-        setAwaitingInput(Object.keys(message.flowRun.awaitingHumanNodes).length > 0);
-        setBackwardActive((current) => (
-          areStringArraysEqual(current, message.backwardActive) ? current : message.backwardActive
-        ));
-        if (message.flowRun.status !== 'running') {
-          setStopRequested(false);
-        }
-        return;
-      case 'error':
-        setStopRequested(false);
-        if (!flowRun) {
-          setSelectorError(message.message);
-        }
-        appendToActiveRole({
-          id: nextFeedId(),
-          type: 'error',
-          label: 'Runtime Error',
-          text: message.message
-        });
-        return;
-      case 'flow_complete':
-        setAwaitingInput(false);
-        setWaitLabel(null);
-        return;
-    }
-  }
-
-  const socket = useWebSocket(socketUrl, { onMessage: handleIncomingMessage });
-
-  useEffect(() => {
-    if (socket.status !== 'open' || !selectedProject) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const syncFlowState = async () => {
-      try {
-        const response = await fetch('/api/flow-state');
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-
-        const nextFlowRun = await response.json() as FlowRun | null;
-        if (cancelled) return;
-
-        setFlowRun((current) => (areFlowRunsEqual(current, nextFlowRun) ? current : nextFlowRun));
-        if (nextFlowRun) {
-          setSelectedProject(nextFlowRun.projectNamespace);
-        }
-      } catch {
-        // Ignore poll errors and keep the last known state.
-      }
-    };
-
-    void syncFlowState();
-    const timer = window.setInterval(() => {
-      void syncFlowState();
-    }, 1500);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [socket.status, selectedProject]);
-
   function handleProjectSelect(projectNamespace: string): void {
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
-    setFlowRun(null);
-    setBackwardActive([]);
-    setLastHandoff(null);
-    setRoleFeeds({});
-    setActiveLiveRole(null);
-    setSelectedRole(null);
-    setWorkflow(null);
-    setWaitLabel(null);
-    setAwaitingInput(false);
-    setShowImprovementModal(false);
-    setComposerValue('');
-    setStopRequested(false);
-    sendMessage({ type: 'start_initialized_flow', projectNamespace });
+    void fetchProjectFlows(projectNamespace);
   }
 
   function handleExistingInitialization(projectNamespace: string): void {
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
-    setFlowRun(null);
-    setBackwardActive([]);
-    setLastHandoff(null);
-    setRoleFeeds({});
-    setActiveLiveRole(null);
-    setSelectedRole(null);
-    setWorkflow(null);
-    setWaitLabel(null);
-    setAwaitingInput(false);
-    setShowImprovementModal(false);
-    setComposerValue('');
-    setStopRequested(false);
     sendMessage({ type: 'start_takeover_initialization', projectNamespace });
   }
 
@@ -390,50 +507,73 @@ export function App() {
 
     setSelectedProject(projectName);
     setSelectorError(null);
-    setFlowRun(null);
-    setBackwardActive([]);
-    setLastHandoff(null);
-    setRoleFeeds({});
-    setActiveLiveRole(null);
-    setSelectedRole(null);
-    setWorkflow(null);
-    setWaitLabel(null);
-    setAwaitingInput(false);
-    setShowImprovementModal(false);
-    setComposerValue('');
-    setStopRequested(false);
     sendMessage({ type: 'start_greenfield_initialization', projectName });
   }
 
+  function handleOpenFlow(flow: FlowSummary): void {
+    openFlow({ projectNamespace: flow.projectNamespace, flowId: flow.flowId }, titleForFlow(flow));
+  }
+
+  function handleNewFlow(projectNamespace: string): void {
+    setSelectorError(null);
+    sendMessage({ type: 'start_initialized_flow', projectNamespace });
+  }
+
+  function handleTabSelect(tab: FlowTab): void {
+    setActiveTabKey(tab.key);
+    setSelectedProject(tab.ref.projectNamespace);
+    writeUrlFlowRef(tab.ref);
+    sendMessage({ type: 'open_flow', flowRef: tab.ref });
+  }
+
   function handleSubmit(): void {
-    const text = composerValue.trim();
+    if (!activeTab || !activeUi) return;
+    const text = activeUi.composerValue.trim();
     if (!text) return;
     const targetRole = resolveInputTargetRole();
-    appendToRoleFeed(targetRole, {
-      id: nextFeedId(),
-      type: 'user',
-      label: 'You',
-      text
+    updateFlowUi(activeTab.key, (state) => ({
+      ...state,
+      composerValue: '',
+      awaitingInput: false,
+      roleFeeds: appendFeedItem(state.roleFeeds, targetRole, {
+        id: nextFeedId(),
+        type: 'user',
+        label: 'You',
+        text
+      })
+    }));
+    sendMessage({
+      type: 'human_input',
+      flowRef: activeTab.ref,
+      text,
+      role: targetRole === '__system__' ? undefined : targetRole
     });
-    setComposerValue('');
-    setAwaitingInput(false);
-    sendMessage({ type: 'human_input', text, role: targetRole === '__system__' ? undefined : targetRole });
   }
 
   function handleImprovementChoice(choice: '1' | '2' | '3'): void {
-    setShowImprovementModal(false);
-    sendMessage({ type: 'human_input', text: choice });
+    if (!activeTab) return;
+    updateFlowUi(activeTab.key, (state) => ({ ...state, showImprovementModal: false }));
+    sendMessage({ type: 'human_input', flowRef: activeTab.ref, text: choice });
   }
 
   function handleStopActiveTurn(): void {
-    if (stopRequested) return;
-    setStopRequested(true);
-    sendMessage({ type: 'stop_active_turn', role: viewedRole ?? undefined });
+    if (!activeTab || !activeUi || activeUi.stopRequested) return;
+    updateFlowUi(activeTab.key, (state) => ({ ...state, stopRequested: true }));
+    sendMessage({ type: 'stop_active_turn', flowRef: activeTab.ref, role: viewedRole ?? undefined });
+  }
+
+  function handleResumeFlow(): void {
+    if (!activeTab) return;
+    sendMessage({ type: 'resume_flow', flowRef: activeTab.ref });
   }
 
   const handleWorkflowLoaded = useCallback((graph: WorkflowGraph) => {
-    setWorkflow((current) => (areWorkflowGraphsEqual(current, graph) ? current : graph));
-  }, []);
+    if (!activeTabKey) return;
+    updateFlowUi(activeTabKey, (state) => ({
+      ...state,
+      workflow: areWorkflowGraphsEqual(state.workflow, graph) ? state.workflow : graph
+    }));
+  }, [activeTabKey]);
 
   const handleGraphNodeClick = useCallback((_nodeId: string) => {}, []);
 
@@ -471,17 +611,17 @@ export function App() {
   }, [activeLiveRole, flowRun, workflow]);
 
   const viewedRole = selectedRole ?? activeLiveRole ?? activeRoles[0] ?? null;
-  const displayedFeed = viewedRole ? (roleFeeds[viewedRole] ?? []) : [];
-  const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (roleFeeds.__system__ ?? []);
+  const displayedFeed = viewedRole ? (activeUi?.roleFeeds[viewedRole] ?? []) : [];
+  const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds.__system__ ?? []);
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
   const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
-  const visibleWaitLabel = isViewedRoleActive ? waitLabel : null;
+  const visibleWaitLabel = isViewedRoleActive ? activeUi?.waitLabel ?? null : null;
   const inputDisabled = !viewedRoleAwaitingNodeId;
   const canStop =
     !!flowRun &&
     flowRun.status === 'running' &&
     !viewedRoleAwaitingNodeId &&
-    !showImprovementModal &&
+    !activeUi?.showImprovementModal &&
     socket.status === 'open';
   const canStopViewedRole = canStop && isViewedRoleActive;
 
@@ -498,26 +638,58 @@ export function App() {
         <div className="header-meta">
           <span className="status-pill">Socket: {statusLine}</span>
           {selectedProject ? <span className="status-pill">Project: {selectedProject}</span> : null}
+          {activeTab && flowRun?.status === 'running' ? (
+            <button
+              type="button"
+              className="status-action"
+              disabled={socket.status !== 'open'}
+              onClick={handleResumeFlow}
+            >
+              Resume
+            </button>
+          ) : null}
         </div>
       </header>
+
+      {tabs.length > 0 ? (
+        <nav className="flow-tab-strip" aria-label="Open flows">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className="flow-tab"
+              data-active={tab.key === activeTabKey}
+              onClick={() => handleTabSelect(tab)}
+            >
+              <span className="flow-tab-title">{tab.title}</span>
+              <span className="flow-tab-project">{tab.ref.projectNamespace}</span>
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       <div className="workspace-grid">
         <ProjectSelector
           projectsWithADocs={projects.withADocs}
           projectsWithoutADocs={projects.withoutADocs}
           selectedProject={selectedProject}
+          selectedFlowId={activeTab?.ref.flowId ?? null}
+          projectFlows={projectFlows}
           newProjectName={newProjectName}
           errorMessage={selectorError}
           disabled={socket.status !== 'open'}
           onSelectInitialized={handleProjectSelect}
           onInitializeExisting={handleExistingInitialization}
+          onOpenFlow={handleOpenFlow}
+          onNewFlow={handleNewFlow}
           onNewProjectNameChange={setNewProjectName}
           onCreateNew={handleCreateNewProject}
         />
 
-        {flowRun ? (
+        {flowRun && activeTab ? (
           <GraphView
             flowRun={flowRun}
+            flowRef={activeTab.ref}
             backwardActive={backwardActive}
             backwardSources={backwardSources}
             recordFolderPath={flowRun.recordFolderPath}
@@ -531,15 +703,15 @@ export function App() {
                 <p className="eyebrow">Workflow Graph</p>
                 <h2>{selectedProject ? selectedProject : 'No project selected'}</h2>
                 <p className="panel-copy">
-                  {selectedProject 
-                    ? 'Preparing the runtime-owned flow and waiting for the first Owner node to activate…' 
-                    : 'Select a project from the left sidebar to load its workflow graph and role chat.'}
+                  {selectedProject
+                    ? 'Select a saved record or create a new flow from the left pane.'
+                    : 'Select a project from the left sidebar to load its records and role chat.'}
                 </p>
               </div>
             </div>
             <div className="graph-canvas">
               <div className="graph-empty">
-                {selectedProject ? 'Waiting for flow state…' : 'Select a project to begin'}
+                {selectedProject ? 'No flow selected' : 'Select a project to begin'}
               </div>
             </div>
           </section>
@@ -547,29 +719,35 @@ export function App() {
 
         <ChatInterface
           subtitle={
-            flowRun 
-              ? "Select a role to view its conversation." 
-              : "The first Owner conversation will appear here once the runtime activates the initialization or intake node."
+            flowRun
+              ? 'Select a role to view its conversation.'
+              : 'Open or create a flow to start the runtime conversation.'
           }
           messages={visibleFeed}
           waitingLabel={visibleWaitLabel}
-          inputValue={composerValue}
+          inputValue={activeUi?.composerValue ?? ''}
           inputDisabled={inputDisabled}
           placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
           showComposer={isViewedRoleActive}
           canStop={canStopViewedRole}
-          stopRequested={stopRequested}
+          stopRequested={activeUi?.stopRequested ?? false}
           roles={roles}
           selectedRole={viewedRole ?? undefined}
           activeRole={activeLiveRole ?? undefined}
-          onRoleSelect={setSelectedRole}
-          onInputChange={setComposerValue}
+          onRoleSelect={(role) => {
+            if (!activeTabKey) return;
+            updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
+          }}
+          onInputChange={(value) => {
+            if (!activeTabKey) return;
+            updateFlowUi(activeTabKey, (state) => ({ ...state, composerValue: value }));
+          }}
           onSubmit={handleSubmit}
           onStop={handleStopActiveTurn}
         />
       </div>
 
-      {showImprovementModal ? (
+      {activeUi?.showImprovementModal ? (
         <div className="modal-overlay">
           <div className="modal-panel">
             <p className="eyebrow">Improvement Phase</p>
