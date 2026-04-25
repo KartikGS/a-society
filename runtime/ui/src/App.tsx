@@ -233,7 +233,7 @@ export function App() {
         return;
       }
       case 'wait_start':
-        setWaitLabel(`Waiting for first token from ${message.provider}/${message.model}`);
+        setWaitLabel(`Waiting for ${message.model} response.`);
         return;
       case 'wait_stop':
         setWaitLabel(null);
@@ -433,14 +433,30 @@ export function App() {
       : EMPTY_STRINGS
   ), [workflow]);
 
-  const displayedFeed = selectedRole ? (roleFeeds[selectedRole] ?? []) : (activeLiveRole ? (roleFeeds[activeLiveRole] ?? []) : []);
+  const activeRoles = useMemo(() => {
+    if (!flowRun || !workflow) {
+      return activeLiveRole ? [activeLiveRole] : EMPTY_STRINGS;
+    }
+
+    return [...new Set(
+      flowRun.activeNodes
+        .map((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.role)
+        .filter((role): role is string => role !== undefined)
+    )];
+  }, [activeLiveRole, flowRun, workflow]);
+
+  const viewedRole = selectedRole ?? activeLiveRole ?? activeRoles[0] ?? null;
+  const displayedFeed = viewedRole ? (roleFeeds[viewedRole] ?? []) : [];
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (roleFeeds.__system__ ?? []);
+  const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
+  const visibleWaitLabel = isViewedRoleActive ? waitLabel : null;
   const canStop =
     !!flowRun &&
     flowRun.status === 'running' &&
     !awaitingInput &&
     !showImprovementModal &&
     socket.status === 'open';
+  const canStopViewedRole = canStop && isViewedRoleActive;
 
   return (
     <main className="app-shell">
@@ -486,18 +502,17 @@ export function App() {
             />
 
             <ChatInterface
-              title="Role feed"
               subtitle="Select a role to view its conversation."
               messages={visibleFeed}
-              waitingLabel={waitLabel}
+              waitingLabel={visibleWaitLabel}
               inputValue={composerValue}
               inputDisabled={!awaitingInput}
               placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
-              statusLine={statusLine}
-              canStop={canStop}
+              showComposer={isViewedRoleActive}
+              canStop={canStopViewedRole}
               stopRequested={stopRequested}
               roles={roles}
-              selectedRole={selectedRole ?? activeLiveRole ?? undefined}
+              selectedRole={viewedRole ?? undefined}
               activeRole={activeLiveRole ?? undefined}
               onRoleSelect={setSelectedRole}
               onInputChange={setComposerValue}
@@ -522,18 +537,17 @@ export function App() {
             </section>
 
             <ChatInterface
-              title="Role feed"
               subtitle="The first Owner conversation will appear here once the runtime activates the initialization or intake node."
               messages={displayedFeed}
-              waitingLabel={waitLabel}
+              waitingLabel={visibleWaitLabel}
               inputValue={composerValue}
               inputDisabled={!awaitingInput}
               placeholder={awaitingInput ? 'Reply to the active prompt…' : 'Input unlocks when the runtime requests it.'}
-              statusLine={statusLine}
-              canStop={canStop}
+              showComposer={isViewedRoleActive}
+              canStop={canStopViewedRole}
               stopRequested={stopRequested}
               roles={[]}
-              selectedRole={selectedRole ?? activeLiveRole ?? undefined}
+              selectedRole={viewedRole ?? undefined}
               activeRole={activeLiveRole ?? undefined}
               onRoleSelect={setSelectedRole}
               onInputChange={setComposerValue}

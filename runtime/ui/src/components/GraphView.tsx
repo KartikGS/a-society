@@ -1,9 +1,11 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
   MiniMap,
+  Position,
   ReactFlow,
+  type ReactFlowInstance,
   type Edge,
   type Node
 } from '@xyflow/react';
@@ -91,6 +93,8 @@ function buildReactFlowState(
       nodes.push({
         id: node.id,
         position: { x: depth * 280, y: index * 170 },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
         data: {
           label: (
             <div className={`graph-node ${tone}`}>
@@ -149,6 +153,7 @@ function GraphViewComponent({
   const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const workflowRef = useRef<WorkflowGraph | null>(null);
+  const reactFlowRef = useRef<ReactFlowInstance<Node, Edge> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,6 +203,18 @@ function GraphViewComponent({
       : EMPTY_GRAPH_STATE
   ), [workflow, flowRun, backwardActive, backwardSources]);
 
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    if (!reactFlowRef.current || event.deltaY === 0) {
+      return;
+    }
+
+    event.preventDefault();
+    const currentZoom = reactFlowRef.current.getZoom();
+    const zoomFactor = event.deltaY < 0 ? 1.18 : 1 / 1.18;
+    const nextZoom = Math.max(0.2, Math.min(2.5, currentZoom * zoomFactor));
+    void reactFlowRef.current.zoomTo(nextZoom, { duration: 80 });
+  }, []);
+
   return (
     <section className="panel graph-panel">
       <div className="graph-panel-header">
@@ -226,7 +243,7 @@ function GraphViewComponent({
         <span>{recordFolderPath}</span>
       </div>
 
-      <div className="graph-canvas">
+      <div className="graph-canvas" onWheelCapture={handleWheel}>
         {error ? <div className="graph-empty">{error}</div> : null}
         {!workflow && !error ? <div className="graph-empty">Loading workflow graph…</div> : null}
         {workflow ? (
@@ -239,7 +256,10 @@ function GraphViewComponent({
             nodesDraggable={false}
             panOnDrag={true}
             panOnScroll={false}
-            zoomOnScroll={true}
+            zoomOnScroll={false}
+            onInit={(instance) => {
+              reactFlowRef.current = instance;
+            }}
             onNodeClick={(_event, node) => onNodeClick(node.id)}
           >
             <Background gap={20} color="rgba(65, 78, 92, 0.09)" />

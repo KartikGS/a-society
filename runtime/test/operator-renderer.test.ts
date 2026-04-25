@@ -179,7 +179,7 @@ test('emit clears wait before rendering notice (non-TTY: no spinner, emits notic
 
   const out = chunks.join('');
   // The wait line should appear, then the completed line
-  assert.ok(out.includes('[runtime/wait] Waiting for first token from anthropic/claude-3'));
+  assert.ok(out.includes('[runtime/wait] Waiting for claude-3 response'));
   assert.ok(out.includes('[runtime/flow] Orchestration complete'));
   // Completed line must come after wait line
   assert.ok(out.indexOf('[runtime/flow]') > out.indexOf('[runtime/wait]'));
