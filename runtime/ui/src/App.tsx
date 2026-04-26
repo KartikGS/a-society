@@ -47,12 +47,6 @@ function flowKey(ref: FlowRef): string {
   return `${ref.projectNamespace}/${ref.flowId}`;
 }
 
-function flowRefFromRun(flowRun: FlowRun): FlowRef {
-  return {
-    projectNamespace: flowRun.projectNamespace,
-    flowId: flowRun.flowId,
-  };
-}
 
 function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
   return {
@@ -225,31 +219,28 @@ function titleForFlow(flowRun: FlowRun | FlowSummary | FlowRef): string {
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const socketUrl = `${protocol}://${window.location.host}`;
-  const initialUrlFlowRef = useRef<FlowRef | null>(parseUrlFlowRef());
+  const initialFlowRef = useMemo(() => parseUrlFlowRef(), []);
+  const initialUrlFlowRef = useRef<FlowRef | null>(initialFlowRef);
   const openedInitialFlow = useRef(false);
   const lastSubscribedConnectionId = useRef(0);
 
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
-  const [selectedProject, setSelectedProject] = useState<string | null>(initialUrlFlowRef.current?.projectNamespace ?? null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
   const [newProjectName, setNewProjectName] = useState('');
   const [selectorError, setSelectorError] = useState<string | null>(null);
   const [tabs, setTabs] = useState<FlowTab[]>([]);
-  const [activeTabKey, setActiveTabKey] = useState<string | null>(initialUrlFlowRef.current ? flowKey(initialUrlFlowRef.current) : null);
+  const [activeTabKey, setActiveTabKey] = useState<string | null>(initialFlowRef ? flowKey(initialFlowRef) : null);
   const [flowUiByKey, setFlowUiByKey] = useState<Record<string, FlowUiState>>({});
 
-  function sendMessage(message: ClientMessage): void {
-    socket.send(message);
-  }
-
-  function updateFlowUi(key: string, updater: (state: FlowUiState) => FlowUiState): void {
+  const updateFlowUi = useCallback((key: string, updater: (state: FlowUiState) => FlowUiState): void => {
     setFlowUiByKey((current) => {
       const base = current[key] ?? createFlowUiState();
       return { ...current, [key]: updater(base) };
     });
-  }
+  }, []);
 
-  function ensureTab(ref: FlowRef, title: string): void {
+  const ensureTab = useCallback((ref: FlowRef, title: string): void => {
     const key = flowKey(ref);
     setTabs((current) => {
       const existing = current.find((tab) => tab.key === key);
@@ -261,9 +252,9 @@ export function App() {
     setActiveTabKey(key);
     setSelectedProject(ref.projectNamespace);
     writeUrlFlowRef(ref);
-  }
+  }, []);
 
-  async function fetchProjectFlows(projectNamespace: string): Promise<void> {
+  const fetchProjectFlows = useCallback(async (projectNamespace: string): Promise<void> => {
     try {
       const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/flows`);
       if (!response.ok) {
@@ -274,13 +265,7 @@ export function App() {
     } catch {
       setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: current[projectNamespace] ?? [] }));
     }
-  }
-
-  function openFlow(ref: FlowRef, title = ref.flowId): void {
-    ensureTab(ref, title);
-    updateFlowUi(flowKey(ref), (state) => state);
-    sendMessage({ type: 'open_flow', flowRef: ref });
-  }
+  }, []);
 
   function handleIncomingMessage(message: ServerMessage): void {
     if (message.type === 'init') {
@@ -432,29 +417,50 @@ export function App() {
 
   const socket = useWebSocket(socketUrl, { onMessage: handleIncomingMessage });
 
+  const { send: socketSend } = socket;
+  const sendMessage = useCallback((message: ClientMessage): void => {
+    socketSend(message);
+  }, [socketSend]);
+
+  const openFlow = useCallback((ref: FlowRef, title = ref.flowId): void => {
+    ensureTab(ref, title);
+    updateFlowUi(flowKey(ref), (state) => state);
+    sendMessage({ type: 'open_flow', flowRef: ref });
+  }, [ensureTab, updateFlowUi, sendMessage]);
+
+  const activeTab = useMemo(() => (
+    activeTabKey ? tabs.find((tab) => tab.key === activeTabKey) ?? null : null
+  ), [activeTabKey, tabs]);
+
   useEffect(() => {
     const ref = initialUrlFlowRef.current;
     if (socket.status !== 'open' || openedInitialFlow.current || !ref) return;
     openedInitialFlow.current = true;
     openFlow(ref);
-  }, [socket.status]);
+  }, [socket.status, openFlow]);
 
   useEffect(() => {
     if (socket.status !== 'open' || !activeTab) return;
     if (socket.connectionId === lastSubscribedConnectionId.current) return;
     lastSubscribedConnectionId.current = socket.connectionId;
     sendMessage({ type: 'open_flow', flowRef: activeTab.ref });
-  }, [socket.status, socket.connectionId, activeTab?.key]);
+  }, [socket.status, socket.connectionId, activeTab, sendMessage]);
 
   useEffect(() => {
-    if (selectedProject) {
-      void fetchProjectFlows(selectedProject);
-    }
+    if (!selectedProject) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/projects/${encodeURIComponent(selectedProject)}/flows`);
+        if (!response.ok) throw new Error(await response.text());
+        const flows = await response.json() as FlowSummary[];
+        if (!cancelled) setProjectFlowsByProject((current) => ({ ...current, [selectedProject]: flows }));
+      } catch {
+        if (!cancelled) setProjectFlowsByProject((current) => ({ ...current, [selectedProject]: current[selectedProject] ?? [] }));
+      }
+    })();
+    return () => { cancelled = true; };
   }, [selectedProject]);
-
-  const activeTab = useMemo(() => (
-    activeTabKey ? tabs.find((tab) => tab.key === activeTabKey) ?? null : null
-  ), [activeTabKey, tabs]);
 
   const activeUi = activeTabKey ? flowUiByKey[activeTabKey] ?? null : null;
   const flowRun = activeUi?.flowRun ?? null;
@@ -502,7 +508,7 @@ export function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [socket.status, activeTab?.key, activeTab?.ref.projectNamespace, activeTab?.ref.flowId]);
+  }, [socket.status, activeTab, updateFlowUi]);
 
   function resolveInputTargetRole(): string {
     if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {
@@ -599,16 +605,9 @@ export function App() {
       ...state,
       workflow: areWorkflowGraphsEqual(state.workflow, graph) ? state.workflow : graph
     }));
-  }, [activeTabKey]);
+  }, [activeTabKey, updateFlowUi]);
 
   const handleGraphNodeClick = useCallback((_nodeId: string) => {}, []);
-
-  const statusLine =
-    socket.status === 'open'
-      ? 'Connected'
-      : socket.status === 'connecting'
-        ? 'Reconnecting to runtime'
-        : 'Connection lost';
 
   const activeNodeIds = flowRun ? getOpenNodeIds(flowRun) : undefined;
   const lastHandoffFromNodeId = lastHandoff?.fromNodeId;

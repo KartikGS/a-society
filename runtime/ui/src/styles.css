@@ -14,7 +14,7 @@
   --node-backward: #d9485f;
   --node-backward-source: #72777f;
   --node-complete: #2f855a;
-  --node-neutral: #ffffff;
+  --node-neutral: #94a3b8;
   --shadow: 0 24px 60px rgba(67, 48, 24, 0.08);
   font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
 }
@@ -864,8 +864,7 @@ textarea {
 }
 
 .legend-neutral {
-  background: white;
-  border: 1px solid rgba(34, 49, 63, 0.2);
+  background: var(--node-neutral);
 }
 
 .graph-node {
@@ -879,9 +878,9 @@ textarea {
   padding: 12px;
   box-sizing: border-box;
   border-radius: 50%;
-  border: 1px solid rgba(34, 49, 63, 0.12);
-  box-shadow: 0 14px 24px rgba(34, 49, 63, 0.08);
-  background: white;
+  border: 3px solid var(--node-neutral);
+  box-shadow: 0 4px 16px rgba(34, 49, 63, 0.1);
+  background: var(--bg);
   text-align: center;
 }
 
@@ -894,7 +893,7 @@ textarea {
 }
 
 .graph-node-role {
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--ink-soft);
   font-size: 11px;
   line-height: 1.2;
   letter-spacing: 0.06em;
@@ -903,27 +902,29 @@ textarea {
 }
 
 .node-active {
-  background: linear-gradient(135deg, #60a5fa, #2563eb);
+  border-color: var(--node-active);
 }
 
 .node-backward {
-  background: linear-gradient(135deg, #fb7185, #be123c);
+  border-color: var(--node-backward);
 }
 
 .node-backward-source {
-  background: linear-gradient(135deg, #9ca3af, #4b5563);
+  border-color: var(--node-backward-source);
 }
 
 .node-completed {
-  background: linear-gradient(135deg, #4ade80, #15803d);
+  border-color: var(--node-complete);
 }
 
 .node-neutral {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 244, 246, 0.96));
+  border-color: var(--node-neutral);
 }
 
-.node-neutral .graph-node-role {
-  color: rgba(34, 49, 63, 0.72);
+.react-flow__edge-path {
+  stroke: var(--ink) !important;
+  stroke-width: 3 !important;
+  opacity: 0.65;
 }
 
 .transcript-panel {
@@ -988,7 +989,7 @@ textarea {
     --node-backward: #f43f5e;
     --node-backward-source: #9ca3af;
     --node-complete: #22c55e;
-    --node-neutral: #1f2937;
+    --node-neutral: #475569;
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   }
 
@@ -1023,6 +1024,10 @@ textarea {
 
   .graph-canvas {
     background: radial-gradient(circle at top, rgba(22, 27, 34, 0.8), rgba(15, 17, 21, 0.9));
+  }
+
+  .graph-node {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
   }
 
   .feed-item {

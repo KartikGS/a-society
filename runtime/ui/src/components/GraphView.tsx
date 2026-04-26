@@ -1,3 +1,4 @@
+import dagre from '@dagrejs/dagre';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
@@ -40,43 +41,7 @@ function getOpenNodeIds(flowRun: FlowRun): string[] {
   return ids;
 }
 
-function computeDepths(workflow: WorkflowGraph): Map<string, number> {
-  const incomingCount = new Map<string, number>();
-  const outgoing = new Map<string, string[]>();
-  const queue: string[] = [];
-  const depths = new Map<string, number>();
-
-  for (const node of workflow.nodes) {
-    incomingCount.set(node.id, 0);
-    outgoing.set(node.id, []);
-  }
-
-  for (const edge of workflow.edges) {
-    incomingCount.set(edge.to, (incomingCount.get(edge.to) ?? 0) + 1);
-    outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), edge.to]);
-  }
-
-  for (const node of workflow.nodes) {
-    if ((incomingCount.get(node.id) ?? 0) === 0) {
-      queue.push(node.id);
-      depths.set(node.id, 0);
-    }
-  }
-
-  while (queue.length > 0) {
-    const nodeId = queue.shift()!;
-    const nextDepth = (depths.get(nodeId) ?? 0) + 1;
-    for (const targetId of outgoing.get(nodeId) ?? []) {
-      incomingCount.set(targetId, (incomingCount.get(targetId) ?? 1) - 1);
-      depths.set(targetId, Math.max(depths.get(targetId) ?? 0, nextDepth));
-      if ((incomingCount.get(targetId) ?? 0) === 0) {
-        queue.push(targetId);
-      }
-    }
-  }
-
-  return depths;
-}
+const NODE_SIZE = 140;
 
 function buildReactFlowState(
   workflow: WorkflowGraph,
@@ -84,53 +49,57 @@ function buildReactFlowState(
   backwardActive: string[],
   backwardSources: string[]
 ): { nodes: Node[]; edges: Edge[] } {
-  const depths = computeDepths(workflow);
-  const levels = new Map<number, Array<{ id: string; role: string }>>();
+  const g = new dagre.graphlib.Graph();
+  g.setDefaultEdgeLabel(() => ({}));
+  g.setGraph({ rankdir: 'LR', nodesep: 60, ranksep: 100 });
 
   for (const node of workflow.nodes) {
-    const depth = depths.get(node.id) ?? 0;
-    levels.set(depth, [...(levels.get(depth) ?? []), node]);
+    g.setNode(node.id, { width: NODE_SIZE, height: NODE_SIZE });
   }
-
-  const nodes: Node[] = [];
-  for (const [depth, group] of levels) {
-    group.forEach((node, index) => {
-      const isCompleted = flowRun.completedNodes.includes(node.id);
-      const isBackward = backwardActive.includes(node.id);
-      const openNodeIds = getOpenNodeIds(flowRun);
-      const isBackwardSource = backwardSources.includes(node.id) && openNodeIds.includes(node.id);
-      const isActive = openNodeIds.includes(node.id);
-
-      let tone = 'node-neutral';
-      if (isCompleted) tone = 'node-completed';
-      else if (isBackward) tone = 'node-backward';
-      else if (isBackwardSource) tone = 'node-backward-source';
-      else if (isActive) tone = 'node-active';
-
-      nodes.push({
-        id: node.id,
-        position: { x: depth * 280, y: index * 170 },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
-        data: {
-          label: (
-            <div className={`graph-node ${tone}`}>
-              <span className="graph-node-id">{node.id}</span>
-              <span className="graph-node-role">{node.role}</span>
-            </div>
-          )
-        },
-        style: {
-          border: 'none',
-          background: 'transparent',
-          boxShadow: 'none',
-          padding: 0,
-          width: 140,
-          height: 140
-        }
-      });
-    });
+  for (const edge of workflow.edges) {
+    g.setEdge(edge.from, edge.to);
   }
+  dagre.layout(g);
+
+  const openNodeIds = getOpenNodeIds(flowRun);
+
+  const nodes: Node[] = workflow.nodes.map((node) => {
+    const { x, y } = g.node(node.id);
+
+    const isCompleted = flowRun.completedNodes.includes(node.id);
+    const isBackward = backwardActive.includes(node.id);
+    const isBackwardSource = backwardSources.includes(node.id) && openNodeIds.includes(node.id);
+    const isActive = openNodeIds.includes(node.id);
+
+    let tone = 'node-neutral';
+    if (isCompleted) tone = 'node-completed';
+    else if (isBackward) tone = 'node-backward';
+    else if (isBackwardSource) tone = 'node-backward-source';
+    else if (isActive) tone = 'node-active';
+
+    return {
+      id: node.id,
+      position: { x: x - NODE_SIZE / 2, y: y - NODE_SIZE / 2 },
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      data: {
+        label: (
+          <div className={`graph-node ${tone}`}>
+            <span className="graph-node-id">{node.id}</span>
+            <span className="graph-node-role">{node.role}</span>
+          </div>
+        )
+      },
+      style: {
+        border: 'none',
+        background: 'transparent',
+        boxShadow: 'none',
+        padding: 0,
+        width: NODE_SIZE,
+        height: NODE_SIZE
+      }
+    };
+  });
 
   const edges: Edge[] = workflow.edges.map((edge) => ({
     id: `${edge.from}-${edge.to}`,
@@ -138,10 +107,6 @@ function buildReactFlowState(
     target: edge.to,
     type: 'straight',
     animated: false,
-    style: {
-      stroke: 'rgba(35, 48, 63, 0.35)',
-      strokeWidth: 2
-    }
   }));
 
   return { nodes, edges };

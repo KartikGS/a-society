@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ClientMessage, ServerMessage } from '../types';
 
 interface UseWebSocketOptions {
@@ -61,10 +61,10 @@ export function useWebSocket(url: string, options: UseWebSocketOptions) {
     };
   }, [url]);
 
-  function send(message: ClientMessage): void {
+  const send = useCallback((message: ClientMessage): void => {
     if (socketRef.current?.readyState !== WebSocket.OPEN) return;
     socketRef.current.send(JSON.stringify(message));
-  }
+  }, []);
 
   return { send, status, connectionId };
 }

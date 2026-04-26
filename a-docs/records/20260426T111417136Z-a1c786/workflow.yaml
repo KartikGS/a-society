@@ -1,0 +1,63 @@
+workflow:
+  name: Runtime Parallel Execution Stress Test
+  summary: A full-spectrum flow implementing a Project Health Dashboard to exercise every role and node in the canonical workflow.
+  nodes:
+    - id: owner-intake
+      role: Owner
+    - id: curator-work
+      role: Curator
+    - id: owner-framework-decision
+      role: Owner
+    - id: curator-finalize
+      role: Curator
+    - id: ta-design
+      role: Technical Architect
+    - id: framework-services-implementation
+      role: Framework Services Developer
+    - id: orchestration-implementation
+      role: Orchestration Developer
+    - id: ui-implementation
+      role: UI Developer
+    - id: ta-review
+      role: Technical Architect
+    - id: curator-registration
+      role: Curator
+    - id: owner-closure
+      role: Owner
+  edges:
+    - from: owner-intake
+      to: curator-work
+      artifact: owner-to-curator
+    - from: curator-work
+      to: owner-framework-decision
+      artifact: curator-to-owner
+    - from: owner-framework-decision
+      to: curator-finalize
+      artifact: owner-to-curator
+    - from: curator-finalize
+      to: ta-design
+      artifact: curator-to-owner
+    - from: ta-design
+      to: framework-services-implementation
+      artifact: executable-design
+    - from: ta-design
+      to: orchestration-implementation
+      artifact: executable-design
+    - from: ta-design
+      to: ui-implementation
+      artifact: executable-design
+    - from: framework-services-implementation
+      to: ta-review
+      artifact: completion-report
+    - from: orchestration-implementation
+      to: ta-review
+      artifact: completion-report
+    - from: ui-implementation
+      to: ta-review
+      artifact: completion-report
+    - from: ta-review
+      to: curator-registration
+      artifact: ta-assessment
+    - from: curator-registration
+      to: owner-closure
+      artifact: curator-to-owner
