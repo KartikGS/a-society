@@ -19,7 +19,7 @@ import { LLMGateway } from '../src/llm.js';
 import { FlowOrchestrator } from '../src/orchestrator.js';
 import { validateWorkflowFile } from '../src/framework-services/workflow-graph-validator.js';
 import { ImprovementOrchestrator } from '../src/improvement.js';
-import { runInteractiveSession } from '../src/orient.js';
+import { runRoleTurn } from '../src/orient.js';
 import { SessionStore } from '../src/store.js';
 
 import type { 
@@ -145,19 +145,18 @@ async function run() {
     assert.strictEqual(providerSpans[0].attributes['provider.result_type'], 'tool_calls');
   });
 
-  await test('Scenario: runInteractiveSession with empty history returns null (no auto-seed)', async () => {
+  await test('Scenario: runRoleTurn with empty history returns null (no auto-seed)', async () => {
     clearTestSpans();
     clearTestMetrics();
 
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    const result = await runInteractiveSession(
+    const result = await runRoleTurn(
       tmpDir,
       'a-society',
       'curator',
       'System prompt',
       [],
-      undefined,
       output
     );
 
@@ -189,13 +188,12 @@ async function run() {
     };
 
     try {
-        await runInteractiveSession(
+        await runRoleTurn(
             tmpDir,
             'a-society',
             'curator',
             'System prompt', 
             [{ role: 'user', content: 'Who are you?' }], 
-            undefined,
             output
         );
     } finally {
@@ -243,13 +241,12 @@ async function run() {
     };
 
     try {
-      const result = await runInteractiveSession(
+      const result = await runRoleTurn(
         tmpDir,
         'a-society',
         'curator',
         'System prompt',
         [{ role: 'user', content: 'Who are you?' }],
-        undefined,
         output,
         undefined,
         renderer
@@ -282,13 +279,12 @@ async function run() {
     };
 
     try {
-      await runInteractiveSession(
+      await runRoleTurn(
         tmpDir,
         'a-society',
         'curator',
         'System prompt',
         [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined,
         undefined
       );
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
@@ -335,13 +331,12 @@ async function run() {
     };
 
     try {
-      await runInteractiveSession(
+      await runRoleTurn(
         tmpDir,
         'a-society',
         'curator',
         'System prompt',
         [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined,
         output,
         undefined,
         renderer

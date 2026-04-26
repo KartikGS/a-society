@@ -237,6 +237,10 @@ function buildServer(workspaceRoot: string) {
     broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as FlowScopedHistoricalMessage);
   }
 
+  function emitTransientMessage(session: ActiveSession, message: RuntimeServerMessage): void {
+    broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as FlowScopedHistoricalMessage);
+  }
+
   function buildFlowStateMessage(session: ActiveSession | null, ref: FlowRef): FlowStateMessage | null {
     const flowRun = readFlowRun(ref);
     if (!flowRun) return null;
@@ -306,7 +310,15 @@ function buildServer(workspaceRoot: string) {
         }
 
         updateBackwardTracking(session, message.event);
-        emitHistoricalMessage(session, message);
+        if (
+          message.event.kind === 'role.active' &&
+          message.event.activationSource !== 'handoff' &&
+          message.event.activationSource !== 'runtime'
+        ) {
+          emitTransientMessage(session, message);
+        } else {
+          emitHistoricalMessage(session, message);
+        }
 
         if (message.event.kind === 'handoff.applied' || message.event.kind === 'flow.completed') {
           setImmediate(() => emitFlowState(session));
@@ -355,12 +367,6 @@ function buildServer(workspaceRoot: string) {
 
     activeSessions.set(flowKey(flowRef), session);
     return session;
-  }
-
-  function getOrCreateSession(flowRef: FlowRef): ActiveSession {
-    const existing = activeSessions.get(flowKey(flowRef));
-    if (existing) return existing;
-    return createSession(flowRef);
   }
 
   function attachSessionTask(session: ActiveSession, taskFactory: () => Promise<void>): Promise<void> {

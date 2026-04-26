@@ -79,12 +79,16 @@ function FlowList(props: {
       </div>
       <div className="sidebar-project-list">
         {props.flows.map((flow) => (
-          <div key={flow.flowId} className="sidebar-flow-row">
+          <div
+            key={flow.flowId}
+            className="sidebar-flow-row"
+            data-active={props.selectedFlowId === flow.flowId}
+            data-disabled={props.disabled}
+          >
             <button
               type="button"
-              className="sidebar-project-item"
+              className="sidebar-flow-open-btn"
               disabled={props.disabled}
-              data-active={props.selectedFlowId === flow.flowId}
               onClick={() => props.onOpenFlow(flow)}
             >
               <span className="sidebar-project-name">{flow.recordName ?? flow.flowId}</span>

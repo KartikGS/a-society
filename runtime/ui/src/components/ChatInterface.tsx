@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 
 export interface FeedItem {
   id: string;
-  type: 'assistant' | 'event' | 'error' | 'user';
+  type: 'activation' | 'assistant' | 'event' | 'error' | 'repair' | 'user';
   label: string;
   text: string;
 }
@@ -127,17 +127,26 @@ export function ChatInterface(props: ChatInterfaceProps) {
         ) : (
           props.messages.map((message) => (
             <article key={message.id} className={`feed-item feed-item-${message.type}`}>
-              <p className="feed-label">{message.label}</p>
-              {message.type === 'assistant' ? (
-                <div className="feed-markdown">
-                  <ReactMarkdown>{normalizeAssistantMarkdown(message.text)}</ReactMarkdown>
-                </div>
-              ) : message.type === 'user' ? (
-                <div className="feed-user-text">
-                  {message.text}
+              {message.type === 'repair' || message.type === 'activation' ? (
+                <div className={`feed-compact-line feed-compact-${message.type}`}>
+                  <span className="feed-compact-label">{message.label}</span>
+                  <span className="feed-compact-text">{message.text}</span>
                 </div>
               ) : (
-                <pre className="feed-text">{message.text}</pre>
+                <>
+                  <p className="feed-label">{message.label}</p>
+                  {message.type === 'assistant' ? (
+                    <div className="feed-markdown">
+                      <ReactMarkdown>{normalizeAssistantMarkdown(message.text)}</ReactMarkdown>
+                    </div>
+                  ) : message.type === 'user' ? (
+                    <div className="feed-user-text">
+                      {message.text}
+                    </div>
+                  ) : (
+                    <pre className="feed-text">{message.text}</pre>
+                  )}
+                </>
               )}
             </article>
           ))

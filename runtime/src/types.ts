@@ -66,14 +66,6 @@ export interface RoleSession {
 }
 
 
-export interface OrientSession {
-  sessionId: string;
-  workspaceRoot: string;
-  projectNamespace: string;
-  roleName: string;
-  startedAt: string;
-}
-
 export interface ToolDefinition {
   name: string;
   description: string;
@@ -102,14 +94,14 @@ export interface TurnUsage {
   outputTokens?: number;
 }
 
-export interface InteractiveSessionResult {
+export interface RoleTurnResult {
   handoff: HandoffResult;
   usage?: TurnUsage;
 }
 
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
-  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string }
+  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string; activationSource?: 'node-start' | 'handoff' | 'runtime' }
   | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string }

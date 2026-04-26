@@ -103,10 +103,11 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
     case 'flow.resumed':
       return { id: nextFeedId(), type: 'event', label: 'Resume', text: `Flow ${event.flowId} resumed with ${event.activeNodeCount} active node(s).` };
     case 'role.active':
+      if (event.activationSource !== 'handoff' && event.activationSource !== 'runtime') return null;
       return {
         id: nextFeedId(),
-        type: 'event',
-        label: 'Role Active',
+        type: 'activation',
+        label: event.activationSource === 'runtime' ? 'Runtime' : 'Handoff',
         text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).${event.artifactBasename ? ` Primary artifact: ${event.artifactBasename}.` : ''}`
       };
     case 'activity.tool_call':
@@ -128,17 +129,12 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
     case 'repair.requested':
       return {
         id: nextFeedId(),
-        type: 'error',
+        type: 'repair',
         label: 'Repair Requested',
         text: event.summary
       };
     case 'human.awaiting_input':
-      return {
-        id: nextFeedId(),
-        type: 'event',
-        label: 'Awaiting Input',
-        text: `${event.nodeId} (${event.role}) is waiting for a human reply.`
-      };
+      return null;
     case 'human.resumed':
       return null;
     case 'parallel.active_set':
@@ -201,8 +197,8 @@ function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string | null):
 
 function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
   const existing = feeds[role] ?? [];
-  if (item.type === 'assistant' && existing[existing.length - 1]?.type === 'assistant') {
-    const previous = existing[existing.length - 1];
+  const previous = existing[existing.length - 1];
+  if (item.type === 'assistant' && previous?.type === 'assistant') {
     return {
       ...feeds,
       [role]: [...existing.slice(0, -1), { ...previous, text: previous.text + item.text }]

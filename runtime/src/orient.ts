@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { InteractiveSessionResult, OrientSession, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
+import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
 import { LLMGateway, LLMGatewayError } from './llm.js';
 import { buildRoleContext } from './registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
@@ -130,17 +130,16 @@ async function executeSessionTurn(
   });
 }
 
-export async function runInteractiveSession(
+export async function runRoleTurn(
   workspaceRoot: string,
   projectNamespace: string,
   roleName: string,
   providedSystemPrompt?: string,
   providedHistory?: RuntimeMessageParam[],
-  _inputStream: NodeJS.ReadableStream = process.stdin,
   outputStream: NodeJS.WritableStream = process.stdout,
   externalSignal?: AbortSignal,
   operatorRenderer?: OperatorRenderSink
-): Promise<InteractiveSessionResult | null> {
+): Promise<RoleTurnResult | null> {
 
   const tracer = TelemetryManager.getTracer();
   let turnIndex = 0;
@@ -153,18 +152,12 @@ export async function runInteractiveSession(
     return null;
   }
 
-  const session: OrientSession = {
-    sessionId: crypto.randomUUID(),
-    workspaceRoot,
-    projectNamespace,
-    roleName,
-    startedAt: new Date().toISOString()
-  };
+  const sessionId = crypto.randomUUID();
 
   return tracer.startActiveSpan('session.interaction', {
     kind: SpanKind.INTERNAL,
     attributes: {
-      'session.id': session.sessionId,
+      'session.id': sessionId,
       'project_namespace': projectNamespace,
       'role_name': roleName
     }

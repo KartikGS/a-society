@@ -8,7 +8,7 @@ import {
 import { ContextInjectionService } from './injection.js';
 import { buildImprovementEntryMessage } from './session-entry.js';
 import { SessionStore } from './store.js';
-import { runInteractiveSession } from './orient.js';
+import { runRoleTurn } from './orient.js';
 import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } from './types.js';
 import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
@@ -65,7 +65,6 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   initialUserMessage: string,
   expectedKind: K,
   role: string,
-  inputStream: NodeJS.ReadableStream,
   outputStream: NodeJS.WritableStream,
   renderer: OperatorRenderSink
 ): Promise<ExpectedImprovementSignal<K>> {
@@ -74,13 +73,12 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 
   while (true) {
     try {
-      const sessionResult = await runInteractiveSession(
+      const sessionResult = await runRoleTurn(
         flowRun.workspaceRoot,
         flowRun.projectNamespace,
         roleName,
         bundleContent,
         history,
-        inputStream,
         outputStream
       );
 
@@ -278,7 +276,6 @@ export class ImprovementOrchestrator {
                     userMessage,
                     'meta-analysis-complete',
                     entry.role,
-                    inputStream,
                     outputStream,
                     renderer
                   );
@@ -311,7 +308,6 @@ export class ImprovementOrchestrator {
                     userMessage,
                     'backward-pass-complete',
                     entry.role,
-                    inputStream,
                     outputStream,
                     renderer
                   );

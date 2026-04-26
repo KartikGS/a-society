@@ -3,8 +3,8 @@ import path from 'node:path';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRef, FlowRun, HandoffTarget, InteractiveSessionResult, OperatorRenderSink, TurnUsage } from './types.js';
-import { emitUsage, runInteractiveSession } from './orient.js';
+import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage } from './types.js';
+import { emitUsage, runRoleTurn } from './orient.js';
 import { buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
 import { createDefaultRenderer } from './operator-renderer.js';
@@ -190,6 +190,8 @@ export class FlowOrchestrator {
         this.ensureNoRoleScopedParallelConflict(flowRun, wf, nodeId, roleName);
 
         const sessionId = this.roleSessionId(flowRun, roleName);
+        const visitedNodeIds = flowRun.visitedNodeIds ?? (flowRun.visitedNodeIds = []);
+        const firstNodeVisit = !visitedNodeIds.includes(nodeId);
 
         const resolvedArtifacts: string[] =
           activeArtifactPath !== undefined
@@ -203,13 +205,20 @@ export class FlowOrchestrator {
         const artifactBasename = resolvedArtifacts.length === 1
           ? path.basename(resolvedArtifacts[0])
           : undefined;
+        const isRuntimeInitialActivation =
+          firstNodeVisit &&
+          !claim.resumedFromHuman &&
+          flowRun.completedNodes.length === 0 &&
+          Object.keys(flowRun.completedEdgeArtifacts).length === 0 &&
+          resolvedArtifacts.length === 0;
         if (!this.pendingRoleActiveEmitted.has(nodeId)) {
           this.renderer.emit({
             kind: 'role.active',
             nodeId,
             role: currentNodeDef.role,
             artifactCount: resolvedArtifacts.length,
-            artifactBasename
+            artifactBasename,
+            activationSource: isRuntimeInitialActivation ? 'runtime' : 'node-start'
           });
         }
         this.pendingRoleActiveEmitted.delete(nodeId);
@@ -235,8 +244,6 @@ export class FlowOrchestrator {
 
         const injectedHistory = [...session.transcriptHistory];
         const sameNodeResume = session.isActive && session.currentNodeId === nodeId && injectedHistory.length > 0;
-        const visitedNodeIds = flowRun.visitedNodeIds ?? (flowRun.visitedNodeIds = []);
-        const firstNodeVisit = !visitedNodeIds.includes(nodeId);
         const rawNodeContext = firstNodeVisit ? {
           required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
           guidance: Array.isArray(currentNodeDef.guidance) ? currentNodeDef.guidance : undefined,
@@ -302,12 +309,12 @@ export class FlowOrchestrator {
             const sigintHandler = () => controller.abort();
             process.once('SIGINT', sigintHandler);
 
-            let sessionResult: InteractiveSessionResult | null = null;
+            let sessionResult: RoleTurnResult | null = null;
             try {
-              sessionResult = await runInteractiveSession(
+              sessionResult = await runRoleTurn(
                 flowRun.workspaceRoot, flowRun.projectNamespace, roleName, bundleContent,
                 injectedHistory as any,
-                inputStream, outputStream,
+                outputStream,
                 controller.signal,
                 this.renderer
               );
@@ -664,6 +671,9 @@ export class FlowOrchestrator {
     if (notice?.kind === 'role') {
       this.emitRoleActiveIfActivated(updatedFlow, wf, notice.nodeId);
     } else if (notice?.kind === 'parallel') {
+      for (const target of eventTargets) {
+        this.emitRoleActiveIfActivated(updatedFlow, wf, target.nodeId);
+      }
       this.emitParallelActiveSet(updatedFlow, wf);
     }
 
@@ -1101,7 +1111,8 @@ export class FlowOrchestrator {
       nodeId,
       role: node.role,
       artifactCount: activatedArtifacts.length,
-      artifactBasename
+      artifactBasename,
+      activationSource: 'handoff'
     });
     this.pendingRoleActiveEmitted.add(nodeId);
   }
