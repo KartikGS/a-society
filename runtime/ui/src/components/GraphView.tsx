@@ -125,7 +125,8 @@ function buildReactFlowState(
           background: 'transparent',
           boxShadow: 'none',
           padding: 0,
-          width: 220
+          width: 140,
+          height: 140
         }
       });
     });

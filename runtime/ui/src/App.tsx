@@ -630,128 +630,132 @@ export function App() {
 
   return (
     <main className="app-shell">
-      {activeTab && flowRun?.status === 'running' ? (
-        <header className="app-header">
-          <div className="header-meta">
-            <button
-              type="button"
-              className="status-action"
-              disabled={socket.status !== 'open'}
-              onClick={handleResumeFlow}
-            >
-              Resume
-            </button>
+      <PanelGroup orientation="horizontal">
+        <Panel defaultSize={20} minSize={15} style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)' }}>
+          <ProjectSelector
+            projectsWithADocs={projects.withADocs}
+            projectsWithoutADocs={projects.withoutADocs}
+            selectedProject={selectedProject}
+            selectedFlowId={activeTab?.ref.flowId ?? null}
+            projectFlows={projectFlows}
+            newProjectName={newProjectName}
+            errorMessage={selectorError}
+            disabled={socket.status !== 'open'}
+            onSelectInitialized={handleProjectSelect}
+            onInitializeExisting={handleExistingInitialization}
+            onOpenFlow={handleOpenFlow}
+            onNewFlow={handleNewFlow}
+            onNewProjectNameChange={setNewProjectName}
+            onCreateNew={handleCreateNewProject}
+          />
+        </Panel>
+
+        <PanelResizeHandle className="resize-handle" />
+
+        <Panel style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+          {activeTab && flowRun?.status === 'running' ? (
+            <header className="app-header">
+              <div className="header-meta">
+                <button
+                  type="button"
+                  className="status-action"
+                  disabled={socket.status !== 'open'}
+                  onClick={handleResumeFlow}
+                >
+                  Resume
+                </button>
+              </div>
+            </header>
+          ) : null}
+
+          {tabs.length > 0 ? (
+            <nav className="flow-tab-strip" aria-label="Open flows">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className="flow-tab"
+                  data-active={tab.key === activeTabKey}
+                  onClick={() => handleTabSelect(tab)}
+                >
+                  <span className="flow-tab-title">{tab.title}</span>
+                  <span className="flow-tab-project">{tab.ref.projectNamespace}</span>
+                </button>
+              ))}
+            </nav>
+          ) : null}
+
+          <div className="workspace-grid-wrapper" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            <PanelGroup orientation="horizontal">
+              <Panel defaultSize={60} minSize={30} style={{ display: 'flex', flexDirection: 'column' }}>
+                {flowRun && activeTab ? (
+                  <GraphView
+                    flowRun={flowRun}
+                    flowRef={activeTab.ref}
+                    backwardActive={backwardActive}
+                    backwardSources={backwardSources}
+                    recordFolderPath={flowRun.recordFolderPath}
+                    onNodeClick={handleGraphNodeClick}
+                    onWorkflowLoaded={handleWorkflowLoaded}
+                  />
+                ) : (
+                  <section className="panel center-panel graph-panel" style={{ flex: 1 }}>
+                    <div className="graph-panel-header">
+                      <div>
+                        <p className="eyebrow">Workflow Graph</p>
+                        <h2>{selectedProject ? selectedProject : 'No project selected'}</h2>
+                        <p className="panel-copy">
+                          {selectedProject
+                            ? 'Select a saved record or create a new flow from the left pane.'
+                            : 'Select a project from the left sidebar to load its records and role chat.'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="graph-canvas">
+                      <div className="graph-empty">
+                        {selectedProject ? 'No flow selected' : 'Select a project to begin'}
+                      </div>
+                    </div>
+                  </section>
+                )}
+              </Panel>
+
+              <PanelResizeHandle className="resize-handle" />
+
+              <Panel defaultSize={40} minSize={20} style={{ display: 'flex', flexDirection: 'column' }}>
+                <ChatInterface
+                  subtitle={
+                    flowRun
+                      ? 'Select a role to view its conversation.'
+                      : 'Open or create a flow to start the runtime conversation.'
+                  }
+                  messages={visibleFeed}
+                  waitingLabel={visibleWaitLabel}
+                  inputValue={activeUi?.composerValue ?? ''}
+                  inputDisabled={inputDisabled}
+                  placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
+                  showComposer={isViewedRoleActive}
+                  canStop={canStopViewedRole}
+                  stopRequested={activeUi?.stopRequested ?? false}
+                  roles={roles}
+                  selectedRole={viewedRole ?? undefined}
+                  activeRole={activeLiveRole ?? undefined}
+                  onRoleSelect={(role) => {
+                    if (!activeTabKey) return;
+                    updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
+                  }}
+                  onInputChange={(value) => {
+                    if (!activeTabKey) return;
+                    updateFlowUi(activeTabKey, (state) => ({ ...state, composerValue: value }));
+                  }}
+                  onSubmit={handleSubmit}
+                  onStop={handleStopActiveTurn}
+                />
+              </Panel>
+            </PanelGroup>
           </div>
-        </header>
-      ) : null}
-
-      {tabs.length > 0 ? (
-        <nav className="flow-tab-strip" aria-label="Open flows">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              className="flow-tab"
-              data-active={tab.key === activeTabKey}
-              onClick={() => handleTabSelect(tab)}
-            >
-              <span className="flow-tab-title">{tab.title}</span>
-              <span className="flow-tab-project">{tab.ref.projectNamespace}</span>
-            </button>
-          ))}
-        </nav>
-      ) : null}
-
-      <div className="workspace-grid-wrapper" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <PanelGroup orientation="horizontal">
-          <Panel defaultSize={20} minSize={15} style={{ display: 'flex', flexDirection: 'column' }}>
-            <ProjectSelector
-              projectsWithADocs={projects.withADocs}
-              projectsWithoutADocs={projects.withoutADocs}
-              selectedProject={selectedProject}
-              selectedFlowId={activeTab?.ref.flowId ?? null}
-              projectFlows={projectFlows}
-              newProjectName={newProjectName}
-              errorMessage={selectorError}
-              disabled={socket.status !== 'open'}
-              onSelectInitialized={handleProjectSelect}
-              onInitializeExisting={handleExistingInitialization}
-              onOpenFlow={handleOpenFlow}
-              onNewFlow={handleNewFlow}
-              onNewProjectNameChange={setNewProjectName}
-              onCreateNew={handleCreateNewProject}
-            />
-          </Panel>
-
-          <PanelResizeHandle className="resize-handle" />
-
-          <Panel defaultSize={50} minSize={30} style={{ display: 'flex', flexDirection: 'column' }}>
-            {flowRun && activeTab ? (
-              <GraphView
-                flowRun={flowRun}
-                flowRef={activeTab.ref}
-                backwardActive={backwardActive}
-                backwardSources={backwardSources}
-                recordFolderPath={flowRun.recordFolderPath}
-                onNodeClick={handleGraphNodeClick}
-                onWorkflowLoaded={handleWorkflowLoaded}
-              />
-            ) : (
-              <section className="panel center-panel graph-panel" style={{ flex: 1 }}>
-                <div className="graph-panel-header">
-                  <div>
-                    <p className="eyebrow">Workflow Graph</p>
-                    <h2>{selectedProject ? selectedProject : 'No project selected'}</h2>
-                    <p className="panel-copy">
-                      {selectedProject
-                        ? 'Select a saved record or create a new flow from the left pane.'
-                        : 'Select a project from the left sidebar to load its records and role chat.'}
-                    </p>
-                  </div>
-                </div>
-                <div className="graph-canvas">
-                  <div className="graph-empty">
-                    {selectedProject ? 'No flow selected' : 'Select a project to begin'}
-                  </div>
-                </div>
-              </section>
-            )}
-          </Panel>
-
-          <PanelResizeHandle className="resize-handle" />
-
-          <Panel defaultSize={30} minSize={20} style={{ display: 'flex', flexDirection: 'column' }}>
-            <ChatInterface
-              subtitle={
-                flowRun
-                  ? 'Select a role to view its conversation.'
-                  : 'Open or create a flow to start the runtime conversation.'
-              }
-              messages={visibleFeed}
-              waitingLabel={visibleWaitLabel}
-              inputValue={activeUi?.composerValue ?? ''}
-              inputDisabled={inputDisabled}
-              placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
-              showComposer={isViewedRoleActive}
-              canStop={canStopViewedRole}
-              stopRequested={activeUi?.stopRequested ?? false}
-              roles={roles}
-              selectedRole={viewedRole ?? undefined}
-              activeRole={activeLiveRole ?? undefined}
-              onRoleSelect={(role) => {
-                if (!activeTabKey) return;
-                updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
-              }}
-              onInputChange={(value) => {
-                if (!activeTabKey) return;
-                updateFlowUi(activeTabKey, (state) => ({ ...state, composerValue: value }));
-              }}
-              onSubmit={handleSubmit}
-              onStop={handleStopActiveTurn}
-            />
-          </Panel>
-        </PanelGroup>
-      </div>
+        </Panel>
+      </PanelGroup>
 
       {activeUi?.showImprovementModal ? (
         <div className="modal-overlay">

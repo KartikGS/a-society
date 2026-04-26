@@ -82,7 +82,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
     if (!element) return;
 
     element.style.height = '0px';
-    const nextHeight = Math.min(Math.max(element.scrollHeight, 72), 220);
+    const nextHeight = Math.min(Math.max(element.scrollHeight, 52), 220);
     element.style.height = `${nextHeight}px`;
     element.style.overflowY = element.scrollHeight > 220 ? 'auto' : 'hidden';
   }, [props.inputValue, props.showComposer]);
