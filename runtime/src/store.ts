@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { FlowRef, FlowRun, FlowSummary, RoleSession } from './types.js';
+import type { FlowRef, FlowRun, FlowSummary, OperatorFeedMessage, RoleSession } from './types.js';
 import { repairMovedRecordFolder } from './draft-flow.js';
 import { syncRecordMetadataFromWorkflow } from './record-metadata.js';
 
@@ -46,6 +46,10 @@ function getFlowPath(workspaceRoot: string, ref: FlowRef): string {
 
 function getSessionsDir(workspaceRoot: string, ref: FlowRef): string {
   return path.join(getFlowDir(workspaceRoot, ref), 'sessions');
+}
+
+function getOperatorFeedPath(workspaceRoot: string, ref: FlowRef): string {
+  return path.join(getFlowDir(workspaceRoot, ref), 'operator-feed.json');
 }
 
 function getLegacyFlowPath(workspaceRoot: string): string {
@@ -270,6 +274,42 @@ export class SessionStore {
         fs.unlinkSync(p);
       }
     }
+  }
+
+  static loadOperatorFeed(
+    ref: FlowRef,
+    workspaceRoot = SessionStore.defaultWorkspaceRoot,
+  ): OperatorFeedMessage[] {
+    SessionStore.init(workspaceRoot);
+    const feedPath = getOperatorFeedPath(workspaceRoot, ref);
+    if (!fs.existsSync(feedPath)) return [];
+
+    const parsed = JSON.parse(fs.readFileSync(feedPath, 'utf8')) as unknown;
+    return Array.isArray(parsed) ? parsed as OperatorFeedMessage[] : [];
+  }
+
+  static saveOperatorFeed(
+    messages: OperatorFeedMessage[],
+    ref: FlowRef,
+    workspaceRoot = SessionStore.defaultWorkspaceRoot,
+  ): void {
+    SessionStore.init(workspaceRoot);
+    const flowDir = getFlowDir(workspaceRoot, ref);
+    fs.mkdirSync(flowDir, { recursive: true });
+    fs.writeFileSync(getOperatorFeedPath(workspaceRoot, ref), JSON.stringify(messages, null, 2));
+  }
+
+  static appendOperatorFeedMessage(
+    message: OperatorFeedMessage,
+    ref: FlowRef,
+    workspaceRoot = SessionStore.defaultWorkspaceRoot,
+    limit = 400,
+  ): OperatorFeedMessage[] {
+    const messages = SessionStore.loadOperatorFeed(ref, workspaceRoot);
+    messages.push(message);
+    const retained = messages.slice(-limit);
+    SessionStore.saveOperatorFeed(retained, ref, workspaceRoot);
+    return retained;
   }
 
   static listFlowSummaries(workspaceRoot: string, projectNamespace: string): FlowSummary[] {

@@ -227,6 +227,7 @@ export function App() {
   const socketUrl = `${protocol}://${window.location.host}`;
   const initialUrlFlowRef = useRef<FlowRef | null>(parseUrlFlowRef());
   const openedInitialFlow = useRef(false);
+  const lastSubscribedConnectionId = useRef(0);
 
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialUrlFlowRef.current?.projectNamespace ?? null);
@@ -297,6 +298,16 @@ export function App() {
     const key = flowKey(message.flowRef);
 
     switch (message.type) {
+      case 'feed_reset':
+        updateFlowUi(key, (state) => ({
+          ...state,
+          roleFeeds: {},
+          activeLiveRole: null,
+          lastHandoff: null,
+          waitLabel: null,
+          stopRequested: false,
+        }));
+        return;
       case 'operator_event': {
         const event = message.event;
 
@@ -370,6 +381,17 @@ export function App() {
           })
         }));
         return;
+      case 'input_text':
+        updateFlowUi(key, (state) => ({
+          ...state,
+          roleFeeds: appendFeedItem(state.roleFeeds, message.role ?? state.activeLiveRole ?? '__system__', {
+            id: nextFeedId(),
+            type: 'user',
+            label: 'You',
+            text: message.text
+          })
+        }));
+        return;
       case 'flow_state':
         ensureTab(message.flowRef, titleForFlow(message.flowRun));
         updateFlowUi(key, (state) => ({
@@ -416,6 +438,13 @@ export function App() {
     openedInitialFlow.current = true;
     openFlow(ref);
   }, [socket.status]);
+
+  useEffect(() => {
+    if (socket.status !== 'open' || !activeTab) return;
+    if (socket.connectionId === lastSubscribedConnectionId.current) return;
+    lastSubscribedConnectionId.current = socket.connectionId;
+    sendMessage({ type: 'open_flow', flowRef: activeTab.ref });
+  }, [socket.status, socket.connectionId, activeTab?.key]);
 
   useEffect(() => {
     if (selectedProject) {
@@ -538,12 +567,6 @@ export function App() {
       ...state,
       composerValue: '',
       awaitingInput: false,
-      roleFeeds: appendFeedItem(state.roleFeeds, targetRole, {
-        id: nextFeedId(),
-        type: 'user',
-        label: 'You',
-        text
-      })
     }));
     sendMessage({
       type: 'human_input',
@@ -631,7 +654,7 @@ export function App() {
   return (
     <main className="app-shell">
       <PanelGroup orientation="horizontal">
-        <Panel defaultSize={20} minSize={15} style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)' }}>
+        <Panel defaultSize={20} minSize={15} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: '1px solid var(--border)' }}>
           <ProjectSelector
             projectsWithADocs={projects.withADocs}
             projectsWithoutADocs={projects.withoutADocs}
@@ -652,7 +675,7 @@ export function App() {
 
         <PanelResizeHandle className="resize-handle" />
 
-        <Panel style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <Panel style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
           {activeTab && flowRun?.status === 'running' ? (
             <header className="app-header">
               <div className="header-meta">
@@ -687,7 +710,7 @@ export function App() {
 
           <div className="workspace-grid-wrapper" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
             <PanelGroup orientation="horizontal">
-              <Panel defaultSize={60} minSize={30} style={{ display: 'flex', flexDirection: 'column' }}>
+              <Panel defaultSize={60} minSize={30} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {flowRun && activeTab ? (
                   <GraphView
                     flowRun={flowRun}
@@ -722,7 +745,7 @@ export function App() {
 
               <PanelResizeHandle className="resize-handle" />
 
-              <Panel defaultSize={40} minSize={20} style={{ display: 'flex', flexDirection: 'column' }}>
+              <Panel defaultSize={40} minSize={20} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <ChatInterface
                   subtitle={
                     flowRun

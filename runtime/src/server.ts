@@ -17,7 +17,7 @@ import { bootstrapInitializationFlow } from './initialization-bootstrap.js';
 import { initializeDraftFlow } from './draft-flow.js';
 import { discoverProjects, type ProjectDiscovery } from './project-discovery.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
-import type { FlowRef, FlowRun, FlowSummary, OperatorEvent } from './types.js';
+import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage } from './types.js';
 
 type ClientMessage =
   | { type: 'open_flow'; flowRef: FlowRef }
@@ -35,17 +35,14 @@ type FlowStateMessage = {
   backwardActive: string[];
 };
 
-type HistoricalMessage =
-  | RuntimeServerMessage
-  | { type: 'output_text'; text: string }
-  | { type: 'error'; message: string }
-  | { type: 'flow_complete' };
+type HistoricalMessage = OperatorFeedMessage;
 
 type FlowScopedHistoricalMessage = HistoricalMessage & { flowRef: FlowRef };
 
 type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
+  | { type: 'feed_reset'; flowRef: FlowRef }
   | FlowStateMessage
   | FlowScopedHistoricalMessage;
 
@@ -220,10 +217,19 @@ function buildServer(workspaceRoot: string) {
   }
 
   function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
-    session.messageHistory.push(message);
+    const previous = session.messageHistory[session.messageHistory.length - 1];
+    if (previous?.type === 'output_text' && message.type === 'output_text') {
+      session.messageHistory[session.messageHistory.length - 1] = {
+        type: 'output_text',
+        text: previous.text + message.text,
+      };
+    } else {
+      session.messageHistory.push(message);
+    }
     if (session.messageHistory.length > HISTORY_LIMIT) {
       session.messageHistory.splice(0, session.messageHistory.length - HISTORY_LIMIT);
     }
+    SessionStore.saveOperatorFeed(session.messageHistory, session.flowRef, workspaceRoot);
   }
 
   function emitHistoricalMessage(session: ActiveSession, message: HistoricalMessage): void {
@@ -333,7 +339,7 @@ function buildServer(workspaceRoot: string) {
       outputBridge,
       sink,
       orchestrator,
-      messageHistory: [],
+      messageHistory: SessionStore.loadOperatorFeed(flowRef, workspaceRoot),
       lastFlowState: null,
       backwardActive: new Set<string>(),
       awaitingHumanInput: false,
@@ -385,16 +391,14 @@ function buildServer(workspaceRoot: string) {
 
   function replaySessionState(socket: WebSocket, ref: FlowRef): void {
     const session = activeSessions.get(flowKey(ref));
-    if (!session) {
-      sendFlowState(socket, ref);
-      return;
+    const messageHistory = session?.messageHistory ?? SessionStore.loadOperatorFeed(ref, workspaceRoot);
+
+    sendToSocket(socket, { type: 'feed_reset', flowRef: ref });
+    for (const message of messageHistory) {
+      sendToSocket(socket, { ...message, flowRef: ref } as FlowScopedHistoricalMessage);
     }
 
-    for (const message of session.messageHistory) {
-      sendToSocket(socket, { ...message, flowRef: session.flowRef } as FlowScopedHistoricalMessage);
-    }
-
-    if (session.lastFlowState) {
+    if (session?.lastFlowState) {
       sendToSocket(socket, session.lastFlowState);
     } else {
       sendFlowState(socket, ref);
@@ -511,6 +515,11 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(ref);
     session.awaitingHumanInput = false;
+    emitHistoricalMessage(session, {
+      type: 'input_text',
+      role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
+      text,
+    });
 
     void attachSessionTask(session, async () => {
       let currentFlow = readFlowRun(ref);
@@ -561,6 +570,11 @@ function buildServer(workspaceRoot: string) {
       }
 
       activeSession.awaitingHumanInput = false;
+      emitHistoricalMessage(activeSession, {
+        type: 'input_text',
+        role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
+        text,
+      });
       void activeSession.orchestrator.advanceFlow(
         flowRun,
         targetNodeId,

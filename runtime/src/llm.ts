@@ -23,6 +23,11 @@ function createProvider(name: string): LLMProvider {
   }
 }
 
+function throwIfAborted(signal: AbortSignal | undefined, partialText?: string): void {
+  if (!signal?.aborted) return;
+  throw new LLMGatewayError('ABORTED', 'Turn aborted by operator', partialText);
+}
+
 export class LLMGateway {
   private provider: LLMProvider;
   private fileExecutor?: FileToolExecutor;
@@ -67,8 +72,10 @@ export class LLMGateway {
         if (!this.tools || !this.fileExecutor) {
           const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
           if (result.type === 'text') {
+            throwIfAborted(options?.signal, result.text);
             return { text: result.text, usage: result.usage, displayedText: result.displayedText };
           }
+          throwIfAborted(options?.signal);
           throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
         }
 
@@ -86,6 +93,7 @@ export class LLMGateway {
           }
 
           const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+          throwIfAborted(options?.signal, result.type === 'text' ? result.text : undefined);
           displayedText = displayedText || !!result.displayedText;
 
           if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
@@ -133,6 +141,7 @@ export class LLMGateway {
               return { role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError };
             })
           );
+          throwIfAborted(options?.signal);
           intermediateMessages.push(...result.continuationMessages, ...toolResultMessages);
           messages = [...messages, ...result.continuationMessages, ...toolResultMessages];
         }

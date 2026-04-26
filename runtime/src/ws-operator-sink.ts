@@ -1,9 +1,9 @@
-import type { OperatorEvent, OperatorRenderSink } from './types.js';
+import type { OperatorEvent, OperatorFeedMessage, OperatorRenderSink } from './types.js';
 
-export type RuntimeServerMessage =
-  | { type: 'operator_event'; event: OperatorEvent }
-  | { type: 'wait_start'; provider: string; model: string }
-  | { type: 'wait_stop' };
+export type RuntimeServerMessage = Extract<
+  OperatorFeedMessage,
+  { type: 'operator_event' | 'wait_start' | 'wait_stop' }
+>;
 
 export class WebSocketOperatorSink implements OperatorRenderSink {
   constructor(private readonly send: (msg: RuntimeServerMessage) => void) {}

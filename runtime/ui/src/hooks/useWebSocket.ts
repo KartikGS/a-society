@@ -9,6 +9,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions) {
   const socketRef = useRef<WebSocket | null>(null);
   const messageHandlerRef = useRef(options.onMessage);
   const [status, setStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');
+  const [connectionId, setConnectionId] = useState(0);
 
   useEffect(() => {
     messageHandlerRef.current = options.onMessage;
@@ -27,6 +28,7 @@ export function useWebSocket(url: string, options: UseWebSocketOptions) {
 
       socket.onopen = () => {
         setStatus('open');
+        setConnectionId((current) => current + 1);
       };
 
       socket.onmessage = (event) => {
@@ -64,5 +66,5 @@ export function useWebSocket(url: string, options: UseWebSocketOptions) {
     socketRef.current.send(JSON.stringify(message));
   }
 
-  return { send, status };
+  return { send, status, connectionId };
 }

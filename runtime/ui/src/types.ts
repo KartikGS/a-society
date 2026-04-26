@@ -66,10 +66,12 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
+  | { type: 'feed_reset'; flowRef: FlowRef }
   | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }
   | { type: 'wait_start'; flowRef: FlowRef; provider: string; model: string }
   | { type: 'wait_stop'; flowRef: FlowRef }
   | { type: 'output_text'; flowRef: FlowRef; text: string }
+  | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[] }
   | { type: 'error'; flowRef: FlowRef; message: string }
   | { type: 'flow_complete'; flowRef: FlowRef };
