@@ -593,6 +593,27 @@ export function App() {
     sendMessage({ type: 'open_flow', flowRef: tab.ref });
   }
 
+  function handleCloseTab(tab: FlowTab): void {
+    setTabs((current) => {
+      const next = current.filter((t) => t.key !== tab.key);
+      if (activeTabKey === tab.key) {
+        const idx = current.findIndex((t) => t.key === tab.key);
+        const fallback = next[idx] ?? next[idx - 1] ?? null;
+        setActiveTabKey(fallback?.key ?? null);
+        writeUrlFlowRef(fallback?.ref ?? null);
+        if (fallback) {
+          setSelectedProject(fallback.ref.projectNamespace);
+        }
+      }
+      return next;
+    });
+    setFlowUiByKey((current) => {
+      const next = { ...current };
+      delete next[tab.key];
+      return next;
+    });
+  }
+
   function handleSubmit(): void {
     if (!activeTab || !activeUi) return;
     const text = activeUi.composerValue.trim();
@@ -723,16 +744,28 @@ export function App() {
           {tabs.length > 0 ? (
             <nav className="flow-tab-strip" aria-label="Open flows">
               {tabs.map((tab) => (
-                <button
+                <div
                   key={tab.key}
-                  type="button"
                   className="flow-tab"
                   data-active={tab.key === activeTabKey}
-                  onClick={() => handleTabSelect(tab)}
                 >
-                  <span className="flow-tab-title">{tab.title}</span>
-                  <span className="flow-tab-project">{tab.ref.projectNamespace}</span>
-                </button>
+                  <button
+                    type="button"
+                    className="flow-tab-click-area"
+                    onClick={() => handleTabSelect(tab)}
+                  >
+                    <span className="flow-tab-title">{tab.title}</span>
+                    <span className="flow-tab-project">{tab.ref.projectNamespace}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flow-tab-close-btn"
+                    title="Close tab"
+                    onClick={() => handleCloseTab(tab)}
+                  >
+                    ×
+                  </button>
+                </div>
               ))}
             </nav>
           ) : null}

@@ -779,22 +779,36 @@ textarea {
 .flow-tab {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   min-width: 160px;
   max-width: 260px;
-  padding: 12px 16px;
   border-radius: 4px 4px 0 0;
   border: 1px solid var(--border);
   border-bottom: none;
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(0, 0, 0, 0.04);
   color: var(--ink-soft);
   cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.flow-tab:hover:not([data-active="true"]) {
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .flow-tab[data-active="true"] {
   background: var(--surface-strong);
-  border-color: rgba(15, 118, 110, 0.3);
+  border-color: var(--border);
+  border-bottom: 1px solid var(--surface-strong);
   color: var(--ink);
+  margin-bottom: -1px;
+}
+
+.flow-tab-click-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px 12px 16px;
+  text-align: left;
 }
 
 .flow-tab-title {
@@ -806,12 +820,40 @@ textarea {
 }
 
 .flow-tab-project {
-  margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
   color: var(--ink-soft);
+}
+
+.flow-tab-close-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 100%;
+  padding: 0 6px 0 2px;
+  border: none;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  border-radius: 0 4px 0 0;
+  transition: opacity 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.flow-tab:hover .flow-tab-close-btn,
+.flow-tab[data-active="true"] .flow-tab-close-btn {
+  opacity: 1;
+}
+
+.flow-tab-close-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--ink);
 }
 
 .sidebar-stack {
