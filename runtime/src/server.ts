@@ -692,6 +692,24 @@ function buildServer(workspaceRoot: string) {
     });
   });
 
+  app.delete('/api/flows/:projectNamespace/:flowId', (req: Request, res: Response) => {
+    const ref = {
+      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
+      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
+    };
+
+    const { recordFolderPath } = SessionStore.deleteFlow(ref, workspaceRoot);
+    if (recordFolderPath && fs.existsSync(recordFolderPath)) {
+      fs.rmSync(recordFolderPath, { recursive: true, force: true });
+    }
+
+    for (const socket of clients) {
+      sendProjectFlows(socket, ref.projectNamespace);
+    }
+
+    res.status(200).json({ ok: true });
+  });
+
   app.get('/api/flows/:projectNamespace/:flowId/transcripts/:nodeId', (req: Request, res: Response) => {
     const ref = {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,

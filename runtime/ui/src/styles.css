@@ -223,6 +223,49 @@ textarea {
   font-style: italic;
 }
 
+.sidebar-flow-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.sidebar-flow-row .sidebar-project-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-flow-delete-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.sidebar-flow-row:hover .sidebar-flow-delete-btn {
+  opacity: 1;
+}
+
+.sidebar-flow-delete-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  border-color: rgba(220, 38, 38, 0.2);
+  color: rgb(220, 38, 38);
+}
+
+.sidebar-flow-delete-btn:disabled {
+  opacity: 0;
+  cursor: not-allowed;
+}
+
 .sidebar-footer {
   margin-top: auto;
   padding-top: 16px;

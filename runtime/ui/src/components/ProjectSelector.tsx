@@ -13,6 +13,7 @@ interface ProjectSelectorProps {
   onInitializeExisting: (projectNamespace: string) => void;
   onOpenFlow: (flow: FlowSummary) => void;
   onNewFlow: (projectNamespace: string) => void;
+  onDeleteFlow: (flow: FlowSummary) => void;
   onNewProjectNameChange: (value: string) => void;
   onCreateNew: () => void;
 }
@@ -59,6 +60,7 @@ function FlowList(props: {
   disabled: boolean;
   onOpenFlow: (flow: FlowSummary) => void;
   onNewFlow: (projectNamespace: string) => void;
+  onDeleteFlow: (flow: FlowSummary) => void;
 }) {
   if (!props.selectedProject) return null;
 
@@ -77,17 +79,27 @@ function FlowList(props: {
       </div>
       <div className="sidebar-project-list">
         {props.flows.map((flow) => (
-          <button
-            key={flow.flowId}
-            type="button"
-            className="sidebar-project-item"
-            disabled={props.disabled}
-            data-active={props.selectedFlowId === flow.flowId}
-            onClick={() => props.onOpenFlow(flow)}
-          >
-            <span className="sidebar-project-name">{flow.recordName ?? flow.flowId}</span>
-            <span className="sidebar-project-path">{flow.status}</span>
-          </button>
+          <div key={flow.flowId} className="sidebar-flow-row">
+            <button
+              type="button"
+              className="sidebar-project-item"
+              disabled={props.disabled}
+              data-active={props.selectedFlowId === flow.flowId}
+              onClick={() => props.onOpenFlow(flow)}
+            >
+              <span className="sidebar-project-name">{flow.recordName ?? flow.flowId}</span>
+              <span className="sidebar-project-path">{flow.status}</span>
+            </button>
+            <button
+              type="button"
+              className="sidebar-flow-delete-btn"
+              disabled={props.disabled}
+              title="Delete record"
+              onClick={() => props.onDeleteFlow(flow)}
+            >
+              ×
+            </button>
+          </div>
         ))}
       </div>
       {props.flows.length === 0 ? (
@@ -118,6 +130,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
             disabled={props.disabled}
             onOpenFlow={props.onOpenFlow}
             onNewFlow={props.onNewFlow}
+            onDeleteFlow={props.onDeleteFlow}
           />
         </div>
       </aside>

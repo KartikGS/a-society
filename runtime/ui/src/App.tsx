@@ -557,6 +557,35 @@ export function App() {
     sendMessage({ type: 'start_initialized_flow', projectNamespace });
   }
 
+  async function handleDeleteFlow(flow: FlowSummary): Promise<void> {
+    const label = flow.recordName ?? flow.flowId;
+    if (!window.confirm(`Delete "${label}" and all its artifacts? This cannot be undone.`)) return;
+
+    try {
+      const response = await fetch(
+        `/api/flows/${encodeURIComponent(flow.projectNamespace)}/${encodeURIComponent(flow.flowId)}`,
+        { method: 'DELETE' },
+      );
+      if (!response.ok) throw new Error(await response.text());
+
+      const key = flowKey(flow);
+      setTabs((current) => current.filter((tab) => tab.key !== key));
+      setFlowUiByKey((current) => {
+        const next = { ...current };
+        delete next[key];
+        return next;
+      });
+      if (activeTabKey === key) {
+        setActiveTabKey(null);
+        writeUrlFlowRef(null);
+      }
+
+      void fetchProjectFlows(flow.projectNamespace);
+    } catch (err) {
+      setSelectorError(err instanceof Error ? err.message : 'Failed to delete flow.');
+    }
+  }
+
   function handleTabSelect(tab: FlowTab): void {
     setActiveTabKey(tab.key);
     setSelectedProject(tab.ref.projectNamespace);
@@ -667,6 +696,7 @@ export function App() {
             onInitializeExisting={handleExistingInitialization}
             onOpenFlow={handleOpenFlow}
             onNewFlow={handleNewFlow}
+            onDeleteFlow={handleDeleteFlow}
             onNewProjectNameChange={setNewProjectName}
             onCreateNew={handleCreateNewProject}
           />

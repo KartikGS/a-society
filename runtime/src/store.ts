@@ -312,6 +312,35 @@ export class SessionStore {
     return retained;
   }
 
+  static deleteFlow(ref: FlowRef, workspaceRoot = SessionStore.defaultWorkspaceRoot): { recordFolderPath: string | null } {
+    SessionStore.init(workspaceRoot);
+
+    let recordFolderPath: string | null = null;
+    const flowPath = getFlowPath(workspaceRoot, ref);
+    if (fs.existsSync(flowPath)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(flowPath, 'utf8')) as FlowRun;
+        recordFolderPath = raw.recordFolderPath ?? null;
+      } catch {
+        // best-effort; still delete state dir
+      }
+    }
+
+    const flowDir = getFlowDir(workspaceRoot, ref);
+    if (fs.existsSync(flowDir)) {
+      fs.rmSync(flowDir, { recursive: true, force: true });
+    }
+
+    if (
+      SessionStore.currentFlowRef?.projectNamespace === ref.projectNamespace &&
+      SessionStore.currentFlowRef?.flowId === ref.flowId
+    ) {
+      SessionStore.currentFlowRef = null;
+    }
+
+    return { recordFolderPath };
+  }
+
   static listFlowSummaries(workspaceRoot: string, projectNamespace: string): FlowSummary[] {
     SessionStore.init(workspaceRoot);
     const projectDir = getProjectStateDir(workspaceRoot, projectNamespace);
