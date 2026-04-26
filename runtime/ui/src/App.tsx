@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView } from './components/GraphView';
 import { ProjectSelector } from './components/ProjectSelector';
@@ -487,11 +488,13 @@ export function App() {
     return '__system__';
   }
 
-  function handleProjectSelect(projectNamespace: string): void {
+  function handleProjectSelect(projectNamespace: string | null): void {
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
-    void fetchProjectFlows(projectNamespace);
+    if (projectNamespace) {
+      void fetchProjectFlows(projectNamespace);
+    }
   }
 
   function handleExistingInitialization(projectNamespace: string): void {
@@ -627,18 +630,9 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <div className="background-orbit background-orbit-left" />
-      <div className="background-orbit background-orbit-right" />
-
-      <header className="app-header">
-        <div>
-          <p className="eyebrow">A-Society Runtime</p>
-          <h1>CLI to UI orchestration console</h1>
-        </div>
-        <div className="header-meta">
-          <span className="status-pill">Socket: {statusLine}</span>
-          {selectedProject ? <span className="status-pill">Project: {selectedProject}</span> : null}
-          {activeTab && flowRun?.status === 'running' ? (
+      {activeTab && flowRun?.status === 'running' ? (
+        <header className="app-header">
+          <div className="header-meta">
             <button
               type="button"
               className="status-action"
@@ -647,9 +641,9 @@ export function App() {
             >
               Resume
             </button>
-          ) : null}
-        </div>
-      </header>
+          </div>
+        </header>
+      ) : null}
 
       {tabs.length > 0 ? (
         <nav className="flow-tab-strip" aria-label="Open flows">
@@ -668,83 +662,95 @@ export function App() {
         </nav>
       ) : null}
 
-      <div className="workspace-grid">
-        <ProjectSelector
-          projectsWithADocs={projects.withADocs}
-          projectsWithoutADocs={projects.withoutADocs}
-          selectedProject={selectedProject}
-          selectedFlowId={activeTab?.ref.flowId ?? null}
-          projectFlows={projectFlows}
-          newProjectName={newProjectName}
-          errorMessage={selectorError}
-          disabled={socket.status !== 'open'}
-          onSelectInitialized={handleProjectSelect}
-          onInitializeExisting={handleExistingInitialization}
-          onOpenFlow={handleOpenFlow}
-          onNewFlow={handleNewFlow}
-          onNewProjectNameChange={setNewProjectName}
-          onCreateNew={handleCreateNewProject}
-        />
+      <div className="workspace-grid-wrapper" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <PanelGroup orientation="horizontal">
+          <Panel defaultSize={20} minSize={15} style={{ display: 'flex', flexDirection: 'column' }}>
+            <ProjectSelector
+              projectsWithADocs={projects.withADocs}
+              projectsWithoutADocs={projects.withoutADocs}
+              selectedProject={selectedProject}
+              selectedFlowId={activeTab?.ref.flowId ?? null}
+              projectFlows={projectFlows}
+              newProjectName={newProjectName}
+              errorMessage={selectorError}
+              disabled={socket.status !== 'open'}
+              onSelectInitialized={handleProjectSelect}
+              onInitializeExisting={handleExistingInitialization}
+              onOpenFlow={handleOpenFlow}
+              onNewFlow={handleNewFlow}
+              onNewProjectNameChange={setNewProjectName}
+              onCreateNew={handleCreateNewProject}
+            />
+          </Panel>
 
-        {flowRun && activeTab ? (
-          <GraphView
-            flowRun={flowRun}
-            flowRef={activeTab.ref}
-            backwardActive={backwardActive}
-            backwardSources={backwardSources}
-            recordFolderPath={flowRun.recordFolderPath}
-            onNodeClick={handleGraphNodeClick}
-            onWorkflowLoaded={handleWorkflowLoaded}
-          />
-        ) : (
-          <section className="panel center-panel graph-panel">
-            <div className="graph-panel-header">
-              <div>
-                <p className="eyebrow">Workflow Graph</p>
-                <h2>{selectedProject ? selectedProject : 'No project selected'}</h2>
-                <p className="panel-copy">
-                  {selectedProject
-                    ? 'Select a saved record or create a new flow from the left pane.'
-                    : 'Select a project from the left sidebar to load its records and role chat.'}
-                </p>
-              </div>
-            </div>
-            <div className="graph-canvas">
-              <div className="graph-empty">
-                {selectedProject ? 'No flow selected' : 'Select a project to begin'}
-              </div>
-            </div>
-          </section>
-        )}
+          <PanelResizeHandle className="resize-handle" />
 
-        <ChatInterface
-          subtitle={
-            flowRun
-              ? 'Select a role to view its conversation.'
-              : 'Open or create a flow to start the runtime conversation.'
-          }
-          messages={visibleFeed}
-          waitingLabel={visibleWaitLabel}
-          inputValue={activeUi?.composerValue ?? ''}
-          inputDisabled={inputDisabled}
-          placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
-          showComposer={isViewedRoleActive}
-          canStop={canStopViewedRole}
-          stopRequested={activeUi?.stopRequested ?? false}
-          roles={roles}
-          selectedRole={viewedRole ?? undefined}
-          activeRole={activeLiveRole ?? undefined}
-          onRoleSelect={(role) => {
-            if (!activeTabKey) return;
-            updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
-          }}
-          onInputChange={(value) => {
-            if (!activeTabKey) return;
-            updateFlowUi(activeTabKey, (state) => ({ ...state, composerValue: value }));
-          }}
-          onSubmit={handleSubmit}
-          onStop={handleStopActiveTurn}
-        />
+          <Panel defaultSize={50} minSize={30} style={{ display: 'flex', flexDirection: 'column' }}>
+            {flowRun && activeTab ? (
+              <GraphView
+                flowRun={flowRun}
+                flowRef={activeTab.ref}
+                backwardActive={backwardActive}
+                backwardSources={backwardSources}
+                recordFolderPath={flowRun.recordFolderPath}
+                onNodeClick={handleGraphNodeClick}
+                onWorkflowLoaded={handleWorkflowLoaded}
+              />
+            ) : (
+              <section className="panel center-panel graph-panel" style={{ flex: 1 }}>
+                <div className="graph-panel-header">
+                  <div>
+                    <p className="eyebrow">Workflow Graph</p>
+                    <h2>{selectedProject ? selectedProject : 'No project selected'}</h2>
+                    <p className="panel-copy">
+                      {selectedProject
+                        ? 'Select a saved record or create a new flow from the left pane.'
+                        : 'Select a project from the left sidebar to load its records and role chat.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="graph-canvas">
+                  <div className="graph-empty">
+                    {selectedProject ? 'No flow selected' : 'Select a project to begin'}
+                  </div>
+                </div>
+              </section>
+            )}
+          </Panel>
+
+          <PanelResizeHandle className="resize-handle" />
+
+          <Panel defaultSize={30} minSize={20} style={{ display: 'flex', flexDirection: 'column' }}>
+            <ChatInterface
+              subtitle={
+                flowRun
+                  ? 'Select a role to view its conversation.'
+                  : 'Open or create a flow to start the runtime conversation.'
+              }
+              messages={visibleFeed}
+              waitingLabel={visibleWaitLabel}
+              inputValue={activeUi?.composerValue ?? ''}
+              inputDisabled={inputDisabled}
+              placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
+              showComposer={isViewedRoleActive}
+              canStop={canStopViewedRole}
+              stopRequested={activeUi?.stopRequested ?? false}
+              roles={roles}
+              selectedRole={viewedRole ?? undefined}
+              activeRole={activeLiveRole ?? undefined}
+              onRoleSelect={(role) => {
+                if (!activeTabKey) return;
+                updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
+              }}
+              onInputChange={(value) => {
+                if (!activeTabKey) return;
+                updateFlowUi(activeTabKey, (state) => ({ ...state, composerValue: value }));
+              }}
+              onSubmit={handleSubmit}
+              onStop={handleStopActiveTurn}
+            />
+          </Panel>
+        </PanelGroup>
       </div>
 
       {activeUi?.showImprovementModal ? (

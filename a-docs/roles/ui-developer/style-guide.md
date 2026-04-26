@@ -40,12 +40,12 @@ export const ChatInterface = (props: ChatInterfaceProps) => { ... }
 
 **Components in `src/components/`.** Hooks in `src/hooks/`. Do not create additional subdirectory levels unless the folder would exceed five files.
 
-**3-Pane IDE Layout.** The main workspace uses a persistent 3-pane layout:
-- **Left Pane (Sidebar):** Project explorer and creation (`ProjectSelector` acting as a sidebar).
+**3-Pane IDE Layout.** The main workspace uses a persistent, resizable 3-pane layout:
+- **Left Pane (Sidebar):** Project explorer, creation, and record selection (`ProjectSelector` acting as a sidebar).
 - **Center Pane (Main Editor):** Workflow graph (`GraphView`) or extra project information.
 - **Right Pane (Secondary Sidebar):** Role chat interface (`ChatInterface`).
 
-This layout is managed by the `.workspace-grid` class (`280px minmax(0, 1fr) 360px`). Do not implement full-screen toggle views that obscure this persistent layout.
+This layout is managed by the `react-resizable-panels` library via the `<PanelGroup orientation="horizontal">` container. It should fill the available browser space edge-to-edge to mimic a professional IDE. Do not implement full-screen toggle views that obscure this persistent layout.
 
 ---
 
@@ -146,7 +146,7 @@ color: rgba(34, 49, 63, 0.72);
 | Token | Light Value | Dark Value | Use |
 |---|---|---|---|
 | `--bg` | `#f4efe6` | `#0f1115` | Page background base |
-| `--surface` | `rgba(255,251,245,0.88)` | `rgba(22,27,34,0.65)` | Panel fill (frosted glassmorphism) |
+| `--surface` | `rgba(255,251,245,0.88)` | `rgba(22,27,34,0.65)` | Panel fill |
 | `--surface-strong` | `#fffdf9` | `#1c2128` | Modal/input fill |
 | `--border` | `rgba(42,54,68,0.12)` | `rgba(205,217,229,0.1)` | Default border |
 | `--ink` | `#22313f` | `#cdd9e5` | Primary text |
@@ -179,7 +179,7 @@ Avoid deep nesting of selectors. Two levels maximum (`.feed-item .feed-label` is
 
 | Context | Radius |
 |---|---|
-| Major panels | `28px` |
+| Major panels | `0` (Flat, edge-to-edge IDE look) |
 | Cards, feed items | `18px` |
 | Pills, full-round buttons | `999px` |
 | Graph canvas, large inner surfaces | `24px` |
@@ -193,7 +193,7 @@ Do not introduce intermediate values without a clear reason.
 **Animations.** Define `@keyframes` at the top level of `styles.css`. The standing animations are `pulse` (live-role indicator), `fadeIn` (modal overlay), and `slideUp` (modal panel). Add a new `@keyframes` only when the motion serves a clear user signal.
 
 **Responsive breakpoints.** Two breakpoints in use:
-- `max-width: 1100px` — stack `.workspace-grid` from two columns to one.
+- `max-width: 1100px` — collapse to stacked panels (if implemented) or adjust resizing limits.
 - `max-width: 720px` — mobile: reduce padding, flatten header layouts, shorten graph canvas height.
 
 Do not add intermediate breakpoints without a layout justification.
@@ -229,6 +229,6 @@ Do not remove these resets.
 - No server-side code. No modifications to `runtime/src/`.
 - No new API endpoints. If additional server data is needed, surface the requirement as a server-contract gap to the TA.
 - No global state library, no data-fetching library (React Query, SWR, etc.).
-- No component library (MUI, Radix, shadcn/ui, etc.). The UI is custom and intentionally minimal.
+- No component library (MUI, Radix, shadcn/ui, etc.). The UI is custom and intentionally minimal, though specialized headless layout utilities like `react-resizable-panels` are permitted.
 - No new font families or icon libraries without Owner direction.
 - No inline styles beyond the ReactFlow node style resets described above.

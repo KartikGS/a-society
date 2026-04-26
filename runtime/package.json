@@ -32,6 +32,7 @@
     "js-yaml": "^4.1.0",
     "openai": "^4.0.0",
     "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^4.10.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {

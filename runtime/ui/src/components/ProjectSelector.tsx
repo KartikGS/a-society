@@ -9,7 +9,7 @@ interface ProjectSelectorProps {
   newProjectName: string;
   errorMessage: string | null;
   disabled: boolean;
-  onSelectInitialized: (projectNamespace: string) => void;
+  onSelectInitialized: (projectNamespace: string | null) => void;
   onInitializeExisting: (projectNamespace: string) => void;
   onOpenFlow: (flow: FlowSummary) => void;
   onNewFlow: (projectNamespace: string) => void;
@@ -98,13 +98,34 @@ function FlowList(props: {
 }
 
 export function ProjectSelector(props: ProjectSelectorProps) {
-  return (
-    <aside className="panel sidebar-panel">
-      <div className="sidebar-header">
-        <p className="eyebrow">A-Society</p>
-        <h2>Projects</h2>
-      </div>
+  if (props.selectedProject) {
+    return (
+      <aside className="panel sidebar-panel" style={{ flex: 1, minHeight: 0 }}>
+        <div className="sidebar-header" style={{ marginBottom: 0 }}>
+          <button
+            type="button"
+            className="sidebar-mini-btn"
+            onClick={() => props.onSelectInitialized(null)}
+          >
+            &larr; Back to Projects
+          </button>
+        </div>
+        <div className="sidebar-content">
+          <FlowList
+            selectedProject={props.selectedProject}
+            selectedFlowId={props.selectedFlowId}
+            flows={props.projectFlows}
+            disabled={props.disabled}
+            onOpenFlow={props.onOpenFlow}
+            onNewFlow={props.onNewFlow}
+          />
+        </div>
+      </aside>
+    );
+  }
 
+  return (
+    <aside className="panel sidebar-panel" style={{ flex: 1, minHeight: 0 }}>
       {props.errorMessage ? (
         <div className="sidebar-error">
           <p>{props.errorMessage}</p>
@@ -113,7 +134,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
 
       <div className="sidebar-content">
         <ProjectSection
-          title="Initialized (with a-docs)"
+          title="Initialized"
           projects={props.projectsWithADocs}
           selectedProject={props.selectedProject}
           disabled={props.disabled}
@@ -121,17 +142,8 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           emptyMessage="No initialized projects."
         />
 
-        <FlowList
-          selectedProject={props.selectedProject}
-          selectedFlowId={props.selectedFlowId}
-          flows={props.projectFlows}
-          disabled={props.disabled}
-          onOpenFlow={props.onOpenFlow}
-          onNewFlow={props.onNewFlow}
-        />
-
         <ProjectSection
-          title="Uninitialized (no a-docs)"
+          title="Uninitialized"
           projects={props.projectsWithoutADocs}
           selectedProject={props.selectedProject}
           disabled={props.disabled}
