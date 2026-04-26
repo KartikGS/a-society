@@ -653,7 +653,7 @@ export function App() {
   return (
     <main className="app-shell">
       <PanelGroup orientation="horizontal">
-        <Panel defaultSize={20} minSize={15} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: '1px solid var(--border)' }}>
+        <Panel defaultSize={15} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: '1px solid var(--border)' }}>
           <ProjectSelector
             projectsWithADocs={projects.withADocs}
             projectsWithoutADocs={projects.withoutADocs}
@@ -674,7 +674,7 @@ export function App() {
 
         <PanelResizeHandle className="resize-handle" />
 
-        <Panel style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <Panel defaultSize={85} style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
           {activeTab && flowRun?.status === 'running' ? (
             <header className="app-header">
               <div className="header-meta">
@@ -709,7 +709,7 @@ export function App() {
 
           <div className="workspace-grid-wrapper" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
             <PanelGroup orientation="horizontal">
-              <Panel defaultSize={60} minSize={30} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <Panel defaultSize={60} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 {flowRun && activeTab ? (
                   <GraphView
                     flowRun={flowRun}
@@ -744,7 +744,7 @@ export function App() {
 
               <PanelResizeHandle className="resize-handle" />
 
-              <Panel defaultSize={40} minSize={20} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <Panel defaultSize={40} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                 <ChatInterface
                   subtitle={
                     flowRun
