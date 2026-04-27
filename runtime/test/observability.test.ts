@@ -517,6 +517,17 @@ async function run() {
       recordFolderPath: recordDir
     };
 
+    SessionStore.saveRoleSession({
+      roleName: 'Curator',
+      logicalSessionId: 'repair-flow__curator',
+      transcriptHistory: [
+        { role: 'user', content: 'Forward-pass curator assignment.' },
+        { role: 'assistant', content: 'Forward-pass curator output.' }
+      ],
+      isActive: false,
+      currentNodeId: 'curator'
+    }, SessionStore.flowRef(flowRun), tmpDir);
+
     const mockProvider = new MockProvider([
       { type: 'text', text: `Saved findings. \`\`\`handoff\ntype: meta-analysis-complete\nfindings_path: ${findingsPath}\n\`\`\`` },
       { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' },
@@ -524,7 +535,9 @@ async function run() {
     ]);
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    const observedHistories: RuntimeMessageParam[][] = [];
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      observedHistories.push((hist as RuntimeMessageParam[]).map(message => ({ ...message })));
       return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
     };
 
@@ -553,6 +566,9 @@ async function run() {
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.stateVersion, '7', 'improvement initialization must keep the latest state version');
+    assert.strictEqual(observedHistories[0][0].content, 'Forward-pass curator assignment.');
+    assert.strictEqual(observedHistories[0][1].content, 'Forward-pass curator output.');
+    assert.ok(observedHistories[0][2].role === 'user' && observedHistories[0][2].content.includes('Backward pass meta-analysis.'));
     assert.ok(capturedOutput.includes('Owner emitted prompt-human during backward pass feedback. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });

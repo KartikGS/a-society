@@ -129,7 +129,7 @@ export type OperatorFeedMessage =
   | { type: 'operator_event'; event: OperatorEvent }
   | { type: 'wait_start'; provider: string; model: string }
   | { type: 'wait_stop' }
-  | { type: 'output_text'; text: string }
+  | { type: 'output_text'; role?: string; text: string }
   | { type: 'input_text'; role?: string; text: string }
   | { type: 'error'; message: string }
   | { type: 'flow_complete' };

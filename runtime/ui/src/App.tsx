@@ -345,7 +345,7 @@ export function App() {
         updateFlowUi(key, (state) => ({
           ...state,
           waitLabel: null,
-          roleFeeds: appendFeedItem(state.roleFeeds, state.activeLiveRole ?? '__system__', {
+          roleFeeds: appendFeedItem(state.roleFeeds, message.role ?? state.activeLiveRole ?? '__system__', {
             id: nextFeedId(),
             type: 'assistant',
             label: 'Assistant',

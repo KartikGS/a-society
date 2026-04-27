@@ -6,7 +6,7 @@ import express, { type Express, type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import { PassThrough } from 'node:stream';
+import { PassThrough, Writable } from 'node:stream';
 import { WebSocketServer, WebSocket } from 'ws';
 import { TelemetryManager } from './observability.js';
 import { SessionStore } from './store.js';
@@ -220,9 +220,10 @@ function buildServer(workspaceRoot: string) {
 
   function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
     const previous = session.messageHistory[session.messageHistory.length - 1];
-    if (previous?.type === 'output_text' && message.type === 'output_text') {
+    if (previous?.type === 'output_text' && message.type === 'output_text' && previous.role === message.role) {
       session.messageHistory[session.messageHistory.length - 1] = {
         type: 'output_text',
+        role: message.role,
         text: previous.text + message.text,
       };
     } else {
@@ -623,6 +624,18 @@ function buildServer(workspaceRoot: string) {
     return createSession(ref);
   }
 
+  function createRoleOutputStream(session: ActiveSession, role: string): NodeJS.WritableStream {
+    return new Writable({
+      write(chunk, _encoding, callback) {
+        const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        if (text && !isPromptLine(text)) {
+          emitHistoricalMessage(session, { type: 'output_text', role, text });
+        }
+        callback();
+      }
+    });
+  }
+
   function handleImprovementChoice(ref: FlowRef, mode: ImprovementMode | 'none'): void {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_improvement_choice') {
@@ -664,7 +677,8 @@ function buildServer(workspaceRoot: string) {
         currentFlow,
         mode,
         session.outputBridge,
-        session.sink
+        session.sink,
+        (roleName) => createRoleOutputStream(session, roleName)
       );
 
       const latestFlow = readFlowRun(ref);

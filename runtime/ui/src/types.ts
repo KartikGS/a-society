@@ -70,7 +70,7 @@ export type ServerMessage =
   | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }
   | { type: 'wait_start'; flowRef: FlowRef; provider: string; model: string }
   | { type: 'wait_stop'; flowRef: FlowRef }
-  | { type: 'output_text'; flowRef: FlowRef; text: string }
+  | { type: 'output_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[] }
   | { type: 'error'; flowRef: FlowRef; message: string }

@@ -13,6 +13,7 @@ import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
+import { toKebabCaseRoleId } from './role-id.js';
 
 // Co-maintenance: update if the final backward-pass feedback role convention changes for this project.
 const FEEDBACK_ROLE = 'Owner';
@@ -58,17 +59,31 @@ function describeExpectedStep(expectedKind: ExpectedImprovementSignalKind): stri
   return expectedKind === 'meta-analysis-complete' ? 'meta-analysis' : 'feedback';
 }
 
+function cloneRuntimeHistory(history: RuntimeMessageParam[]): RuntimeMessageParam[] {
+  return history.map(message => ({ ...message }));
+}
+
+function loadForwardPassRoleHistory(flowRun: FlowRun, roleName: string): RuntimeMessageParam[] {
+  const sessionId = `${flowRun.flowId}__${toKebabCaseRoleId(roleName)}`;
+  const session = SessionStore.loadRoleSession(
+    sessionId,
+    SessionStore.flowRef(flowRun),
+    flowRun.workspaceRoot
+  );
+  return session ? cloneRuntimeHistory(session.transcriptHistory as RuntimeMessageParam[]) : [];
+}
+
 async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImprovementSignalKind>(
   flowRun: FlowRun,
   roleName: string,
   bundleContent: string,
-  initialUserMessage: string,
+  initialHistory: RuntimeMessageParam[],
   expectedKind: K,
   role: string,
   outputStream: NodeJS.WritableStream,
   renderer: OperatorRenderSink
 ): Promise<ExpectedImprovementSignal<K>> {
-  const history: RuntimeMessageParam[] = [{ role: 'user', content: initialUserMessage }];
+  const history = cloneRuntimeHistory(initialHistory);
   const stepLabel = describeExpectedStep(expectedKind);
 
   while (true) {
@@ -184,6 +199,7 @@ export class ImprovementOrchestrator {
     mode: ImprovementMode,
     outputStream: NodeJS.WritableStream,
     renderer: OperatorRenderSink,
+    roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
   ): Promise<void> {
     const signal = flowRun.improvementPhase?.forwardPassClosure;
     if (!signal) {
@@ -243,6 +259,14 @@ export class ImprovementOrchestrator {
               // Concurrent roles within step
               await Promise.all(group.map(async (entry) => {
                 const roleName = entry.role;
+                const roleOutputStream = roleOutputStreamFactory?.(roleName) ?? outputStream;
+                renderer.emit({
+                  kind: 'role.active',
+                  nodeId: `${toKebabCaseRoleId(roleName)}-${entry.stepType}`,
+                  role: roleName,
+                  artifactCount: 0,
+                  activationSource: 'runtime'
+                });
 
                 if (entry.stepType === 'meta-analysis') {
                   const findingsRoles = entry.findingsRolesToInject;
@@ -278,14 +302,16 @@ export class ImprovementOrchestrator {
                     findingsFilePaths,
                     completionSignal: 'Produce your findings artifact at the next available sequence position in the record folder. When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set to the repo-relative path of your findings file.'
                   });
+                  const history = loadForwardPassRoleHistory(flowRun, roleName);
+                  history.push({ role: 'user', content: userMessage });
                   const result = await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleName,
                     bundleContent,
-                    userMessage,
+                    history,
                     'meta-analysis-complete',
                     entry.role,
-                    outputStream,
+                    roleOutputStream,
                     renderer
                   );
 
@@ -310,14 +336,15 @@ export class ImprovementOrchestrator {
                     findingsFilePaths: allFindingsFiles,
                     completionSignal: 'Findings from all roles in this flow are in your context. Produce the feedback artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the feedback artifact.'
                   });
+                  const history: RuntimeMessageParam[] = [{ role: 'user', content: userMessage }];
                   await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleName,
                     bundleContent,
-                    userMessage,
+                    history,
                     'backward-pass-complete',
                     entry.role,
-                    outputStream,
+                    roleOutputStream,
                     renderer
                   );
                 }
