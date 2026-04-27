@@ -480,12 +480,15 @@ async function run() {
     // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:
     // workspaceRoot = workspace root, projectNamespace = project folder name.
     const improvementNamespace = path.basename(tmpDir);
+    const runtimeRoot = path.join(tmpDir, 'a-society', 'runtime');
     fs.mkdirSync(recordDir, { recursive: true });
+    fs.mkdirSync(runtimeRoot, { recursive: true });
     fs.mkdirSync(path.join(aDocsRoot, 'improvement'), { recursive: true });
     fs.mkdirSync(path.join(aDocsRoot, 'indexes'), { recursive: true });
     fs.mkdirSync(path.join(aDocsRoot, 'workflow'), { recursive: true });
     fs.writeFileSync(path.join(aDocsRoot, 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
     fs.writeFileSync(path.join(aDocsRoot, 'improvement', 'feedback.md'), 'Feedback instructions');
+    fs.writeFileSync(path.join(runtimeRoot, 'FEEDBACK.md'), 'Runtime feedback instructions');
     fs.writeFileSync(path.join(aDocsRoot, 'indexes', 'main.md'), '');
     fs.writeFileSync(
       path.join(aDocsRoot, 'workflow', 'main.yaml'),
@@ -566,10 +569,20 @@ async function run() {
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.stateVersion, '7', 'improvement initialization must keep the latest state version');
-    assert.strictEqual(observedHistories[0][0].content, 'Forward-pass curator assignment.');
-    assert.strictEqual(observedHistories[0][1].content, 'Forward-pass curator output.');
-    assert.ok(observedHistories[0][2].role === 'user' && observedHistories[0][2].content.includes('Backward pass meta-analysis.'));
-    assert.ok(capturedOutput.includes('Owner emitted prompt-human during backward pass feedback. Requesting repair.'));
+    const metaUserMessage = observedHistories[0][0];
+    const metaAssistantMessage = observedHistories[0][1];
+    const metaImprovementMessage = observedHistories[0][2];
+    const feedbackMessage = observedHistories[1][0];
+    assert.ok('content' in metaUserMessage);
+    assert.ok('content' in metaAssistantMessage);
+    assert.ok('content' in metaImprovementMessage);
+    assert.ok('content' in feedbackMessage);
+    assert.strictEqual(metaUserMessage.content, 'Forward-pass curator assignment.');
+    assert.strictEqual(metaAssistantMessage.content, 'Forward-pass curator output.');
+    assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes('Backward pass meta-analysis.'));
+    assert.ok(feedbackMessage.content.includes('[FILE: a-society/runtime/FEEDBACK.md]'));
+    assert.ok(feedbackMessage.content.includes('Runtime feedback instructions'));
+    assert.ok(capturedOutput.includes('A-Society Feedback emitted prompt-human during backward pass feedback. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });
 

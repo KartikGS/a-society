@@ -590,6 +590,18 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ---
 
+### `runtime/FEEDBACK.md` — `$A_SOCIETY_RUNTIME_FEEDBACK`
+
+**Why it exists:** The final backward-pass feedback step is runtime-owned A-Society feedback, not a normal project role session. It needs a stable instruction surface that does not depend on any adopting project's Owner role.
+
+**What it owns:** The scope, guardrails, and terminal signal contract for producing the final A-Society feedback artifact from completed meta-analysis findings.
+
+**What breaks without it:** The runtime falls back to project-specific Owner instructions for A-Society feedback, creating role ambiguity and inconsistent framework signal.
+
+**Do not consolidate with:** `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` — the handoff contract defines machine-readable signal syntax; this file defines the feedback phase's work. Do not consolidate with `$GENERAL_IMPROVEMENT_FEEDBACK` — the general file is a project template, while this is the runtime-owned execution contract.
+
+---
+
 ## `general/`
 
 ### `general/instructions/` — folder

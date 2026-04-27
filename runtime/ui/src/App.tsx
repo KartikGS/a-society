@@ -294,7 +294,7 @@ export function App() {
             return {
               ...state,
               activeLiveRole: event.role,
-              selectedRole: state.selectedRole ?? event.role,
+              selectedRole: event.activationSource === 'runtime' ? event.role : state.selectedRole ?? event.role,
               awaitingInput: false,
               stopRequested: false,
               roleFeeds: item ? appendFeedItem(state.roleFeeds, event.role, item) : state.roleFeeds,
@@ -653,11 +653,17 @@ export function App() {
       : EMPTY_STRINGS
   ), [activeNodeIds, lastHandoffFromNodeId]);
 
-  const roles = useMemo(() => (
-    workflow
-      ? [...new Set(workflow.nodes.map((node) => node.role))]
-      : EMPTY_STRINGS
-  ), [workflow]);
+  const roles = useMemo(() => {
+    const roleSet = new Set<string>();
+    if (workflow) {
+      for (const node of workflow.nodes) roleSet.add(node.role);
+    }
+    for (const role of Object.keys(activeUi?.roleFeeds ?? {})) {
+      if (role !== '__system__') roleSet.add(role);
+    }
+    if (activeLiveRole) roleSet.add(activeLiveRole);
+    return roleSet.size > 0 ? [...roleSet] : EMPTY_STRINGS;
+  }, [activeLiveRole, activeUi?.roleFeeds, workflow]);
 
   const activeRoles = useMemo(() => {
     if (!flowRun || !workflow) {

@@ -15,8 +15,12 @@ import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
 import { toKebabCaseRoleId } from './role-id.js';
 
-// Co-maintenance: update if the final backward-pass feedback role convention changes for this project.
-const FEEDBACK_ROLE = 'Owner';
+const FEEDBACK_ROLE = 'A-Society Feedback';
+const RUNTIME_FEEDBACK_SYSTEM_PROMPT = [
+  'You are the A-Society runtime feedback phase.',
+  'Follow the runtime feedback instructions supplied in the latest user message.',
+  'Use the supplied findings as the primary source material and emit the required backward-pass-complete handoff block.'
+].join('\n');
 
 type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-complete';
 export type ImprovementMode = 'graph-based' | 'parallel';
@@ -71,6 +75,10 @@ function loadForwardPassRoleHistory(flowRun: FlowRun, roleName: string): Runtime
     flowRun.workspaceRoot
   );
   return session ? cloneRuntimeHistory(session.transcriptHistory as RuntimeMessageParam[]) : [];
+}
+
+function runtimeFeedbackInstructionPath(flowRun: FlowRun): string {
+  return path.join(flowRun.workspaceRoot, 'a-society', 'runtime', 'FEEDBACK.md');
 }
 
 async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImprovementSignalKind>(
@@ -319,14 +327,7 @@ export class ImprovementOrchestrator {
                 } else if (entry.stepType === 'feedback') {
                   const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
 
-                  // $[PROJECT]_IMPROVEMENT_FEEDBACK: project root + namespace + a-docs/improvement/feedback.md
-                  const feedbackInstructionPath = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'feedback.md');
-
-                  const { bundleContent } = ContextInjectionService.buildContextBundle(
-                    flowRun.projectNamespace,
-                    roleName,
-                    flowRun.workspaceRoot
-                  );
+                  const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
 
                   const userMessage = buildImprovementEntryMessage({
                     stepLabel: 'feedback',
@@ -340,7 +341,7 @@ export class ImprovementOrchestrator {
                   await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleName,
-                    bundleContent,
+                    RUNTIME_FEEDBACK_SYSTEM_PROMPT,
                     history,
                     'backward-pass-complete',
                     entry.role,

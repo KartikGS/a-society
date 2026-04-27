@@ -144,12 +144,14 @@ export async function runRoleTurn(
   const tracer = TelemetryManager.getTracer();
   let turnIndex = 0;
 
-  const orientRoleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
-  if (!orientRoleEntry) {
-    if (outputStream === process.stdout) {
-      console.error(`Could not load role context for '${projectNamespace}/${roleName}'. Check that the role file exists and contains valid frontmatter.`);
+  if (providedSystemPrompt === undefined) {
+    const orientRoleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
+    if (!orientRoleEntry) {
+      if (outputStream === process.stdout) {
+        console.error(`Could not load role context for '${projectNamespace}/${roleName}'. Check that the role file exists and contains valid frontmatter.`);
+      }
+      return null;
     }
-    return null;
   }
 
   const sessionId = crypto.randomUUID();
