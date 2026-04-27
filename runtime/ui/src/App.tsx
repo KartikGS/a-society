@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
-import { GraphView } from './components/GraphView';
+import { GraphView, type GraphMode } from './components/GraphView';
 import { ProjectSelector } from './components/ProjectSelector';
 import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -31,6 +31,7 @@ interface FlowUiState {
   roleFeeds: Record<string, FeedItem[]>;
   activeLiveRole: string | null;
   selectedRole: string | null;
+  selectedGraph: GraphMode;
   workflow: WorkflowGraph | null;
   composerValue: string;
   awaitingInput: boolean;
@@ -55,6 +56,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     roleFeeds: {},
     activeLiveRole: null,
     selectedRole: null,
+    selectedGraph: 'flow',
     workflow: null,
     composerValue: '',
     awaitingInput: flowRun?.status === 'awaiting_human',
@@ -206,6 +208,10 @@ function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: F
 function titleForFlow(flowRun: FlowRun | FlowSummary | FlowRef): string {
   if ('recordName' in flowRun && flowRun.recordName) return flowRun.recordName;
   return flowRun.flowId;
+}
+
+function hasImprovementGraph(flowRun: FlowRun | null): boolean {
+  return flowRun?.improvementPhase?.mode === 'graph-based' || flowRun?.improvementPhase?.mode === 'parallel';
 }
 
 export function App() {
@@ -366,15 +372,24 @@ export function App() {
         return;
       case 'flow_state':
         ensureTab(message.flowRef, titleForFlow(message.flowRun));
-        updateFlowUi(key, (state) => ({
-          ...state,
-          flowRun: areFlowRunsEqual(state.flowRun, message.flowRun) ? state.flowRun : message.flowRun,
-          backwardActive: areStringArraysEqual(state.backwardActive, message.backwardActive)
-            ? state.backwardActive
-            : message.backwardActive,
-          awaitingInput: Object.keys(message.flowRun.awaitingHumanNodes).length > 0,
-          stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
-        }));
+        updateFlowUi(key, (state) => {
+          const improvementGraphAvailable = hasImprovementGraph(message.flowRun);
+          const wasImprovementGraphAvailable = hasImprovementGraph(state.flowRun);
+          return {
+            ...state,
+            flowRun: areFlowRunsEqual(state.flowRun, message.flowRun) ? state.flowRun : message.flowRun,
+            backwardActive: areStringArraysEqual(state.backwardActive, message.backwardActive)
+              ? state.backwardActive
+              : message.backwardActive,
+            selectedGraph: improvementGraphAvailable && !wasImprovementGraphAvailable && message.flowRun.improvementPhase?.status === 'running'
+              ? 'improvement'
+              : !improvementGraphAvailable && state.selectedGraph === 'improvement'
+                ? 'flow'
+                : state.selectedGraph,
+            awaitingInput: Object.keys(message.flowRun.awaitingHumanNodes).length > 0,
+            stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
+          };
+        });
         void fetchProjectFlows(message.flowRef.projectNamespace);
         return;
       case 'error':
@@ -454,6 +469,7 @@ export function App() {
   const workflow = activeUi?.workflow ?? null;
   const activeLiveRole = activeUi?.activeLiveRole ?? null;
   const selectedRole = activeUi?.selectedRole ?? null;
+  const selectedGraph = activeUi?.selectedGraph ?? 'flow';
   const lastHandoff = activeUi?.lastHandoff ?? null;
   const backwardActive = activeUi?.backwardActive ?? EMPTY_STRINGS;
   const projectFlows = selectedProject ? projectFlowsByProject[selectedProject] ?? [] : [];
@@ -621,6 +637,9 @@ export function App() {
 
   function handleImprovementChoice(mode: 'graph-based' | 'parallel' | 'none'): void {
     if (!activeTab) return;
+    if (mode !== 'none') {
+      updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
+    }
     sendMessage({ type: 'improvement_choice', flowRef: activeTab.ref, mode });
   }
 
@@ -645,7 +664,14 @@ export function App() {
 
   const handleGraphNodeClick = useCallback((_nodeId: string) => {}, []);
 
+  const handleGraphModeChange = useCallback((mode: GraphMode) => {
+    if (!activeTabKey) return;
+    updateFlowUi(activeTabKey, (state) => ({ ...state, selectedGraph: mode }));
+  }, [activeTabKey, updateFlowUi]);
+
   const activeNodeIds = flowRun ? getOpenNodeIds(flowRun) : undefined;
+  const improvementGraphAvailable = hasImprovementGraph(flowRun);
+  const graphMode = selectedGraph === 'improvement' && improvementGraphAvailable ? 'improvement' : 'flow';
   const lastHandoffFromNodeId = lastHandoff?.fromNodeId;
   const backwardSources = useMemo(() => (
     activeNodeIds && lastHandoffFromNodeId && activeNodeIds.includes(lastHandoffFromNodeId)
@@ -769,10 +795,13 @@ export function App() {
                   <GraphView
                     flowRun={flowRun}
                     flowRef={activeTab.ref}
+                    graphMode={graphMode}
+                    improvementAvailable={improvementGraphAvailable}
                     backwardActive={backwardActive}
                     backwardSources={backwardSources}
                     recordFolderPath={flowRun.recordFolderPath}
                     onNodeClick={handleGraphNodeClick}
+                    onGraphModeChange={handleGraphModeChange}
                     onWorkflowLoaded={handleWorkflowLoaded}
                   />
                 ) : (

@@ -14,6 +14,7 @@ import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
 import { toKebabCaseRoleId } from './role-id.js';
+import { improvementNodeId, writeImprovementWorkflow } from './improvement-workflow.js';
 
 const FEEDBACK_ROLE = 'A-Society Feedback';
 const RUNTIME_FEEDBACK_SYSTEM_PROMPT = [
@@ -178,6 +179,8 @@ export class ImprovementOrchestrator {
       currentStep: 0,
       completedRoles: [],
       findingsProduced: {},
+      activeNodeIds: [],
+      completedNodeIds: [],
       forwardPassClosure: signal
     };
     flowRun.stateVersion = '7';
@@ -196,6 +199,9 @@ export class ImprovementOrchestrator {
       currentStep: flowRun.improvementPhase?.currentStep ?? 0,
       completedRoles: flowRun.improvementPhase?.completedRoles ?? [],
       findingsProduced: flowRun.improvementPhase?.findingsProduced ?? {},
+      improvementWorkflowPath: flowRun.improvementPhase?.improvementWorkflowPath,
+      activeNodeIds: [],
+      completedNodeIds: flowRun.improvementPhase?.completedNodeIds ?? [],
       forwardPassClosure
     };
     saveImprovementFlow(flowRun);
@@ -225,6 +231,9 @@ export class ImprovementOrchestrator {
       try {
         span.setAttribute('improvement.mode', mode);
         span.addEvent('improvement.mode_selected', { mode });
+        const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
+        const improvementWorkflowFilePath = writeImprovementWorkflow(signal.recordFolderPath, plan, mode);
+
         flowRun.improvementPhase = {
           ...flowRun.improvementPhase,
           status: 'running',
@@ -232,6 +241,9 @@ export class ImprovementOrchestrator {
           currentStep: 0,
           completedRoles: [],
           findingsProduced: {},
+          improvementWorkflowPath: path.relative(flowRun.workspaceRoot, improvementWorkflowFilePath),
+          activeNodeIds: [],
+          completedNodeIds: [],
           forwardPassClosure: signal
         };
         flowRun.status = 'running';
@@ -239,13 +251,14 @@ export class ImprovementOrchestrator {
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 
-        const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
         span.setAttribute('improvement.plan_step_count', plan.length);
 
         // Sequential steps
         for (let i = 0; i < plan.length; i++) {
           flowRun.improvementPhase.currentStep = i;
           const group = plan[i];
+          flowRun.improvementPhase.activeNodeIds = group.map(improvementNodeId);
+          saveImprovementFlow(flowRun);
           const isFeedback = group.some(e => e.stepType === 'feedback');
           const spanName = isFeedback ? 'improvement.feedback' : 'improvement.meta_analysis.step';
           span.addEvent('improvement.step_started', {
@@ -267,10 +280,11 @@ export class ImprovementOrchestrator {
               // Concurrent roles within step
               await Promise.all(group.map(async (entry) => {
                 const roleName = entry.role;
+                const improvementGraphNodeId = improvementNodeId(entry);
                 const roleOutputStream = roleOutputStreamFactory?.(roleName) ?? outputStream;
                 renderer.emit({
                   kind: 'role.active',
-                  nodeId: `${toKebabCaseRoleId(roleName)}-${entry.stepType}`,
+                  nodeId: improvementGraphNodeId,
                   role: roleName,
                   artifactCount: 0,
                   activationSource: 'runtime'
@@ -350,6 +364,15 @@ export class ImprovementOrchestrator {
                   );
                 }
                 flowRun.improvementPhase!.completedRoles.push(entry.role);
+                flowRun.improvementPhase!.activeNodeIds = (flowRun.improvementPhase!.activeNodeIds ?? [])
+                  .filter(nodeId => nodeId !== improvementGraphNodeId);
+                if (!(flowRun.improvementPhase!.completedNodeIds ?? []).includes(improvementGraphNodeId)) {
+                  flowRun.improvementPhase!.completedNodeIds = [
+                    ...(flowRun.improvementPhase!.completedNodeIds ?? []),
+                    improvementGraphNodeId
+                  ];
+                }
+                saveImprovementFlow(flowRun);
               }));
               saveImprovementFlow(flowRun);
               span.addEvent('store.flow_saved', { stage: 'step_completed', step_index: i });
@@ -366,6 +389,8 @@ export class ImprovementOrchestrator {
 
         flowRun.status = 'completed';
         flowRun.improvementPhase.status = 'completed';
+        flowRun.improvementPhase.activeNodeIds = [];
+        flowRun.improvementPhase.completedNodeIds = plan.flatMap(group => group.map(improvementNodeId));
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
         outputStream.write(`[improvement] Improvement phase complete. Flow closed.\n`);

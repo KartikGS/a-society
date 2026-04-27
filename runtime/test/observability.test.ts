@@ -569,6 +569,13 @@ async function run() {
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.stateVersion, '7', 'improvement initialization must keep the latest state version');
+    assert.ok(fs.existsSync(path.join(recordDir, 'improvement.yaml')), 'improvement run should persist improvement.yaml');
+    assert.strictEqual(flowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
+    assert.deepStrictEqual(flowRun.improvementPhase?.activeNodeIds, []);
+    assert.deepStrictEqual(flowRun.improvementPhase?.completedNodeIds, [
+      'curator-meta-analysis',
+      'a-society-feedback-feedback'
+    ]);
     const metaUserMessage = observedHistories[0][0];
     const metaAssistantMessage = observedHistories[0][1];
     const metaImprovementMessage = observedHistories[0][2];

@@ -25,6 +25,9 @@ export interface ImprovementPhaseState {
   currentStep: number;                         // index into BackwardPassPlan outer array
   completedRoles: string[];                    // role names that have produced findings or been attempted
   findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
+  improvementWorkflowPath?: string;            // repo-relative path to runtime-generated improvement.yaml
+  activeNodeIds?: string[];                    // improvement graph node ids currently running
+  completedNodeIds?: string[];                 // improvement graph node ids that completed
   forwardPassClosure: {
     recordFolderPath: string;
     artifactPath: string;

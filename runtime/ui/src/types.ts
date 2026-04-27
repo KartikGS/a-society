@@ -24,6 +24,22 @@ export interface FlowRun {
   pendingNodeArtifacts: Record<string, string[]>;
   status: 'initialized' | 'running' | 'awaiting_human' | 'awaiting_improvement_choice' | 'awaiting_retry' | 'completed' | 'failed';
   stateVersion: string;
+  improvementPhase?: ImprovementPhaseState;
+}
+
+export interface ImprovementPhaseState {
+  status: 'awaiting_choice' | 'running' | 'completed' | 'skipped';
+  mode?: 'graph-based' | 'parallel' | 'none';
+  currentStep: number;
+  completedRoles: string[];
+  findingsProduced: Record<string, string>;
+  improvementWorkflowPath?: string;
+  activeNodeIds?: string[];
+  completedNodeIds?: string[];
+  forwardPassClosure: {
+    recordFolderPath: string;
+    artifactPath: string;
+  };
 }
 
 export interface FlowRef {
@@ -77,7 +93,9 @@ export type ServerMessage =
   | { type: 'flow_complete'; flowRef: FlowRef };
 
 export interface WorkflowGraph {
-  nodes: Array<{ id: string; role: string }>;
+  name?: string;
+  summary?: string;
+  nodes: Array<{ id: string; role: string; step_index?: number; step_type?: 'meta-analysis' | 'feedback' }>;
   edges: Array<{ from: string; to: string }>;
 }
 

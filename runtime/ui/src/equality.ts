@@ -62,6 +62,27 @@ function areAwaitingHumanMapsEqual(
   return true;
 }
 
+function areImprovementPhasesEqual(
+  left: FlowRun['improvementPhase'],
+  right: FlowRun['improvementPhase']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+
+  return (
+    left.status === right.status &&
+    left.mode === right.mode &&
+    left.currentStep === right.currentStep &&
+    left.improvementWorkflowPath === right.improvementWorkflowPath &&
+    left.forwardPassClosure.recordFolderPath === right.forwardPassClosure.recordFolderPath &&
+    left.forwardPassClosure.artifactPath === right.forwardPassClosure.artifactPath &&
+    areStringArraysEqual(left.completedRoles, right.completedRoles) &&
+    areStringMapsEqual(left.findingsProduced, right.findingsProduced) &&
+    areStringArraysEqual(left.activeNodeIds, right.activeNodeIds) &&
+    areStringArraysEqual(left.completedNodeIds, right.completedNodeIds)
+  );
+}
+
 export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
@@ -81,7 +102,8 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringMapsEqual(left.completedEdgeArtifacts, right.completedEdgeArtifacts) &&
-    areStringArrayMapsEqual(left.pendingNodeArtifacts, right.pendingNodeArtifacts)
+    areStringArrayMapsEqual(left.pendingNodeArtifacts, right.pendingNodeArtifacts) &&
+    areImprovementPhasesEqual(left.improvementPhase, right.improvementPhase)
   );
 }
 
@@ -96,9 +118,14 @@ export function areWorkflowGraphsEqual(
     return false;
   }
 
+  if (left.name !== right.name) return false;
+  if (left.summary !== right.summary) return false;
+
   for (let index = 0; index < left.nodes.length; index += 1) {
     if (left.nodes[index].id !== right.nodes[index].id) return false;
     if (left.nodes[index].role !== right.nodes[index].role) return false;
+    if (left.nodes[index].step_index !== right.nodes[index].step_index) return false;
+    if (left.nodes[index].step_type !== right.nodes[index].step_type) return false;
   }
 
   for (let index = 0; index < left.edges.length; index += 1) {

@@ -18,6 +18,7 @@ import { bootstrapInitializationFlow } from './initialization-bootstrap.js';
 import { initializeDraftFlow } from './draft-flow.js';
 import { discoverProjects, type ProjectDiscovery } from './project-discovery.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
+import { readImprovementWorkflow } from './improvement-workflow.js';
 import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage } from './types.js';
 
 type ClientMessage =
@@ -175,6 +176,14 @@ function buildServer(workspaceRoot: string) {
     }
   }
 
+  function resolveImprovementWorkflow(flowRun: FlowRun | null): any | null {
+    if (!flowRun || flowRun.improvementPhase?.mode === undefined || flowRun.improvementPhase.mode === 'none') {
+      return null;
+    }
+
+    return readImprovementWorkflow(flowRun.improvementPhase.forwardPassClosure.recordFolderPath);
+  }
+
   function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {
     const workflow = resolveWorkflow(flowRun);
     const node = workflow?.nodes?.find((candidate: any) => candidate.id === nodeId);
@@ -323,7 +332,11 @@ function buildServer(workspaceRoot: string) {
           emitHistoricalMessage(session, message);
         }
 
-        if (message.event.kind === 'handoff.applied' || message.event.kind === 'flow.completed') {
+        if (
+          message.event.kind === 'handoff.applied' ||
+          message.event.kind === 'flow.completed' ||
+          (message.event.kind === 'role.active' && message.event.activationSource === 'runtime')
+        ) {
           setImmediate(() => emitFlowState(session));
         }
 
@@ -777,6 +790,33 @@ function buildServer(workspaceRoot: string) {
     }
 
     res.json({
+      name: typeof workflow.name === 'string' ? workflow.name : undefined,
+      summary: typeof workflow.summary === 'string' ? workflow.summary : undefined,
+      nodes: Array.isArray(workflow.nodes) ? workflow.nodes : [],
+      edges: Array.isArray(workflow.edges) ? workflow.edges : []
+    });
+  });
+
+  app.get('/api/flows/:projectNamespace/:flowId/improvement-workflow', (req: Request, res: Response) => {
+    const ref = {
+      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
+      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
+    };
+    const flowRun = readFlowRun(ref);
+    if (!flowRun) {
+      res.status(404).json({ message: 'No flow state found.' });
+      return;
+    }
+
+    const workflow = resolveImprovementWorkflow(flowRun);
+    if (!workflow) {
+      res.status(404).json({ message: 'Improvement graph is unavailable for this flow.' });
+      return;
+    }
+
+    res.json({
+      name: typeof workflow.name === 'string' ? workflow.name : undefined,
+      summary: typeof workflow.summary === 'string' ? workflow.summary : undefined,
       nodes: Array.isArray(workflow.nodes) ? workflow.nodes : [],
       edges: Array.isArray(workflow.edges) ? workflow.edges : []
     });

@@ -12,13 +12,18 @@ import {
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
 import type { FlowRef, FlowRun, WorkflowGraph } from '../types';
 
+export type GraphMode = 'flow' | 'improvement';
+
 interface GraphViewProps {
   flowRun: FlowRun;
   flowRef: FlowRef;
+  graphMode: GraphMode;
+  improvementAvailable: boolean;
   backwardActive: string[];
   backwardSources?: string[];
   recordFolderPath: string;
   onNodeClick: (nodeId: string) => void;
+  onGraphModeChange: (mode: GraphMode) => void;
   onWorkflowLoaded?: (graph: WorkflowGraph) => void;
 }
 
@@ -45,6 +50,7 @@ const NODE_SIZE = 140;
 function buildReactFlowState(
   workflow: WorkflowGraph,
   flowRun: FlowRun,
+  graphMode: GraphMode,
   backwardActive: string[],
   backwardSources: string[]
 ): { nodes: Node[]; edges: Edge[] } {
@@ -61,14 +67,20 @@ function buildReactFlowState(
   dagre.layout(g);
 
   const openNodeIds = getOpenNodeIds(flowRun);
+  const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
+  const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
 
   const nodes: Node[] = workflow.nodes.map((node) => {
     const { x, y } = g.node(node.id);
 
-    const isCompleted = flowRun.completedNodes.includes(node.id);
-    const isBackward = backwardActive.includes(node.id);
-    const isBackwardSource = backwardSources.includes(node.id) && openNodeIds.includes(node.id);
-    const isActive = openNodeIds.includes(node.id);
+    const isCompleted = graphMode === 'improvement'
+      ? improvementCompletedNodeIds.includes(node.id)
+      : flowRun.completedNodes.includes(node.id);
+    const isBackward = graphMode === 'flow' && backwardActive.includes(node.id);
+    const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && openNodeIds.includes(node.id);
+    const isActive = graphMode === 'improvement'
+      ? improvementActiveNodeIds.includes(node.id)
+      : openNodeIds.includes(node.id);
 
     let tone = 'node-neutral';
     if (isCompleted) tone = 'node-completed';
@@ -122,30 +134,42 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
     areStringArraysEqual(left.readyNodes, right.readyNodes) &&
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areStringArraysEqual(Object.keys(left.awaitingHumanNodes), Object.keys(right.awaitingHumanNodes)) &&
-    areStringArraysEqual(left.completedNodes, right.completedNodes)
+    areStringArraysEqual(left.completedNodes, right.completedNodes) &&
+    left.improvementPhase?.status === right.improvementPhase?.status &&
+    left.improvementPhase?.mode === right.improvementPhase?.mode &&
+    left.improvementPhase?.currentStep === right.improvementPhase?.currentStep &&
+    left.improvementPhase?.improvementWorkflowPath === right.improvementPhase?.improvementWorkflowPath &&
+    areStringArraysEqual(left.improvementPhase?.activeNodeIds, right.improvementPhase?.activeNodeIds) &&
+    areStringArraysEqual(left.improvementPhase?.completedNodeIds, right.improvementPhase?.completedNodeIds)
   );
 }
 
 function GraphViewComponent({
   flowRun,
   flowRef,
+  graphMode,
+  improvementAvailable,
   backwardActive,
   backwardSources: providedBackwardSources,
   recordFolderPath,
   onNodeClick,
+  onGraphModeChange,
   onWorkflowLoaded
 }: GraphViewProps) {
   const [workflow, setWorkflow] = useState<WorkflowGraph | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadedGraphMode, setLoadedGraphMode] = useState<GraphMode | null>(null);
+  const [error, setError] = useState<{ mode: GraphMode; message: string } | null>(null);
   const workflowRef = useRef<WorkflowGraph | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    workflowRef.current = null;
 
     const loadWorkflow = async () => {
       try {
+        const graphEndpoint = graphMode === 'improvement' ? 'improvement-workflow' : 'workflow';
         const response = await fetch(
-          `/api/flows/${encodeURIComponent(flowRef.projectNamespace)}/${encodeURIComponent(flowRef.flowId)}/workflow`
+          `/api/flows/${encodeURIComponent(flowRef.projectNamespace)}/${encodeURIComponent(flowRef.flowId)}/${graphEndpoint}`
         );
         if (!response.ok) {
           throw new Error(await response.text());
@@ -155,14 +179,21 @@ function GraphViewComponent({
         if (!areWorkflowGraphsEqual(workflowRef.current, graph)) {
           workflowRef.current = graph;
           setWorkflow(graph);
-          onWorkflowLoaded?.(graph);
+          setLoadedGraphMode(graphMode);
+          if (graphMode === 'flow') {
+            onWorkflowLoaded?.(graph);
+          }
         }
         setError(null);
       } catch (loadError: unknown) {
         if (cancelled) return;
         workflowRef.current = null;
         setWorkflow(null);
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load workflow graph.');
+        setLoadedGraphMode(null);
+        setError({
+          mode: graphMode,
+          message: loadError instanceof Error ? loadError.message : 'Unable to load workflow graph.'
+        });
       }
     };
 
@@ -175,35 +206,64 @@ function GraphViewComponent({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [flowRef.projectNamespace, flowRef.flowId, recordFolderPath, onWorkflowLoaded]);
+  }, [flowRef.projectNamespace, flowRef.flowId, graphMode, recordFolderPath, onWorkflowLoaded]);
+
+  const visibleWorkflow = loadedGraphMode === graphMode ? workflow : null;
+  const visibleError = error?.mode === graphMode ? error.message : null;
 
   const backwardSources = useMemo(() => (
-    workflow && providedBackwardSources && providedBackwardSources.length > 0
+    visibleWorkflow && providedBackwardSources && providedBackwardSources.length > 0
       ? providedBackwardSources
       : EMPTY_STRINGS
-  ), [workflow, providedBackwardSources]);
+  ), [visibleWorkflow, providedBackwardSources]);
 
   const graphState = useMemo(() => (
-    workflow
-      ? buildReactFlowState(workflow, flowRun, backwardActive, backwardSources)
+    visibleWorkflow
+      ? buildReactFlowState(visibleWorkflow, flowRun, graphMode, backwardActive, backwardSources)
       : EMPTY_GRAPH_STATE
-  ), [workflow, flowRun, backwardActive, backwardSources]);
+  ), [visibleWorkflow, flowRun, graphMode, backwardActive, backwardSources]);
+
+  const graphTitle = visibleWorkflow?.name ?? flowRun.recordName ?? flowRun.flowId;
+  const graphSummary = visibleWorkflow?.summary ?? flowRun.recordSummary ?? flowRun.projectNamespace;
+  const graphStateLabel = graphMode === 'improvement'
+    ? flowRun.improvementPhase?.status ?? flowRun.status
+    : flowRun.status;
+  const graphModeLabel = graphMode === 'improvement' ? 'Improvement Graph' : 'Workflow Graph';
 
   return (
     <section className="panel graph-panel">
       <div className="graph-panel-header">
         <div>
-          <p className="eyebrow">Workflow Graph</p>
-          <h2>{flowRun.recordName ?? flowRun.flowId}</h2>
+          <p className="eyebrow">{graphModeLabel}</p>
+          <h2>{graphTitle}</h2>
           <p className="panel-copy">
-            {flowRun.recordSummary ?? flowRun.projectNamespace}
+            {graphSummary}
           </p>
         </div>
-        <div className="legend">
-          <span><i className="legend-swatch legend-active" /> Active</span>
-          <span><i className="legend-swatch legend-backward" /> Backward</span>
-          <span><i className="legend-swatch legend-complete" /> Complete</span>
-          <span><i className="legend-swatch legend-neutral" /> Pending</span>
+        <div className="graph-header-actions">
+          <div className="graph-mode-tabs" aria-label="Graph view">
+            <button
+              type="button"
+              className={`graph-mode-tab${graphMode === 'flow' ? ' graph-mode-tab-active' : ''}`}
+              onClick={() => onGraphModeChange('flow')}
+            >
+              Flow
+            </button>
+            <button
+              type="button"
+              className={`graph-mode-tab${graphMode === 'improvement' ? ' graph-mode-tab-active' : ''}`}
+              disabled={!improvementAvailable}
+              onClick={() => onGraphModeChange('improvement')}
+            >
+              Improvement
+            </button>
+          </div>
+          <div className="legend">
+            <span><i className="legend-swatch legend-active" /> Active</span>
+            {graphMode === 'flow' ? <span><i className="legend-swatch legend-backward" /> Backward</span> : null}
+            <span><i className="legend-swatch legend-complete" /> Complete</span>
+            <span><i className="legend-swatch legend-neutral" /> Pending</span>
+          </div>
         </div>
       </div>
 
@@ -212,15 +272,15 @@ function GraphViewComponent({
         <span className="graph-meta-sep">·</span>
         <span>Record: {flowRun.flowId}</span>
         <span className="graph-meta-sep">·</span>
-        <span>State: {flowRun.status}</span>
+        <span>State: {graphStateLabel}</span>
         <span className="graph-meta-sep">·</span>
         <span>{recordFolderPath}</span>
       </div>
 
       <div className="graph-canvas">
-        {error ? <div className="graph-empty">{error}</div> : null}
-        {!workflow && !error ? <div className="graph-empty">Loading workflow graph…</div> : null}
-        {workflow ? (
+        {visibleError ? <div className="graph-empty">{visibleError}</div> : null}
+        {!visibleWorkflow && !visibleError ? <div className="graph-empty">Loading {graphMode === 'improvement' ? 'improvement' : 'workflow'} graph…</div> : null}
+        {visibleWorkflow ? (
           <ReactFlow
             nodes={graphState.nodes}
             edges={graphState.edges}
@@ -245,7 +305,10 @@ function areGraphViewPropsEqual(prev: GraphViewProps, next: GraphViewProps): boo
     prev.recordFolderPath === next.recordFolderPath &&
     prev.flowRef.projectNamespace === next.flowRef.projectNamespace &&
     prev.flowRef.flowId === next.flowRef.flowId &&
+    prev.graphMode === next.graphMode &&
+    prev.improvementAvailable === next.improvementAvailable &&
     prev.onNodeClick === next.onNodeClick &&
+    prev.onGraphModeChange === next.onGraphModeChange &&
     prev.onWorkflowLoaded === next.onWorkflowLoaded &&
     areGraphFlowRunsEqual(prev.flowRun, next.flowRun) &&
     areStringArraysEqual(prev.backwardActive, next.backwardActive) &&
