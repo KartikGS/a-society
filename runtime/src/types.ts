@@ -2,6 +2,7 @@ export type FlowStatus =
   | 'initialized' 
   | 'running' 
   | 'awaiting_human' 
+  | 'awaiting_improvement_choice'
   | 'awaiting_retry' 
   | 'completed' 
   | 'failed';
@@ -19,10 +20,15 @@ export type HandoffResult =
   | { kind: 'awaiting_human' };
 
 export interface ImprovementPhaseState {
-  mode: 'graph-based' | 'parallel';
+  status: 'awaiting_choice' | 'running' | 'completed' | 'skipped';
+  mode?: 'graph-based' | 'parallel' | 'none';
   currentStep: number;                         // index into BackwardPassPlan outer array
   completedRoles: string[];                    // role names that have produced findings or been attempted
   findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
+  forwardPassClosure: {
+    recordFolderPath: string;
+    artifactPath: string;
+  };
 }
 
 export interface FlowRun {
@@ -111,7 +117,6 @@ export type OperatorEvent =
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
   | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
-  | { kind: 'flow.improvement_prompt' }
   | { kind: 'flow.completed' };
 
 export interface OperatorRenderSink {

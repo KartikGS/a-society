@@ -101,10 +101,7 @@ export class OperatorEventRenderer implements OperatorRenderSink {
       }
 
       case 'flow.forward_pass_closed':
-        return `[runtime/flow] Forward pass closed via ${event.artifactBasename}; starting improvement phase`;
-
-      case 'flow.improvement_prompt':
-        return `[runtime/improvement] Awaiting improvement mode selection`;
+        return `[runtime/flow] Forward pass closed via ${event.artifactBasename}; awaiting improvement mode selection`;
 
       case 'flow.completed':
         return `[runtime/flow] Orchestration complete`;

@@ -11,6 +11,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { TelemetryManager } from './observability.js';
 import { SessionStore } from './store.js';
 import { FlowOrchestrator } from './orchestrator.js';
+import { ImprovementOrchestrator, type ImprovementMode } from './improvement.js';
 import { toKebabCaseRoleId } from './role-id.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
 import { bootstrapInitializationFlow } from './initialization-bootstrap.js';
@@ -26,7 +27,8 @@ type ClientMessage =
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
-  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string };
+  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
+  | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' };
 
 type FlowStateMessage = {
   type: 'flow_state';
@@ -613,6 +615,67 @@ function buildServer(workspaceRoot: string) {
     broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active runtime session is waiting for human input.' });
   }
 
+  function getOrCreateChoiceSession(ref: FlowRef): ActiveSession {
+    const existing = activeSessions.get(flowKey(ref));
+    if (existing && !existing.finished) {
+      return existing;
+    }
+    return createSession(ref);
+  }
+
+  function handleImprovementChoice(ref: FlowRef, mode: ImprovementMode | 'none'): void {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun || flowRun.status !== 'awaiting_improvement_choice') {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'The runtime is not currently waiting for an improvement mode selection.'
+      });
+      return;
+    }
+
+    const session = getOrCreateChoiceSession(ref);
+    const label = mode === 'none' ? 'No improvement' : mode === 'graph-based' ? 'Graph-based improvement' : 'Parallel improvement';
+    emitHistoricalMessage(session, {
+      type: 'input_text',
+      text: label,
+    });
+
+    if (mode === 'none') {
+      try {
+        ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
+        session.sink.emit({ kind: 'flow.completed' });
+      } catch (error: any) {
+        emitHistoricalMessage(session, {
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+      return;
+    }
+
+    void attachSessionTask(session, async () => {
+      const currentFlow = readFlowRun(ref);
+      if (!currentFlow) {
+        throw new Error('Flow state disappeared before the improvement phase began.');
+      }
+
+      await ImprovementOrchestrator.runImprovement(
+        currentFlow,
+        mode,
+        session.outputBridge,
+        session.sink
+      );
+
+      const latestFlow = readFlowRun(ref);
+      if (latestFlow?.status === 'completed') {
+        session.sink.emit({ kind: 'flow.completed' });
+      }
+    }).catch(() => {});
+
+    setImmediate(() => emitFlowState(session));
+  }
+
   function handleStopActiveTurn(ref: FlowRef, target?: { nodeId?: string; role?: string }): void {
     const activeSession = activeSessions.get(flowKey(ref));
     if (!activeSession || activeSession.finished) {
@@ -648,6 +711,13 @@ function buildServer(workspaceRoot: string) {
         return parsed;
       }
       if (parsed?.type === 'human_input' && hasFlowRef(parsed.flowRef) && typeof parsed.text === 'string') {
+        return parsed;
+      }
+      if (
+        parsed?.type === 'improvement_choice' &&
+        hasFlowRef(parsed.flowRef) &&
+        (parsed.mode === 'graph-based' || parsed.mode === 'parallel' || parsed.mode === 'none')
+      ) {
         return parsed;
       }
       return null;
@@ -832,6 +902,11 @@ function buildServer(workspaceRoot: string) {
 
       if (message.type === 'stop_active_turn') {
         handleStopActiveTurn(message.flowRef, { nodeId: message.nodeId, role: message.role });
+        return;
+      }
+
+      if (message.type === 'improvement_choice') {
+        handleImprovementChoice(message.flowRef, message.mode);
         return;
       }
 

@@ -22,7 +22,7 @@ export interface FlowRun {
   visitedNodeIds?: string[];
   completedEdgeArtifacts: Record<string, string>;
   pendingNodeArtifacts: Record<string, string[]>;
-  status: 'initialized' | 'running' | 'awaiting_human' | 'awaiting_retry' | 'completed' | 'failed';
+  status: 'initialized' | 'running' | 'awaiting_human' | 'awaiting_improvement_choice' | 'awaiting_retry' | 'completed' | 'failed';
   stateVersion: string;
 }
 
@@ -51,7 +51,6 @@ export type OperatorEvent =
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
   | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
-  | { kind: 'flow.improvement_prompt' }
   | { kind: 'flow.completed' };
 
 export type ClientMessage =
@@ -61,7 +60,8 @@ export type ClientMessage =
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
-  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string };
+  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
+  | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' };
 
 export type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }

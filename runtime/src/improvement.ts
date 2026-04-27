@@ -1,5 +1,4 @@
 import path from 'node:path';
-import readline from 'node:readline';
 import {
   computeBackwardPassPlan,
   locateFindingsFiles,
@@ -19,6 +18,7 @@ import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './fram
 const FEEDBACK_ROLE = 'Owner';
 
 type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-complete';
+export type ImprovementMode = 'graph-based' | 'parallel';
 
 type ExpectedImprovementSignal<K extends ExpectedImprovementSignalKind> = Extract<HandoffResult, { kind: K }>;
 
@@ -145,13 +145,51 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 }
 
 export class ImprovementOrchestrator {
-  static async handleForwardPassClosure(
+  static markAwaitingChoice(
     flowRun: FlowRun,
     signal: { recordFolderPath: string; artifactPath: string },
-    inputStream: NodeJS.ReadableStream,
+  ): void {
+    flowRun.status = 'awaiting_improvement_choice';
+    flowRun.improvementPhase = {
+      status: 'awaiting_choice',
+      currentStep: 0,
+      completedRoles: [],
+      findingsProduced: {},
+      forwardPassClosure: signal
+    };
+    flowRun.stateVersion = '7';
+  }
+
+  static skipImprovement(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): void {
+    const forwardPassClosure = flowRun.improvementPhase?.forwardPassClosure;
+    if (!forwardPassClosure) {
+      throw new Error('[improvement] Cannot skip improvement: forward-pass closure metadata is missing.');
+    }
+
+    flowRun.status = 'completed';
+    flowRun.improvementPhase = {
+      status: 'skipped',
+      mode: 'none',
+      currentStep: flowRun.improvementPhase?.currentStep ?? 0,
+      completedRoles: flowRun.improvementPhase?.completedRoles ?? [],
+      findingsProduced: flowRun.improvementPhase?.findingsProduced ?? {},
+      forwardPassClosure
+    };
+    saveImprovementFlow(flowRun);
+    outputStream?.write(`[improvement] No improvement selected. Record closed.\n`);
+  }
+
+  static async runImprovement(
+    flowRun: FlowRun,
+    mode: ImprovementMode,
     outputStream: NodeJS.WritableStream,
     renderer: OperatorRenderSink,
   ): Promise<void> {
+    const signal = flowRun.improvementPhase?.forwardPassClosure;
+    if (!signal) {
+      throw new Error('[improvement] Cannot start improvement: forward-pass closure metadata is missing.');
+    }
+
     const tracer = TelemetryManager.getTracer();
     return tracer.startActiveSpan('improvement.orchestrate', {
       kind: SpanKind.INTERNAL,
@@ -160,48 +198,19 @@ export class ImprovementOrchestrator {
         'improvement.record_folder': signal.recordFolderPath,
       }
     }, async (span) => {
-      const rl = readline.createInterface({
-        input: inputStream,
-        output: outputStream,
-        terminal: false
-      });
-
-      const question = (query: string): Promise<string> => {
-        return new Promise((resolve) => rl.question(query, resolve));
-      };
-
       try {
-        renderer.emit({ kind: 'flow.improvement_prompt' });
-
-        let choice = String((await question('Enter 1, 2, or 3: ')) ?? '').trim();
-        if (choice !== '1' && choice !== '2' && choice !== '3') {
-          choice = String((await question('Invalid selection. Enter 1, 2, or 3: ')) ?? '').trim();
-          if (choice !== '1' && choice !== '2' && choice !== '3') {
-            outputStream.write(`[improvement] Could not read valid selection. Defaulting to no improvement.\n`);
-            choice = '3';
-          }
-        }
-        rl.close();
-
-        if (choice === '3') {
-          span.setAttribute('improvement.mode', 'none');
-          span.addEvent('improvement.mode_selected', { mode: 'none' });
-          outputStream.write(`[improvement] No improvement selected. Record closed.\n`);
-          flowRun.status = 'completed';
-          saveImprovementFlow(flowRun);
-          span.addEvent('store.flow_saved', { stage: 'improvement_skipped' });
-          return;
-        }
-
-        const mode = choice === '1' ? 'graph-based' : 'parallel';
         span.setAttribute('improvement.mode', mode);
         span.addEvent('improvement.mode_selected', { mode });
         flowRun.improvementPhase = {
+          ...flowRun.improvementPhase,
+          status: 'running',
           mode,
           currentStep: 0,
           completedRoles: [],
-          findingsProduced: {}
+          findingsProduced: {},
+          forwardPassClosure: signal
         };
+        flowRun.status = 'running';
         flowRun.stateVersion = '7';
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
@@ -328,6 +337,7 @@ export class ImprovementOrchestrator {
         }
 
         flowRun.status = 'completed';
+        flowRun.improvementPhase.status = 'completed';
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
         outputStream.write(`[improvement] Improvement phase complete. Flow closed.\n`);

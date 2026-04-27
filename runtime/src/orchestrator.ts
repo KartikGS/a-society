@@ -137,7 +137,7 @@ export class FlowOrchestrator {
     nodeId: string,
     activeArtifactPath?: string | string[],
     humanInput?: string,
-    inputStream: NodeJS.ReadableStream = process.stdin,
+    _inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout
   ): Promise<void> {
     this.setFlowContext(flowRun);
@@ -370,7 +370,10 @@ export class FlowOrchestrator {
                 flowRun = await SessionStore.updateFlowRun((latest) => {
                   this.removeOpenNode(latest, nodeId);
                   this.addCompletedNode(latest, nodeId);
-                  this.reconcileFlowStatus(latest);
+                  ImprovementOrchestrator.markAwaitingChoice(latest, {
+                    recordFolderPath: handoffResult.recordFolderPath,
+                    artifactPath: handoffResult.artifactPath
+                  });
                 }, this.requireFlowRef(), this.requireWorkspaceRoot());
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;
@@ -380,13 +383,6 @@ export class FlowOrchestrator {
                   recordFolderPath: handoffResult.recordFolderPath,
                   artifactBasename: path.basename(handoffResult.artifactPath)
                 });
-                await ImprovementOrchestrator.handleForwardPassClosure(
-                  flowRun,
-                  { recordFolderPath: handoffResult.recordFolderPath, artifactPath: handoffResult.artifactPath },
-                  inputStream,
-                  outputStream,
-                  this.renderer,
-                );
                 return;
               }
 
@@ -999,7 +995,7 @@ export class FlowOrchestrator {
   }
 
   private reconcileFlowStatus(flowRun: FlowRun): void {
-    if (flowRun.status === 'completed' || flowRun.status === 'failed') return;
+    if (flowRun.status === 'completed' || flowRun.status === 'failed' || flowRun.status === 'awaiting_improvement_choice') return;
     if (flowRun.readyNodes.length > 0 || flowRun.runningNodes.length > 0) {
       flowRun.status = 'running';
       return;

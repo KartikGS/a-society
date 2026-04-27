@@ -157,7 +157,7 @@ test('usage.turn_summary both-unavailable renders provider notice', () => {
 test('flow.forward_pass_closed renders artifact basename', () => {
   const { renderer, output } = makeRenderer();
   renderer.emit({ kind: 'flow.forward_pass_closed', recordFolderPath: 'some/folder', artifactBasename: '08-owner-closure.md' });
-  assert.ok(output().includes('[runtime/flow] Forward pass closed via 08-owner-closure.md; starting improvement phase\n'));
+  assert.ok(output().includes('[runtime/flow] Forward pass closed via 08-owner-closure.md; awaiting improvement mode selection\n'));
 });
 
 test('flow.completed renders orchestration complete', () => {

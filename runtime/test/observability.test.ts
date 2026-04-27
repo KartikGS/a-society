@@ -443,27 +443,18 @@ async function run() {
       improvementPhase: null
     };
 
-    const { Readable, Writable } = await import('node:stream');
-    const input = new Readable();
-    input.push('3\n');
-    input.push(null);
+    const { Writable } = await import('node:stream');
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    await ImprovementOrchestrator.handleForwardPassClosure(
+    ImprovementOrchestrator.markAwaitingChoice(
       flowRun,
-      { recordFolderPath: tmpDir, artifactPath: 'test.md' },
-      input,
-      output,
-      { emit: () => {}, startWait: () => {}, stopWait: () => {} }
+      { recordFolderPath: tmpDir, artifactPath: 'test.md' }
     );
+    ImprovementOrchestrator.skipImprovement(flowRun, output);
 
-    const impSpan = getSpan('improvement.orchestrate');
-    assert.ok(impSpan);
-    assert.strictEqual(impSpan.attributes['flow.id'], 'test-flow');
-    assert.strictEqual(impSpan.attributes['improvement.record_folder'], tmpDir);
-    assert.strictEqual(impSpan.attributes['improvement.mode'], 'none');
-    assert.ok(getEvents(impSpan).find(e => e.name === 'improvement.mode_selected' && e.attributes['mode'] === 'none'));
-    assert.ok(getEvents(impSpan).find(e => e.name === 'store.flow_saved' && e.attributes['stage'] === 'improvement_skipped'));
+    assert.strictEqual(flowRun.status, 'completed');
+    assert.strictEqual(flowRun.improvementPhase.status, 'skipped');
+    assert.strictEqual(flowRun.improvementPhase.mode, 'none');
   });
 
   await test('Scenario: ImprovementOrchestrator repairs feedback until terminal handoff (REAL CODE)', async () => {
@@ -538,10 +529,6 @@ async function run() {
     };
 
     let capturedOutput = '';
-    const { Readable } = await import('node:stream');
-    const input = new Readable();
-    input.push('1\n');
-    input.push(null);
     const output = new Writable({
       write(chunk, _encoding, callback) {
         capturedOutput += chunk.toString();
@@ -550,10 +537,13 @@ async function run() {
     });
 
     try {
-      await ImprovementOrchestrator.handleForwardPassClosure(
+      ImprovementOrchestrator.markAwaitingChoice(
         flowRun,
-        { recordFolderPath: recordDir, artifactPath: closureArtifactPath },
-        input,
+        { recordFolderPath: recordDir, artifactPath: closureArtifactPath }
+      );
+      await ImprovementOrchestrator.runImprovement(
+        flowRun,
+        'graph-based',
         output,
         { emit: () => {}, startWait: () => {}, stopWait: () => {} }
       );

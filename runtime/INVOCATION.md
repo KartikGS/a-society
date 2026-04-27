@@ -87,7 +87,7 @@ When the runtime emits a `type: prompt-human` handoff signal, the runtime persis
 
 If more than one role is awaiting input, the browser message must identify the target role or node. Because same-role parallel activation is rejected, a role target resolves to at most one awaiting node.
 
-Improvement-phase menus use the same browser input path. Menu text appears in the operator feed; the human types the response into the same input box.
+When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
 ---
 
@@ -154,7 +154,7 @@ If no session exists for the selected node, the UI reports that the transcript i
 The runtime injects and consumes the machine-readable handoff contract from `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
 
 - `type: prompt-human` pauses the emitting node for targeted browser-entered human input
-- `type: forward-pass-closed` ends the forward pass and hands control to improvement orchestration
+- `type: forward-pass-closed` ends the forward pass and pauses the flow at `awaiting_improvement_choice`
 - `type: meta-analysis-complete` is consumed during backward-pass orchestration
 - `type: backward-pass-complete` closes the backward pass after the final feedback step
 

@@ -10,13 +10,12 @@ import { PassThrough } from 'node:stream';
 
 /**
  * Correction 4 verification: a real forward-pass-closed signal drives through
- * the orchestrator and emits the approved operator notice before improvement
- * orchestration begins.
+ * the orchestrator, emits the approved operator notice, and persists an
+ * awaiting_improvement_choice state.
  *
- * The mock server returns a forward-pass-closed handoff on turn 1. The inputStream
- * has "3\n" pre-written so ImprovementOrchestrator selects "no improvement" without
- * blocking. The test asserts the operator stream contains the notice and that it
- * precedes any improvement orchestration output on the assistant stream.
+ * The mock server returns a forward-pass-closed handoff on turn 1. The test
+ * asserts the operator stream contains the notice and flow.json pauses before
+ * the improvement phase runs.
  */
 async function runTest() {
   console.log("Starting forward-pass-closure integration test...");
@@ -112,10 +111,7 @@ async function runTest() {
     outputChunks.push(chunk.toString());
   });
 
-  // Pre-write "3\n" so ImprovementOrchestrator reads it immediately when
-  // it creates a readline interface on this stream (no improvement selected).
   const inputStream = new PassThrough();
-  inputStream.write('3\n');
 
   server.removeAllListeners('request');
   server.on('request', (req, res) => {
@@ -148,33 +144,25 @@ async function runTest() {
     console.log("Assistant/improvement stream output:");
     console.log(assistantOut);
 
-    const expectedNotice = '[runtime/flow] Forward pass closed via closure-artifact.md; starting improvement phase';
+    const expectedNotice = '[runtime/flow] Forward pass closed via closure-artifact.md; awaiting improvement mode selection';
     const hasForwardPassNotice = operatorOut.includes(expectedNotice);
 
-    // The improvement orchestrator writes its menu prompt and closure message to outputStream
-    const hasImprovementPrompt = assistantOut.includes('Enter 1, 2, or 3:');
-    const hasImprovementClosure = assistantOut.includes('[improvement] No improvement selected. Record closed.');
-
-    // Verify ordering: forward-pass notice on operator stream appears before
-    // improvement orchestration output on output stream (separate streams — the
-    // emit call precedes the ImprovementOrchestrator.handleForwardPassClosure call
-    // in orchestrator.ts, so this ordering is structurally guaranteed)
     console.log("Validation:");
     console.log(`- Operator stream has forward-pass-closed notice: ${hasForwardPassNotice ? "Yes" : "No"}`);
-    console.log(`- Output stream has improvement prompt: ${hasImprovementPrompt ? "Yes" : "No"}`);
-    console.log(`- Output stream has improvement closure: ${hasImprovementClosure ? "Yes" : "No"}`);
 
     assert.ok(hasForwardPassNotice,
       `Expected operator stream to contain: "${expectedNotice}"`);
-    assert.ok(hasImprovementPrompt,
-      "Expected output stream to contain improvement orchestrator prompt.");
-    assert.ok(hasImprovementClosure,
-      "Expected output stream to contain no-improvement closure message.");
 
-    // The flow should be completed after "no improvement" selection
+    assert.ok(!assistantOut.includes('Enter 1, 2, or 3:'),
+      "Expected improvement mode selection to move out of the assistant stream.");
+
     const finalFlow = SessionStore.loadFlowRun()!;
-    assert.strictEqual(finalFlow.status, 'completed',
-      "Expected flow to be completed after no-improvement selection.");
+    assert.strictEqual(finalFlow.status, 'awaiting_improvement_choice',
+      "Expected flow to pause for improvement mode selection after forward-pass closure.");
+    assert.strictEqual(finalFlow.improvementPhase?.status, 'awaiting_choice',
+      "Expected improvement phase to persist awaiting-choice state.");
+    assert.strictEqual(finalFlow.improvementPhase?.forwardPassClosure.artifactPath, closureArtifactPath,
+      "Expected forward-pass closure artifact metadata to be persisted.");
 
     console.log("Forward-pass-closure test PASSED.");
   } catch (e: any) {

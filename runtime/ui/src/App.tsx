@@ -35,7 +35,6 @@ interface FlowUiState {
   composerValue: string;
   awaitingInput: boolean;
   waitLabel: string | null;
-  showImprovementModal: boolean;
   stopRequested: boolean;
 }
 
@@ -60,7 +59,6 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     composerValue: '',
     awaitingInput: flowRun?.status === 'awaiting_human',
     waitLabel: null,
-    showImprovementModal: false,
     stopRequested: false,
   };
 }
@@ -160,8 +158,6 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         label: 'Forward Pass',
         text: `Forward pass closed via ${event.artifactBasename}.`
       };
-    case 'flow.improvement_prompt':
-      return null;
     case 'flow.completed':
       return {
         id: nextFeedId(),
@@ -320,11 +316,6 @@ export function App() {
               roleFeeds: item ? appendFeedItem(state.roleFeeds, event.role, item) : state.roleFeeds,
             };
           });
-          return;
-        }
-
-        if (event.kind === 'flow.improvement_prompt') {
-          updateFlowUi(key, (state) => ({ ...state, showImprovementModal: true }));
           return;
         }
 
@@ -628,10 +619,9 @@ export function App() {
     });
   }
 
-  function handleImprovementChoice(choice: '1' | '2' | '3'): void {
+  function handleImprovementChoice(mode: 'graph-based' | 'parallel' | 'none'): void {
     if (!activeTab) return;
-    updateFlowUi(activeTab.key, (state) => ({ ...state, showImprovementModal: false }));
-    sendMessage({ type: 'human_input', flowRef: activeTab.ref, text: choice });
+    sendMessage({ type: 'improvement_choice', flowRef: activeTab.ref, mode });
   }
 
   function handleStopActiveTurn(): void {
@@ -686,13 +676,13 @@ export function App() {
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds.__system__ ?? []);
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
   const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
+  const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const visibleWaitLabel = isViewedRoleActive ? activeUi?.waitLabel ?? null : null;
   const inputDisabled = !viewedRoleAwaitingNodeId;
   const canStop =
     !!flowRun &&
     flowRun.status === 'running' &&
     !viewedRoleAwaitingNodeId &&
-    !activeUi?.showImprovementModal &&
     socket.status === 'open';
   const canStopViewedRole = canStop && isViewedRoleActive;
 
@@ -838,22 +828,22 @@ export function App() {
         </Panel>
       </PanelGroup>
 
-      {activeUi?.showImprovementModal ? (
+      {isAwaitingImprovementChoice ? (
         <div className="modal-overlay">
           <div className="modal-panel">
             <p className="eyebrow">Improvement Phase</p>
             <h2>Choose improvement mode</h2>
             <p className="modal-copy">Forward pass is complete. How should the backward pass proceed?</p>
             <div className="modal-choices">
-              <button className="modal-choice" onClick={() => handleImprovementChoice('1')}>
+              <button className="modal-choice" onClick={() => handleImprovementChoice('graph-based')}>
                 <span className="modal-choice-label">Graph-based</span>
                 <span className="modal-choice-desc">Roles run in reverse topological order; each receives findings from their direct forward successors.</span>
               </button>
-              <button className="modal-choice" onClick={() => handleImprovementChoice('2')}>
+              <button className="modal-choice" onClick={() => handleImprovementChoice('parallel')}>
                 <span className="modal-choice-label">Parallel</span>
                 <span className="modal-choice-desc">All roles run simultaneously; no cross-role findings injected.</span>
               </button>
-              <button className="modal-choice modal-choice-neutral" onClick={() => handleImprovementChoice('3')}>
+              <button className="modal-choice modal-choice-neutral" onClick={() => handleImprovementChoice('none')}>
                 <span className="modal-choice-label">No improvement</span>
                 <span className="modal-choice-desc">Close the record now without a backward pass.</span>
               </button>
