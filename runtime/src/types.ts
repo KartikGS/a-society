@@ -72,6 +72,7 @@ export interface RoleSession {
   transcriptHistory: unknown[];
   isActive: boolean;
   currentNodeId?: string;
+  systemPrompt?: string;
 }
 
 

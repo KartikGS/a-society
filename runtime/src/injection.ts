@@ -31,11 +31,7 @@ export class ContextInjectionService {
     // 0a. Role announcement
     bundle += `You are the ${roleName} agent for ${projectNamespace}. Below is information that will help you play your role.\n\n`;
 
-    // 0b. Date injection
-    const today = new Date().toISOString().split('T')[0];
-    bundle += `Today's date is ${today}.\n\n`;
-
-    // 0c. Runtime-owned session contracts
+    // 0b. Runtime-owned session contracts
     bundle += `--- RUNTIME-MANAGED SESSION CONTRACTS ---\n`;
     if (fs.existsSync(RUNTIME_HANDOFF_CONTRACT_PATH)) {
       const content = fs.readFileSync(RUNTIME_HANDOFF_CONTRACT_PATH, 'utf8');

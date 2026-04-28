@@ -238,9 +238,12 @@ export class FlowOrchestrator {
           session.currentNodeId = session.currentNodeId ?? nodeId;
         }
 
-        const { bundleContent } = ContextInjectionService.buildContextBundle(
-          flowRun.projectNamespace, roleName, flowRun.workspaceRoot
-        );
+        if (!session.systemPrompt) {
+          session.systemPrompt = ContextInjectionService.buildContextBundle(
+            flowRun.projectNamespace, roleName, flowRun.workspaceRoot
+          ).bundleContent;
+        }
+        const bundleContent = session.systemPrompt;
 
         const injectedHistory = [...session.transcriptHistory];
         const sameNodeResume = session.isActive && session.currentNodeId === nodeId && injectedHistory.length > 0;

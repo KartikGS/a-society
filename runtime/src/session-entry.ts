@@ -44,6 +44,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
   const lines: string[] = [];
 
   lines.push(`Workflow node: ${nodeId} (role: ${role})`);
+  lines.push(`Node started at: ${new Date().toISOString()}`);
   if (recordFolderPath) {
     lines.push(`Record folder: ${recordFolderPath}`);
   }
@@ -144,6 +145,7 @@ export function buildImprovementEntryMessage(opts: ImprovementEntryOptions): str
   const lines: string[] = [];
 
   lines.push(`Backward pass ${stepLabel}.`);
+  lines.push(`Node started at: ${new Date().toISOString()}`);
   lines.push(`Record folder: ${recordFolderPath}`);
   lines.push('');
 
