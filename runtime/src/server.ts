@@ -17,6 +17,7 @@ import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-
 import { bootstrapInitializationFlow } from './initialization-bootstrap.js';
 import { initializeDraftFlow } from './draft-flow.js';
 import { discoverProjects, type ProjectDiscovery } from './project-discovery.js';
+import * as SettingsStore from './settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
 import { readImprovementWorkflow } from './improvement-workflow.js';
 import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage } from './types.js';
@@ -859,6 +860,51 @@ function buildServer(workspaceRoot: string) {
     }
 
     res.json(payload);
+  });
+
+  app.use(express.json());
+
+  app.get('/api/settings/models', (_req: Request, res: Response) => {
+    res.json(SettingsStore.listModels());
+  });
+
+  app.post('/api/settings/models', (req: Request, res: Response) => {
+    const { apiKey, ...params } = req.body as any;
+    if (!params.displayName || !params.providerType || !params.modelId) {
+      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
+      return;
+    }
+    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
+      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
+      return;
+    }
+    const model = SettingsStore.createModel({
+      displayName: String(params.displayName),
+      providerType: params.providerType as 'anthropic' | 'openai-compatible',
+      providerBaseUrl: String(params.providerBaseUrl ?? ''),
+      modelId: String(params.modelId),
+      contextWindow: Number(params.contextWindow) || 0,
+      maxOutputTokens: Number(params.maxOutputTokens) || 0,
+      supportsThinking: Boolean(params.supportsThinking),
+      supportsMultimodal: Boolean(params.supportsMultimodal),
+    }, String(apiKey ?? ''));
+    res.status(201).json(model);
+  });
+
+  app.post('/api/settings/models/:id/activate', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    try {
+      SettingsStore.activateModel(id);
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(404).json({ message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.delete('/api/settings/models/:id', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    SettingsStore.deleteModel(id);
+    res.json({ ok: true });
   });
 
   app.use(express.static(UI_DIST));

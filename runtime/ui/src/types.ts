@@ -1,3 +1,18 @@
+export type ProviderType = 'anthropic' | 'openai-compatible';
+
+export interface ModelConfig {
+  id: string;
+  displayName: string;
+  providerType: ProviderType;
+  providerBaseUrl: string;
+  modelId: string;
+  contextWindow: number;
+  maxOutputTokens: number;
+  supportsThinking: boolean;
+  supportsMultimodal: boolean;
+  active: boolean;
+}
+
 export interface ProjectSummary {
   displayName: string;
   folderName: string;

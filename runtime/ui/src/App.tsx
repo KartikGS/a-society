@@ -3,6 +3,7 @@ import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'reac
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView, type GraphMode } from './components/GraphView';
 import { ProjectSelector } from './components/ProjectSelector';
+import { SettingsModal } from './components/SettingsModal';
 import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
 import type {
@@ -222,6 +223,7 @@ export function App() {
   const openedInitialFlow = useRef(false);
   const lastSubscribedConnectionId = useRef(0);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -886,6 +888,18 @@ export function App() {
           </div>
         </div>
       ) : null}
+
+      <button
+        type="button"
+        className="settings-fab"
+        onClick={() => setSettingsOpen(true)}
+        aria-label="Open settings"
+        title="Settings"
+      >
+        ⚙
+      </button>
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </main>
   );
 }

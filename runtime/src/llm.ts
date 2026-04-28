@@ -7,14 +7,31 @@ import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from './tools/bash-executor.j
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from './tools/web-search-executor.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { getActiveModelWithKey } from './settings-store.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from './types.js';
 
-function createProvider(name: string): LLMProvider {
+function createProvider(): LLMProvider {
+  const active = getActiveModelWithKey();
+  if (active) {
+    switch (active.providerType) {
+      case 'anthropic':
+        return new AnthropicProvider(active.apiKey, active.modelId);
+      case 'openai-compatible':
+        return new OpenAICompatibleProvider({
+          baseURL: active.providerBaseUrl,
+          apiKey: active.apiKey,
+          model: active.modelId,
+        });
+    }
+  }
+  const name = process.env.LLM_PROVIDER ?? 'anthropic';
   switch (name) {
-    case 'anthropic':        return new AnthropicProvider(process.env.ANTHROPIC_API_KEY || '');
-    case 'openai-compatible': return new OpenAICompatibleProvider();
+    case 'anthropic':
+      return new AnthropicProvider(process.env.ANTHROPIC_API_KEY || '');
+    case 'openai-compatible':
+      return new OpenAICompatibleProvider();
     default:
       throw new LLMGatewayError(
         'UNKNOWN',
@@ -39,7 +56,7 @@ export class LLMGateway {
     if (provider) {
       this.provider = provider;
     } else {
-      this.provider = createProvider(process.env.LLM_PROVIDER ?? 'anthropic');
+      this.provider = createProvider();
     }
 
     if (workspaceRoot) {
