@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from './injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage } from './types.js';
+import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate } from './types.js';
 import { emitUsage, runRoleTurn } from './orient.js';
 import { buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
@@ -138,7 +138,8 @@ export class FlowOrchestrator {
     activeArtifactPath?: string | string[],
     humanInput?: string,
     _inputStream: NodeJS.ReadableStream = process.stdin,
-    outputStream: NodeJS.WritableStream = process.stdout
+    outputStream: NodeJS.WritableStream = process.stdout,
+    consentGate?: ConsentGate
   ): Promise<void> {
     this.setFlowContext(flowRun);
     const claim = await this.claimNodeForAdvance(nodeId, humanInput !== undefined);
@@ -319,7 +320,8 @@ export class FlowOrchestrator {
                 injectedHistory as any,
                 outputStream,
                 controller.signal,
-                this.renderer
+                this.renderer,
+                consentGate
               );
             } finally {
               process.removeListener('SIGINT', sigintHandler);

@@ -1,11 +1,32 @@
-export type FlowStatus = 
-  | 'initialized' 
-  | 'running' 
-  | 'awaiting_human' 
+export type FlowStatus =
+  | 'initialized'
+  | 'running'
+  | 'awaiting_human'
   | 'awaiting_improvement_choice'
-  | 'awaiting_retry' 
-  | 'completed' 
+  | 'awaiting_retry'
+  | 'completed'
   | 'failed';
+
+export type ConsentDecision = 'pending' | 'granted' | 'denied';
+export type ConsentMode = 'ask' | 'full-access';
+export type ConsentClass = 'file-writes' | 'shell-network';
+
+export interface ConsentState {
+  mode: ConsentMode;
+  fileWrites: ConsentDecision;
+  shellNetwork: ConsentDecision;
+}
+
+export function defaultConsentState(): ConsentState {
+  return { mode: 'ask', fileWrites: 'pending', shellNetwork: 'pending' };
+}
+
+export interface ConsentGate {
+  check(toolName: string, signal?: AbortSignal): Promise<'proceed' | 'deny'>;
+  respond(decision: 'granted' | 'denied'): void;
+  setMode(mode: ConsentMode): void;
+  getInFlightRequest(): { toolClass: ConsentClass; toolName: string } | null;
+}
 
 export interface HandoffTarget {
   target_node_id: string;
@@ -51,6 +72,7 @@ export interface FlowRun {
   status: FlowStatus;
   stateVersion: string;                        // Persistence version: "7" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
+  consentState?: ConsentState;
 }
 
 export interface FlowRef {
@@ -121,7 +143,10 @@ export type OperatorEvent =
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
   | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
-  | { kind: 'flow.completed' };
+  | { kind: 'flow.completed' }
+  | { kind: 'consent.requested'; toolClass: ConsentClass; toolName: string }
+  | { kind: 'consent.resolved'; toolClass: ConsentClass; decision: 'granted' | 'denied' }
+  | { kind: 'consent.mode_changed'; mode: ConsentMode };
 
 export interface OperatorRenderSink {
   emit(event: OperatorEvent): void;
@@ -142,6 +167,7 @@ export interface TurnOptions {
   signal?: AbortSignal;
   outputStream?: NodeJS.WritableStream;
   operatorRenderer?: OperatorRenderSink;
+  consentGate?: ConsentGate;
 }
 
 export interface GatewayTurnResult {

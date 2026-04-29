@@ -20,7 +20,9 @@ import { discoverProjects, type ProjectDiscovery } from './project-discovery.js'
 import * as SettingsStore from './settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from './workflow-file.js';
 import { readImprovementWorkflow } from './improvement-workflow.js';
-import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage } from './types.js';
+import { defaultConsentState } from './types.js';
+import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode } from './types.js';
+import { ConsentGateImpl } from './consent-gate.js';
 
 type ClientMessage =
   | { type: 'open_flow'; flowRef: FlowRef }
@@ -30,7 +32,9 @@ type ClientMessage =
   | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
-  | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' };
+  | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' }
+  | { type: 'consent_response'; flowRef: FlowRef; decision: 'granted' | 'denied' }
+  | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 
 type FlowStateMessage = {
   type: 'flow_state';
@@ -63,6 +67,7 @@ interface ActiveSession {
   awaitingHumanInput: boolean;
   finished: boolean;
   task: Promise<void>;
+  consentGate: ConsentGateImpl;
 }
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -311,6 +316,20 @@ function buildServer(workspaceRoot: string) {
         emitHistoricalMessage(session, message);
         return;
       case 'operator_event':
+        if (message.event.kind === 'consent.requested') {
+          emitTransientMessage(session, message);
+          return;
+        }
+
+        if (message.event.kind === 'consent.resolved' || message.event.kind === 'consent.mode_changed') {
+          void SessionStore.updateFlowRun((flow) => {
+            flow.consentState = session.consentGate.getState();
+          }, session.flowRef, workspaceRoot);
+          emitHistoricalMessage(session, message);
+          setImmediate(() => emitFlowState(session));
+          return;
+        }
+
         if (message.event.kind === 'human.awaiting_input') {
           session.awaitingHumanInput = true;
         }
@@ -360,6 +379,8 @@ function buildServer(workspaceRoot: string) {
 
     const sink = new WebSocketOperatorSink((message) => handleRuntimeMessage(session, message));
     const orchestrator = new FlowOrchestrator(sink);
+    const initialConsentState = readFlowRun(flowRef)?.consentState ?? defaultConsentState();
+    const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
     session = {
       flowRef,
@@ -368,6 +389,7 @@ function buildServer(workspaceRoot: string) {
       outputBridge,
       sink,
       orchestrator,
+      consentGate,
       messageHistory: SessionStore.loadOperatorFeed(flowRef, workspaceRoot),
       lastFlowState: null,
       backwardActive: new Set<string>(),
@@ -425,6 +447,15 @@ function buildServer(workspaceRoot: string) {
       sendToSocket(socket, session.lastFlowState);
     } else {
       sendFlowState(socket, ref);
+    }
+
+    const inFlight = session?.consentGate?.getInFlightRequest();
+    if (inFlight) {
+      sendToSocket(socket, {
+        type: 'operator_event',
+        flowRef: ref,
+        event: { kind: 'consent.requested', toolClass: inFlight.toolClass, toolName: inFlight.toolName }
+      } as any);
     }
   }
 
@@ -556,7 +587,8 @@ function buildServer(workspaceRoot: string) {
         undefined,
         text,
         session.inputBridge,
-        session.outputBridge
+        session.outputBridge,
+        session.consentGate
       );
 
       await session.orchestrator.runStoredFlow(
@@ -604,7 +636,8 @@ function buildServer(workspaceRoot: string) {
         undefined,
         text,
         activeSession.inputBridge,
-        activeSession.outputBridge
+        activeSession.outputBridge,
+        activeSession.consentGate
       ).then(() => activeSession.orchestrator.runStoredFlow(
         workspaceRoot,
         flowRun.projectNamespace,
@@ -704,6 +737,39 @@ function buildServer(workspaceRoot: string) {
     setImmediate(() => emitFlowState(session));
   }
 
+  function handleConsentResponse(ref: FlowRef, decision: 'granted' | 'denied'): void {
+    const session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active session for consent response.' });
+      return;
+    }
+    session.consentGate.respond(decision);
+  }
+
+  function handleConsentMode(ref: FlowRef, mode: ConsentMode): void {
+    const session = activeSessions.get(flowKey(ref));
+    if (session && !session.finished) {
+      session.consentGate.setMode(mode);
+      return;
+    }
+    // No active session — persist mode change directly to the flow state
+    void SessionStore.updateFlowRun((flow) => {
+      if (!flow.consentState) {
+        flow.consentState = defaultConsentState();
+      }
+      flow.consentState.mode = mode;
+      if (mode === 'full-access') {
+        flow.consentState.fileWrites = 'granted';
+        flow.consentState.shellNetwork = 'granted';
+      }
+    }, ref, workspaceRoot).then(() => {
+      const flowRun = readFlowRun(ref);
+      if (flowRun) {
+        broadcastToFlow(ref, { type: 'flow_state', flowRef: ref, flowRun, backwardActive: [] });
+      }
+    });
+  }
+
   function handleStopActiveTurn(ref: FlowRef, target?: { nodeId?: string; role?: string }): void {
     const activeSession = activeSessions.get(flowKey(ref));
     if (!activeSession || activeSession.finished) {
@@ -745,6 +811,20 @@ function buildServer(workspaceRoot: string) {
         parsed?.type === 'improvement_choice' &&
         hasFlowRef(parsed.flowRef) &&
         (parsed.mode === 'graph-based' || parsed.mode === 'parallel' || parsed.mode === 'none')
+      ) {
+        return parsed;
+      }
+      if (
+        parsed?.type === 'consent_response' &&
+        hasFlowRef(parsed.flowRef) &&
+        (parsed.decision === 'granted' || parsed.decision === 'denied')
+      ) {
+        return parsed;
+      }
+      if (
+        parsed?.type === 'consent_mode' &&
+        hasFlowRef(parsed.flowRef) &&
+        (parsed.mode === 'ask' || parsed.mode === 'full-access')
       ) {
         return parsed;
       }
@@ -1010,12 +1090,29 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
+      if (message.type === 'consent_response') {
+        handleConsentResponse(message.flowRef, message.decision);
+        return;
+      }
+
+      if (message.type === 'consent_mode') {
+        handleConsentMode(message.flowRef, message.mode);
+        return;
+      }
+
       handleHumanInput(message.flowRef, message.text, { nodeId: message.nodeId, role: message.role });
     });
 
     socket.on('close', () => {
+      const subscribedKey = socketSubscriptions.get(socket);
       clients.delete(socket);
       socketSubscriptions.delete(socket);
+      if (subscribedKey) {
+        const hasOtherSubscribers = [...clients].some((c) => socketSubscriptions.get(c) === subscribedKey);
+        if (!hasOtherSubscribers) {
+          activeSessions.get(subscribedKey)?.consentGate?.abortInFlight();
+        }
+      }
     });
   });
 

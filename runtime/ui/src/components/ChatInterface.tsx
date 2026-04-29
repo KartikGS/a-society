@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import type { ConsentClass, ConsentMode } from '../types';
 
 export interface FeedItem {
   id: string;
@@ -21,11 +22,20 @@ interface ChatInterfaceProps {
   roles?: string[];
   selectedRole?: string;
   activeRole?: string;
+  consentRequest?: { toolClass: ConsentClass; toolName: string } | null;
+  consentMode?: ConsentMode;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
   onStop?: () => void;
+  onConsentResponse?: (decision: 'granted' | 'denied') => void;
+  onConsentModeChange?: (mode: ConsentMode) => void;
 }
+
+const CONSENT_CLASS_LABELS: Record<ConsentClass, string> = {
+  'file-writes': 'file writes',
+  'shell-network': 'shell & network',
+};
 
 function normalizeAssistantMarkdown(text: string): string {
   return text.replace(/\$?\\(?:rightarrow|to)\$?/g, '→');
@@ -154,37 +164,80 @@ export function ChatInterface(props: ChatInterfaceProps) {
       </div>
 
       {props.showComposer ? (
-        <form
-          className="composer"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (props.canStop) return;
-            props.onSubmit();
-          }}
-        >
-          <div className="composer-shell">
-            <textarea
-              ref={textareaRef}
-              value={props.inputValue}
-              onChange={(event) => props.onInputChange(event.target.value)}
-              disabled={props.inputDisabled}
-              placeholder={props.placeholder}
-              rows={1}
-            />
-            {showActionButton ? (
-              <button
-                type={props.canStop ? 'button' : 'submit'}
-                className={`composer-action${props.canStop ? ' composer-action-stop' : ''}`}
-                onClick={props.canStop ? props.onStop : undefined}
-                disabled={props.canStop ? props.stopRequested : props.inputDisabled || props.inputValue.trim().length === 0}
-                aria-label={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
-                title={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
-              >
-                {props.canStop ? <StopIcon /> : <SendIcon />}
-              </button>
-            ) : null}
+        <div className="composer-area">
+          {props.consentRequest ? (
+            <div className="consent-banner">
+              <div className="consent-banner-body">
+                <span className="consent-banner-tool">{props.consentRequest.toolName}</span>
+                <span className="consent-banner-desc">
+                  {' '}wants permission for{' '}
+                  <strong>{CONSENT_CLASS_LABELS[props.consentRequest.toolClass]}</strong>.
+                  Allow this flow to continue?
+                </span>
+              </div>
+              <div className="consent-banner-actions">
+                <button
+                  type="button"
+                  className="consent-btn consent-btn-allow"
+                  onClick={() => props.onConsentResponse?.('granted')}
+                >
+                  Allow
+                </button>
+                <button
+                  type="button"
+                  className="consent-btn consent-btn-deny"
+                  onClick={() => props.onConsentResponse?.('denied')}
+                >
+                  Deny
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <form
+            className="composer"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (props.canStop) return;
+              props.onSubmit();
+            }}
+          >
+            <div className="composer-shell">
+              <textarea
+                ref={textareaRef}
+                value={props.inputValue}
+                onChange={(event) => props.onInputChange(event.target.value)}
+                disabled={props.inputDisabled}
+                placeholder={props.placeholder}
+                rows={1}
+              />
+              {showActionButton ? (
+                <button
+                  type={props.canStop ? 'button' : 'submit'}
+                  className={`composer-action${props.canStop ? ' composer-action-stop' : ''}`}
+                  onClick={props.canStop ? props.onStop : undefined}
+                  disabled={props.canStop ? props.stopRequested : props.inputDisabled || props.inputValue.trim().length === 0}
+                  aria-label={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
+                  title={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
+                >
+                  {props.canStop ? <StopIcon /> : <SendIcon />}
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          <div className="composer-footer">
+            <select
+              className="consent-mode-select"
+              value={props.consentMode ?? 'ask'}
+              onChange={(e) => props.onConsentModeChange?.(e.target.value as ConsentMode)}
+              title="Tool permission mode for this flow"
+            >
+              <option value="ask">Ask when needed</option>
+              <option value="full-access">Full access</option>
+            </select>
           </div>
-        </form>
+        </div>
       ) : null}
     </section>
   );

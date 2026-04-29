@@ -135,9 +135,6 @@ export class LLMGateway {
               'llm.tool_name': call.name,
               'llm.tool_id': call.id
             });
-            const pathArg = call.input?.path as string | undefined;
-            const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
-            options?.operatorRenderer?.emit({ kind: 'activity.tool_call', toolName: call.name, path: pathArg, command: commandArg });
           }
 
           const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
@@ -147,6 +144,21 @@ export class LLMGateway {
                 content = `Error: could not parse tool arguments: ${call.parseError}`;
                 isError = true;
               } else {
+                if (options?.consentGate) {
+                  const decision = await options.consentGate.check(call.name, options.signal);
+                  if (decision === 'deny') {
+                    return {
+                      role: 'tool_result' as const,
+                      callId: call.id,
+                      toolName: call.name,
+                      content: 'Tool call denied: the user did not grant permission for this operation.',
+                      isError: true,
+                    };
+                  }
+                }
+                const pathArg = call.input?.path as string | undefined;
+                const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
+                options?.operatorRenderer?.emit({ kind: 'activity.tool_call', toolName: call.name, path: pathArg, command: commandArg });
                 const res = await (this.bashExecutor!.canHandle(call.name)
                   ? this.bashExecutor!.execute(call, options?.signal)
                   : this.webSearchExecutor?.canHandle(call.name)

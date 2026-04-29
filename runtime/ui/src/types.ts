@@ -40,6 +40,7 @@ export interface FlowRun {
   status: 'initialized' | 'running' | 'awaiting_human' | 'awaiting_improvement_choice' | 'awaiting_retry' | 'completed' | 'failed';
   stateVersion: string;
   improvementPhase?: ImprovementPhaseState;
+  consentState?: ConsentState;
 }
 
 export interface ImprovementPhaseState {
@@ -70,6 +71,16 @@ export interface FlowSummary extends FlowRef {
   updatedAt?: string;
 }
 
+export type ConsentClass = 'file-writes' | 'shell-network';
+export type ConsentMode = 'ask' | 'full-access';
+export type ConsentDecision = 'pending' | 'granted' | 'denied';
+
+export interface ConsentState {
+  mode: ConsentMode;
+  fileWrites: ConsentDecision;
+  shellNetwork: ConsentDecision;
+}
+
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string; activationSource?: 'node-start' | 'handoff' | 'runtime' }
@@ -82,7 +93,10 @@ export type OperatorEvent =
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
   | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
-  | { kind: 'flow.completed' };
+  | { kind: 'flow.completed' }
+  | { kind: 'consent.requested'; toolClass: ConsentClass; toolName: string }
+  | { kind: 'consent.resolved'; toolClass: ConsentClass; decision: 'granted' | 'denied' }
+  | { kind: 'consent.mode_changed'; mode: ConsentMode };
 
 export type ClientMessage =
   | { type: 'open_flow'; flowRef: FlowRef }
@@ -92,7 +106,9 @@ export type ClientMessage =
   | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
-  | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' };
+  | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' }
+  | { type: 'consent_response'; flowRef: FlowRef; decision: 'granted' | 'denied' }
+  | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 
 export type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }

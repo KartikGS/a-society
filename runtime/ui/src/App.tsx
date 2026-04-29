@@ -8,6 +8,8 @@ import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from '
 import { useWebSocket } from './hooks/useWebSocket';
 import type {
   ClientMessage,
+  ConsentClass,
+  ConsentMode,
   FlowRef,
   FlowRun,
   FlowSummary,
@@ -38,6 +40,7 @@ interface FlowUiState {
   awaitingInput: boolean;
   waitLabel: string | null;
   stopRequested: boolean;
+  consentRequest: { toolClass: ConsentClass; toolName: string } | null;
 }
 
 function nextFeedId(): string {
@@ -63,6 +66,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     awaitingInput: flowRun?.status === 'awaiting_human',
     waitLabel: null,
     stopRequested: false,
+    consentRequest: null,
   };
 }
 
@@ -168,6 +172,10 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         label: 'Complete',
         text: 'Orchestration completed.'
       };
+    case 'consent.requested':
+    case 'consent.resolved':
+    case 'consent.mode_changed':
+      return null;
   }
 }
 
@@ -291,10 +299,28 @@ export function App() {
           lastHandoff: null,
           waitLabel: null,
           stopRequested: false,
+          consentRequest: null,
         }));
         return;
       case 'operator_event': {
         const event = message.event;
+
+        if (event.kind === 'consent.requested') {
+          updateFlowUi(key, (state) => ({
+            ...state,
+            consentRequest: { toolClass: event.toolClass, toolName: event.toolName },
+          }));
+          return;
+        }
+
+        if (event.kind === 'consent.resolved') {
+          updateFlowUi(key, (state) => ({ ...state, consentRequest: null }));
+          return;
+        }
+
+        if (event.kind === 'consent.mode_changed') {
+          return;
+        }
 
         if (event.kind === 'role.active') {
           updateFlowUi(key, (state) => {
@@ -645,6 +671,16 @@ export function App() {
     sendMessage({ type: 'improvement_choice', flowRef: activeTab.ref, mode });
   }
 
+  function handleConsentResponse(decision: 'granted' | 'denied'): void {
+    if (!activeTab) return;
+    sendMessage({ type: 'consent_response', flowRef: activeTab.ref, decision });
+  }
+
+  function handleConsentModeChange(mode: ConsentMode): void {
+    if (!activeTab) return;
+    sendMessage({ type: 'consent_mode', flowRef: activeTab.ref, mode });
+  }
+
   function handleStopActiveTurn(): void {
     if (!activeTab || !activeUi || activeUi.stopRequested) return;
     updateFlowUi(activeTab.key, (state) => ({ ...state, stopRequested: true }));
@@ -848,6 +884,8 @@ export function App() {
                   roles={roles}
                   selectedRole={viewedRole ?? undefined}
                   activeRole={activeLiveRole ?? undefined}
+                  consentRequest={activeUi?.consentRequest ?? null}
+                  consentMode={flowRun?.consentState?.mode ?? 'ask'}
                   onRoleSelect={(role) => {
                     if (!activeTabKey) return;
                     updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
@@ -858,6 +896,8 @@ export function App() {
                   }}
                   onSubmit={handleSubmit}
                   onStop={handleStopActiveTurn}
+                  onConsentResponse={handleConsentResponse}
+                  onConsentModeChange={handleConsentModeChange}
                 />
               </Panel>
             </PanelGroup>

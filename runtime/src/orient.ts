@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage } from './types.js';
+import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage, ConsentGate } from './types.js';
 import { LLMGateway, LLMGatewayError } from './llm.js';
 import { buildRoleContext } from './registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
@@ -58,7 +58,8 @@ async function executeSessionTurn(
   turnIndex: number,
   outputStream: NodeJS.WritableStream,
   externalSignal: AbortSignal | undefined,
-  operatorRenderer: OperatorRenderSink | undefined
+  operatorRenderer: OperatorRenderSink | undefined,
+  consentGate: ConsentGate | undefined
 ): Promise<SessionTurnResult> {
   const tracer = TelemetryManager.getTracer();
   const meter = TelemetryManager.getMeter();
@@ -81,7 +82,8 @@ async function executeSessionTurn(
       const result = await llm.executeTurn(systemPrompt, history, {
         signal: externalSignal,
         outputStream,
-        operatorRenderer
+        operatorRenderer,
+        consentGate,
       });
       if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
         turnSpan.addEvent('session.assistant_turn', { content: result.text });
@@ -138,7 +140,8 @@ export async function runRoleTurn(
   providedHistory?: RuntimeMessageParam[],
   outputStream: NodeJS.WritableStream = process.stdout,
   externalSignal?: AbortSignal,
-  operatorRenderer?: OperatorRenderSink
+  operatorRenderer?: OperatorRenderSink,
+  consentGate?: ConsentGate
 ): Promise<RoleTurnResult | null> {
 
   const tracer = TelemetryManager.getTracer();
@@ -188,7 +191,8 @@ export async function runRoleTurn(
         turnIndex++,
         outputStream,
         externalSignal,
-        operatorRenderer
+        operatorRenderer,
+        consentGate
       );
 
       if (turnResult.abort || turnResult.error) {
