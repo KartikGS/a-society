@@ -11,7 +11,7 @@ import { createDefaultRenderer } from './operator-renderer.js';
 import { buildWorkflowRepairGuidance } from './framework-services/workflow-graph-validator.js';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
 import { TelemetryManager } from './observability.js';
-import { toKebabCaseRoleId } from './role-id.js';
+import { parseRoleIdentity } from './role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, resolveFlowWorkflow } from './workflow-file.js';
 import { syncRecordMetadataFromWorkflow } from './record-metadata.js';
@@ -753,8 +753,8 @@ export class FlowOrchestrator {
         const conflictingNodeId = occupiedRoles.get(nodeRoleKey);
         if (conflictingNodeId && conflictingNodeId !== nodeId) {
           throw new WorkflowError(
-            `Unsupported same-role parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role '${node.role}'. ` +
-            'The runtime uses one flow-scoped session per role, so concurrent same-role nodes are not supported.'
+            `Unsupported same-role-instance parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role instance '${node.role}'. ` +
+            'The runtime uses one flow-scoped session per role instance, so concurrent same-role-instance nodes are not supported.'
           );
         }
         occupiedRoles.set(nodeRoleKey, nodeId);
@@ -858,7 +858,7 @@ export class FlowOrchestrator {
   }
 
   private roleKey(roleName: string): string {
-    return toKebabCaseRoleId(roleName);
+    return parseRoleIdentity(roleName).instanceRoleId;
   }
 
   private resolveActiveWorkflow(flowRun: FlowRun): any {
@@ -894,8 +894,8 @@ export class FlowOrchestrator {
     if (!conflictingNodeId) return;
 
     throw new WorkflowError(
-      `Unsupported same-role parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role '${roleName}'. ` +
-      'The runtime uses one flow-scoped session per role, so concurrent same-role nodes are not supported.'
+      `Unsupported same-role-instance parallel activation: node '${nodeId}' and node '${conflictingNodeId}' both require role instance '${roleName}'. ` +
+      'The runtime uses one flow-scoped session per role instance, so concurrent same-role-instance nodes are not supported.'
     );
   }
 
@@ -925,8 +925,8 @@ export class FlowOrchestrator {
       const conflictingNodeId = occupiedRoles.get(targetRoleKey);
       if (conflictingNodeId && conflictingNodeId !== target.nodeId) {
         throw new WorkflowError(
-          `Unsupported same-role parallel activation: node '${target.nodeId}' and node '${conflictingNodeId}' both require role '${target.role}'. ` +
-          'The runtime uses one flow-scoped session per role, so concurrent same-role nodes are not supported.'
+          `Unsupported same-role-instance parallel activation: node '${target.nodeId}' and node '${conflictingNodeId}' both require role instance '${target.role}'. ` +
+          'The runtime uses one flow-scoped session per role instance, so concurrent same-role-instance nodes are not supported.'
         );
       }
       occupiedRoles.set(targetRoleKey, target.nodeId);

@@ -95,6 +95,30 @@ test('passes for a minimal healthy runtime fixture', () => {
   }
 });
 
+test('passes when workflow uses a numbered role instance backed by the base role folder', () => {
+  const fixture = makeProjectFixture();
+  try {
+    fs.writeFileSync(
+      path.join(fixture.projectRoot, 'a-docs', 'workflow', 'main.yaml'),
+      [
+        'workflow:',
+        '  name: Test Workflow',
+        '  nodes:',
+        '    - id: owner-one',
+        '      role: Owner_1',
+        '  edges: []',
+        ''
+      ].join('\n'),
+      'utf8'
+    );
+
+    const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
+    assert.strictEqual(result.ok, true, `expected role instance to use base owner folder, got errors: ${result.errors.join('; ')}`);
+  } finally {
+    cleanup(fixture.tmpRoot);
+  }
+});
+
 test('fails when a role folder is missing ownership.yaml', () => {
   const fixture = makeProjectFixture();
   try {

@@ -1,5 +1,5 @@
 /**
- * Integration test: repeated-role session behavior under role-scoped flow sessions.
+ * Integration test: repeated-role and role-instance session behavior.
  *
  * Uses a repeated-role workflow: Owner-intake -> TA -> Owner-gate
  * Covers:
@@ -7,7 +7,8 @@
  *  1. Same-node prompt-human resume preserves the existing role-scoped transcript
  *  2. Later same-role node reuses the same role-scoped session and appends a node-transition packet
  *  3. Reopened same-role node keeps the prior role-scoped session and appends a reopen packet
- *  4. Same-role parallel activation is explicitly rejected for now
+ *  4. Separate role instances with the same base role use separate sessions
+ *  5. Same-role-instance parallel activation is explicitly rejected
  */
 
 import assert from 'node:assert';
@@ -32,10 +33,12 @@ const namespaceDir = path.join(workspaceRoot, projectNamespace);
 const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
 const indexDir = path.join(namespaceDir, 'a-docs', 'indexes');
 const recordDir = path.join(namespaceDir, 'records', 'test-flow');
+const instanceRecordDir = path.join(namespaceDir, 'records', 'instance-flow');
 
 fs.mkdirSync(rolesDir, { recursive: true });
 fs.mkdirSync(indexDir, { recursive: true });
 fs.mkdirSync(recordDir, { recursive: true });
+fs.mkdirSync(instanceRecordDir, { recursive: true });
 fs.mkdirSync(stateDir, { recursive: true });
 fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
 fs.mkdirSync(path.join(rolesDir, 'ta'), { recursive: true });
@@ -70,12 +73,25 @@ const workflow = `workflow:
 `;
 fs.writeFileSync(path.join(recordDir, 'workflow.yaml'), workflow);
 
+const instanceWorkflow = `workflow:
+  name: instance-flow
+  nodes:
+    - id: owner-one
+      role: owner_1
+    - id: owner-two
+      role: owner_2
+  edges: []
+`;
+fs.writeFileSync(path.join(instanceRecordDir, 'workflow.yaml'), instanceWorkflow);
+
 const ownerArtifact1 = path.join(recordDir, '01-owner-brief.md');
 const taArtifact = path.join(recordDir, '02-ta-design.md');
 const reviewFeedbackArtifact = path.join(recordDir, '03-review-feedback.md');
+const ownerInstanceArtifact = path.join(instanceRecordDir, '01-owner-instance-input.md');
 fs.writeFileSync(ownerArtifact1, 'Owner brief content.');
 fs.writeFileSync(taArtifact, 'TA design content.');
 fs.writeFileSync(reviewFeedbackArtifact, 'Reviewer requests revision to the Owner brief.');
+fs.writeFileSync(ownerInstanceArtifact, 'Role instance input.');
 
 process.env.A_SOCIETY_STATE_DIR = stateDir;
 
@@ -119,6 +135,10 @@ function ownerSessionId(flowId = 'test-flow-id') {
   return `${flowId}__owner`;
 }
 
+function ownerInstanceSessionId(instanceNumber: number, flowId = 'instance-flow-id') {
+  return `${flowId}__owner-${instanceNumber}`;
+}
+
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   return {
     flowId: 'test-flow-id',
@@ -131,6 +151,27 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
+    status: 'running',
+    stateVersion: '7',
+    ...overrides
+  };
+}
+
+function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
+  return {
+    flowId: 'instance-flow-id',
+    workspaceRoot,
+    projectNamespace,
+    recordFolderPath: instanceRecordDir,
+    readyNodes: ['owner-one', 'owner-two'],
+    runningNodes: [],
+    awaitingHumanNodes: {},
+    completedNodes: [],
+    completedEdgeArtifacts: {},
+    pendingNodeArtifacts: {
+      'owner-one': [path.relative(workspaceRoot, ownerInstanceArtifact)],
+      'owner-two': [path.relative(workspaceRoot, ownerInstanceArtifact)]
+    },
     status: 'running',
     stateVersion: '7',
     ...overrides
@@ -358,7 +399,53 @@ async function run() {
     assert.strictEqual(session!.currentNodeId, 'owner-intake');
   });
 
-  await test('Orchestrator: same-role parallel activation is rejected', async () => {
+  await test('Orchestrator: role instances with the same base role use separate sessions', async () => {
+    resetState();
+
+    const flowRun = makeInstanceFlowRun();
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Owner one pauses. ```handoff\ntype: prompt-human\n```' },
+      { type: 'text', text: 'Owner two pauses. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const orchestrator = new FlowOrchestrator();
+    const input = new Readable({ read() {} });
+    input.push(null);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await orchestrator.advanceFlow(flowRun, 'owner-one', undefined, undefined, input, output);
+      const afterOwnerOne = SessionStore.loadFlowRun({ projectNamespace, flowId: 'instance-flow-id' }, workspaceRoot)!;
+      await orchestrator.advanceFlow(afterOwnerOne, 'owner-two', undefined, undefined, input, output);
+    } finally {
+      unpatch();
+    }
+
+    const ownerOneSession = SessionStore.loadRoleSession(
+      ownerInstanceSessionId(1),
+      { projectNamespace, flowId: 'instance-flow-id' },
+      workspaceRoot
+    );
+    const ownerTwoSession = SessionStore.loadRoleSession(
+      ownerInstanceSessionId(2),
+      { projectNamespace, flowId: 'instance-flow-id' },
+      workspaceRoot
+    );
+
+    assert.ok(ownerOneSession !== null, 'owner_1 should have a separate session');
+    assert.ok(ownerTwoSession !== null, 'owner_2 should have a separate session');
+    assert.strictEqual(ownerOneSession!.roleName, 'owner_1');
+    assert.strictEqual(ownerTwoSession!.roleName, 'owner_2');
+    assert.strictEqual(ownerOneSession!.logicalSessionId, ownerInstanceSessionId(1));
+    assert.strictEqual(ownerTwoSession!.logicalSessionId, ownerInstanceSessionId(2));
+    assert.notDeepStrictEqual(ownerOneSession!.transcriptHistory, ownerTwoSession!.transcriptHistory);
+    assert.ok((ownerOneSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
+    assert.ok((ownerTwoSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
+  });
+
+  await test('Orchestrator: same-role-instance parallel activation is rejected', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -380,7 +467,7 @@ async function run() {
       () => orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output),
       (error: any) => {
         assert.ok(error instanceof WorkflowError);
-        assert.ok(error.message.includes('Unsupported same-role parallel activation'));
+        assert.ok(error.message.includes('Unsupported same-role-instance parallel activation'));
         return true;
       }
     );

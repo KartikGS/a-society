@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from './required-reading.js';
+import { parseRoleIdentity } from './role-id.js';
 
 export interface ContextBundleResult {
   bundleContent: string;
@@ -13,6 +14,14 @@ export interface ContextBundleResult {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_HANDOFF_CONTRACT_PATH = path.resolve(__dirname, '../HANDOFF-CONTRACT.md');
+
+function localDateStamp(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 export class ContextInjectionService {
   /**
@@ -26,10 +35,16 @@ export class ContextInjectionService {
     roleName: string,
     workspaceRoot: string
   ): ContextBundleResult {
+    const roleIdentity = parseRoleIdentity(roleName);
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
 
     // 0a. Role announcement
-    bundle += `You are the ${roleName} agent for ${projectNamespace}. Below is information that will help you play your role.\n\n`;
+    bundle += `You are the ${roleIdentity.instanceRoleName} agent for ${projectNamespace}. Below is information that will help you play your role.\n`;
+    if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
+      bundle += `This session uses the ${roleIdentity.baseRoleName} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleName} session identity.\n`;
+    }
+    bundle += '\n';
+    bundle += `Today's date is ${localDateStamp()}.\n\n`;
 
     // 0b. Runtime-owned session contracts
     bundle += `--- RUNTIME-MANAGED SESSION CONTRACTS ---\n`;
@@ -45,7 +60,10 @@ export class ContextInjectionService {
     const roleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
 
     if (roleEntry) {
-      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleName} IN ${projectNamespace} ---\n`;
+      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleIdentity.instanceRoleName} IN ${projectNamespace} ---\n`;
+      if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
+        bundle += `Loaded from base role ${roleIdentity.baseRoleName}.\n`;
+      }
       bundle += `These files are already loaded into this session by the runtime. Use them directly. Do not spend your first turn rereading or re-listing them unless the current task specifically requires close inspection of one file.\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
         if (RUNTIME_MANAGED_REQUIRED_READING_VARIABLES.has(varName)) {
@@ -61,7 +79,7 @@ export class ContextInjectionService {
         }
       }
     } else {
-      bundle += `--- UNKNOWN ROLE: ${roleName} IN ${projectNamespace}. No required reading available. ---\n\n`;
+      bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleName} IN ${projectNamespace}. No required reading available. ---\n\n`;
     }
 
     // Compute hash

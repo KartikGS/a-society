@@ -51,17 +51,25 @@ test('INVOCATION.md: documents prompt-human resume behavior (same node session r
   );
 });
 
-test('INVOCATION.md: documents later same-role return with role-scoped session reuse', () => {
+test('INVOCATION.md: documents later same-role-instance return with role-instance-scoped session reuse', () => {
   assert.ok(
-    doc.includes('role-scoped session') || doc.includes('same flow-scoped role session'),
-    'Expected INVOCATION.md to describe reused role-scoped continuity for later same-role nodes'
+    doc.includes('role-instance session') || doc.includes('role-instance-scoped session'),
+    'Expected INVOCATION.md to describe reused role-instance continuity for later same-role-instance nodes'
   );
 });
 
-test('INVOCATION.md: documents same-role parallel rejection behavior', () => {
+test('INVOCATION.md: documents role instance parallel behavior', () => {
   assert.ok(
-    doc.includes('unsupported') || doc.includes('rejects same-role parallel activation'),
-    'Expected INVOCATION.md to describe same-role parallel rejection'
+    doc.includes('Owner_1') && doc.includes('Owner_2'),
+    'Expected INVOCATION.md to document numbered role instances'
+  );
+  assert.ok(
+    doc.includes('Concurrent activation of the same role instance is unsupported'),
+    'Expected INVOCATION.md to describe same-role-instance rejection'
+  );
+  assert.ok(
+    doc.includes('Distinct role instances may run in parallel'),
+    'Expected INVOCATION.md to describe parallel role instances'
   );
 });
 
@@ -70,8 +78,8 @@ test('INVOCATION.md: documents explicit scheduler fields and distinct-role paral
   assert.ok(doc.includes('runningNodes'), 'Expected INVOCATION.md to document runningNodes');
   assert.ok(doc.includes('awaitingHumanNodes'), 'Expected INVOCATION.md to document awaitingHumanNodes');
   assert.ok(
-    doc.includes('Distinct-role ready nodes may run in parallel') || doc.includes('distinct-role nodes concurrently'),
-    'Expected INVOCATION.md to describe distinct-role parallel execution'
+    doc.includes('Distinct role instances may run in parallel') || doc.includes('distinct-role nodes concurrently'),
+    'Expected INVOCATION.md to describe role-instance parallel execution'
   );
 });
 

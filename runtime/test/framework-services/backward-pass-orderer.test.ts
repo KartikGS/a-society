@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   buildBackwardPassPlan,
+  deterministicFindingsFilePath,
   locateFindingsFiles,
   locateAllFindingsFiles,
 } from '../../src/framework-services/backward-pass-orderer.js';
@@ -118,17 +119,16 @@ test('buildBackwardPassPlan (Parallel Mode): all roles in one group, no injectio
 
 test('locateFindingsFiles: finds correctly normalized and case-insensitive roles', () => {
   const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-files-'));
-  fs.writeFileSync(path.join(recordFolder, '01-owner-findings.md'), 'test');
-  fs.writeFileSync(path.join(recordFolder, '02a-technical-architect-findings.md'), 'test');
-  fs.writeFileSync(path.join(recordFolder, '03-other-role-findings.md'), 'test');
+  const ownerFindingsPath = deterministicFindingsFilePath(recordFolder, 'Owner');
+  const technicalArchitectFindingsPath = deterministicFindingsFilePath(recordFolder, 'Technical Architect');
+  fs.mkdirSync(path.dirname(ownerFindingsPath), { recursive: true });
+  fs.writeFileSync(ownerFindingsPath, 'test');
+  fs.writeFileSync(technicalArchitectFindingsPath, 'test');
   fs.writeFileSync(path.join(recordFolder, 'random.txt'), 'test');
 
   try {
-    const results = locateFindingsFiles(recordFolder, ['Owner', 'Technical Architect']);
-    assert.strictEqual(results.length, 2);
-    assert.ok(results.some(r => r.endsWith('01-owner-findings.md')));
-    assert.ok(results.some(r => r.endsWith('02a-technical-architect-findings.md')));
-    assert.ok(!results.some(r => r.endsWith('03-other-role-findings.md')));
+    const results = locateFindingsFiles(recordFolder, ['owner', 'TECHNICAL ARCHITECT', 'Other Role']);
+    assert.deepStrictEqual(results, [ownerFindingsPath, technicalArchitectFindingsPath]);
   } finally {
     fs.rmSync(recordFolder, { recursive: true, force: true });
   }
@@ -139,18 +139,17 @@ test('locateFindingsFiles: returns [] for absent directory', () => {
   assert.deepStrictEqual(results, []);
 });
 
-test('locateAllFindingsFiles: returns all matching files', () => {
+test('locateAllFindingsFiles: returns all deterministic findings files', () => {
   const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-all-files-'));
-  fs.writeFileSync(path.join(recordFolder, '01-owner-findings.md'), 'test');
-  fs.writeFileSync(path.join(recordFolder, '02a-technical-architect-findings.md'), 'test');
-  fs.writeFileSync(path.join(recordFolder, '05-curator-findings.md'), 'test');
+  const ownerFindingsPath = deterministicFindingsFilePath(recordFolder, 'Owner');
+  const curatorFindingsPath = deterministicFindingsFilePath(recordFolder, 'Curator');
+  fs.mkdirSync(path.dirname(ownerFindingsPath), { recursive: true });
+  fs.writeFileSync(ownerFindingsPath, 'owner');
+  fs.writeFileSync(curatorFindingsPath, 'curator');
 
   try {
     const results = locateAllFindingsFiles(recordFolder);
-    assert.strictEqual(results.length, 3);
-    assert.ok(results.some(r => r.endsWith('01-owner-findings.md')));
-    assert.ok(results.some(r => r.endsWith('02a-technical-architect-findings.md')));
-    assert.ok(results.some(r => r.endsWith('05-curator-findings.md')));
+    assert.deepStrictEqual(results, [curatorFindingsPath, ownerFindingsPath]);
   } finally {
     fs.rmSync(recordFolder, { recursive: true, force: true });
   }

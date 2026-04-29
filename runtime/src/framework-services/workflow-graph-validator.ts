@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import yaml from 'js-yaml';
+import { parseRoleIdentity } from '../role-id.js';
 
 export interface WorkflowNode {
   id: string;
@@ -252,7 +253,7 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
 
   const workflow = wf as WorkflowGraph;
 
-  // 1. Unconditional check: No neighboring same-role nodes
+  // 1. Unconditional check: No neighboring same-role-instance nodes
   const nodeIdToRole = new Map<string, string>();
   for (const node of workflow.nodes) {
     nodeIdToRole.set(node.id, node.role);
@@ -263,8 +264,12 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
     const fromRole = nodeIdToRole.get(edge.from);
     const toRole = nodeIdToRole.get(edge.to);
 
-    if (fromRole && toRole && fromRole === toRole) {
-      errors.push(`Invalid edge [${i}]: neighboring nodes "${edge.from}" and "${edge.to}" both share the same role "${fromRole}"`);
+    if (
+      fromRole &&
+      toRole &&
+      parseRoleIdentity(fromRole).instanceRoleId === parseRoleIdentity(toRole).instanceRoleId
+    ) {
+      errors.push(`Invalid edge [${i}]: neighboring nodes "${edge.from}" and "${edge.to}" both share the same role instance "${fromRole}"`);
     }
   }
 
@@ -279,7 +284,7 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
 
     if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
       // Sole node case
-      if (workflow.nodes[0].role !== 'Owner') {
+      if (parseRoleIdentity(workflow.nodes[0].role).baseRoleId !== 'owner') {
         errors.push(`Strict mode violation: sole node role must be "Owner" (found "${workflow.nodes[0].role}")`);
       }
     } else {
@@ -294,7 +299,7 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
       }
 
       for (const node of startNodes) {
-        if (node.role !== 'Owner') {
+        if (parseRoleIdentity(node.role).baseRoleId !== 'owner') {
           errors.push(
             `Strict mode violation: start node "${node.id}" must have role "Owner" (found "${node.role}")`
           );
@@ -302,7 +307,7 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
       }
 
       for (const node of endNodes) {
-        if (node.role !== 'Owner') {
+        if (parseRoleIdentity(node.role).baseRoleId !== 'owner') {
           errors.push(
             `Strict mode violation: end node "${node.id}" must have role "Owner" (found "${node.role}")`
           );

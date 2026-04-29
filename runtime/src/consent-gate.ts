@@ -1,10 +1,10 @@
-import {
+import { defaultConsentState } from './types.js';
+import type {
   ConsentClass,
   ConsentDecision,
   ConsentGate,
   ConsentMode,
   ConsentState,
-  defaultConsentState,
   OperatorRenderSink,
 } from './types.js';
 

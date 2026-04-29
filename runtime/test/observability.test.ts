@@ -18,6 +18,7 @@ import { HandoffParseError } from '../src/handoff.js';
 import { LLMGateway } from '../src/llm.js';
 import { FlowOrchestrator } from '../src/orchestrator.js';
 import { validateWorkflowFile } from '../src/framework-services/workflow-graph-validator.js';
+import { deterministicFindingsFilePath } from '../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../src/improvement.js';
 import { runRoleTurn } from '../src/orient.js';
 import { SessionStore } from '../src/store.js';
@@ -498,9 +499,11 @@ async function run() {
       path.join(recordDir, 'workflow.yaml'),
       'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n'
     );
-    fs.writeFileSync(path.join(recordDir, '01-curator-findings.md'), 'Existing findings');
+    const assignedFindingsPath = deterministicFindingsFilePath(recordDir, 'Curator');
+    fs.mkdirSync(path.dirname(assignedFindingsPath), { recursive: true });
+    fs.writeFileSync(assignedFindingsPath, 'Existing findings');
 
-    const findingsPath = path.relative(tmpDir, path.join(recordDir, '01-curator-findings.md'));
+    const findingsPath = path.relative(tmpDir, assignedFindingsPath);
     const feedbackArtifactPath = path.relative(tmpDir, path.join(recordDir, '02-owner-feedback.md'));
     const closureArtifactPath = path.relative(tmpDir, path.join(recordDir, '00-owner-closure.md'));
 
@@ -587,7 +590,9 @@ async function run() {
     assert.strictEqual(metaUserMessage.content, 'Forward-pass curator assignment.');
     assert.strictEqual(metaAssistantMessage.content, 'Forward-pass curator output.');
     assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes('Backward pass meta-analysis.'));
+    assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes(`runtime-assigned path: ${findingsPath}`));
     assert.ok(feedbackMessage.content.includes('[FILE: a-society/runtime/FEEDBACK.md]'));
+    assert.ok(feedbackMessage.content.includes(`[FILE: ${findingsPath}]`));
     assert.ok(feedbackMessage.content.includes('Runtime feedback instructions'));
     assert.ok(capturedOutput.includes('A-Society Feedback emitted prompt-human during backward pass feedback. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));

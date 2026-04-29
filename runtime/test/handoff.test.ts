@@ -55,10 +55,10 @@ test('parse (forward-pass-closed): returns closure signal', () => {
 });
 
 test('parse (meta-analysis-complete): returns findings signal', () => {
-  const text = "```handoff\ntype: meta-analysis-complete\nfindings_path: a-society/a-docs/records/example-flow/11-owner-findings.md\n```";
+  const text = "```handoff\ntype: meta-analysis-complete\nfindings_path: a-society/a-docs/records/example-flow/findings/owner-findings.md\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual(result.kind, 'meta-analysis-complete');
-  assert.strictEqual((result as any).findingsPath, 'a-society/a-docs/records/example-flow/11-owner-findings.md');
+  assert.strictEqual((result as any).findingsPath, 'a-society/a-docs/records/example-flow/findings/owner-findings.md');
 });
 
 test('parse (backward-pass-complete): returns backward pass closure signal', () => {

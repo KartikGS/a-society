@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { toKebabCaseRoleId } from './role-id.js';
+import { parseRoleIdentity } from './role-id.js';
 
 export interface RoleContextEntry {
   requiredReadingVariables: string[];
@@ -9,7 +9,7 @@ export interface RoleContextEntry {
 
 /**
  * Dynamically builds the RoleContextEntry for a given role by reading
- * a-docs/roles/<role-id>/required-readings.yaml.
+ * a-docs/roles/<base-role-id>/required-readings.yaml.
  *
  * Preferred schema:
  * required_readings: [ $VAR_NAME, ... ]
@@ -24,7 +24,7 @@ export function buildRoleContext(
   roleName: string,
   workspaceRoot: string
 ): RoleContextEntry | null {
-  const roleId = toKebabCaseRoleId(roleName);
+  const roleId = parseRoleIdentity(roleName).baseRoleId;
   const roleYamlPath = path.join(
     workspaceRoot,
     projectNamespace,

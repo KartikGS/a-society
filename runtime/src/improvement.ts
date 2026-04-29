@@ -1,6 +1,8 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import {
   computeBackwardPassPlan,
+  deterministicFindingsFilePath,
   locateFindingsFiles,
   locateAllFindingsFiles,
 } from './framework-services/backward-pass-orderer.js';
@@ -13,7 +15,7 @@ import { HandoffParseError } from './handoff.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
-import { toKebabCaseRoleId } from './role-id.js';
+import { parseRoleIdentity } from './role-id.js';
 import { improvementNodeId, writeImprovementWorkflow } from './improvement-workflow.js';
 
 const FEEDBACK_ROLE = 'A-Society Feedback';
@@ -27,6 +29,13 @@ type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-c
 export type ImprovementMode = 'graph-based' | 'parallel';
 
 type ExpectedImprovementSignal<K extends ExpectedImprovementSignalKind> = Extract<HandoffResult, { kind: K }>;
+type ExpectedSignalRepair = {
+  code: string;
+  operatorSummary: string;
+  modelRepairMessage: string;
+};
+type ExpectedSignalValidator<K extends ExpectedImprovementSignalKind> =
+  (result: ExpectedImprovementSignal<K>) => ExpectedSignalRepair | null;
 
 function saveImprovementFlow(flowRun: FlowRun): void {
   if (!flowRun.workspaceRoot || !flowRun.projectNamespace || !flowRun.flowId) {
@@ -69,13 +78,21 @@ function cloneRuntimeHistory(history: RuntimeMessageParam[]): RuntimeMessagePara
 }
 
 function loadForwardPassRoleHistory(flowRun: FlowRun, roleName: string): RuntimeMessageParam[] {
-  const sessionId = `${flowRun.flowId}__${toKebabCaseRoleId(roleName)}`;
+  const sessionId = `${flowRun.flowId}__${parseRoleIdentity(roleName).instanceRoleId}`;
   const session = SessionStore.loadRoleSession(
     sessionId,
     SessionStore.flowRef(flowRun),
     flowRun.workspaceRoot
   );
   return session ? cloneRuntimeHistory(session.transcriptHistory as RuntimeMessageParam[]) : [];
+}
+
+function normalizeRepoRelativePath(filePath: string, workspaceRoot: string): string {
+  const nativePath = filePath.replace(/\\/g, path.sep);
+  const relativePath = path.isAbsolute(nativePath)
+    ? path.relative(workspaceRoot, nativePath)
+    : nativePath;
+  return path.normalize(relativePath).replace(/^\.\//, '').split(path.sep).join('/');
 }
 
 function runtimeFeedbackInstructionPath(flowRun: FlowRun): string {
@@ -90,7 +107,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   expectedKind: K,
   role: string,
   outputStream: NodeJS.WritableStream,
-  renderer: OperatorRenderSink
+  renderer: OperatorRenderSink,
+  validateExpectedSignal?: ExpectedSignalValidator<K>,
 ): Promise<ExpectedImprovementSignal<K>> {
   const history = cloneRuntimeHistory(initialHistory);
   const stepLabel = describeExpectedStep(expectedKind);
@@ -131,6 +149,19 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
             history.push({ role: 'user', content: guidance.modelRepairMessage });
             continue;
           }
+        }
+
+        const repair = validateExpectedSignal?.(result as ExpectedImprovementSignal<K>);
+        if (repair) {
+          outputStream.write(`[improvement] ${repair.operatorSummary}. Requesting repair.\n`);
+          renderer.emit({
+            kind: 'repair.requested',
+            scope: 'improvement',
+            code: repair.code,
+            summary: repair.operatorSummary
+          });
+          history.push({ role: 'user', content: repair.modelRepairMessage });
+          continue;
         }
 
         return result as ExpectedImprovementSignal<K>;
@@ -293,6 +324,15 @@ export class ImprovementOrchestrator {
                 if (entry.stepType === 'meta-analysis') {
                   const findingsRoles = entry.findingsRolesToInject;
                   const findingsFilePaths = locateFindingsFiles(signal.recordFolderPath, findingsRoles);
+                  const assignedFindingsFilePath = deterministicFindingsFilePath(
+                    signal.recordFolderPath,
+                    roleName
+                  );
+                  fs.mkdirSync(path.dirname(assignedFindingsFilePath), { recursive: true });
+                  const assignedFindingsRepoPath = normalizeRepoRelativePath(
+                    assignedFindingsFilePath,
+                    flowRun.workspaceRoot
+                  );
                   
                   // §2.6 / §3.6 Warning for missing findings
                   for (const expectedRole of findingsRoles) {
@@ -322,11 +362,15 @@ export class ImprovementOrchestrator {
                     workspaceRoot: flowRun.workspaceRoot,
                     instructionFilePath: metaAnalysisInstructionPath,
                     findingsFilePaths,
-                    completionSignal: 'Produce your findings artifact at the next available sequence position in the record folder. When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set to the repo-relative path of your findings file.'
+                    completionSignal: [
+                      `Produce your findings artifact at exactly this runtime-assigned path: ${assignedFindingsRepoPath}.`,
+                      'Do not choose a sequence number or alternate filename.',
+                      `When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set exactly to ${assignedFindingsRepoPath}.`
+                    ].join(' ')
                   });
                   const history = loadForwardPassRoleHistory(flowRun, roleName);
                   history.push({ role: 'user', content: userMessage });
-                  const result = await runBackwardPassSessionUntilExpectedSignal(
+                  await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleName,
                     bundleContent,
@@ -334,10 +378,38 @@ export class ImprovementOrchestrator {
                     'meta-analysis-complete',
                     entry.role,
                     roleOutputStream,
-                    renderer
+                    renderer,
+                    (result) => {
+                      const actualFindingsPath = normalizeRepoRelativePath(result.findingsPath, flowRun.workspaceRoot);
+                      if (actualFindingsPath !== assignedFindingsRepoPath) {
+                        return {
+                          code: 'assigned_findings_path',
+                          operatorSummary: `${entry.role} used findings_path ${actualFindingsPath}; expected ${assignedFindingsRepoPath}`,
+                          modelRepairMessage: [
+                            'Error: This backward pass meta-analysis step has a runtime-assigned findings path.',
+                            `Write or move your findings artifact to ${assignedFindingsRepoPath}.`,
+                            `Then emit a meta-analysis-complete handoff block with findings_path set exactly to ${assignedFindingsRepoPath}.`
+                          ].join(' ')
+                        };
+                      }
+
+                      if (!fs.existsSync(assignedFindingsFilePath)) {
+                        return {
+                          code: 'missing_findings_artifact',
+                          operatorSummary: `${entry.role} emitted meta-analysis-complete before creating ${assignedFindingsRepoPath}`,
+                          modelRepairMessage: [
+                            'Error: The runtime-assigned findings artifact does not exist yet.',
+                            `Create ${assignedFindingsRepoPath}.`,
+                            `Then emit a meta-analysis-complete handoff block with findings_path set exactly to ${assignedFindingsRepoPath}.`
+                          ].join(' ')
+                        };
+                      }
+
+                      return null;
+                    }
                   );
 
-                  flowRun.improvementPhase!.findingsProduced[entry.role] = result.findingsPath;
+                  flowRun.improvementPhase!.findingsProduced[entry.role] = assignedFindingsRepoPath;
                 } else if (entry.stepType === 'feedback') {
                   const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
 

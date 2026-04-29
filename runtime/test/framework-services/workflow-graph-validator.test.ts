@@ -221,7 +221,7 @@ test('file without frontmatter fails', () => {
   assert.strictEqual(result.valid, false);
 });
 
-test('neighboring same-role nodes produces error (unconditional)', () => {
+test('neighboring same-role-instance nodes produces error (unconditional)', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -234,8 +234,23 @@ test('neighboring same-role nodes produces error (unconditional)', () => {
   };
   const errors = validateGraph(graph);
   assert.ok(
-    errors.some((e: string) => e.includes('neighboring nodes "n1" and "n2" both share the same role "Owner"'))
+    errors.some((e: string) => e.includes('neighboring nodes "n1" and "n2" both share the same role instance "Owner"'))
   );
+});
+
+test('neighboring numbered role instances with the same base role pass', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Owner_1' },
+        { id: 'n2', role: 'Owner_2' },
+      ],
+      edges: [{ from: 'n1', to: 'n2' }],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.deepStrictEqual(errors, []);
 });
 
 test('strict mode: non-Owner start node produces error', () => {
@@ -304,6 +319,25 @@ test('strict mode: valid graph passes', () => {
         { id: 'n1', role: 'Owner' },
         { id: 'n2', role: 'Curator' },
         { id: 'n3', role: 'Owner' },
+      ],
+      edges: [
+        { from: 'n1', to: 'n2' },
+        { from: 'n2', to: 'n3' },
+      ],
+    },
+  };
+  const errors = validateGraph(graph, true);
+  assert.deepStrictEqual(errors, []);
+});
+
+test('strict mode: numbered Owner role instances satisfy Owner start/end rules', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'n1', role: 'Owner_1' },
+        { id: 'n2', role: 'Curator' },
+        { id: 'n3', role: 'Owner_2' },
       ],
       edges: [
         { from: 'n1', to: 'n2' },

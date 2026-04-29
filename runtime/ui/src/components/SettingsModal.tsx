@@ -41,19 +41,19 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    async function fetchModels() {
+      try {
+        const res = await fetch('/api/settings/models');
+        if (!res.ok) throw new Error(await res.text());
+        setModels(await res.json() as ModelConfig[]);
+        setListError(null);
+      } catch (err) {
+        setListError(err instanceof Error ? err.message : 'Failed to load models.');
+      }
+    }
+
     void fetchModels();
   }, []);
-
-  async function fetchModels() {
-    try {
-      const res = await fetch('/api/settings/models');
-      if (!res.ok) throw new Error(await res.text());
-      setModels(await res.json() as ModelConfig[]);
-      setListError(null);
-    } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Failed to load models.');
-    }
-  }
 
   async function handleActivate(id: string) {
     try {

@@ -12,7 +12,7 @@ import { TelemetryManager } from './observability.js';
 import { SessionStore } from './store.js';
 import { FlowOrchestrator } from './orchestrator.js';
 import { ImprovementOrchestrator, type ImprovementMode } from './improvement.js';
-import { toKebabCaseRoleId } from './role-id.js';
+import { parseRoleIdentity } from './role-id.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
 import { bootstrapInitializationFlow } from './initialization-bootstrap.js';
 import { initializeDraftFlow } from './draft-flow.js';
@@ -139,9 +139,9 @@ function resolveAwaitingHumanNode(flowRun: FlowRun, target?: { nodeId?: string; 
   }
 
   if (target?.role) {
-    const roleKey = toKebabCaseRoleId(target.role);
+    const roleKey = parseRoleIdentity(target.role).instanceRoleId;
     const matches = awaitingNodeIds.filter((nodeId) =>
-      toKebabCaseRoleId(flowRun.awaitingHumanNodes[nodeId].role) === roleKey
+      parseRoleIdentity(flowRun.awaitingHumanNodes[nodeId].role).instanceRoleId === roleKey
     );
     if (matches.length === 1) return matches[0];
     if (matches.length === 0) {
@@ -198,7 +198,7 @@ function buildServer(workspaceRoot: string) {
     }
 
     const flowRef = flowRefFromRun(flowRun);
-    const logicalSessionId = `${flowRun.flowId}__${toKebabCaseRoleId(node.role)}`;
+    const logicalSessionId = `${flowRun.flowId}__${parseRoleIdentity(node.role).instanceRoleId}`;
     const session = SessionStore.loadRoleSession(logicalSessionId, flowRef, workspaceRoot);
     if (!session) {
       return null;

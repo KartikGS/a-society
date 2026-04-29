@@ -101,7 +101,7 @@ Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis
 
 **`record_folder_path`** — Repo-relative path to the active record folder. Used only by `forward-pass-closed`.
 
-**`findings_path`** — Repo-relative path to the findings artifact produced in a meta-analysis session. Used only by `meta-analysis-complete`.
+**`findings_path`** — Repo-relative path to the runtime-assigned findings artifact produced in a meta-analysis session. Used only by `meta-analysis-complete`.
 
 ---
 
@@ -142,7 +142,7 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-closure.
 
 ```handoff
 type: meta-analysis-complete
-findings_path: [project-name]/a-docs/records/[record-folder]/[NN]-[role]-findings.md
+findings_path: [project-name]/a-docs/records/[record-folder]/findings/[role]-findings.md
 ```
 
 **Backward-pass completion**

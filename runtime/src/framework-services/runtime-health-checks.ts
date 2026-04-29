@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import yaml from 'js-yaml';
 import { resolveProjectRecordsRoot, resolveProjectRoot } from '../draft-flow.js';
-import { toKebabCaseRoleId } from '../role-id.js';
+import { parseRoleIdentity, toKebabCaseRoleId } from '../role-id.js';
 import { validatePaths } from './path-validator.js';
 import { validateWorkflowFile } from './workflow-graph-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../workflow-file.js';
@@ -201,7 +201,7 @@ function collectWorkflowNodeReadingOverlapErrors(
     const nodeRecord = node as Record<string, unknown>;
     const nodeId = typeof nodeRecord.id === 'string' ? nodeRecord.id : '<unknown>';
     const roleName = typeof nodeRecord.role === 'string' ? nodeRecord.role : '<unknown>';
-    const roleId = toKebabCaseRoleId(roleName);
+    const roleId = parseRoleIdentity(roleName).baseRoleId;
     const startupVariables = new Set<string>([
       ...RUNTIME_MANAGED_REQUIRED_READING_VARIABLES,
       ...(roleRequiredReadingsByRoleId.get(roleId) || [])
@@ -475,7 +475,7 @@ export function runRuntimeHealthChecks(
 
       if (isDirectory(rolesRoot)) {
         for (const roleName of collectWorkflowRoles(workflowDoc)) {
-          const roleFolder = toKebabCaseRoleId(roleName);
+          const roleFolder = parseRoleIdentity(roleName).baseRoleId;
           const roleFolderPath = path.join(rolesRoot, roleFolder);
           if (!isDirectory(roleFolderPath)) {
             errors.push(`a-docs/workflow/main.yaml references role "${roleName}", but a-docs/roles/${roleFolder} is missing`);
@@ -519,7 +519,7 @@ export function buildRuntimeHealthRepairGuidance(
       'Repair the existing project structure in place. Do not start a new flow or create a replacement project tree.',
       'Minimum runtime surfaces that must be healthy include:',
       '- a-docs/indexes/main.md with valid registered paths',
-      '- a-docs/roles/<role-id>/{main.md, ownership.yaml, required-readings.yaml}',
+      '- a-docs/roles/<base-role-id>/{main.md, ownership.yaml, required-readings.yaml}',
       '- a-docs/workflow/main.yaml',
       '- a-docs/improvement/{meta-analysis.md, feedback.md}',
       '- a records root at a-docs/records/ or legacy records/',

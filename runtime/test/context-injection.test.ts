@@ -65,6 +65,21 @@ test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and alrea
   assert.ok(!bundle.bundleContent.includes('--- MANDATORY CONTEXT LOADING FOR'));
 });
 
+test('buildContextBundle: role instances load base role required readings', () => {
+  const bundle = ContextInjectionService.buildContextBundle(
+    'a-society',
+    'Owner_1',
+    tmpDir
+  );
+
+  assert.ok(bundle.bundleContent.includes('You are the Owner_1 agent for a-society.'));
+  assert.ok(bundle.bundleContent.includes('uses the Owner role authority and required readings'));
+  assert.ok(bundle.bundleContent.includes('Loaded from base role Owner.'));
+  assert.ok(bundle.bundleContent.includes('Agent orientation'));
+  assert.ok(bundle.bundleContent.includes('Owner role doc'));
+  assert.ok(!bundle.bundleContent.includes('FILE ERROR'));
+});
+
 test('buildContextBundle: does not include active artifact content', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',

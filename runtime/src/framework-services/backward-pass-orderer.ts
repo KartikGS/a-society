@@ -37,6 +37,19 @@ export interface BackwardPassEntry {
   findingsRolesToInject: string[];
 }
 
+export const FINDINGS_DIRECTORY_NAME = 'findings';
+
+export function deterministicFindingsFilePath(
+  recordFolderPath: string,
+  roleName: string,
+): string {
+  return path.join(
+    recordFolderPath,
+    FINDINGS_DIRECTORY_NAME,
+    `${toKebabCaseRoleId(roleName)}-findings.md`,
+  );
+}
+
 /**
  * Sequential steps (outer array) containing concurrent groups (inner array).
  * Linear flows have exactly one entry in each inner array.
@@ -320,40 +333,25 @@ export function locateFindingsFiles(
   recordFolderPath: string,
   roleNames: string[],
 ): string[] {
-  const filenames = (() => {
-    try {
-      return fs.readdirSync(recordFolderPath);
-    } catch {
-      return [];
-    }
-  })();
+  const matches = roleNames
+    .map(roleName => deterministicFindingsFilePath(recordFolderPath, roleName))
+    .filter(filePath => fs.existsSync(filePath));
 
-  const normalizedRequestedRoles = new Set(roleNames.map(toKebabCaseRoleId));
-  const findingsPattern = /^(\d+)[a-z]?-(.*)-findings\.md$/i;
-
-  const matches = filenames.filter(filename => {
-    const match = filename.match(findingsPattern);
-    if (!match) return false;
-    const roleSlug = toKebabCaseRoleId(match[2]);
-    return normalizedRequestedRoles.has(roleSlug);
-  });
-
-  return matches.map(filename => path.relative(process.cwd(), path.join(recordFolderPath, filename)));
+  return Array.from(new Set(matches));
 }
 
 export function locateAllFindingsFiles(
   recordFolderPath: string,
 ): string[] {
-  const filenames = (() => {
+  const findingsFolderPath = path.join(recordFolderPath, FINDINGS_DIRECTORY_NAME);
+  return (() => {
     try {
-      return fs.readdirSync(recordFolderPath);
+      return fs.readdirSync(findingsFolderPath)
+        .filter(filename => /^[a-z0-9-]+-findings\.md$/i.test(filename))
+        .map(filename => path.join(findingsFolderPath, filename))
+        .sort();
     } catch {
       return [];
     }
   })();
-
-  const findingsPattern = /^\d+[a-z]?-(.*)-findings\.md$/i;
-  const matches = filenames.filter(filename => findingsPattern.test(filename));
-
-  return matches.map(filename => path.relative(process.cwd(), path.join(recordFolderPath, filename)));
 }

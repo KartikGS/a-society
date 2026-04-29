@@ -85,7 +85,7 @@ The browser UI replaces the old stderr/stdout split with a WebSocket event strea
 
 When the runtime emits a `type: prompt-human` handoff signal, the runtime persists that node under `awaitingHumanNodes`. The operator replies in the browser from the requesting role/node chat, and the runtime resumes the same session without dropping out to a separate terminal prompt.
 
-If more than one role is awaiting input, the browser message must identify the target role or node. Because same-role parallel activation is rejected, a role target resolves to at most one awaiting node.
+If more than one role instance is awaiting input, the browser message must identify the target role instance or node.
 
 When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
@@ -95,7 +95,9 @@ When the forward pass closes, the runtime persists `status: awaiting_improvement
 
 ### Required reading is loaded once at startup
 
-When a session begins, the runtime resolves the active role to kebab-case and loads that role's file from `a-docs/roles/<role-id>/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
+When a session begins, the runtime resolves the active role instance to its base role and loads that base role's file from `a-docs/roles/<base-role-id>/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
+
+Role names ending in `_<number>` are separate role instances. For example, `Owner_1` and `Owner_2` both load `Owner` required readings, but they use separate runtime sessions.
 
 ### Stored-flow startup only
 
@@ -120,17 +122,17 @@ On runtime resume, persisted `runningNodes` are treated as stale process-local w
 
 When a `type: prompt-human` handoff pauses execution, the active role-scoped transcript is preserved. On resume at the same node, the runtime reuses that same node session and appends only the new human reply.
 
-### Later same-role return
+### Later same-role-instance return
 
-When the same role appears again at a later node in the same flow, the runtime reuses the same flow-scoped role session and appends a node-transition packet. The current node inputs are authoritative even though earlier discussion remains available.
+When the same role instance appears again at a later node in the same flow, the runtime reuses the same flow-scoped role-instance session and appends a node-transition packet. The current node inputs are authoritative even though earlier discussion remains available.
 
 ### Reopened node re-entry
 
-When a backward edge reopens a node for the same role, the runtime keeps the existing role-scoped session and appends a reopened-node packet before continuing.
+When a backward edge reopens a node for the same role instance, the runtime keeps the existing role-instance-scoped session and appends a reopened-node packet before continuing.
 
-### Same-role parallel activation
+### Same-role-instance parallel activation
 
-Concurrent same-role parallel activation is unsupported. The runtime rejects same-role parallel activation because it uses one flow-scoped session per role. Distinct-role ready nodes may run in parallel.
+Concurrent activation of the same role instance is unsupported because a role instance has one flow-scoped session. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
 
 ---
 
@@ -142,7 +144,7 @@ Transcript resolution path:
 
 1. Load the current `FlowRun`
 2. Map node ID to role from the active workflow file
-3. Resolve the logical session ID as `flowId__role-name`
+3. Resolve the logical session ID as `flowId__role-instance-name`
 4. Load the persisted role session from runtime state
 
 If no session exists for the selected node, the UI reports that the transcript is unavailable.
@@ -158,7 +160,9 @@ The runtime injects and consumes the machine-readable handoff contract from `$A_
 - `type: meta-analysis-complete` is consumed during backward-pass orchestration
 - `type: backward-pass-complete` closes the backward pass after the final feedback step
 
-When the runtime is waiting for human input, the UI keeps the current flow state and resumes the same role-scoped session after a reply is submitted to the requesting role/node.
+During backward-pass meta-analysis, the runtime assigns each role a deterministic findings path under the active record folder's `findings/` subfolder, using `<role-slug>-findings.md`. A meta-analysis session must write to that assigned path and return the same repo-relative path in `findings_path`.
+
+When the runtime is waiting for human input, the UI keeps the current flow state and resumes the same role-instance-scoped session after a reply is submitted to the requesting role instance or node.
 
 ---
 
@@ -173,7 +177,7 @@ Per-flow layout:
 
 - `flow.json` — persisted `FlowRun`
 - `operator-feed.json` — persisted browser/operator feed messages for replay after reconnect or server restart
-- `sessions/` — persisted role-scoped session files for that flow
+- `sessions/` — persisted role-instance-scoped session files for that flow
 
 Resume behavior:
 
