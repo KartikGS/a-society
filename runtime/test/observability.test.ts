@@ -440,9 +440,13 @@ async function run() {
     const flowRun: any = {
       flowId: 'test-flow',
       workspaceRoot: tmpDir,
+      projectNamespace: path.basename(tmpDir),
+      recordFolderPath: path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'records', 'test-flow'),
       status: 'running',
       improvementPhase: null
     };
+
+    fs.mkdirSync(flowRun.recordFolderPath, { recursive: true });
 
     const { Writable } = await import('node:stream');
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
@@ -504,7 +508,14 @@ async function run() {
     fs.writeFileSync(assignedFindingsPath, 'Existing findings');
 
     const findingsPath = path.relative(tmpDir, assignedFindingsPath);
-    const feedbackArtifactPath = path.relative(tmpDir, path.join(recordDir, '02-owner-feedback.md'));
+    const feedbackArtifactPath = path.join(
+      'a-society',
+      'feedback',
+      `${path.basename(tmpDir).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-flow-repair-flow.md`
+    );
+    const assignedFeedbackFilePath = path.join(tmpDir, feedbackArtifactPath);
+    fs.mkdirSync(path.dirname(assignedFeedbackFilePath), { recursive: true });
+    fs.writeFileSync(assignedFeedbackFilePath, 'Existing feedback target', 'utf8');
     const closureArtifactPath = path.relative(tmpDir, path.join(recordDir, '00-owner-closure.md'));
 
     const flowRun: any = {
@@ -520,7 +531,10 @@ async function run() {
       status: 'running',
       stateVersion: '7',
       improvementPhase: null,
-      recordFolderPath: recordDir
+      recordFolderPath: recordDir,
+      feedbackContext: {
+        kind: 'standard'
+      }
     };
 
     SessionStore.saveRoleSession({
@@ -544,16 +558,37 @@ async function run() {
     const observedHistories: RuntimeMessageParam[][] = [];
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
       observedHistories.push((hist as RuntimeMessageParam[]).map(message => ({ ...message })));
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      const result = await originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      if (result.type === 'text' && result.text.includes('type: meta-analysis-complete')) {
+        fs.mkdirSync(path.dirname(assignedFindingsPath), { recursive: true });
+        fs.writeFileSync(assignedFindingsPath, 'Generated findings', 'utf8');
+      }
+      if (result.type === 'text' && result.text.includes('type: backward-pass-complete')) {
+        fs.writeFileSync(assignedFeedbackFilePath, 'Generated feedback', 'utf8');
+      }
+      return result;
     };
 
     let capturedOutput = '';
+    const repairSummaries: string[] = [];
     const output = new Writable({
       write(chunk, _encoding, callback) {
         capturedOutput += chunk.toString();
         callback();
       }
     });
+    const renderer = {
+      emit(event: any) {
+        if (event?.kind === 'repair.requested') {
+          repairSummaries.push(String(event.summary));
+          if (repairSummaries.length > 5) {
+            throw new Error(`repair loop: ${repairSummaries.join(' || ')}`);
+          }
+        }
+      },
+      startWait() {},
+      stopWait() {}
+    };
 
     try {
       ImprovementOrchestrator.markAwaitingChoice(
@@ -564,7 +599,17 @@ async function run() {
         flowRun,
         'graph-based',
         output,
-        { emit: () => {}, startWait: () => {}, stopWait: () => {} }
+        renderer
+      );
+      assert.strictEqual(flowRun.status, 'awaiting_feedback_consent');
+      assert.strictEqual(flowRun.improvementPhase?.status, 'awaiting_feedback_consent');
+      assert.deepStrictEqual(flowRun.improvementPhase?.completedNodeIds, [
+        'curator-meta-analysis'
+      ]);
+      await ImprovementOrchestrator.runFeedback(
+        flowRun,
+        output,
+        renderer
       );
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;
@@ -579,6 +624,8 @@ async function run() {
       'curator-meta-analysis',
       'a-society-feedback-feedback'
     ]);
+    assert.strictEqual(flowRun.improvementPhase?.feedbackArtifactPath, feedbackArtifactPath);
+    assert.strictEqual(flowRun.improvementPhase?.feedbackConsent, 'granted');
     const metaUserMessage = observedHistories[0][0];
     const metaAssistantMessage = observedHistories[0][1];
     const metaImprovementMessage = observedHistories[0][2];
@@ -591,9 +638,13 @@ async function run() {
     assert.strictEqual(metaAssistantMessage.content, 'Forward-pass curator output.');
     assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes('Backward pass meta-analysis.'));
     assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes(`runtime-assigned path: ${findingsPath}`));
+    assert.ok(capturedOutput.includes(`[improvement] Meta-analysis complete. Awaiting feedback consent before writing ${feedbackArtifactPath}.`));
     assert.ok(feedbackMessage.content.includes('[FILE: a-society/runtime/FEEDBACK.md]'));
     assert.ok(feedbackMessage.content.includes(`[FILE: ${findingsPath}]`));
     assert.ok(feedbackMessage.content.includes('Runtime feedback instructions'));
+    assert.ok(feedbackMessage.content.includes(`Source flow ID: repair-flow`));
+    assert.ok(feedbackMessage.content.includes(`Flow kind: standard`));
+    assert.ok(feedbackMessage.content.includes(`runtime-assigned path: ${feedbackArtifactPath}`));
     assert.ok(capturedOutput.includes('A-Society Feedback emitted prompt-human during backward pass feedback. Requesting repair.'));
     assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
   });

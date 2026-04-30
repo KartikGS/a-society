@@ -288,28 +288,6 @@ files:
     scaffold: stub
     source_path: general/instructions/records/main.md
 
-  # ── Feedback consent ──────────────────────────────────────────────────────────
-  # Each consent file is instantiated from the same template; feedback type is filled in at
-  # scaffold time. The Consent Utility (Component 2) may also be used to create these files.
-
-  - path: feedback/onboarding/consent.md
-    description: "Onboarding feedback consent — records whether this project consents to initialization signal reports being filed to a-society/feedback/onboarding/"
-    required: true
-    scaffold: copy
-    source_path: general/feedback/consent.md
-
-  - path: feedback/migration/consent.md
-    description: "Migration feedback consent — records whether this project consents to migration feedback reports being filed to a-society/feedback/migration/"
-    required: true
-    scaffold: copy
-    source_path: general/feedback/consent.md
-
-  - path: feedback/curator-signal/consent.md
-    description: "Framework feedback consent — records whether this project consents to backward-pass framework feedback being filed to a-society/feedback/curator-signal/"
-    required: true
-    scaffold: copy
-    source_path: general/feedback/consent.md
-
   # ── Version record ────────────────────────────────────────────────────────────
 
   - path: a-society-version.md

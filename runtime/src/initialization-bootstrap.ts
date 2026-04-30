@@ -366,7 +366,11 @@ export function bootstrapInitializationFlow(
         'owner-intake': activeArtifacts
       },
       status: 'running',
-      stateVersion: '7'
+      stateVersion: '7',
+      feedbackContext: {
+        kind: 'initialization',
+        initializationMode: mode,
+      }
     },
     scaffoldResult
   };

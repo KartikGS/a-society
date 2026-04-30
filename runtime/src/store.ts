@@ -117,6 +117,9 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
   if (!Array.isArray(flow.visitedNodeIds)) {
     flow.visitedNodeIds = [];
   }
+  if (!flow.feedbackContext) {
+    flow.feedbackContext = { kind: 'standard' };
+  }
 
   return flow;
 }

@@ -3,6 +3,7 @@ export type FlowStatus =
   | 'running'
   | 'awaiting_human'
   | 'awaiting_improvement_choice'
+  | 'awaiting_feedback_consent'
   | 'awaiting_retry'
   | 'completed'
   | 'failed';
@@ -15,6 +16,14 @@ export interface ConsentState {
   mode: ConsentMode;
   fileWrites: ConsentDecision;
   shellNetwork: ConsentDecision;
+}
+
+export type FeedbackContextKind = 'standard' | 'initialization' | 'update-application';
+
+export interface FeedbackContext {
+  kind: FeedbackContextKind;
+  initializationMode?: 'takeover' | 'greenfield';
+  updateReportPaths?: string[];
 }
 
 export function defaultConsentState(): ConsentState {
@@ -41,7 +50,7 @@ export type HandoffResult =
   | { kind: 'awaiting_human' };
 
 export interface ImprovementPhaseState {
-  status: 'awaiting_choice' | 'running' | 'completed' | 'skipped';
+  status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
   mode?: 'graph-based' | 'parallel' | 'none';
   currentStep: number;                         // index into BackwardPassPlan outer array
   completedRoles: string[];                    // role names that have produced findings or been attempted
@@ -49,6 +58,8 @@ export interface ImprovementPhaseState {
   improvementWorkflowPath?: string;            // repo-relative path to runtime-generated improvement.yaml
   activeNodeIds?: string[];                    // improvement graph node ids currently running
   completedNodeIds?: string[];                 // improvement graph node ids that completed
+  feedbackArtifactPath?: string;               // repo-relative path assigned for optional upstream feedback
+  feedbackConsent?: 'pending' | 'granted' | 'denied';
   forwardPassClosure: {
     recordFolderPath: string;
     artifactPath: string;
@@ -72,6 +83,7 @@ export interface FlowRun {
   status: FlowStatus;
   stateVersion: string;                        // Persistence version: "7" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
+  feedbackContext?: FeedbackContext;           // Runtime-owned context for the optional upstream feedback step
   consentState?: ConsentState;
 }
 

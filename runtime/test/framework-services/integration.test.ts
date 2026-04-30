@@ -4,7 +4,6 @@
  * Exercises the deterministic framework services against the live A-Society
  * framework state. Validates that component interfaces compose correctly:
  *
- *   Scaffold  →  Consent Utility   (scaffold calls consent utility for consent files)
  *   Scaffold  →  Path Validator    (path validator can be run against index files)
  *   Workflow Graph Validator        (validates live permanent workflow definitions)
  *   Backward Pass Orderer           (reads record-folder workflow.yaml input)
@@ -23,7 +22,6 @@ import { fileURLToPath } from 'node:url';
 import {
   scaffoldFromManifestFile,
 } from '../../src/framework-services/scaffolding-system.js';
-import { checkConsent } from '../../src/framework-services/consent-utility.js';
 import { validatePaths } from '../../src/framework-services/path-validator.js';
 import { validateWorkflowFile } from '../../src/framework-services/workflow-graph-validator.js';
 import { computeBackwardPassPlan } from '../../src/framework-services/backward-pass-orderer.js';
@@ -94,8 +92,6 @@ fs.writeFileSync(
 );
 
 // ── Scenario 1: Full project initialization ───────────────────────────────────
-// Scaffold → Consent Utility chain: scaffoldFromManifestFile creates consent
-// files via the Consent Utility; checkConsent then reads each of the three back.
 
 import type { ScaffoldResult } from '../../src/framework-services/scaffolding-system.js';
 let scaffoldResult: ScaffoldResult | undefined;
@@ -107,7 +103,6 @@ test('Scenario 1 — scaffold runs against live manifest without throwing', () =
       'Integration Test Project',
       SOCIETY_ROOT,
       MANIFEST_PATH,
-      { consentValue: 'pending', consentRecordedBy: 'Integration Test' },
     );
   });
 });
@@ -126,37 +121,15 @@ test('Scenario 1 — scaffold reports created and skipped arrays (no unexpected 
 
 test('Scenario 1 — a-docs/ directory tree was created', () => {
   assert.ok(fs.existsSync(ADOCS_ROOT), 'a-docs/ does not exist');
-  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'feedback')), 'feedback/ subdir missing');
   assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'roles')), 'roles/ subdir missing');
   assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'thinking')), 'thinking/ subdir missing');
   assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'improvement')), 'improvement/ subdir missing');
 });
 
-// ── Scenario 2: Scaffold → Consent Utility ────────────────────────────────────
-// Consent files created by scaffold are readable by checkConsent.
-
-test('Scenario 2 — onboarding consent file readable by checkConsent', () => {
-  const result = checkConsent(ADOCS_ROOT, 'onboarding');
-  assert.strictEqual(result.file_status, 'present');
-  assert.strictEqual(result.consented, 'pending');
-});
-
-test('Scenario 2 — migration consent file readable by checkConsent', () => {
-  const result = checkConsent(ADOCS_ROOT, 'migration');
-  assert.strictEqual(result.file_status, 'present');
-  assert.strictEqual(result.consented, 'pending');
-});
-
-test('Scenario 2 — curator-signal consent file readable by checkConsent', () => {
-  const result = checkConsent(ADOCS_ROOT, 'curator-signal');
-  assert.strictEqual(result.file_status, 'present');
-  assert.strictEqual(result.consented, 'pending');
-});
-
-// ── Scenario 3: Scaffold idempotency ─────────────────────────────────────────
+// ── Scenario 2: Scaffold idempotency ─────────────────────────────────────────
 // A second scaffold run on the same project skips all existing files.
 
-test('Scenario 3 — second scaffold run skips all existing files (no overwrites)', () => {
+test('Scenario 2 — second scaffold run skips all existing files (no overwrites)', () => {
   const second = scaffoldFromManifestFile(
     PROJECT_ROOT,
     'Integration Test Project',
@@ -167,9 +140,9 @@ test('Scenario 3 — second scaffold run skips all existing files (no overwrites
   assert.ok(second.skipped.length > 0, 'Expected some skipped entries');
 });
 
-// ── Scenario 4: Path Validator against live indexes ───────────────────────────
+// ── Scenario 3: Path Validator against live indexes ───────────────────────────
 
-test('Scenario 4 — path validator runs against public index without throwing', () => {
+test('Scenario 3 — path validator runs against public index without throwing', () => {
   let results: any[] | undefined;
   assert.doesNotThrow(() => {
     results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
@@ -178,7 +151,7 @@ test('Scenario 4 — path validator runs against public index without throwing',
   assert.ok(results!.length > 0);
 });
 
-test('Scenario 4 — public index: all results have required fields', () => {
+test('Scenario 3 — public index: all results have required fields', () => {
   const results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
   for (const r of results) {
     assert.ok('variable' in r, 'missing variable field');
@@ -188,11 +161,11 @@ test('Scenario 4 — public index: all results have required fields', () => {
   }
 });
 
-test('Scenario 4 — path validator runs against internal index without throwing', () => {
+test('Scenario 3 — path validator runs against internal index without throwing', () => {
   assert.doesNotThrow(() => validatePaths(INTERNAL_INDEX, REPO_ROOT));
 });
 
-test('Scenario 4 — internal index: any failures are framework drift, not tool errors', () => {
+test('Scenario 3 — internal index: any failures are framework drift, not tool errors', () => {
   const results = validatePaths(INTERNAL_INDEX, REPO_ROOT);
   const missing = results.filter(r => r.status === 'missing');
   const parseErrors = results.filter(r => r.status === 'parse-error');
@@ -204,12 +177,12 @@ test('Scenario 4 — internal index: any failures are framework drift, not tool 
   assert.strictEqual(parseErrors.length, 0, `Path validator produced parse errors: ${JSON.stringify(parseErrors)}`);
 });
 
-// ── Scenario 5: Workflow Graph Validator + Backward Pass Orderer ──────────────
+// ── Scenario 4: Workflow Graph Validator + Backward Pass Orderer ──────────────
 
 let backwardPlan: BackwardPassPlan | undefined;
 let backwardOrder: BackwardPassEntry[] | undefined;
 
-test('Scenario 5 — workflow graph validator runs on live workflow and reports framework drift without failing', () => {
+test('Scenario 4 — workflow graph validator runs on live workflow and reports framework drift without failing', () => {
   const result = validateWorkflowFile(WORKFLOW_FILE);
   assert.ok(typeof result.valid === 'boolean');
   assert.ok(Array.isArray(result.errors));
@@ -218,7 +191,7 @@ test('Scenario 5 — workflow graph validator runs on live workflow and reports 
   }
 });
 
-test('Scenario 5 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
+test('Scenario 4 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
   assert.doesNotThrow(() => {
     backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'Owner', 'graph-based');
     // Flatten 2D plan to flat array for downstream assertions
@@ -226,12 +199,12 @@ test('Scenario 5 — backward pass orderer runs on record-folder workflow.yaml w
   });
 });
 
-test('Scenario 5 — backward pass order has at least two entries', () => {
+test('Scenario 4 — backward pass order has at least two entries', () => {
   if (!backwardOrder) return;
   assert.ok(backwardOrder.length >= 2, `Expected ≥ 2 entries, got ${backwardOrder.length}`);
 });
 
-test('Scenario 5 — backward pass last entry is feedback role', () => {
+test('Scenario 4 — backward pass last entry is feedback role', () => {
   if (!backwardOrder) return;
   const last = backwardOrder[backwardOrder.length - 1];
   assert.strictEqual(last.stepType, 'feedback', 'Last entry should be the feedback role');

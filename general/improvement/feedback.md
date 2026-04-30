@@ -22,7 +22,7 @@ This artifact is for upstream A-Society feedback, not for local project maintena
 - cross-project patterns or anti-patterns
 - framework-level documentation or workflow gaps
 
-If the project later files feedback to A-Society's collection folders, this artifact is the authoritative source for that submission.
+This step runs only if the runtime/operator approves upstream feedback generation after meta-analysis. When approved, write the artifact at the exact runtime-assigned path under `a-society/feedback/`. The human reviews and optionally shares that file upstream later; do not assume automatic submission.
 
 **Step 4.** Close the backward pass.
 
@@ -37,4 +37,5 @@ End the session with a `type: backward-pass-complete` handoff block whose `artif
 - If two documents conflict, resolve by updating one source-of-truth and adding a cross-reference — never duplicate.
 - Do not use the feedback artifact as a maintenance backlog for local `a-docs/`. Local standing fixes belong in meta-analysis.
 - Do not directly modify `a-society/general/` or upstream runtime/tooling from a downstream project's backward pass. Elevate those items as feedback here.
+- Include enough context for a human to review and redact before sharing, but avoid unnecessary project-sensitive detail.
 - **Forward pass closure boundary:** Do not begin the backward pass before the forward pass is explicitly closed by the intake role as a distinct step. The intake role is the terminal node of every forward pass. Issuing a single instruction that collapses "complete registration" and "proceed to backward pass" into one step removes the boundary. The correct sequence is: (1) the final forward-pass role completes its work and returns to the intake role; (2) the intake role reviews the completed work, confirms that the forward pass is closed, and issues a separate backward-pass initiation. Findings produced before the forward pass is confirmed closed may be based on incomplete work. **Approval is not completion:** The intake role confirming forward pass closure while downstream tasks remain pending (e.g., a step approved but not yet executed) is a forward pass closure boundary violation. "Complete" means executed; the intake role must verify execution, not merely that approval was issued.

@@ -14,8 +14,6 @@ This document is the standing reference for the coupling surface between A-Socie
 | Index table format | Yes | Path validation |
 | `VERSION.md` format | Yes | Update comparison |
 | `a-society-version.md` format | Yes | Update comparison |
-| `$GENERAL_FEEDBACK_CONSENT` template format | Yes | Consent handling |
-| Feedback type identifiers and directory names | Yes | Consent handling |
 | Workflow graph YAML frontmatter schema | Yes | Workflow graph validation |
 | Record-folder `workflow.yaml` schema | Yes | Backward-pass planning |
 | `$GENERAL_MANIFEST` file format and `copy` source paths | Yes | Scaffolding |
@@ -31,7 +29,6 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 |---|---|---|
 | `$INSTRUCTION_INDEX` | Path validation | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | Update comparison | Closed — capability wording plus manual fallback |
-| `$INSTRUCTION_CONSENT` | Consent handling | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Workflow graph validation / backward-pass planning | Closed — generic executable-capability wording |
 | `$INSTRUCTION_WORKFLOW_MODIFY` | Backward-pass planning | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Backward-pass planning | Closed — capability wording plus manual fallback |
@@ -48,5 +45,5 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 | **B** | A new standing executable capability is added | Executable layer | Coupling-map row added; standing guidance updated where relevant; operator reference added only if explicitly approved |
 | **C** | An existing executable capability changes interface or behavior | Executable layer | Coupling-map row updated; affected guidance surfaces updated |
 | **D** | A maintained document changes structure in a way scaffolding or runtime injection must reflect | `general/` or `a-docs/` | Executable implementation and coupling rows updated |
-| **E** | A new consent or feedback contract is added | Either | Consent handling, manifest, and consent guidance updated together |
+| **E** | A new upstream feedback contract is added | Either | Runtime feedback guidance, orchestration behavior, and operator-facing consent copy updated together |
 | **F** | The backward-pass contract changes | `general/` or `a-docs/` | Backward-pass planning updated together |

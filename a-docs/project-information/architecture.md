@@ -21,22 +21,24 @@ Two indexes govern path resolution:
 
 ## Feedback Signal Architecture
 
-A-Society grows from real-world usage. All inbound feedback signal is collected under `a-society/feedback/`, organized by signal type. All feedback writing requires recorded consent from the adopting project — see the Consent Invariant below.
+A-Society grows from real-world usage. All inbound feedback signal is collected under `$A_SOCIETY_FEEDBACK_DIR`. New runtime-generated feedback is a single optional upstream-sharing step that happens only after a flow's forward pass is closed and its backward-pass meta-analysis is complete.
 
-**Stream 1 — Initialization signal reports** (`$A_SOCIETY_FEEDBACK_ONBOARDING`)
-Every time the runtime-owned Owner initialization flow completes an initialization run, it may generate a signal report (with the project's consent) and write it to `a-society/feedback/onboarding/[project-name]-[YYYY-MM-DD].md`. These reports capture: what was inferable vs. what required questions, how each `general/` instruction performed, adversity encountered, and concrete recommendations for improving the library and runtime initialization experience. The Owner and Curator consume these reports to identify gaps and drive improvements to `general/` and `runtime/`.
+**Single feedback path — optional upstream sharing after backward pass**
+Every initialized project flow can end in the same shape:
 
-**Stream 2 — Migration feedback reports** (`$A_SOCIETY_FEEDBACK_MIGRATION`)
-After an adopting project's Curator implements a framework update report, it produces a migration feedback report (with consent) and files it to `a-society/feedback/migration/[project-name]-[update-report-date].md`. These reports capture: which changes applied, the clarity of migration guidance, friction encountered, and recommendations for improving future update reports. Use `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` when producing these reports.
+1. forward pass closes
+2. backward-pass meta-analysis runs locally
+3. the runtime asks the human whether to generate upstream A-Society feedback for that flow
+4. if the human says Yes, the feedback agent writes one report directly to a runtime-assigned path under `$A_SOCIETY_FEEDBACK_DIR`
+5. if the human says No, the flow closes without running the feedback agent
 
-**Stream 3 — Project-level framework feedback from adopting projects** (`$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL`)
-Projects using the framework run their own improvement protocols. Their backward passes surface patterns, friction, and gaps that A-Society's own agents cannot see. The final Owner feedback artifact from those projects is the high-value signal for evolving the general library and runtime. The collection path is still the legacy-named `curator-signal/` folder, but the signal itself is project-level framework feedback rather than Curator-only output.
+The feedback prompt is flow-aware. Initialization flows should focus on what the runtime inferred, what required human input, and where scaffolding or initialization guidance caused friction. Update-application flows should focus on which update guidance applied, what was unclear, and what future migration reports should improve. Standard flows should focus on reusable framework gaps, workflow friction, runtime issues, and cross-project patterns.
+
+**Collection model — local generation, human-reviewed sharing**
+The current collection model is intentionally simple: the feedback agent writes a markdown artifact into `$A_SOCIETY_FEEDBACK_DIR`, then the human reviews, redacts if needed, and may share it upstream in a manual GitHub PR. This keeps submission explicit, avoids automatic ingestion from personal machines, and leaves moderation at the PR-review layer. Privacy review is the immediate concern, so the runtime should always make clear that generated feedback may contain project-specific details and should be reviewed before sharing.
 
 **Outbound communication — Framework update reports**
-The inverse of inbound streams: A-Society pushing change notifications out to adopting projects. When `general/` or runtime-owned initialization behavior changes in ways that require adopting projects to review their own `a-docs/`, the A-Society Curator produces a framework update report and publishes it to `a-society/updates/`. Each report classifies changes by impact (Breaking / Recommended / Optional) and includes migration guidance for each adopting project's Curator. A `vMAJOR.MINOR` versioning scheme has been established so Curators can determine which reports they still need to apply by comparing their project's recorded version (in `a-docs/a-society-version.md`) against A-Society's current version (`$A_SOCIETY_VERSION`). The remaining open problem is *discovery* — how Curators learn that new update reports exist in the first place. This is deferred until A-Society's distribution model is defined. See `$A_SOCIETY_UPDATES_PROTOCOL`.
-
-**What this means for runtime initialization flows:**
-When initializing a project that uses the A-Society framework, establish the consent system using `$INSTRUCTION_CONSENT`. Ask the human about onboarding signal consent before closing initialization. The project's update-implementing role should reference checking `a-docs/feedback/migration/consent.md` before filing migration feedback, and the Owner should reference checking `a-docs/feedback/curator-signal/consent.md` before filing project-level framework feedback.
+The inverse of inbound feedback: A-Society pushing change notifications out to adopting projects. When `general/` or runtime-owned initialization behavior changes in ways that require adopting projects to review their own `a-docs/`, the A-Society Curator produces a framework update report and publishes it to `a-society/updates/`. Each report classifies changes by impact (Breaking / Recommended / Optional) and includes migration guidance for the adopting project's Owner, who starts an update-application flow and routes work to the touched-surface truth owners. A `vMAJOR.MINOR` versioning scheme has been established so adopters can determine which reports they still need to apply by comparing their project's recorded version (in `a-docs/a-society-version.md`) against A-Society's current version (`$A_SOCIETY_VERSION`). The remaining open problem is *discovery* — how projects learn that new update reports exist in the first place. This is deferred until A-Society's distribution model is defined. See `$A_SOCIETY_UPDATES_PROTOCOL`.
 
 ---
 
@@ -98,10 +100,11 @@ Violation: A runtime initialization surface loading A-Society's internal vision 
 
 ### Consent Before Signal
 
-A-Society never writes feedback signal from a project without explicit, recorded consent from that project's owner. Consent is stored in the project's `a-docs/feedback/[type]/consent.md` — one file per feedback type.
+A-Society never writes upstream feedback from a project without an explicit operator decision for that flow.
 
-- Every feedback-producing agent checks its consent file before writing. If the file is absent or `Consented: No`, the agent skips and notes it in session output
-- Consent files are loaded on-demand at the moment feedback is about to be written — they are not part of any role's session-start required reading
-- Every new feedback mechanism must define its consent type and agent behavior before shipping — see `$A_SOCIETY_PRINCIPLES`
+- Local backward-pass meta-analysis may still run without upstream-sharing consent
+- The final upstream feedback agent runs only after the runtime asks whether to generate feedback for the just-completed flow
+- If the answer is No, the flow closes without creating an upstream feedback artifact
+- If the answer is Yes, the feedback agent writes exactly one runtime-assigned artifact under `$A_SOCIETY_FEEDBACK_DIR`
 
-Violation: An agent writing to `a-society/feedback/` without first reading the project's consent file for that feedback type.
+Violation: The runtime running the upstream feedback step, or writing to `a-society/feedback/`, without an explicit per-flow operator decision.

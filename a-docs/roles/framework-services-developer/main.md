@@ -21,7 +21,7 @@ The Framework Services Developer operates as a specialist under the Technical Ar
 
 ## Primary Focus
 
-Implement and maintain deterministic executable framework services — scaffolding, consent handling, workflow validation, backward-pass planning, path validation, update comparison, and related reusable executable helpers — following the approved executable design.
+Implement and maintain deterministic executable framework services — scaffolding, workflow validation, backward-pass planning, path validation, update comparison, and related reusable executable helpers — following the approved executable design.
 
 ---
 

@@ -18,14 +18,14 @@ An agent's context window is finite and shared. Required reading should contain 
 
 ## 2. Consent Precedes Signal
 
-A-Society collects feedback signal from adopting projects to improve the framework. This collection requires explicit, recorded consent from the project's owner.
+A-Society collects feedback signal from adopting projects to improve the framework. This collection requires an explicit operator decision for each flow that wants to share upstream feedback.
 
-- Every feedback mechanism must have a corresponding consent file at `a-docs/feedback/[type]/consent.md` in the adopting project
-- Agents check consent before writing. If the consent file is absent or Consented is No, the agent skips writing and notes it in session output — no exceptions
-- Consent is recorded at the project level, not globally. Each project opts in independently
-- Consent files are loaded on-demand by the feedback-producing agent, not at session start
+- The runtime asks whether to generate upstream feedback only after backward-pass meta-analysis is complete
+- If the operator declines, the feedback agent does not run
+- If the operator approves, the feedback agent writes one runtime-assigned artifact under `a-society/feedback/`
+- Consent for one flow does not imply blanket consent for future flows
 
-**Consequence:** Any new feedback mechanism that ships without a corresponding consent model is incomplete. Define the consent type and the agent behavior before publishing the feature.
+**Consequence:** Any new feedback mechanism that ships without a clear per-flow consent point is incomplete. Define the prompt timing, operator meaning, and agent behavior before publishing the feature.
 
 ---
 
@@ -37,8 +37,9 @@ The questions to ask when designing a new feature:
 
 1. Does this feature produce signal that could improve the framework?
 2. If yes: where does the signal go, what format does it take, and which agent produces it?
-3. What is the consent model?
-4. What is the storage location under `a-society/feedback/`?
+3. What does the operator need to understand before deciding whether to generate/share that signal?
+4. What flow context must be carried into the final feedback step?
+5. What is the runtime-assigned storage location under `a-society/feedback/`?
 
 If the answer to question 1 is no, no feedback mechanism is needed. Do not add feedback for its own sake.
 

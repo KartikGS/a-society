@@ -1,4 +1,6 @@
-# Framework Feedback Report — Template
+# Framework Feedback Report — Legacy Focus Template
+
+Legacy compatibility note: this older focus-specific outline is preserved for historical references. New runtime-managed upstream feedback uses the single per-flow feedback path and the runtime-assigned report under `a-society/feedback/`.
 
 **Project:** [project name]
 **Date:** [YYYY-MM-DD]
@@ -57,5 +59,5 @@ Areas where A-Society's current guidance or workflow model created confusion or 
 
 ## Completion Checklist
 
-- [ ] Consent verified at `a-docs/feedback/curator-signal/consent.md` before filing this report
-- [ ] Report filed at `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL/[project]-[YYYY-MM-DD].md`
+- [ ] Runtime/operator consent granted before generating upstream feedback
+- [ ] Report written at the runtime-assigned path under `a-society/feedback/`

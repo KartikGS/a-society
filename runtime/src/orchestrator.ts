@@ -1000,7 +1000,12 @@ export class FlowOrchestrator {
   }
 
   private reconcileFlowStatus(flowRun: FlowRun): void {
-    if (flowRun.status === 'completed' || flowRun.status === 'failed' || flowRun.status === 'awaiting_improvement_choice') return;
+    if (
+      flowRun.status === 'completed' ||
+      flowRun.status === 'failed' ||
+      flowRun.status === 'awaiting_improvement_choice' ||
+      flowRun.status === 'awaiting_feedback_consent'
+    ) return;
     if (flowRun.readyNodes.length > 0 || flowRun.runningNodes.length > 0) {
       flowRun.status = 'running';
       return;

@@ -33,6 +33,7 @@ type ClientMessage =
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
   | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' }
+  | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
   | { type: 'consent_response'; flowRef: FlowRef; decision: 'granted' | 'denied' }
   | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 
@@ -737,6 +738,59 @@ function buildServer(workspaceRoot: string) {
     setImmediate(() => emitFlowState(session));
   }
 
+  function handleFeedbackConsentChoice(ref: FlowRef, decision: 'granted' | 'denied'): void {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun || flowRun.status !== 'awaiting_feedback_consent') {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'The runtime is not currently waiting for a feedback consent decision.'
+      });
+      return;
+    }
+
+    const session = getOrCreateChoiceSession(ref);
+    const label = decision === 'granted' ? 'Generate upstream feedback' : 'Skip upstream feedback';
+    emitHistoricalMessage(session, {
+      type: 'input_text',
+      text: label,
+    });
+
+    if (decision === 'denied') {
+      try {
+        ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
+        session.sink.emit({ kind: 'flow.completed' });
+      } catch (error: any) {
+        emitHistoricalMessage(session, {
+          type: 'error',
+          message: error instanceof Error ? error.message : String(error)
+        });
+      }
+      return;
+    }
+
+    void attachSessionTask(session, async () => {
+      const currentFlow = readFlowRun(ref);
+      if (!currentFlow) {
+        throw new Error('Flow state disappeared before the feedback step began.');
+      }
+
+      await ImprovementOrchestrator.runFeedback(
+        currentFlow,
+        session.outputBridge,
+        session.sink,
+        (roleName) => createRoleOutputStream(session, roleName)
+      );
+
+      const latestFlow = readFlowRun(ref);
+      if (latestFlow?.status === 'completed') {
+        session.sink.emit({ kind: 'flow.completed' });
+      }
+    }).catch(() => {});
+
+    setImmediate(() => emitFlowState(session));
+  }
+
   function handleConsentResponse(ref: FlowRef, decision: 'granted' | 'denied'): void {
     const session = activeSessions.get(flowKey(ref));
     if (!session || session.finished) {
@@ -811,6 +865,13 @@ function buildServer(workspaceRoot: string) {
         parsed?.type === 'improvement_choice' &&
         hasFlowRef(parsed.flowRef) &&
         (parsed.mode === 'graph-based' || parsed.mode === 'parallel' || parsed.mode === 'none')
+      ) {
+        return parsed;
+      }
+      if (
+        parsed?.type === 'feedback_consent_choice' &&
+        hasFlowRef(parsed.flowRef) &&
+        (parsed.decision === 'granted' || parsed.decision === 'denied')
       ) {
         return parsed;
       }
@@ -1087,6 +1148,11 @@ function buildServer(workspaceRoot: string) {
 
       if (message.type === 'improvement_choice') {
         handleImprovementChoice(message.flowRef, message.mode);
+        return;
+      }
+
+      if (message.type === 'feedback_consent_choice') {
+        handleFeedbackConsentChoice(message.flowRef, message.decision);
         return;
       }
 

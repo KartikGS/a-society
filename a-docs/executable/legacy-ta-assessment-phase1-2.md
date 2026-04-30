@@ -1,6 +1,6 @@
 # TA Assessment: Legacy Phase 1–2 Executable Deviations
 
-This document preserves two historical Technical Architect rulings that remain load-bearing in the unified executable layer.
+This document preserves one historical Technical Architect ruling that remains load-bearing in the unified executable layer, plus one retired ruling kept for traceability.
 
 ---
 
@@ -14,16 +14,14 @@ The update-comparison capability uses `VERSION.md` history as the authoritative 
 
 ---
 
-## Deviation 2 — Consent Handling
+## Deviation 2 — Consent Handling (Retired)
 
-**Ruling:** Accept with spec update.
+**Ruling at the time:** Accept with spec update.
 
-The consent-handling capability renders the consent-file structure programmatically rather than reading `$GENERAL_FEEDBACK_CONSENT` at runtime. The template and the renderer are therefore a co-maintained pair.
-
-**Standing consequence:** When `$GENERAL_FEEDBACK_CONSENT` changes structurally, the executable consent-rendering implementation must be updated in the same flow.
+The older consent-handling capability rendered consent-file structure programmatically rather than reading `$GENERAL_FEEDBACK_CONSENT` at runtime. That capability has now been retired. Upstream feedback consent is asked per flow by the runtime after backward-pass meta-analysis, so this older ruling no longer creates a standing co-maintenance obligation.
 
 ---
 
 ## Standing Reference
 
-These rulings are historical but still authoritative for the legacy framework-service designs carried forward into `$A_SOCIETY_EXECUTABLE_PROPOSAL`.
+Deviation 1 remains authoritative for the standing executable layer. Deviation 2 is retained only so older records and update reports remain interpretable.

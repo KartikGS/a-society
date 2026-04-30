@@ -132,6 +132,7 @@ export interface ImprovementEntryOptions {
   workspaceRoot: string;
   instructionFilePath: string;
   findingsFilePaths: string[];
+  contextLines?: string[];
   completionSignal: string;
 }
 
@@ -141,13 +142,29 @@ export interface ImprovementEntryOptions {
  * not in the system bundle.
  */
 export function buildImprovementEntryMessage(opts: ImprovementEntryOptions): string {
-  const { stepLabel, recordFolderPath, workspaceRoot, instructionFilePath, findingsFilePaths, completionSignal } = opts;
+  const {
+    stepLabel,
+    recordFolderPath,
+    workspaceRoot,
+    instructionFilePath,
+    findingsFilePaths,
+    contextLines,
+    completionSignal
+  } = opts;
   const lines: string[] = [];
 
   lines.push(`Backward pass ${stepLabel}.`);
   lines.push(`Node started at: ${new Date().toISOString()}`);
   lines.push(`Record folder: ${recordFolderPath}`);
   lines.push('');
+
+  if (contextLines && contextLines.length > 0) {
+    lines.push('Flow feedback context:');
+    for (const line of contextLines) {
+      lines.push(`- ${line}`);
+    }
+    lines.push('');
+  }
 
   const instructionRelPath = path.relative(workspaceRoot, instructionFilePath);
   lines.push(`[FILE: ${instructionRelPath}]`);

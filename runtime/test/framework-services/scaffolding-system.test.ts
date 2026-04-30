@@ -7,7 +7,6 @@ import {
   scaffold,
   scaffoldFromManifestFile,
   renderStub,
-  detectFeedbackConsentType,
 } from '../../src/framework-services/scaffolding-system.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -45,28 +44,6 @@ seedSourceFile('general/roles/curator/main.md', '# Curator\n\nCurator role conte
 seedSourceFile('general/thinking/main.md', '# Thinking\n\nThinking content.\n');
 
 console.log('\nscaffolding-system');
-
-// ── detectFeedbackConsentType ─────────────────────────────────────────────────
-
-test('detectFeedbackConsentType: returns type key for onboarding consent path', () => {
-  assert.strictEqual(detectFeedbackConsentType('feedback/onboarding/consent.md'), 'onboarding');
-});
-
-test('detectFeedbackConsentType: returns type key for migration consent path', () => {
-  assert.strictEqual(detectFeedbackConsentType('feedback/migration/consent.md'), 'migration');
-});
-
-test('detectFeedbackConsentType: returns type key for curator-signal consent path', () => {
-  assert.strictEqual(detectFeedbackConsentType('feedback/curator-signal/consent.md'), 'curator-signal');
-});
-
-test('detectFeedbackConsentType: returns null for non-consent path', () => {
-  assert.strictEqual(detectFeedbackConsentType('project-information/vision.md'), null);
-});
-
-test('detectFeedbackConsentType: returns null for unknown feedback type', () => {
-  assert.strictEqual(detectFeedbackConsentType('feedback/unknown-type/consent.md'), null);
-});
 
 // ── renderStub ────────────────────────────────────────────────────────────────
 
@@ -157,40 +134,6 @@ test('scaffold: fails gracefully when copy source does not exist', () => {
   const result = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   assert.strictEqual(result.failed.length, 1);
   assert.ok(result.failed[0].reason.includes('Cannot copy from'));
-});
-
-// ── scaffold — consent entries ────────────────────────────────────────────────
-
-test('scaffold: creates onboarding consent file via Consent Utility', () => {
-  const projectRoot = path.join(TEMP_BASE, 'consent-scaffold-test');
-  const entries = [
-    { path: 'feedback/onboarding/consent.md', scaffold: 'copy', source_path: 'general/feedback/consent.md' },
-  ];
-  const result = scaffold(projectRoot, 'My Project', SOCIETY_ROOT, entries, { consentValue: 'pending' });
-  const target = path.join(projectRoot, 'a-docs', 'feedback', 'onboarding', 'consent.md');
-  assert.strictEqual(result.created.length, 1);
-  assert.ok(fs.existsSync(target));
-  const content = fs.readFileSync(target, 'utf8');
-  assert.ok(content.includes('**Consented:** Pending'));
-  assert.ok(content.includes('My Project'));
-});
-
-test('scaffold: all three consent files use Consent Utility', () => {
-  const projectRoot = path.join(TEMP_BASE, 'all-consent-test');
-  const entries = [
-    { path: 'feedback/onboarding/consent.md', scaffold: 'copy', source_path: 'general/feedback/consent.md' },
-    { path: 'feedback/migration/consent.md', scaffold: 'copy', source_path: 'general/feedback/consent.md' },
-    { path: 'feedback/curator-signal/consent.md', scaffold: 'copy', source_path: 'general/feedback/consent.md' },
-  ];
-  const result = scaffold(projectRoot, 'Consent Project', SOCIETY_ROOT, entries, { consentValue: 'yes' });
-  assert.strictEqual(result.created.length, 3);
-  assert.strictEqual(result.failed.length, 0);
-  const onboarding = path.join(projectRoot, 'a-docs', 'feedback', 'onboarding', 'consent.md');
-  const migration = path.join(projectRoot, 'a-docs', 'feedback', 'migration', 'consent.md');
-  const curatorSignal = path.join(projectRoot, 'a-docs', 'feedback', 'curator-signal', 'consent.md');
-  assert.ok(fs.existsSync(onboarding));
-  assert.ok(fs.existsSync(migration));
-  assert.ok(fs.existsSync(curatorSignal));
 });
 
 // ── scaffold — overwrite and skip behaviour ───────────────────────────────────

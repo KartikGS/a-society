@@ -1,4 +1,6 @@
-# Migration Feedback Report — Template
+# Migration Feedback Report — Legacy Focus Template
+
+Legacy compatibility note: this older migration-specific outline is preserved for historical references. New runtime-managed upstream feedback uses the single per-flow feedback path and the runtime-assigned report under `a-society/feedback/`.
 
 **Project:** [project name]
 **Update report:** [filename, e.g., 2026-03-07-initializer-protocol-gaps.md]
@@ -53,5 +55,5 @@ Proposed improvements to future update reports or the migration process itself:
 
 - [ ] All applicable Breaking changes implemented
 - [ ] Applicability assessment complete for all changes (Breaking, Recommended, Optional)
-- [ ] Consent verified at `a-docs/feedback/migration/consent.md` before filing this report
-- [ ] Report filed at `a-society/feedback/migration/[project]-[update-report-date].md`
+- [ ] Runtime/operator consent granted before generating upstream feedback
+- [ ] Report written at the runtime-assigned path under `a-society/feedback/`

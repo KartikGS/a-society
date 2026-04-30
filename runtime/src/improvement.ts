@@ -99,6 +99,64 @@ function runtimeFeedbackInstructionPath(flowRun: FlowRun): string {
   return path.join(flowRun.workspaceRoot, 'a-society', 'runtime', 'FEEDBACK.md');
 }
 
+function sanitizeFeedbackFileSegment(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'project';
+}
+
+function feedbackKindFileSegment(flowRun: FlowRun): string {
+  const feedbackContext = flowRun.feedbackContext ?? { kind: 'standard' as const };
+  if (feedbackContext.kind === 'initialization') {
+    return feedbackContext.initializationMode === 'greenfield'
+      ? 'initialization-greenfield'
+      : 'initialization-takeover';
+  }
+  if (feedbackContext.kind === 'update-application') {
+    return 'update-application';
+  }
+  return 'flow';
+}
+
+function assignedFeedbackArtifactRelativePath(flowRun: FlowRun): string {
+  const existing = flowRun.improvementPhase?.feedbackArtifactPath;
+  if (existing) return existing;
+
+  return path.posix.join(
+    'a-society',
+    'feedback',
+    `${sanitizeFeedbackFileSegment(flowRun.projectNamespace)}-${feedbackKindFileSegment(flowRun)}-${flowRun.flowId}.md`
+  );
+}
+
+function feedbackContextLines(flowRun: FlowRun): string[] {
+  const feedbackContext = flowRun.feedbackContext ?? { kind: 'standard' as const };
+  const lines = [`Source flow ID: ${flowRun.flowId}`];
+
+  if (feedbackContext.kind === 'initialization') {
+    lines.push(
+      `Flow kind: initialization (${feedbackContext.initializationMode === 'greenfield' ? 'greenfield' : 'takeover'})`
+    );
+    lines.push('Focus on what the runtime could infer, what required human input, and where initialization guidance caused friction.');
+    return lines;
+  }
+
+  if (feedbackContext.kind === 'update-application') {
+    lines.push('Flow kind: update application');
+    lines.push('Focus on which update guidance applied, where migration guidance was unclear, and what the runtime or framework should improve for future update flows.');
+    for (const reportPath of feedbackContext.updateReportPaths ?? []) {
+      lines.push(`Referenced update report: ${reportPath}`);
+    }
+    return lines;
+  }
+
+  lines.push('Flow kind: standard');
+  lines.push('Focus on reusable framework gaps, workflow friction, runtime issues, and cross-project patterns surfaced by this flow.');
+  return lines;
+}
+
 async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImprovementSignalKind>(
   flowRun: FlowRun,
   roleName: string,
@@ -212,6 +270,8 @@ export class ImprovementOrchestrator {
       findingsProduced: {},
       activeNodeIds: [],
       completedNodeIds: [],
+      feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
+      feedbackConsent: 'pending',
       forwardPassClosure: signal
     };
     flowRun.stateVersion = '7';
@@ -233,10 +293,30 @@ export class ImprovementOrchestrator {
       improvementWorkflowPath: flowRun.improvementPhase?.improvementWorkflowPath,
       activeNodeIds: [],
       completedNodeIds: flowRun.improvementPhase?.completedNodeIds ?? [],
+      feedbackArtifactPath: flowRun.improvementPhase?.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun),
+      feedbackConsent: flowRun.improvementPhase?.feedbackConsent,
       forwardPassClosure
     };
     saveImprovementFlow(flowRun);
     outputStream?.write(`[improvement] No improvement selected. Record closed.\n`);
+  }
+
+  static skipFeedback(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): void {
+    const improvementPhase = flowRun.improvementPhase;
+    if (!improvementPhase?.forwardPassClosure) {
+      throw new Error('[improvement] Cannot skip feedback: forward-pass closure metadata is missing.');
+    }
+
+    flowRun.status = 'completed';
+    flowRun.improvementPhase = {
+      ...improvementPhase,
+      status: 'completed',
+      activeNodeIds: [],
+      feedbackArtifactPath: improvementPhase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun),
+      feedbackConsent: 'denied',
+    };
+    saveImprovementFlow(flowRun);
+    outputStream?.write('[improvement] Upstream feedback skipped. Flow closed.\n');
   }
 
   static async runImprovement(
@@ -275,6 +355,8 @@ export class ImprovementOrchestrator {
           improvementWorkflowPath: path.relative(flowRun.workspaceRoot, improvementWorkflowFilePath),
           activeNodeIds: [],
           completedNodeIds: [],
+          feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
+          feedbackConsent: 'pending',
           forwardPassClosure: signal
         };
         flowRun.status = 'running';
@@ -288,9 +370,23 @@ export class ImprovementOrchestrator {
         for (let i = 0; i < plan.length; i++) {
           flowRun.improvementPhase.currentStep = i;
           const group = plan[i];
+          const isFeedback = group.some(e => e.stepType === 'feedback');
+          if (isFeedback) {
+            flowRun.status = 'awaiting_feedback_consent';
+            flowRun.improvementPhase.status = 'awaiting_feedback_consent';
+            flowRun.improvementPhase.activeNodeIds = [];
+            flowRun.improvementPhase.feedbackArtifactPath = flowRun.improvementPhase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
+            flowRun.improvementPhase.feedbackConsent = 'pending';
+            saveImprovementFlow(flowRun);
+            span.addEvent('store.flow_saved', { stage: 'awaiting_feedback_consent', step_index: i });
+            outputStream.write(
+              `[improvement] Meta-analysis complete. Awaiting feedback consent before writing ${flowRun.improvementPhase.feedbackArtifactPath}.\n`
+            );
+            return;
+          }
+
           flowRun.improvementPhase.activeNodeIds = group.map(improvementNodeId);
           saveImprovementFlow(flowRun);
-          const isFeedback = group.some(e => e.stepType === 'feedback');
           const spanName = isFeedback ? 'improvement.feedback' : 'improvement.meta_analysis.step';
           span.addEvent('improvement.step_started', {
             step_index: i,
@@ -410,30 +506,6 @@ export class ImprovementOrchestrator {
                   );
 
                   flowRun.improvementPhase!.findingsProduced[entry.role] = assignedFindingsRepoPath;
-                } else if (entry.stepType === 'feedback') {
-                  const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
-
-                  const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
-
-                  const userMessage = buildImprovementEntryMessage({
-                    stepLabel: 'feedback',
-                    recordFolderPath: signal.recordFolderPath,
-                    workspaceRoot: flowRun.workspaceRoot,
-                    instructionFilePath: feedbackInstructionPath,
-                    findingsFilePaths: allFindingsFiles,
-                    completionSignal: 'Findings from all roles in this flow are in your context. Produce the feedback artifact, then emit a backward-pass-complete handoff block with artifact_path set to the repo-relative path of the feedback artifact.'
-                  });
-                  const history: RuntimeMessageParam[] = [{ role: 'user', content: userMessage }];
-                  await runBackwardPassSessionUntilExpectedSignal(
-                    flowRun,
-                    roleName,
-                    RUNTIME_FEEDBACK_SYSTEM_PROMPT,
-                    history,
-                    'backward-pass-complete',
-                    entry.role,
-                    roleOutputStream,
-                    renderer
-                  );
                 }
                 flowRun.improvementPhase!.completedRoles.push(entry.role);
                 flowRun.improvementPhase!.activeNodeIds = (flowRun.improvementPhase!.activeNodeIds ?? [])
@@ -466,6 +538,171 @@ export class ImprovementOrchestrator {
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
         outputStream.write(`[improvement] Improvement phase complete. Flow closed.\n`);
+      } catch (e: any) {
+        span.recordException(e);
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw e;
+      } finally {
+        span.end();
+      }
+    });
+  }
+
+  static async runFeedback(
+    flowRun: FlowRun,
+    outputStream: NodeJS.WritableStream,
+    renderer: OperatorRenderSink,
+    roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
+  ): Promise<void> {
+    const signal = flowRun.improvementPhase?.forwardPassClosure;
+    if (!signal) {
+      throw new Error('[improvement] Cannot run feedback: forward-pass closure metadata is missing.');
+    }
+
+    const currentStep = flowRun.improvementPhase?.currentStep;
+    if (currentStep === undefined) {
+      throw new Error('[improvement] Cannot run feedback: improvement step index is missing.');
+    }
+
+    const tracer = TelemetryManager.getTracer();
+    return tracer.startActiveSpan('improvement.feedback', {
+      kind: SpanKind.INTERNAL,
+      attributes: {
+        'flow.id': flowRun.flowId,
+        'improvement.record_folder': signal.recordFolderPath,
+      }
+    }, async (span) => {
+      try {
+        const mode = flowRun.improvementPhase?.mode;
+        if (!mode || mode === 'none') {
+          throw new Error('[improvement] Cannot run feedback: improvement mode is missing.');
+        }
+
+        const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
+        const group = plan[currentStep];
+        if (!group || !group.some(entry => entry.stepType === 'feedback')) {
+          throw new Error('[improvement] Cannot run feedback: the current improvement step is not a feedback step.');
+        }
+
+        const assignedFeedbackRepoPath = flowRun.improvementPhase?.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
+        const assignedFeedbackFilePath = path.resolve(flowRun.workspaceRoot, assignedFeedbackRepoPath);
+        fs.mkdirSync(path.dirname(assignedFeedbackFilePath), { recursive: true });
+
+        const existingPhase = flowRun.improvementPhase;
+        if (!existingPhase?.forwardPassClosure) {
+          throw new Error('[improvement] Cannot run feedback: improvement phase state is incomplete.');
+        }
+
+        flowRun.status = 'running';
+        flowRun.improvementPhase = {
+          status: 'running',
+          mode,
+          currentStep,
+          completedRoles: existingPhase.completedRoles ?? [],
+          findingsProduced: existingPhase.findingsProduced ?? {},
+          improvementWorkflowPath: existingPhase.improvementWorkflowPath,
+          activeNodeIds: group.map(improvementNodeId),
+          completedNodeIds: existingPhase.completedNodeIds ?? [],
+          feedbackArtifactPath: assignedFeedbackRepoPath,
+          feedbackConsent: 'granted',
+          forwardPassClosure: existingPhase.forwardPassClosure,
+        };
+        saveImprovementFlow(flowRun);
+        span.addEvent('store.flow_saved', { stage: 'feedback_started', step_index: currentStep });
+
+        await Promise.all(group.map(async (entry) => {
+          const roleName = entry.role;
+          const improvementGraphNodeId = improvementNodeId(entry);
+          const roleOutputStream = roleOutputStreamFactory?.(roleName) ?? outputStream;
+          renderer.emit({
+            kind: 'role.active',
+            nodeId: improvementGraphNodeId,
+            role: roleName,
+            artifactCount: 0,
+            activationSource: 'runtime'
+          });
+
+          const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
+          const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
+
+          const userMessage = buildImprovementEntryMessage({
+            stepLabel: 'feedback',
+            recordFolderPath: signal.recordFolderPath,
+            workspaceRoot: flowRun.workspaceRoot,
+            instructionFilePath: feedbackInstructionPath,
+            findingsFilePaths: allFindingsFiles,
+            contextLines: feedbackContextLines(flowRun),
+            completionSignal: [
+              'Findings from all roles in this flow are in your context.',
+              `Produce the upstream feedback artifact at exactly this runtime-assigned path: ${assignedFeedbackRepoPath}.`,
+              'Do not choose an alternate filename or location.',
+              `When the feedback artifact is saved, emit a backward-pass-complete handoff block with artifact_path set exactly to ${assignedFeedbackRepoPath}.`
+            ].join(' ')
+          });
+          const history: RuntimeMessageParam[] = [{ role: 'user', content: userMessage }];
+          await runBackwardPassSessionUntilExpectedSignal(
+            flowRun,
+            roleName,
+            RUNTIME_FEEDBACK_SYSTEM_PROMPT,
+            history,
+            'backward-pass-complete',
+            entry.role,
+            roleOutputStream,
+            renderer,
+            (result) => {
+              const actualArtifactPath = normalizeRepoRelativePath(result.artifactPath, flowRun.workspaceRoot);
+              if (actualArtifactPath !== assignedFeedbackRepoPath) {
+                return {
+                  code: 'assigned_feedback_path',
+                  operatorSummary: `${entry.role} used artifact_path ${actualArtifactPath}; expected ${assignedFeedbackRepoPath}`,
+                  modelRepairMessage: [
+                    'Error: This backward pass feedback step has a runtime-assigned artifact path.',
+                    `Write or move the feedback artifact to ${assignedFeedbackRepoPath}.`,
+                    `Then emit a backward-pass-complete handoff block with artifact_path set exactly to ${assignedFeedbackRepoPath}.`
+                  ].join(' ')
+                };
+              }
+
+              if (!fs.existsSync(assignedFeedbackFilePath)) {
+                return {
+                  code: 'missing_feedback_artifact',
+                  operatorSummary: `${entry.role} emitted backward-pass-complete before creating ${assignedFeedbackRepoPath}`,
+                  modelRepairMessage: [
+                    'Error: The runtime-assigned feedback artifact does not exist yet.',
+                    `Create ${assignedFeedbackRepoPath}.`,
+                    `Then emit a backward-pass-complete handoff block with artifact_path set exactly to ${assignedFeedbackRepoPath}.`
+                  ].join(' ')
+                };
+              }
+
+              return null;
+            }
+          );
+
+          flowRun.improvementPhase!.completedRoles.push(entry.role);
+          flowRun.improvementPhase!.activeNodeIds = (flowRun.improvementPhase!.activeNodeIds ?? [])
+            .filter(nodeId => nodeId !== improvementGraphNodeId);
+          if (!(flowRun.improvementPhase!.completedNodeIds ?? []).includes(improvementGraphNodeId)) {
+            flowRun.improvementPhase!.completedNodeIds = [
+              ...(flowRun.improvementPhase!.completedNodeIds ?? []),
+              improvementGraphNodeId
+            ];
+          }
+          saveImprovementFlow(flowRun);
+        }));
+
+        flowRun.status = 'completed';
+        flowRun.improvementPhase = {
+          ...flowRun.improvementPhase!,
+          status: 'completed',
+          activeNodeIds: [],
+          completedNodeIds: plan.flatMap(stepGroup => stepGroup.map(improvementNodeId)),
+          feedbackArtifactPath: assignedFeedbackRepoPath,
+          feedbackConsent: 'granted',
+        };
+        saveImprovementFlow(flowRun);
+        span.addEvent('store.flow_saved', { stage: 'feedback_completed' });
+        outputStream.write('[improvement] Improvement phase complete. Flow closed.\n');
       } catch (e: any) {
         span.recordException(e);
         span.setStatus({ code: SpanStatusCode.ERROR });

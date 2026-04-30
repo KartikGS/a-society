@@ -90,6 +90,8 @@ When a pattern passes all three: draft the proposal, note the evidence from this
 
 ## Version-Aware Migration
 
+In projects that use workflow routing, update application starts with the Owner. The Owner opens an update-application flow, maps the touched surfaces, and routes the actual work to the relevant truth owners. The Curator participates when Curator-owned surfaces are affected.
+
 When performing migration tasks — bringing a project's agent-docs into conformance with current A-Society standards — work in version order:
 
 1. Read the project's `a-docs/a-society-version.md` to determine the current recorded version (last row of Applied Updates, or baseline if none applied)

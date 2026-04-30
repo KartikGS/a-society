@@ -11,7 +11,8 @@ The runtime uses this guide after participating roles have produced their meta-a
 - Review the findings files supplied in the entry message.
 - Treat findings as the primary source of truth for this feedback step.
 - If more context is needed, inspect the active record folder yourself.
-- Produce one final feedback artifact in the active record folder.
+- Produce one final feedback artifact at the exact runtime-assigned path under `a-society/feedback/`.
+- Assume the human may later review, redact, and optionally submit that file in a manual GitHub PR.
 - Do not modify project files, framework files, role instructions, indexes, or runtime code from this step.
 
 ---
@@ -28,6 +29,10 @@ Capture feedback that can improve A-Society as a framework:
 - suggestions that may belong in `general/`, runtime, or A-Society governance
 
 Do not use the feedback artifact as a local maintenance backlog. Local standing-surface fixes belong in role meta-analysis, not here.
+
+Include enough detail to make the report useful upstream, but avoid unnecessary project-sensitive specifics.
+
+Add a short suggested PR title/body section so the human has reusable share text if they decide to submit the report upstream.
 
 ---
 

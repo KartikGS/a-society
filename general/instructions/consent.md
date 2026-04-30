@@ -1,72 +1,69 @@
-# Instruction: Feedback Consent Setup
+# Instruction: Upstream Feedback Consent
 
-This instruction explains how to establish the consent system in a project's `a-docs/` during initialization, and how agents use it when producing feedback signal for A-Society.
-
----
-
-## What Feedback Consent Is
-
-A-Society collects feedback signal from adopting projects to improve the framework — but only with the project owner's explicit permission. Consent is recorded in small, targeted files: one per feedback type, stored adjacent to where that feedback would be produced.
-
-Agents check consent before writing any feedback. If consent is absent or denied, they skip the write and note it in session output. No agent writes feedback without a recorded Yes.
+This instruction explains how runtime-managed projects handle consent for upstream A-Society feedback.
 
 ---
 
-## When to Create Consent Files
+## What Feedback Consent Means Now
 
-Consent files are created when a feedback-producing agent is first set up for the project — not all at once. Create the consent file for a feedback type when that feedback type becomes relevant:
+A-Society still requires explicit permission before writing upstream feedback, but consent is no longer scaffolded as project files.
 
-| Feedback type | Created by | When |
-|---|---|---|
-| `onboarding-signal` | Owner during initialization | During initialization, before closing |
-| `migration` | Owner during initialization | During initialization, if a Curator role was created |
-| `curator-signal` | Owner during initialization | During initialization, for every project that will run backward passes |
+Instead, the runtime asks for a decision at the end of each flow, after backward-pass meta-analysis is complete and before the final upstream feedback step would run.
 
-Do not create consent files for feedback types that are not yet active in the project.
+That decision means:
 
----
+- **Yes** — spend the extra turn, run the feedback agent, and write one report to the runtime-assigned path under `a-society/feedback/`
+- **No** — skip the feedback agent entirely and close the flow
 
-## How to Create a Consent File
-
-1. Ask the human explicitly: "May A-Society write a [type] report to `a-society/feedback/[type]/` after [triggering event]? This report helps A-Society improve the framework."
-2. Record the answer — do not infer consent from silence or general agreement.
-3. Use the project's executable consent-creation capability, if one exists, to create the consent file. Pass the project's `a-docs/` path, the feedback type identifier (`onboarding`, `migration`, or `curator-signal`), and the consent answer recorded in step 2. If no such capability exists, copy `$GENERAL_FEEDBACK_CONSENT` manually, fill in the Type, Consented, Date, Recorded by, and description fields, and save at `a-docs/feedback/[type]/consent.md`.
-4. Register the consent file in the project's index as `$[PROJECT]_FEEDBACK_[TYPE]_CONSENT`.
+Consent is flow-specific, not global.
 
 ---
 
-## Folder Structure
+## When the Runtime Asks
 
-Each project's `a-docs/feedback/` folder mirrors A-Society's own `a-society/feedback/` collection folders:
+The runtime asks only when all of the following are true:
 
-```
-a-docs/feedback/
-  onboarding/
-    consent.md        ← checked by the initializing Owner flow before writing onboarding signal
-  migration/
-    consent.md        ← checked by Curator before filing a migration feedback report
-    [local draft migration reports, if any]
-  curator-signal/
-    consent.md        ← checked by the Owner before filing project-level framework feedback to A-Society
-```
+1. the forward pass is already closed
+2. backward-pass meta-analysis is complete
+3. the next step would be the final upstream feedback step
+
+This applies to standard flows, initialization flows, and update-application flows.
 
 ---
 
-## Agent Behavior at Feedback Time
+## What the Human Should Be Told
 
-Before writing any feedback artifact, the producing agent must:
+Before the decision is made, the runtime should make these points clear:
 
-1. Read the consent file at `a-docs/feedback/[type]/consent.md`
-2. If `Consented: Yes` — proceed with writing to `a-society/feedback/[type]/[project]-[date].md`
-3. If `Consented: No` or the file does not exist — skip. Output: "Feedback skipped — consent not recorded for [type]."
+1. generating feedback will spend another agent turn
+2. the report is written locally under `a-society/feedback/`
+3. the report may contain project-specific details and should be reviewed or redacted before sharing
+4. sharing is manual for now, typically by opening a GitHub PR
 
-The consent file is not loaded at session start. It is loaded only at the moment the agent is about to write feedback.
+Do not imply automatic submission or background collection from the user's machine.
 
 ---
 
-## What Does Not Belong Here
+## Agent Behavior
 
-- The `curator-signal` directory name is legacy naming for project-level framework feedback; a Curator role is not required to use it
-- Do not store actual feedback reports in `a-docs/feedback/` — filed reports go to `a-society/feedback/[type]/` (A-Society's collection folder)
-- Do not use `a-docs/feedback/` for any purpose other than consent files and in-progress local drafts
-- Do not create a consent file without asking the human — assumed consent is not consent
+When consent is denied:
+
+- do not run the feedback agent
+- do not create an upstream feedback file
+- close the flow normally after meta-analysis
+
+When consent is granted:
+
+- run the feedback agent once
+- write exactly one report to the runtime-assigned path under `a-society/feedback/`
+- include enough context for upstream review, but avoid unnecessary sensitive detail
+
+---
+
+## What No Longer Happens
+
+- Do not scaffold `a-docs/feedback/[type]/consent.md` files for new projects
+- Do not register per-type feedback consent files in project indexes
+- Do not model feedback as separate onboarding, migration, and curator-signal pipelines
+
+The active model is one optional upstream feedback step after a normal backward pass.

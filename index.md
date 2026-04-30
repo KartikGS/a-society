@@ -19,14 +19,16 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_RUNTIME_FEEDBACK` | `a-society/runtime/FEEDBACK.md` | Runtime-owned final backward-pass feedback contract — used by the runtime's A-Society feedback phase |
 | `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
 | **Feedback** | | |
-| `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Template for initialization signal reports — one report per initialization run |
-| `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
-| `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
-| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
-| `$GENERAL_FEEDBACK_CURATOR_SIGNAL_TEMPLATE` | `a-society/general/feedback/template-curator-signal.md` | Framework-feedback report template for the legacy `curator-signal` collection — used after backward passes to capture project-level feedback for A-Society |
-| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Initialization signal reports — filed after initialization runs with project consent |
-| `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
-| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy-named collection for project-level framework feedback from adopting projects after backward passes |
+| `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — new runtime-generated feedback lands directly here |
+| `$GENERAL_FEEDBACK_TEMPLATE` | `a-society/general/feedback/template-feedback.md` | Single upstream feedback report template — reference format for the runtime-managed final feedback step |
+| `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How runtime-managed projects ask for upstream feedback consent per flow |
+| `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Legacy compatibility note for the retired consent-file model |
+| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Legacy migration-focused feedback outline retained for historical references |
+| `$GENERAL_FEEDBACK_CURATOR_SIGNAL_TEMPLATE` | `a-society/general/feedback/template-curator-signal.md` | Legacy project-feedback outline retained for historical references |
+| `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Legacy initialization-feedback template retained for historical references |
+| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Legacy initialization-feedback collection retained for historical artifacts |
+| `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Legacy migration-feedback collection retained for historical artifacts |
+| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy project-feedback collection retained for historical artifacts |
 | **Framework Updates** | | |
 | `$A_SOCIETY_VERSION` | `a-society/VERSION.md` | A-Society's current framework version — single source of truth for the vMAJOR.MINOR version stamp |
 | `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |

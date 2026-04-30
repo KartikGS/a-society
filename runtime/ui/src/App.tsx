@@ -103,6 +103,34 @@ function formatUsageSummary(event: Extract<OperatorEvent, { kind: 'usage.turn_su
   }
 }
 
+function feedbackConsentCopy(flowRun: FlowRun | null): { title: string; body: string; details: string } {
+  const artifactPath = flowRun?.improvementPhase?.feedbackArtifactPath ?? 'a-society/feedback/';
+  const feedbackContext = flowRun?.feedbackContext;
+
+  if (feedbackContext?.kind === 'initialization') {
+    const modeLabel = feedbackContext.initializationMode === 'greenfield' ? 'greenfield' : 'takeover';
+    return {
+      title: 'Generate initialization feedback?',
+      body: `Meta-analysis is complete. If you approve, the feedback agent will spend one more turn writing an upstream report directly to \`${artifactPath}\`.`,
+      details: `This ${modeLabel} initialization report should focus on what the runtime inferred, what required human input, and where initialization guidance or scaffolding created friction. Review or redact the file before sharing it upstream in a manual PR.`
+    };
+  }
+
+  if (feedbackContext?.kind === 'update-application') {
+    return {
+      title: 'Generate update-flow feedback?',
+      body: `Meta-analysis is complete. If you approve, the feedback agent will spend one more turn writing an upstream report directly to \`${artifactPath}\`.`,
+      details: 'This update-application report should focus on which update guidance applied, where migration guidance was unclear, and what the framework should improve for future update flows. Review or redact the file before sharing it upstream in a manual PR.'
+    };
+  }
+
+  return {
+    title: 'Generate upstream feedback?',
+    body: `Meta-analysis is complete. If you approve, the feedback agent will spend one more turn writing an upstream report directly to \`${artifactPath}\`.`,
+    details: 'This report should capture reusable framework gaps, workflow friction, runtime issues, and cross-project patterns surfaced by this flow. Review or redact the file before sharing it upstream in a manual PR.'
+  };
+}
+
 function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
   switch (event.kind) {
     case 'flow.resumed':
@@ -671,6 +699,14 @@ export function App() {
     sendMessage({ type: 'improvement_choice', flowRef: activeTab.ref, mode });
   }
 
+  function handleFeedbackConsentChoice(decision: 'granted' | 'denied'): void {
+    if (!activeTab) return;
+    if (decision === 'granted') {
+      updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
+    }
+    sendMessage({ type: 'feedback_consent_choice', flowRef: activeTab.ref, decision });
+  }
+
   function handleConsentResponse(decision: 'granted' | 'denied'): void {
     if (!activeTab) return;
     sendMessage({ type: 'consent_response', flowRef: activeTab.ref, decision });
@@ -747,6 +783,8 @@ export function App() {
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
   const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
+  const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
+  const feedbackPrompt = feedbackConsentCopy(flowRun);
   const visibleWaitLabel = isViewedRoleActive ? activeUi?.waitLabel ?? null : null;
   const inputDisabled = !viewedRoleAwaitingNodeId;
   const canStop =
@@ -923,6 +961,27 @@ export function App() {
               <button className="modal-choice modal-choice-neutral" onClick={() => handleImprovementChoice('none')}>
                 <span className="modal-choice-label">No improvement</span>
                 <span className="modal-choice-desc">Close the record now without a backward pass.</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {isAwaitingFeedbackConsent ? (
+        <div className="modal-overlay">
+          <div className="modal-panel">
+            <p className="eyebrow">Feedback Step</p>
+            <h2>{feedbackPrompt.title}</h2>
+            <p className="modal-copy">{feedbackPrompt.body}</p>
+            <p className="modal-copy">{feedbackPrompt.details}</p>
+            <div className="modal-choices">
+              <button className="modal-choice" onClick={() => handleFeedbackConsentChoice('granted')}>
+                <span className="modal-choice-label">Generate feedback</span>
+                <span className="modal-choice-desc">Run the feedback agent, create the report in `a-society/feedback/`, and leave it ready for review or manual PR sharing.</span>
+              </button>
+              <button className="modal-choice modal-choice-neutral" onClick={() => handleFeedbackConsentChoice('denied')}>
+                <span className="modal-choice-label">Skip feedback</span>
+                <span className="modal-choice-desc">Close the flow now without spending another turn or creating an upstream feedback file.</span>
               </button>
             </div>
           </div>

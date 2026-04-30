@@ -137,17 +137,17 @@ Project-information documents form a coherent category: they are all read at ori
 
 ### `general/feedback/`
 
-**Purpose:** Ready-made templates for feedback artifacts that adopting projects produce and file back to A-Society. These are the counterpart to `a-society/feedback/` — the templates live in `general/` so adopting project agents can use them directly.
+**Purpose:** Feedback-reference artifacts for upstream A-Society feedback. The active surface is a single general feedback template that matches the runtime's optional final feedback step. Legacy stream-specific templates remain here only as compatibility references for historical artifacts.
 
 **What belongs here:**
-- The consent file template — instantiated per feedback type in a project's `a-docs/feedback/[type]/consent.md`
-- Report templates for each feedback stream (e.g., migration feedback report)
+- The general upstream feedback template
+- Compatibility references for older feedback formats or older update reports that still mention them
 
 **What does not belong here:**
-- Actual feedback reports filed by adopting projects — those go to `a-society/feedback/[type]/`
-- Instructions for setting up the consent system — those live in `general/instructions/consent.md`
+- Actual feedback reports filed by adopting projects — those go to `a-society/feedback/`
+- Project-level consent records or scaffolding requirements — the runtime now asks for upstream-feedback consent per flow at feedback time
 
-**Principle:** Files here are ready-made artifacts that adopting project agents copy and instantiate. They are not instructions for how to build something — they are the thing itself, ready to use.
+**Principle:** Files here define or preserve feedback artifact formats. They do not define project scaffolding requirements.
 
 ---
 

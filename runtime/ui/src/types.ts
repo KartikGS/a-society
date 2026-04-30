@@ -37,14 +37,23 @@ export interface FlowRun {
   visitedNodeIds?: string[];
   completedEdgeArtifacts: Record<string, string>;
   pendingNodeArtifacts: Record<string, string[]>;
-  status: 'initialized' | 'running' | 'awaiting_human' | 'awaiting_improvement_choice' | 'awaiting_retry' | 'completed' | 'failed';
+  status: 'initialized' | 'running' | 'awaiting_human' | 'awaiting_improvement_choice' | 'awaiting_feedback_consent' | 'awaiting_retry' | 'completed' | 'failed';
   stateVersion: string;
   improvementPhase?: ImprovementPhaseState;
+  feedbackContext?: FeedbackContext;
   consentState?: ConsentState;
 }
 
+export type FeedbackContextKind = 'standard' | 'initialization' | 'update-application';
+
+export interface FeedbackContext {
+  kind: FeedbackContextKind;
+  initializationMode?: 'takeover' | 'greenfield';
+  updateReportPaths?: string[];
+}
+
 export interface ImprovementPhaseState {
-  status: 'awaiting_choice' | 'running' | 'completed' | 'skipped';
+  status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
   mode?: 'graph-based' | 'parallel' | 'none';
   currentStep: number;
   completedRoles: string[];
@@ -52,6 +61,8 @@ export interface ImprovementPhaseState {
   improvementWorkflowPath?: string;
   activeNodeIds?: string[];
   completedNodeIds?: string[];
+  feedbackArtifactPath?: string;
+  feedbackConsent?: 'pending' | 'granted' | 'denied';
   forwardPassClosure: {
     recordFolderPath: string;
     artifactPath: string;
@@ -107,6 +118,7 @@ export type ClientMessage =
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
   | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' }
+  | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
   | { type: 'consent_response'; flowRef: FlowRef; decision: 'granted' | 'denied' }
   | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 

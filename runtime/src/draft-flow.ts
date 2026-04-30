@@ -101,7 +101,10 @@ export function initializeDraftFlow(
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: {},
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '7',
+    feedbackContext: {
+      kind: 'standard',
+    }
   };
 }
 

@@ -18,10 +18,11 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_ARCHITECTURE` | `a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
 | `$A_SOCIETY_LOG` | `a-society/a-docs/project-information/log.md` | A-Society project log — current state and next priorities for agents orienting at session start |
 | `$A_SOCIETY_INDEX` | `a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
-| `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Ready-made consent file template — instantiated per feedback type in a project's a-docs/feedback/[type]/ |
-| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Migration feedback report template — used by Curators after implementing framework update reports |
+| `$GENERAL_FEEDBACK_TEMPLATE` | `a-society/general/feedback/template-feedback.md` | Single upstream feedback report template — reference format for the runtime-managed final feedback step |
+| `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Legacy compatibility note for the retired consent-file model |
+| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Legacy migration-focused feedback outline retained for historical references |
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `a-society/general/instructions/a-society-version-record.md` | How to create and maintain an A-Society version record in any initialized project |
-| `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How to establish the feedback consent system in a project during initialization |
+| `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How runtime-managed projects ask for upstream feedback consent per flow |
 | `$INSTRUCTION_TOOLING` | `a-society/general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `a-society/general/instructions/project-information/vision.md` | How to create a vision document for any project |
 | `$INSTRUCTION_STRUCTURE` | `a-society/general/instructions/project-information/structure.md` | How to create a structure document for any project |
@@ -120,10 +121,10 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_WORKFLOW_COMPLEXITY` | `a-society/a-docs/workflow/complexity.md` | A-Society workflow complexity guidance — internal intake sizing rules, tier-selection boundaries, and project-specific routing constraints |
 | `$A_SOCIETY_IMPROVEMENT` | `a-society/a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
 | `$A_SOCIETY_RECORDS` | `a-society/a-docs/records/main.md` | A-Society records convention — record ID and metadata model, artifact sequence, and placement rules for flow-level artifact tracking |
-| `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — organized by signal type |
-| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Initialization signal reports — filed after initialization runs with project consent |
-| `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Migration feedback reports — filed by Curators after implementing framework update reports |
-| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy-named collection for project-level framework feedback from adopting projects |
+| `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — new runtime-generated reports land directly here |
+| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Legacy initialization-feedback collection retained for historical artifacts |
+| `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Legacy migration-feedback collection retained for historical artifacts |
+| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy project-feedback collection retained for historical artifacts |
 | `$A_SOCIETY_VERSION` | `a-society/VERSION.md` | A-Society's current framework version — single source of truth for the vMAJOR.MINOR version stamp |
 | `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |

@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { createConsentFile, FEEDBACK_TYPES } from './consent-utility.js';
 
 interface ManifestEntry {
   path: string;
@@ -13,8 +12,6 @@ interface ManifestEntry {
 
 interface ScaffoldOptions {
   overwrite?: boolean;
-  consentValue?: string;
-  consentRecordedBy?: string;
   includeOptional?: boolean;
 }
 
@@ -33,21 +30,6 @@ export interface ScaffoldResult {
   created: ScaffoldCreatedItem[];
   skipped: ScaffoldSkippedItem[];
   failed: ScaffoldSkippedItem[];
-}
-
-/**
- * Detects whether a manifest entry path is a feedback consent file.
- * Returns the feedback type key (e.g. 'onboarding') or null.
- *
- * Matches paths of the form: feedback/[type]/consent.md
- */
-export function detectFeedbackConsentType(entryPath: string): string | null {
-  const parts = entryPath.replace(/\\/g, '/').split('/');
-  if (parts.length === 3 && parts[0] === 'feedback' && parts[2] === 'consent.md') {
-    const feedbackType = parts[1];
-    if (FEEDBACK_TYPES[feedbackType]) return feedbackType;
-  }
-  return null;
 }
 
 /**
@@ -89,8 +71,7 @@ export function renderStub(entry: ManifestEntry): string {
  * Creates the a-docs/ folder structure and files for a new project.
  *
  * For each entry in `entries`:
- *   - scaffold: 'copy'  → copies source file from aSocietyRoot/source_path verbatim,
- *                         except for feedback consent files which are rendered via Consent Utility
+ *   - scaffold: 'copy'  → copies source file from aSocietyRoot/source_path verbatim
  *   - scaffold: 'stub'  → writes a minimal titled stub pointing to the instruction source
  *
  * Does not overwrite existing files unless options.overwrite is true.
@@ -107,7 +88,7 @@ export function scaffold(
   if (!aSocietyRoot) throw new Error('aSocietyRoot is required');
   if (!Array.isArray(entries)) throw new Error('entries must be an array');
 
-  const { overwrite = false, consentValue = 'pending', consentRecordedBy } = options;
+  const { overwrite = false } = options;
   const aDocsRoot = path.join(projectRoot, 'a-docs');
 
   const created: ScaffoldCreatedItem[] = [];
@@ -136,24 +117,7 @@ export function scaffold(
       continue;
     }
 
-    // Route by type
-    const feedbackType = detectFeedbackConsentType(entry.path);
-
-    if (feedbackType) {
-      // Feedback consent files: delegate to Consent Utility
-      const result = createConsentFile(aDocsRoot, feedbackType, projectName, consentValue, {
-        overwrite,
-        recordedBy: consentRecordedBy || 'Scaffolding System',
-      });
-      if (result.status === 'created') {
-        created.push({ path: targetPath, scaffold: 'consent', source: entry.source_path || '' });
-      } else if (result.status === 'already-existed') {
-        skipped.push({ path: targetPath, reason: 'already-existed' });
-      } else {
-        failed.push({ path: targetPath, reason: result.reason || 'Consent Utility failed' });
-      }
-
-    } else if (entry.scaffold === 'copy') {
+    if (entry.scaffold === 'copy') {
       // Generic copy: read source and write to target
       const sourcePath = path.join(aSocietyRoot, entry.source_path);
       try {
