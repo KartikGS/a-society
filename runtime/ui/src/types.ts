@@ -146,7 +146,7 @@ export type ServerMessage =
   | { type: 'wait_stop'; flowRef: FlowRef }
   | { type: 'output_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
-  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[] }
+  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean }
   | { type: 'error'; flowRef: FlowRef; message: string }
   | { type: 'flow_complete'; flowRef: FlowRef };
 

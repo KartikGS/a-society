@@ -95,6 +95,7 @@ export class FlowOrchestrator {
         const resumeWf = this.resolveActiveWorkflow(flowRun);
         this.ensureNoRoleScopedParallelConflictInOpenSet(flowRun, resumeWf);
         const resumedOpenNodes = this.getOpenNodeIds(flowRun);
+        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: resumedOpenNodes.length });
         if (resumedOpenNodes.length > 1) {
           try {
             const activeNodes = resumedOpenNodes.map(id => {
@@ -492,7 +493,9 @@ export class FlowOrchestrator {
         const isBackward = incomingEdges.some((edge: any) => edge.from === targetNodeId);
 
         if (isForward && isBackward) {
-          throw new Error(`Target node '${targetNodeId}' is both an unresolved successor and a predecessor of '${nodeId}', which is unsupported.`);
+          this.throwHandoffTransitionRepair(
+            `Target node '${targetNodeId}' is both an unresolved successor and a predecessor of '${nodeId}', which is unsupported.`
+          );
         }
         if (isForward) {
           forwardTargets.push(handoff);
@@ -503,22 +506,24 @@ export class FlowOrchestrator {
           continue;
         }
 
-        const targetExists = this.findNodeById(wf, targetNodeId);
+        const targetExists = this.findNodeByIdOrNull(wf, targetNodeId);
         if (!targetExists) {
-          throw new Error(`Target node '${targetNodeId}' not found in workflow.`);
+          this.throwHandoffTransitionRepair(`Target node '${targetNodeId}' not found in workflow.`);
         }
-        throw new Error(
+        this.throwHandoffTransitionRepair(
           `Unauthorized transition: node '${nodeId}' may hand forward only to unresolved successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
         );
       }
 
       if (forwardTargets.length > 0 && backwardTargets.length > 0) {
-        throw new Error(`Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`);
+        this.throwHandoffTransitionRepair(
+          `Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`
+        );
       }
 
       if (handoffs.length === 0) {
         if (outgoingEdges.length > 0) {
-          throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
+          this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted no valid handoff targets.`);
         }
         this.removeOpenNode(latest, nodeId);
         this.addCompletedNode(latest, nodeId);
@@ -534,8 +539,9 @@ export class FlowOrchestrator {
 
       if (forwardTargets.length > 0) {
         if (forwardTargets.length !== outstandingOutgoingEdges.length) {
-          throw new Error(
-            `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s).`
+          this.throwHandoffTransitionRepair(
+            `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s). ` +
+            `Emit one forward handoff target for each unresolved successor: ${outstandingOutgoingEdges.map((edge: any) => edge.to).join(', ')}.`
           );
         }
 
@@ -546,10 +552,10 @@ export class FlowOrchestrator {
           const targetNode = this.findNodeById(wf, edge.to);
           const handoff = forwardTargets.find(h => h.target_node_id === targetNode.id);
           if (!handoff) {
-            throw new Error(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
+            this.throwHandoffTransitionRepair(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
           }
           if (claimedTargets.has(handoff.target_node_id)) {
-            throw new Error(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
+            this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
           }
           claimedTargets.add(handoff.target_node_id);
           activationPairs.push({
@@ -596,7 +602,7 @@ export class FlowOrchestrator {
 
         for (const handoff of backwardTargets) {
           if (claimedTargets.has(handoff.target_node_id)) {
-            throw new Error(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
+            this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
           }
           claimedTargets.add(handoff.target_node_id);
 
@@ -605,7 +611,7 @@ export class FlowOrchestrator {
           const rejectedArtifactPath = latest.completedEdgeArtifacts[rejectedEdgeKey];
 
           if (!rejectedArtifactPath) {
-            throw new Error(
+            this.throwHandoffTransitionRepair(
               `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
             );
           }
@@ -651,7 +657,7 @@ export class FlowOrchestrator {
         return;
       }
 
-      throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
+      this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted no valid handoff targets.`);
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
 
     if (!direction) {
@@ -938,6 +944,18 @@ export class FlowOrchestrator {
       throw new Error(`Node '${nodeId}' not found in workflow.`);
     }
     return node;
+  }
+
+  private findNodeByIdOrNull(wf: any, nodeId: string): any | null {
+    return wf.nodes.find((n: any) => n.id === nodeId) ?? null;
+  }
+
+  private throwHandoffTransitionRepair(detail: string): never {
+    throw new HandoffParseError({
+      code: 'invalid_transition',
+      operatorSummary: 'Handoff target mismatch',
+      modelRepairMessage: `Error: ${detail} Correct the final \`handoff\` block and restate it.`
+    });
   }
 
   private getOutgoingEdges(wf: any, nodeId: string): any[] {

@@ -22,6 +22,8 @@ interface GraphViewProps {
   backwardActive: string[];
   backwardSources?: string[];
   recordFolderPath: string;
+  showResume?: boolean;
+  onResume?: () => void;
   onNodeClick: (nodeId: string) => void;
   onGraphModeChange: (mode: GraphMode) => void;
   onWorkflowLoaded?: (graph: WorkflowGraph) => void;
@@ -235,7 +237,14 @@ function GraphViewComponent({
       <div className="graph-panel-header">
         <div>
           <p className="eyebrow">{graphModeLabel}</p>
-          <h2>{graphTitle}</h2>
+          <div className="graph-title-row">
+            <h2>{graphTitle}</h2>
+            {props.showResume ? (
+              <button type="button" className="resume-btn" onClick={props.onResume}>
+                Resume
+              </button>
+            ) : null}
+          </div>
           <p className="panel-copy">
             {graphSummary}
           </p>

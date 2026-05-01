@@ -3,16 +3,29 @@ import { LLMGatewayError } from '../types.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions, TurnUsage } from '../types.js';
 import { TelemetryManager } from '../observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import {
+  appendThinkingSystemInstruction,
+  DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS,
+  resolveMaxOutputTokens,
+  type ProviderRuntimeConfig
+} from './config.js';
 
 export class OpenAICompatibleProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
   private baseURL: string;
+  private maxOutputTokens: number;
+  private supportsThinking: boolean;
 
-  constructor(config: { baseURL: string; apiKey: string; model: string }) {
+  constructor(config: { baseURL: string; apiKey: string; model: string } & ProviderRuntimeConfig) {
     this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey });
     this.baseURL = config.baseURL;
     this.model = config.model;
+    this.maxOutputTokens = resolveMaxOutputTokens(
+      config.maxOutputTokens,
+      DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS
+    );
+    this.supportsThinking = config.supportsThinking === true;
   }
 
   private formatProviderError(err: any, summary: string, suggestion?: string): string {
@@ -41,6 +54,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
       attributes: {
         'provider.name': 'openai-compatible',
         'provider.model': this.model,
+        'provider.max_output_tokens': this.maxOutputTokens,
+        'provider.supports_thinking': this.supportsThinking,
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
       }
@@ -56,7 +71,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
         renderer?.startWait('openai-compatible', this.model);
 
         const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-          { role: 'system' as const, content: systemPrompt },
+          {
+            role: 'system' as const,
+            content: appendThinkingSystemInstruction(systemPrompt, this.supportsThinking)
+          },
           ...messages.map(m => {
             if (m.role === 'user') return { role: 'user' as const, content: m.content };
             if (m.role === 'assistant') return { role: 'assistant' as const, content: m.content };
@@ -93,7 +111,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           model: this.model,
           messages: openAIMessages,
           stream: true,
-          max_tokens: 8192,
+          max_tokens: this.maxOutputTokens,
           stream_options: { include_usage: true },
           ...(nativeTools ? { tools: nativeTools } : {})
         }, { signal: options?.signal });

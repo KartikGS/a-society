@@ -4,7 +4,7 @@ import type { ConsentClass, ConsentMode } from '../types';
 
 export interface FeedItem {
   id: string;
-  type: 'activation' | 'assistant' | 'event' | 'error' | 'repair' | 'user';
+  type: 'activation' | 'assistant' | 'event' | 'error' | 'handoff' | 'repair' | 'tool' | 'user';
   label: string;
   text: string;
 }
@@ -41,6 +41,98 @@ const CONSENT_CLASS_LABELS: Record<ConsentClass, string> = {
 
 function normalizeAssistantMarkdown(text: string): string {
   return text.replace(/\$?\\(?:rightarrow|to)\$?/g, '→');
+}
+
+type MarkdownSegment =
+  | { kind: 'markdown'; text: string }
+  | { kind: 'table'; headers: string[]; rows: string[][] };
+
+function splitTableRow(line: string): string[] | null {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return null;
+
+  const withoutLeading = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
+  const withoutTrailing = withoutLeading.endsWith('|') ? withoutLeading.slice(0, -1) : withoutLeading;
+  const cells = withoutTrailing.split('|').map((cell) => cell.trim());
+  return cells.length >= 2 ? cells : null;
+}
+
+function isTableSeparator(cells: string[]): boolean {
+  return cells.length >= 2 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, '')));
+}
+
+function splitMarkdownTables(text: string): MarkdownSegment[] {
+  const normalized = normalizeAssistantMarkdown(text);
+  const lines = normalized.split(/\r?\n/);
+  const segments: MarkdownSegment[] = [];
+  const pending: string[] = [];
+
+  const flushPending = () => {
+    if (pending.length === 0) return;
+    segments.push({ kind: 'markdown', text: pending.join('\n') });
+    pending.length = 0;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const headerCells = splitTableRow(lines[i]);
+    const separatorCells = i + 1 < lines.length ? splitTableRow(lines[i + 1]) : null;
+
+    if (headerCells && separatorCells && isTableSeparator(separatorCells)) {
+      flushPending();
+      const rows: string[][] = [];
+      i += 2;
+
+      while (i < lines.length) {
+        const rowCells = splitTableRow(lines[i]);
+        if (!rowCells) break;
+        rows.push(rowCells);
+        i++;
+      }
+
+      i--;
+      segments.push({ kind: 'table', headers: headerCells, rows });
+    } else {
+      pending.push(lines[i]);
+    }
+  }
+
+  flushPending();
+  return segments;
+}
+
+function renderAssistantMarkdown(text: string) {
+  return splitMarkdownTables(text).map((segment, index) => {
+    if (segment.kind === 'markdown') {
+      return <ReactMarkdown key={index}>{segment.text}</ReactMarkdown>;
+    }
+
+    return (
+      <div className="feed-table-wrap" key={index}>
+        <table>
+          <thead>
+            <tr>
+              {segment.headers.map((header, headerIndex) => (
+                <th key={headerIndex}>
+                  <ReactMarkdown>{header}</ReactMarkdown>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {segment.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {segment.headers.map((_, cellIndex) => (
+                  <td key={cellIndex}>
+                    <ReactMarkdown>{row[cellIndex] ?? ''}</ReactMarkdown>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  });
 }
 
 function SendIcon() {
@@ -170,7 +262,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
         ) : (
           props.messages.map((message) => (
             <article key={message.id} className={`feed-item feed-item-${message.type}`}>
-              {message.type === 'repair' || message.type === 'activation' ? (
+              {message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'tool' ? (
                 <div className={`feed-compact-line feed-compact-${message.type}`}>
                   <span className="feed-compact-label">{message.label}</span>
                   <span className="feed-compact-text">{message.text}</span>
@@ -180,7 +272,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   <p className="feed-label">{message.label}</p>
                   {message.type === 'assistant' ? (
                     <div className="feed-markdown">
-                      <ReactMarkdown>{normalizeAssistantMarkdown(message.text)}</ReactMarkdown>
+                      {renderAssistantMarkdown(message.text)}
                     </div>
                   ) : message.type === 'user' ? (
                     <div className="feed-user-text">

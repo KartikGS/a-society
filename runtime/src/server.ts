@@ -42,6 +42,7 @@ type FlowStateMessage = {
   flowRef: FlowRef;
   flowRun: FlowRun;
   backwardActive: string[];
+  hasActiveSession: boolean;
 };
 
 type HistoricalMessage = OperatorFeedMessage;
@@ -279,7 +280,8 @@ function buildServer(workspaceRoot: string) {
       type: 'flow_state',
       flowRef: ref,
       flowRun,
-      backwardActive
+      backwardActive,
+      hasActiveSession: session !== null && !session.finished,
     };
   }
 
@@ -863,7 +865,7 @@ function buildServer(workspaceRoot: string) {
     }, ref, workspaceRoot).then(() => {
       const flowRun = readFlowRun(ref);
       if (flowRun) {
-        broadcastToFlow(ref, { type: 'flow_state', flowRef: ref, flowRun, backwardActive: [] });
+        broadcastToFlow(ref, { type: 'flow_state', flowRef: ref, flowRun, backwardActive: [], hasActiveSession: activeSessions.has(flowKey(ref)) && !activeSessions.get(flowKey(ref))!.finished });
       }
     });
   }

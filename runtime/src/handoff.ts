@@ -9,6 +9,7 @@ export type HandoffRepairCode =
   | 'invalid_target_shape'
   | 'missing_required_field'
   | 'artifact_unavailable'
+  | 'invalid_transition'
   | 'unknown_signal_type';
 
 export interface HandoffRepairDetails {

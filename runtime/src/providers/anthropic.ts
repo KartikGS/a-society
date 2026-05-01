@@ -2,6 +2,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { LLMGatewayError } from '../types.js';
 import { TelemetryManager } from '../observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import {
+  appendThinkingSystemInstruction,
+  DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS,
+  resolveMaxOutputTokens,
+  type ProviderRuntimeConfig
+} from './config.js';
 
 import type {
   LLMProvider,
@@ -14,10 +20,17 @@ import type {
 export class AnthropicProvider implements LLMProvider {
   private client: Anthropic;
   private model: string;
+  private maxOutputTokens: number;
+  private supportsThinking: boolean;
 
-  constructor(apiKey: string, model: string) {
+  constructor(apiKey: string, model: string, config: ProviderRuntimeConfig = {}) {
     this.client = new Anthropic({ apiKey });
     this.model = model;
+    this.maxOutputTokens = resolveMaxOutputTokens(
+      config.maxOutputTokens,
+      DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS
+    );
+    this.supportsThinking = config.supportsThinking === true;
   }
 
   async executeTurn(
@@ -33,6 +46,8 @@ export class AnthropicProvider implements LLMProvider {
       attributes: {
         'provider.name': 'anthropic',
         'provider.model': this.model,
+        'provider.max_output_tokens': this.maxOutputTokens,
+        'provider.supports_thinking': this.supportsThinking,
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
       }
@@ -74,8 +89,8 @@ export class AnthropicProvider implements LLMProvider {
         });
 
         const stream = this.client.messages.stream({
-          max_tokens: 4096,
-          system: systemPrompt,
+          max_tokens: this.maxOutputTokens,
+          system: appendThinkingSystemInstruction(systemPrompt, this.supportsThinking),
           messages: anthropicMessages,
           model: this.model,
           tools: tools?.map(t => ({

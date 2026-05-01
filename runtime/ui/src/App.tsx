@@ -46,6 +46,7 @@ interface FlowUiState {
   stopRequested: boolean;
   consentRequest: { toolClass: ConsentClass; toolName: string } | null;
   latestInputTokensByRole: Record<string, number>;
+  hasActiveSession: boolean;
 }
 
 function nextFeedId(): string {
@@ -73,6 +74,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     stopRequested: false,
     consentRequest: null,
     latestInputTokensByRole: {},
+    hasActiveSession: false,
   };
 }
 
@@ -140,14 +142,14 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
     case 'activity.tool_call':
       return {
         id: nextFeedId(),
-        type: 'event',
+        type: 'tool',
         label: 'Tool Call',
         text: event.command ? `${event.toolName}: ${event.command}` : event.path ? `${event.toolName} ${event.path}` : event.toolName
       };
     case 'handoff.applied':
       return {
         id: nextFeedId(),
-        type: 'event',
+        type: 'handoff',
         label: 'Handoff',
         text: event.targets.length === 0
           ? `${event.fromNodeId} (${event.fromRole}) completed its terminal step.`
@@ -470,6 +472,7 @@ export function App() {
                 : state.selectedGraph,
             awaitingInput: Object.keys(message.flowRun.awaitingHumanNodes).length > 0,
             stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
+            hasActiveSession: message.hasActiveSession,
           };
         });
         void fetchProjectFlows(message.flowRef.projectNamespace);
@@ -901,20 +904,6 @@ export function App() {
         <PanelResizeHandle className="resize-handle" />
 
         <Panel defaultSize={85} style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
-          {activeTab && flowRun?.status === 'running' ? (
-            <header className="app-header">
-              <div className="header-meta">
-                <button
-                  type="button"
-                  className="status-action"
-                  disabled={socket.status !== 'open'}
-                  onClick={handleResumeFlow}
-                >
-                  Resume
-                </button>
-              </div>
-            </header>
-          ) : null}
 
           {tabs.length > 0 ? (
             <nav className="flow-tab-strip" aria-label="Open flows">
@@ -957,6 +946,8 @@ export function App() {
                     backwardActive={backwardActive}
                     backwardSources={backwardSources}
                     recordFolderPath={flowRun.recordFolderPath}
+                    showResume={flowRun.status === 'running' && !(activeUi?.hasActiveSession ?? true)}
+                    onResume={handleResumeFlow}
                     onNodeClick={handleGraphNodeClick}
                     onGraphModeChange={handleGraphModeChange}
                     onWorkflowLoaded={handleWorkflowLoaded}

@@ -17,9 +17,13 @@ function createProvider(): LLMProvider {
   if (!active || active.modelId.trim() === '' || active.apiKey.trim() === '') {
     throw new LLMGatewayError('UNKNOWN', MODEL_CONFIGURATION_REQUIRED_MESSAGE);
   }
+  const providerRuntimeConfig = {
+    maxOutputTokens: active.maxOutputTokens,
+    supportsThinking: active.supportsThinking,
+  };
   switch (active.providerType) {
     case 'anthropic':
-      return new AnthropicProvider(active.apiKey, active.modelId);
+      return new AnthropicProvider(active.apiKey, active.modelId, providerRuntimeConfig);
     case 'openai-compatible':
       if (active.providerBaseUrl.trim() === '') {
         throw new LLMGatewayError('UNKNOWN', MODEL_CONFIGURATION_REQUIRED_MESSAGE);
@@ -28,6 +32,7 @@ function createProvider(): LLMProvider {
         baseURL: active.providerBaseUrl,
         apiKey: active.apiKey,
         model: active.modelId,
+        ...providerRuntimeConfig,
       });
     default:
       throw new LLMGatewayError(
