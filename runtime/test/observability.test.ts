@@ -22,6 +22,7 @@ import { deterministicFindingsFilePath } from '../src/framework-services/backwar
 import { ImprovementOrchestrator } from '../src/improvement.js';
 import { runRoleTurn } from '../src/orient.js';
 import { SessionStore } from '../src/store.js';
+import { seedTestModelSettings } from './integration/settings-test-utils.js';
 
 import type { 
   LLMProvider, 
@@ -100,6 +101,7 @@ async function run() {
   await setupTestTelemetry();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
   const stateDir = path.join(tmpDir, '.state');
+  const settingsDir = path.join(tmpDir, '.settings');
   
   // registry.ts buildRoleContext(projectNamespace, roleName, workspaceRoot)
   // For projectNamespace "a-society" and roleName "curator", it looks for:
@@ -113,6 +115,8 @@ async function run() {
   fs.writeFileSync(path.join(rolesDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
 
   process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE = 'true';
+  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
   console.log('\nobservability-foundation integration corrections (Pass 2)');
 
@@ -559,11 +563,11 @@ async function run() {
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
       observedHistories.push((hist as RuntimeMessageParam[]).map(message => ({ ...message })));
       const result = await originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
-      if (result.type === 'text' && result.text.includes('type: meta-analysis-complete')) {
+      if (result.text.includes('type: meta-analysis-complete')) {
         fs.mkdirSync(path.dirname(assignedFindingsPath), { recursive: true });
         fs.writeFileSync(assignedFindingsPath, 'Generated findings', 'utf8');
       }
-      if (result.type === 'text' && result.text.includes('type: backward-pass-complete')) {
+      if (result.text.includes('type: backward-pass-complete')) {
         fs.writeFileSync(assignedFeedbackFilePath, 'Generated feedback', 'utf8');
       }
       return result;
@@ -653,6 +657,7 @@ async function run() {
   
   await TelemetryManager.shutdown();
   delete process.env.A_SOCIETY_STATE_DIR;
+  delete process.env.A_SOCIETY_SETTINGS_DIR;
   fs.rmSync(tmpDir, { recursive: true, force: true });
   
   if (failed > 0) process.exit(1);

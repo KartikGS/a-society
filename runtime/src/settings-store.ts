@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import crypto from 'node:crypto';
 
 export interface ModelConfig {
@@ -12,7 +11,7 @@ export interface ModelConfig {
   contextWindow: number;
   maxOutputTokens: number;
   supportsThinking: boolean;
-  supportsMultimodal: boolean;
+  supportedInputTypes: Array<'image' | 'audio' | 'video'>;
   active: boolean;
 }
 
@@ -25,46 +24,123 @@ interface SettingsData {
   models: ModelConfig[];
 }
 
-const SETTINGS_DIR = path.join(os.homedir(), '.a-society');
-const SETTINGS_PATH = path.join(SETTINGS_DIR, 'settings.json');
-const SECRETS_PATH = path.join(SETTINGS_DIR, 'secrets.json');
+interface PersistedModelConfig {
+  id: string;
+  displayName: string;
+  providerType: 'anthropic' | 'openai-compatible';
+  providerBaseUrl: string;
+  modelId: string;
+  contextWindow: number;
+  maxOutputTokens: number;
+  supportsThinking: boolean;
+  supportedInputTypes?: unknown;
+  active: boolean;
+}
+
+export const MODEL_CONFIGURATION_REQUIRED_MESSAGE =
+  'No active model is configured in Settings. Add and activate a model before starting or continuing runtime work.';
+
+let defaultWorkspaceRoot = process.cwd();
+
+export function configureSettingsStore(workspaceRoot: string): void {
+  defaultWorkspaceRoot = path.resolve(workspaceRoot);
+}
+
+function getSettingsDir(): string {
+  const override = process.env.A_SOCIETY_SETTINGS_DIR?.trim();
+  return override && override.length > 0
+    ? path.resolve(override)
+    : path.join(defaultWorkspaceRoot, '.a-society');
+}
+
+function getSettingsPath(): string {
+  return path.join(getSettingsDir(), 'settings.json');
+}
+
+function getSecretsPath(): string {
+  return path.join(getSettingsDir(), 'secrets.json');
+}
+
+function isUsableModelConfig(model: ModelConfigWithKey | null): model is ModelConfigWithKey {
+  if (!model) return false;
+  if (model.modelId.trim() === '' || model.apiKey.trim() === '') return false;
+  if (model.providerType === 'openai-compatible' && model.providerBaseUrl.trim() === '') return false;
+  return true;
+}
 
 function ensureDir(): void {
-  if (!fs.existsSync(SETTINGS_DIR)) {
-    fs.mkdirSync(SETTINGS_DIR, { recursive: true, mode: 0o700 });
+  const settingsDir = getSettingsDir();
+  if (!fs.existsSync(settingsDir)) {
+    fs.mkdirSync(settingsDir, { recursive: true, mode: 0o700 });
   }
 }
 
+function normalizeSupportedInputTypes(supportedInputTypes: unknown): Array<'image' | 'audio' | 'video'> {
+  const allowed = new Set(['image', 'audio', 'video']);
+  if (Array.isArray(supportedInputTypes)) {
+    return supportedInputTypes
+      .filter((value): value is 'image' | 'audio' | 'video' => typeof value === 'string' && allowed.has(value))
+      .filter((value, index, values) => values.indexOf(value) === index);
+  }
+  return [];
+}
+
+function normalizeModelConfig(model: PersistedModelConfig): ModelConfig {
+  return {
+    id: model.id,
+    displayName: model.displayName,
+    providerType: model.providerType,
+    providerBaseUrl: model.providerBaseUrl,
+    modelId: model.modelId,
+    contextWindow: model.contextWindow,
+    maxOutputTokens: model.maxOutputTokens,
+    supportsThinking: model.supportsThinking,
+    supportedInputTypes: normalizeSupportedInputTypes(model.supportedInputTypes),
+    active: model.active,
+  };
+}
+
 function loadSettings(): SettingsData {
-  if (!fs.existsSync(SETTINGS_PATH)) {
+  const settingsPath = getSettingsPath();
+  if (!fs.existsSync(settingsPath)) {
     return { version: 1, models: [] };
   }
   try {
-    return JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8')) as SettingsData;
+    const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
+      version?: number;
+      models?: PersistedModelConfig[];
+    };
+    return {
+      version: raw.version ?? 1,
+      models: Array.isArray(raw.models) ? raw.models.map(normalizeModelConfig) : [],
+    };
   } catch {
     return { version: 1, models: [] };
   }
 }
 
 function saveSettings(data: SettingsData): void {
+  const settingsPath = getSettingsPath();
   ensureDir();
-  fs.writeFileSync(SETTINGS_PATH, JSON.stringify(data, null, 2), 'utf8');
-  fs.chmodSync(SETTINGS_PATH, 0o600);
+  fs.writeFileSync(settingsPath, JSON.stringify(data, null, 2), 'utf8');
+  fs.chmodSync(settingsPath, 0o600);
 }
 
 function loadSecrets(): Record<string, string> {
-  if (!fs.existsSync(SECRETS_PATH)) return {};
+  const secretsPath = getSecretsPath();
+  if (!fs.existsSync(secretsPath)) return {};
   try {
-    return JSON.parse(fs.readFileSync(SECRETS_PATH, 'utf8')) as Record<string, string>;
+    return JSON.parse(fs.readFileSync(secretsPath, 'utf8')) as Record<string, string>;
   } catch {
     return {};
   }
 }
 
 function saveSecrets(secrets: Record<string, string>): void {
+  const secretsPath = getSecretsPath();
   ensureDir();
-  fs.writeFileSync(SECRETS_PATH, JSON.stringify(secrets, null, 2), 'utf8');
-  fs.chmodSync(SECRETS_PATH, 0o600);
+  fs.writeFileSync(secretsPath, JSON.stringify(secrets, null, 2), 'utf8');
+  fs.chmodSync(secretsPath, 0o600);
 }
 
 export function listModels(): ModelConfig[] {
@@ -123,4 +199,8 @@ export function getActiveModelWithKey(): ModelConfigWithKey | null {
 
   const secrets = loadSecrets();
   return { ...active, apiKey: secrets[active.id] ?? '' };
+}
+
+export function hasUsableConfiguredModel(): boolean {
+  return isUsableModelConfig(getActiveModelWithKey());
 }

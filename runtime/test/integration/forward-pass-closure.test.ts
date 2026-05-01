@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { PassThrough } from 'node:stream';
+import { seedTestModelSettings } from './settings-test-utils.js';
 
 /**
  * Correction 4 verification: a real forward-pass-closed signal drives through
@@ -30,19 +31,17 @@ async function runTest() {
   await new Promise<void>(resolve => server.listen(0, resolve));
   const port = (server.address() as any).port;
 
-  process.env.LLM_PROVIDER = 'openai-compatible';
-  process.env.OPENAI_COMPAT_BASE_URL = `http://127.0.0.1:${port}/v1`;
-  process.env.OPENAI_COMPAT_API_KEY = 'test-key';
-  process.env.OPENAI_COMPAT_MODEL = 'mock-model';
-
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'forward-pass-closure-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.state');
+  const testSettingsDir = path.join(tmpBase, '.settings');
   fs.mkdirSync(testDir);
   fs.mkdirSync(testStateDir);
   process.env.A_SOCIETY_STATE_DIR = testStateDir;
+  process.env.A_SOCIETY_SETTINGS_DIR = testSettingsDir;
+  seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const recordPath = path.join(testDir, 'records', 'test-flow');
   fs.mkdirSync(recordPath, { recursive: true });
@@ -173,6 +172,8 @@ async function runTest() {
     inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
+    delete process.env.A_SOCIETY_STATE_DIR;
+    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 }
 

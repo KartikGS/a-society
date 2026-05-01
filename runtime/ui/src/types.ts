@@ -1,4 +1,5 @@
 export type ProviderType = 'anthropic' | 'openai-compatible';
+export type InputModality = 'image' | 'audio' | 'video';
 
 export interface ModelConfig {
   id: string;
@@ -9,8 +10,13 @@ export interface ModelConfig {
   contextWindow: number;
   maxOutputTokens: number;
   supportsThinking: boolean;
-  supportsMultimodal: boolean;
+  supportedInputTypes: InputModality[];
   active: boolean;
+}
+
+export interface SettingsStatus {
+  hasConfiguredModel: boolean;
+  modelCount: number;
 }
 
 export interface ProjectSummary {

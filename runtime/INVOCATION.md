@@ -27,6 +27,14 @@ a-society
 
 If the selected port is already in use, the runtime prints a clear error and exits non-zero.
 
+### Model Configuration
+
+The runtime server can start without a model, but runtime work cannot proceed until the operator configures and activates at least one model in the Settings UI.
+
+- Provider, model ID, base URL, and API key are configured in Settings
+- The Settings modal stays open until a usable active model exists
+- Environment variables in `.env` no longer select the runtime model
+
 ---
 
 ## UI Modes
@@ -169,7 +177,9 @@ When the runtime is waiting for human input, the UI keeps the current flow state
 ## State Location and Resume
 
 - Default state directory: `{workspace}/.a-society/state`
+- Default settings directory: `{workspace}/.a-society`
 - Override: `A_SOCIETY_STATE_DIR`
+- Override: `A_SOCIETY_SETTINGS_DIR`
 
 The runtime persists flow state and role sessions under `{stateDir}/{projectNamespace}/{flowId}/`.
 

@@ -6,6 +6,7 @@ import { ProjectSelector } from './components/ProjectSelector';
 import { SettingsModal } from './components/SettingsModal';
 import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
+import { normalizeSettingsStatus } from './model-config';
 import type {
   ClientMessage,
   ConsentClass,
@@ -16,10 +17,13 @@ import type {
   OperatorEvent,
   ProjectDiscovery,
   ServerMessage,
+  SettingsStatus,
   WorkflowGraph,
 } from './types';
 
 const EMPTY_STRINGS: string[] = [];
+const SETTINGS_REQUIRED_MESSAGE =
+  'No active model is configured in Settings. Add and activate a model before starting or continuing runtime work.';
 
 interface FlowTab {
   key: string;
@@ -260,6 +264,7 @@ export function App() {
   const lastSubscribedConnectionId = useRef(0);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsStatus, setSettingsStatus] = useState<SettingsStatus | null>(null);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -288,6 +293,22 @@ export function App() {
     setActiveTabKey(key);
     setSelectedProject(ref.projectNamespace);
     writeUrlFlowRef(ref);
+  }, []);
+
+  const fetchSettingsStatus = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetch('/api/settings/status');
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const status = normalizeSettingsStatus(await response.json());
+      if (!status) {
+        throw new Error('Invalid settings status response.');
+      }
+      setSettingsStatus(status);
+    } catch {
+      setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 });
+    }
   }, []);
 
   const fetchProjectFlows = useCallback(async (projectNamespace: string): Promise<void> => {
@@ -490,12 +511,36 @@ export function App() {
     activeTabKey ? tabs.find((tab) => tab.key === activeTabKey) ?? null : null
   ), [activeTabKey, tabs]);
 
+  const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
+  const settingsReady = settingsStatus !== null;
+
+  const ensureConfiguredModel = useCallback((): boolean => {
+    if (hasConfiguredModel) return true;
+    setSelectorError(SETTINGS_REQUIRED_MESSAGE);
+    setSettingsOpen(true);
+    return false;
+  }, [hasConfiguredModel]);
+
   useEffect(() => {
     const ref = initialUrlFlowRef.current;
     if (socket.status !== 'open' || openedInitialFlow.current || !ref) return;
     openedInitialFlow.current = true;
     openFlow(ref);
   }, [socket.status, openFlow]);
+
+  useEffect(() => {
+    void fetchSettingsStatus();
+  }, [fetchSettingsStatus]);
+
+  useEffect(() => {
+    if (settingsReady && !hasConfiguredModel) {
+      setSettingsOpen(true);
+      return;
+    }
+    if (hasConfiguredModel) {
+      setSelectorError((current) => current === SETTINGS_REQUIRED_MESSAGE ? null : current);
+    }
+  }, [hasConfiguredModel, settingsReady]);
 
   useEffect(() => {
     if (socket.status !== 'open' || !activeTab) return;
@@ -592,6 +637,7 @@ export function App() {
   }
 
   function handleExistingInitialization(projectNamespace: string): void {
+    if (!ensureConfiguredModel()) return;
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
@@ -601,6 +647,7 @@ export function App() {
   function handleCreateNewProject(): void {
     const projectName = newProjectName.trim();
     if (!projectName) return;
+    if (!ensureConfiguredModel()) return;
 
     setSelectedProject(projectName);
     setSelectorError(null);
@@ -612,6 +659,7 @@ export function App() {
   }
 
   function handleNewFlow(projectNamespace: string): void {
+    if (!ensureConfiguredModel()) return;
     setSelectorError(null);
     sendMessage({ type: 'start_initialized_flow', projectNamespace });
   }
@@ -675,6 +723,7 @@ export function App() {
 
   function handleSubmit(): void {
     if (!activeTab || !activeUi) return;
+    if (!ensureConfiguredModel()) return;
     const text = activeUi.composerValue.trim();
     if (!text) return;
     const targetRole = resolveInputTargetRole();
@@ -693,6 +742,7 @@ export function App() {
 
   function handleImprovementChoice(mode: 'graph-based' | 'parallel' | 'none'): void {
     if (!activeTab) return;
+    if (mode !== 'none' && !ensureConfiguredModel()) return;
     if (mode !== 'none') {
       updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
     }
@@ -701,6 +751,7 @@ export function App() {
 
   function handleFeedbackConsentChoice(decision: 'granted' | 'denied'): void {
     if (!activeTab) return;
+    if (decision === 'granted' && !ensureConfiguredModel()) return;
     if (decision === 'granted') {
       updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
     }
@@ -725,6 +776,7 @@ export function App() {
 
   function handleResumeFlow(): void {
     if (!activeTab) return;
+    if (!ensureConfiguredModel()) return;
     sendMessage({ type: 'resume_flow', flowRef: activeTab.ref });
   }
 
@@ -807,6 +859,9 @@ export function App() {
             newProjectName={newProjectName}
             errorMessage={selectorError}
             disabled={socket.status !== 'open'}
+            canStartFlows={socket.status === 'open' && hasConfiguredModel}
+            settingsReady={settingsReady}
+            settingsConfigured={hasConfiguredModel}
             onSelectInitialized={handleProjectSelect}
             onInitializeExisting={handleExistingInitialization}
             onOpenFlow={handleOpenFlow}
@@ -814,6 +869,7 @@ export function App() {
             onDeleteFlow={handleDeleteFlow}
             onNewProjectNameChange={setNewProjectName}
             onCreateNew={handleCreateNewProject}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         </Panel>
 
@@ -988,17 +1044,13 @@ export function App() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        className="settings-fab"
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Open settings"
-        title="Settings"
-      >
-        ⚙
-      </button>
-
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsModal
+          required={!hasConfiguredModel}
+          onClose={() => setSettingsOpen(false)}
+          onModelsChange={() => { void fetchSettingsStatus(); }}
+        />
+      )}
     </main>
   );
 }

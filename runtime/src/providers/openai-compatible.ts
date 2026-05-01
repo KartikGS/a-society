@@ -9,20 +9,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
   private model: string;
   private baseURL: string;
 
-  constructor(config?: { baseURL: string; apiKey: string; model: string }) {
-    if (config) {
-      this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey });
-      this.baseURL = config.baseURL;
-      this.model = config.model;
-    } else {
-      const baseURL = process.env.OPENAI_COMPAT_BASE_URL;
-      if (!baseURL) {
-        throw new LLMGatewayError('UNKNOWN', 'LLM_PROVIDER=openai-compatible requires OPENAI_COMPAT_BASE_URL to be set.');
-      }
-      this.client = new OpenAI({ baseURL, apiKey: process.env.OPENAI_COMPAT_API_KEY || '' });
-      this.baseURL = baseURL;
-      this.model = process.env.OPENAI_COMPAT_MODEL ?? 'mistralai/Mistral-7B-Instruct-v0.3';
-    }
+  constructor(config: { baseURL: string; apiKey: string; model: string }) {
+    this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey });
+    this.baseURL = config.baseURL;
+    this.model = config.model;
   }
 
   private formatProviderError(err: any, summary: string, suggestion?: string): string {

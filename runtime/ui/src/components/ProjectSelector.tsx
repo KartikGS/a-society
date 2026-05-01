@@ -9,6 +9,9 @@ interface ProjectSelectorProps {
   newProjectName: string;
   errorMessage: string | null;
   disabled: boolean;
+  canStartFlows: boolean;
+  settingsReady: boolean;
+  settingsConfigured: boolean;
   onSelectInitialized: (projectNamespace: string | null) => void;
   onInitializeExisting: (projectNamespace: string) => void;
   onOpenFlow: (flow: FlowSummary) => void;
@@ -16,6 +19,7 @@ interface ProjectSelectorProps {
   onDeleteFlow: (flow: FlowSummary) => void;
   onNewProjectNameChange: (value: string) => void;
   onCreateNew: () => void;
+  onOpenSettings: () => void;
 }
 
 interface ProjectSectionProps {
@@ -58,6 +62,7 @@ function FlowList(props: {
   selectedFlowId: string | null;
   flows: FlowSummary[];
   disabled: boolean;
+  canStartFlows: boolean;
   onOpenFlow: (flow: FlowSummary) => void;
   onNewFlow: (projectNamespace: string) => void;
   onDeleteFlow: (flow: FlowSummary) => void;
@@ -71,7 +76,7 @@ function FlowList(props: {
         <button
           type="button"
           className="sidebar-mini-btn"
-          disabled={props.disabled}
+          disabled={props.disabled || !props.canStartFlows}
           onClick={() => props.onNewFlow(props.selectedProject!)}
         >
           New
@@ -113,6 +118,35 @@ function FlowList(props: {
   );
 }
 
+function SettingsAccess(props: {
+  ready: boolean;
+  configured: boolean;
+  onOpen: () => void;
+}) {
+  let label = 'Open runtime settings';
+
+  if (!props.ready) {
+    label = 'Loading runtime settings';
+  } else if (!props.configured) {
+    label = 'Configure runtime model';
+  }
+
+  return (
+    <button
+      type="button"
+      className="sidebar-settings-icon-btn"
+      onClick={props.onOpen}
+      aria-label={label}
+      title={label}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M10.325 4.317a1.724 1.724 0 0 1 3.35 0l.186.796a1.724 1.724 0 0 0 2.573 1.066l.705-.403a1.724 1.724 0 0 1 2.35.63l.42.727a1.724 1.724 0 0 1-.63 2.35l-.705.403a1.724 1.724 0 0 0 0 2.988l.705.403a1.724 1.724 0 0 1 .63 2.35l-.42.727a1.724 1.724 0 0 1-2.35.63l-.705-.403a1.724 1.724 0 0 0-2.573 1.066l-.186.796a1.724 1.724 0 0 1-3.35 0l-.186-.796a1.724 1.724 0 0 0-2.573-1.066l-.705.403a1.724 1.724 0 0 1-2.35-.63l-.42-.727a1.724 1.724 0 0 1 .63-2.35l.705-.403a1.724 1.724 0 0 0 0-2.988l-.705-.403a1.724 1.724 0 0 1-.63-2.35l.42-.727a1.724 1.724 0 0 1 2.35-.63l.705.403a1.724 1.724 0 0 0 2.573-1.066l.186-.796Z" />
+        <path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z" />
+      </svg>
+    </button>
+  );
+}
+
 export function ProjectSelector(props: ProjectSelectorProps) {
   if (props.selectedProject) {
     return (
@@ -132,10 +166,20 @@ export function ProjectSelector(props: ProjectSelectorProps) {
             selectedFlowId={props.selectedFlowId}
             flows={props.projectFlows}
             disabled={props.disabled}
+            canStartFlows={props.canStartFlows}
             onOpenFlow={props.onOpenFlow}
             onNewFlow={props.onNewFlow}
             onDeleteFlow={props.onDeleteFlow}
           />
+        </div>
+        <div className="sidebar-footer sidebar-footer-compact">
+          <div className="sidebar-settings-dock">
+            <SettingsAccess
+              ready={props.settingsReady}
+              configured={props.settingsConfigured}
+              onOpen={props.onOpenSettings}
+            />
+          </div>
         </div>
       </aside>
     );
@@ -163,33 +207,47 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           title="Uninitialized"
           projects={props.projectsWithoutADocs}
           selectedProject={props.selectedProject}
-          disabled={props.disabled}
+          disabled={props.disabled || !props.canStartFlows}
           onSelect={props.onInitializeExisting}
           emptyMessage="No uninitialized projects."
         />
       </div>
 
       <div className="sidebar-footer">
-        <h3 className="sidebar-section-title">Create New Project</h3>
-        <form
-          className="sidebar-create-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            props.onCreateNew();
-          }}
-        >
-          <input
-            type="text"
-            className="sidebar-input"
-            value={props.newProjectName}
-            onChange={(event) => props.onNewProjectNameChange(event.target.value)}
-            disabled={props.disabled}
-            placeholder="New project name..."
+        <div className="sidebar-create-stack">
+          <h3 className="sidebar-section-title">Create New Project</h3>
+          <form
+            className="sidebar-create-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              props.onCreateNew();
+            }}
+          >
+            <input
+              type="text"
+              className="sidebar-input"
+              value={props.newProjectName}
+              onChange={(event) => props.onNewProjectNameChange(event.target.value)}
+              disabled={props.disabled || !props.canStartFlows}
+              placeholder="New project name..."
+            />
+            <button
+              type="submit"
+              className="sidebar-create-btn"
+              disabled={props.disabled || !props.canStartFlows || props.newProjectName.trim().length === 0}
+            >
+              Create
+            </button>
+          </form>
+        </div>
+
+        <div className="sidebar-settings-dock">
+          <SettingsAccess
+            ready={props.settingsReady}
+            configured={props.settingsConfigured}
+            onOpen={props.onOpenSettings}
           />
-          <button type="submit" className="sidebar-create-btn" disabled={props.disabled || props.newProjectName.trim().length === 0}>
-            Create
-          </button>
-        </form>
+        </div>
       </div>
     </aside>
   );

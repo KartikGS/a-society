@@ -100,6 +100,14 @@ function flowKey(ref: FlowRef): string {
   return `${ref.projectNamespace}/${ref.flowId}`;
 }
 
+function missingModelError(ref: FlowRef): ServerMessage {
+  return {
+    type: 'error',
+    flowRef: ref,
+    message: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
+  };
+}
+
 function flowRefFromRun(flowRun: FlowRun): FlowRef {
   return {
     projectNamespace: flowRun.projectNamespace,
@@ -160,6 +168,7 @@ function resolveAwaitingHumanNode(flowRun: FlowRun, target?: { nodeId?: string; 
 
 function buildServer(workspaceRoot: string) {
   SessionStore.init(workspaceRoot);
+  SettingsStore.configureSettingsStore(workspaceRoot);
 
   const app = express();
   const httpServer = http.createServer(app);
@@ -472,6 +481,11 @@ function buildServer(workspaceRoot: string) {
   }
 
   function startFreshFlow(socket: WebSocket, projectNamespace: string): void {
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
+      return;
+    }
+
     const flowRun = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
@@ -494,6 +508,11 @@ function buildServer(workspaceRoot: string) {
   }
 
   function startInitializationFlow(socket: WebSocket, projectNamespace: string, mode: 'takeover' | 'greenfield'): void {
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
+      return;
+    }
+
     const { flowRun } = bootstrapInitializationFlow(workspaceRoot, projectNamespace, mode);
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
@@ -535,6 +554,11 @@ function buildServer(workspaceRoot: string) {
       return;
     }
 
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      sendToSocket(socket, missingModelError(ref));
+      return;
+    }
+
     const session = createSession(ref);
     sendFlowState(socket, ref);
     void attachSessionTask(session, () =>
@@ -553,6 +577,11 @@ function buildServer(workspaceRoot: string) {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_human') {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No suspended flow is waiting for operator input.' });
+      return;
+    }
+
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, missingModelError(ref));
       return;
     }
 
@@ -614,6 +643,11 @@ function buildServer(workspaceRoot: string) {
       const flowRun = readFlowRun(ref);
       if (!flowRun || Object.keys(flowRun.awaitingHumanNodes).length === 0) {
         broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
+        return;
+      }
+
+      if (!SettingsStore.hasUsableConfiguredModel()) {
+        broadcastToFlow(ref, missingModelError(ref));
         return;
       }
 
@@ -715,6 +749,11 @@ function buildServer(workspaceRoot: string) {
       return;
     }
 
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, missingModelError(ref));
+      return;
+    }
+
     void attachSessionTask(session, async () => {
       const currentFlow = readFlowRun(ref);
       if (!currentFlow) {
@@ -766,6 +805,11 @@ function buildServer(workspaceRoot: string) {
           message: error instanceof Error ? error.message : String(error)
         });
       }
+      return;
+    }
+
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, missingModelError(ref));
       return;
     }
 
@@ -1009,6 +1053,13 @@ function buildServer(workspaceRoot: string) {
     res.json(SettingsStore.listModels());
   });
 
+  app.get('/api/settings/status', (_req: Request, res: Response) => {
+    res.json({
+      hasConfiguredModel: SettingsStore.hasUsableConfiguredModel(),
+      modelCount: SettingsStore.listModels().length
+    });
+  });
+
   app.post('/api/settings/models', (req: Request, res: Response) => {
     const { apiKey, ...params } = req.body as any;
     if (!params.displayName || !params.providerType || !params.modelId) {
@@ -1027,7 +1078,11 @@ function buildServer(workspaceRoot: string) {
       contextWindow: Number(params.contextWindow) || 0,
       maxOutputTokens: Number(params.maxOutputTokens) || 0,
       supportsThinking: Boolean(params.supportsThinking),
-      supportsMultimodal: Boolean(params.supportsMultimodal),
+      supportedInputTypes: Array.isArray(params.supportedInputTypes)
+        ? params.supportedInputTypes
+            .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
+              value === 'image' || value === 'audio' || value === 'video')
+        : [],
     }, String(apiKey ?? ''));
     res.status(201).json(model);
   });

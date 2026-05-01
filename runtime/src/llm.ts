@@ -7,35 +7,32 @@ import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from './tools/bash-executor.j
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from './tools/web-search-executor.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { getActiveModelWithKey } from './settings-store.js';
+import { configureSettingsStore, getActiveModelWithKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE } from './settings-store.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from './types.js';
 
 function createProvider(): LLMProvider {
   const active = getActiveModelWithKey();
-  if (active) {
-    switch (active.providerType) {
-      case 'anthropic':
-        return new AnthropicProvider(active.apiKey, active.modelId);
-      case 'openai-compatible':
-        return new OpenAICompatibleProvider({
-          baseURL: active.providerBaseUrl,
-          apiKey: active.apiKey,
-          model: active.modelId,
-        });
-    }
+  if (!active || active.modelId.trim() === '' || active.apiKey.trim() === '') {
+    throw new LLMGatewayError('UNKNOWN', MODEL_CONFIGURATION_REQUIRED_MESSAGE);
   }
-  const name = process.env.LLM_PROVIDER ?? 'anthropic';
-  switch (name) {
+  switch (active.providerType) {
     case 'anthropic':
-      return new AnthropicProvider(process.env.ANTHROPIC_API_KEY || '');
+      return new AnthropicProvider(active.apiKey, active.modelId);
     case 'openai-compatible':
-      return new OpenAICompatibleProvider();
+      if (active.providerBaseUrl.trim() === '') {
+        throw new LLMGatewayError('UNKNOWN', MODEL_CONFIGURATION_REQUIRED_MESSAGE);
+      }
+      return new OpenAICompatibleProvider({
+        baseURL: active.providerBaseUrl,
+        apiKey: active.apiKey,
+        model: active.modelId,
+      });
     default:
       throw new LLMGatewayError(
         'UNKNOWN',
-        `Unknown provider: "${name}". Supported: anthropic, openai-compatible.`
+        `Unknown provider: "${(active as { providerType: string }).providerType}". Supported: anthropic, openai-compatible.`
       );
   }
 }
@@ -53,6 +50,10 @@ export class LLMGateway {
   private tools?: ToolDefinition[];
 
   constructor(workspaceRoot?: string, provider?: LLMProvider) {
+    if (workspaceRoot) {
+      configureSettingsStore(workspaceRoot);
+    }
+
     if (provider) {
       this.provider = provider;
     } else {

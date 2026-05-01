@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { PassThrough } from 'node:stream';
+import { seedTestModelSettings } from './settings-test-utils.js';
 
 /**
  * Correction 1 verification: resumed multi-node flows emit parallel.active_set.
@@ -23,13 +24,12 @@ async function runTest() {
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.state');
+  const testSettingsDir = path.join(tmpBase, '.settings');
   fs.mkdirSync(testDir);
   fs.mkdirSync(testStateDir);
   process.env.A_SOCIETY_STATE_DIR = testStateDir;
-  process.env.LLM_PROVIDER = 'openai-compatible';
-  process.env.OPENAI_COMPAT_BASE_URL = 'http://127.0.0.1:1/v1';
-  process.env.OPENAI_COMPAT_API_KEY = 'test-key';
-  process.env.OPENAI_COMPAT_MODEL = 'mock-model';
+  process.env.A_SOCIETY_SETTINGS_DIR = testSettingsDir;
+  seedTestModelSettings(testSettingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
   const recordPath = path.join(testDir, 'records', 'test-flow');
   fs.mkdirSync(recordPath, { recursive: true });
@@ -127,6 +127,8 @@ async function runTest() {
     inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
+    delete process.env.A_SOCIETY_STATE_DIR;
+    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 }
 

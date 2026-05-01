@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ModelConfig, ProviderType } from '../types';
+import { normalizeModelConfig, normalizeModelConfigs } from '../model-config';
+import type { InputModality, ModelConfig, ProviderType } from '../types';
 
 interface SettingsModalProps {
   onClose: () => void;
+  onModelsChange?: () => void;
+  required?: boolean;
 }
 
 interface ModelFormState {
@@ -14,7 +17,7 @@ interface ModelFormState {
   contextWindow: string;
   maxOutputTokens: string;
   supportsThinking: boolean;
-  supportsMultimodal: boolean;
+  supportedInputTypes: InputModality[];
 }
 
 const DEFAULT_FORM: ModelFormState = {
@@ -26,12 +29,22 @@ const DEFAULT_FORM: ModelFormState = {
   contextWindow: '',
   maxOutputTokens: '',
   supportsThinking: false,
-  supportsMultimodal: false,
+  supportedInputTypes: [],
 };
+
+const INPUT_MODALITY_OPTIONS: Array<{ value: InputModality; label: string }> = [
+  { value: 'image', label: 'Image' },
+  { value: 'audio', label: 'Audio' },
+  { value: 'video', label: 'Video' },
+];
+
+function formatInputModality(value: InputModality): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 type View = 'list' | 'add';
 
-export function SettingsModal({ onClose }: SettingsModalProps) {
+export function SettingsModal({ onClose, onModelsChange, required = false }: SettingsModalProps) {
   const [view, setView] = useState<View>('list');
   const [models, setModels] = useState<ModelConfig[]>([]);
   const [listError, setListError] = useState<string | null>(null);
@@ -40,12 +53,17 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [submitting, setSubmitting] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
+  function replaceModels(next: ModelConfig[]): void {
+    setModels(next);
+    onModelsChange?.();
+  }
+
   useEffect(() => {
     async function fetchModels() {
       try {
         const res = await fetch('/api/settings/models');
         if (!res.ok) throw new Error(await res.text());
-        setModels(await res.json() as ModelConfig[]);
+        replaceModels(normalizeModelConfigs(await res.json()));
         setListError(null);
       } catch (err) {
         setListError(err instanceof Error ? err.message : 'Failed to load models.');
@@ -59,7 +77,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     try {
       const res = await fetch(`/api/settings/models/${encodeURIComponent(id)}/activate`, { method: 'POST' });
       if (!res.ok) throw new Error(await res.text());
-      setModels((prev) => prev.map((m) => ({ ...m, active: m.id === id })));
+      replaceModels(models.map((m) => ({ ...m, active: m.id === id })));
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Failed to activate model.');
     }
@@ -69,13 +87,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     try {
       const res = await fetch(`/api/settings/models/${encodeURIComponent(id)}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
-      setModels((prev) => {
-        const next = prev.filter((m) => m.id !== id);
-        if (prev.find((m) => m.id === id)?.active && next.length > 0) {
-          next[0] = { ...next[0], active: true };
-        }
-        return next;
-      });
+      const next = models.filter((m) => m.id !== id);
+      if (models.find((m) => m.id === id)?.active && next.length > 0) {
+        next[0] = { ...next[0], active: true };
+      }
+      replaceModels(next);
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'Failed to delete model.');
     }
@@ -107,20 +123,18 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           contextWindow: form.contextWindow ? parseInt(form.contextWindow, 10) : 0,
           maxOutputTokens: form.maxOutputTokens ? parseInt(form.maxOutputTokens, 10) : 0,
           supportsThinking: form.supportsThinking,
-          supportsMultimodal: form.supportsMultimodal,
+          supportedInputTypes: form.supportedInputTypes,
         }),
       });
       if (!res.ok) {
         const body = await res.json() as { message?: string };
         throw new Error(body.message ?? 'Failed to create model.');
       }
-      const created = await res.json() as ModelConfig;
-      setModels((prev) => {
-        const isFirst = prev.length === 0;
-        return isFirst
-          ? [created]
-          : prev.map((m) => ({ ...m, active: false })).concat(created);
-      });
+      const created = normalizeModelConfig(await res.json());
+      if (!created) {
+        throw new Error('Server returned an invalid model configuration.');
+      }
+      replaceModels(models.concat(created));
       setForm(DEFAULT_FORM);
       setView('list');
     } catch (err) {
@@ -131,7 +145,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   }
 
   function handleOverlayClick(e: React.MouseEvent) {
-    if (e.target === overlayRef.current) onClose();
+    if (!required && e.target === overlayRef.current) onClose();
   }
 
   function setField<K extends keyof ModelFormState>(key: K, value: ModelFormState[K]) {
@@ -143,7 +157,9 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
       <div className="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
         <div className="settings-modal-header">
           <h2 className="settings-modal-title">Settings</h2>
-          <button type="button" className="settings-close-btn" onClick={onClose} aria-label="Close settings">×</button>
+          {!required ? (
+            <button type="button" className="settings-close-btn" onClick={onClose} aria-label="Close settings">×</button>
+          ) : null}
         </div>
 
         <div className="settings-modal-body">
@@ -224,12 +240,12 @@ function ModelList({ models, error, onAdd, onActivate, onDelete }: ModelListProp
                       <span>Thinking</span>
                     </>
                   )}
-                  {model.supportsMultimodal && (
-                    <>
+                  {(model.supportedInputTypes ?? []).map((modality) => (
+                    <span key={modality} className="model-meta-pair">
                       <span className="model-meta-sep">·</span>
-                      <span>Multimodal</span>
-                    </>
-                  )}
+                      <span>{formatInputModality(modality)}</span>
+                    </span>
+                  ))}
                 </div>
               </div>
               <div className="model-card-actions">
@@ -271,6 +287,13 @@ interface AddModelFormProps {
 }
 
 function AddModelForm({ form, error, submitting, onChange, onSubmit, onCancel }: AddModelFormProps) {
+  function toggleInputModality(modality: InputModality, checked: boolean) {
+    const next = checked
+      ? [...form.supportedInputTypes, modality]
+      : form.supportedInputTypes.filter((value) => value !== modality);
+    onChange('supportedInputTypes', next);
+  }
+
   return (
     <div className="settings-section">
       <div className="settings-section-header">
@@ -295,7 +318,7 @@ function AddModelForm({ form, error, submitting, onChange, onSubmit, onCancel }:
           <label className="form-label" htmlFor="sf-providerType">Provider type</label>
           <select
             id="sf-providerType"
-            className="form-input"
+            className="form-input form-select"
             value={form.providerType}
             onChange={(e) => onChange('providerType', e.target.value as ProviderType)}
           >
@@ -381,14 +404,21 @@ function AddModelForm({ form, error, submitting, onChange, onSubmit, onCancel }:
             />
             Supports extended thinking / reasoning
           </label>
-          <label className="form-checkbox-label">
-            <input
-              type="checkbox"
-              checked={form.supportsMultimodal}
-              onChange={(e) => onChange('supportsMultimodal', e.target.checked)}
-            />
-            Supports multimodal input (images)
-          </label>
+          <div className="form-fieldset">
+            <span className="form-label">Supports multimodal input</span>
+            <div className="form-checkbox-group">
+              {INPUT_MODALITY_OPTIONS.map((option) => (
+                <label key={option.value} className="form-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={form.supportedInputTypes.includes(option.value)}
+                    onChange={(e) => toggleInputModality(option.value, e.target.checked)}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
 
         {error && <p className="settings-error">{error}</p>}

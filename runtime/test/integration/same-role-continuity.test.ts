@@ -22,11 +22,13 @@ import { ContextInjectionService } from '../../src/injection.js';
 import { buildForwardNodeEntryMessage } from '../../src/session-entry.js';
 import { LLMGateway } from '../../src/llm.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/types.js';
+import { seedTestModelSettings } from './settings-test-utils.js';
 
 // ---- Harness setup ----
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
 const stateDir = path.join(tmpDir, '.state');
+const settingsDir = path.join(tmpDir, '.settings');
 const projectNamespace = 'test-proj';
 const workspaceRoot = tmpDir;
 const namespaceDir = path.join(workspaceRoot, projectNamespace);
@@ -94,6 +96,8 @@ fs.writeFileSync(reviewFeedbackArtifact, 'Reviewer requests revision to the Owne
 fs.writeFileSync(ownerInstanceArtifact, 'Role instance input.');
 
 process.env.A_SOCIETY_STATE_DIR = stateDir;
+process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
 function resetState() {
   fs.rmSync(stateDir, { recursive: true, force: true });
@@ -477,6 +481,7 @@ async function run() {
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
   delete process.env.A_SOCIETY_STATE_DIR;
+  delete process.env.A_SOCIETY_SETTINGS_DIR;
 
   if (failed > 0) process.exit(1);
 }
