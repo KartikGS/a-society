@@ -1,4 +1,4 @@
-import type { InputModality, ModelConfig, ProviderType, SettingsStatus } from './types';
+import type { InputModality, ModelConfig, ProviderType, SettingsStatus, ToolSettings } from './types';
 
 const INPUT_MODALITY_SET = new Set<InputModality>(['image', 'audio', 'video']);
 
@@ -64,5 +64,25 @@ export function normalizeSettingsStatus(value: unknown): SettingsStatus | null {
   return {
     hasConfiguredModel: raw.hasConfiguredModel,
     modelCount: normalizeInteger(raw.modelCount),
+  };
+}
+
+export function normalizeToolSettings(value: unknown): ToolSettings | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const raw = value as Record<string, unknown>;
+  const webSearch = raw.webSearch;
+  if (!webSearch || typeof webSearch !== 'object') return null;
+
+  const webSearchRaw = webSearch as Record<string, unknown>;
+  if (typeof webSearchRaw.enabled !== 'boolean' || typeof webSearchRaw.hasApiKey !== 'boolean') {
+    return null;
+  }
+
+  return {
+    webSearch: {
+      enabled: webSearchRaw.enabled,
+      hasApiKey: webSearchRaw.hasApiKey,
+    },
   };
 }

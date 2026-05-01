@@ -7,7 +7,7 @@ import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from './tools/bash-executor.j
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from './tools/web-search-executor.js';
 import { TelemetryManager } from './observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { configureSettingsStore, getActiveModelWithKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE } from './settings-store.js';
+import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE } from './settings-store.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from './types.js';
@@ -64,7 +64,7 @@ export class LLMGateway {
       this.fileExecutor = new FileToolExecutor(workspaceRoot);
       this.bashExecutor = new BashToolExecutor(workspaceRoot);
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
-      const tavilyKey = process.env.TAVILY_API_KEY;
+      const tavilyKey = getEnabledWebSearchApiKey();
       if (tavilyKey) {
         this.webSearchExecutor = new WebSearchExecutor(tavilyKey);
         this.tools = [...this.tools, ...WEB_SEARCH_TOOL_DEFINITIONS];

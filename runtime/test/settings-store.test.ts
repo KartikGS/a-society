@@ -5,8 +5,12 @@ import path from 'node:path';
 import {
   configureSettingsStore,
   createModel,
+  getEnabledWebSearchApiKey,
   getActiveModelWithKey,
+  getToolSettings,
   listModels,
+  updateModel,
+  updateWebSearchToolSettings,
 } from '../src/settings-store.js';
 
 let passed = 0;
@@ -51,6 +55,58 @@ test('default settings directory lives under the configured workspace root', () 
   assert.ok(fs.existsSync(secretsPath), 'secrets.json should be created in the workspace .a-society directory');
   assert.strictEqual(listModels().length, 1);
   assert.strictEqual(getActiveModelWithKey()?.apiKey, 'workspace-key');
+});
+
+test('updateModel changes persisted config and preserves api key when left blank', () => {
+  const existing = listModels()[0];
+  const updated = updateModel(existing.id, {
+    displayName: 'Workspace Model Updated',
+    providerType: 'openai-compatible',
+    providerBaseUrl: 'http://127.0.0.1:2/v1',
+    modelId: 'workspace-model-v2',
+    contextWindow: 64000,
+    maxOutputTokens: 4096,
+    supportsThinking: true,
+    supportedInputTypes: ['image', 'audio'],
+  });
+
+  assert.strictEqual(updated.displayName, 'Workspace Model Updated');
+  assert.strictEqual(updated.modelId, 'workspace-model-v2');
+  assert.deepStrictEqual(updated.supportedInputTypes, ['image', 'audio']);
+  assert.strictEqual(getActiveModelWithKey()?.apiKey, 'workspace-key');
+});
+
+test('web search tool stores Tavily key in secrets and only enables when configured', () => {
+  assert.deepStrictEqual(getToolSettings(), {
+    webSearch: {
+      enabled: false,
+      hasApiKey: false,
+    },
+  });
+  assert.strictEqual(getEnabledWebSearchApiKey(), null);
+
+  assert.throws(
+    () => updateWebSearchToolSettings({ enabled: true }),
+    /Tavily API key is required/
+  );
+
+  let tools = updateWebSearchToolSettings({ enabled: false, apiKey: 'tavily-test-key' });
+  assert.deepStrictEqual(tools, {
+    webSearch: {
+      enabled: false,
+      hasApiKey: true,
+    },
+  });
+  assert.strictEqual(getEnabledWebSearchApiKey(), null);
+
+  tools = updateWebSearchToolSettings({ enabled: true });
+  assert.deepStrictEqual(tools, {
+    webSearch: {
+      enabled: true,
+      hasApiKey: true,
+    },
+  });
+  assert.strictEqual(getEnabledWebSearchApiKey(), 'tavily-test-key');
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

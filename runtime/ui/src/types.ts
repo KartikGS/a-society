@@ -19,6 +19,15 @@ export interface SettingsStatus {
   modelCount: number;
 }
 
+export interface WebSearchToolSettings {
+  enabled: boolean;
+  hasApiKey: boolean;
+}
+
+export interface ToolSettings {
+  webSearch: WebSearchToolSettings;
+}
+
 export interface ProjectSummary {
   displayName: string;
   folderName: string;

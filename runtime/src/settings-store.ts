@@ -19,9 +19,23 @@ export interface ModelConfigWithKey extends ModelConfig {
   apiKey: string;
 }
 
+interface StoredToolSettings {
+  webSearch: {
+    enabled: boolean;
+  };
+}
+
+export interface ToolSettings {
+  webSearch: {
+    enabled: boolean;
+    hasApiKey: boolean;
+  };
+}
+
 interface SettingsData {
   version: number;
   models: ModelConfig[];
+  tools: StoredToolSettings;
 }
 
 interface PersistedModelConfig {
@@ -37,8 +51,15 @@ interface PersistedModelConfig {
   active: boolean;
 }
 
+interface PersistedToolSettings {
+  webSearch?: {
+    enabled?: unknown;
+  };
+}
+
 export const MODEL_CONFIGURATION_REQUIRED_MESSAGE =
   'No active model is configured in Settings. Add and activate a model before starting or continuing runtime work.';
+const WEB_SEARCH_SECRET_KEY = '__tool_web_search_tavily_api_key';
 
 let defaultWorkspaceRoot = process.cwd();
 
@@ -100,22 +121,33 @@ function normalizeModelConfig(model: PersistedModelConfig): ModelConfig {
   };
 }
 
+function normalizeStoredToolSettings(tools: unknown): StoredToolSettings {
+  const raw = tools && typeof tools === 'object' ? tools as PersistedToolSettings : {};
+  return {
+    webSearch: {
+      enabled: raw.webSearch?.enabled === true,
+    },
+  };
+}
+
 function loadSettings(): SettingsData {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
-    return { version: 1, models: [] };
+    return { version: 1, models: [], tools: normalizeStoredToolSettings(undefined) };
   }
   try {
     const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
       version?: number;
       models?: PersistedModelConfig[];
+      tools?: PersistedToolSettings;
     };
     return {
       version: raw.version ?? 1,
       models: Array.isArray(raw.models) ? raw.models.map(normalizeModelConfig) : [],
+      tools: normalizeStoredToolSettings(raw.tools),
     };
   } catch {
-    return { version: 1, models: [] };
+    return { version: 1, models: [], tools: normalizeStoredToolSettings(undefined) };
   }
 }
 
@@ -164,6 +196,35 @@ export function createModel(
   return model;
 }
 
+export function updateModel(
+  id: string,
+  params: Omit<ModelConfig, 'id' | 'active'>,
+  apiKey?: string
+): ModelConfig {
+  const data = loadSettings();
+  const idx = data.models.findIndex((model) => model.id === id);
+  if (idx === -1) {
+    throw new Error(`Model "${id}" not found.`);
+  }
+
+  const existing = data.models[idx];
+  const updated: ModelConfig = {
+    ...params,
+    id: existing.id,
+    active: existing.active,
+  };
+  data.models[idx] = updated;
+  saveSettings(data);
+
+  if (typeof apiKey === 'string' && apiKey.trim() !== '') {
+    const secrets = loadSecrets();
+    secrets[id] = apiKey;
+    saveSecrets(secrets);
+  }
+
+  return updated;
+}
+
 export function deleteModel(id: string): void {
   const data = loadSettings();
   const idx = data.models.findIndex((m) => m.id === id);
@@ -203,4 +264,50 @@ export function getActiveModelWithKey(): ModelConfigWithKey | null {
 
 export function hasUsableConfiguredModel(): boolean {
   return isUsableModelConfig(getActiveModelWithKey());
+}
+
+export function getToolSettings(): ToolSettings {
+  const data = loadSettings();
+  const secrets = loadSecrets();
+  const apiKey = secrets[WEB_SEARCH_SECRET_KEY] ?? '';
+  const hasApiKey = apiKey.trim() !== '';
+
+  return {
+    webSearch: {
+      enabled: data.tools.webSearch.enabled && hasApiKey,
+      hasApiKey,
+    },
+  };
+}
+
+export function updateWebSearchToolSettings(params: {
+  enabled: boolean;
+  apiKey?: string;
+}): ToolSettings {
+  const data = loadSettings();
+  const secrets = loadSecrets();
+  const nextApiKey = typeof params.apiKey === 'string' ? params.apiKey.trim() : '';
+
+  if (nextApiKey !== '') {
+    secrets[WEB_SEARCH_SECRET_KEY] = nextApiKey;
+    saveSecrets(secrets);
+  }
+
+  const hasApiKey = (secrets[WEB_SEARCH_SECRET_KEY] ?? '').trim() !== '';
+  if (params.enabled && !hasApiKey) {
+    throw new Error('Tavily API key is required to enable web search.');
+  }
+
+  data.tools.webSearch.enabled = params.enabled && hasApiKey;
+  saveSettings(data);
+  return getToolSettings();
+}
+
+export function getEnabledWebSearchApiKey(): string | null {
+  const data = loadSettings();
+  if (!data.tools.webSearch.enabled) return null;
+
+  const secrets = loadSecrets();
+  const apiKey = secrets[WEB_SEARCH_SECRET_KEY] ?? '';
+  return apiKey.trim() !== '' ? apiKey : null;
 }
