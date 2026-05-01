@@ -154,6 +154,8 @@ function GraphViewComponent({
   backwardActive,
   backwardSources: providedBackwardSources,
   recordFolderPath,
+  showResume,
+  onResume,
   onNodeClick,
   onGraphModeChange,
   onWorkflowLoaded
@@ -239,8 +241,8 @@ function GraphViewComponent({
           <p className="eyebrow">{graphModeLabel}</p>
           <div className="graph-title-row">
             <h2>{graphTitle}</h2>
-            {props.showResume ? (
-              <button type="button" className="resume-btn" onClick={props.onResume}>
+            {showResume ? (
+              <button type="button" className="resume-btn" onClick={onResume}>
                 Resume
               </button>
             ) : null}
@@ -316,6 +318,7 @@ function areGraphViewPropsEqual(prev: GraphViewProps, next: GraphViewProps): boo
     prev.flowRef.flowId === next.flowRef.flowId &&
     prev.graphMode === next.graphMode &&
     prev.improvementAvailable === next.improvementAvailable &&
+    prev.showResume === next.showResume &&
     prev.onNodeClick === next.onNodeClick &&
     prev.onGraphModeChange === next.onGraphModeChange &&
     prev.onWorkflowLoaded === next.onWorkflowLoaded &&
