@@ -1060,6 +1060,11 @@ function buildServer(workspaceRoot: string) {
     });
   });
 
+  app.get('/api/settings/active-model/context-window', (_req: Request, res: Response) => {
+    const model = SettingsStore.getActiveModelWithKey();
+    res.json({ contextWindow: model?.contextWindow ?? null });
+  });
+
   app.get('/api/settings/tools', (_req: Request, res: Response) => {
     res.json(SettingsStore.getToolSettings());
   });

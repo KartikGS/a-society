@@ -10,6 +10,7 @@
   --accent: #0f766e;
   --accent-deep: #0b5f58;
   --warning: #bb3e03;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2322313f' opacity='.55'/%3E%3C/svg%3E");
   --node-active: #3b82f6;
   --node-backward: #d9485f;
   --node-backward-source: #72777f;
@@ -113,7 +114,7 @@ textarea {
 .selector-panel,
 .chat-panel,
 .transcript-panel {
-  padding: 24px;
+  padding: 18px;
 }
 
 /* Sidebar */
@@ -742,6 +743,61 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.context-ring {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+.context-ring svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.context-ring-pct {
+  position: relative;
+  z-index: 1;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.context-ring-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(34, 49, 63, 0.12);
+  flex-direction: column;
+  gap: 3px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.context-ring:hover .context-ring-tooltip {
+  display: flex;
+}
+
+.context-ring-tooltip-hint {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
 .feed-label {
   margin: 0 0 8px;
   font-size: 12px;
@@ -808,8 +864,11 @@ textarea {
 
 .composer-footer {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 10px;
+  align-items: center;
+}
+
+.composer-footer .consent-mode-select {
+  margin-left: auto;
 }
 
 .composer-btn {
@@ -890,7 +949,7 @@ textarea {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 8px;
 }
 
 .composer-area .composer {
@@ -963,10 +1022,19 @@ textarea {
   padding: 3px 22px 3px 8px;
   font-size: 11px;
   color: var(--ink-soft);
-  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2322313f' opacity='.4'/%3E%3C/svg%3E") no-repeat right 6px center / 8px 5px;
-  border: 1px solid rgba(34, 49, 63, 0.14);
+  background:
+    var(--surface-strong)
+    var(--select-chevron)
+    no-repeat right 6px center / 8px 5px;
+  border: 1px solid var(--border);
   border-radius: 6px;
+  color-scheme: light dark;
   cursor: pointer;
+}
+
+.consent-mode-select option {
+  background: var(--surface-strong);
+  color: var(--ink);
 }
 
 .consent-mode-select:focus {
@@ -1716,11 +1784,17 @@ textarea {
   padding-right: 38px;
   background:
     var(--surface-strong)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2322313f' opacity='.55'/%3E%3C/svg%3E")
+    var(--select-chevron)
     no-repeat right 14px center / 10px 6px;
   line-height: 1.25;
   text-indent: 0;
+  color-scheme: light dark;
   cursor: pointer;
+}
+
+.form-select option {
+  background: var(--surface-strong);
+  color: var(--ink);
 }
 
 .form-checkboxes {
@@ -1899,6 +1973,7 @@ textarea {
     --accent: #2dd4bf;
     --accent-deep: #14b8a6;
     --warning: #fb923c;
+    --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23cdd9e5' opacity='.7'/%3E%3C/svg%3E");
     --node-active: #3b82f6;
     --node-backward: #f43f5e;
     --node-backward-source: #9ca3af;

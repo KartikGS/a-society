@@ -24,6 +24,8 @@ interface ChatInterfaceProps {
   activeRole?: string;
   consentRequest?: { toolClass: ConsentClass; toolName: string } | null;
   consentMode?: ConsentMode;
+  contextWindow?: number | null;
+  latestInputTokens?: number | null;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
@@ -57,6 +59,37 @@ function StopIcon() {
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <rect x="5" y="5" width="10" height="10" rx="2.5" fill="currentColor" />
     </svg>
+  );
+}
+
+function ContextRing({ contextWindow, inputTokens }: { contextWindow: number; inputTokens: number | null }) {
+  const RADIUS = 16;
+  const STROKE = 3;
+  const normalizedRadius = RADIUS - STROKE / 2;
+  const circumference = 2 * Math.PI * normalizedRadius;
+  const pct = inputTokens != null ? Math.min(inputTokens / contextWindow, 1) : 0;
+  const strokeDashoffset = circumference * (1 - pct);
+  const pctDisplay = Math.round(pct * 100);
+
+  return (
+    <div className="context-ring">
+      <svg width={RADIUS * 2} height={RADIUS * 2} aria-hidden="true">
+        <circle cx={RADIUS} cy={RADIUS} r={normalizedRadius} fill="none" stroke="var(--border)" strokeWidth={STROKE} />
+        <circle
+          cx={RADIUS} cy={RADIUS} r={normalizedRadius}
+          fill="none" stroke="var(--accent)" strokeWidth={STROKE}
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${RADIUS} ${RADIUS})`}
+        />
+      </svg>
+      <span className="context-ring-pct">{pctDisplay}%</span>
+      <div className="context-ring-tooltip">
+        <span>{inputTokens != null ? inputTokens.toLocaleString() : '0'} / {contextWindow.toLocaleString()} tokens</span>
+        <span className="context-ring-tooltip-hint">Usage updated at end of LLM turn</span>
+      </div>
+    </div>
   );
 }
 
@@ -227,6 +260,9 @@ export function ChatInterface(props: ChatInterfaceProps) {
           </form>
 
           <div className="composer-footer">
+            {props.contextWindow ? (
+              <ContextRing contextWindow={props.contextWindow} inputTokens={props.latestInputTokens ?? null} />
+            ) : null}
             <select
               className="consent-mode-select"
               value={props.consentMode ?? 'ask'}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView, type GraphMode } from './components/GraphView';
@@ -45,6 +45,7 @@ interface FlowUiState {
   waitLabel: string | null;
   stopRequested: boolean;
   consentRequest: { toolClass: ConsentClass; toolName: string } | null;
+  latestInputTokensByRole: Record<string, number>;
 }
 
 function nextFeedId(): string {
@@ -71,6 +72,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     waitLabel: null,
     stopRequested: false,
     consentRequest: null,
+    latestInputTokensByRole: {},
   };
 }
 
@@ -94,18 +96,6 @@ function writeUrlFlowRef(ref: FlowRef | null): void {
   window.history.replaceState({}, '', url);
 }
 
-function formatUsageSummary(event: Extract<OperatorEvent, { kind: 'usage.turn_summary' }>): string {
-  switch (event.availability) {
-    case 'full':
-      return `Tokens: ${event.inputTokens} in, ${event.outputTokens} out`;
-    case 'input-unavailable':
-      return `Tokens: input unavailable, ${event.outputTokens} out`;
-    case 'output-unavailable':
-      return `Tokens: ${event.inputTokens} in, output unavailable`;
-    case 'both-unavailable':
-      return 'Tokens unavailable (provider did not report usage)';
-  }
-}
 
 function feedbackConsentCopy(flowRun: FlowRun | null): { title: string; body: string; details: string } {
   const artifactPath = flowRun?.improvementPhase?.feedbackArtifactPath ?? 'a-society/feedback/';
@@ -138,7 +128,7 @@ function feedbackConsentCopy(flowRun: FlowRun | null): { title: string; body: st
 function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
   switch (event.kind) {
     case 'flow.resumed':
-      return { id: nextFeedId(), type: 'event', label: 'Resume', text: `Flow ${event.flowId} resumed with ${event.activeNodeCount} active node(s).` };
+      return null;
     case 'role.active':
       if (event.activationSource !== 'handoff' && event.activationSource !== 'runtime') return null;
       return {
@@ -189,7 +179,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         text: `${event.nodeId} (${event.role}) is waiting for ${event.waitingFor.join(', ')}.`
       };
     case 'usage.turn_summary':
-      return { id: nextFeedId(), type: 'event', label: 'Usage', text: formatUsageSummary(event) };
+      return null;
     case 'flow.forward_pass_closed':
       return {
         id: nextFeedId(),
@@ -265,6 +255,7 @@ export function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState<SettingsStatus | null>(null);
+  const [contextWindow, setContextWindow] = useState<number | null>(null);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -348,6 +339,7 @@ export function App() {
           lastHandoff: null,
           waitLabel: null,
           stopRequested: false,
+          latestInputTokensByRole: {},
           consentRequest: null,
         }));
         return;
@@ -368,6 +360,19 @@ export function App() {
         }
 
         if (event.kind === 'consent.mode_changed') {
+          return;
+        }
+
+        if (event.kind === 'usage.turn_summary') {
+          if (event.availability === 'full' || event.availability === 'output-unavailable') {
+            updateFlowUi(key, (state) => {
+              const role = state.activeLiveRole ?? '__system__';
+              return {
+                ...state,
+                latestInputTokensByRole: { ...state.latestInputTokensByRole, [role]: event.inputTokens! },
+              };
+            });
+          }
           return;
         }
 
@@ -529,16 +534,36 @@ export function App() {
   }, [socket.status, openFlow]);
 
   useEffect(() => {
-    void fetchSettingsStatus();
-  }, [fetchSettingsStatus]);
+    let cancelled = false;
+    fetch('/api/settings/status')
+      .then(async (res) => {
+        if (cancelled || !res.ok) return;
+        const status = normalizeSettingsStatus(await res.json());
+        if (!cancelled && status) setSettingsStatus(status);
+      })
+      .catch(() => { if (!cancelled) setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 }); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/settings/active-model/context-window')
+      .then(async (res) => {
+        if (cancelled || !res.ok) return;
+        const data = await res.json() as { contextWindow: number | null };
+        if (!cancelled) setContextWindow(data.contextWindow ?? null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (settingsReady && !hasConfiguredModel) {
-      setSettingsOpen(true);
+      startTransition(() => setSettingsOpen(true));
       return;
     }
     if (hasConfiguredModel) {
-      setSelectorError((current) => current === SETTINGS_REQUIRED_MESSAGE ? null : current);
+      startTransition(() => setSelectorError((current) => current === SETTINGS_REQUIRED_MESSAGE ? null : current));
     }
   }, [hasConfiguredModel, settingsReady]);
 
@@ -992,6 +1017,8 @@ export function App() {
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
                   onConsentModeChange={handleConsentModeChange}
+                  contextWindow={contextWindow}
+                  latestInputTokens={viewedRole ? (activeUi?.latestInputTokensByRole[viewedRole] ?? null) : null}
                 />
               </Panel>
             </PanelGroup>

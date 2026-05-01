@@ -95,7 +95,6 @@ export class FlowOrchestrator {
         const resumeWf = this.resolveActiveWorkflow(flowRun);
         this.ensureNoRoleScopedParallelConflictInOpenSet(flowRun, resumeWf);
         const resumedOpenNodes = this.getOpenNodeIds(flowRun);
-        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: resumedOpenNodes.length });
         if (resumedOpenNodes.length > 1) {
           try {
             const activeNodes = resumedOpenNodes.map(id => {
