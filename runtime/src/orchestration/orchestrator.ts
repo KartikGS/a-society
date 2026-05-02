@@ -418,13 +418,17 @@ export class FlowOrchestrator {
 
                 span.setAttribute('node.outcome', 'forward_pass_closed');
                 emitUsage(this.renderer, turnUsage, roleName);
+                const uniqueBaseRoles = new Set(
+                  (wf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
+                );
+                const singleRole = uniqueBaseRoles.size <= 1;
                 flowRun = await SessionStore.updateFlowRun((latest) => {
                   this.removeOpenNode(latest, nodeId);
                   this.addCompletedNode(latest, nodeId);
                   ImprovementOrchestrator.markAwaitingChoice(latest, {
                     recordFolderPath: handoffResult.recordFolderPath,
                     artifactPath: handoffResult.artifactPath
-                  });
+                  }, singleRole);
                 }, this.requireFlowRef(), this.requireWorkspaceRoot());
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;

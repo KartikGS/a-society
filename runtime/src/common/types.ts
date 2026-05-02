@@ -60,6 +60,7 @@ export interface ImprovementPhaseState {
   completedNodeIds?: string[];                 // improvement graph node ids that completed
   feedbackArtifactPath?: string;               // repo-relative path assigned for optional upstream feedback
   feedbackConsent?: 'pending' | 'granted' | 'denied';
+  singleRole?: boolean;                        // true when the workflow has only one unique base role
   forwardPassClosure: {
     recordFolderPath: string;
     artifactPath: string;

@@ -260,6 +260,7 @@ export class ImprovementOrchestrator {
   static markAwaitingChoice(
     flowRun: FlowRun,
     signal: { recordFolderPath: string; artifactPath: string },
+    singleRole?: boolean,
   ): void {
     flowRun.status = 'awaiting_improvement_choice';
     flowRun.improvementPhase = {
@@ -271,6 +272,7 @@ export class ImprovementOrchestrator {
       completedNodeIds: [],
       feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
       feedbackConsent: 'pending',
+      singleRole: singleRole ?? false,
       forwardPassClosure: signal
     };
     flowRun.stateVersion = '7';

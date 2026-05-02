@@ -78,6 +78,7 @@ export interface ImprovementPhaseState {
   completedNodeIds?: string[];
   feedbackArtifactPath?: string;
   feedbackConsent?: 'pending' | 'granted' | 'denied';
+  singleRole?: boolean;
   forwardPassClosure: {
     recordFolderPath: string;
     artifactPath: string;
