@@ -1,0 +1,22 @@
+workflow:
+  name: Runtime Tree Placement Migration
+  summary: Manual executable migration flow to reorganize runtime contracts and source modules into capability folders.
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+      guidance:
+        - Manual record because the runtime is not orchestrating this session.
+        - Use the stored runtime placement standard as the approved design boundary.
+      inputs:
+        - Human request to perform the runtime tree placement migration.
+        - Stored placement standard from the prior manual flow.
+      work:
+        - Create the workflow plan.
+        - Execute the migration with import, index, and documentation follow-through.
+        - Verify runtime build and focused tests.
+      outputs:
+        - Owner workflow plan.
+        - Migrated runtime tree.
+        - Owner closure artifact.
+  edges: []

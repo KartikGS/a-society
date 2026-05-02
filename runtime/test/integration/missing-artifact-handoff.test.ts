@@ -1,6 +1,6 @@
 import assert from 'node:assert';
-import { FlowOrchestrator } from '../../src/orchestrator.js';
-import { SessionStore } from '../../src/store.js';
+import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
+import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';

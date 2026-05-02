@@ -2,12 +2,12 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
 
-import { TelemetryManager } from '../src/observability.js';
+import { TelemetryManager } from '../src/observability/observability.js';
 TelemetryManager.init();
 
 import os from 'node:os';
 import { exec } from 'node:child_process';
-import { startServer } from '../src/server.js';
+import { startServer } from '../src/server/server.js';
 
 function parsePort(rawPort: string | undefined): number {
   const parsed = Number(rawPort ?? '3000');

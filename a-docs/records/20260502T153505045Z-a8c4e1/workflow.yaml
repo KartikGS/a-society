@@ -1,0 +1,22 @@
+workflow:
+  name: Runtime Placement Standard
+  summary: Manual Owner-routed flow to store runtime folder and source module placement rules while the runtime is not orchestrating this session.
+  nodes:
+    - id: owner-intake
+      role: Owner
+      human-collaborative: direction
+      guidance:
+        - This is a manual record because the runtime is not orchestrating this session.
+        - Create the workflow plan and apply the placement rule to standing documentation surfaces.
+        - Close directly after verification because the user supplied the architecture direction and no executable files are being moved.
+      inputs:
+        - Human direction to store a better runtime placement standard.
+      work:
+        - Create manual record artifacts.
+        - Update standing placement-rule documentation.
+        - Verify no index update is required beyond existing touched surfaces.
+      outputs:
+        - Owner workflow plan.
+        - Updated standing placement-rule documentation.
+        - Owner closure summary.
+  edges: []

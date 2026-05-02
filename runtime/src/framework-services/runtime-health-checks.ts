@@ -2,12 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import yaml from 'js-yaml';
-import { resolveProjectRecordsRoot, resolveProjectRoot } from '../draft-flow.js';
-import { parseRoleIdentity, toKebabCaseRoleId } from '../role-id.js';
+import { resolveProjectRecordsRoot, resolveProjectRoot } from '../projects/draft-flow.js';
+import { parseRoleIdentity, toKebabCaseRoleId } from '../common/role-id.js';
 import { validatePaths } from './path-validator.js';
 import { validateWorkflowFile } from './workflow-graph-validator.js';
-import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../workflow-file.js';
-import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../required-reading.js';
+import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
+import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../context/required-reading.js';
 
 export interface RuntimeHealthCheckResult {
   ok: boolean;

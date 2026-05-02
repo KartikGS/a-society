@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
-import { FlowOrchestrator } from '../../src/orchestrator.js';
-import { SessionStore } from '../../src/store.js';
+import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
+import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 async function runTest() {

@@ -2,7 +2,7 @@ import type { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { InMemorySpanExporter } from '@opentelemetry/sdk-trace-base';
 import type { MetricData } from '@opentelemetry/sdk-metrics';
 import { AggregationTemporality, InMemoryMetricExporter } from '@opentelemetry/sdk-metrics';
-import { TelemetryManager } from '../src/observability.js';
+import { TelemetryManager } from '../src/observability/observability.js';
 
 let exporter: InMemorySpanExporter | null = null;
 let metricExporter: InMemoryMetricExporter | null = null;

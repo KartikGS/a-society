@@ -16,13 +16,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { Readable, Writable, PassThrough } from 'node:stream';
-import { FlowOrchestrator, WorkflowError } from '../../src/orchestrator.js';
+import { FlowOrchestrator, WorkflowError } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
-import { SessionStore } from '../../src/store.js';
-import { ContextInjectionService } from '../../src/injection.js';
-import { buildForwardNodeEntryMessage } from '../../src/session-entry.js';
-import { LLMGateway } from '../../src/llm.js';
-import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/types.js';
+import { SessionStore } from '../../src/orchestration/store.js';
+import { ContextInjectionService } from '../../src/context/injection.js';
+import { buildForwardNodeEntryMessage } from '../../src/context/session-entry.js';
+import { LLMGateway } from '../../src/providers/llm.js';
+import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
 // ---- Harness setup ----

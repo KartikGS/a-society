@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { LLMGatewayError } from '../types.js';
-import { TelemetryManager } from '../observability.js';
+import { LLMGatewayError } from '../common/types.js';
+import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
   appendThinkingSystemInstruction,
@@ -15,7 +15,7 @@ import type {
   ProviderTurnResult,
   ToolDefinition,
   TurnOptions
-} from '../types.js';
+} from '../common/types.js';
 
 export class AnthropicProvider implements LLMProvider {
   private client: Anthropic;

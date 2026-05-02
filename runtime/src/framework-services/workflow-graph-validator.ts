@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import yaml from 'js-yaml';
-import { parseRoleIdentity } from '../role-id.js';
+import { parseRoleIdentity } from '../common/role-id.js';
 
 export interface WorkflowNode {
   id: string;

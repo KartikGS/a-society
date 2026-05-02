@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { findWorkflowFilePath, parseWorkflowFile } from '../workflow-file.js';
-import { toKebabCaseRoleId } from '../role-id.js';
+import { findWorkflowFilePath, parseWorkflowFile } from '../context/workflow-file.js';
+import { toKebabCaseRoleId } from '../common/role-id.js';
 
 export interface WorkflowNode {
   id: string;

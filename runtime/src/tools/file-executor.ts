@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import type { ToolDefinition, ToolCall } from '../types.js';
+import type { ToolDefinition, ToolCall } from '../common/types.js';
 
 export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {

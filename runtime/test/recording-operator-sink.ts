@@ -1,4 +1,4 @@
-import type { OperatorEvent, OperatorRenderSink } from '../src/types.js';
+import type { OperatorEvent, OperatorRenderSink } from '../src/common/types.js';
 
 export class RecordingOperatorSink implements OperatorRenderSink {
   readonly events: OperatorEvent[] = [];

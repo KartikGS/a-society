@@ -53,6 +53,7 @@ When you are unsure whether something belongs in `general/` vs another project's
 - TypeScript source files implementing orchestration components (context injection, session management, handoff routing, provider gateways, observability, and similar)
 - TypeScript source files implementing permanent deterministic framework services
 - Supporting runtime files (`package.json`, state management, `INVOCATION.md`)
+- Runtime-owned contracts injected into managed sessions or runtime-owned phases
 
 **What does not belong here:**
 - General guidance or design references for how the executable layer works — those belong in `a-docs/executable/` or other `a-docs/` locations
@@ -62,6 +63,25 @@ When you are unsure whether something belongs in `general/` vs another project's
 **Principle:** `runtime/` is the standing executable root. The Orchestration Developer owns its operator-facing surface and orchestration behavior; Framework Services Developer-owned executable services land here.
 
 **The key test:** Is this part of the standing executable surface A-Society intends to keep? If yes → `runtime/`.
+
+**Internal placement standard:** New runtime work is grouped by runtime capability, not left flat at the root or directly under `src/`.
+
+- `runtime/INVOCATION.md` remains the root operator-facing entry point. Package, build, environment, and installation files may also remain at the runtime root.
+- Runtime-injected or runtime-owned agent/session contracts belong under `runtime/contracts/`, not as additional root Markdown files.
+- `runtime/src/` should contain capability folders rather than a large flat set of peer files. Standard capability folders are:
+  - `orchestration/` — flow lifecycle, handoff routing, role-turn coordination, and runtime state transitions
+  - `context/` — required-reading resolution, node-entry assembly, index/path resolution, and workflow-file context loading
+  - `framework-services/` — deterministic framework services such as scaffolding, validation, comparison, and backward-pass ordering
+  - `improvement/` — backward-pass orchestration, findings/feedback flow control, and generated improvement workflow data
+  - `projects/` — project discovery, initialization bootstrap, draft flow creation, record metadata, and project-scoped runtime setup
+  - `server/` — HTTP, WebSocket, and browser-operator backend surfaces
+  - `providers/` — LLM provider adapters and provider configuration
+  - `tools/` — model-callable tool executors
+  - `observability/` — telemetry, metrics, tracing, and runtime diagnostics
+  - `settings/` — persisted runtime/operator settings
+  - `common/` — shared types, role identifiers, and small cross-cutting utilities
+- Tests should mirror the capability folder structure when a capability has more than one test file.
+- A new top-level folder under `runtime/` or `runtime/src/` requires a real capability boundary. Do not create folders for one-off naming preferences; place the file in the nearest existing capability folder until the category is real.
 
 ---
 
@@ -137,7 +157,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **The key test:** Would an adopting project of *any* type instantiate this role inside their own `a-docs/`? If yes — `general/roles/` is correct. If only projects of a specific category would instantiate it — it belongs under `general/project-types/<type>/roles/`. If the role is a service A-Society provides to other projects — it belongs in `a-society/a-docs/roles/`.
 
-**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator regardless of domain. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/INITIALIZATION.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
+**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator regardless of domain. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/contracts/initialization.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
 
 ---
 

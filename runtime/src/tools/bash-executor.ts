@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { LLMGatewayError } from '../types.js';
-import type { ToolDefinition, ToolCall } from '../types.js';
+import { LLMGatewayError } from '../common/types.js';
+import type { ToolDefinition, ToolCall } from '../common/types.js';
 
 const TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_BYTES = 100_000;

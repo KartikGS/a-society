@@ -1,0 +1,4 @@
+record:
+  id: 20260502T153505045Z-a8c4e1
+  name: runtime-placement-standard
+  summary: Store a standing placement standard for runtime root files and runtime/src capability modules.

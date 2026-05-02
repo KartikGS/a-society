@@ -9,6 +9,10 @@ This document records the standing governance rules for A-Society's unified exec
 - `runtime/` is the standing executable root
 - all standing executable implementation belongs under `runtime/`
 - standing executable design and coupling references live under `a-docs/executable/`
+- `runtime/INVOCATION.md` is the root operator-facing entry point; additional runtime-owned agent/session contracts belong under `runtime/contracts/`
+- `runtime/src/` is organized by executable capability rather than by a flat file list. Standard capability folders are `orchestration/`, `context/`, `framework-services/`, `improvement/`, `projects/`, `server/`, `providers/`, `tools/`, `observability/`, `settings/`, and `common/`
+- source tests should mirror capability folders when a capability has more than one test file
+- root contracts and flat `runtime/src/` files are not valid placement for new work; use the capability folders and `runtime/contracts/`
 
 ---
 

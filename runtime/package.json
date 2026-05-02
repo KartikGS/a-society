@@ -7,7 +7,7 @@
     "a-society": "./bin/a-society"
   },
   "scripts": {
-    "start": "tsx src/server.ts",
+    "start": "tsx src/server/server.ts",
     "build:ui": "vite build",
     "build": "tsc && npm run build:ui",
     "lint": "eslint .",

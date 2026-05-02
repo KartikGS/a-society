@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
-import { LLMGatewayError } from '../types.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions, TurnUsage } from '../types.js';
-import { TelemetryManager } from '../observability.js';
+import { LLMGatewayError } from '../common/types.js';
+import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions, TurnUsage } from '../common/types.js';
+import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
   appendThinkingSystemInstruction,

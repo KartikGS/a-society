@@ -1,0 +1,4 @@
+record:
+  id: 20260502T154052240Z-b9f2c7
+  name: runtime-tree-placement-migration
+  summary: Move runtime contracts and source modules into the standing placement standard.

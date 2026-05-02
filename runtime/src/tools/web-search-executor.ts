@@ -1,5 +1,5 @@
-import { LLMGatewayError } from '../types.js';
-import type { ToolDefinition, ToolCall } from '../types.js';
+import { LLMGatewayError } from '../common/types.js';
+import type { ToolDefinition, ToolCall } from '../common/types.js';
 
 const TAVILY_API_URL = 'https://api.tavily.com/search';
 const DEFAULT_MAX_RESULTS = 5;

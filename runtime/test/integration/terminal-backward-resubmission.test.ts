@@ -2,9 +2,9 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { FlowOrchestrator } from '../../src/orchestrator.js';
+import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
-import { SessionStore } from '../../src/store.js';
+import { SessionStore } from '../../src/orchestration/store.js';
 
 async function runTest() {
   console.log('Starting terminal-backward-resubmission integration test...');
