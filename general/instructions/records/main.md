@@ -95,31 +95,7 @@ Some projects using this framework maintain a `workflow.yaml` file in each recor
 
 **When to use `workflow.yaml`:** When the project has an executable backward-pass ordering capability or runtime-managed node-entry injection, `workflow.yaml` is the input that capability reads. Projects without such a capability do not need `workflow.yaml`.
 
-**Schema:**
-
-```yaml
-workflow:
-  name: <string>
-  summary: <string>            # optional
-  nodes:
-    - id: <string>
-      role: <string>
-      human-collaborative: <string>  # optional
-      required_readings:
-        - $VARIABLE_NAME             # optional
-      guidance: [<string>]           # optional
-      inputs: [<string>]             # optional
-      work: [<string>]               # optional
-      outputs: [<string>]            # optional
-      transitions: [<string>]        # optional
-      notes: [<string>]              # optional
-  edges:
-    - from: <string>
-      to: <string>
-      artifact: <string>             # optional
-```
-
-*Schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Record-folder `workflow.yaml` uses the same nodes/edges schema as permanent workflow definitions, instantiated as a flow-specific snapshot of the active path.*
+**Runtime contract:** For projects using the A-Society runtime, `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` defines the YAML schema, canonical-vs-record snapshot behavior, node-entry injection behavior, role-instance syntax, and handoff target semantics. This records instruction owns placement and artifact-lifecycle rules, not the executable schema.
 
 **Who creates it:** The workflow-authority role or runtime-managed intake system, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
 
@@ -129,9 +105,9 @@ workflow:
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the intake role could not specify at intake.
 
-**What the executable layer reads from it:** `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges` drive backward-pass ordering. Runtime-managed sessions may also surface the node's `guidance`, `inputs`, `work`, `outputs`, `transitions`, `notes`, and first-entry `required_readings` from this same file.
+**What the executable layer reads from it:** The runtime contract defines which fields are parsed and how they affect backward-pass ordering, node-entry delivery, and handoff routing.
 
-**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.yaml` is the executable record snapshot. When creating `workflow.yaml`, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. `workflow.yaml` is authoritative for executable ordering and node-entry delivery for that flow; the plan's `path` governs human-oriented planning only.
+**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.yaml` is the executable record snapshot. The workflow-authority role derives the record snapshot from the planned path and the runtime contract. `workflow.yaml` is authoritative for executable ordering and node-entry delivery for that flow; the plan's `path` governs human-oriented planning only.
 
 **Pre-convention record folders:** Record folders created before the project established the `workflow.yaml` requirement are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. An executable backward-pass ordering capability, if the project uses one, cannot be invoked for these folders; use manual backward pass ordering instead. Projects should record the convention introduction date or version in their `records/main.md` so this determination is unambiguous.
 
@@ -183,7 +159,7 @@ For projects that do not use records, `improvement/reports/` remains the default
 Write `a-docs/records/main.md`. Declare the record-ID format and how uniqueness is guaranteed when two flows begin at nearly the same time.
 
 **Step 2 — Declare the record metadata and artifact sequence.**
-List which non-sequenced files (`record.yaml`, and optionally `workflow.yaml`) and which sequenced artifact types appear in each record folder. The first sequenced position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability or runtime-managed node-entry injection, also declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan. The schema is defined in `$INSTRUCTION_WORKFLOW_GRAPH`. Document the workflow-authority role and the capability that reads the file in the project's `records/main.md`.
+List which non-sequenced files (`record.yaml`, and optionally `workflow.yaml`) and which sequenced artifact types appear in each record folder. The first sequenced position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability or runtime-managed node-entry injection, also declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan. For A-Society runtime-managed projects, the schema is defined in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`. Document the workflow-authority role and the capability that reads the file in the project's `records/main.md`.
 
 **Step 3 — Update the conversation layer.**
 Remove live artifact files from `communication/conversation/`. Update template header notes to say artifacts are created into the active record folder.

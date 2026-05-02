@@ -35,3 +35,4 @@ Implementation lives under `runtime/`. Standing executable design and coupling r
 - `$A_SOCIETY_EXECUTABLE_ADDENDUM` — executable governance and maintenance rules
 - `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` — maintained executable/documentation coupling surface
 - `$A_SOCIETY_RUNTIME_INVOCATION` — operator-facing runtime behavior reference
+- `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` — runtime-owned workflow YAML schema and node-entry injection contract

@@ -165,6 +165,34 @@ test('buildForwardNodeEntryMessage: renders node contract fields and node-specif
   assert.ok(msg.includes('Node-specific reading content.'));
 });
 
+test('buildForwardNodeEntryMessage: injects workflow contract when requested', () => {
+  const msg = buildForwardNodeEntryMessage({
+    nodeId: 'owner-intake',
+    role: 'Owner',
+    workspaceRoot: tmpDir,
+    projectNamespace,
+    activeArtifacts: [],
+    includeWorkflowContract: true
+  });
+
+  assert.ok(msg.includes('Runtime workflow contract:'));
+  assert.ok(msg.includes('[FILE: a-society/runtime/WORKFLOW-CONTRACT.md]'));
+  assert.ok(msg.includes('A-Society Runtime Workflow Contract'));
+});
+
+test('buildForwardNodeEntryMessage: omits workflow contract by default', () => {
+  const msg = buildForwardNodeEntryMessage({
+    nodeId: 'owner-gate',
+    role: 'Owner',
+    workspaceRoot: tmpDir,
+    projectNamespace,
+    activeArtifacts: []
+  });
+
+  assert.ok(!msg.includes('Runtime workflow contract:'));
+  assert.ok(!msg.includes('A-Society Runtime Workflow Contract'));
+});
+
 test('buildForwardNodeEntryMessage: omits human input section when not provided', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',

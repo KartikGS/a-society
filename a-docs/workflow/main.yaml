@@ -15,6 +15,7 @@ workflow:
         - Read $A_SOCIETY_OWNER_LOG_MANAGEMENT when intake decisions affect $A_SOCIETY_LOG.
         - Read $A_SOCIETY_OWNER_BRIEF_WRITING when another role will be engaged or when the plan defines an explicit approval or review gate.
         - Read $A_SOCIETY_OWNER_CLOSURE when a direct Owner path reaches forward-pass closure from this node in the record snapshot.
+        - Follow $A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT when creating or updating workflow.yaml.
       inputs:
         - Human direction
         - Backward-pass findings requiring Owner judgment

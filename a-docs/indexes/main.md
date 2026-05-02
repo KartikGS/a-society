@@ -67,6 +67,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2` | `a-society/a-docs/executable/legacy-ta-assessment-phase1-2.md` | Historical TA deviation rulings preserved for legacy framework-service designs carried into the unified executable layer |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `a-society/runtime/HANDOFF-CONTRACT.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
+| `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` | `a-society/runtime/WORKFLOW-CONTRACT.md` | Runtime-owned workflow YAML contract — schema, role-instance behavior, node-entry injection, and active-path routing semantics |
 | `$A_SOCIETY_RUNTIME_FEEDBACK` | `a-society/runtime/FEEDBACK.md` | Runtime-owned final backward-pass feedback contract — used by the runtime's A-Society feedback phase |
 | `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
 | `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |

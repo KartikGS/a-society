@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { resolveVariableFromIndex } from './paths.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../WORKFLOW-CONTRACT.md');
 
 export interface ForwardNodeEntryOptions {
   nodeId: string;
@@ -12,6 +16,7 @@ export interface ForwardNodeEntryOptions {
   entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
   previousNodeId?: string;
   humanInput?: string;
+  includeWorkflowContract?: boolean;
   nodeContext?: {
     required_readings?: string[];
     guidance?: string[];
@@ -39,6 +44,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     entryMode = 'first-node',
     previousNodeId,
     humanInput,
+    includeWorkflowContract,
     nodeContext
   } = opts;
   const lines: string[] = [];
@@ -82,6 +88,18 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
   if (humanInput) {
     lines.push('Human input:');
     lines.push(humanInput);
+    lines.push('');
+  }
+
+  if (includeWorkflowContract) {
+    lines.push('Runtime workflow contract:');
+    lines.push('Use this contract when creating, updating, or repairing workflow.yaml for this active flow.');
+    if (fs.existsSync(RUNTIME_WORKFLOW_CONTRACT_PATH)) {
+      lines.push('[FILE: a-society/runtime/WORKFLOW-CONTRACT.md]');
+      lines.push(fs.readFileSync(RUNTIME_WORKFLOW_CONTRACT_PATH, 'utf8'));
+    } else {
+      lines.push('[FILE ERROR: Could not read a-society/runtime/WORKFLOW-CONTRACT.md]');
+    }
     lines.push('');
   }
 

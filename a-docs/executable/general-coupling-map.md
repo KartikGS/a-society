@@ -14,8 +14,7 @@ This document is the standing reference for the coupling surface between A-Socie
 | Index table format | Yes | Path validation |
 | `VERSION.md` format | Yes | Update comparison |
 | `a-society-version.md` format | Yes | Update comparison |
-| Workflow graph YAML frontmatter schema | Yes | Workflow graph validation |
-| Record-folder `workflow.yaml` schema | Yes | Backward-pass planning |
+| Runtime workflow YAML contract (`$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`) | Yes | Workflow graph validation, node-entry injection, active-flow routing, backward-pass planning |
 | `$GENERAL_MANIFEST` file format and `copy` source paths | Yes | Scaffolding |
 | `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |
 
@@ -29,10 +28,11 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 |---|---|---|
 | `$INSTRUCTION_INDEX` | Path validation | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | Update comparison | Closed — capability wording plus manual fallback |
-| `$INSTRUCTION_WORKFLOW_GRAPH` | Workflow graph validation / backward-pass planning | Closed — generic executable-capability wording |
+| `$INSTRUCTION_WORKFLOW_GRAPH` | Workflow graph validation / backward-pass planning | Closed — points to `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for runtime schema and interpretation |
 | `$INSTRUCTION_WORKFLOW_MODIFY` | Backward-pass planning | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Backward-pass planning | Closed — capability wording plus manual fallback |
-| `$INSTRUCTION_RECORDS` | Backward-pass planning | Closed — generic executable-capability wording |
+| `$INSTRUCTION_RECORDS` | Backward-pass planning | Closed — points to `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for runtime schema and interpretation |
+| `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` | Workflow graph validation / node-entry injection / backward-pass planning | Closed — authoritative runtime contract |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | Operator-facing executable behavior | Closed — sole surviving default operator-facing reference |
 
 ---

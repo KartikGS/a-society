@@ -70,8 +70,7 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 
 - index table format used by path validation
 - `VERSION.md` and `a-society-version.md` format used by update comparison
-- workflow graph schema used by workflow graph validation
-- record-folder `workflow.yaml` schema used by backward-pass planning
+- runtime workflow YAML contract used by workflow graph validation, node-entry injection, active-flow routing, and backward-pass planning
 - per-role `required-readings.yaml` schema used by runtime context injection
 
 These dependencies are tracked and maintained via `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.

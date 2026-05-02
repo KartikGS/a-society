@@ -590,6 +590,18 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ---
 
+### `runtime/WORKFLOW-CONTRACT.md` — `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`
+
+**Why it exists:** The runtime parses, validates, merges, and injects workflow YAML. Those executable semantics need one runtime-owned source instead of being repeated across general workflow instructions and A-Society records conventions.
+
+**What it owns:** The accepted `workflow.yaml` schema, canonical-vs-record snapshot merge behavior, node-entry injection behavior, role-instance syntax, and handoff target semantics.
+
+**What breaks without it:** Workflow-authority agents infer executable behavior from scattered documentation or stale examples, producing invalid snapshots, duplicated node-reading instructions, or same-role parallel tracks that share history accidentally.
+
+**Do not consolidate with:** `$INSTRUCTION_WORKFLOW` or `$INSTRUCTION_WORKFLOW_GRAPH` — those are reusable design/encoding instructions for projects; this file is the runtime's executable contract. Do not consolidate with `$A_SOCIETY_RECORDS` — records owns artifact placement and sequencing, not runtime parsing semantics.
+
+---
+
 ### `runtime/FEEDBACK.md` — `$A_SOCIETY_RUNTIME_FEEDBACK`
 
 **Why it exists:** The final backward-pass feedback step is runtime-owned A-Society feedback, not a normal project role session. It needs a stable instruction surface that does not depend on any adopting project's Owner role.

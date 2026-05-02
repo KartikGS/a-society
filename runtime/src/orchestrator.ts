@@ -24,6 +24,25 @@ export class WorkflowError extends Error {
 
 type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
 
+function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
+  const fields = [
+    nodeDef?.guidance,
+    nodeDef?.inputs,
+    nodeDef?.work,
+    nodeDef?.outputs,
+    nodeDef?.transitions,
+    nodeDef?.notes
+  ];
+
+  return fields.some((value) =>
+    Array.isArray(value) &&
+    value.some((item) =>
+      typeof item === 'string' &&
+      /workflow\.yaml|workflow-authority|workflow snapshot|active path/i.test(item)
+    )
+  );
+}
+
 export class FlowOrchestrator {
   private renderer: OperatorRenderSink;
   private pendingRoleActiveEmitted = new Set<string>();
@@ -264,6 +283,7 @@ export class FlowOrchestrator {
         const nodeContext = rawNodeContext && Object.values(rawNodeContext).some(value =>
           Array.isArray(value) ? value.length > 0 : false
         ) ? rawNodeContext : undefined;
+        const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
 
         if (injectedHistory.length === 0) {
           const nodeEntryMessage = buildForwardNodeEntryMessage({
@@ -274,6 +294,7 @@ export class FlowOrchestrator {
             recordFolderPath: flowRun.recordFolderPath,
             activeArtifacts: resolvedArtifacts,
             humanInput,
+            includeWorkflowContract,
             nodeContext
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });
@@ -288,6 +309,7 @@ export class FlowOrchestrator {
             entryMode: session.currentNodeId === nodeId ? 'reopened-node' : 'role-transition',
             previousNodeId: session.currentNodeId,
             humanInput,
+            includeWorkflowContract,
             nodeContext
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });

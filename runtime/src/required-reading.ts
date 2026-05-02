@@ -1,7 +1,8 @@
 import { buildRoleContext } from './registry.js';
 
 export const RUNTIME_MANAGED_REQUIRED_READING_VARIABLES = new Set([
-  '$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT'
+  '$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT',
+  '$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT'
 ]);
 
 export function collectStartupInjectedRequiredReadingVariables(

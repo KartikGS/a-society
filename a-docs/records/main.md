@@ -58,29 +58,7 @@ Within each record folder, sequenced artifacts are named with a zero-padded two-
 
 `workflow.yaml` is a structured YAML file that lives in the record folder alongside the sequenced artifacts. It is not sequenced — it has no `NN-` prefix and does not appear in the artifact sequence table.
 
-**Schema:**
-
-```yaml
-workflow:
-  name: <string>             # Permanent workflow name; include flow identifier when helpful
-  summary: <string>          # Optional; one-line workflow summary
-  nodes:
-    - id: <string>           # Unique node identifier
-      role: <string>         # Role name (parsed by Component 4)
-      human-collaborative: <string>  # Optional override; usually sourced from the canonical workflow by node id
-      required_readings:     # Optional override; usually sourced from the canonical workflow by node id
-        - $VARIABLE_NAME
-      guidance: [<string>]   # Optional override
-      inputs: [<string>]     # Optional override
-      work: [<string>]       # Optional override
-      outputs: [<string>]    # Optional override
-      transitions: [<string>] # Optional override
-      notes: [<string>]      # Optional override
-  edges:
-    - from: <string>         # Node id
-      to: <string>           # Node id
-      artifact: <string>     # Optional; artifact type carried by this handoff
-```
+The executable schema and runtime interpretation are defined in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`. This records convention owns the file's placement, lifecycle, and record-folder obligations.
 
 **Who creates it:** The workflow-authority role or runtime intake surface at flow intake, alongside `01-owner-workflow-plan.md`.
 
@@ -90,7 +68,7 @@ workflow:
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the Owner could not specify at intake.
 
-**What the runtime reads from it:** Component 4 reads `workflow.nodes[].role` and the graph structure in `workflow.nodes[].id` + `workflow.edges` for backward-pass planning. At forward-pass node entry, the runtime uses `workflow.nodes[].id` to resolve the standing node contract from the canonical workflow definition, then applies any override fields present in the record snapshot for that node. Record snapshots should therefore stay minimal by default: path topology first, node-contract overrides only when this flow truly needs them.
+**What the runtime reads from it:** `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` defines which fields the runtime parses, how canonical node contracts merge with record-snapshot overrides, and how the active snapshot drives backward-pass planning, node-entry delivery, and handoff routing.
 
 **Artifact names in `workflow.yaml` are descriptor-level labels, not frozen numeric filenames.** The `artifact` value documents the intended handoff type at intake. Later `REVISE` or correction loops may shift the live sequence numbering. When that happens, preserve the descriptor and use the next available sequence slot in the record folder rather than trying to restore the originally planned number.
 
@@ -99,7 +77,7 @@ workflow:
 - **Plan `path`** — human-oriented planning reference used for complexity assessment and routing decisions at intake. Not machine-parsed. Combined role + phase strings.
 - **`workflow.yaml`** — machine-readable record snapshot parsed by the runtime. Used to compute backward pass traversal order and to define the active flow path the runtime executes.
 
-When creating `workflow.yaml` at intake, derive the node list and edge structure from the plan's `path`. Each step in the plan's path corresponds to a node; the sequencing and branching structure of the workflow imply the edges. Roles must be consistent between the two representations. Keep node entries minimal by default, typically `id`, `role`, and any needed edge artifacts. Add node-level fields only when the active flow needs an explicit override to the canonical workflow definition. `workflow.yaml` is the authoritative runtime topology snapshot for this flow; the plan's `path` governs human-oriented planning only.
+When creating `workflow.yaml` at intake, derive the node list and edge structure from the plan's `path` and follow `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`. Roles must be consistent between the two representations. `workflow.yaml` is the authoritative runtime topology snapshot for this flow; the plan's `path` governs human-oriented planning only.
 
 **Pre-convention record folders:** Record folders created before the `workflow.yaml` requirement was established are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. Component 4 cannot be invoked for these folders; use manual backward pass ordering.
 
@@ -124,4 +102,4 @@ In runtime-managed A-Society flows, the runtime creates the active record folder
 
 The active workflow then determines which artifacts are created inside that folder and which role is responsible for them. Flow-specific intake gates, brief requirements, and routing obligations are defined by `$A_SOCIETY_WORKFLOW` and its linked support documents, not by this records convention.
 
-When a flow uses `workflow.yaml`, the workflow-authority role creates or updates it in this folder using the schema above. Every sequenced artifact created after intake must use the next available sequence position in the live folder.
+When a flow uses `workflow.yaml`, the workflow-authority role creates or updates it in this folder using `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`. Every sequenced artifact created after intake must use the next available sequence position in the live folder.
