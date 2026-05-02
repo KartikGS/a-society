@@ -47,11 +47,13 @@ const flowRun: FlowRun = {
 
 SessionStore.saveFlowRun(flowRun, ref, tmpDir);
 
-test('operator feed persists separately from role transcript history', () => {
-  const feed: OperatorFeedMessage[] = [
-    { type: 'operator_event', event: { kind: 'role.active', nodeId: 'owner-intake', role: 'Owner', artifactCount: 0 } },
-    { type: 'output_text', text: 'Visible assistant text.' },
+test('role feed persists separately from role transcript history', () => {
+  const roleFeed: OperatorFeedMessage[] = [
+    { type: 'output_text', role: 'Owner', text: 'Visible assistant text.' },
     { type: 'input_text', role: 'Owner', text: 'Visible operator reply.' },
+  ];
+  const flowFeed: OperatorFeedMessage[] = [
+    { type: 'operator_event', event: { kind: 'role.active', nodeId: 'owner-intake', role: 'Owner', artifactCount: 0 } },
   ];
   const roleSession: RoleSession = {
     roleName: 'Owner',
@@ -61,27 +63,34 @@ test('operator feed persists separately from role transcript history', () => {
     currentNodeId: 'owner-intake',
   };
 
-  SessionStore.saveOperatorFeed(feed, ref, tmpDir);
+  SessionStore.saveRoleFeed(roleFeed, ref, 'owner', tmpDir);
+  SessionStore.saveRoleFeed(flowFeed, ref, '__flow__', tmpDir);
   SessionStore.saveRoleSession(roleSession, ref, tmpDir);
 
-  assert.deepStrictEqual(SessionStore.loadOperatorFeed(ref, tmpDir), feed);
+  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'owner', tmpDir), roleFeed);
+  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, '__flow__', tmpDir), flowFeed);
   assert.deepStrictEqual(
-    SessionStore.loadRoleSession(roleSession.logicalSessionId, ref, tmpDir)?.transcriptHistory,
+    SessionStore.loadRoleSession('owner', ref, tmpDir)?.transcriptHistory,
     roleSession.transcriptHistory
   );
 });
 
-test('operator feed append retains the configured message limit', () => {
-  SessionStore.saveOperatorFeed([], ref, tmpDir);
+test('loadAllRoleFeeds returns all role feeds keyed by role', () => {
+  const allFeeds = SessionStore.loadAllRoleFeeds(ref, tmpDir);
+  assert.ok(allFeeds.has('owner'), 'should have owner feed');
+  assert.ok(allFeeds.has('__flow__'), 'should have __flow__ feed');
+  assert.strictEqual(allFeeds.get('owner')?.length, 2);
+  assert.strictEqual(allFeeds.get('__flow__')?.length, 1);
+});
 
-  SessionStore.appendOperatorFeedMessage({ type: 'output_text', text: 'one' }, ref, tmpDir, 2);
-  SessionStore.appendOperatorFeedMessage({ type: 'output_text', text: 'two' }, ref, tmpDir, 2);
-  SessionStore.appendOperatorFeedMessage({ type: 'output_text', text: 'three' }, ref, tmpDir, 2);
-
-  assert.deepStrictEqual(SessionStore.loadOperatorFeed(ref, tmpDir), [
-    { type: 'output_text', text: 'two' },
-    { type: 'output_text', text: 'three' },
-  ]);
+test('saveRoleFeed and loadRoleFeed round-trip correctly', () => {
+  const messages: OperatorFeedMessage[] = [
+    { type: 'output_text', role: 'Curator_1', text: 'hello' },
+    { type: 'wait_start', role: 'Curator_1', provider: 'anthropic', model: 'claude-3' },
+    { type: 'wait_stop', role: 'Curator_1' },
+  ];
+  SessionStore.saveRoleFeed(messages, ref, 'curator_1', tmpDir);
+  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'curator_1', tmpDir), messages);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

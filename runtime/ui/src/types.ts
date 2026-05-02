@@ -117,7 +117,7 @@ export type OperatorEvent =
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
-  | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; toolClass: ConsentClass; toolName: string }
@@ -142,9 +142,9 @@ export type ServerMessage =
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
   | { type: 'feed_reset'; flowRef: FlowRef }
   | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }
-  | { type: 'wait_start'; flowRef: FlowRef; provider: string; model: string }
-  | { type: 'wait_stop'; flowRef: FlowRef }
-  | { type: 'output_text'; flowRef: FlowRef; role?: string; text: string }
+  | { type: 'wait_start'; flowRef: FlowRef; role: string; provider: string; model: string }
+  | { type: 'wait_stop'; flowRef: FlowRef; role: string }
+  | { type: 'output_text'; flowRef: FlowRef; role: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean }
   | { type: 'error'; flowRef: FlowRef; message: string }

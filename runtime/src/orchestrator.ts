@@ -31,6 +31,7 @@ export class FlowOrchestrator {
   private activeTurnControllers = new Map<string, { role: string; controller: AbortController }>();
   private flowRef: FlowRef | null = null;
   private workspaceRoot: string | null = null;
+  private boundSigintHandler: (() => void) | null = null;
 
   constructor(renderer?: OperatorRenderSink) {
     this.renderer = renderer ?? createDefaultRenderer();
@@ -54,7 +55,8 @@ export class FlowOrchestrator {
     _roleName: string,
     inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout,
-    flowId?: string
+    flowId?: string,
+    outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
     const tracer = TelemetryManager.getTracer();
     const meter = TelemetryManager.getMeter();
@@ -113,7 +115,7 @@ export class FlowOrchestrator {
         rootSpan.addEvent('flow.established', { 'flow.id': flowRun.flowId, 'record_folder_path': path.relative(workspaceRoot, flowRun.recordFolderPath) });
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
-        await this.runReadyNodesUntilBlocked(inputStream, outputStream);
+        await this.runReadyNodesUntilBlocked(inputStream, outputStream, outputStreamFactory);
         flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
 
         rootSpan.setAttribute('flow.status', flowRun.status);
@@ -139,7 +141,8 @@ export class FlowOrchestrator {
     humanInput?: string,
     _inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout,
-    consentGate?: ConsentGate
+    consentGate?: ConsentGate,
+    outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
     this.setFlowContext(flowRun);
     const claim = await this.claimNodeForAdvance(nodeId, humanInput !== undefined);
@@ -224,7 +227,9 @@ export class FlowOrchestrator {
         }
         this.pendingRoleActiveEmitted.delete(nodeId);
 
-        let session = SessionStore.loadRoleSession(sessionId, this.requireFlowRef(), this.requireWorkspaceRoot());
+        const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;
+
+        let session = SessionStore.loadRoleSession(this.roleKey(roleName), this.requireFlowRef(), this.requireWorkspaceRoot());
         span.setAttribute('node.session_resumed', session !== null);
         if (!session) {
           session = {
@@ -310,25 +315,24 @@ export class FlowOrchestrator {
           try {
             const controller = new AbortController();
             this.activeTurnControllers.set(nodeId, { role: roleName, controller });
-            const sigintHandler = () => controller.abort();
-            process.once('SIGINT', sigintHandler);
+            this.ensureSigintHandler();
 
             let sessionResult: RoleTurnResult | null = null;
             try {
               sessionResult = await runRoleTurn(
                 flowRun.workspaceRoot, flowRun.projectNamespace, roleName, bundleContent,
                 injectedHistory as any,
-                outputStream,
+                nodeOutputStream,
                 controller.signal,
                 this.renderer,
                 consentGate
               );
             } finally {
-              process.removeListener('SIGINT', sigintHandler);
               const activeController = this.activeTurnControllers.get(nodeId);
               if (activeController?.controller === controller) {
                 this.activeTurnControllers.delete(nodeId);
               }
+              this.releaseSigintHandlerIfIdle();
             }
 
             if (sessionResult) {
@@ -337,7 +341,7 @@ export class FlowOrchestrator {
               if (handoffResult.kind === 'awaiting_human') {
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
-                emitUsage(this.renderer, turnUsage);
+                emitUsage(this.renderer, turnUsage, roleName);
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
                 flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'prompt-human');
@@ -353,7 +357,7 @@ export class FlowOrchestrator {
                     error_count: healthCheck.errors.length,
                     errors: healthCheck.errors.join('; ').slice(0, 2000)
                   });
-                  emitUsage(this.renderer, turnUsage);
+                  emitUsage(this.renderer, turnUsage, roleName);
                   const guidance = buildRuntimeHealthRepairGuidance(
                     healthCheck.errors,
                     'forward-pass-closed'
@@ -371,7 +375,7 @@ export class FlowOrchestrator {
                 }
 
                 span.setAttribute('node.outcome', 'forward_pass_closed');
-                emitUsage(this.renderer, turnUsage);
+                emitUsage(this.renderer, turnUsage, roleName);
                 flowRun = await SessionStore.updateFlowRun((latest) => {
                   this.removeOpenNode(latest, nodeId);
                   this.addCompletedNode(latest, nodeId);
@@ -688,7 +692,8 @@ export class FlowOrchestrator {
 
   private async runReadyNodesUntilBlocked(
     inputStream: NodeJS.ReadableStream,
-    outputStream: NodeJS.WritableStream
+    outputStream: NodeJS.WritableStream,
+    outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
     const runningTasks = new Map<string, Promise<void>>();
     let firstError: unknown = null;
@@ -703,7 +708,9 @@ export class FlowOrchestrator {
           undefined,
           undefined,
           inputStream,
-          outputStream
+          outputStream,
+          undefined,
+          outputStreamFactory
         ).catch((error) => {
           if (!firstError) firstError = error;
         }).finally(() => {
@@ -1138,6 +1145,23 @@ export class FlowOrchestrator {
       activationSource: 'handoff'
     });
     this.pendingRoleActiveEmitted.add(nodeId);
+  }
+
+  private ensureSigintHandler(): void {
+    if (this.boundSigintHandler) return;
+    this.boundSigintHandler = () => {
+      for (const { controller } of this.activeTurnControllers.values()) {
+        if (!controller.signal.aborted) controller.abort();
+      }
+    };
+    process.on('SIGINT', this.boundSigintHandler);
+  }
+
+  private releaseSigintHandlerIfIdle(): void {
+    if (this.activeTurnControllers.size === 0 && this.boundSigintHandler) {
+      process.removeListener('SIGINT', this.boundSigintHandler);
+      this.boundSigintHandler = null;
+    }
   }
 
   private emitParallelActiveSet(flowRun: FlowRun, wf: any) {

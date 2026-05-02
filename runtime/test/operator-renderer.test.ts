@@ -174,7 +174,7 @@ test('emit clears wait before rendering notice (non-TTY: no spinner, emits notic
   // non-TTY: isTTY is undefined/false
   const renderer = new OperatorEventRenderer(stream as any);
 
-  renderer.startWait('anthropic', 'claude-3');
+  renderer.startWait('Owner', 'anthropic', 'claude-3');
   renderer.emit({ kind: 'flow.completed' });
 
   const out = chunks.join('');

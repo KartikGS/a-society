@@ -68,7 +68,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       let outputTokens: number | undefined;
 
       try {
-        renderer?.startWait('openai-compatible', this.model);
+        renderer?.startWait(options?.role ?? '', 'openai-compatible', this.model);
 
         const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
           {
@@ -132,7 +132,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           const delta = choice.delta;
           if (!delta) continue;
           if (delta.content) {
-            if (fullText === '') renderer?.stopWait();
+            if (fullText === '') renderer?.stopWait(options?.role ?? '');
             outputStream.write(delta.content);
             fullText += delta.content;
             displayedText = true;
@@ -143,7 +143,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
                 toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
                 if (tc.id || tc.function?.name) {
                   span.addEvent('provider.tool_call_received', { 'tool.name': tc.function?.name, 'tool.id': tc.id });
-                  renderer?.stopWait();
+                  renderer?.stopWait(options?.role ?? '');
                 }
               }
               const acc = toolCallAcc.get(tc.index)!;
@@ -154,7 +154,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           }
         }
 
-        renderer?.stopWait();
+        renderer?.stopWait(options?.role ?? '');
 
         const usage: TurnUsage | undefined = (inputTokens !== undefined || outputTokens !== undefined)
           ? { inputTokens, outputTokens }
@@ -185,7 +185,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         span.setAttribute('provider.result_type', 'text');
         return { type: 'text' as const, text: fullText, usage, displayedText };
       } catch (err: any) {
-        renderer?.stopWait();
+        renderer?.stopWait(options?.role ?? '');
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
           span.addEvent('provider.aborted');
           span.setStatus({ code: SpanStatusCode.OK });

@@ -153,7 +153,7 @@ export type OperatorEvent =
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }
   | { kind: 'parallel.join_waiting'; nodeId: string; role: string; waitingFor: string[] }
-  | { kind: 'usage.turn_summary'; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; toolClass: ConsentClass; toolName: string }
@@ -162,15 +162,15 @@ export type OperatorEvent =
 
 export interface OperatorRenderSink {
   emit(event: OperatorEvent): void;
-  startWait(provider: string, model: string): void;
-  stopWait(): void;
+  startWait(role: string, provider: string, model: string): void;
+  stopWait(role: string): void;
 }
 
 export type OperatorFeedMessage =
   | { type: 'operator_event'; event: OperatorEvent }
-  | { type: 'wait_start'; provider: string; model: string }
-  | { type: 'wait_stop' }
-  | { type: 'output_text'; role?: string; text: string }
+  | { type: 'wait_start'; role: string; provider: string; model: string }
+  | { type: 'wait_stop'; role: string }
+  | { type: 'output_text'; role: string; text: string }
   | { type: 'input_text'; role?: string; text: string }
   | { type: 'error'; message: string }
   | { type: 'flow_complete' };
@@ -180,6 +180,7 @@ export interface TurnOptions {
   outputStream?: NodeJS.WritableStream;
   operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
+  role?: string;
 }
 
 export interface GatewayTurnResult {

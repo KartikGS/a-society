@@ -7,12 +7,12 @@ export class OperatorEventRenderer implements OperatorRenderSink {
     this.stream = stream;
   }
 
-  startWait(provider: string, model: string): void {
-    const label = `[runtime/wait] Waiting for ${model} response`;
+  startWait(role: string, provider: string, model: string): void {
+    const label = `[runtime/wait] Waiting for ${model} response${role ? ` (${role})` : ''}`;
     this.stream.write(label + '\n');
   }
 
-  stopWait(): void {
+  stopWait(_role: string): void {
     // Plain stderr fallback: wait notices are emitted as static lines.
   }
 

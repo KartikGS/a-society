@@ -12,11 +12,11 @@ export class WebSocketOperatorSink implements OperatorRenderSink {
     this.send({ type: 'operator_event', event });
   }
 
-  startWait(provider: string, model: string): void {
-    this.send({ type: 'wait_start', provider, model });
+  startWait(role: string, provider: string, model: string): void {
+    this.send({ type: 'wait_start', role, provider, model });
   }
 
-  stopWait(): void {
-    this.send({ type: 'wait_stop' });
+  stopWait(role: string): void {
+    this.send({ type: 'wait_stop', role });
   }
 }

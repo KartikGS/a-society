@@ -78,9 +78,8 @@ function cloneRuntimeHistory(history: RuntimeMessageParam[]): RuntimeMessagePara
 }
 
 function loadForwardPassRoleHistory(flowRun: FlowRun, roleName: string): RuntimeMessageParam[] {
-  const sessionId = `${flowRun.flowId}__${parseRoleIdentity(roleName).instanceRoleId}`;
   const session = SessionStore.loadRoleSession(
-    sessionId,
+    parseRoleIdentity(roleName).instanceRoleId,
     SessionStore.flowRef(flowRun),
     flowRun.workspaceRoot
   );

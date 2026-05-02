@@ -63,7 +63,7 @@ interface ActiveSession {
   outputBridge: PassThrough;
   sink: WebSocketOperatorSink;
   orchestrator: FlowOrchestrator;
-  messageHistory: HistoricalMessage[];
+  roleFeedHistory: Map<string, HistoricalMessage[]>;
   lastFlowState: FlowStateMessage | null;
   backwardActive: Set<string>;
   awaitingHumanInput: boolean;
@@ -209,8 +209,8 @@ function buildServer(workspaceRoot: string) {
     }
 
     const flowRef = flowRefFromRun(flowRun);
-    const logicalSessionId = `${flowRun.flowId}__${parseRoleIdentity(node.role).instanceRoleId}`;
-    const session = SessionStore.loadRoleSession(logicalSessionId, flowRef, workspaceRoot);
+    const roleKey = parseRoleIdentity(node.role).instanceRoleId;
+    const session = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
     if (!session) {
       return null;
     }
@@ -244,21 +244,39 @@ function buildServer(workspaceRoot: string) {
     });
   }
 
+  function getRoleFeedKey(message: HistoricalMessage): string {
+    if (
+      (message.type === 'output_text' || message.type === 'wait_start' || message.type === 'wait_stop') &&
+      'role' in message && message.role
+    ) {
+      return parseRoleIdentity(message.role).instanceRoleId;
+    }
+    if (message.type === 'input_text' && message.role) {
+      return parseRoleIdentity(message.role).instanceRoleId;
+    }
+    return '__flow__';
+  }
+
   function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
-    const previous = session.messageHistory[session.messageHistory.length - 1];
-    if (previous?.type === 'output_text' && message.type === 'output_text' && previous.role === message.role) {
-      session.messageHistory[session.messageHistory.length - 1] = {
+    const roleKey = getRoleFeedKey(message);
+    const history = session.roleFeedHistory.get(roleKey) ?? [];
+
+    const previous = history[history.length - 1];
+    if (previous?.type === 'output_text' && message.type === 'output_text') {
+      history[history.length - 1] = {
         type: 'output_text',
-        role: message.role,
-        text: previous.text + message.text,
+        role: (message as Extract<HistoricalMessage, { type: 'output_text' }>).role,
+        text: (previous as Extract<HistoricalMessage, { type: 'output_text' }>).text +
+              (message as Extract<HistoricalMessage, { type: 'output_text' }>).text,
       };
     } else {
-      session.messageHistory.push(message);
+      history.push(message);
     }
-    if (session.messageHistory.length > HISTORY_LIMIT) {
-      session.messageHistory.splice(0, session.messageHistory.length - HISTORY_LIMIT);
+    if (history.length > HISTORY_LIMIT) {
+      history.splice(0, history.length - HISTORY_LIMIT);
     }
-    SessionStore.saveOperatorFeed(session.messageHistory, session.flowRef, workspaceRoot);
+    session.roleFeedHistory.set(roleKey, history);
+    SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
   }
 
   function emitHistoricalMessage(session: ActiveSession, message: HistoricalMessage): void {
@@ -402,19 +420,13 @@ function buildServer(workspaceRoot: string) {
       sink,
       orchestrator,
       consentGate,
-      messageHistory: SessionStore.loadOperatorFeed(flowRef, workspaceRoot),
+      roleFeedHistory: SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot),
       lastFlowState: null,
       backwardActive: new Set<string>(),
       awaitingHumanInput: false,
       finished: false,
       task: Promise.resolve()
     };
-
-    outputBridge.on('data', (chunk: string | Buffer) => {
-      const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-      if (!text || isPromptLine(text)) return;
-      emitHistoricalMessage(session, { type: 'output_text', text });
-    });
 
     activeSessions.set(flowKey(flowRef), session);
     return session;
@@ -448,11 +460,20 @@ function buildServer(workspaceRoot: string) {
 
   function replaySessionState(socket: WebSocket, ref: FlowRef): void {
     const session = activeSessions.get(flowKey(ref));
-    const messageHistory = session?.messageHistory ?? SessionStore.loadOperatorFeed(ref, workspaceRoot);
+    const feedHistory = session?.roleFeedHistory ?? SessionStore.loadAllRoleFeeds(ref, workspaceRoot);
 
     sendToSocket(socket, { type: 'feed_reset', flowRef: ref });
-    for (const message of messageHistory) {
+
+    // Send flow-level messages first (operator events, errors, flow_complete)
+    for (const message of (feedHistory.get('__flow__') ?? [])) {
       sendToSocket(socket, { ...message, flowRef: ref } as FlowScopedHistoricalMessage);
+    }
+    // Send per-role messages (output_text, input_text, wait_start, wait_stop)
+    for (const [roleKey, messages] of feedHistory) {
+      if (roleKey === '__flow__') continue;
+      for (const message of messages) {
+        sendToSocket(socket, { ...message, flowRef: ref } as FlowScopedHistoricalMessage);
+      }
     }
 
     if (session?.lastFlowState) {
@@ -504,7 +525,8 @@ function buildServer(workspaceRoot: string) {
         'Owner',
         session.inputBridge,
         session.outputBridge,
-        flowRef.flowId
+        flowRef.flowId,
+        (role) => createRoleOutputStream(session, role)
       )
     ).catch(() => {});
   }
@@ -531,7 +553,8 @@ function buildServer(workspaceRoot: string) {
         'Owner',
         session.inputBridge,
         session.outputBridge,
-        flowRef.flowId
+        flowRef.flowId,
+        (role) => createRoleOutputStream(session, role)
       )
     ).catch(() => {});
   }
@@ -570,7 +593,8 @@ function buildServer(workspaceRoot: string) {
         'Owner',
         session.inputBridge,
         session.outputBridge,
-        ref.flowId
+        ref.flowId,
+        (role) => createRoleOutputStream(session, role)
       )
     ).catch(() => {});
   }
@@ -620,7 +644,8 @@ function buildServer(workspaceRoot: string) {
         text,
         session.inputBridge,
         session.outputBridge,
-        session.consentGate
+        session.consentGate,
+        (role) => createRoleOutputStream(session, role)
       );
 
       await session.orchestrator.runStoredFlow(
@@ -629,7 +654,8 @@ function buildServer(workspaceRoot: string) {
         'Owner',
         session.inputBridge,
         session.outputBridge,
-        ref.flowId
+        ref.flowId,
+        (role) => createRoleOutputStream(session, role)
       );
 
       currentFlow = readFlowRun(ref);
@@ -674,14 +700,16 @@ function buildServer(workspaceRoot: string) {
         text,
         activeSession.inputBridge,
         activeSession.outputBridge,
-        activeSession.consentGate
+        activeSession.consentGate,
+        (role) => createRoleOutputStream(activeSession, role)
       ).then(() => activeSession.orchestrator.runStoredFlow(
         workspaceRoot,
         flowRun.projectNamespace,
         'Owner',
         activeSession.inputBridge,
         activeSession.outputBridge,
-        ref.flowId
+        ref.flowId,
+        (role) => createRoleOutputStream(activeSession, role)
       )).catch((error: any) => {
         emitHistoricalMessage(activeSession, {
           type: 'error',

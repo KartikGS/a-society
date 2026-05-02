@@ -23,22 +23,22 @@ function ensureAssistantOutputEndsWithNewline(
   outputStream.write('\n');
 }
 
-export function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined): void {
+export function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined, role?: string): void {
   if (!renderer) return;
   if (!usage) {
-    renderer.emit({ kind: 'usage.turn_summary', availability: 'both-unavailable' });
+    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'both-unavailable' });
     return;
   }
   const hasIn = usage.inputTokens !== undefined;
   const hasOut = usage.outputTokens !== undefined;
   if (hasIn && hasOut) {
-    renderer.emit({ kind: 'usage.turn_summary', availability: 'full', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
+    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'full', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
   } else if (hasIn) {
-    renderer.emit({ kind: 'usage.turn_summary', availability: 'output-unavailable', inputTokens: usage.inputTokens });
+    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'output-unavailable', inputTokens: usage.inputTokens });
   } else if (hasOut) {
-    renderer.emit({ kind: 'usage.turn_summary', availability: 'input-unavailable', outputTokens: usage.outputTokens });
+    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'input-unavailable', outputTokens: usage.outputTokens });
   } else {
-    renderer.emit({ kind: 'usage.turn_summary', availability: 'both-unavailable' });
+    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'both-unavailable' });
   }
 }
 
@@ -84,6 +84,7 @@ async function executeSessionTurn(
         outputStream,
         operatorRenderer,
         consentGate,
+        role: roleName,
       });
       if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
         turnSpan.addEvent('session.assistant_turn', { content: result.text });

@@ -33,12 +33,12 @@ test('startWait and stopWait map to protocol wait messages', () => {
   const messages: unknown[] = [];
   const sink = new WebSocketOperatorSink((message) => messages.push(message));
 
-  sink.startWait('anthropic', 'claude-3-7-sonnet');
-  sink.stopWait();
+  sink.startWait('Owner', 'anthropic', 'claude-3-7-sonnet');
+  sink.stopWait('Owner');
 
   assert.deepStrictEqual(messages, [
-    { type: 'wait_start', provider: 'anthropic', model: 'claude-3-7-sonnet' },
-    { type: 'wait_stop' }
+    { type: 'wait_start', role: 'Owner', provider: 'anthropic', model: 'claude-3-7-sonnet' },
+    { type: 'wait_stop', role: 'Owner' }
   ]);
 });
 

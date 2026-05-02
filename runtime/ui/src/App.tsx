@@ -36,13 +36,12 @@ interface FlowUiState {
   backwardActive: string[];
   lastHandoff: Extract<OperatorEvent, { kind: 'handoff.applied' }> | null;
   roleFeeds: Record<string, FeedItem[]>;
-  activeLiveRole: string | null;
   selectedRole: string | null;
   selectedGraph: GraphMode;
   workflow: WorkflowGraph | null;
   composerValue: string;
   awaitingInput: boolean;
-  waitLabel: string | null;
+  waitLabels: Record<string, string | null>;
   stopRequested: boolean;
   consentRequest: { toolClass: ConsentClass; toolName: string } | null;
   latestInputTokensByRole: Record<string, number>;
@@ -64,13 +63,12 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     backwardActive: [],
     lastHandoff: null,
     roleFeeds: {},
-    activeLiveRole: null,
     selectedRole: null,
     selectedGraph: 'flow',
     workflow: null,
     composerValue: '',
     awaitingInput: flowRun?.status === 'awaiting_human',
-    waitLabel: null,
+    waitLabels: {},
     stopRequested: false,
     consentRequest: null,
     latestInputTokensByRole: {},
@@ -167,12 +165,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
     case 'human.resumed':
       return null;
     case 'parallel.active_set':
-      return {
-        id: nextFeedId(),
-        type: 'event',
-        label: 'Parallel',
-        text: `Active nodes: ${event.activeNodes.map((node) => `${node.nodeId} (${node.role})`).join(', ')}`
-      };
+      return null;
     case 'parallel.join_waiting':
       return {
         id: nextFeedId(),
@@ -337,9 +330,8 @@ export function App() {
         updateFlowUi(key, (state) => ({
           ...state,
           roleFeeds: {},
-          activeLiveRole: null,
           lastHandoff: null,
-          waitLabel: null,
+          waitLabels: {},
           stopRequested: false,
           latestInputTokensByRole: {},
           consentRequest: null,
@@ -368,7 +360,7 @@ export function App() {
         if (event.kind === 'usage.turn_summary') {
           if (event.availability === 'full' || event.availability === 'output-unavailable') {
             updateFlowUi(key, (state) => {
-              const role = state.activeLiveRole ?? '__system__';
+              const role = event.role ?? '__system__';
               return {
                 ...state,
                 latestInputTokensByRole: { ...state.latestInputTokensByRole, [role]: event.inputTokens! },
@@ -383,7 +375,6 @@ export function App() {
             const item = formatOperatorEvent(event);
             return {
               ...state,
-              activeLiveRole: event.role,
               selectedRole: event.activationSource === 'runtime' ? event.role : state.selectedRole ?? event.role,
               awaitingInput: false,
               stopRequested: false,
@@ -399,7 +390,6 @@ export function App() {
             const item = formatOperatorEvent(event);
             return {
               ...state,
-              activeLiveRole: event.role,
               selectedRole: state.selectedRole ?? event.role,
               awaitingInput: true,
               stopRequested: false,
@@ -411,31 +401,34 @@ export function App() {
 
         updateFlowUi(key, (state) => {
           const item = formatOperatorEvent(event);
-          const activeRole = event.kind === 'human.resumed'
-            ? event.role
-            : state.activeLiveRole;
+          const feedRole = event.kind === 'human.resumed' ? event.role : '__system__';
           return {
             ...state,
-            activeLiveRole: activeRole,
             awaitingInput: event.kind === 'flow.completed' ? false : state.awaitingInput,
             stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
-            roleFeeds: item ? appendFeedItem(state.roleFeeds, activeRole ?? '__system__', item) : state.roleFeeds,
+            roleFeeds: item ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
           };
         });
         return;
       }
       case 'wait_start':
-        updateFlowUi(key, (state) => ({ ...state, waitLabel: `Waiting for ${message.model} response.` }));
+        updateFlowUi(key, (state) => ({
+          ...state,
+          waitLabels: { ...state.waitLabels, [message.role]: `Waiting for ${message.model} response.` }
+        }));
         return;
       case 'wait_stop':
-        updateFlowUi(key, (state) => ({ ...state, waitLabel: null }));
+        updateFlowUi(key, (state) => ({
+          ...state,
+          waitLabels: { ...state.waitLabels, [message.role]: null }
+        }));
         return;
       case 'output_text':
         updateFlowUi(key, (state) => ({
           ...state,
-          waitLabel: null,
-          roleFeeds: appendFeedItem(state.roleFeeds, message.role ?? state.activeLiveRole ?? '__system__', {
+          waitLabels: { ...state.waitLabels, [message.role]: null },
+          roleFeeds: appendFeedItem(state.roleFeeds, message.role, {
             id: nextFeedId(),
             type: 'assistant',
             label: 'Assistant',
@@ -446,7 +439,7 @@ export function App() {
       case 'input_text':
         updateFlowUi(key, (state) => ({
           ...state,
-          roleFeeds: appendFeedItem(state.roleFeeds, message.role ?? state.activeLiveRole ?? '__system__', {
+          roleFeeds: appendFeedItem(state.roleFeeds, message.role ?? '__system__', {
             id: nextFeedId(),
             type: 'user',
             label: 'You',
@@ -481,7 +474,7 @@ export function App() {
         updateFlowUi(key, (state) => ({
           ...state,
           stopRequested: false,
-          roleFeeds: appendFeedItem(state.roleFeeds, state.activeLiveRole ?? '__system__', {
+          roleFeeds: appendFeedItem(state.roleFeeds, '__system__', {
             id: nextFeedId(),
             type: 'error',
             label: 'Runtime Error',
@@ -596,7 +589,6 @@ export function App() {
   const activeUi = activeTabKey ? flowUiByKey[activeTabKey] ?? null : null;
   const flowRun = activeUi?.flowRun ?? null;
   const workflow = activeUi?.workflow ?? null;
-  const activeLiveRole = activeUi?.activeLiveRole ?? null;
   const selectedRole = activeUi?.selectedRole ?? null;
   const selectedGraph = activeUi?.selectedGraph ?? 'flow';
   const lastHandoff = activeUi?.lastHandoff ?? null;
@@ -646,7 +638,6 @@ export function App() {
     if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {
       return selectedRole;
     }
-    if (activeLiveRole) return activeLiveRole;
     if (flowRun && workflow && getOpenNodeIds(flowRun).length === 1) {
       const activeNode = workflow.nodes.find((node) => node.id === getOpenNodeIds(flowRun)[0]);
       if (activeNode) return activeNode.role;
@@ -841,23 +832,20 @@ export function App() {
     for (const role of Object.keys(activeUi?.roleFeeds ?? {})) {
       if (role !== '__system__') roleSet.add(role);
     }
-    if (activeLiveRole) roleSet.add(activeLiveRole);
     return roleSet.size > 0 ? [...roleSet] : EMPTY_STRINGS;
-  }, [activeLiveRole, activeUi?.roleFeeds, workflow]);
+  }, [activeUi?.roleFeeds, workflow]);
 
   const activeRoles = useMemo(() => {
-    if (!flowRun || !workflow) {
-      return activeLiveRole ? [activeLiveRole] : EMPTY_STRINGS;
-    }
+    if (!flowRun || !workflow) return EMPTY_STRINGS;
 
     return [...new Set(
       getOpenNodeIds(flowRun)
         .map((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.role)
         .filter((role): role is string => role !== undefined)
     )];
-  }, [activeLiveRole, flowRun, workflow]);
+  }, [flowRun, workflow]);
 
-  const viewedRole = selectedRole ?? activeLiveRole ?? activeRoles[0] ?? null;
+  const viewedRole = selectedRole ?? activeRoles[0] ?? null;
   const displayedFeed = viewedRole ? (activeUi?.roleFeeds[viewedRole] ?? []) : [];
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds.__system__ ?? []);
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
@@ -865,7 +853,7 @@ export function App() {
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
   const feedbackPrompt = feedbackConsentCopy(flowRun);
-  const visibleWaitLabel = isViewedRoleActive ? activeUi?.waitLabel ?? null : null;
+  const visibleWaitLabel = isViewedRoleActive && viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
   const inputDisabled = !viewedRoleAwaitingNodeId;
   const canStop =
     !!flowRun &&
@@ -993,7 +981,7 @@ export function App() {
                   stopRequested={activeUi?.stopRequested ?? false}
                   roles={roles}
                   selectedRole={viewedRole ?? undefined}
-                  activeRole={activeLiveRole ?? undefined}
+                  activeRole={activeRoles[0] ?? undefined}
                   consentRequest={activeUi?.consentRequest ?? null}
                   consentMode={flowRun?.consentState?.mode ?? 'ask'}
                   onRoleSelect={(role) => {
