@@ -68,7 +68,6 @@ interface ActiveSession {
   roleFeedHistory: Map<string, HistoricalMessage[]>;
   lastFlowState: FlowStateMessage | null;
   backwardActive: Set<string>;
-  awaitingHumanInput: boolean;
   finished: boolean;
   task: Promise<void>;
   consentGate: ConsentGateImpl;
@@ -376,11 +375,15 @@ function buildServer(workspaceRoot: string) {
           return;
         }
 
-        if (message.event.kind === 'consent.resolved' || message.event.kind === 'consent.mode_changed') {
+        if (message.event.kind === 'consent.resolved') {
+          emitTransientMessage(session, message);
+          return;
+        }
+
+        if (message.event.kind === 'consent.mode_changed') {
           void SessionStore.updateFlowRun((flow) => {
             flow.consentState = session.consentGate.getState();
           }, session.flowRef, workspaceRoot);
-          emitHistoricalMessage(session, message);
           setImmediate(() => emitFlowState(session));
           return;
         }
@@ -399,15 +402,14 @@ function buildServer(workspaceRoot: string) {
           return;
         }
 
-        if (message.event.kind === 'human.awaiting_input') {
-          session.awaitingHumanInput = true;
-        }
         if (
-          message.event.kind === 'human.resumed' ||
-          message.event.kind === 'role.active' ||
-          message.event.kind === 'flow.completed'
+          message.event.kind === 'flow.resumed' ||
+          message.event.kind === 'parallel.active_set' ||
+          message.event.kind === 'activity.tool_call' ||
+          message.event.kind === 'repair.requested' ||
+          message.event.kind === 'flow.forward_pass_closed'
         ) {
-          session.awaitingHumanInput = false;
+          return;
         }
 
         updateBackwardTracking(session, message.event);
@@ -431,7 +433,6 @@ function buildServer(workspaceRoot: string) {
 
         if (message.event.kind === 'flow.completed') {
           session.finished = true;
-          emitHistoricalMessage(session, { type: 'flow_complete' });
         }
         return;
     }
@@ -472,7 +473,6 @@ function buildServer(workspaceRoot: string) {
       roleFeedHistory,
       lastFlowState: null,
       backwardActive: new Set<string>(),
-      awaitingHumanInput: false,
       finished: false,
       task: Promise.resolve(),
       latestInputTokensByRole,
@@ -497,7 +497,6 @@ function buildServer(workspaceRoot: string) {
         if (currentFlow?.status === 'completed') {
           session.finished = true;
         }
-        session.awaitingHumanInput = false;
         emitFlowState(session);
       });
 
@@ -668,7 +667,6 @@ function buildServer(workspaceRoot: string) {
     }
 
     const session = createSession(ref);
-    session.awaitingHumanInput = false;
     emitHistoricalMessage(session, {
       type: 'input_text',
       role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
@@ -731,7 +729,6 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      activeSession.awaitingHumanInput = false;
       emitHistoricalMessage(activeSession, {
         type: 'input_text',
         role: flowRun.awaitingHumanNodes[targetNodeId]?.role,

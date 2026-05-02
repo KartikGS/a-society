@@ -148,7 +148,7 @@ export type ServerMessage =
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; inputTokensByRole: Record<string, number> }
   | { type: 'error'; flowRef: FlowRef; message: string }
-  | { type: 'flow_complete'; flowRef: FlowRef };
+;
 
 export interface WorkflowGraph {
   name?: string;

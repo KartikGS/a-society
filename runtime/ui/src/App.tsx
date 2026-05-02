@@ -40,7 +40,6 @@ interface FlowUiState {
   selectedGraph: GraphMode;
   workflow: WorkflowGraph | null;
   composerValue: string;
-  awaitingInput: boolean;
   waitLabels: Record<string, string | null>;
   stopRequested: boolean;
   consentRequest: { toolClass: ConsentClass; toolName: string } | null;
@@ -67,7 +66,6 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     selectedGraph: 'flow',
     workflow: null,
     composerValue: '',
-    awaitingInput: flowRun?.status === 'awaiting_human',
     waitLabels: {},
     stopRequested: false,
     consentRequest: null,
@@ -376,7 +374,6 @@ export function App() {
             return {
               ...state,
               selectedRole: event.activationSource === 'runtime' ? event.role : state.selectedRole ?? event.role,
-              awaitingInput: false,
               stopRequested: false,
               roleFeeds: item ? appendFeedItem(state.roleFeeds, event.role, item) : state.roleFeeds,
             };
@@ -391,7 +388,6 @@ export function App() {
             return {
               ...state,
               selectedRole: state.selectedRole ?? event.role,
-              awaitingInput: true,
               stopRequested: false,
               roleFeeds: item ? appendFeedItem(state.roleFeeds, event.role, item) : state.roleFeeds,
             };
@@ -409,7 +405,6 @@ export function App() {
                 : null;
           return {
             ...state,
-            awaitingInput: event.kind === 'flow.completed' ? false : state.awaitingInput,
             stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
             roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
@@ -468,7 +463,6 @@ export function App() {
               : !improvementGraphAvailable && state.selectedGraph === 'improvement'
                 ? 'flow'
                 : state.selectedGraph,
-            awaitingInput: Object.keys(message.flowRun.awaitingHumanNodes).length > 0,
             stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
             hasActiveSession: message.hasActiveSession,
             latestInputTokensByRole: { ...message.inputTokensByRole, ...state.latestInputTokensByRole },
@@ -490,13 +484,6 @@ export function App() {
         if (message.flowRef.flowId === '__new__' || message.flowRef.flowId === '__system__') {
           setSelectorError(message.message);
         }
-        return;
-      case 'flow_complete':
-        updateFlowUi(key, (state) => ({
-          ...state,
-          awaitingInput: false,
-          waitLabel: null,
-        }));
         return;
     }
   }
@@ -755,7 +742,6 @@ export function App() {
     updateFlowUi(activeTab.key, (state) => ({
       ...state,
       composerValue: '',
-      awaitingInput: false,
     }));
     sendMessage({
       type: 'human_input',

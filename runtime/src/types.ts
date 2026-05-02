@@ -171,8 +171,7 @@ export type OperatorFeedMessage =
   | { type: 'operator_event'; event: OperatorEvent }
   | { type: 'output_text'; role: string; text: string }
   | { type: 'input_text'; role?: string; text: string }
-  | { type: 'error'; message: string }
-  | { type: 'flow_complete' };
+  | { type: 'error'; message: string };
 
 export interface TurnOptions {
   signal?: AbortSignal;
