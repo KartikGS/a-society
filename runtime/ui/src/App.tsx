@@ -401,13 +401,18 @@ export function App() {
 
         updateFlowUi(key, (state) => {
           const item = formatOperatorEvent(event);
-          const feedRole = event.kind === 'human.resumed' ? event.role : '__system__';
+          const feedRole =
+            event.kind === 'human.resumed' || event.kind === 'parallel.join_waiting'
+              ? event.role
+              : event.kind === 'handoff.applied'
+                ? event.fromRole
+                : null;
           return {
             ...state,
             awaitingInput: event.kind === 'flow.completed' ? false : state.awaitingInput,
             stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
-            roleFeeds: item ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
+            roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
           };
         });
         return;

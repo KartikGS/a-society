@@ -52,9 +52,6 @@ test('role feed persists separately from role transcript history', () => {
     { type: 'output_text', role: 'Owner', text: 'Visible assistant text.' },
     { type: 'input_text', role: 'Owner', text: 'Visible operator reply.' },
   ];
-  const flowFeed: OperatorFeedMessage[] = [
-    { type: 'operator_event', event: { kind: 'role.active', nodeId: 'owner-intake', role: 'Owner', artifactCount: 0 } },
-  ];
   const roleSession: RoleSession = {
     roleName: 'Owner',
     logicalSessionId: `${flowId}__owner`,
@@ -64,11 +61,9 @@ test('role feed persists separately from role transcript history', () => {
   };
 
   SessionStore.saveRoleFeed(roleFeed, ref, 'owner', tmpDir);
-  SessionStore.saveRoleFeed(flowFeed, ref, '__flow__', tmpDir);
   SessionStore.saveRoleSession(roleSession, ref, tmpDir);
 
   assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'owner', tmpDir), roleFeed);
-  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, '__flow__', tmpDir), flowFeed);
   assert.deepStrictEqual(
     SessionStore.loadRoleSession('owner', ref, tmpDir)?.transcriptHistory,
     roleSession.transcriptHistory
@@ -78,9 +73,7 @@ test('role feed persists separately from role transcript history', () => {
 test('loadAllRoleFeeds returns all role feeds keyed by role', () => {
   const allFeeds = SessionStore.loadAllRoleFeeds(ref, tmpDir);
   assert.ok(allFeeds.has('owner'), 'should have owner feed');
-  assert.ok(allFeeds.has('__flow__'), 'should have __flow__ feed');
   assert.strictEqual(allFeeds.get('owner')?.length, 2);
-  assert.strictEqual(allFeeds.get('__flow__')?.length, 1);
 });
 
 test('saveRoleFeed and loadRoleFeed round-trip correctly', () => {

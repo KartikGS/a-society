@@ -244,21 +244,29 @@ function buildServer(workspaceRoot: string) {
     });
   }
 
-  function getRoleFeedKey(message: HistoricalMessage): string {
-    if (
-      (message.type === 'output_text' || message.type === 'wait_start' || message.type === 'wait_stop') &&
-      'role' in message && message.role
-    ) {
+  function getRoleFeedKey(message: HistoricalMessage): string | null {
+    if (message.type === 'output_text' || message.type === 'wait_start' || message.type === 'wait_stop') {
       return parseRoleIdentity(message.role).instanceRoleId;
     }
-    if (message.type === 'input_text' && message.role) {
-      return parseRoleIdentity(message.role).instanceRoleId;
+    if (message.type === 'input_text') {
+      return message.role ? parseRoleIdentity(message.role).instanceRoleId : null;
     }
-    return '__flow__';
+    if (message.type === 'operator_event') {
+      const event = message.event;
+      if ('role' in event && typeof event.role === 'string') {
+        return parseRoleIdentity(event.role).instanceRoleId;
+      }
+      if (event.kind === 'handoff.applied') {
+        return parseRoleIdentity(event.fromRole).instanceRoleId;
+      }
+      return null;
+    }
+    return null;
   }
 
   function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
     const roleKey = getRoleFeedKey(message);
+    if (!roleKey) return;
     const history = session.roleFeedHistory.get(roleKey) ?? [];
 
     const previous = history[history.length - 1];
@@ -464,13 +472,7 @@ function buildServer(workspaceRoot: string) {
 
     sendToSocket(socket, { type: 'feed_reset', flowRef: ref });
 
-    // Send flow-level messages first (operator events, errors, flow_complete)
-    for (const message of (feedHistory.get('__flow__') ?? [])) {
-      sendToSocket(socket, { ...message, flowRef: ref } as FlowScopedHistoricalMessage);
-    }
-    // Send per-role messages (output_text, input_text, wait_start, wait_stop)
-    for (const [roleKey, messages] of feedHistory) {
-      if (roleKey === '__flow__') continue;
+    for (const [, messages] of feedHistory) {
       for (const message of messages) {
         sendToSocket(socket, { ...message, flowRef: ref } as FlowScopedHistoricalMessage);
       }
