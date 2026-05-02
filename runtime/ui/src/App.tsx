@@ -542,7 +542,7 @@ export function App() {
         const data = await res.json() as { contextWindow: number | null };
         if (!cancelled) setContextWindow(data.contextWindow ?? null);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { cancelled = true; };
   }, []);
 
@@ -799,7 +799,7 @@ export function App() {
     }));
   }, [activeTabKey, updateFlowUi]);
 
-  const handleGraphNodeClick = useCallback((_nodeId: string) => {}, []);
+  const handleGraphNodeClick = useCallback((_nodeId: string) => { }, []);
 
   const handleGraphModeChange = useCallback((mode: GraphMode) => {
     if (!activeTabKey) return;

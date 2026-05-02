@@ -77,7 +77,7 @@ interface ActiveSession {
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const UI_DIST = path.resolve(
   MODULE_DIR,
-  path.basename(MODULE_DIR) === 'src' ? '../dist/ui' : './ui'
+  MODULE_DIR.split(path.sep).includes('dist') ? '../../ui' : '../../dist/ui'
 );
 const UI_INDEX = path.join(UI_DIST, 'index.html');
 const HISTORY_LIMIT = 400;

@@ -190,13 +190,6 @@ export function ChatInterface(props: ChatInterfaceProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
 
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [props.inputValue]);
-
   const handleFeedScroll = useCallback(() => {
     const element = feedRef.current;
     if (!element) return;
@@ -216,10 +209,23 @@ export function ChatInterface(props: ChatInterfaceProps) {
     const element = textareaRef.current;
     if (!element) return;
 
+    if (!props.inputValue) {
+      element.style.height = '52px';
+      element.style.overflowY = 'hidden';
+      return;
+    }
+
+    const currentScrollTop = element.scrollTop;
     element.style.height = '0px';
     const nextHeight = Math.min(Math.max(element.scrollHeight, 52), 220);
     element.style.height = `${nextHeight}px`;
     element.style.overflowY = element.scrollHeight > 220 ? 'auto' : 'hidden';
+    
+    if (element.selectionStart === props.inputValue.length) {
+      element.scrollTop = element.scrollHeight;
+    } else {
+      element.scrollTop = currentScrollTop;
+    }
   }, [props.inputValue, props.showComposer]);
 
   const showActionButton = props.canStop || !props.inputDisabled;
