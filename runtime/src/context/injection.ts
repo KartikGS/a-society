@@ -15,13 +15,6 @@ export interface ContextBundleResult {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_HANDOFF_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/handoff.md');
 
-function localDateStamp(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 export class ContextInjectionService {
   /**
@@ -44,7 +37,6 @@ export class ContextInjectionService {
       bundle += `This session uses the ${roleIdentity.baseRoleName} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleName} session identity.\n`;
     }
     bundle += '\n';
-    bundle += `Today's date is ${localDateStamp()}.\n\n`;
 
     // 0b. Runtime-owned session contracts
     bundle += `--- RUNTIME-MANAGED SESSION CONTRACTS ---\n`;

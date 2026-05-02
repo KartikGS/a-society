@@ -1,12 +1,20 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { Resource } from '@opentelemetry/resources';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
+import {
+  ATTR_SERVICE_NAME,
+  ATTR_SERVICE_NAMESPACE,
+  ATTR_SERVICE_VERSION,
+} from '@opentelemetry/semantic-conventions';
 import * as opentelemetry from '@opentelemetry/api';
+import { logs } from '@opentelemetry/api-logs';
+import type { Logger as OtelLogger } from '@opentelemetry/api-logs';
 import { SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import type { SpanExporter } from '@opentelemetry/sdk-trace-base';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { LoggerProvider, SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,18 +35,20 @@ export class TelemetryManager {
   private static instance: NodeSDK | null = null;
   private static testProvider: any = null;
   private static testMeterProvider: any = null;
+  private static loggerProvider: LoggerProvider | null = null;
   private static tracer: opentelemetry.Tracer | null = null;
   private static meter: opentelemetry.Meter | null = null;
+  private static logger: OtelLogger | null = null;
 
   static init(): void {
     if (this.instance) return;
     if (process.env.A_SOCIETY_TELEMETRY_ENABLED === 'false') return;
 
     const resource = Resource.default().merge(new Resource({
-      [SemanticResourceAttributes.SERVICE_NAME]: 'a-society-runtime',
-      [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'a-society',
-      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.A_SOCIETY_ENVIRONMENT || 'production',
-      [SemanticResourceAttributes.SERVICE_VERSION]: packageJson.version,
+      [ATTR_SERVICE_NAME]: 'a-society-runtime',
+      [ATTR_SERVICE_NAMESPACE]: 'a-society',
+      ['deployment.environment']: process.env.A_SOCIETY_ENVIRONMENT || 'production',
+      [ATTR_SERVICE_VERSION]: packageJson.version,
       ['a_society.framework.version']: frameworkVersion,
     }));
 
@@ -60,6 +70,17 @@ export class TelemetryManager {
         }),
         exportIntervalMillis: Number(process.env.A_SOCIETY_OTLP_METRICS_INTERVAL) || 60000,
       });
+
+      this.loggerProvider = new LoggerProvider({ resource });
+      this.loggerProvider.addLogRecordProcessor(
+        new SimpleLogRecordProcessor(
+          new OTLPLogExporter({
+            url: endpoint.endsWith('/') ? `${endpoint}v1/logs` : `${endpoint}/v1/logs`,
+            headers,
+          })
+        )
+      );
+      logs.setGlobalLoggerProvider(this.loggerProvider);
     }
 
     this.instance = new NodeSDK({
@@ -87,9 +108,9 @@ export class TelemetryManager {
     await this.shutdown();
 
     const resource = Resource.default().merge(new Resource({
-      [SemanticResourceAttributes.SERVICE_NAME]: 'a-society-runtime-test',
-      [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'a-society',
-      [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: 'test',
+      [ATTR_SERVICE_NAME]: 'a-society-runtime-test',
+      [ATTR_SERVICE_NAMESPACE]: 'a-society',
+      ['deployment.environment']: 'test',
     }));
 
     const { BasicTracerProvider } = await import('@opentelemetry/sdk-trace-base');
@@ -147,8 +168,13 @@ export class TelemetryManager {
       await this.testMeterProvider.shutdown();
       this.testMeterProvider = null;
     }
+    if (this.loggerProvider) {
+      await this.loggerProvider.shutdown();
+      this.loggerProvider = null;
+    }
     this.tracer = null;
     this.meter = null;
+    this.logger = null;
   }
 
   static getTracer(): opentelemetry.Tracer {
@@ -163,6 +189,13 @@ export class TelemetryManager {
       this.meter = opentelemetry.metrics.getMeter('a-society-runtime');
     }
     return this.meter;
+  }
+
+  static getLogger(): OtelLogger {
+    if (!this.logger) {
+      this.logger = logs.getLogger('a-society-runtime');
+    }
+    return this.logger;
   }
 
   private static parseHeaders(headerStr?: string): Record<string, string> {

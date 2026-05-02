@@ -4,7 +4,7 @@ import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
 import { buildRoleContext } from '../context/registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
-import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { logger } from '../observability/logger.js';
 
 function writeAssistantOutputIfNeeded(
   text: string,
@@ -55,82 +55,128 @@ async function executeSessionTurn(
   history: RuntimeMessageParam[],
   projectNamespace: string,
   roleName: string,
+  sessionId: string,
   turnIndex: number,
   outputStream: NodeJS.WritableStream,
   externalSignal: AbortSignal | undefined,
   operatorRenderer: OperatorRenderSink | undefined,
   consentGate: ConsentGate | undefined
 ): Promise<SessionTurnResult> {
-  const tracer = TelemetryManager.getTracer();
   const meter = TelemetryManager.getMeter();
+  const startTime = Date.now();
 
-  return tracer.startActiveSpan('session.turn', {
-    kind: SpanKind.INTERNAL,
-    attributes: { 'turn.index': turnIndex, 'project_namespace': projectNamespace, 'role_name': roleName }
-  }, async (turnSpan): Promise<SessionTurnResult> => {
-    const startTime = Date.now();
-    meter.createCounter('a_society.session.turn.started').add(1, {
-      project_namespace: projectNamespace,
-      role_name: roleName
-    });
-    try {
+  meter.createCounter('a_society.session.turn.started').add(1, {
+    project_namespace: projectNamespace,
+    role_name: roleName
+  });
+
+  logger.info('session.turn.started', {
+    project_namespace: projectNamespace,
+    role_name: roleName,
+    session_id: sessionId,
+    turn_index: turnIndex,
+  });
+
+  try {
+    if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
       const latestUserMessage = history[history.length - 1];
-      if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true' && latestUserMessage?.role === 'user') {
-        turnSpan.addEvent('session.user_turn', { content: latestUserMessage.content });
-      }
-
-      const result = await llm.executeTurn(systemPrompt, history, {
-        signal: externalSignal,
-        outputStream,
-        operatorRenderer,
-        consentGate,
-        role: roleName,
-      });
-      if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-        turnSpan.addEvent('session.assistant_turn', { content: result.text });
-      }
-      writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
-      ensureAssistantOutputEndsWithNewline(result.text, outputStream);
-
-      if (result.intermediateMessages) history.push(...result.intermediateMessages);
-      history.push({ role: 'assistant', content: result.text });
-
-      const parseResult = HandoffInterpreter.parse(result.text);
-      turnSpan.setAttribute('session.turn.outcome', 'handoff');
-      turnSpan.addEvent('session.turn.handoff_detected', { handoff_kind: parseResult.kind });
-      return { handoff: parseResult, usage: result.usage };
-    } catch (error: any) {
-      if (error instanceof HandoffParseError) {
-        meter.createCounter('a_society.handoff.parse_failure').add(1, {
+      if (latestUserMessage?.role === 'user') {
+        logger.debug('session.user_turn', {
           project_namespace: projectNamespace,
-          role_name: roleName
+          role_name: roleName,
+          session_id: sessionId,
+          content: latestUserMessage.content.slice(0, 2000),
         });
-        turnSpan.addEvent('session.turn.parse_failed', { error_message: error.message.slice(0, 500) });
-        turnSpan.setAttribute('session.turn.outcome', 'repair_requested');
-        turnSpan.recordException(error);
-        turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-        throw error;
       }
-      if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
-        turnSpan.setAttribute('session.turn.outcome', 'aborted');
-        turnSpan.addEvent('session.turn.aborted', { partial_text_available: !!error.partialText });
-        if (error.partialText) {
-          history.push({ role: 'assistant', content: error.partialText });
-        }
-        return { abort: true as const };
-      }
-      turnSpan.recordException(error);
-      turnSpan.setStatus({ code: SpanStatusCode.ERROR });
-      return { error: true as const };
-    } finally {
-      const duration = Date.now() - startTime;
-      meter.createHistogram('a_society.session.turn.duration').record(duration, {
+    }
+
+    const result = await llm.executeTurn(systemPrompt, history, {
+      signal: externalSignal,
+      outputStream,
+      operatorRenderer,
+      consentGate,
+      role: roleName,
+    });
+
+    if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
+      logger.debug('session.assistant_turn', {
+        project_namespace: projectNamespace,
+        role_name: roleName,
+        session_id: sessionId,
+        content: result.text.slice(0, 2000),
+      });
+    }
+
+    writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
+    ensureAssistantOutputEndsWithNewline(result.text, outputStream);
+
+    if (result.intermediateMessages) history.push(...result.intermediateMessages);
+    history.push({ role: 'assistant', content: result.text });
+
+    const parseResult = HandoffInterpreter.parse(result.text);
+
+    logger.info('session.turn.completed', {
+      project_namespace: projectNamespace,
+      role_name: roleName,
+      session_id: sessionId,
+      turn_index: turnIndex,
+      outcome: 'handoff',
+      handoff_kind: parseResult.kind,
+      duration_ms: Date.now() - startTime,
+    });
+
+    return { handoff: parseResult, usage: result.usage };
+
+  } catch (error: any) {
+    const duration = Date.now() - startTime;
+
+    if (error instanceof HandoffParseError) {
+      meter.createCounter('a_society.handoff.parse_failure').add(1, {
         project_namespace: projectNamespace,
         role_name: roleName
       });
-      turnSpan.end();
+      logger.warn('session.turn.parse_failed', {
+        project_namespace: projectNamespace,
+        role_name: roleName,
+        session_id: sessionId,
+        turn_index: turnIndex,
+        error_message: error.message.slice(0, 500),
+        duration_ms: duration,
+      });
+      throw error;
     }
-  });
+
+    if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
+      logger.info('session.turn.aborted', {
+        project_namespace: projectNamespace,
+        role_name: roleName,
+        session_id: sessionId,
+        turn_index: turnIndex,
+        partial_text_available: !!error.partialText,
+        duration_ms: duration,
+      });
+      if (error.partialText) {
+        history.push({ role: 'assistant', content: error.partialText });
+      }
+      return { abort: true as const };
+    }
+
+    logger.error('session.turn.error', {
+      project_namespace: projectNamespace,
+      role_name: roleName,
+      session_id: sessionId,
+      turn_index: turnIndex,
+      error_message: error instanceof Error ? error.message.slice(0, 500) : String(error),
+      duration_ms: duration,
+    });
+    return { error: true as const };
+
+  } finally {
+    meter.createHistogram('a_society.session.turn.duration').record(Date.now() - startTime, {
+      project_namespace: projectNamespace,
+      role_name: roleName
+    });
+  }
 }
 
 export async function runRoleTurn(
@@ -145,7 +191,6 @@ export async function runRoleTurn(
   consentGate?: ConsentGate
 ): Promise<RoleTurnResult | null> {
 
-  const tracer = TelemetryManager.getTracer();
   let turnIndex = 0;
 
   if (providedSystemPrompt === undefined) {
@@ -159,67 +204,52 @@ export async function runRoleTurn(
   }
 
   const sessionId = crypto.randomUUID();
+  const systemPrompt = providedSystemPrompt ?? '';
+  const llm = new LLMGateway(workspaceRoot);
+  const history: RuntimeMessageParam[] = providedHistory ?? [];
 
-  return tracer.startActiveSpan('session.interaction', {
-    kind: SpanKind.INTERNAL,
-    attributes: {
-      'session.id': sessionId,
-      'project_namespace': projectNamespace,
-      'role_name': roleName
-    }
-  }, async (interactionSpan) => {
+  if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
+    logger.debug('session.system_prompt', {
+      project_namespace: projectNamespace,
+      role_name: roleName,
+      session_id: sessionId,
+      content: systemPrompt.slice(0, 2000),
+    });
+  }
 
-    const systemPrompt = providedSystemPrompt ?? '';
-    if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
-      interactionSpan.addEvent('session.system_prompt', { content: systemPrompt.slice(0, 2000) });
-    }
+  if (history[history.length - 1]?.role !== 'user') {
+    logger.warn('session.invalid_history', {
+      project_namespace: projectNamespace,
+      role_name: roleName,
+      session_id: sessionId,
+    });
+    return null;
+  }
 
-    const llm = new LLMGateway(workspaceRoot);
-    const history: RuntimeMessageParam[] = providedHistory ?? [];
+  const turnResult = await executeSessionTurn(
+    llm,
+    systemPrompt,
+    history,
+    projectNamespace,
+    roleName,
+    sessionId,
+    turnIndex++,
+    outputStream,
+    externalSignal,
+    operatorRenderer,
+    consentGate
+  );
 
-    try {
-      if (history[history.length - 1]?.role !== 'user') {
-        interactionSpan.setAttribute('session.interaction.outcome', 'invalid_history');
-        return null;
-      }
+  if (turnResult.abort || turnResult.error) {
+    return null;
+  }
 
-      const turnResult = await executeSessionTurn(
-        llm,
-        systemPrompt,
-        history,
-        projectNamespace,
-        roleName,
-        turnIndex++,
-        outputStream,
-        externalSignal,
-        operatorRenderer,
-        consentGate
-      );
+  if (turnResult.handoff) {
+    return {
+      handoff: turnResult.handoff,
+      usage: turnResult.usage
+    };
+  }
 
-      if (turnResult.abort || turnResult.error) {
-        interactionSpan.setAttribute('session.interaction.outcome', turnResult.abort ? 'aborted' : 'error');
-        return null;
-      }
-
-      if (turnResult.handoff) {
-        const outcome = turnResult.handoff.kind === 'awaiting_human' ? 'awaiting_human' : 'handoff';
-        interactionSpan.setAttribute('session.interaction.outcome', outcome);
-        return {
-          handoff: turnResult.handoff,
-          usage: turnResult.usage
-        };
-      }
-
-      interactionSpan.setAttribute('session.interaction.outcome', 'null_return');
-      return null;
-
-    } catch (e: any) {
-      interactionSpan.recordException(e);
-      interactionSpan.setStatus({ code: SpanStatusCode.ERROR });
-      throw e;
-    } finally {
-      interactionSpan.setAttribute('session.interaction.turn_count', turnIndex);
-      interactionSpan.end();
-    }
-  });
+  return null;
 }

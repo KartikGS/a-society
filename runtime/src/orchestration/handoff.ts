@@ -1,7 +1,5 @@
 import yaml from 'js-yaml';
 import type { HandoffResult } from '../common/types.js';
-import { TelemetryManager } from '../observability/observability.js';
-import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 
 export type HandoffRepairCode =
   | 'missing_block'
@@ -76,33 +74,27 @@ export class HandoffInterpreter {
    * Supports target forms (single/array) and typed signal forms.
    */
   static parse(text: string): HandoffResult {
-    const tracer = TelemetryManager.getTracer();
-    return tracer.startActiveSpan('handoff.parse', {
-      kind: SpanKind.INTERNAL,
-      attributes: { 'handoff.text_length': text.length }
-    }, (span) => {
+    const handoffTagRegex = /```handoff\s*[\n\r]+([\s\S]*?)```/i;
+    const match = text.match(handoffTagRegex);
+    let payload: any;
+
+    if (match) {
       try {
-        const handoffTagRegex = /```handoff\s*[\n\r]+([\s\S]*?)```/i;
-        const match = text.match(handoffTagRegex);
-        let payload: any;
+        payload = yaml.load(match[1]);
+      } catch (_err) {
+        throw yamlParseError();
+      }
+    } else {
+      throw missingBlock();
+    }
 
-        if (match) {
-          try {
-            payload = yaml.load(match[1]);
-          } catch (_err) {
-            throw yamlParseError();
-          }
-        } else {
-          throw missingBlock();
-        }
+    if (!payload && payload !== 0) {
+      throw missingBlock();
+    }
 
-        if (!payload && payload !== 0) {
-          throw missingBlock();
-        }
+    let result: HandoffResult;
 
-        let result: HandoffResult;
-
-        if (Array.isArray(payload)) {
+    if (Array.isArray(payload)) {
           if (payload.length === 0) {
             throw invalidTargetShape('Handoff block must contain at least one target.');
           }
@@ -170,17 +162,6 @@ export class HandoffInterpreter {
           throw missingBlock();
         }
 
-        span.setAttribute('handoff.parse.success', true);
-        span.setAttribute('handoff.result_kind', result.kind);
-        return result;
-      } catch (e: any) {
-        span.setAttribute('handoff.parse.success', false);
-        span.recordException(e);
-        span.setStatus({ code: SpanStatusCode.ERROR });
-        throw e;
-      } finally {
-        span.end();
-      }
-    });
+    return result;
   }
 }
