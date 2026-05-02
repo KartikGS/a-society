@@ -107,6 +107,7 @@ export interface RoleSession {
   isActive: boolean;
   currentNodeId?: string;
   systemPrompt?: string;
+  latestInputTokens?: number;
 }
 
 

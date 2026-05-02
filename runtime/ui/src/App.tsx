@@ -471,6 +471,7 @@ export function App() {
             awaitingInput: Object.keys(message.flowRun.awaitingHumanNodes).length > 0,
             stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
             hasActiveSession: message.hasActiveSession,
+            latestInputTokensByRole: { ...message.inputTokensByRole, ...state.latestInputTokensByRole },
           };
         });
         void fetchProjectFlows(message.flowRef.projectNamespace);

@@ -43,6 +43,7 @@ type FlowStateMessage = {
   flowRun: FlowRun;
   backwardActive: string[];
   hasActiveSession: boolean;
+  inputTokensByRole: Record<string, number>;
 };
 
 type HistoricalMessage = OperatorFeedMessage;
@@ -71,6 +72,7 @@ interface ActiveSession {
   finished: boolean;
   task: Promise<void>;
   consentGate: ConsentGateImpl;
+  latestInputTokensByRole: Record<string, number>;
 }
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -254,7 +256,7 @@ function buildServer(workspaceRoot: string) {
     }
     if (message.type === 'operator_event') {
       const event = message.event;
-      if (event.kind === 'human.awaiting_input' || event.kind === 'human.resumed') {
+      if (event.kind === 'human.awaiting_input' || event.kind === 'human.resumed' || event.kind === 'usage.turn_summary') {
         return null;
       }
       if ('role' in event && typeof event.role === 'string') {
@@ -306,12 +308,23 @@ function buildServer(workspaceRoot: string) {
     const backwardActive = session
       ? Array.from(session.backwardActive).filter((nodeId) => getOpenNodeIds(flowRun).includes(nodeId))
       : [];
+    const inputTokensByRole: Record<string, number> = session
+      ? { ...session.latestInputTokensByRole }
+      : Object.fromEntries(
+          SessionStore.listRoleKeys(ref, workspaceRoot)
+            .map((roleKey) => {
+              const s = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+              return s?.latestInputTokens != null ? [roleKey, s.latestInputTokens] as const : null;
+            })
+            .filter((e): e is [string, number] => e !== null)
+        );
     return {
       type: 'flow_state',
       flowRef: ref,
       flowRun,
       backwardActive,
       hasActiveSession: session !== null && !session.finished,
+      inputTokensByRole,
     };
   }
 
@@ -372,6 +385,20 @@ function buildServer(workspaceRoot: string) {
           return;
         }
 
+        if (message.event.kind === 'usage.turn_summary') {
+          const { role, availability, inputTokens } = message.event;
+          if (role && (availability === 'full' || availability === 'output-unavailable') && inputTokens != null) {
+            const roleKey = parseRoleIdentity(role).instanceRoleId;
+            session.latestInputTokensByRole[roleKey] = inputTokens;
+            const stored = SessionStore.loadRoleSession(roleKey, session.flowRef, workspaceRoot);
+            if (stored) {
+              SessionStore.saveRoleSession({ ...stored, latestInputTokens: inputTokens }, session.flowRef, workspaceRoot);
+            }
+          }
+          emitTransientMessage(session, message);
+          return;
+        }
+
         if (message.event.kind === 'human.awaiting_input') {
           session.awaitingHumanInput = true;
         }
@@ -424,6 +451,16 @@ function buildServer(workspaceRoot: string) {
     const initialConsentState = readFlowRun(flowRef)?.consentState ?? defaultConsentState();
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
+    const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot);
+    const latestInputTokensByRole = Object.fromEntries(
+      Array.from(roleFeedHistory.keys())
+        .map((roleKey) => {
+          const s = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
+          return s?.latestInputTokens != null ? [roleKey, s.latestInputTokens] as const : null;
+        })
+        .filter((e): e is [string, number] => e !== null)
+    );
+
     session = {
       flowRef,
       projectNamespace: flowRef.projectNamespace,
@@ -432,12 +469,13 @@ function buildServer(workspaceRoot: string) {
       sink,
       orchestrator,
       consentGate,
-      roleFeedHistory: SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot),
+      roleFeedHistory,
       lastFlowState: null,
       backwardActive: new Set<string>(),
       awaitingHumanInput: false,
       finished: false,
-      task: Promise.resolve()
+      task: Promise.resolve(),
+      latestInputTokensByRole,
     };
 
     activeSessions.set(flowKey(flowRef), session);
@@ -897,10 +935,8 @@ function buildServer(workspaceRoot: string) {
         flow.consentState.shellNetwork = 'granted';
       }
     }, ref, workspaceRoot).then(() => {
-      const flowRun = readFlowRun(ref);
-      if (flowRun) {
-        broadcastToFlow(ref, { type: 'flow_state', flowRef: ref, flowRun, backwardActive: [], hasActiveSession: activeSessions.has(flowKey(ref)) && !activeSessions.get(flowKey(ref))!.finished });
-      }
+      const msg = buildFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
+      if (msg) broadcastToFlow(ref, msg);
     });
   }
 

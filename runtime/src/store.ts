@@ -270,6 +270,17 @@ export class SessionStore {
     fs.writeFileSync(getRoleFeedPath(workspaceRoot, ref, roleKey), JSON.stringify(messages, null, 2));
   }
 
+  static listRoleKeys(
+    ref: FlowRef,
+    workspaceRoot = SessionStore.defaultWorkspaceRoot,
+  ): string[] {
+    const rolesDir = path.join(getFlowDir(workspaceRoot, ref), 'roles');
+    if (!fs.existsSync(rolesDir)) return [];
+    return fs.readdirSync(rolesDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name);
+  }
+
   static loadAllRoleFeeds(
     ref: FlowRef,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
