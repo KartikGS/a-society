@@ -26,6 +26,8 @@ export interface ForwardNodeEntryOptions {
     transitions?: string[];
     notes?: string[];
   };
+  forwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
+  backwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
 }
 
 /**
@@ -45,7 +47,9 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     previousNodeId,
     humanInput,
     includeWorkflowContract,
-    nodeContext
+    nodeContext,
+    forwardHandoffTargets,
+    backwardHandoffTargets
   } = opts;
   const lines: string[] = [];
 
@@ -137,6 +141,21 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
         lines.push('');
       }
     }
+  }
+
+  const hasForward = forwardHandoffTargets && forwardHandoffTargets.length > 0;
+  const hasBackward = backwardHandoffTargets && backwardHandoffTargets.length > 0;
+  if (hasForward || hasBackward) {
+    lines.push('Handoff routing (first entry to this node only):');
+    if (hasForward) {
+      const forwardList = forwardHandoffTargets!.map(t => `${t.nodeId} (${t.role})`).join(', ');
+      lines.push(`You must hand off to: ${forwardList}`);
+    }
+    if (hasBackward) {
+      const backwardList = backwardHandoffTargets!.map(t => `${t.nodeId} (${t.role})`).join(', ');
+      lines.push(`If you encounter an issue, you can hand off back to: ${backwardList}`);
+    }
+    lines.push('');
   }
 
   lines.push('Proceed from these current node inputs.');

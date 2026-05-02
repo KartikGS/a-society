@@ -285,6 +285,23 @@ export class FlowOrchestrator {
         ) ? rawNodeContext : undefined;
         const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
 
+        const forwardHandoffTargets = firstNodeVisit
+          ? this.getOutgoingEdges(wf, nodeId)
+              .map((edge: any) => {
+                const node = this.findNodeByIdOrNull(wf, edge.to);
+                return node ? { nodeId: node.id as string, role: node.role as string } : null;
+              })
+              .filter((t): t is { nodeId: string; role: string } => t !== null)
+          : undefined;
+        const backwardHandoffTargets = firstNodeVisit
+          ? this.getIncomingEdges(wf, nodeId)
+              .map((edge: any) => {
+                const node = this.findNodeByIdOrNull(wf, edge.from);
+                return node ? { nodeId: node.id as string, role: node.role as string } : null;
+              })
+              .filter((t): t is { nodeId: string; role: string } => t !== null)
+          : undefined;
+
         if (injectedHistory.length === 0) {
           const nodeEntryMessage = buildForwardNodeEntryMessage({
             nodeId,
@@ -295,7 +312,9 @@ export class FlowOrchestrator {
             activeArtifacts: resolvedArtifacts,
             humanInput,
             includeWorkflowContract,
-            nodeContext
+            nodeContext,
+            forwardHandoffTargets,
+            backwardHandoffTargets
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });
         } else if (!sameNodeResume) {
@@ -310,7 +329,9 @@ export class FlowOrchestrator {
             previousNodeId: session.currentNodeId,
             humanInput,
             includeWorkflowContract,
-            nodeContext
+            nodeContext,
+            forwardHandoffTargets,
+            backwardHandoffTargets
           });
           injectedHistory.push({ role: 'user', content: nodeEntryMessage });
         } else if (humanInput) {
