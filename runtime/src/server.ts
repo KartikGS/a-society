@@ -54,7 +54,8 @@ type ServerMessage =
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
   | { type: 'feed_reset'; flowRef: FlowRef }
   | FlowStateMessage
-  | FlowScopedHistoricalMessage;
+  | FlowScopedHistoricalMessage
+  | (RuntimeServerMessage & { flowRef: FlowRef });
 
 interface ActiveSession {
   flowRef: FlowRef;
@@ -245,7 +246,7 @@ function buildServer(workspaceRoot: string) {
   }
 
   function getRoleFeedKey(message: HistoricalMessage): string | null {
-    if (message.type === 'output_text' || message.type === 'wait_start' || message.type === 'wait_stop') {
+    if (message.type === 'output_text') {
       return parseRoleIdentity(message.role).instanceRoleId;
     }
     if (message.type === 'input_text') {
@@ -253,6 +254,9 @@ function buildServer(workspaceRoot: string) {
     }
     if (message.type === 'operator_event') {
       const event = message.event;
+      if (event.kind === 'human.awaiting_input' || event.kind === 'human.resumed') {
+        return null;
+      }
       if ('role' in event && typeof event.role === 'string') {
         return parseRoleIdentity(event.role).instanceRoleId;
       }
@@ -293,7 +297,7 @@ function buildServer(workspaceRoot: string) {
   }
 
   function emitTransientMessage(session: ActiveSession, message: RuntimeServerMessage): void {
-    broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as FlowScopedHistoricalMessage);
+    broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as ServerMessage);
   }
 
   function buildFlowStateMessage(session: ActiveSession | null, ref: FlowRef): FlowStateMessage | null {
@@ -348,10 +352,10 @@ function buildServer(workspaceRoot: string) {
   function handleRuntimeMessage(session: ActiveSession, message: RuntimeServerMessage): void {
     switch (message.type) {
       case 'wait_start':
-        emitHistoricalMessage(session, message);
+        emitTransientMessage(session, message);
         return;
       case 'wait_stop':
-        emitHistoricalMessage(session, message);
+        emitTransientMessage(session, message);
         return;
       case 'operator_event':
         if (message.event.kind === 'consent.requested') {

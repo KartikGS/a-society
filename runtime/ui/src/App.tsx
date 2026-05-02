@@ -981,7 +981,7 @@ export function App() {
                   inputValue={activeUi?.composerValue ?? ''}
                   inputDisabled={inputDisabled}
                   placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
-                  showComposer={isViewedRoleActive}
+                  showComposer={true}
                   canStop={canStopViewedRole}
                   stopRequested={activeUi?.stopRequested ?? false}
                   roles={roles}

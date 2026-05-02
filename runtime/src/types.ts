@@ -168,8 +168,6 @@ export interface OperatorRenderSink {
 
 export type OperatorFeedMessage =
   | { type: 'operator_event'; event: OperatorEvent }
-  | { type: 'wait_start'; role: string; provider: string; model: string }
-  | { type: 'wait_stop'; role: string }
   | { type: 'output_text'; role: string; text: string }
   | { type: 'input_text'; role?: string; text: string }
   | { type: 'error'; message: string }

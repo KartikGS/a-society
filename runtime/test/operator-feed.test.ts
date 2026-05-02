@@ -79,8 +79,7 @@ test('loadAllRoleFeeds returns all role feeds keyed by role', () => {
 test('saveRoleFeed and loadRoleFeed round-trip correctly', () => {
   const messages: OperatorFeedMessage[] = [
     { type: 'output_text', role: 'Curator_1', text: 'hello' },
-    { type: 'wait_start', role: 'Curator_1', provider: 'anthropic', model: 'claude-3' },
-    { type: 'wait_stop', role: 'Curator_1' },
+    { type: 'input_text', role: 'Curator_1', text: 'user reply' },
   ];
   SessionStore.saveRoleFeed(messages, ref, 'curator_1', tmpDir);
   assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'curator_1', tmpDir), messages);
