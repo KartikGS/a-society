@@ -67,39 +67,77 @@ When you are unsure whether something belongs in `general/` vs another project's
 
 ### `general/`
 
-**Purpose:** Everything A-Society distributes to other projects. `general/` is the shareable, reusable layer — the content that any project can take and apply directly, without modification. It is what A-Society *gives*; `a-docs/` is what A-Society *is*.
+**Purpose:** Everything A-Society distributes to other projects. `general/` is the shareable, reusable layer — the content that any project can take and apply directly, without modification within its tier. It is what A-Society *gives*; `a-docs/` is what A-Society *is*.
 
 When someone adopts this framework, they are using `general/`. When A-Society agents work on the framework itself, they are working in `a-docs/`.
 
+**Two-tier model:** `general/` is partitioned into a universal layer and a category layer (see `### general/project-types/` below). The universal layer is the default; the category layer is opt-in for adopting projects whose project type matches.
+
+- **Universal layer** — the `general/` root and all non-`project-types/` sub-folders (e.g., `general/instructions/`, `general/roles/`, `general/improvement/`, `general/thinking/`). Content here must apply without modification to *any* project type — software, writing, legal, research, or any other domain.
+- **Category layer** — `general/project-types/<type>/`. Content here must apply without modification to any project of that category, but is not required to apply universally.
+
+**What belongs at the universal layer:**
+- Instruction documents that describe artifacts every project produces (vision, structure, agents.md, indexes, workflow definitions, records)
+- Role templates that every project instantiates regardless of domain (Owner, Curator)
+- Standards, patterns, and thinking frameworks every project can use verbatim
+
+**What belongs at the category layer:**
+- Role templates that only make sense for a category of projects (e.g., a Technical Architect template under `general/project-types/executable/roles/technical-architect/`)
+- Instruction documents whose subject matter is reusable across a category but not universal
+- Other patterns that proved reusable within a category through feedback signal
+
+**What does not belong in `general/` at any tier:**
+- A-Society's own operational content — roles A-Society runs itself, its project identity documents (those belong in `a-docs/`)
+- Project-specific content from LLM Journey or any other adopting project
+- Patterns that have only been observed in one project — those stay in that project's own `a-docs/` until a second project independently produces the same pattern
+
+**The placement test:**
+1. Could this be rewritten without modification for a writing project, a legal project, *and* a software project equally? → **Universal layer.**
+2. Is there a recognizable category of projects (more than one project of that type) for which this applies without modification, but it does not apply universally? → **Category layer**, under the matching `general/project-types/<type>/`. If the category does not yet exist, propose it for Owner approval before adding content.
+3. Does this only apply to one specific project? → **That project's own `a-docs/`.**
+
+---
+
+### `general/project-types/`
+
+**Purpose:** The category layer of `general/`. Each sub-folder names a project category and holds templates and instructions reusable across projects of that type.
+
+**Structure:** Each `general/project-types/<type>/` folder mirrors the structural shape of the universal layer where the category needs that shape. For example, a category that requires its own roles uses `general/project-types/<type>/roles/`. Categories add only the substructure they actually use.
+
 **What belongs here:**
-- Instruction documents (how to create specific project artifacts)
-- Role templates for projects to adopt as their own
-- Standards, patterns, and thinking frameworks any project can use verbatim
+- Categories that have been explicitly approved by the Owner
+- Templates and instructions that apply across the named category but not universally
 
 **What does not belong here:**
-- A-Society's own operational content — roles A-Society runs itself, its project identity documents (those belong in `a-docs/`)
-- Anything that assumes a specific technology, domain, or team structure
-- Project-specific content from LLM Journey or any other adopting project
+- A category that has only one example project — collect more evidence first
+- Content that would belong at the universal layer if rewritten with category-specific assumptions removed
+- Content specific to one project within the category
 
-**Principle:** If it would need to be rewritten for a different kind of project, it does not belong here. If it can be handed to any project owner and applied immediately, it does.
+**Adding a new category is a scope decision and requires explicit Owner approval.** Each new category commits A-Society to maintaining that partition long-term. Categories are added when feedback signal demonstrates a recurring pattern across multiple projects of that type that does not generalize to projects outside the type.
+
+**Current categories:**
+- `general/project-types/executable/` — projects with an executable layer (programmatic services, runtime orchestration, code-execution surfaces). Hosts the Technical Architect role template and other patterns specific to building executable systems.
+
+**Principle:** A project category exists in `general/project-types/` because the framework has decided to maintain reusable content for that category. Categories are scoped, named, approved, and load-bearing — not informal groupings.
 
 ---
 
 ### `general/roles/`
 
-**Purpose:** Role templates that any adopting project can use as-is or adapt. These are not A-Society's own roles — they are starting points for other projects to build their own.
+**Purpose:** Role templates applicable to *every* project regardless of type. Universal-layer role templates live here; category-shaped role templates live under `general/project-types/<type>/roles/`.
 
 **What belongs here:**
-- Ready-made role templates applicable to any project type (Owner, Curator, and similar archetypes)
+- Ready-made role templates that every project instantiates regardless of domain (Owner, Curator)
 - Templates that a project would copy and customize for their own `a-docs/roles/`
 
 **What does not belong here:**
+- Roles that only make sense for a category of projects (e.g., a Technical Architect, which presupposes an executable layer) — those belong under `general/project-types/<type>/roles/`
 - Roles that belong to A-Society itself — those live in `a-society/a-docs/roles/`
-- Roles that are specific to one project or domain
+- Roles that are specific to one project
 
-**The key test:** Would an adopting project instantiate this role inside their own `a-docs/`? If yes — `general/roles/` is correct. If the role is a service A-Society provides to other projects (not something they own themselves) — it belongs in `a-society/a-docs/roles/`.
+**The key test:** Would an adopting project of *any* type instantiate this role inside their own `a-docs/`? If yes — `general/roles/` is correct. If only projects of a specific category would instantiate it — it belongs under `general/project-types/<type>/roles/`. If the role is a service A-Society provides to other projects — it belongs in `a-society/a-docs/roles/`.
 
-**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator. Runtime-owned initialization guidance belongs in `runtime/INITIALIZATION.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
+**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator regardless of domain. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/INITIALIZATION.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
 
 ---
 

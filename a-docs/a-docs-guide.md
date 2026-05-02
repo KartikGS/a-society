@@ -652,10 +652,28 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ### `general/roles/` — folder
 
-**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers. A project adopting the framework takes a template, fills in the marked sections, and has a working role — without starting from a blank page.
+**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates are those that every project instantiates regardless of project type (Owner, Curator). Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
 
-**What it owns:** Starting-point role documents that encode the correct structure and most of the content for common archetypes.
+**What it owns:** Starting-point role documents for archetypes that apply across every project type — currently Owner and Curator.
 
-**What breaks without it:** Each project re-invents role documents from scratch. The instruction for roles exists, but the gap between instruction and a working role document is larger without a template.
+**What breaks without it:** Each project re-invents universal role documents from scratch. The instruction for roles exists, but the gap between instruction and a working role document is larger without a template.
 
 **Do not consolidate `general/roles/` with `general/instructions/roles/`:** Instructions describe *how* to create a role document. Templates *are* role documents, ready to use. They serve different purposes and must remain separate.
+
+**Do not place category-shaped role templates here:** A role that only makes sense for projects of a particular type — for example, a Technical Architect, which presupposes an executable layer to design — belongs under `general/project-types/<type>/roles/`. Placing such a template at the universal layer breaks the Portability Constraint in `$A_SOCIETY_ARCHITECTURE`.
+
+---
+
+### `general/project-types/` — folder
+
+**Why it exists:** The category layer of `general/`. Each `general/project-types/<type>/` sub-folder names an Owner-approved project category and holds templates and instructions reusable across projects of that type but not universally. Without this layer, category-shaped patterns either pollute the universal layer (violating portability) or get re-invented in every adopting project's `a-docs/`.
+
+**What it owns:** Owner-approved project categories and their reusable templates and instructions. Each category folder mirrors the structural shape of the universal layer where the category requires that shape (e.g., `general/project-types/<type>/roles/` for category-shaped role templates).
+
+**What breaks without it:** Category-shaped patterns lack a sanctioned home. The Portability Constraint forces them either into the universal layer (where they do not belong) or out of `general/` entirely (where adopting projects of that type cannot reuse them).
+
+**Adding a new category requires explicit Owner approval.** Each new category commits A-Society to long-term maintenance of a partition in the library and must be justified by patterns reusable across the named category, not by patterns from a single project.
+
+**Do not consolidate with `general/roles/` or other universal-layer folders:** Universal-layer content applies to every project type without modification; category-layer content applies only across the named category. Mixing them collapses the Portability Constraint.
+
+**Current categories:** `general/project-types/executable/` — projects with an executable layer (programmatic services, runtime orchestration, code-execution surfaces). Hosts the Technical Architect role template (`$GENERAL_TA_ROLE`, `$GENERAL_TA_ADVISORY_STANDARDS`) and is the home for future executable-layer-only patterns.

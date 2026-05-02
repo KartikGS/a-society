@@ -68,15 +68,24 @@ Public runtime initialization surfaces operate outside A-Society's internal docu
 
 Violation: A runtime initialization surface loading `a-docs/agents.md` or `a-docs/project-information/vision.md` as part of its standing context loading.
 
-### Portability Hard Constraint
+### Portability Constraint (Two-Tier Model)
 
-Anything placed in `general/` must apply without modification to any project type — software, writing, legal, research, or any other domain. This is not a preference; it is a load-bearing constraint. `general/` is the shared library for all adopters.
+`general/` is a two-tier library:
 
-- No content in `general/` may assume a specific technology, domain, team structure, or workflow
-- The test: "Would this need to be rewritten for a non-technical project?" If yes, it does not belong in `general/`
-- Project-specific patterns belong in that project's own `a-docs/`, not in `general/`
+- **Universal layer** — the default. Content placed at the `general/` root or in any non-`project-types/` sub-folder must apply without modification to any project type — software, writing, legal, research, or any other domain.
+- **Category layer** — `general/project-types/<type>/`. Content placed here must apply without modification to any project of that category, but is not required to apply universally across all categories.
 
-Violation: Adding an instruction to `general/` that references specific programming languages, software tools, or technical concepts as baseline assumptions.
+The universal-layer rule: no universal-layer content may assume a specific technology, domain, team structure, or workflow. The test: "Would this need to be rewritten for a non-technical project?" If yes, it does not belong at the universal layer — consider whether it belongs in a category folder, or in an adopting project's own `a-docs/`.
+
+The category-layer rule: content placed under `general/project-types/<type>/` must apply without modification to any project of that category. The test: "Would this need to be rewritten for a different project of this same type?" If yes, the placement is wrong — either the category needs subdivision, or the content is project-specific and belongs in that project's own `a-docs/`.
+
+Project-specific patterns belong in that project's own `a-docs/`, not in `general/` at any tier.
+
+Adding a new `general/project-types/<type>/` category is a scope decision and requires explicit Owner approval. Each new category commits A-Society to long-term maintenance of a partition in the library and must be justified by patterns reusable across the named category, not by patterns from a single project.
+
+Violation: Adding content to the universal layer that references specific programming languages, software tools, or technical concepts as baseline assumptions.
+Violation: Adding content under `general/project-types/<type>/` that applies only to one project within that category rather than to the category as a whole.
+Violation: Creating a new `general/project-types/<type>/` category without explicit Owner approval.
 
 ### Information Ownership
 

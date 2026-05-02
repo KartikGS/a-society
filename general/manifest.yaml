@@ -174,13 +174,13 @@ files:
     description: "Technical Architect (advisory-producing) role — authority, boundaries, and workflow-linked support-doc routing for any role that scopes and specifies work for implementing roles"
     required: false
     scaffold: copy
-    source_path: general/roles/technical-architect/main.md
+    source_path: general/project-types/executable/roles/technical-architect/main.md
 
   - path: roles/technical-architect/advisory-standards.md
     description: "Technical Architect support doc — advisory standards surfaced by workflows that use an advisory-producing role"
     required: false
     scaffold: copy
-    source_path: general/roles/technical-architect/advisory-standards.md
+    source_path: general/project-types/executable/roles/technical-architect/advisory-standards.md
 
   # ── Workflow ──────────────────────────────────────────────────────────────────
 

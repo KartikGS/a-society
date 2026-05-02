@@ -26,9 +26,17 @@ The runtime assigns the final filename and asks the operator for consent before 
 
 ## Framework Improvements
 
-| Target | Problem | Recommended change |
-|---|---|---|
-| [general / runtime / workflow / docs] | [what hurt] | [what to change] |
+Classify each candidate by generality so A-Society's intake can route it correctly:
+
+- **Universal** — applies without modification to every project type
+- **Category-shaped (`<category>`)** — applies across a recognizable category of projects but not universally; name the category. If the named category does not exist under `a-society/general/project-types/`, the contribution implies a category-creation request that requires Owner approval before any category folder is created
+- **Project-specific** — only applies to your project; included for context, not for inclusion in `general/`
+
+A row whose Generality cell is missing or unclassified is malformed.
+
+| Target | Generality | Problem | Recommended change |
+|---|---|---|---|
+| [general / runtime / workflow / docs] | [universal / category-shaped (`<category>`) / project-specific] | [what hurt] | [what to change] |
 
 ## Share-Upstream Notes
 

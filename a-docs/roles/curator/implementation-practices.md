@@ -9,6 +9,8 @@
 
 When in doubt about classification, propose rather than implement.
 
+**Two-tier `general/` model.** Per the Portability Constraint in `$A_SOCIETY_ARCHITECTURE` and the placement tests in `$A_SOCIETY_STRUCTURE`, `general/` is partitioned into a universal layer (the `general/` root and its non-`project-types/` sub-folders) and a category layer (`general/project-types/<type>/`). The change-type rules above apply at both tiers. One additional gate applies at the category layer: **creating a new `general/project-types/<type>/` category folder is a scope decision and requires explicit Owner approval before any content is placed under it.** Adding content to an already-approved category follows the same change-type rules — clarifications and precision fixes within direct Curator authority, new scope additions within that category requiring an Owner proposal. Do not create a category folder as part of an implementation pass; route the category creation as a separate Owner-approval step before proposing the content placement.
+
 ---
 
 ## Standing Checks
@@ -22,6 +24,8 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 **Cross-item consistency within target files.** When implementing a multi-item brief, after completing each item's edits to a target file, scan that file for content made stale by earlier items in the same brief. If edits from one item render other content in the same file inconsistent, address that staleness in the same implementation pass — do not leave a target file in a known-inconsistent state at the end of any item's implementation.
 
 ## Implementation Practices
+
+**Proposal stage — two-tier placement classification.** When proposing any addition to `general/`, classify the placement as universal-layer or category-layer at proposal time using the placement tests in `$A_SOCIETY_STRUCTURE`. Universal-layer placement requires the content to apply without modification to every project type (the test: would it be rewritten without modification for a writing project, a legal project, and a software project equally?). Category-layer placement requires the content to apply without modification across a named category of projects but not universally (the test: would it be rewritten for a different project of the same type?). State the classification, the chosen placement, and (for category-layer placements) the named category. A proposal that defaults to universal-layer placement without applying the placement test is incomplete. Creating a new `general/project-types/<type>/` category folder is a scope decision distinct from adding content — it requires explicit Owner approval before any content is placed under that folder; route category creation as a separate approval step rather than bundling it with the content placement.
 
 **Proposal stage — behavioral property consistency.** Before submitting any proposal, verify that proposed output language does not contain contradictory behavioral properties (ordering, mutability, timing constraints). Structural placement checks are necessary but not sufficient — semantic consistency between properties must also be verified. A proposal that seeds contradictory terms will have those contradictions reproduced downstream.
 

@@ -52,7 +52,8 @@ If the answer to question 1 is no, no feedback mechanism is needed. Do not add f
 A-Society's folder structure is a deliberate expression of what the framework is. Adding a folder adds a category; adding a category implies a commitment to maintain it.
 
 - Do not create a folder until three or more artifacts warrant it — or until namespace parity requires it (see `$A_SOCIETY_STRUCTURE`)
-- Do not add to `general/` unless the artifact is genuinely domain-agnostic and reusable without modification across any project type
+- Do not add to the universal layer of `general/` unless the artifact applies without modification to any project type
+- Add to `general/project-types/<type>/` only when the artifact applies without modification across a recognizable category of projects, and Owner approval has been granted for that category
 - Do not add to `a-docs/` unless the artifact is documentation for agents working on A-Society itself
 
 **Consequence:** When in doubt about placement, apply the placement test from `$A_SOCIETY_STRUCTURE`: "Is this true only of A-Society, or would it be equally true of a legal project, a writing project, and a software project?"

@@ -22,6 +22,14 @@ This artifact is for upstream A-Society feedback, not for local project maintena
 - cross-project patterns or anti-patterns
 - framework-level documentation or workflow gaps
 
+Each candidate framework improvement in the artifact must be labeled with one of three generality buckets so A-Society's intake can route it correctly:
+
+- **Universal** — applies without modification to every project type. Eligible for the universal layer of `general/`.
+- **Category-shaped (`<category>`)** — applies across a recognizable category of projects (for example: projects with an executable layer) but not universally. Name the category. If the named category does not already exist under `a-society/general/project-types/`, the contribution implies a category-creation request that requires explicit A-Society Owner approval before a category folder is created.
+- **Project-specific** — only applies to your own project. Included for context, not for inclusion in `general/`.
+
+Use the placement tests in `$[PROJECT]_STRUCTURE` (or A-Society's equivalent) to apply the classification. When uncertain, prefer the strongest claim you can defend with confidence — over-claiming universality is harder to walk back than under-claiming it. The artifact is malformed if any framework-improvement candidate is missing its classification.
+
 This step runs only if the runtime/operator approves upstream feedback generation after meta-analysis. When approved, write the artifact at the exact runtime-assigned path under `a-society/feedback/`. The human reviews and optionally shares that file upstream later; do not assume automatic submission.
 
 **Step 4.** Close the backward pass.
