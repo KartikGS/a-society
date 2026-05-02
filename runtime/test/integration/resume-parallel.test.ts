@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
-import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -77,16 +77,8 @@ async function runTest() {
     stateVersion: '7'
   });
 
-  const operatorStream = new PassThrough();
-  const operatorChunks: string[] = [];
-  operatorStream.on('data', (chunk: Buffer) => {
-    const text = chunk.toString();
-    operatorChunks.push(text);
-    process.stderr.write(text);
-  });
-
-  const renderer = new OperatorEventRenderer(operatorStream as any);
-  const orchestrator = new FlowOrchestrator(renderer);
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
 
   const inputStream = new PassThrough();
   const outputStream = new PassThrough();
@@ -94,30 +86,27 @@ async function runTest() {
   try {
     await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, 'Owner', inputStream, outputStream);
 
-    const operatorOut = operatorChunks.join('');
-    console.log("\nOperator stream output:");
-    console.log(operatorOut);
+    const resumeIdx = sink.events.findIndex(e => e.kind === 'flow.resumed');
+    const parallelEvent = sink.events.find(e => e.kind === 'parallel.active_set');
+    const parallelIdx = sink.events.findIndex(e => e.kind === 'parallel.active_set');
 
-    const hasResumedNotice = operatorOut.includes('[runtime/flow] Resuming flow');
-    const hasParallelActiveSet = operatorOut.includes('[runtime/parallel] Active nodes:');
-    const hasNodeBranchA = operatorOut.includes('branch-a');
-    const hasNodeBranchB = operatorOut.includes('branch-b');
+    const hasResumedNotice = resumeIdx !== -1;
+    const hasParallelActiveSet = parallelEvent !== undefined;
+    const hasNodeBranchA = parallelEvent?.kind === 'parallel.active_set' && parallelEvent.activeNodes.some(n => n.nodeId === 'branch-a');
+    const hasNodeBranchB = parallelEvent?.kind === 'parallel.active_set' && parallelEvent.activeNodes.some(n => n.nodeId === 'branch-b');
 
     console.log("Validation:");
-    console.log(`- Operator stream has resume notice: ${hasResumedNotice ? "Yes" : "No"}`);
-    console.log(`- Operator stream has parallel.active_set: ${hasParallelActiveSet ? "Yes" : "No"}`);
+    console.log(`- Sink has flow.resumed event: ${hasResumedNotice ? "Yes" : "No"}`);
+    console.log(`- Sink has parallel.active_set event: ${hasParallelActiveSet ? "Yes" : "No"}`);
     console.log(`- parallel.active_set includes branch-a: ${hasNodeBranchA ? "Yes" : "No"}`);
     console.log(`- parallel.active_set includes branch-b: ${hasNodeBranchB ? "Yes" : "No"}`);
 
-    assert.ok(hasResumedNotice, "Expected operator stream to contain flow.resumed notice.");
-    assert.ok(hasParallelActiveSet, "Expected operator stream to contain parallel.active_set notice for resumed multi-node flow.");
+    assert.ok(hasResumedNotice, "Expected sink to contain flow.resumed event.");
+    assert.ok(hasParallelActiveSet, "Expected sink to contain parallel.active_set event.");
     assert.ok(hasNodeBranchA, "Expected parallel.active_set to include branch-a.");
     assert.ok(hasNodeBranchB, "Expected parallel.active_set to include branch-b.");
 
-    // Verify ordering: resume notice precedes parallel.active_set
-    const resumeIdx = operatorOut.indexOf('[runtime/flow] Resuming flow');
-    const parallelIdx = operatorOut.indexOf('[runtime/parallel] Active nodes:');
-    assert.ok(resumeIdx < parallelIdx, "Expected flow.resumed notice to precede parallel.active_set notice.");
+    assert.ok(resumeIdx < parallelIdx, "Expected flow.resumed event to precede parallel.active_set event.");
 
     console.log("Resume-parallel test PASSED.");
   } catch (e: any) {

@@ -17,6 +17,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { Readable, Writable, PassThrough } from 'node:stream';
 import { FlowOrchestrator, WorkflowError } from '../../src/orchestrator.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/store.js';
 import { ContextInjectionService } from '../../src/injection.js';
 import { buildForwardNodeEntryMessage } from '../../src/session-entry.js';
@@ -325,7 +326,7 @@ async function run() {
       { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' }
     ]));
 
-    const orchestrator = new FlowOrchestrator();
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     const input = new Readable({ read() {} });
     input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
@@ -380,7 +381,7 @@ async function run() {
       { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' }
     ]));
 
-    const orchestrator = new FlowOrchestrator();
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     const input = new Readable({ read() {} });
     input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
@@ -414,7 +415,7 @@ async function run() {
       { type: 'text', text: 'Owner two pauses. ```handoff\ntype: prompt-human\n```' }
     ]));
 
-    const orchestrator = new FlowOrchestrator();
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     const input = new Readable({ read() {} });
     input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
@@ -463,7 +464,7 @@ async function run() {
     });
     SessionStore.saveFlowRun(flowRun);
 
-    const orchestrator = new FlowOrchestrator();
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     const input = new PassThrough();
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 

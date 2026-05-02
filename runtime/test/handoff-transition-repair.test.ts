@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { FlowOrchestrator } from '../src/orchestrator.js';
 import { HandoffParseError } from '../src/handoff.js';
+import { RecordingOperatorSink } from './recording-operator-sink.js';
 import { SessionStore } from '../src/store.js';
 import type { FlowRun } from '../src/types.js';
 
@@ -68,7 +69,7 @@ await test('incomplete forward handoff is modeled as repairable handoff parse st
   const ref = { projectNamespace, flowId };
   SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
 
-  const orchestrator = new FlowOrchestrator();
+  const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
   await assert.rejects(
     () => orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'Owner', [
       {

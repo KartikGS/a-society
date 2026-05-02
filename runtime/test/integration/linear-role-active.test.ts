@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
-import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -98,16 +98,8 @@ async function runTest() {
     stateVersion: '7'
   });
 
-  const operatorStream = new PassThrough();
-  const operatorChunks: string[] = [];
-  operatorStream.on('data', (chunk: Buffer) => {
-    const text = chunk.toString();
-    operatorChunks.push(text);
-    process.stderr.write(text);
-  });
-
-  const renderer = new OperatorEventRenderer(operatorStream as any);
-  const orchestrator = new FlowOrchestrator(renderer);
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
 
   const inputStream = new PassThrough();
   const outputStream = new PassThrough();
@@ -153,21 +145,17 @@ async function runTest() {
     console.log("\n--- Advancing 'next' node ---");
     await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, undefined, inputStream, outputStream);
 
-    const operatorOut = operatorChunks.join('');
-    console.log("\nOperator stream output:");
-    console.log(operatorOut);
-
-    // Count how many times 'next' receives a role.active notice
-    const nextRoleActiveMatches = operatorOut.match(/\[runtime\/role\] Active: next/g) || [];
-    const nextRoleActiveCount = nextRoleActiveMatches.length;
+    const nextRoleActiveCount = sink.events.filter(
+      e => e.kind === 'role.active' && e.nodeId === 'next'
+    ).length;
 
     console.log("Validation:");
-    console.log(`- role.active notices for 'next': ${nextRoleActiveCount} (expected: 1)`);
+    console.log(`- role.active events for 'next': ${nextRoleActiveCount} (expected: 1)`);
 
     assert.strictEqual(
       nextRoleActiveCount,
       1,
-      `Expected exactly one role.active notice for successor node 'next', got ${nextRoleActiveCount}`
+      `Expected exactly one role.active event for successor node 'next', got ${nextRoleActiveCount}`
     );
     const flowAfterNext = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");

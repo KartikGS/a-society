@@ -5,7 +5,7 @@ import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
-import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 async function runTest() {
   console.log('Starting precreated-flow-required integration test...');
@@ -21,9 +21,7 @@ async function runTest() {
 
   process.env.A_SOCIETY_STATE_DIR = testStateDir;
 
-  const operatorStream = new PassThrough();
-  const renderer = new OperatorEventRenderer(operatorStream as any);
-  const orchestrator = new FlowOrchestrator(renderer);
+  const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   const inputStream = new PassThrough();
   const outputStream = new PassThrough();

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/store.js';
 
 async function runTest() {
@@ -81,7 +82,7 @@ async function runTest() {
   });
 
   const flowRun = SessionStore.loadFlowRun()!;
-  const orchestrator = new FlowOrchestrator();
+  const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'Owner', [
     { target_node_id: 'proposal', artifact_path: reviewFeedbackRel },

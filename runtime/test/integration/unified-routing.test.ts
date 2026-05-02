@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
-import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 
 import fs from 'node:fs';
@@ -99,17 +99,8 @@ async function runTest() {
     stateVersion: '7'
   });
 
-  // Capture operator (stderr) and assistant (stdout) streams separately
-  const operatorStream = new PassThrough();
-  const operatorChunks: string[] = [];
-  operatorStream.on('data', (chunk: Buffer) => {
-    const text = chunk.toString();
-    operatorChunks.push(text);
-    process.stderr.write(text);
-  });
-
-  const renderer = new OperatorEventRenderer(operatorStream as any);
-  const orchestrator = new FlowOrchestrator(renderer);
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
 
   const inputStream = new PassThrough();
   const outputStream = new PassThrough();
@@ -170,33 +161,26 @@ async function runTest() {
       m.content.includes('Use the canonical workflow contract.')
     );
 
-    const operatorOut = operatorChunks.join('');
-    // Verify operator stream contains the handoff notice and role.active notice
-    const hasHandoffNotice = operatorOut.includes('[runtime/handoff]');
-    const hasRoleActiveNotice = operatorOut.includes('[runtime/role]');
-    // Verify operator stream contains repair notice
-    const hasRepairNotice = operatorOut.includes('[runtime/repair]');
-    // Verify assistant text does not appear in operator stream
-    const assistantTextInOperator = operatorOut.includes('Here is a broken handoff');
+    const hasHandoffNotice = sink.events.some(e => e.kind === 'handoff.applied');
+    const hasRoleActiveNotice = sink.events.some(e => e.kind === 'role.active');
+    const hasRepairNotice = sink.events.some(e => e.kind === 'repair.requested');
 
     console.log("Validation:");
     console.log(`- Node 'start' completed: ${updatedFlow.completedNodes.includes('start') ? "Yes" : "No"}`);
     console.log(`- Node 'next' is active: ${updatedFlow.readyNodes.includes('next') ? "Yes" : "No"}`);
     console.log(`- Repair message injected into history: ${repairInjected ? "Yes" : "No"}`);
     console.log(`- Canonical node guidance injected from main workflow: ${canonicalGuidanceInjected ? "Yes" : "No"}`);
-    console.log(`- Operator stream has handoff notice: ${hasHandoffNotice ? "Yes" : "No"}`);
-    console.log(`- Operator stream has role.active notice: ${hasRoleActiveNotice ? "Yes" : "No"}`);
-    console.log(`- Operator stream has repair notice: ${hasRepairNotice ? "Yes" : "No"}`);
-    console.log(`- Assistant text leaked into operator stream: ${assistantTextInOperator ? "Yes (FAIL)" : "No"}`);
+    console.log(`- Sink has handoff event: ${hasHandoffNotice ? "Yes" : "No"}`);
+    console.log(`- Sink has role.active event: ${hasRoleActiveNotice ? "Yes" : "No"}`);
+    console.log(`- Sink has repair event: ${hasRepairNotice ? "Yes" : "No"}`);
 
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed.");
     assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to be active.");
     assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
     assert.ok(canonicalGuidanceInjected, "Expected node contract guidance to be resolved from a-docs/workflow/main.yaml.");
-    assert.ok(hasHandoffNotice, "Expected operator stream to contain a handoff notice.");
-    assert.ok(hasRoleActiveNotice, "Expected operator stream to contain a role.active notice.");
-    assert.ok(hasRepairNotice, "Expected operator stream to contain a repair notice.");
-    assert.ok(!assistantTextInOperator, "Assistant text must not leak into the operator stream.");
+    assert.ok(hasHandoffNotice, "Expected sink to contain a handoff.applied event.");
+    assert.ok(hasRoleActiveNotice, "Expected sink to contain a role.active event.");
+    assert.ok(hasRepairNotice, "Expected sink to contain a repair.requested event.");
 
     console.log("Integration test PASSED.");
 

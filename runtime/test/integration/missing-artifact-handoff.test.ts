@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
-import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -82,16 +82,8 @@ async function runTest() {
     stateVersion: '7'
   });
 
-  const operatorStream = new PassThrough();
-  const operatorChunks: string[] = [];
-  operatorStream.on('data', (chunk: Buffer) => {
-    const text = chunk.toString();
-    operatorChunks.push(text);
-    process.stderr.write(text);
-  });
-
-  const renderer = new OperatorEventRenderer(operatorStream as any);
-  const orchestrator = new FlowOrchestrator(renderer);
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
 
   const inputStream = new PassThrough();
   const outputStream = new PassThrough();
@@ -121,13 +113,11 @@ async function runTest() {
     await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
 
     const updatedFlow = SessionStore.loadFlowRun()!;
-    const operatorOut = operatorChunks.join('');
-
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
     assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to activate after repaired handoff.");
     assert.ok(
-      operatorOut.includes('[runtime/repair] Referenced artifact unavailable; retrying current node'),
-      'Expected operator stream to show missing-artifact repair notice.'
+      sink.events.some(e => e.kind === 'repair.requested' && e.scope === 'node'),
+      'Expected sink to contain a repair.requested event with scope "node".'
     );
   } finally {
     server.close();

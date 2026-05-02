@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestrator.js';
 import { SessionStore } from '../../src/store.js';
-import { OperatorEventRenderer } from '../../src/operator-renderer.js';
+import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -92,16 +92,8 @@ async function runTest() {
     stateVersion: '7'
   });
 
-  const operatorStream = new PassThrough();
-  const operatorChunks: string[] = [];
-  operatorStream.on('data', (chunk: Buffer) => {
-    const text = chunk.toString();
-    operatorChunks.push(text);
-    process.stderr.write(text);
-  });
-
-  const renderer = new OperatorEventRenderer(operatorStream as any);
-  const orchestrator = new FlowOrchestrator(renderer);
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
 
   // outputStream captures assistant text and improvement orchestrator prompts
   const outputStream = new PassThrough();
@@ -135,22 +127,19 @@ async function runTest() {
     await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
     console.log("\n--- Orchestration Complete ---\n");
 
-    const operatorOut = operatorChunks.join('');
     const assistantOut = outputChunks.join('');
 
-    console.log("Operator stream output:");
-    console.log(operatorOut);
     console.log("Assistant/improvement stream output:");
     console.log(assistantOut);
 
-    const expectedNotice = '[runtime/flow] Forward pass closed via closure-artifact.md; awaiting improvement mode selection';
-    const hasForwardPassNotice = operatorOut.includes(expectedNotice);
+    const hasForwardPassNotice = sink.events.some(
+      e => e.kind === 'flow.forward_pass_closed' && e.artifactBasename === 'closure-artifact.md'
+    );
 
     console.log("Validation:");
-    console.log(`- Operator stream has forward-pass-closed notice: ${hasForwardPassNotice ? "Yes" : "No"}`);
+    console.log(`- Sink has flow.forward_pass_closed event: ${hasForwardPassNotice ? "Yes" : "No"}`);
 
-    assert.ok(hasForwardPassNotice,
-      `Expected operator stream to contain: "${expectedNotice}"`);
+    assert.ok(hasForwardPassNotice, "Expected sink to contain flow.forward_pass_closed event for closure-artifact.md");
 
     assert.ok(!assistantOut.includes('Enter 1, 2, or 3:'),
       "Expected improvement mode selection to move out of the assistant stream.");

@@ -7,7 +7,6 @@ import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSin
 import { emitUsage, runRoleTurn } from './orient.js';
 import { buildForwardNodeEntryMessage } from './session-entry.js';
 import { ImprovementOrchestrator } from './improvement.js';
-import { createDefaultRenderer } from './operator-renderer.js';
 import { buildWorkflowRepairGuidance } from './framework-services/workflow-graph-validator.js';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from './framework-services/runtime-health-checks.js';
 import { TelemetryManager } from './observability.js';
@@ -33,8 +32,8 @@ export class FlowOrchestrator {
   private workspaceRoot: string | null = null;
   private boundSigintHandler: (() => void) | null = null;
 
-  constructor(renderer?: OperatorRenderSink) {
-    this.renderer = renderer ?? createDefaultRenderer();
+  constructor(renderer: OperatorRenderSink) {
+    this.renderer = renderer;
   }
 
   public abortActiveTurn(target?: { nodeId?: string; role?: string }): boolean {
