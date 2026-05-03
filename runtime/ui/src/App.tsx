@@ -402,9 +402,12 @@ export function App() {
               ? event.role
               : event.kind === 'handoff.applied'
                 ? event.fromRole
-                : null;
+                : event.kind === 'repair.requested'
+                  ? event.role ?? null
+                  : null;
           return {
             ...state,
+            selectedRole: event.kind === 'repair.requested' && event.role ? state.selectedRole ?? event.role : state.selectedRole,
             stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
             roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,

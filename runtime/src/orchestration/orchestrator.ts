@@ -408,7 +408,9 @@ export class FlowOrchestrator {
                     kind: 'repair.requested',
                     scope: 'node',
                     code: 'runtime_health',
-                    summary: guidance.operatorSummary
+                    summary: guidance.operatorSummary,
+                    role: currentNodeDef.role,
+                    nodeId
                   });
                   injectedHistory.push({ role: 'user', content: guidance.modelRepairMessage });
                   session.transcriptHistory = injectedHistory;
@@ -478,7 +480,14 @@ export class FlowOrchestrator {
                 error_type: e.name,
                 error_message: e.message.slice(0, 500)
               });
-              this.renderer.emit({ kind: 'repair.requested', scope: 'node', code: e.details.code, summary: e.details.operatorSummary });
+              this.renderer.emit({
+                kind: 'repair.requested',
+                scope: 'node',
+                code: e.details.code,
+                summary: e.details.operatorSummary,
+                role: currentNodeDef.role,
+                nodeId
+              });
               injectedHistory.push({ role: 'user', content: e.details.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
@@ -487,7 +496,14 @@ export class FlowOrchestrator {
             if (e instanceof WorkflowError) {
               span.addEvent('workflow.error_injected', { error_message: e.message.slice(0, 500) });
               const guidance = buildWorkflowRepairGuidance([e.message]);
-              this.renderer.emit({ kind: 'repair.requested', scope: 'node', code: 'workflow_parse', summary: guidance.operatorSummary });
+              this.renderer.emit({
+                kind: 'repair.requested',
+                scope: 'node',
+                code: 'workflow_parse',
+                summary: guidance.operatorSummary,
+                role: currentNodeDef.role,
+                nodeId
+              });
               injectedHistory.push({ role: 'user', content: guidance.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());

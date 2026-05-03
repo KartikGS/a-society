@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { SessionStore } from '../../src/orchestration/store.js';
-import type { FlowRun, OperatorFeedMessage, RoleSession } from '../../src/common/types.js';
+import { getOperatorFeedRoleKey, isTransientOperatorEvent } from '../../src/server/role-feed.js';
+import type { FlowRun, OperatorEvent, OperatorFeedMessage, RoleSession } from '../../src/common/types.js';
 
 let passed = 0;
 let failed = 0;
@@ -83,6 +84,20 @@ test('saveRoleFeed and loadRoleFeed round-trip correctly', () => {
   ];
   SessionStore.saveRoleFeed(messages, ref, 'curator_1', tmpDir);
   assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'curator_1', tmpDir), messages);
+});
+
+test('repair requested events are role-feed historical events when role is present', () => {
+  const event: OperatorEvent = {
+    kind: 'repair.requested',
+    scope: 'node',
+    code: 'missing_block',
+    summary: 'Malformed handoff block',
+    role: 'Owner',
+    nodeId: 'owner-intake',
+  };
+
+  assert.strictEqual(isTransientOperatorEvent(event), false);
+  assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

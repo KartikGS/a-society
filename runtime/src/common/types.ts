@@ -150,7 +150,7 @@ export type OperatorEvent =
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string; activationSource?: 'node-start' | 'handoff' | 'runtime' }
   | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
-  | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string }
+  | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'parallel.active_set'; activeNodes: Array<{ nodeId: string; role: string }> }

@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
+import type { OperatorEvent } from '../../src/common/types.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -113,12 +114,14 @@ async function runTest() {
     await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
 
     const updatedFlow = SessionStore.loadFlowRun()!;
+    const repairNotice = sink.events.find(
+      (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
+    );
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
     assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to activate after repaired handoff.");
-    assert.ok(
-      sink.events.some(e => e.kind === 'repair.requested' && e.scope === 'node'),
-      'Expected sink to contain a repair.requested event with scope "node".'
-    );
+    assert.ok(repairNotice, 'Expected sink to contain a repair.requested event with scope "node".');
+    assert.strictEqual(repairNotice.role, 'start');
+    assert.strictEqual(repairNotice.nodeId, 'start');
   } finally {
     server.close();
     inputStream.destroy();

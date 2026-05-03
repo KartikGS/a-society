@@ -23,6 +23,7 @@ import { readImprovementWorkflow } from '../improvement/improvement-workflow.js'
 import { defaultConsentState } from '../common/types.js';
 import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
+import { getOperatorFeedRoleKey, isTransientOperatorEvent } from './role-feed.js';
 
 type ClientMessage =
   | { type: 'open_flow'; flowRef: FlowRef }
@@ -246,31 +247,8 @@ function buildServer(workspaceRoot: string) {
     });
   }
 
-  function getRoleFeedKey(message: HistoricalMessage): string | null {
-    if (message.type === 'output_text') {
-      return parseRoleIdentity(message.role).instanceRoleId;
-    }
-    if (message.type === 'input_text') {
-      return message.role ? parseRoleIdentity(message.role).instanceRoleId : null;
-    }
-    if (message.type === 'operator_event') {
-      const event = message.event;
-      if (event.kind === 'human.awaiting_input' || event.kind === 'human.resumed' || event.kind === 'usage.turn_summary') {
-        return null;
-      }
-      if ('role' in event && typeof event.role === 'string') {
-        return parseRoleIdentity(event.role).instanceRoleId;
-      }
-      if (event.kind === 'handoff.applied') {
-        return parseRoleIdentity(event.fromRole).instanceRoleId;
-      }
-      return null;
-    }
-    return null;
-  }
-
   function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
-    const roleKey = getRoleFeedKey(message);
+    const roleKey = getOperatorFeedRoleKey(message);
     if (!roleKey) return;
     const history = session.roleFeedHistory.get(roleKey) ?? [];
 
@@ -402,13 +380,7 @@ function buildServer(workspaceRoot: string) {
           return;
         }
 
-        if (
-          message.event.kind === 'flow.resumed' ||
-          message.event.kind === 'parallel.active_set' ||
-          message.event.kind === 'activity.tool_call' ||
-          message.event.kind === 'repair.requested' ||
-          message.event.kind === 'flow.forward_pass_closed'
-        ) {
+        if (isTransientOperatorEvent(message.event)) {
           return;
         }
 

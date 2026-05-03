@@ -201,7 +201,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
               kind: 'repair.requested',
               scope: 'improvement',
               code: 'runtime_health',
-              summary: guidance.operatorSummary
+              summary: guidance.operatorSummary,
+              role
             });
             history.push({ role: 'user', content: guidance.modelRepairMessage });
             continue;
@@ -215,7 +216,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
             kind: 'repair.requested',
             scope: 'improvement',
             code: repair.code,
-            summary: repair.operatorSummary
+            summary: repair.operatorSummary,
+            role
           });
           history.push({ role: 'user', content: repair.modelRepairMessage });
           continue;
@@ -231,7 +233,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         kind: 'repair.requested',
         scope: 'improvement',
         code: 'unexpected_signal',
-        summary: `${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}`
+        summary: `${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}`,
+        role
       });
       history.push({
         role: 'user',
@@ -246,7 +249,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           kind: 'repair.requested',
           scope: 'improvement',
           code: error.details.code,
-          summary: error.details.operatorSummary
+          summary: error.details.operatorSummary,
+          role
         });
         history.push({ role: 'user', content: error.details.modelRepairMessage });
         continue;

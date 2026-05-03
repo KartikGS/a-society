@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
+import type { OperatorEvent } from '../../src/common/types.js';
 import http from 'node:http';
 
 import fs from 'node:fs';
@@ -145,7 +146,7 @@ async function runTest() {
     console.log("\n--- Orchestration Complete ---\n");
 
     const updatedFlow = SessionStore.loadFlowRun()!;
-    const session = SessionStore.loadRoleSession(`${flowRun.flowId}__start`);
+    const session = SessionStore.loadRoleSession('start');
     const history = session?.transcriptHistory as any[];
 
     // The repair message injected into history is the model-facing repair message
@@ -163,7 +164,10 @@ async function runTest() {
 
     const hasHandoffNotice = sink.events.some(e => e.kind === 'handoff.applied');
     const hasRoleActiveNotice = sink.events.some(e => e.kind === 'role.active');
-    const hasRepairNotice = sink.events.some(e => e.kind === 'repair.requested');
+    const repairNotice = sink.events.find(
+      (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested'
+    );
+    const hasRepairNotice = repairNotice !== undefined;
 
     console.log("Validation:");
     console.log(`- Node 'start' completed: ${updatedFlow.completedNodes.includes('start') ? "Yes" : "No"}`);
@@ -181,6 +185,8 @@ async function runTest() {
     assert.ok(hasHandoffNotice, "Expected sink to contain a handoff.applied event.");
     assert.ok(hasRoleActiveNotice, "Expected sink to contain a role.active event.");
     assert.ok(hasRepairNotice, "Expected sink to contain a repair.requested event.");
+    assert.strictEqual(repairNotice?.role, 'start', "Expected repair.requested to be attributed to the active role.");
+    assert.strictEqual(repairNotice?.nodeId, 'start', "Expected repair.requested to be attributed to the active node.");
 
     console.log("Integration test PASSED.");
 
