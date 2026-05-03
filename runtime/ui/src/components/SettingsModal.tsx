@@ -513,14 +513,26 @@ function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCan
         </div>
 
         <div className="form-field">
-          <label className="form-label" htmlFor="sf-apiKey">API key</label>
+          <div className="form-label-with-info">
+            <label className="form-label" htmlFor="sf-apiKey">API key</label>
+            <div className="info-icon-wrap" aria-label="API key storage information">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <div className="info-tooltip">
+                <strong>Where are keys stored:</strong><br />
+                Within your workspace in .a-society/secrets.json. File permissions are restricted to your user account.<br /><br />
+                <strong>What this means</strong><br />
+                The runtime does not encrypt API keys. Anything with read access to your user account can read them.<br />
+                Rotate keys on a cadence you're comfortable with, and immediately if this machine is shared or compromised.
+              </div>
+            </div>
+          </div>
           <input
             id="sf-apiKey"
             className="form-input"
             type="password"
             value={form.apiKey}
             onChange={(e) => onChange('apiKey', e.target.value)}
-            placeholder={isEditing ? 'Leave blank to keep the current API key' : 'Stored securely on disk, not in the repo'}
+            placeholder={isEditing ? 'Leave blank to keep the current API key' : 'Stored locally in plaintext on your machine'}
             required={!isEditing}
           />
         </div>
@@ -639,7 +651,19 @@ function ToolsSettingsPanel({
           </div>
 
           <div className="form-field">
-            <label className="form-label" htmlFor="sf-tavilyApiKey">Tavily API key</label>
+            <div className="form-label-with-info">
+              <label className="form-label" htmlFor="sf-tavilyApiKey">Tavily API key</label>
+              <div className="info-icon-wrap" aria-label="API key storage information">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div className="info-tooltip">
+                  <strong>Where are keys stored:</strong><br />
+                  Within your workspace in .a-society/secrets.json. File permissions are restricted to your user account.<br /><br />
+                  <strong>What this means</strong><br />
+                  The runtime does not encrypt API keys. Anything with read access to your user account can read them.<br />
+                  Rotate keys on a cadence you're comfortable with, and immediately if this machine is shared or compromised.
+                </div>
+              </div>
+            </div>
             <input
               id="sf-tavilyApiKey"
               className="form-input"
