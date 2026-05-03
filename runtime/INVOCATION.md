@@ -97,6 +97,20 @@ If more than one role instance is awaiting input, the browser message must ident
 
 When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
+### Tool permission modes
+
+The chat footer exposes three per-flow tool permission modes:
+
+- `No Access` — permission-required tools ask each time; stored flow grants are ignored
+- `Partial Access` — stored flow grants are honored: all edits if previously granted, and exact bash commands previously granted for this flow
+- `Full Access` — permission-required tools run without prompting
+
+File writes (`edit_file`, `write_file`) prompt with the target path and offer `Allow`, `Allow all edits this flow`, or `Deny`.
+
+Bash commands prompt with the exact command and offer `Allow`, `Allow <command> this flow`, or `Deny`. Simple safe read-only commands such as `ls` do not prompt.
+
+Permission state is stored on the active `FlowRun` as `consentState` in `flow.json`.
+
 ---
 
 ## Session Startup and Continuity

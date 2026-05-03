@@ -9,8 +9,9 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { normalizeSettingsStatus } from './model-config';
 import type {
   ClientMessage,
-  ConsentClass,
   ConsentMode,
+  ConsentRequest,
+  ConsentResponseDecision,
   FlowRef,
   FlowRun,
   FlowSummary,
@@ -42,7 +43,7 @@ interface FlowUiState {
   composerValue: string;
   waitLabels: Record<string, string | null>;
   stopRequested: boolean;
-  consentRequest: { toolClass: ConsentClass; toolName: string } | null;
+  consentRequest: ConsentRequest | null;
   latestInputTokensByRole: Record<string, number>;
   hasActiveSession: boolean;
 }
@@ -341,7 +342,7 @@ export function App() {
         if (event.kind === 'consent.requested') {
           updateFlowUi(key, (state) => ({
             ...state,
-            consentRequest: { toolClass: event.toolClass, toolName: event.toolName },
+            consentRequest: event.request,
           }));
           return;
         }
@@ -352,6 +353,10 @@ export function App() {
         }
 
         if (event.kind === 'consent.mode_changed') {
+          updateFlowUi(key, (state) => ({
+            ...state,
+            consentRequest: event.mode === 'full-access' ? null : state.consentRequest,
+          }));
           return;
         }
 
@@ -772,7 +777,7 @@ export function App() {
     sendMessage({ type: 'feedback_consent_choice', flowRef: activeTab.ref, decision });
   }
 
-  function handleConsentResponse(decision: 'granted' | 'denied'): void {
+  function handleConsentResponse(decision: ConsentResponseDecision): void {
     if (!activeTab) return;
     sendMessage({ type: 'consent_response', flowRef: activeTab.ref, decision });
   }
@@ -978,7 +983,7 @@ export function App() {
                   selectedRole={viewedRole ?? undefined}
                   activeRole={activeRoles[0] ?? undefined}
                   consentRequest={activeUi?.consentRequest ?? null}
-                  consentMode={flowRun?.consentState?.mode ?? 'ask'}
+                  consentMode={flowRun?.consentState?.mode ?? 'no-access'}
                   onRoleSelect={(role) => {
                     if (!activeTabKey) return;
                     updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));

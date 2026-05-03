@@ -8,14 +8,27 @@ export type FlowStatus =
   | 'completed'
   | 'failed';
 
-export type ConsentDecision = 'pending' | 'granted' | 'denied';
-export type ConsentMode = 'ask' | 'full-access';
-export type ConsentClass = 'file-writes' | 'shell-network';
+export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
+export type ConsentRequestKind = 'file-write' | 'bash-command';
+export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
+
+export type ConsentRequest =
+  | { kind: 'file-write'; toolName: string; path: string }
+  | { kind: 'bash-command'; toolName: 'run_command'; command: string };
+
+export interface ConsentCheckRequest {
+  toolName: string;
+  input?: Record<string, unknown>;
+}
 
 export interface ConsentState {
   mode: ConsentMode;
-  fileWrites: ConsentDecision;
-  shellNetwork: ConsentDecision;
+  fileWrites: {
+    allowAllEditsThisFlow: boolean;
+  };
+  bash: {
+    allowedCommands: Record<string, { command: string; grantedAt: string }>;
+  };
 }
 
 export type FeedbackContextKind = 'standard' | 'initialization' | 'update-application';
@@ -27,14 +40,62 @@ export interface FeedbackContext {
 }
 
 export function defaultConsentState(): ConsentState {
-  return { mode: 'ask', fileWrites: 'pending', shellNetwork: 'pending' };
+  return {
+    mode: 'no-access',
+    fileWrites: {
+      allowAllEditsThisFlow: false,
+    },
+    bash: {
+      allowedCommands: {},
+    },
+  };
+}
+
+export function normalizeConsentState(raw: unknown): ConsentState {
+  const fallback = defaultConsentState();
+  if (!raw || typeof raw !== 'object') return fallback;
+
+  const source = raw as Record<string, any>;
+  const mode: ConsentMode =
+    source.mode === 'partial-access' || source.mode === 'full-access' || source.mode === 'no-access'
+      ? source.mode
+      : source.mode === 'ask'
+        ? 'no-access'
+        : fallback.mode;
+
+  const fileWrites = source.fileWrites && typeof source.fileWrites === 'object'
+    ? {
+        allowAllEditsThisFlow: Boolean(source.fileWrites.allowAllEditsThisFlow),
+      }
+    : {
+        allowAllEditsThisFlow: false,
+      };
+
+  const allowedCommandsSource = source.bash?.allowedCommands;
+  const allowedCommands: Record<string, { command: string; grantedAt: string }> = {};
+  if (allowedCommandsSource && typeof allowedCommandsSource === 'object') {
+    for (const [key, value] of Object.entries(allowedCommandsSource as Record<string, any>)) {
+      if (!value || typeof value !== 'object' || typeof value.command !== 'string') continue;
+      allowedCommands[key] = {
+        command: value.command,
+        grantedAt: typeof value.grantedAt === 'string' ? value.grantedAt : new Date(0).toISOString(),
+      };
+    }
+  }
+
+  return {
+    mode,
+    fileWrites,
+    bash: { allowedCommands },
+  };
 }
 
 export interface ConsentGate {
-  check(toolName: string, signal?: AbortSignal): Promise<'proceed' | 'deny'>;
-  respond(decision: 'granted' | 'denied'): void;
+  check(request: ConsentCheckRequest, signal?: AbortSignal): Promise<'proceed' | 'deny'>;
+  respond(decision: ConsentResponseDecision): void;
   setMode(mode: ConsentMode): void;
-  getInFlightRequest(): { toolClass: ConsentClass; toolName: string } | null;
+  getState(): ConsentState;
+  getInFlightRequest(): ConsentRequest | null;
 }
 
 export interface HandoffTarget {
@@ -158,8 +219,8 @@ export type OperatorEvent =
   | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
   | { kind: 'flow.completed' }
-  | { kind: 'consent.requested'; toolClass: ConsentClass; toolName: string }
-  | { kind: 'consent.resolved'; toolClass: ConsentClass; decision: 'granted' | 'denied' }
+  | { kind: 'consent.requested'; request: ConsentRequest }
+  | { kind: 'consent.resolved'; request: ConsentRequest; decision: ConsentResponseDecision }
   | { kind: 'consent.mode_changed'; mode: ConsentMode };
 
 export interface OperatorRenderSink {

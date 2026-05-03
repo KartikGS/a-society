@@ -20,8 +20,8 @@ import { discoverProjects, type ProjectDiscovery } from '../projects/project-dis
 import * as SettingsStore from '../settings/settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
-import { defaultConsentState } from '../common/types.js';
-import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode } from '../common/types.js';
+import { defaultConsentState, normalizeConsentState } from '../common/types.js';
+import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentResponseDecision } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent } from './role-feed.js';
 
@@ -35,7 +35,7 @@ type ClientMessage =
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
   | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' }
   | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
-  | { type: 'consent_response'; flowRef: FlowRef; decision: 'granted' | 'denied' }
+  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision }
   | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 
 type FlowStateMessage = {
@@ -354,6 +354,9 @@ function buildServer(workspaceRoot: string) {
         }
 
         if (message.event.kind === 'consent.resolved') {
+          void SessionStore.updateFlowRun((flow) => {
+            flow.consentState = session.consentGate.getState();
+          }, session.flowRef, workspaceRoot).then(() => emitFlowState(session));
           emitTransientMessage(session, message);
           return;
         }
@@ -361,8 +364,7 @@ function buildServer(workspaceRoot: string) {
         if (message.event.kind === 'consent.mode_changed') {
           void SessionStore.updateFlowRun((flow) => {
             flow.consentState = session.consentGate.getState();
-          }, session.flowRef, workspaceRoot);
-          setImmediate(() => emitFlowState(session));
+          }, session.flowRef, workspaceRoot).then(() => emitFlowState(session));
           return;
         }
 
@@ -421,7 +423,7 @@ function buildServer(workspaceRoot: string) {
 
     const sink = new WebSocketOperatorSink((message) => handleRuntimeMessage(session, message));
     const orchestrator = new FlowOrchestrator(sink);
-    const initialConsentState = readFlowRun(flowRef)?.consentState ?? defaultConsentState();
+    const initialConsentState = normalizeConsentState(readFlowRun(flowRef)?.consentState ?? defaultConsentState());
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
     const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot);
@@ -502,7 +504,7 @@ function buildServer(workspaceRoot: string) {
       sendToSocket(socket, {
         type: 'operator_event',
         flowRef: ref,
-        event: { kind: 'consent.requested', toolClass: inFlight.toolClass, toolName: inFlight.toolName }
+        event: { kind: 'consent.requested', request: inFlight }
       } as any);
     }
   }
@@ -878,7 +880,7 @@ function buildServer(workspaceRoot: string) {
     setImmediate(() => emitFlowState(session));
   }
 
-  function handleConsentResponse(ref: FlowRef, decision: 'granted' | 'denied'): void {
+  function handleConsentResponse(ref: FlowRef, decision: ConsentResponseDecision): void {
     const session = activeSessions.get(flowKey(ref));
     if (!session || session.finished) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active session for consent response.' });
@@ -898,11 +900,8 @@ function buildServer(workspaceRoot: string) {
       if (!flow.consentState) {
         flow.consentState = defaultConsentState();
       }
+      flow.consentState = normalizeConsentState(flow.consentState);
       flow.consentState.mode = mode;
-      if (mode === 'full-access') {
-        flow.consentState.fileWrites = 'granted';
-        flow.consentState.shellNetwork = 'granted';
-      }
     }, ref, workspaceRoot).then(() => {
       const msg = buildFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
       if (msg) broadcastToFlow(ref, msg);
@@ -963,15 +962,29 @@ function buildServer(workspaceRoot: string) {
       if (
         parsed?.type === 'consent_response' &&
         hasFlowRef(parsed.flowRef) &&
-        (parsed.decision === 'granted' || parsed.decision === 'denied')
+        (
+          parsed.decision === 'allow_once' ||
+          parsed.decision === 'allow_flow' ||
+          parsed.decision === 'deny' ||
+          parsed.decision === 'granted' ||
+          parsed.decision === 'denied'
+        )
       ) {
+        if (parsed.decision === 'granted') parsed.decision = 'allow_once';
+        if (parsed.decision === 'denied') parsed.decision = 'deny';
         return parsed;
       }
       if (
         parsed?.type === 'consent_mode' &&
         hasFlowRef(parsed.flowRef) &&
-        (parsed.mode === 'ask' || parsed.mode === 'full-access')
+        (
+          parsed.mode === 'no-access' ||
+          parsed.mode === 'partial-access' ||
+          parsed.mode === 'full-access' ||
+          parsed.mode === 'ask'
+        )
       ) {
+        if (parsed.mode === 'ask') parsed.mode = 'no-access';
         return parsed;
       }
       return null;

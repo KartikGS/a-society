@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizeConsentState } from '../common/types.js';
 import type { FlowRef, FlowRun, FlowSummary, OperatorFeedMessage, RoleSession } from '../common/types.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { repairMovedRecordFolder } from '../projects/draft-flow.js';
@@ -117,6 +118,7 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
   if (!flow.feedbackContext) {
     flow.feedbackContext = { kind: 'standard' };
   }
+  flow.consentState = normalizeConsentState(flow.consentState);
 
   return flow;
 }

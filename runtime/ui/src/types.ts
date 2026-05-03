@@ -98,14 +98,21 @@ export interface FlowSummary extends FlowRef {
   updatedAt?: string;
 }
 
-export type ConsentClass = 'file-writes' | 'shell-network';
-export type ConsentMode = 'ask' | 'full-access';
-export type ConsentDecision = 'pending' | 'granted' | 'denied';
+export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
+export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
+
+export type ConsentRequest =
+  | { kind: 'file-write'; toolName: string; path: string }
+  | { kind: 'bash-command'; toolName: 'run_command'; command: string };
 
 export interface ConsentState {
   mode: ConsentMode;
-  fileWrites: ConsentDecision;
-  shellNetwork: ConsentDecision;
+  fileWrites: {
+    allowAllEditsThisFlow: boolean;
+  };
+  bash: {
+    allowedCommands: Record<string, { command: string; grantedAt: string }>;
+  };
 }
 
 export type OperatorEvent =
@@ -121,8 +128,8 @@ export type OperatorEvent =
   | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
   | { kind: 'flow.completed' }
-  | { kind: 'consent.requested'; toolClass: ConsentClass; toolName: string }
-  | { kind: 'consent.resolved'; toolClass: ConsentClass; decision: 'granted' | 'denied' }
+  | { kind: 'consent.requested'; request: ConsentRequest }
+  | { kind: 'consent.resolved'; request: ConsentRequest; decision: ConsentResponseDecision }
   | { kind: 'consent.mode_changed'; mode: ConsentMode };
 
 export type ClientMessage =
@@ -135,7 +142,7 @@ export type ClientMessage =
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
   | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' }
   | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
-  | { type: 'consent_response'; flowRef: FlowRef; decision: 'granted' | 'denied' }
+  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision }
   | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 
 export type ServerMessage =

@@ -999,7 +999,7 @@ textarea {
 
 .consent-banner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 10px 14px;
   margin-bottom: 6px;
@@ -1017,14 +1017,23 @@ textarea {
 }
 
 .consent-banner-tool {
+  display: block;
+  margin-bottom: 2px;
   font-weight: 600;
   font-family: "IBM Plex Mono", monospace;
 }
 
+.consent-banner-desc {
+  display: block;
+}
+
 .consent-banner-actions {
   display: flex;
+  flex-direction: column;
   gap: 6px;
   flex-shrink: 0;
+  align-items: stretch;
+  max-width: min(360px, 48%);
 }
 
 .consent-btn {
@@ -1035,6 +1044,8 @@ textarea {
   cursor: pointer;
   border: 1px solid transparent;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .consent-btn-allow {
@@ -1045,6 +1056,16 @@ textarea {
 
 .consent-btn-allow:hover {
   background: var(--accent-deep);
+}
+
+.consent-btn-allow-flow {
+  background: white;
+  color: var(--accent-deep);
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+.consent-btn-allow-flow:hover {
+  background: rgba(13, 148, 136, 0.08);
 }
 
 .consent-btn-deny {

@@ -151,7 +151,10 @@ export class LLMGateway {
                 isError = true;
               } else {
                 if (options?.consentGate) {
-                  const decision = await options.consentGate.check(call.name, options.signal);
+                  const decision = await options.consentGate.check({
+                    toolName: call.name,
+                    input: call.input,
+                  }, options.signal);
                   if (decision === 'deny') {
                     return {
                       role: 'tool_result' as const,

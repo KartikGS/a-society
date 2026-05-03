@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { ConsentClass, ConsentMode } from '../types';
+import type { ConsentMode, ConsentRequest, ConsentResponseDecision } from '../types';
 
 export interface FeedItem {
   id: string;
@@ -22,7 +22,7 @@ interface ChatInterfaceProps {
   roles?: string[];
   selectedRole?: string;
   activeRole?: string;
-  consentRequest?: { toolClass: ConsentClass; toolName: string } | null;
+  consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
   contextWindow?: number | null;
   latestInputTokens?: number | null;
@@ -30,17 +30,26 @@ interface ChatInterfaceProps {
   onInputChange: (value: string) => void;
   onSubmit: () => void;
   onStop?: () => void;
-  onConsentResponse?: (decision: 'granted' | 'denied') => void;
+  onConsentResponse?: (decision: ConsentResponseDecision) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
 }
 
-const CONSENT_CLASS_LABELS: Record<ConsentClass, string> = {
-  'file-writes': 'file writes',
-  'shell-network': 'shell & network',
-};
-
 function normalizeAssistantMarkdown(text: string): string {
   return text.replace(/\$?\\(?:rightarrow|to)\$?/g, '→');
+}
+
+function consentPromptTitle(request: ConsentRequest): string {
+  if (request.kind === 'file-write') {
+    return `Allow write ${request.path}?`;
+  }
+  return `Allow ${request.command}?`;
+}
+
+function consentAllowFlowLabel(request: ConsentRequest): string {
+  if (request.kind === 'file-write') {
+    return 'Allow all edits this flow';
+  }
+  return `Allow ${request.command} this flow`;
 }
 
 type MarkdownSegment =
@@ -300,24 +309,27 @@ export function ChatInterface(props: ChatInterfaceProps) {
             <div className="consent-banner">
               <div className="consent-banner-body">
                 <span className="consent-banner-tool">{props.consentRequest.toolName}</span>
-                <span className="consent-banner-desc">
-                  {' '}wants permission for{' '}
-                  <strong>{CONSENT_CLASS_LABELS[props.consentRequest.toolClass]}</strong>.
-                  Allow this flow to continue?
-                </span>
+                <span className="consent-banner-desc">{consentPromptTitle(props.consentRequest)}</span>
               </div>
               <div className="consent-banner-actions">
                 <button
                   type="button"
                   className="consent-btn consent-btn-allow"
-                  onClick={() => props.onConsentResponse?.('granted')}
+                  onClick={() => props.onConsentResponse?.('allow_once')}
                 >
                   Allow
                 </button>
                 <button
                   type="button"
+                  className="consent-btn consent-btn-allow-flow"
+                  onClick={() => props.onConsentResponse?.('allow_flow')}
+                >
+                  {consentAllowFlowLabel(props.consentRequest)}
+                </button>
+                <button
+                  type="button"
                   className="consent-btn consent-btn-deny"
-                  onClick={() => props.onConsentResponse?.('denied')}
+                  onClick={() => props.onConsentResponse?.('deny')}
                 >
                   Deny
                 </button>
@@ -363,12 +375,13 @@ export function ChatInterface(props: ChatInterfaceProps) {
             ) : null}
             <select
               className="consent-mode-select"
-              value={props.consentMode ?? 'ask'}
+              value={props.consentMode ?? 'no-access'}
               onChange={(e) => props.onConsentModeChange?.(e.target.value as ConsentMode)}
               title="Tool permission mode for this flow"
             >
-              <option value="ask">Ask when needed</option>
-              <option value="full-access">Full access</option>
+              <option value="no-access">No Access</option>
+              <option value="partial-access">Partial Access</option>
+              <option value="full-access">Full Access</option>
             </select>
           </div>
         </div>
