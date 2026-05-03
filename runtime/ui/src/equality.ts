@@ -1,4 +1,4 @@
-import type { FlowRun, WorkflowGraph } from './types';
+import type { FlowRun, WorkflowGraph } from './types.js';
 
 export function areStringArraysEqual(left?: string[], right?: string[]): boolean {
   if (left === right) return true;
@@ -83,6 +83,45 @@ function areImprovementPhasesEqual(
   );
 }
 
+function areFeedbackContextsEqual(
+  left: FlowRun['feedbackContext'],
+  right: FlowRun['feedbackContext']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+
+  return (
+    left.kind === right.kind &&
+    left.initializationMode === right.initializationMode &&
+    areStringArraysEqual(left.updateReportPaths, right.updateReportPaths)
+  );
+}
+
+function areConsentStatesEqual(
+  left: FlowRun['consentState'],
+  right: FlowRun['consentState']
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return left === right;
+
+  const leftCommands = left.bash?.allowedCommands ?? {};
+  const rightCommands = right.bash?.allowedCommands ?? {};
+  const leftCommandKeys = Object.keys(leftCommands);
+  const rightCommandKeys = Object.keys(rightCommands);
+
+  if (leftCommandKeys.length !== rightCommandKeys.length) return false;
+  for (const key of leftCommandKeys) {
+    if (!(key in rightCommands)) return false;
+    if (leftCommands[key].command !== rightCommands[key].command) return false;
+    if (leftCommands[key].grantedAt !== rightCommands[key].grantedAt) return false;
+  }
+
+  return (
+    left.mode === right.mode &&
+    Boolean(left.fileWrites?.allowAllEditsThisFlow) === Boolean(right.fileWrites?.allowAllEditsThisFlow)
+  );
+}
+
 export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): boolean {
   if (left === right) return true;
   if (!left || !right) return left === right;
@@ -103,7 +142,9 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringMapsEqual(left.completedEdgeArtifacts, right.completedEdgeArtifacts) &&
     areStringArrayMapsEqual(left.pendingNodeArtifacts, right.pendingNodeArtifacts) &&
-    areImprovementPhasesEqual(left.improvementPhase, right.improvementPhase)
+    areImprovementPhasesEqual(left.improvementPhase, right.improvementPhase) &&
+    areFeedbackContextsEqual(left.feedbackContext, right.feedbackContext) &&
+    areConsentStatesEqual(left.consentState, right.consentState)
   );
 }
 
