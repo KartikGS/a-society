@@ -367,7 +367,11 @@ export class FlowOrchestrator {
                 nodeOutputStream,
                 controller.signal,
                 this.renderer,
-                consentGate
+                consentGate,
+                async () => {
+                  session.transcriptHistory = injectedHistory;
+                  SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                }
               );
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);

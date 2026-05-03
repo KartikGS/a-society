@@ -241,14 +241,13 @@ export interface TurnOptions {
   operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
   role?: string;
+  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
 }
 
 export interface GatewayTurnResult {
   text: string;
   usage?: TurnUsage;
   displayedText?: boolean;
-  /** Tool call/result messages accumulated during this turn, in conversation order, excluding the final assistant text message. */
-  intermediateMessages?: RuntimeMessageParam[];
 }
 
 export type ProviderTurnResult =

@@ -60,7 +60,8 @@ async function executeSessionTurn(
   outputStream: NodeJS.WritableStream,
   externalSignal: AbortSignal | undefined,
   operatorRenderer: OperatorRenderSink | undefined,
-  consentGate: ConsentGate | undefined
+  consentGate: ConsentGate | undefined,
+  onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined
 ): Promise<SessionTurnResult> {
   const meter = TelemetryManager.getMeter();
   const startTime = Date.now();
@@ -96,6 +97,7 @@ async function executeSessionTurn(
       operatorRenderer,
       consentGate,
       role: roleName,
+      onConversationMessages,
     });
 
     if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
@@ -110,7 +112,6 @@ async function executeSessionTurn(
     writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
     ensureAssistantOutputEndsWithNewline(result.text, outputStream);
 
-    if (result.intermediateMessages) history.push(...result.intermediateMessages);
     history.push({ role: 'assistant', content: result.text });
 
     const parseResult = HandoffInterpreter.parse(result.text);
@@ -188,7 +189,8 @@ export async function runRoleTurn(
   outputStream: NodeJS.WritableStream = process.stdout,
   externalSignal?: AbortSignal,
   operatorRenderer?: OperatorRenderSink,
-  consentGate?: ConsentGate
+  consentGate?: ConsentGate,
+  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>
 ): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
@@ -237,7 +239,8 @@ export async function runRoleTurn(
     outputStream,
     externalSignal,
     operatorRenderer,
-    consentGate
+    consentGate,
+    onConversationMessages
   );
 
   if (turnResult.abort || turnResult.error) {

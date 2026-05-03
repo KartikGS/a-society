@@ -109,14 +109,22 @@ export class LLMGateway {
 
         const MAX_TOOL_ROUNDS = 50;
         let messages: RuntimeMessageParam[] = [...messageHistory];
-        const intermediateMessages: RuntimeMessageParam[] = [];
+        const appendConversationMessages = async (newMessages: RuntimeMessageParam[]): Promise<void> => {
+          if (newMessages.length === 0) return;
+          messageHistory.push(...newMessages);
+          messages = [...messages, ...newMessages];
+          await options?.onConversationMessages?.(newMessages);
+        };
+
         for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
           if (options?.signal?.aborted) {
             throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
           }
 
           const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
-          throwIfAborted(options?.signal, result.type === 'text' ? result.text : undefined);
+          if (result.type === 'text') {
+            throwIfAborted(options?.signal, result.text);
+          }
           displayedText = displayedText || !!result.displayedText;
 
           if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
@@ -130,8 +138,7 @@ export class LLMGateway {
             return {
               text: result.text,
               usage,
-              displayedText,
-              intermediateMessages: intermediateMessages.length > 0 ? intermediateMessages : undefined
+              displayedText
             };
           }
 
@@ -142,6 +149,9 @@ export class LLMGateway {
               'llm.tool_id': call.id
             });
           }
+
+          await appendConversationMessages(result.continuationMessages);
+          throwIfAborted(options?.signal);
 
           const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
             result.calls.map(async (call) => {
@@ -180,8 +190,7 @@ export class LLMGateway {
             })
           );
           throwIfAborted(options?.signal);
-          intermediateMessages.push(...result.continuationMessages, ...toolResultMessages);
-          messages = [...messages, ...result.continuationMessages, ...toolResultMessages];
+          await appendConversationMessages(toolResultMessages);
         }
         span.addEvent('llm.max_rounds_exceeded', { limit: MAX_TOOL_ROUNDS });
         throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (50). The session has been aborted.');

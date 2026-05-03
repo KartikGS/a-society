@@ -1332,15 +1332,8 @@ function buildServer(workspaceRoot: string) {
     });
 
     socket.on('close', () => {
-      const subscribedKey = socketSubscriptions.get(socket);
       clients.delete(socket);
       socketSubscriptions.delete(socket);
-      if (subscribedKey) {
-        const hasOtherSubscribers = [...clients].some((c) => socketSubscriptions.get(c) === subscribedKey);
-        if (!hasOtherSubscribers) {
-          activeSessions.get(subscribedKey)?.consentGate?.abortInFlight();
-        }
-      }
     });
   });
 

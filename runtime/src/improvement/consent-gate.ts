@@ -234,7 +234,7 @@ export class ConsentGateImpl {
     }
   }
 
-  /** Called when the WebSocket for this flow closes mid-request */
+  /** Called only for explicit runtime cancellation; reconnects replay the in-flight request. */
   abortInFlight(): void {
     if (!this.inFlight) return;
     const entry = this.inFlight;
