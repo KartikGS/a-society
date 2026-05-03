@@ -25,6 +25,12 @@ processors:
         value: development
         action: insert
 
+  attributes/loki:
+    actions:
+      - action: insert
+        key: service_name
+        value: a-society-runtime
+
 exporters:
   otlp/tempo:
     endpoint: tempo:4317
@@ -33,6 +39,9 @@ exporters:
 
   prometheus:
     endpoint: 0.0.0.0:8889
+
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
 
 extensions:
   health_check:
@@ -51,3 +60,8 @@ service:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
       exporters: [prometheus]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/loki, batch]
+      exporters: [loki]

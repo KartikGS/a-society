@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   a-society-observability:
     driver: bridge
@@ -30,6 +28,17 @@ services:
     networks:
       - a-society-observability
 
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: a-society-loki
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes:
+      - ./loki.yaml:/etc/loki/loki.yaml:ro
+    ports:
+      - "13100:3100"
+    networks:
+      - a-society-observability
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.93.0
     container_name: a-society-otel-collector
@@ -45,6 +54,7 @@ services:
     depends_on:
       - tempo
       - prometheus
+      - loki
     networks:
       - a-society-observability
 
@@ -63,5 +73,6 @@ services:
     depends_on:
       - prometheus
       - tempo
+      - loki
     networks:
       - a-society-observability
