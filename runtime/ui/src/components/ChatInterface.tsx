@@ -1,13 +1,8 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import type { ConsentMode, ConsentRequest, ConsentResponseDecision } from '../types';
+import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem } from '../types';
 
-export interface FeedItem {
-  id: string;
-  type: 'activation' | 'assistant' | 'event' | 'error' | 'handoff' | 'repair' | 'tool' | 'user';
-  label: string;
-  text: string;
-}
+export type { FeedItem };
 
 interface ChatInterfaceProps {
   subtitle: string;

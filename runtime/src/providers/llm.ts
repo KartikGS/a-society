@@ -177,7 +177,7 @@ export class LLMGateway {
                 }
                 const pathArg = call.input?.path as string | undefined;
                 const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
-                options?.operatorRenderer?.emit({ kind: 'activity.tool_call', toolName: call.name, path: pathArg, command: commandArg });
+                options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
                 const res = await (this.bashExecutor!.canHandle(call.name)
                   ? this.bashExecutor!.execute(call, options?.signal)
                   : this.webSearchExecutor?.canHandle(call.name)

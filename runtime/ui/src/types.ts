@@ -1,3 +1,6 @@
+import type { FeedItem, FeedItemType } from '../../src/common/types.js';
+export type { FeedItem, FeedItemType };
+
 export type ProviderType = 'anthropic' | 'openai-compatible';
 export type InputModality = 'image' | 'audio' | 'video';
 
@@ -118,7 +121,7 @@ export interface ConsentState {
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string; activationSource?: 'node-start' | 'handoff' | 'runtime' }
-  | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
+  | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
@@ -148,7 +151,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
-  | { type: 'feed_reset'; flowRef: FlowRef }
+  | { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> }
   | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }
   | { type: 'wait_start'; flowRef: FlowRef; role: string; provider: string; model: string }
   | { type: 'wait_stop'; flowRef: FlowRef; role: string }

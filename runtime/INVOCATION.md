@@ -200,15 +200,15 @@ The runtime persists flow state and role sessions under `{stateDir}/{projectName
 Per-flow layout:
 
 - `flow.json` — persisted `FlowRun`
-- `operator-feed.json` — persisted browser/operator feed messages for replay after reconnect or server restart
-- `sessions/` — persisted role-instance-scoped session files for that flow
+- `roles/<roleKey>/feed.json` — persisted per-role browser feed (`FeedItem[]`) for replay after reconnect or server restart
+- `roles/<roleKey>/transcript.json` — persisted role-instance-scoped session transcript for that role
 
 Resume behavior:
 
 - Existing `FlowRun` state is read from `{stateDir}/{projectNamespace}/{flowId}/flow.json`
 - Selecting a flow opens it in graph mode
-- The browser feed is replayed from `{stateDir}/{projectNamespace}/{flowId}/operator-feed.json` when available
-- Role-scoped session continuity is preserved from persisted session files
+- The browser feed is replayed from `{stateDir}/{projectNamespace}/{flowId}/roles/<roleKey>/feed.json` when available
+- Role-scoped session continuity is preserved from persisted role transcript files
 - Stale persisted `runningNodes` are returned to `readyNodes`
 
 ---

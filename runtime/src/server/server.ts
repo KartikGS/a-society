@@ -21,9 +21,9 @@ import * as SettingsStore from '../settings/settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
 import { defaultConsentState, normalizeConsentState } from '../common/types.js';
-import type { FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentResponseDecision } from '../common/types.js';
+import type { FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentResponseDecision } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
-import { getOperatorFeedRoleKey, isTransientOperatorEvent } from './role-feed.js';
+import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from './role-feed.js';
 
 type ClientMessage =
   | { type: 'open_flow'; flowRef: FlowRef }
@@ -51,10 +51,12 @@ type HistoricalMessage = OperatorFeedMessage;
 
 type FlowScopedHistoricalMessage = HistoricalMessage & { flowRef: FlowRef };
 
+type FeedReplayMessage = { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> };
+
 type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
-  | { type: 'feed_reset'; flowRef: FlowRef }
+  | FeedReplayMessage
   | FlowStateMessage
   | FlowScopedHistoricalMessage
   | (RuntimeServerMessage & { flowRef: FlowRef });
@@ -66,7 +68,8 @@ interface ActiveSession {
   outputBridge: PassThrough;
   sink: WebSocketOperatorSink;
   orchestrator: FlowOrchestrator;
-  roleFeedHistory: Map<string, HistoricalMessage[]>;
+  roleFeedHistory: Map<string, FeedItem[]>;
+  roleFeedSequence: Map<string, number>;
   lastFlowState: FlowStateMessage | null;
   backwardActive: Set<string>;
   finished: boolean;
@@ -98,6 +101,21 @@ function parsePort(rawPort: string | undefined): number {
 
 function isPromptLine(text: string): boolean {
   return text === '\n> ' || text === '> ' || text === '\r\n> ';
+}
+
+function recoverRoleFeedSequence(roleFeedHistory: Map<string, FeedItem[]>): Map<string, number> {
+  const sequence = new Map<string, number>();
+  for (const [roleKey, items] of roleFeedHistory) {
+    const prefix = `${roleKey}_`;
+    let max = -1;
+    for (const item of items) {
+      if (!item.id.startsWith(prefix)) continue;
+      const seq = parseInt(item.id.slice(prefix.length), 10);
+      if (Number.isFinite(seq) && seq > max) max = seq;
+    }
+    sequence.set(roleKey, max + 1);
+  }
+  return sequence;
 }
 
 function flowKey(ref: FlowRef): string {
@@ -247,22 +265,30 @@ function buildServer(workspaceRoot: string) {
     });
   }
 
+  function nextFeedItemId(session: ActiveSession, roleKey: string): string {
+    const seq = session.roleFeedSequence.get(roleKey) ?? 0;
+    session.roleFeedSequence.set(roleKey, seq + 1);
+    return `${roleKey}_${seq}`;
+  }
+
   function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
     const roleKey = getOperatorFeedRoleKey(message);
     if (!roleKey) return;
     const history = session.roleFeedHistory.get(roleKey) ?? [];
 
     const previous = history[history.length - 1];
-    if (previous?.type === 'output_text' && message.type === 'output_text') {
-      history[history.length - 1] = {
-        type: 'output_text',
-        role: (message as Extract<HistoricalMessage, { type: 'output_text' }>).role,
-        text: (previous as Extract<HistoricalMessage, { type: 'output_text' }>).text +
-              (message as Extract<HistoricalMessage, { type: 'output_text' }>).text,
-      };
-    } else {
-      history.push(message);
+    if (previous?.type === 'assistant' && message.type === 'output_text') {
+      history[history.length - 1] = { ...previous, text: previous.text + message.text };
+      session.roleFeedHistory.set(roleKey, history);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      return;
     }
+
+    const id = nextFeedItemId(session, roleKey);
+    const item = projectMessageToFeedItem(message, id);
+    if (!item) return;
+
+    history.push(item);
     if (history.length > HISTORY_LIMIT) {
       history.splice(0, history.length - HISTORY_LIMIT);
     }
@@ -427,6 +453,7 @@ function buildServer(workspaceRoot: string) {
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
     const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot);
+    const roleFeedSequence = recoverRoleFeedSequence(roleFeedHistory);
     const latestInputTokensByRole = Object.fromEntries(
       Array.from(roleFeedHistory.keys())
         .map((roleKey) => {
@@ -445,6 +472,7 @@ function buildServer(workspaceRoot: string) {
       orchestrator,
       consentGate,
       roleFeedHistory,
+      roleFeedSequence,
       lastFlowState: null,
       backwardActive: new Set<string>(),
       finished: false,
@@ -485,13 +513,11 @@ function buildServer(workspaceRoot: string) {
     const session = activeSessions.get(flowKey(ref));
     const feedHistory = session?.roleFeedHistory ?? SessionStore.loadAllRoleFeeds(ref, workspaceRoot);
 
-    sendToSocket(socket, { type: 'feed_reset', flowRef: ref });
-
-    for (const [, messages] of feedHistory) {
-      for (const message of messages) {
-        sendToSocket(socket, { ...message, flowRef: ref } as FlowScopedHistoricalMessage);
-      }
+    const roleFeeds: Record<string, FeedItem[]> = {};
+    for (const [roleKey, items] of feedHistory) {
+      roleFeeds[roleKey] = items;
     }
+    sendToSocket(socket, { type: 'feed_replay', flowRef: ref, roleFeeds });
 
     if (session?.lastFlowState) {
       sendToSocket(socket, session.lastFlowState);

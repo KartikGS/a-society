@@ -84,7 +84,10 @@ test('INVOCATION.md: documents explicit scheduler fields and distinct-role paral
 });
 
 test('INVOCATION.md: documents durable operator feed replay', () => {
-  assert.ok(doc.includes('operator-feed.json'), 'Expected INVOCATION.md to document operator-feed.json');
+  assert.ok(
+    doc.includes('roles/<roleKey>/feed.json'),
+    'Expected INVOCATION.md to document the per-role feed.json layout'
+  );
   assert.ok(
     doc.includes('browser feed') && doc.includes('replayed'),
     'Expected INVOCATION.md to describe browser feed replay'

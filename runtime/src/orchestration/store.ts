@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { normalizeConsentState } from '../common/types.js';
-import type { FlowRef, FlowRun, FlowSummary, OperatorFeedMessage, RoleSession } from '../common/types.js';
+import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../common/types.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { repairMovedRecordFolder } from '../projects/draft-flow.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
@@ -250,26 +250,26 @@ export class SessionStore {
     ref: FlowRef,
     roleKey: string,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
-  ): OperatorFeedMessage[] {
+  ): FeedItem[] {
     const feedPath = getRoleFeedPath(workspaceRoot, ref, roleKey);
     if (!fs.existsSync(feedPath)) return [];
     try {
       const parsed = JSON.parse(fs.readFileSync(feedPath, 'utf8')) as unknown;
-      return Array.isArray(parsed) ? parsed as OperatorFeedMessage[] : [];
+      return Array.isArray(parsed) ? parsed as FeedItem[] : [];
     } catch {
       return [];
     }
   }
 
   static saveRoleFeed(
-    messages: OperatorFeedMessage[],
+    items: FeedItem[],
     ref: FlowRef,
     roleKey: string,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
   ): void {
     const dir = getRoleDir(workspaceRoot, ref, roleKey);
     fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(getRoleFeedPath(workspaceRoot, ref, roleKey), JSON.stringify(messages, null, 2));
+    fs.writeFileSync(getRoleFeedPath(workspaceRoot, ref, roleKey), JSON.stringify(items, null, 2));
   }
 
   static listRoleKeys(
@@ -286,8 +286,8 @@ export class SessionStore {
   static loadAllRoleFeeds(
     ref: FlowRef,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
-  ): Map<string, OperatorFeedMessage[]> {
-    const result = new Map<string, OperatorFeedMessage[]>();
+  ): Map<string, FeedItem[]> {
+    const result = new Map<string, FeedItem[]>();
     const rolesDir = path.join(getFlowDir(workspaceRoot, ref), 'roles');
     if (!fs.existsSync(rolesDir)) return result;
     for (const entry of fs.readdirSync(rolesDir, { withFileTypes: true })) {
@@ -298,7 +298,7 @@ export class SessionStore {
       try {
         const parsed = JSON.parse(fs.readFileSync(feedPath, 'utf8')) as unknown;
         if (Array.isArray(parsed)) {
-          result.set(roleKey, parsed as OperatorFeedMessage[]);
+          result.set(roleKey, parsed as FeedItem[]);
         }
       } catch {
         // skip malformed feed

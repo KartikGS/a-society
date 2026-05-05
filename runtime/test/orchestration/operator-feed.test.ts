@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { SessionStore } from '../../src/orchestration/store.js';
-import { getOperatorFeedRoleKey, isTransientOperatorEvent } from '../../src/server/role-feed.js';
-import type { FlowRun, OperatorEvent, OperatorFeedMessage, RoleSession } from '../../src/common/types.js';
+import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
+import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
 let passed = 0;
 let failed = 0;
@@ -48,10 +48,10 @@ const flowRun: FlowRun = {
 
 SessionStore.saveFlowRun(flowRun, ref, tmpDir);
 
-test('role feed persists separately from role transcript history', () => {
-  const roleFeed: OperatorFeedMessage[] = [
-    { type: 'output_text', role: 'Owner', text: 'Visible assistant text.' },
-    { type: 'input_text', role: 'Owner', text: 'Visible operator reply.' },
+test('role feed persists FeedItem entries separately from role transcript history', () => {
+  const roleFeed: FeedItem[] = [
+    { id: 'owner_0', type: 'assistant', label: 'Assistant', text: 'Visible assistant text.' },
+    { id: 'owner_1', type: 'user', label: 'You', text: 'Visible operator reply.' },
   ];
   const roleSession: RoleSession = {
     roleName: 'Owner',
@@ -77,13 +77,13 @@ test('loadAllRoleFeeds returns all role feeds keyed by role', () => {
   assert.strictEqual(allFeeds.get('owner')?.length, 2);
 });
 
-test('saveRoleFeed and loadRoleFeed round-trip correctly', () => {
-  const messages: OperatorFeedMessage[] = [
-    { type: 'output_text', role: 'Curator_1', text: 'hello' },
-    { type: 'input_text', role: 'Curator_1', text: 'user reply' },
+test('saveRoleFeed and loadRoleFeed round-trip FeedItem arrays', () => {
+  const items: FeedItem[] = [
+    { id: 'curator_1_0', type: 'assistant', label: 'Assistant', text: 'hello' },
+    { id: 'curator_1_1', type: 'user', label: 'You', text: 'user reply' },
   ];
-  SessionStore.saveRoleFeed(messages, ref, 'curator_1', tmpDir);
-  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'curator_1', tmpDir), messages);
+  SessionStore.saveRoleFeed(items, ref, 'curator_1', tmpDir);
+  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'curator_1', tmpDir), items);
 });
 
 test('repair requested events are role-feed historical events when role is present', () => {
@@ -98,6 +98,42 @@ test('repair requested events are role-feed historical events when role is prese
 
   assert.strictEqual(isTransientOperatorEvent(event), false);
   assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
+});
+
+test('projectMessageToFeedItem produces the expected FeedItem shape for output_text', () => {
+  const item = projectMessageToFeedItem(
+    { type: 'output_text', role: 'Owner', text: 'hi' },
+    'owner_0'
+  );
+  assert.deepStrictEqual(item, { id: 'owner_0', type: 'assistant', label: 'Assistant', text: 'hi' });
+});
+
+test('projectMessageToFeedItem returns a tool FeedItem for activity.tool_call with role', () => {
+  const item = projectMessageToFeedItem(
+    {
+      type: 'operator_event',
+      event: { kind: 'activity.tool_call', role: 'Owner', toolName: 'write_file', path: 'a.md' },
+    },
+    'owner_3'
+  );
+  assert.deepStrictEqual(item, { id: 'owner_3', type: 'tool', label: 'Tool Call', text: 'write_file a.md' });
+});
+
+test('activity.tool_call is no longer in the transient set so it reaches historical persistence', () => {
+  const event: OperatorEvent = { kind: 'activity.tool_call', role: 'Owner', toolName: 'read' };
+  assert.strictEqual(isTransientOperatorEvent(event), false);
+  assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
+});
+
+test('projectMessageToFeedItem returns null for events that do not become feed items', () => {
+  assert.strictEqual(
+    projectMessageToFeedItem({ type: 'operator_event', event: { kind: 'flow.resumed', flowId: 'x', activeNodeCount: 1 } }, 'x'),
+    null
+  );
+  assert.strictEqual(
+    projectMessageToFeedItem({ type: 'error', message: 'boom' }, 'x'),
+    null
+  );
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

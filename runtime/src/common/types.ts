@@ -209,7 +209,7 @@ export interface RoleTurnResult {
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string; activationSource?: 'node-start' | 'handoff' | 'runtime' }
-  | { kind: 'activity.tool_call'; toolName: string; path?: string; command?: string }
+  | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
@@ -234,6 +234,23 @@ export type OperatorFeedMessage =
   | { type: 'output_text'; role: string; text: string }
   | { type: 'input_text'; role?: string; text: string }
   | { type: 'error'; message: string };
+
+export type FeedItemType =
+  | 'assistant'
+  | 'user'
+  | 'event'
+  | 'error'
+  | 'handoff'
+  | 'repair'
+  | 'tool'
+  | 'activation';
+
+export interface FeedItem {
+  id: string;
+  type: FeedItemType;
+  label: string;
+  text: string;
+}
 
 export interface TurnOptions {
   signal?: AbortSignal;
