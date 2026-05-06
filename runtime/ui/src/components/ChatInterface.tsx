@@ -16,7 +16,7 @@ interface ChatInterfaceProps {
   stopRequested?: boolean;
   roles?: string[];
   selectedRole?: string;
-  activeRole?: string;
+  activeRoles?: string[];
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
   contextWindow?: number | null;
@@ -243,12 +243,12 @@ export function ChatInterface(props: ChatInterfaceProps) {
           {props.roles.map((role) => (
             <button
               key={role}
-              className={`role-tab${props.selectedRole === role ? ' role-tab-active' : ''}${props.activeRole === role ? ' role-tab-live' : ''}`}
+              className={`role-tab${props.selectedRole === role ? ' role-tab-active' : ''}${props.activeRoles?.includes(role) ? ' role-tab-live' : ''}`}
               onClick={() => props.onRoleSelect?.(role)}
               type="button"
             >
               {role}
-              {props.activeRole === role ? <span className="role-tab-dot" /> : null}
+              {props.activeRoles?.includes(role) ? <span className="role-tab-dot" /> : null}
             </button>
           ))}
         </div>

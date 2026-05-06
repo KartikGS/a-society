@@ -996,7 +996,7 @@ export function App() {
                   stopRequested={activeUi?.stopRequested ?? false}
                   roles={roles}
                   selectedRole={viewedRole ?? undefined}
-                  activeRole={activeRoles[0] ?? undefined}
+                  activeRoles={activeRoles}
                   consentRequest={activeUi?.consentRequest ?? null}
                   consentMode={flowRun?.consentState?.mode ?? 'no-access'}
                   onRoleSelect={(role) => {
