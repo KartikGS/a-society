@@ -1071,18 +1071,6 @@ export class FlowOrchestrator {
       if (!this.getOpenNodeIds(flowRun).includes(candidateNodeId)) {
         flowRun.readyNodes.push(candidateNodeId);
       }
-    } else if (incomingEdges.length > 1) {
-      // Join-blocked: emit parallel.join_waiting
-      const candidateNode = this.findNodeById(wf, candidateNodeId);
-      const waitingFor = incomingEdges
-        .filter((edge: any) => !(this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts))
-        .map((e: any) => e.from);
-      this.renderer.emit({
-        kind: 'parallel.join_waiting',
-        nodeId: candidateNodeId,
-        role: candidateNode?.role ?? '',
-        waitingFor
-      });
     }
   }
 

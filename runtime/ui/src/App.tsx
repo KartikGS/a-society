@@ -138,11 +138,10 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
     case 'flow.resumed':
       return null;
     case 'role.active':
-      if (event.activationSource !== 'handoff' && event.activationSource !== 'runtime') return null;
       return {
         id: nextFeedId(),
         type: 'activation',
-        label: event.activationSource === 'runtime' ? 'Runtime' : 'Handoff',
+        label: event.activationSource === 'runtime' ? 'Runtime' : 'Node',
         text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).${event.artifactBasename ? ` Primary artifact: ${event.artifactBasename}.` : ''}`
       };
     case 'activity.tool_call':
@@ -172,15 +171,6 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
       return null;
     case 'human.resumed':
       return null;
-    case 'parallel.active_set':
-      return null;
-    case 'parallel.join_waiting':
-      return {
-        id: nextFeedId(),
-        type: 'event',
-        label: 'Join Waiting',
-        text: `${event.nodeId} (${event.role}) is waiting for ${event.waitingFor.join(', ')}.`
-      };
     case 'usage.turn_summary':
       return null;
     case 'flow.forward_pass_closed':
@@ -415,7 +405,7 @@ export function App() {
         updateFlowUi(key, (state) => {
           const item = formatOperatorEvent(event);
           const feedRole =
-            event.kind === 'human.resumed' || event.kind === 'parallel.join_waiting' || event.kind === 'activity.tool_call'
+            event.kind === 'human.resumed' || event.kind === 'activity.tool_call'
               ? toRoleKey(event.role)
               : event.kind === 'handoff.applied'
                 ? toRoleKey(event.fromRole)

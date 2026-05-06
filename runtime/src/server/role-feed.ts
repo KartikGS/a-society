@@ -99,13 +99,6 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
       return null;
     case 'human.resumed':
       return null;
-    case 'parallel.join_waiting':
-      return {
-        id,
-        type: 'event',
-        label: 'Join Waiting',
-        text: `${event.nodeId} (${event.role}) is waiting for ${event.waitingFor.join(', ')}.`
-      };
     case 'usage.turn_summary':
       return null;
     case 'flow.forward_pass_closed':
