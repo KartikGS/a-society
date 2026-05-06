@@ -37,7 +37,6 @@ export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | n
 export function isTransientOperatorEvent(event: OperatorEvent): boolean {
   return (
     event.kind === 'flow.resumed' ||
-    event.kind === 'parallel.active_set' ||
     event.kind === 'flow.forward_pass_closed'
   );
 }
@@ -63,11 +62,10 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
     case 'flow.resumed':
       return null;
     case 'role.active':
-      if (event.activationSource !== 'handoff' && event.activationSource !== 'runtime') return null;
       return {
         id,
         type: 'activation',
-        label: event.activationSource === 'runtime' ? 'Runtime' : 'Handoff',
+        label: event.activationSource === 'runtime' ? 'Runtime' : 'Node',
         text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).${event.artifactBasename ? ` Primary artifact: ${event.artifactBasename}.` : ''}`
       };
     case 'activity.tool_call':
@@ -100,8 +98,6 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
     case 'human.awaiting_input':
       return null;
     case 'human.resumed':
-      return null;
-    case 'parallel.active_set':
       return null;
     case 'parallel.join_waiting':
       return {

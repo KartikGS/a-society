@@ -61,7 +61,7 @@ The chat view remains active only until the first workflow node starts.
 
 ### 2. Graph Mode
 
-The UI switches to graph mode on the first `role.active` operator event.
+The UI switches to graph mode on the first `role.active` operator event. `role.active` is emitted when a node is claimed and entered, not when a handoff merely makes that node ready.
 
 - The workflow graph becomes the primary surface
 - Ready, running, awaiting-human, completed, and backward/corrective nodes are color-coded
@@ -128,13 +128,13 @@ The runtime no longer bootstraps from empty orchestration state. A project must 
 - initialized projects use a stored draft flow created by the server
 - initialization runs use a stored single-node Owner flow created after scaffold
 
-The runtime then claims every ready node whose role is not already open, runs distinct-role nodes concurrently, and continues until the flow pauses or completes.
+The runtime then claims ready nodes in `readyNodes` order, runs distinct-role nodes concurrently, and leaves later ready nodes with an already-occupied role instance queued in `readyNodes` until that role instance is free.
 
 ### Flow state scheduler fields
 
 Forward-pass flow state uses explicit scheduler fields:
 
-- `readyNodes` — nodes eligible to start
+- `readyNodes` — nodes whose dependencies are satisfied and are waiting to start
 - `runningNodes` — nodes currently claimed by live runtime turns
 - `awaitingHumanNodes` — nodes suspended for targeted operator input
 
@@ -152,9 +152,9 @@ When the same role instance appears again at a later node in the same flow, the 
 
 When a backward edge reopens a node for the same role instance, the runtime keeps the existing role-instance-scoped session and appends a reopened-node packet before continuing.
 
-### Same-role-instance parallel activation
+### Same-role-instance scheduling
 
-Concurrent activation of the same role instance is unsupported because a role instance has one flow-scoped session. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
+Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple ready nodes share a role instance, the runtime claims only the earliest ready node for that role instance and leaves later same-role-instance nodes in `readyNodes`. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
 
 ---
 

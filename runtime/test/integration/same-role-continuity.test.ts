@@ -8,15 +8,15 @@
  *  2. Later same-role node reuses the same role-scoped session and appends a node-transition packet
  *  3. Reopened same-role node keeps the prior role-scoped session and appends a reopen packet
  *  4. Separate role instances with the same base role use separate sessions
- *  5. Same-role-instance parallel activation is explicitly rejected
+ *  5. Same-role-instance ready nodes are serialized by the scheduler
  */
 
 import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Readable, Writable, PassThrough } from 'node:stream';
-import { FlowOrchestrator, WorkflowError } from '../../src/orchestration/orchestrator.js';
+import { Readable, Writable } from 'node:stream';
+import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { ContextInjectionService } from '../../src/context/injection.js';
@@ -144,6 +144,10 @@ function ownerInstanceSessionId(instanceNumber: number, flowId = 'instance-flow-
   return `${flowId}__owner-${instanceNumber}`;
 }
 
+function flowRef(flowId = 'test-flow-id') {
+  return { projectNamespace, flowId };
+}
+
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   return {
     flowId: 'test-flow-id',
@@ -224,10 +228,11 @@ async function run() {
       transcriptHistory: priorHistory,
       isActive: true,
       currentNodeId: 'owner-intake'
-    });
+    }, flowRef(), workspaceRoot);
 
-    const loadedSession = SessionStore.loadRoleSession(sessionId);
+    const loadedSession = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
     assert.ok(loadedSession !== null, 'Session must be persisted before resume');
+    assert.strictEqual(loadedSession!.logicalSessionId, sessionId);
     assert.strictEqual(loadedSession!.transcriptHistory.length, 2);
     assert.strictEqual((loadedSession!.transcriptHistory[0] as any).content, 'original node entry message');
     assert.strictEqual(loadedSession!.currentNodeId, 'owner-intake');
@@ -285,10 +290,12 @@ async function run() {
       status: 'completed',
       stateVersion: '5',
     };
-    fs.writeFileSync(path.join(stateDir, 'flow.json'), JSON.stringify(v5Flow, null, 2));
+    const v5FlowDir = path.join(stateDir, projectNamespace, 'v5-flow');
+    fs.mkdirSync(v5FlowDir, { recursive: true });
+    fs.writeFileSync(path.join(v5FlowDir, 'flow.json'), JSON.stringify(v5Flow, null, 2));
 
     assert.throws(
-      () => SessionStore.loadFlowRun(),
+      () => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot),
       /only supports flow state version "7"/
     );
   });
@@ -305,7 +312,7 @@ async function run() {
       ],
       isActive: false,
       currentNodeId: 'owner-intake'
-    });
+    }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
       readyNodes: ['owner-gate'],
@@ -337,7 +344,7 @@ async function run() {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession(ownerSessionId());
+    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
     assert.ok(session !== null, 'role-scoped Owner session must be preserved');
     assert.strictEqual((session!.transcriptHistory[0] as any).content, 'owner-intake entry message');
 
@@ -362,7 +369,7 @@ async function run() {
       ],
       isActive: false,
       currentNodeId: 'owner-intake'
-    });
+    }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
       readyNodes: ['owner-intake'],
@@ -392,7 +399,7 @@ async function run() {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession(ownerSessionId());
+    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
     assert.ok(session !== null, 'reopened node should keep the prior role-scoped session');
 
     const reopenedMessage = (session!.transcriptHistory as any[])
@@ -429,13 +436,13 @@ async function run() {
     }
 
     const ownerOneSession = SessionStore.loadRoleSession(
-      ownerInstanceSessionId(1),
-      { projectNamespace, flowId: 'instance-flow-id' },
+      'owner-1',
+      flowRef('instance-flow-id'),
       workspaceRoot
     );
     const ownerTwoSession = SessionStore.loadRoleSession(
-      ownerInstanceSessionId(2),
-      { projectNamespace, flowId: 'instance-flow-id' },
+      'owner-2',
+      flowRef('instance-flow-id'),
       workspaceRoot
     );
 
@@ -450,7 +457,7 @@ async function run() {
     assert.ok((ownerTwoSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
   });
 
-  await test('Orchestrator: same-role-instance parallel activation is rejected', async () => {
+  await test('Orchestrator: same-role-instance ready nodes are serialized by the scheduler', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -464,17 +471,69 @@ async function run() {
     });
     SessionStore.saveFlowRun(flowRun);
 
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Owner intake pauses. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new PassThrough();
+    const input = new Readable({ read() {} });
+    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    await assert.rejects(
-      () => orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output),
-      (error: any) => {
-        assert.ok(error instanceof WorkflowError);
-        assert.ok(error.message.includes('Unsupported same-role-instance parallel activation'));
-        return true;
+    try {
+      await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, 'owner', input, output, flowRun.flowId);
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
+    assert.ok(updated.readyNodes.includes('owner-gate'), 'later same-role node should remain ready');
+    assert.ok(!updated.runningNodes.includes('owner-gate'), 'later same-role node should not be claimed while owner-intake is suspended');
+    assert.ok(updated.awaitingHumanNodes['owner-intake'], 'first same-role node should be awaiting human input');
+  });
+
+  await test('Orchestrator: handoff to busy same-role target is accepted and left ready', async () => {
+    resetState();
+
+    const flowRun = makeFlowRun({
+      readyNodes: [],
+      runningNodes: ['owner-intake', 'ta'],
+      awaitingHumanNodes: {},
+      completedNodes: [],
+      completedEdgeArtifacts: {
+        'owner-intake=>ta': path.relative(workspaceRoot, ownerArtifact1)
+      },
+      pendingNodeArtifacts: {
+        'ta': [path.relative(workspaceRoot, ownerArtifact1)]
       }
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const handoffArtifact = path.relative(workspaceRoot, taArtifact);
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: `TA complete. \`\`\`handoff\ntarget_node_id: owner-gate\nartifact_path: ${handoffArtifact}\n\`\`\`` }
+    ]));
+
+    const sink = new RecordingOperatorSink();
+    const orchestrator = new FlowOrchestrator(sink);
+    const input = new Readable({ read() {} });
+    input.push(null);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await orchestrator.advanceFlow(flowRun, 'ta', undefined, undefined, input, output);
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
+    assert.strictEqual(updated.completedEdgeArtifacts['ta=>owner-gate'], handoffArtifact);
+    assert.ok(updated.readyNodes.includes('owner-gate'), 'busy same-role handoff target should be queued in readyNodes');
+    assert.ok(updated.runningNodes.includes('owner-intake'), 'existing same-role node should remain running');
+    assert.ok(!updated.runningNodes.includes('owner-gate'), 'busy same-role target should not be claimed immediately');
+    assert.ok(
+      !sink.events.some(event => event.kind === 'repair.requested'),
+      'busy same-role handoff should not request repair'
     );
   });
 

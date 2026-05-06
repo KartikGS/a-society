@@ -253,27 +253,7 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
 
   const workflow = wf as WorkflowGraph;
 
-  // 1. Unconditional check: No neighboring same-role-instance nodes
-  const nodeIdToRole = new Map<string, string>();
-  for (const node of workflow.nodes) {
-    nodeIdToRole.set(node.id, node.role);
-  }
-
-  for (let i = 0; i < workflow.edges.length; i++) {
-    const edge = workflow.edges[i];
-    const fromRole = nodeIdToRole.get(edge.from);
-    const toRole = nodeIdToRole.get(edge.to);
-
-    if (
-      fromRole &&
-      toRole &&
-      parseRoleIdentity(fromRole).instanceRoleId === parseRoleIdentity(toRole).instanceRoleId
-    ) {
-      errors.push(`Invalid edge [${i}]: neighboring nodes "${edge.from}" and "${edge.to}" both share the same role instance "${fromRole}"`);
-    }
-  }
-
-  // 2. Strict checks: unique Owner start node; Owner at end
+  // Strict checks: unique Owner start node; Owner at end
   if (strict) {
     const toIds = new Set<string>();
     const fromIds = new Set<string>();

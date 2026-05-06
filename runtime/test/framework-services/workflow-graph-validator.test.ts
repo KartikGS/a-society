@@ -221,7 +221,7 @@ test('file without frontmatter fails', () => {
   assert.strictEqual(result.valid, false);
 });
 
-test('neighboring same-role-instance nodes produces error (unconditional)', () => {
+test('neighboring same-role-instance nodes pass', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -233,9 +233,7 @@ test('neighboring same-role-instance nodes produces error (unconditional)', () =
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(
-    errors.some((e: string) => e.includes('neighboring nodes "n1" and "n2" both share the same role instance "Owner"'))
-  );
+  assert.deepStrictEqual(errors, []);
 });
 
 test('neighboring numbered role instances with the same base role pass', () => {

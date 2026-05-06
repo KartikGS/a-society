@@ -412,14 +412,13 @@ async function run() {
     assert.deepStrictEqual(eventKinds, [
       'role.active',
       'usage.turn_summary',
-      'handoff.applied',
-      'role.active'
+      'handoff.applied'
     ]);
     const usageEvent = renderer.events[1];
     assert.strictEqual(usageEvent.kind, 'usage.turn_summary');
     assert.deepStrictEqual(
       usageEvent,
-      { kind: 'usage.turn_summary', availability: 'full', inputTokens: 55, outputTokens: 13 }
+      { kind: 'usage.turn_summary', role: undefined, availability: 'full', inputTokens: 55, outputTokens: 13 }
     );
   });
 

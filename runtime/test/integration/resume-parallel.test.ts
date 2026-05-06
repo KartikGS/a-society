@@ -9,12 +9,11 @@ import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
 /**
- * Correction 1 verification: resumed multi-node flows emit parallel.active_set.
+ * Verification: resumed multi-node flows emit flow.resumed with open-node count.
  *
  * Pre-saves a flow with two active nodes and status='awaiting_human'.
  * Calls runStoredFlow, which takes the resume path and skips
- * the while loop (status !== 'running'). Asserts that both flow.resumed
- * and parallel.active_set are emitted in order.
+ * the while loop (status !== 'running').
  */
 async function runTest() {
   console.log("Starting resume-parallel integration test...");
@@ -86,27 +85,17 @@ async function runTest() {
   try {
     await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, 'Owner', inputStream, outputStream);
 
-    const resumeIdx = sink.events.findIndex(e => e.kind === 'flow.resumed');
-    const parallelEvent = sink.events.find(e => e.kind === 'parallel.active_set');
-    const parallelIdx = sink.events.findIndex(e => e.kind === 'parallel.active_set');
+    const resumeEvent = sink.events.find(e => e.kind === 'flow.resumed');
 
-    const hasResumedNotice = resumeIdx !== -1;
-    const hasParallelActiveSet = parallelEvent !== undefined;
-    const hasNodeBranchA = parallelEvent?.kind === 'parallel.active_set' && parallelEvent.activeNodes.some(n => n.nodeId === 'branch-a');
-    const hasNodeBranchB = parallelEvent?.kind === 'parallel.active_set' && parallelEvent.activeNodes.some(n => n.nodeId === 'branch-b');
+    const hasResumedNotice = resumeEvent !== undefined;
 
     console.log("Validation:");
     console.log(`- Sink has flow.resumed event: ${hasResumedNotice ? "Yes" : "No"}`);
-    console.log(`- Sink has parallel.active_set event: ${hasParallelActiveSet ? "Yes" : "No"}`);
-    console.log(`- parallel.active_set includes branch-a: ${hasNodeBranchA ? "Yes" : "No"}`);
-    console.log(`- parallel.active_set includes branch-b: ${hasNodeBranchB ? "Yes" : "No"}`);
+    console.log(`- flow.resumed active node count: ${resumeEvent?.kind === 'flow.resumed' ? resumeEvent.activeNodeCount : 'n/a'}`);
 
     assert.ok(hasResumedNotice, "Expected sink to contain flow.resumed event.");
-    assert.ok(hasParallelActiveSet, "Expected sink to contain parallel.active_set event.");
-    assert.ok(hasNodeBranchA, "Expected parallel.active_set to include branch-a.");
-    assert.ok(hasNodeBranchB, "Expected parallel.active_set to include branch-b.");
-
-    assert.ok(resumeIdx < parallelIdx, "Expected flow.resumed event to precede parallel.active_set event.");
+    assert.strictEqual(resumeEvent?.kind === 'flow.resumed' ? resumeEvent.activeNodeCount : 0, 2);
+    assert.deepStrictEqual(sink.events.map(e => e.kind), ['flow.resumed']);
 
     console.log("Resume-parallel test PASSED.");
   } catch (e: any) {

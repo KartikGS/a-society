@@ -128,7 +128,11 @@ The suffix pattern is `Role_N`, where `N` is a numeric suffix. The runtime loads
 
 Node notes such as "Curator A" or "Curator B" are descriptive only. They do not create separate runtime sessions.
 
-Edges may not connect two neighboring nodes with the same role instance. If a flow needs consecutive work by the same base role as distinct runtime sessions, use separate numbered role instances. If the work is one continuous role session, model it as a single node.
+Edges may connect neighboring nodes with the same role instance. The runtime treats the second node as a continuation of the same flow-scoped role-instance session and injects that node's current task inputs before the role continues.
+
+If two nodes share the same role instance and become ready at the same time, the runtime keeps both in ready order but claims only the earliest ready node for that role instance. Later same-role-instance nodes wait until the role instance is no longer running or awaiting human input.
+
+If a flow needs separate runtime histories for the same base role, use separate numbered role instances. If distinct role instances are used, they may run in parallel.
 
 ---
 

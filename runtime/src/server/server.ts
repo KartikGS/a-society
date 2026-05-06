@@ -413,20 +413,12 @@ function buildServer(workspaceRoot: string) {
         }
 
         updateBackwardTracking(session, message.event);
-        if (
-          message.event.kind === 'role.active' &&
-          message.event.activationSource !== 'handoff' &&
-          message.event.activationSource !== 'runtime'
-        ) {
-          emitTransientMessage(session, message);
-        } else {
-          emitHistoricalMessage(session, message);
-        }
+        emitHistoricalMessage(session, message);
 
         if (
           message.event.kind === 'handoff.applied' ||
           message.event.kind === 'flow.completed' ||
-          (message.event.kind === 'role.active' && message.event.activationSource === 'runtime')
+          message.event.kind === 'role.active'
         ) {
           setImmediate(() => emitFlowState(session));
         }

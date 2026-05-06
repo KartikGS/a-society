@@ -64,8 +64,8 @@ test('INVOCATION.md: documents role instance parallel behavior', () => {
     'Expected INVOCATION.md to document numbered role instances'
   );
   assert.ok(
-    doc.includes('Concurrent activation of the same role instance is unsupported'),
-    'Expected INVOCATION.md to describe same-role-instance rejection'
+    doc.includes('leaves later same-role-instance nodes in `readyNodes`'),
+    'Expected INVOCATION.md to describe same-role-instance serialization'
   );
   assert.ok(
     doc.includes('Distinct role instances may run in parallel'),

@@ -11,11 +11,10 @@ import { seedTestModelSettings } from './settings-test-utils.js';
 
 /**
  * Correction 3 verification: a full linear orchestration run emits exactly one
- * role.active notice for the successor node, not two.
+ * role.active notice for the successor node when it is claimed.
  *
- * applyHandoffAndAdvance emits role.active at the handoff boundary and tracks it
- * in pendingRoleActiveEmitted. When advanceFlow subsequently enters the same node,
- * it checks the set and suppresses the duplicate.
+ * Handoff makes the successor ready; advanceFlow emits role.active when the
+ * scheduler or direct caller actually claims and enters that node.
  */
 async function runTest() {
   console.log("Starting linear-role-active integration test...");
@@ -140,7 +139,7 @@ async function runTest() {
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
-    assert.ok(flowAfterStart.readyNodes.includes('next'), "Expected 'next' to be active.");
+    assert.ok(flowAfterStart.readyNodes.includes('next'), "Expected 'next' to be ready.");
 
     console.log("\n--- Advancing 'next' node ---");
     await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, undefined, inputStream, outputStream);
@@ -159,7 +158,7 @@ async function runTest() {
     );
     const flowAfterNext = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");
-    assert.ok(flowAfterNext.readyNodes.includes('end'), "Expected successor node 'end' to be active.");
+    assert.ok(flowAfterNext.readyNodes.includes('end'), "Expected successor node 'end' to be ready.");
 
     console.log("Linear-role-active test PASSED.");
   } catch (e: any) {
