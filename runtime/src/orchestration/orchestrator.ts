@@ -210,19 +210,12 @@ export class FlowOrchestrator {
         const artifactBasename = resolvedArtifacts.length === 1
           ? path.basename(resolvedArtifacts[0])
           : undefined;
-        const isRuntimeInitialActivation =
-          firstNodeVisit &&
-          !claim.resumedFromHuman &&
-          flowRun.completedNodes.length === 0 &&
-          Object.keys(flowRun.completedEdgeArtifacts).length === 0 &&
-          resolvedArtifacts.length === 0;
         this.renderer.emit({
           kind: 'role.active',
           nodeId,
           role: currentNodeDef.role,
           artifactCount: resolvedArtifacts.length,
-          artifactBasename,
-          activationSource: isRuntimeInitialActivation ? 'runtime' : 'node-start'
+          artifactBasename
         });
 
         const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;

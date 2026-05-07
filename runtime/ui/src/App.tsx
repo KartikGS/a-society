@@ -141,7 +141,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
       return {
         id: nextFeedId(),
         type: 'activation',
-        label: event.activationSource === 'runtime' ? 'Runtime' : 'Node',
+        label: 'Activation',
         text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).${event.artifactBasename ? ` Primary artifact: ${event.artifactBasename}.` : ''}`
       };
     case 'activity.tool_call':
@@ -379,7 +379,6 @@ export function App() {
             const roleKey = toRoleKey(event.role);
             return {
               ...state,
-              selectedRole: event.activationSource === 'runtime' ? roleKey : state.selectedRole ?? roleKey,
               stopRequested: false,
               roleFeeds: item && roleKey ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
             };
@@ -394,7 +393,6 @@ export function App() {
             const roleKey = toRoleKey(event.role);
             return {
               ...state,
-              selectedRole: state.selectedRole ?? roleKey,
               stopRequested: false,
               roleFeeds: item && roleKey ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
             };
@@ -414,7 +412,6 @@ export function App() {
                   : null;
           return {
             ...state,
-            selectedRole: event.kind === 'repair.requested' && event.role ? state.selectedRole ?? toRoleKey(event.role) : state.selectedRole,
             stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
             roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
@@ -860,7 +857,8 @@ export function App() {
     )];
   }, [flowRun, workflow]);
 
-  const viewedRole = selectedRole ?? activeRoles[0] ?? null;
+  const autoSelectedRole = roles.length === 1 ? roles[0] : null;
+  const viewedRole = selectedRole ?? autoSelectedRole;
   const displayedFeed = viewedRole ? (activeUi?.roleFeeds[viewedRole] ?? []) : [];
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds[SYSTEM_ROLE_KEY] ?? []);
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;

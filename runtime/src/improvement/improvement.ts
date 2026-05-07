@@ -418,8 +418,7 @@ export class ImprovementOrchestrator {
                   kind: 'role.active',
                   nodeId: improvementGraphNodeId,
                   role: roleName,
-                  artifactCount: 0,
-                  activationSource: 'runtime'
+                  artifactCount: 0
                 });
 
                 if (entry.stepType === 'meta-analysis') {
@@ -623,8 +622,7 @@ export class ImprovementOrchestrator {
             kind: 'role.active',
             nodeId: improvementGraphNodeId,
             role: roleName,
-            artifactCount: 0,
-            activationSource: 'runtime'
+            artifactCount: 0
           });
 
           const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);

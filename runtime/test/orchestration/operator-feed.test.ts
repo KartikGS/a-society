@@ -125,14 +125,13 @@ test('activity.tool_call is no longer in the transient set so it reaches histori
   assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
 });
 
-test('node-start role.active becomes a role feed activation item', () => {
+test('role.active becomes a role feed activation item', () => {
   const event: OperatorEvent = {
     kind: 'role.active',
     nodeId: 'owner-gate',
     role: 'Owner',
     artifactCount: 1,
     artifactBasename: 'handoff.md',
-    activationSource: 'node-start',
   };
 
   assert.strictEqual(isTransientOperatorEvent(event), false);
@@ -140,7 +139,7 @@ test('node-start role.active becomes a role feed activation item', () => {
   assert.deepStrictEqual(projectMessageToFeedItem({ type: 'operator_event', event }, 'owner_4'), {
     id: 'owner_4',
     type: 'activation',
-    label: 'Node',
+    label: 'Activation',
     text: 'owner-gate (Owner) is active with 1 artifact(s). Primary artifact: handoff.md.',
   });
 });
