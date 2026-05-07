@@ -418,8 +418,15 @@ async function run() {
     assert.strictEqual(usageEvent.kind, 'usage.turn_summary');
     assert.deepStrictEqual(
       usageEvent,
-      { kind: 'usage.turn_summary', role: undefined, availability: 'full', inputTokens: 55, outputTokens: 13 }
+      { kind: 'usage.turn_summary', role: 'curator', availability: 'full', inputTokens: 55, outputTokens: 13 }
     );
+
+    const storedSession = SessionStore.loadRoleSession(
+      'curator',
+      { projectNamespace: 'a-society', flowId: 'accepted-handoff-flow' },
+      tmpDir
+    );
+    assert.deepStrictEqual(storedSession?.latestTurnUsage, { inputTokens: 55, outputTokens: 13 });
   });
 
   await test('Scenario: validateWorkflowFile (REAL CODE)', async () => {

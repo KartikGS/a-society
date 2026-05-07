@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate } from '../common/types.js';
+import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession } from '../common/types.js';
 import { emitUsage, runRoleTurn } from './orient.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
@@ -364,10 +364,11 @@ export class FlowOrchestrator {
             if (sessionResult) {
               const handoffResult = sessionResult.handoff;
               const turnUsage = sessionResult.usage;
+              this.applyLatestTurnUsage(session, turnUsage);
+              emitUsage(this.renderer, turnUsage, roleName);
               if (handoffResult.kind === 'awaiting_human') {
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
-                emitUsage(this.renderer, turnUsage, roleName);
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
                 flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'prompt-human');
@@ -383,7 +384,6 @@ export class FlowOrchestrator {
                     error_count: healthCheck.errors.length,
                     errors: healthCheck.errors.join('; ').slice(0, 2000)
                   });
-                  emitUsage(this.renderer, turnUsage, roleName);
                   const guidance = buildRuntimeHealthRepairGuidance(
                     healthCheck.errors,
                     'forward-pass-closed'
@@ -403,7 +403,6 @@ export class FlowOrchestrator {
                 }
 
                 span.setAttribute('node.outcome', 'forward_pass_closed');
-                emitUsage(this.renderer, turnUsage, roleName);
                 const uniqueBaseRoles = new Set(
                   (wf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
                 );
@@ -442,7 +441,7 @@ export class FlowOrchestrator {
               const handoffs = handoffResult.targets;
               this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
 
-              await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs, turnUsage);
+              await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
 
               session.transcriptHistory = injectedHistory;
               session.isActive = false;
@@ -509,8 +508,7 @@ export class FlowOrchestrator {
     flowRun: FlowRun,
     nodeId: string,
     fromRole: string,
-    handoffs: HandoffTarget[],
-    turnUsage?: TurnUsage
+    handoffs: HandoffTarget[]
   ): Promise<AppliedHandoffDirection> {
     this.setFlowContext(flowRun);
     if (!fs.existsSync(flowRun.recordFolderPath)) {
@@ -697,7 +695,6 @@ export class FlowOrchestrator {
       throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
     }
 
-    emitUsage(this.renderer, turnUsage);
     this.renderer.emit({
       kind: 'handoff.applied',
       fromNodeId: nodeId,
@@ -886,6 +883,12 @@ export class FlowOrchestrator {
 
   private roleKey(roleName: string): string {
     return parseRoleIdentity(roleName).instanceRoleId;
+  }
+
+  private applyLatestTurnUsage(session: RoleSession, turnUsage: TurnUsage | undefined): void {
+    if (!turnUsage) return;
+    if (turnUsage.inputTokens === undefined && turnUsage.outputTokens === undefined) return;
+    session.latestTurnUsage = { ...turnUsage };
   }
 
   private resolveActiveWorkflow(flowRun: FlowRun): any {

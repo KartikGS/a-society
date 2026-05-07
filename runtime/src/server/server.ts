@@ -21,7 +21,7 @@ import * as SettingsStore from '../settings/settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
 import { defaultConsentState, normalizeConsentState } from '../common/types.js';
-import type { FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentResponseDecision } from '../common/types.js';
+import type { FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentResponseDecision, RoleSession } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from './role-feed.js';
 
@@ -116,6 +116,11 @@ function recoverRoleFeedSequence(roleFeedHistory: Map<string, FeedItem[]>): Map<
     sequence.set(roleKey, max + 1);
   }
   return sequence;
+}
+
+function latestInputTokensFromSession(session: RoleSession | null): number | null {
+  if (!session) return null;
+  return session.latestTurnUsage?.inputTokens ?? session.latestInputTokens ?? null;
 }
 
 function flowKey(ref: FlowRef): string {
@@ -317,7 +322,8 @@ function buildServer(workspaceRoot: string) {
           SessionStore.listRoleKeys(ref, workspaceRoot)
             .map((roleKey) => {
               const s = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
-              return s?.latestInputTokens != null ? [roleKey, s.latestInputTokens] as const : null;
+              const inputTokens = latestInputTokensFromSession(s);
+              return inputTokens != null ? [roleKey, inputTokens] as const : null;
             })
             .filter((e): e is [string, number] => e !== null)
         );
@@ -399,10 +405,6 @@ function buildServer(workspaceRoot: string) {
           if (role && (availability === 'full' || availability === 'output-unavailable') && inputTokens != null) {
             const roleKey = parseRoleIdentity(role).instanceRoleId;
             session.latestInputTokensByRole[roleKey] = inputTokens;
-            const stored = SessionStore.loadRoleSession(roleKey, session.flowRef, workspaceRoot);
-            if (stored) {
-              SessionStore.saveRoleSession({ ...stored, latestInputTokens: inputTokens }, session.flowRef, workspaceRoot);
-            }
           }
           emitTransientMessage(session, message);
           return;
@@ -450,7 +452,8 @@ function buildServer(workspaceRoot: string) {
       Array.from(roleFeedHistory.keys())
         .map((roleKey) => {
           const s = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
-          return s?.latestInputTokens != null ? [roleKey, s.latestInputTokens] as const : null;
+          const inputTokens = latestInputTokensFromSession(s);
+          return inputTokens != null ? [roleKey, inputTokens] as const : null;
         })
         .filter((e): e is [string, number] => e !== null)
     );
