@@ -11,9 +11,9 @@ import { seedTestModelSettings } from './settings-test-utils.js';
 /**
  * Verification: resumed multi-node flows emit flow.resumed with open-node count.
  *
- * Pre-saves a flow with two active nodes and status='awaiting_human'.
- * Calls runStoredFlow, which takes the resume path and skips
- * the while loop (status !== 'running').
+ * Pre-saves a running flow with two nodes waiting for human input.
+ * Calls runStoredFlow, which emits the open-node count and finds no
+ * ready nodes to advance.
  */
 async function runTest() {
   console.log("Starting resume-parallel integration test...");
@@ -51,7 +51,7 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  // Pre-save a flow in awaiting_human state with two suspended fork branches.
+  // Pre-save a flow with two suspended fork branches.
   // No nodes are ready, so no LLM calls are made — this test only exercises
   // the resume emit path for a multi-node open set.
   SessionStore.init();
@@ -72,7 +72,7 @@ async function runTest() {
       'fork-gate=>branch-b': 'art-b.md'
     },
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] },
-    status: 'awaiting_human',
+    status: 'running',
     stateVersion: '7'
   });
 

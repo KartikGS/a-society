@@ -1,6 +1,5 @@
 export type FlowStatus =
   | 'running'
-  | 'awaiting_human'
   | 'awaiting_improvement_choice'
   | 'awaiting_feedback_consent'
   | 'completed';

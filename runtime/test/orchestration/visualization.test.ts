@@ -91,7 +91,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
     assert.ok(output.includes('[ ] join (Curator) — waiting for: t1'));
 });
 
-test('renderFlowStatus: awaiting_human status renders explicit suspended notice', () => {
+test('renderFlowStatus: awaitingHumanNodes render explicit operator-input notice', () => {
   const flowRun: FlowRun = {
     flowId: 'uuid',
     workspaceRoot: '.',
@@ -103,12 +103,12 @@ test('renderFlowStatus: awaiting_human status renders explicit suspended notice'
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'start': [] },
-    status: 'awaiting_human',
+    status: 'running',
     stateVersion: '7'
   };
   const output = renderFlowStatus(flowRun, WF);
-  assert.ok(output.includes('Status: awaiting_human'), 'must show awaiting_human status');
-  assert.ok(output.includes('Suspended: waiting for operator input'), 'must show suspended notice');
+  assert.ok(output.includes('Status: running'), 'must show flow phase status');
+  assert.ok(output.includes('Human input: waiting for operator input'), 'must show node-level waiting notice');
 });
 
 test('renderFlowStatus: multiple active nodes renders all', () => {

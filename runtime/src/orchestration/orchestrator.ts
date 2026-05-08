@@ -318,7 +318,6 @@ export class FlowOrchestrator {
               latestVisitedNodeIds.push(nodeId);
             }
             latest.visitedNodeIds = latestVisitedNodeIds;
-            this.reconcileFlowStatus(latest);
           }, this.requireFlowRef(), this.requireWorkspaceRoot());
         }
 
@@ -572,7 +571,7 @@ export class FlowOrchestrator {
         if (this.getOpenNodeIds(latest).length === 0) {
           latest.status = 'completed';
         } else {
-          this.reconcileFlowStatus(latest);
+          latest.status = 'running';
         }
         return;
       }
@@ -613,7 +612,7 @@ export class FlowOrchestrator {
         }
 
         this.markNodeCompletedIfSettled(latest, wf, nodeId);
-        this.reconcileFlowStatus(latest);
+        latest.status = 'running';
         direction = 'forward';
         eventTargets = activationPairs.map(p => ({
           nodeId: p.targetId,
@@ -671,7 +670,7 @@ export class FlowOrchestrator {
           reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
         }
 
-        this.reconcileFlowStatus(latest);
+        latest.status = 'running';
         direction = 'backward';
         eventTargets = reactivatedTargets.map(target => ({
           nodeId: target.targetId,
@@ -746,7 +745,6 @@ export class FlowOrchestrator {
         flowRun.readyNodes = this.mergeNodeIds(flowRun.readyNodes, flowRun.runningNodes);
         flowRun.runningNodes = [];
       }
-      this.reconcileFlowStatus(flowRun);
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
   }
 
@@ -755,7 +753,6 @@ export class FlowOrchestrator {
     await SessionStore.updateFlowRun((flowRun) => {
       if (flowRun.status !== 'running' || flowRun.readyNodes.length === 0) {
         claimedNodeIds = [];
-        this.reconcileFlowStatus(flowRun);
         return;
       }
 
@@ -831,7 +828,7 @@ export class FlowOrchestrator {
       flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
       flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
       flowRun.awaitingHumanNodes[nodeId] = { role, reason };
-      this.reconcileFlowStatus(flowRun);
+      flowRun.status = 'running';
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
   }
 
@@ -976,23 +973,6 @@ export class FlowOrchestrator {
       flowRun.runningNodes,
       Object.keys(flowRun.awaitingHumanNodes)
     );
-  }
-
-  private reconcileFlowStatus(flowRun: FlowRun): void {
-    if (
-      flowRun.status === 'completed' ||
-      flowRun.status === 'awaiting_improvement_choice' ||
-      flowRun.status === 'awaiting_feedback_consent'
-    ) return;
-    if (flowRun.readyNodes.length > 0 || flowRun.runningNodes.length > 0) {
-      flowRun.status = 'running';
-      return;
-    }
-    if (Object.keys(flowRun.awaitingHumanNodes).length > 0) {
-      flowRun.status = 'awaiting_human';
-      return;
-    }
-    flowRun.status = 'running';
   }
 
   private markNodeCompletedIfSettled(flowRun: FlowRun, wf: any, nodeId: string): void {

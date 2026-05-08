@@ -165,6 +165,10 @@ function getOpenNodeIds(flowRun: FlowRun): string[] {
   return ids;
 }
 
+function hasAwaitingHumanNodes(flowRun: FlowRun): boolean {
+  return Object.keys(flowRun.awaitingHumanNodes).length > 0;
+}
+
 function resolveAwaitingHumanNode(flowRun: FlowRun, target?: { nodeId?: string; role?: string }): string {
   const awaitingNodeIds = Object.keys(flowRun.awaitingHumanNodes);
   if (target?.nodeId) {
@@ -639,7 +643,7 @@ function buildServer(workspaceRoot: string) {
 
   function resumeAwaitingHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): void {
     const flowRun = readFlowRun(ref);
-    if (!flowRun || flowRun.status !== 'awaiting_human') {
+    if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No suspended flow is waiting for operator input.' });
       return;
     }
@@ -706,7 +710,7 @@ function buildServer(workspaceRoot: string) {
     const activeSession = activeSessions.get(flowKey(ref));
     if (activeSession && !activeSession.finished) {
       const flowRun = readFlowRun(ref);
-      if (!flowRun || Object.keys(flowRun.awaitingHumanNodes).length === 0) {
+      if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
         broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
         return;
       }
@@ -756,7 +760,7 @@ function buildServer(workspaceRoot: string) {
     }
 
     const flowRun = readFlowRun(ref);
-    if (flowRun?.status === 'awaiting_human') {
+    if (flowRun && hasAwaitingHumanNodes(flowRun)) {
       resumeAwaitingHumanInput(ref, text, target);
       return;
     }

@@ -9,8 +9,8 @@ export function renderFlowStatus(flowRun: FlowRun, wf: WfGraph): string {
   let output = `=== RUNTIME FLOW STATUS ===\n`;
   output += `Record Folder: ${flowRun.recordFolderPath}\n`;
   output += `Status: ${flowRun.status}\n`;
-  if (flowRun.status === 'awaiting_human') {
-    output += `Suspended: waiting for operator input\n`;
+  if (Object.keys(flowRun.awaitingHumanNodes).length > 0) {
+    output += `Human input: waiting for operator input\n`;
   }
   output += `\n`;
 

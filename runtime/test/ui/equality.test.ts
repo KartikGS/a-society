@@ -31,7 +31,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: {},
-    status: 'awaiting_human',
+    status: 'running',
     stateVersion: '7',
     consentState: {
       mode,
