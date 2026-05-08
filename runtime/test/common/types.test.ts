@@ -30,7 +30,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'node1': ['artifact.md'] },
-    status: 'initialized',
+    status: 'running',
     stateVersion: '7'
   };
 

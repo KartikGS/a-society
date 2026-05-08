@@ -1,12 +1,9 @@
 export type FlowStatus =
-  | 'initialized'
   | 'running'
   | 'awaiting_human'
   | 'awaiting_improvement_choice'
   | 'awaiting_feedback_consent'
-  | 'awaiting_retry'
-  | 'completed'
-  | 'failed';
+  | 'completed';
 
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentRequestKind = 'file-write' | 'bash-command';

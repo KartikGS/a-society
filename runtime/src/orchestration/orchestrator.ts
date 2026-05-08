@@ -160,7 +160,7 @@ export class FlowOrchestrator {
       }
     }, async (span) => {
       try {
-        if (flowRun.status === 'completed' || flowRun.status === 'failed') {
+        if (flowRun.status === 'completed') {
           throw new Error(`Cannot advance flow in state: ${flowRun.status}`);
         }
 
@@ -789,7 +789,7 @@ export class FlowOrchestrator {
   private async claimNodeForAdvance(nodeId: string, hasHumanInput: boolean): Promise<{ flowRun: FlowRun; resumedFromHuman: boolean }> {
     let resumedFromHuman = false;
     const flowRun = await SessionStore.updateFlowRun((latest) => {
-      if (latest.status === 'completed' || latest.status === 'failed') {
+      if (latest.status === 'completed') {
         throw new Error(`Cannot advance flow in state: ${latest.status}`);
       }
 
@@ -981,7 +981,6 @@ export class FlowOrchestrator {
   private reconcileFlowStatus(flowRun: FlowRun): void {
     if (
       flowRun.status === 'completed' ||
-      flowRun.status === 'failed' ||
       flowRun.status === 'awaiting_improvement_choice' ||
       flowRun.status === 'awaiting_feedback_consent'
     ) return;
