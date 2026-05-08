@@ -44,8 +44,7 @@ class LateAbortTextProvider implements LLMProvider {
     this.abort();
     return {
       type: 'text',
-      text: 'Partial answer without a handoff block',
-      displayedText: true
+      text: 'Partial answer without a handoff block'
     };
   }
 }
@@ -67,8 +66,7 @@ class LateAbortToolCallProvider implements LLMProvider {
         role: 'assistant_tool_calls',
         calls: [{ id: 'call_1', name: 'write_file', input: { path: 'plan.md', content: 'draft' } }],
         text: 'I will write the plan now.',
-      }],
-      displayedText: true,
+      }]
     };
   }
 }
@@ -88,12 +86,11 @@ class ToolCallThenTextProvider implements LLMProvider {
       return {
         type: 'tool_calls',
         calls: [{ id: 'call_1', name: 'write_file', input: { path: 'plan.md', content: 'draft' } }],
-        continuationMessages: [{
-          role: 'assistant_tool_calls',
-          calls: [{ id: 'call_1', name: 'write_file', input: { path: 'plan.md', content: 'draft' } }],
-          text: 'I will write the plan now.',
-        }],
-        displayedText: true,
+      continuationMessages: [{
+        role: 'assistant_tool_calls',
+        calls: [{ id: 'call_1', name: 'write_file', input: { path: 'plan.md', content: 'draft' } }],
+        text: 'I will write the plan now.',
+        }]
       };
     }
 

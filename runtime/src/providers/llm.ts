@@ -96,7 +96,7 @@ export class LLMGateway {
           const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
-            return { text: result.text, usage: result.usage, displayedText: result.displayedText };
+            return { text: result.text, usage: result.usage };
           }
           throwIfAborted(options?.signal);
           throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
@@ -105,7 +105,6 @@ export class LLMGateway {
         let accInputTokens = 0;
         let accOutputTokens = 0;
         let anyUsage = false;
-        let displayedText = false;
 
         const MAX_TOOL_ROUNDS = 50;
         let messages: RuntimeMessageParam[] = [...messageHistory];
@@ -125,7 +124,6 @@ export class LLMGateway {
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
           }
-          displayedText = displayedText || !!result.displayedText;
 
           if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
           if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
@@ -137,8 +135,7 @@ export class LLMGateway {
             span.setAttribute('llm.tool_round_count', round);
             return {
               text: result.text,
-              usage,
-              displayedText
+              usage
             };
           }
 

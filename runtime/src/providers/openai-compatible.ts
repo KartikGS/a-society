@@ -63,7 +63,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
       const renderer = options?.operatorRenderer;
       let fullText = '';
       const outputStream = options?.outputStream ?? process.stdout;
-      let displayedText = false;
       let inputTokens: number | undefined;
       let outputTokens: number | undefined;
 
@@ -134,8 +133,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
           if (delta.content) {
             if (fullText === '') renderer?.stopWait(options?.role ?? '');
             outputStream.write(delta.content);
+            options?.onAssistantTextDelta?.(delta.content);
             fullText += delta.content;
-            displayedText = true;
           }
           if (delta.tool_calls) {
             for (const tc of delta.tool_calls) {
@@ -177,13 +176,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
             type: 'tool_calls' as const,
             calls,
             continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
-            usage,
-            displayedText
+            usage
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, usage, displayedText };
+        return { type: 'text' as const, text: fullText, usage };
       } catch (err: any) {
         renderer?.stopWait(options?.role ?? '');
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {

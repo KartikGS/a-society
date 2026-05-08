@@ -54,7 +54,6 @@ export class AnthropicProvider implements LLMProvider {
     }, async (span) => {
       const renderer = options?.operatorRenderer;
       const outputStream = options?.outputStream ?? process.stdout;
-      let displayedText = false;
       let fullText = '';
 
       try {
@@ -119,8 +118,8 @@ export class AnthropicProvider implements LLMProvider {
             if (delta.type === 'text_delta') {
               if (fullText === '') renderer?.stopWait(options?.role ?? '');
               outputStream.write(delta.text);
+              options?.onAssistantTextDelta?.(delta.text);
               fullText += delta.text;
-              displayedText = true;
             } else if (delta.type === 'input_json_delta') {
               const block = toolUseBlocks.get(chunk.index);
               if (block) block.inputJson += delta.partial_json;
@@ -154,13 +153,12 @@ export class AnthropicProvider implements LLMProvider {
             type: 'tool_calls' as const,
             calls,
             continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
-            usage,
-            displayedText
+            usage
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, usage, displayedText };
+        return { type: 'text' as const, text: fullText, usage };
 
       } catch (error: any) {
         renderer?.stopWait(options?.role ?? '');

@@ -44,7 +44,7 @@ class MockProvider implements LLMProvider {
     this.responses = responses;
   }
 
-  async executeTurn(_system: string, messages: RuntimeMessageParam[], tools?: ToolDefinition[], _options?: TurnOptions): Promise<ProviderTurnResult> {
+  async executeTurn(_system: string, messages: RuntimeMessageParam[], tools?: ToolDefinition[], options?: TurnOptions): Promise<ProviderTurnResult> {
     const tracer = TelemetryManager.getTracer();
     return tracer.startActiveSpan('provider.execute_turn', { 
       kind: 1, // CLIENT
@@ -62,6 +62,10 @@ class MockProvider implements LLMProvider {
         if (res.usage.outputTokens !== undefined) span.setAttribute('provider.output_tokens', res.usage.outputTokens);
       }
       span.setAttribute('provider.result_type', res.type);
+      if (res.type === 'text') {
+        options?.outputStream?.write(res.text);
+        options?.onAssistantTextDelta?.(res.text);
+      }
       span.end();
       return res;
     });
@@ -265,8 +269,7 @@ async function run() {
     }
 
     assert.deepStrictEqual(sequence, [
-      'assistant:I need clarification. ```handoff\ntype: prompt-human\n```',
-      'assistant:\n'
+      'assistant:I need clarification. ```handoff\ntype: prompt-human\n```'
     ]);
     assert.deepStrictEqual(renderer.events, []);
   });

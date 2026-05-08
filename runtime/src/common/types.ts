@@ -254,17 +254,17 @@ export interface TurnOptions {
   consentGate?: ConsentGate;
   role?: string;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
+  onAssistantTextDelta?: (text: string) => void;
 }
 
 export interface GatewayTurnResult {
   text: string;
   usage?: TurnUsage;
-  displayedText?: boolean;
 }
 
 export type ProviderTurnResult =
-  | { type: 'text';       text: string;                                                   usage?: TurnUsage; displayedText?: boolean }
-  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; usage?: TurnUsage; displayedText?: boolean };
+  | { type: 'text';       text: string;                                                   usage?: TurnUsage }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; usage?: TurnUsage };
 
 export interface LLMProvider {
   executeTurn(

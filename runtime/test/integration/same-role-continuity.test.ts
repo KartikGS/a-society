@@ -108,22 +108,33 @@ function resetState() {
 
 // ---- Mock LLM provider ----
 
+type MockResponse =
+  | ProviderTurnResult
+  | ((messages: RuntimeMessageParam[], options?: TurnOptions) => ProviderTurnResult | Promise<ProviderTurnResult>);
+
+function streamMockText(options: TurnOptions | undefined, text: string): void {
+  options?.outputStream?.write(text);
+  options?.onAssistantTextDelta?.(text);
+}
+
 class MockProvider implements LLMProvider {
-  private responses: ProviderTurnResult[];
+  private responses: MockResponse[];
   private callCount = 0;
 
-  constructor(responses: ProviderTurnResult[]) {
+  constructor(responses: MockResponse[]) {
     this.responses = responses;
   }
 
   async executeTurn(
     _system: string,
-    _messages: RuntimeMessageParam[],
+    messages: RuntimeMessageParam[],
     _tools?: ToolDefinition[],
-    _options?: TurnOptions
+    options?: TurnOptions
   ): Promise<ProviderTurnResult> {
     const res = this.responses[this.callCount % this.responses.length];
     this.callCount++;
+    if (typeof res === 'function') return res(messages, options);
+    if (res.type === 'text') streamMockText(options, res.text);
     return res;
   }
 }
@@ -297,6 +308,98 @@ async function run() {
     assert.throws(
       () => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot),
       /only supports flow state version "7"/
+    );
+  });
+
+  await test('Orchestrator: streamed assistant text is persisted before the turn completes', async () => {
+    resetState();
+
+    const flowRun = makeFlowRun();
+    SessionStore.saveFlowRun(flowRun);
+    const finalText = 'Partial paid output completed. ```handoff\ntype: prompt-human\n```';
+    let partialObserved = false;
+
+    const unpatch = patchLLM(new MockProvider([
+      (_messages, options) => {
+        streamMockText(options, 'Partial paid output');
+        const liveSession = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+        const liveHistory = liveSession?.transcriptHistory as RuntimeMessageParam[] | undefined;
+        partialObserved = liveHistory?.some(message =>
+          message.role === 'assistant' && message.content === 'Partial paid output'
+        ) ?? false;
+        streamMockText(options, finalText.slice('Partial paid output'.length));
+        return { type: 'text', text: finalText };
+      }
+    ]));
+
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+    const input = new Readable({ read() {} });
+    input.push(null);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output);
+    } finally {
+      unpatch();
+    }
+
+    assert.ok(partialObserved, 'partial streamed text should be saved while the provider is still running');
+    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    assert.ok(session !== null, 'role session should be saved');
+    const lastMessage = session!.transcriptHistory[session!.transcriptHistory.length - 1] as RuntimeMessageParam;
+    assert.strictEqual(lastMessage.role, 'assistant');
+    assert.strictEqual(lastMessage.content, finalText);
+  });
+
+  await test('Orchestrator: interrupted same-node resume appends continuation prompt', async () => {
+    resetState();
+
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'Partial streamed answer before server shutdown.' }
+      ],
+      isActive: true,
+      currentNodeId: 'owner-intake'
+    }, flowRef(), workspaceRoot);
+
+    const flowRun = makeFlowRun();
+    SessionStore.saveFlowRun(flowRun);
+    let seenMessages: RuntimeMessageParam[] = [];
+
+    const unpatch = patchLLM(new MockProvider([
+      (messages, options) => {
+        seenMessages = messages.map(message => ({ ...message }));
+        const text = 'Continued answer. ```handoff\ntype: prompt-human\n```';
+        streamMockText(options, text);
+        return { type: 'text', text };
+      }
+    ]));
+
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+    const input = new Readable({ read() {} });
+    input.push(null);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output);
+    } finally {
+      unpatch();
+    }
+
+    const interruptedAssistant = seenMessages[seenMessages.length - 2] as any;
+    const continuationMessage = seenMessages[seenMessages.length - 1] as any;
+    assert.strictEqual(interruptedAssistant.role, 'assistant');
+    assert.strictEqual(
+      interruptedAssistant.content,
+      'Partial streamed answer before server shutdown.'
+    );
+    assert.strictEqual(continuationMessage.role, 'user');
+    assert.ok(
+      continuationMessage.content.includes('previous assistant response was interrupted'),
+      'expected the resume turn to ask the role to continue'
     );
   });
 

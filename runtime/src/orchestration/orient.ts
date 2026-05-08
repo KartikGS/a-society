@@ -6,23 +6,6 @@ import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
 
-function writeAssistantOutputIfNeeded(
-  text: string,
-  displayedText: boolean | undefined,
-  outputStream: NodeJS.WritableStream
-): void {
-  if (!text || displayedText) return;
-  outputStream.write(text);
-}
-
-function ensureAssistantOutputEndsWithNewline(
-  text: string,
-  outputStream: NodeJS.WritableStream
-): void {
-  if (!text || text.endsWith('\n')) return;
-  outputStream.write('\n');
-}
-
 export function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined, role?: string): void {
   if (!renderer) return;
   if (!usage) {
@@ -61,7 +44,8 @@ async function executeSessionTurn(
   externalSignal: AbortSignal | undefined,
   operatorRenderer: OperatorRenderSink | undefined,
   consentGate: ConsentGate | undefined,
-  onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined
+  onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined,
+  onAssistantTextDelta: ((text: string) => void) | undefined
 ): Promise<SessionTurnResult> {
   const meter = TelemetryManager.getMeter();
   const startTime = Date.now();
@@ -98,6 +82,7 @@ async function executeSessionTurn(
       consentGate,
       role: roleName,
       onConversationMessages,
+      onAssistantTextDelta,
     });
 
     if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
@@ -108,11 +93,6 @@ async function executeSessionTurn(
         content: result.text.slice(0, 2000),
       });
     }
-
-    writeAssistantOutputIfNeeded(result.text, result.displayedText, outputStream);
-    ensureAssistantOutputEndsWithNewline(result.text, outputStream);
-
-    history.push({ role: 'assistant', content: result.text });
 
     const parseResult = HandoffInterpreter.parse(result.text);
 
@@ -156,9 +136,6 @@ async function executeSessionTurn(
         partial_text_available: !!error.partialText,
         duration_ms: duration,
       });
-      if (error.partialText) {
-        history.push({ role: 'assistant', content: error.partialText });
-      }
       return { abort: true as const };
     }
 
@@ -190,7 +167,8 @@ export async function runRoleTurn(
   externalSignal?: AbortSignal,
   operatorRenderer?: OperatorRenderSink,
   consentGate?: ConsentGate,
-  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>
+  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>,
+  onAssistantTextDelta?: (text: string) => void
 ): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
@@ -240,7 +218,8 @@ export async function runRoleTurn(
     externalSignal,
     operatorRenderer,
     consentGate,
-    onConversationMessages
+    onConversationMessages,
+    onAssistantTextDelta
   );
 
   if (turnResult.abort || turnResult.error) {

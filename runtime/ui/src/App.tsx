@@ -870,7 +870,6 @@ export function App() {
   const inputDisabled = !viewedRoleAwaitingNodeId;
   const canStop =
     !!flowRun &&
-    flowRun.status === 'running' &&
     !viewedRoleAwaitingNodeId &&
     socket.status === 'open';
   const canStopViewedRole = canStop && isViewedRoleActive;

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession } from '../common/types.js';
+import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { emitUsage, runRoleTurn } from './orient.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
@@ -24,6 +24,9 @@ export class WorkflowError extends Error {
 
 type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
 
+const INTERRUPTED_TURN_CONTINUATION_MESSAGE =
+  'The previous assistant response was interrupted during streaming. Continue from where you left off. Do not repeat completed content unless needed for coherence.';
+
 function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
   const fields = [
     nodeDef?.guidance,
@@ -41,6 +44,29 @@ function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
       /workflow\.yaml|workflow-authority|workflow snapshot|active path/i.test(item)
     )
   );
+}
+
+function upsertAssistantDelta(history: RuntimeMessageParam[], text: string): void {
+  if (!text) return;
+  const previous = history[history.length - 1];
+  if (previous?.role === 'assistant') {
+    previous.content += text;
+    return;
+  }
+  history.push({ role: 'assistant', content: text });
+}
+
+function removeAssistantDraftBeforeToolCalls(
+  history: RuntimeMessageParam[],
+  newMessages: RuntimeMessageParam[]
+): void {
+  if (newMessages[0]?.role !== 'assistant_tool_calls') return;
+  const firstNewMessageIndex = history.length - newMessages.length;
+  const previousIndex = firstNewMessageIndex - 1;
+  if (previousIndex < 0) return;
+  if (history[previousIndex]?.role === 'assistant') {
+    history.splice(previousIndex, 1);
+  }
 }
 
 export class FlowOrchestrator {
@@ -242,7 +268,11 @@ export class FlowOrchestrator {
         }
         const bundleContent = session.systemPrompt;
 
-        const injectedHistory = [...session.transcriptHistory];
+        const injectedHistory = [...session.transcriptHistory] as RuntimeMessageParam[];
+        const saveRoleSession = (): void => {
+          session.transcriptHistory = injectedHistory;
+          SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+        };
         const sameNodeResume = session.isActive && session.currentNodeId === nodeId && injectedHistory.length > 0;
         const rawNodeContext = firstNodeVisit ? {
           required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
@@ -311,6 +341,11 @@ export class FlowOrchestrator {
           injectedHistory.push({ role: 'user', content: humanInput });
         }
 
+        if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
+          injectedHistory.push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+          span.addEvent('session.interrupted_turn_continuation');
+        }
+
         if (firstNodeVisit && (injectedHistory.length > 0)) {
           flowRun = await SessionStore.updateFlowRun((latest) => {
             const latestVisitedNodeIds = latest.visitedNodeIds ?? [];
@@ -323,6 +358,7 @@ export class FlowOrchestrator {
 
         session.currentNodeId = nodeId;
         session.isActive = true;
+        saveRoleSession();
         span.addEvent('store.flow_saved', { 'flow.status': flowRun.status });
 
         while (true) {
@@ -335,14 +371,18 @@ export class FlowOrchestrator {
             try {
               sessionResult = await runRoleTurn(
                 flowRun.workspaceRoot, flowRun.projectNamespace, roleName, bundleContent,
-                injectedHistory as any,
+                injectedHistory,
                 nodeOutputStream,
                 controller.signal,
                 this.renderer,
                 consentGate,
-                async () => {
-                  session.transcriptHistory = injectedHistory;
-                  SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                async (messages) => {
+                  removeAssistantDraftBeforeToolCalls(injectedHistory, messages);
+                  saveRoleSession();
+                },
+                (text) => {
+                  upsertAssistantDelta(injectedHistory, text);
+                  saveRoleSession();
                 }
               );
             } finally {
