@@ -102,8 +102,6 @@ async function runTest() {
     outputChunks.push(chunk.toString());
   });
 
-  const inputStream = new PassThrough();
-
   server.removeAllListeners('request');
   server.on('request', (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -124,7 +122,7 @@ async function runTest() {
     if (!flowRun) throw new Error("flowRun not loaded");
 
     console.log("\n--- Advancing 'start' node (expects forward-pass-closed) ---");
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
     console.log("\n--- Orchestration Complete ---\n");
 
     const assistantOut = outputChunks.join('');
@@ -158,7 +156,6 @@ async function runTest() {
     process.exitCode = 1;
   } finally {
     server.close();
-    inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;

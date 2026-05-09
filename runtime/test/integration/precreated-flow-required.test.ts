@@ -23,7 +23,6 @@ async function runTest() {
 
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
-  const inputStream = new PassThrough();
   const outputStream = new PassThrough();
 
   try {
@@ -33,14 +32,11 @@ async function runTest() {
       () => orchestrator.runStoredFlow(
         workspaceRoot,
         projectNamespace,
-        'Owner',
-        inputStream,
         outputStream
       ),
       /No active flow state found\. Create and persist a draft flow before starting orchestration\./
     );
   } finally {
-    inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;

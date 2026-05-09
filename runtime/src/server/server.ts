@@ -564,8 +564,6 @@ function buildServer(workspaceRoot: string) {
       session.orchestrator.runStoredFlow(
         workspaceRoot,
         projectNamespace,
-        'Owner',
-        session.inputBridge,
         session.outputBridge,
         flowRef.flowId,
         (role) => createRoleOutputStream(session, role)
@@ -592,8 +590,6 @@ function buildServer(workspaceRoot: string) {
       session.orchestrator.runStoredFlow(
         workspaceRoot,
         flowRun.projectNamespace,
-        'Owner',
-        session.inputBridge,
         session.outputBridge,
         flowRef.flowId,
         (role) => createRoleOutputStream(session, role)
@@ -632,8 +628,6 @@ function buildServer(workspaceRoot: string) {
       session.orchestrator.runStoredFlow(
         workspaceRoot,
         flowRun.projectNamespace,
-        'Owner',
-        session.inputBridge,
         session.outputBridge,
         ref.flowId,
         (role) => createRoleOutputStream(session, role)
@@ -681,9 +675,7 @@ function buildServer(workspaceRoot: string) {
       await session.orchestrator.advanceFlow(
         currentFlow,
         targetNodeId,
-        undefined,
         text,
-        session.inputBridge,
         session.outputBridge,
         session.consentGate,
         (role) => createRoleOutputStream(session, role)
@@ -692,8 +684,6 @@ function buildServer(workspaceRoot: string) {
       await session.orchestrator.runStoredFlow(
         workspaceRoot,
         currentFlow.projectNamespace,
-        'Owner',
-        session.inputBridge,
         session.outputBridge,
         ref.flowId,
         (role) => createRoleOutputStream(session, role)
@@ -736,17 +726,13 @@ function buildServer(workspaceRoot: string) {
       void activeSession.orchestrator.advanceFlow(
         flowRun,
         targetNodeId,
-        undefined,
         text,
-        activeSession.inputBridge,
         activeSession.outputBridge,
         activeSession.consentGate,
         (role) => createRoleOutputStream(activeSession, role)
       ).then(() => activeSession.orchestrator.runStoredFlow(
         workspaceRoot,
         flowRun.projectNamespace,
-        'Owner',
-        activeSession.inputBridge,
         activeSession.outputBridge,
         ref.flowId,
         (role) => createRoleOutputStream(activeSession, role)

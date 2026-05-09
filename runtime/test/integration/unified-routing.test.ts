@@ -103,7 +103,6 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const inputStream = new PassThrough();
   const outputStream = new PassThrough();
   const assistantChunks: string[] = [];
   outputStream.on('data', (chunk: Buffer) => {
@@ -142,7 +141,7 @@ async function runTest() {
       }
     });
 
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
     console.log("\n--- Orchestration Complete ---\n");
 
     const updatedFlow = SessionStore.loadFlowRun()!;

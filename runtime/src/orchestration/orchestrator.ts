@@ -95,8 +95,6 @@ export class FlowOrchestrator {
   public async runStoredFlow(
     workspaceRoot: string,
     projectNamespace: string,
-    _roleName: string,
-    inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout,
     flowId?: string,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream
@@ -145,7 +143,7 @@ export class FlowOrchestrator {
         rootSpan.addEvent('flow.established', { 'flow.id': flowRun.flowId, 'record_folder_path': path.relative(workspaceRoot, flowRun.recordFolderPath) });
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
-        await this.runReadyNodesUntilBlocked(inputStream, outputStream, outputStreamFactory);
+        await this.runReadyNodesUntilBlocked(outputStream, outputStreamFactory);
         flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
 
         rootSpan.setAttribute('flow.status', flowRun.status);
@@ -167,9 +165,7 @@ export class FlowOrchestrator {
   public async advanceFlow(
     flowRun: FlowRun,
     nodeId: string,
-    activeArtifactPath?: string | string[],
     humanInput?: string,
-    _inputStream: NodeJS.ReadableStream = process.stdin,
     outputStream: NodeJS.WritableStream = process.stdout,
     consentGate?: ConsentGate,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream
@@ -225,10 +221,7 @@ export class FlowOrchestrator {
         const visitedNodeIds = flowRun.visitedNodeIds ?? (flowRun.visitedNodeIds = []);
         const firstNodeVisit = !visitedNodeIds.includes(nodeId);
 
-        const resolvedArtifacts: string[] =
-          activeArtifactPath !== undefined
-            ? (Array.isArray(activeArtifactPath) ? activeArtifactPath : [activeArtifactPath])
-            : (flowRun.pendingNodeArtifacts[nodeId] ?? []);
+        const resolvedArtifacts = flowRun.pendingNodeArtifacts[nodeId] ?? [];
 
         span.setAttribute('node.artifact_count', resolvedArtifacts.length);
 
@@ -738,7 +731,6 @@ export class FlowOrchestrator {
   }
 
   private async runReadyNodesUntilBlocked(
-    inputStream: NodeJS.ReadableStream,
     outputStream: NodeJS.WritableStream,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
@@ -753,8 +745,6 @@ export class FlowOrchestrator {
           SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!,
           claimedNodeId,
           undefined,
-          undefined,
-          inputStream,
           outputStream,
           undefined,
           outputStreamFactory

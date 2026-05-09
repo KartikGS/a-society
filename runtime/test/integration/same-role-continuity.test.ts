@@ -15,7 +15,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Readable, Writable } from 'node:stream';
+import { Writable } from 'node:stream';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -333,12 +333,10 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
     } finally {
       unpatch();
     }
@@ -379,12 +377,10 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
     } finally {
       unpatch();
     }
@@ -437,12 +433,10 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-gate', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-gate', undefined, output);
     } finally {
       unpatch();
     }
@@ -492,12 +486,10 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
     } finally {
       unpatch();
     }
@@ -526,14 +518,12 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-one', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-one', undefined, output);
       const afterOwnerOne = SessionStore.loadFlowRun({ projectNamespace, flowId: 'instance-flow-id' }, workspaceRoot)!;
-      await orchestrator.advanceFlow(afterOwnerOne, 'owner-two', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(afterOwnerOne, 'owner-two', undefined, output);
     } finally {
       unpatch();
     }
@@ -579,12 +569,10 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, 'owner', input, output, flowRun.flowId);
+      await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, output, flowRun.flowId);
     } finally {
       unpatch();
     }
@@ -619,12 +607,10 @@ async function run() {
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
-    const input = new Readable({ read() {} });
-    input.push(null);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.advanceFlow(flowRun, 'ta', undefined, undefined, input, output);
+      await orchestrator.advanceFlow(flowRun, 'ta', undefined, output);
     } finally {
       unpatch();
     }

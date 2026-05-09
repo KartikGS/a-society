@@ -100,7 +100,6 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const inputStream = new PassThrough();
   const outputStream = new PassThrough();
 
   let serverTurn = 0;
@@ -135,14 +134,14 @@ async function runTest() {
     if (!flowRun) throw new Error("flowRun not loaded");
 
     console.log("\n--- Advancing 'start' node ---");
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
     assert.ok(flowAfterStart.readyNodes.includes('next'), "Expected 'next' to be ready.");
 
     console.log("\n--- Advancing 'next' node ---");
-    await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, undefined, inputStream, outputStream);
+    await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, outputStream);
 
     const nextRoleActiveCount = sink.events.filter(
       e => e.kind === 'role.active' && e.nodeId === 'next'
@@ -166,7 +165,6 @@ async function runTest() {
     process.exitCode = 1;
   } finally {
     server.close();
-    inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;

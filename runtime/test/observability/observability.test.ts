@@ -406,7 +406,7 @@ async function run() {
 
     try {
       const orchestrator = new FlowOrchestrator(renderer as any);
-      await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'start', undefined, output);
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }

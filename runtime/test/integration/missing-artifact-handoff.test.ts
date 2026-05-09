@@ -86,7 +86,6 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const inputStream = new PassThrough();
   const outputStream = new PassThrough();
 
   let serverTurn = 0;
@@ -111,7 +110,7 @@ async function runTest() {
     const flowRun = SessionStore.loadFlowRun();
     if (!flowRun) throw new Error('flowRun not loaded');
 
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, inputStream, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
 
     const updatedFlow = SessionStore.loadFlowRun()!;
     const repairNotice = sink.events.find(
@@ -124,7 +123,6 @@ async function runTest() {
     assert.strictEqual(repairNotice.nodeId, 'start');
   } finally {
     server.close();
-    inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;

@@ -79,11 +79,10 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const inputStream = new PassThrough();
   const outputStream = new PassThrough();
 
   try {
-    await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, 'Owner', inputStream, outputStream);
+    await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, outputStream);
 
     const resumeEvent = sink.events.find(e => e.kind === 'flow.resumed');
 
@@ -102,7 +101,6 @@ async function runTest() {
     console.error("Test execution failed:", e.stack);
     process.exitCode = 1;
   } finally {
-    inputStream.destroy();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;
