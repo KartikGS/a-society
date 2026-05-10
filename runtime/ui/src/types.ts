@@ -50,7 +50,7 @@ export interface FlowRun {
   recordSummary?: string;
   readyNodes: string[];
   runningNodes: string[];
-  awaitingHumanNodes: Record<string, { role: string; reason: 'prompt-human' | 'autonomous-abort' }>;
+  awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   completedNodes: string[];
   visitedNodeIds?: string[];
   completedEdgeArtifacts: Record<string, string>;
@@ -103,10 +103,11 @@ export interface FlowSummary extends FlowRef {
 
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
+export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent';
 
 export type ConsentRequest =
-  | { kind: 'file-write'; toolName: string; path: string }
-  | { kind: 'bash-command'; toolName: 'run_command'; command: string };
+  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
+  | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string };
 
 export interface ConsentState {
   mode: ConsentMode;
@@ -124,7 +125,7 @@ export type OperatorEvent =
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
-  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
+  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
@@ -145,7 +146,7 @@ export type ClientMessage =
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
   | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' }
   | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
-  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision }
+  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
   | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
 
 export type ServerMessage =

@@ -44,7 +44,7 @@ interface FlowUiState {
   composerValue: string;
   waitLabels: Record<string, string | null>;
   stopRequested: boolean;
-  consentRequest: ConsentRequest | null;
+  consentRequests: Record<string, ConsentRequest>;
   latestInputTokensByRole: Record<string, number>;
   hasActiveSession: boolean;
 }
@@ -79,7 +79,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     composerValue: '',
     waitLabels: {},
     stopRequested: false,
-    consentRequest: null,
+    consentRequests: {},
     latestInputTokensByRole: {},
     hasActiveSession: false,
   };
@@ -222,8 +222,12 @@ function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string | null):
   const targetKey = toRoleKey(role);
   if (!targetKey) return null;
   const match = Object.entries(flowRun.awaitingHumanNodes)
-    .find(([, state]) => toRoleKey(state.role) === targetKey);
+    .find(([, state]) => state.reason !== 'consent' && toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
+}
+
+function getConsentRequestRoleKey(request: ConsentRequest | null | undefined): string | null {
+  return toRoleKey(request?.role);
 }
 
 function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
@@ -355,7 +359,7 @@ export function App() {
           waitLabels: {},
           stopRequested: false,
           latestInputTokensByRole: {},
-          consentRequest: null,
+          consentRequests: {},
         }));
         return;
       case 'operator_event': {
@@ -364,20 +368,28 @@ export function App() {
         if (event.kind === 'consent.requested') {
           updateFlowUi(key, (state) => ({
             ...state,
-            consentRequest: event.request,
+            consentRequests: {
+              ...state.consentRequests,
+              [getConsentRequestRoleKey(event.request) ?? SYSTEM_ROLE_KEY]: event.request,
+            },
           }));
           return;
         }
 
         if (event.kind === 'consent.resolved') {
-          updateFlowUi(key, (state) => ({ ...state, consentRequest: null }));
+          updateFlowUi(key, (state) => {
+            const roleKey = getConsentRequestRoleKey(event.request) ?? SYSTEM_ROLE_KEY;
+            const nextConsentRequests = { ...state.consentRequests };
+            delete nextConsentRequests[roleKey];
+            return { ...state, consentRequests: nextConsentRequests };
+          });
           return;
         }
 
         if (event.kind === 'consent.mode_changed') {
           updateFlowUi(key, (state) => ({
             ...state,
-            consentRequest: event.mode === 'full-access' ? null : state.consentRequest,
+            consentRequests: event.mode === 'full-access' ? {} : state.consentRequests,
           }));
           return;
         }
@@ -817,8 +829,9 @@ export function App() {
   }
 
   function handleConsentResponse(decision: ConsentResponseDecision): void {
-    if (!activeTab) return;
-    sendMessage({ type: 'consent_response', flowRef: activeTab.ref, decision });
+    if (!activeTab || !visibleConsentRequest) return;
+    const role = visibleConsentRequest.role;
+    sendMessage({ type: 'consent_response', flowRef: activeTab.ref, decision, role });
   }
 
   function handleConsentModeChange(mode: ConsentMode): void {
@@ -888,6 +901,10 @@ export function App() {
   const viewedRole = selectedRole;
   const displayedFeed = viewedRole ? (activeUi?.roleFeeds[viewedRole] ?? []) : [];
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds[SYSTEM_ROLE_KEY] ?? []);
+  const visibleConsentRequest =
+    viewedRole
+      ? activeUi?.consentRequests[viewedRole] ?? null
+      : null;
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
   const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
@@ -1021,7 +1038,7 @@ export function App() {
                   roles={roles}
                   selectedRole={viewedRole ?? undefined}
                   activeRoles={activeRoles}
-                  consentRequest={activeUi?.consentRequest ?? null}
+                  consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? 'no-access'}
                   onRoleSelect={(role) => {
                     if (!activeTabKey) return;

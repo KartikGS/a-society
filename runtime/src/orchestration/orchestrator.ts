@@ -191,7 +191,8 @@ export class FlowOrchestrator {
     projectNamespace: string,
     outputStream: NodeJS.WritableStream = process.stdout,
     flowId?: string,
-    outputStreamFactory?: (role: string) => NodeJS.WritableStream
+    outputStreamFactory?: (role: string) => NodeJS.WritableStream,
+    consentGate?: ConsentGate
   ): Promise<void> {
     const tracer = TelemetryManager.getTracer();
     const meter = TelemetryManager.getMeter();
@@ -237,7 +238,7 @@ export class FlowOrchestrator {
         rootSpan.addEvent('flow.established', { 'flow.id': flowRun.flowId, 'record_folder_path': path.relative(workspaceRoot, flowRun.recordFolderPath) });
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
-        await this.runReadyNodesUntilBlocked(outputStream, outputStreamFactory);
+        await this.runReadyNodesUntilBlocked(outputStream, outputStreamFactory, consentGate);
         flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
 
         rootSpan.setAttribute('flow.status', flowRun.status);
@@ -477,7 +478,8 @@ export class FlowOrchestrator {
                   upsertAssistantDelta(injectedHistory, text);
                   upsertCurrentNodeAssistantDelta(session, nodeId, text);
                   saveRoleSession();
-                }
+                },
+                nodeId
               );
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);
@@ -843,7 +845,8 @@ export class FlowOrchestrator {
 
   private async runReadyNodesUntilBlocked(
     outputStream: NodeJS.WritableStream,
-    outputStreamFactory?: (role: string) => NodeJS.WritableStream
+    outputStreamFactory?: (role: string) => NodeJS.WritableStream,
+    consentGate?: ConsentGate
   ): Promise<void> {
     const runningTasks = new Map<string, Promise<void>>();
     let firstError: unknown = null;
@@ -857,7 +860,7 @@ export class FlowOrchestrator {
           claimedNodeId,
           undefined,
           outputStream,
-          undefined,
+          consentGate,
           outputStreamFactory
         ).catch((error) => {
           if (!firstError) firstError = error;
@@ -963,7 +966,7 @@ export class FlowOrchestrator {
   private async markNodeAwaitingHuman(
     nodeId: string,
     role: string,
-    reason: 'prompt-human' | 'autonomous-abort'
+    reason: 'prompt-human' | 'autonomous-abort' | 'consent'
   ): Promise<FlowRun> {
     return SessionStore.updateFlowRun((flowRun) => {
       flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);

@@ -175,9 +175,17 @@ export class LLMGateway {
                   }
                 }
                 if (options?.consentGate) {
+                  if (!options.role || !options.nodeId) {
+                    throw new LLMGatewayError(
+                      'UNKNOWN',
+                      'Consent-gated tool calls require role and node ownership metadata.'
+                    );
+                  }
                   const decision = await options.consentGate.check({
                     toolName: call.name,
                     input: call.input,
+                    role: options.role,
+                    nodeId: options.nodeId,
                   }, options.signal);
                   if (decision === 'deny') {
                     return {

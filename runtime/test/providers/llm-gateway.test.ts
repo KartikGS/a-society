@@ -120,10 +120,10 @@ class BlockingConsentGate implements ConsentGate {
     this.decisionResolve?.(decision);
   }
 
-  respond(_decision: ConsentResponseDecision): void {}
+  respond(_decision: ConsentResponseDecision, _role: string): void {}
   setMode(_mode: ConsentMode): void {}
   getState() { return defaultConsentState(); }
-  getInFlightRequest(): ConsentRequest | null { return null; }
+  getInFlightRequests(): ConsentRequest[] { return []; }
 }
 
 console.log('\nllm-gateway');
@@ -158,6 +158,8 @@ await test('tool-call continuation is recorded before consent resolves', async (
 
   const pendingTurn = gateway.executeTurn('System prompt', history, {
     consentGate: gate,
+    role: 'Curator',
+    nodeId: 'curator-registration',
     onConversationMessages: (messages) => {
       persistedBatches.push([...messages]);
     },
@@ -165,6 +167,12 @@ await test('tool-call continuation is recorded before consent resolves', async (
 
   await gate.checked;
 
+  assert.deepStrictEqual(gate.requests[0], {
+    toolName: 'write_file',
+    input: { path: 'plan.md', content: 'draft' },
+    role: 'Curator',
+    nodeId: 'curator-registration',
+  });
   assert.strictEqual(history.length, 2);
   assert.strictEqual(history[1].role, 'assistant_tool_calls');
   assert.strictEqual(history[1].text, 'I will write the plan now.');

@@ -7,14 +7,17 @@ export type FlowStatus =
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentRequestKind = 'file-write' | 'bash-command';
 export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
+export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent';
 
 export type ConsentRequest =
-  | { kind: 'file-write'; toolName: string; path: string }
-  | { kind: 'bash-command'; toolName: 'run_command'; command: string };
+  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
+  | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string };
 
 export interface ConsentCheckRequest {
   toolName: string;
   input?: Record<string, unknown>;
+  nodeId: string;
+  role: string;
 }
 
 export interface ConsentState {
@@ -88,10 +91,10 @@ export function normalizeConsentState(raw: unknown): ConsentState {
 
 export interface ConsentGate {
   check(request: ConsentCheckRequest, signal?: AbortSignal): Promise<'proceed' | 'deny'>;
-  respond(decision: ConsentResponseDecision): void;
+  respond(decision: ConsentResponseDecision, role: string): void;
   setMode(mode: ConsentMode): void;
   getState(): ConsentState;
-  getInFlightRequest(): ConsentRequest | null;
+  getInFlightRequests(): ConsentRequest[];
 }
 
 export interface HandoffTarget {
@@ -133,7 +136,7 @@ export interface FlowRun {
   recordSummary?: string;
   readyNodes: string[];                           // node IDs eligible to execute
   runningNodes: string[];                         // node IDs claimed by a live runtime turn
-  awaitingHumanNodes: Record<string, { role: string; reason: 'prompt-human' | 'autonomous-abort' }>;
+  awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   completedNodes: string[];                       // node IDs that have finished
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
   completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
@@ -221,7 +224,7 @@ export type OperatorEvent =
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
-  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
+  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
@@ -266,6 +269,7 @@ export interface TurnOptions {
   operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
   role?: string;
+  nodeId?: string;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
 }
