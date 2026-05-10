@@ -155,64 +155,66 @@ export class LLMGateway {
           await appendConversationMessages(result.continuationMessages);
           throwIfAborted(options?.signal);
 
-          const toolResultMessages: RuntimeMessageParam[] = await Promise.all(
-            result.calls.map(async (call) => {
-              let content: string, isError: boolean;
-              if (call.parseError) {
-                content = `Error: could not parse tool arguments: ${call.parseError}`;
-                isError = true;
-              } else {
-                if (this.bashExecutor?.canHandle(call.name)) {
-                  const denylistResult = this.bashExecutor.validate(call);
-                  if (denylistResult) {
-                    return {
-                      role: 'tool_result' as const,
-                      callId: call.id,
-                      toolName: call.name,
-                      content: denylistResult.content,
-                      isError: true,
-                    };
-                  }
-                }
-                if (options?.consentGate) {
-                  if (!options.role || !options.nodeId) {
-                    throw new LLMGatewayError(
-                      'UNKNOWN',
-                      'Consent-gated tool calls require role and node ownership metadata.'
-                    );
-                  }
-                  const decision = await options.consentGate.check({
+          for (const call of result.calls) {
+            let content: string, isError: boolean;
+            if (call.parseError) {
+              content = `Error: could not parse tool arguments: ${call.parseError}`;
+              isError = true;
+            } else {
+              if (this.bashExecutor?.canHandle(call.name)) {
+                const denylistResult = this.bashExecutor.validate(call);
+                if (denylistResult) {
+                  await appendConversationMessages([{
+                    role: 'tool_result' as const,
+                    callId: call.id,
                     toolName: call.name,
-                    input: call.input,
-                    role: options.role,
-                    nodeId: options.nodeId,
-                  }, options.signal);
-                  if (decision === 'deny') {
-                    return {
-                      role: 'tool_result' as const,
-                      callId: call.id,
-                      toolName: call.name,
-                      content: 'Tool call denied: the user did not grant permission for this operation.',
-                      isError: true,
-                    };
-                  }
+                    content: denylistResult.content,
+                    isError: true,
+                  }]);
+                  continue;
                 }
-                const pathArg = call.input?.path as string | undefined;
-                const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
-                options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
-                const res = await (this.bashExecutor!.canHandle(call.name)
-                  ? this.bashExecutor!.execute(call, options?.signal)
-                  : this.webSearchExecutor?.canHandle(call.name)
-                  ? this.webSearchExecutor.execute(call, options?.signal)
-                  : this.fileExecutor!.execute(call, options?.signal));
-                content = res.content;
-                isError = res.isError;
               }
-              return { role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError };
-            })
-          );
-          throwIfAborted(options?.signal);
-          await appendConversationMessages(toolResultMessages);
+              if (options?.consentGate) {
+                if (!options.role || !options.nodeId) {
+                  throw new LLMGatewayError(
+                    'UNKNOWN',
+                    'Consent-gated tool calls require role and node ownership metadata.'
+                  );
+                }
+                const decision = await options.consentGate.check({
+                  toolName: call.name,
+                  input: call.input,
+                  role: options.role,
+                  nodeId: options.nodeId,
+                }, options.signal);
+                if (decision === 'deny') {
+                  await appendConversationMessages([{
+                    role: 'tool_result' as const,
+                    callId: call.id,
+                    toolName: call.name,
+                    content: 'Tool call denied: the user did not grant permission for this operation. The node is paused for operator guidance.',
+                    isError: true,
+                  }]);
+                  throw new LLMGatewayError(
+                    'CONSENT_DENIED',
+                    'Tool call denied by operator; awaiting human guidance.'
+                  );
+                }
+              }
+              const pathArg = call.input?.path as string | undefined;
+              const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
+              options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
+              const res = await (this.bashExecutor!.canHandle(call.name)
+                ? this.bashExecutor!.execute(call, options?.signal)
+                : this.webSearchExecutor?.canHandle(call.name)
+                ? this.webSearchExecutor.execute(call, options?.signal)
+                : this.fileExecutor!.execute(call, options?.signal));
+              content = res.content;
+              isError = res.isError;
+            }
+            throwIfAborted(options?.signal);
+            await appendConversationMessages([{ role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError }]);
+          }
         }
         span.addEvent('llm.max_rounds_exceeded', { limit: MAX_TOOL_ROUNDS });
         throw new LLMGatewayError('UNKNOWN', 'Tool call loop exceeded maximum rounds (50). The session has been aborted.');

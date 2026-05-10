@@ -252,7 +252,12 @@ export function ChatInterface(props: ChatInterfaceProps) {
 
   return (
     <section className="panel chat-panel">
-      <p className="panel-copy chat-subtitle">{props.subtitle}</p>
+      <div className="chat-subtitle-row">
+        <p className="panel-copy chat-subtitle">{props.subtitle}</p>
+        {props.waitingLabel ? (
+          <span className="status-pill status-pill-wait chat-wait-pill">{props.waitingLabel}</span>
+        ) : null}
+      </div>
 
       {props.roles && props.roles.length > 0 ? (
         <div className="role-tabs">
@@ -267,12 +272,6 @@ export function ChatInterface(props: ChatInterfaceProps) {
               {props.activeRoles?.includes(role) ? <span className="role-tab-dot" /> : null}
             </button>
           ))}
-        </div>
-      ) : null}
-
-      {props.waitingLabel ? (
-        <div className="status-row chat-status-row">
-          <span className="status-pill status-pill-wait">{props.waitingLabel}</span>
         </div>
       ) : null}
 

@@ -369,28 +369,38 @@ function buildServer(workspaceRoot: string) {
   }
 
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
-    if (!request.nodeId || !request.role) return;
     await SessionStore.updateFlowRun((flow) => {
       flow.readyNodes = flow.readyNodes.filter((id) => id !== request.nodeId);
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
-      flow.awaitingHumanNodes[request.nodeId!] = { role: request.role!, reason: 'consent' };
+      flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent' };
       flow.status = 'running';
     }, session.flowRef, workspaceRoot);
     emitFlowState(session);
   }
 
-  async function clearNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
+  async function clearNodeAwaitingConsent(
+    session: ActiveSession,
+    request: ConsentRequest,
+    decision: ConsentResponseDecision
+  ): Promise<void> {
     await SessionStore.updateFlowRun((flow) => {
       flow.consentState = session.consentGate.getState();
-      if (!request.nodeId) return;
-      if (flow.awaitingHumanNodes[request.nodeId!]?.reason !== 'consent') return;
+      if (flow.awaitingHumanNodes[request.nodeId]?.reason !== 'consent') return;
 
-      delete flow.awaitingHumanNodes[request.nodeId!];
+      if (decision === 'deny') {
+        flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent-denied' };
+        flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
+        flow.readyNodes = flow.readyNodes.filter((id) => id !== request.nodeId);
+        flow.status = 'running';
+        return;
+      }
+
+      delete flow.awaitingHumanNodes[request.nodeId];
       if (
-        !flow.completedNodes.includes(request.nodeId!) &&
-        !flow.runningNodes.includes(request.nodeId!)
+        !flow.completedNodes.includes(request.nodeId) &&
+        !flow.runningNodes.includes(request.nodeId)
       ) {
-        flow.runningNodes.push(request.nodeId!);
+        flow.runningNodes.push(request.nodeId);
       }
       flow.status = 'running';
     }, session.flowRef, workspaceRoot);
@@ -430,7 +440,7 @@ function buildServer(workspaceRoot: string) {
         }
 
         if (message.event.kind === 'consent.resolved') {
-          void clearNodeAwaitingConsent(session, message.event.request)
+          void clearNodeAwaitingConsent(session, message.event.request, message.event.decision)
             .finally(() => emitTransientMessage(session, message));
           return;
         }
@@ -955,7 +965,7 @@ function buildServer(workspaceRoot: string) {
       session.consentGate.setMode(mode);
       if (mode === 'full-access') {
         for (const inFlight of inFlightRequests) {
-          void clearNodeAwaitingConsent(session, inFlight);
+          void clearNodeAwaitingConsent(session, inFlight, 'allow_flow');
         }
       }
       return;

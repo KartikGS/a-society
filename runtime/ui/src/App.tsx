@@ -911,9 +911,16 @@ export function App() {
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
   const feedbackPrompt = feedbackConsentCopy(flowRun);
   const visibleWaitLabel = isViewedRoleActive && viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
-  const inputDisabled = !viewedRoleAwaitingNodeId;
+  const hasActiveSession = activeUi?.hasActiveSession ?? false;
+  const inputDisabled = !hasActiveSession || !viewedRoleAwaitingNodeId;
+  const inputPlaceholder = !hasActiveSession
+    ? 'Resume the flow to reply.'
+    : !inputDisabled
+      ? 'Reply to the selected role prompt...'
+      : 'Select a role that is awaiting input.';
   const canStop =
     !!flowRun &&
+    hasActiveSession &&
     !viewedRoleAwaitingNodeId &&
     socket.status === 'open';
   const canStopViewedRole = canStop && isViewedRoleActive;
@@ -990,7 +997,7 @@ export function App() {
                     backwardActive={backwardActive}
                     backwardSources={backwardSources}
                     recordFolderPath={flowRun.recordFolderPath}
-                    showResume={flowRun.status === 'running' && !(activeUi?.hasActiveSession ?? true)}
+                    showResume={flowRun.status === 'running' && !hasActiveSession}
                     onResume={handleResumeFlow}
                     onNodeClick={handleGraphNodeClick}
                     onGraphModeChange={handleGraphModeChange}
@@ -1031,7 +1038,7 @@ export function App() {
                   waitingLabel={visibleWaitLabel}
                   inputValue={activeUi?.composerValue ?? ''}
                   inputDisabled={inputDisabled}
-                  placeholder={!inputDisabled ? 'Reply to the selected role prompt...' : 'Select a role that is awaiting input.'}
+                  placeholder={inputPlaceholder}
                   showComposer={true}
                   canStop={canStopViewedRole}
                   stopRequested={activeUi?.stopRequested ?? false}

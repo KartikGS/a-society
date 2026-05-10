@@ -103,7 +103,7 @@ export interface FlowSummary extends FlowRef {
 
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
-export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent';
+export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent' | 'consent-denied';
 
 export type ConsentRequest =
   | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }

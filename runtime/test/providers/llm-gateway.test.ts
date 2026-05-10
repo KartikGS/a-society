@@ -148,7 +148,7 @@ await test('late abort after streamed text returns is still treated as aborted',
   );
 });
 
-await test('tool-call continuation is recorded before consent resolves', async () => {
+await test('tool-call continuation and denial result are recorded before consent-denied suspension', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
   const provider = new ToolCallThenTextProvider();
   const gateway = new LLMGateway(tmpDir, provider);
@@ -180,13 +180,20 @@ await test('tool-call continuation is recorded before consent resolves', async (
   assert.strictEqual(persistedBatches[0][0].role, 'assistant_tool_calls');
 
   gate.resolve('deny');
-  const result = await pendingTurn;
-
-  assert.strictEqual(result.text, 'Done.');
+  await assert.rejects(
+    pendingTurn,
+    (error: unknown) => {
+      assert.ok(error instanceof LLMGatewayError);
+      assert.strictEqual(error.type, 'CONSENT_DENIED');
+      return true;
+    }
+  );
   assert.strictEqual(history.length, 3);
   assert.strictEqual(history[2].role, 'tool_result');
   assert.match(history[2].content, /denied/i);
-  assert.deepStrictEqual(provider.secondCallMessages, history);
+  assert.strictEqual(persistedBatches.length, 2);
+  assert.strictEqual(persistedBatches[1][0].role, 'tool_result');
+  assert.deepStrictEqual(provider.secondCallMessages, []);
 });
 
 await test('late abort after streamed tool-call text keeps the attempted tool call in history', async () => {

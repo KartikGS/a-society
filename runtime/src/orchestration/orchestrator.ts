@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
+import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { emitUsage, runRoleTurn } from './orient.js';
 import { compactRoleSession, shouldAutoCompact } from './compaction.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
@@ -495,13 +495,14 @@ export class FlowOrchestrator {
               this.applyLatestTurnUsage(session, turnUsage);
               emitUsage(this.renderer, turnUsage, roleName);
               if (handoffResult.kind === 'awaiting_human') {
+                const awaitingReason = sessionResult.awaitingHumanReason ?? 'prompt-human';
                 span.setAttribute('node.outcome', 'awaiting_human');
-                span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'prompt_human_signal' });
+                span.addEvent('node.awaiting_human_suspended', { suspension_reason: awaitingReason });
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-                flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'prompt-human');
+                flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, awaitingReason);
                 await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
-                this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: 'prompt-human' });
+                this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: awaitingReason });
                 break;
               }
 
@@ -966,7 +967,7 @@ export class FlowOrchestrator {
   private async markNodeAwaitingHuman(
     nodeId: string,
     role: string,
-    reason: 'prompt-human' | 'autonomous-abort' | 'consent'
+    reason: AwaitingHumanReason
   ): Promise<FlowRun> {
     return SessionStore.updateFlowRun((flowRun) => {
       flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);

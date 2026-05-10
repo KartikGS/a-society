@@ -69,6 +69,7 @@ function buildReactFlowState(
   dagre.layout(g);
 
   const openNodeIds = getOpenNodeIds(flowRun);
+  const awaitingHumanNodeIds = Object.keys(flowRun.awaitingHumanNodes);
   const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
   const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
 
@@ -80,12 +81,14 @@ function buildReactFlowState(
       : flowRun.completedNodes.includes(node.id);
     const isBackward = graphMode === 'flow' && backwardActive.includes(node.id);
     const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && openNodeIds.includes(node.id);
+    const isAwaitingHuman = graphMode === 'flow' && awaitingHumanNodeIds.includes(node.id);
     const isActive = graphMode === 'improvement'
       ? improvementActiveNodeIds.includes(node.id)
       : openNodeIds.includes(node.id);
 
     let tone = 'node-neutral';
     if (isCompleted) tone = 'node-completed';
+    else if (isAwaitingHuman) tone = 'node-awaiting-human';
     else if (isBackward) tone = 'node-backward';
     else if (isBackwardSource) tone = 'node-backward-source';
     else if (isActive) tone = 'node-active';
@@ -271,6 +274,7 @@ function GraphViewComponent({
           </div>
           <div className="legend">
             <span><i className="legend-swatch legend-active" /> Active</span>
+            {graphMode === 'flow' ? <span><i className="legend-swatch legend-awaiting-human" /> Awaiting Human</span> : null}
             {graphMode === 'flow' ? <span><i className="legend-swatch legend-backward" /> Backward</span> : null}
             <span><i className="legend-swatch legend-complete" /> Complete</span>
             <span><i className="legend-swatch legend-neutral" /> Pending</span>

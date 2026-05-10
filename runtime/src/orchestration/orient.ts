@@ -39,6 +39,7 @@ type SessionTurnResult = {
   handoff?: HandoffResult;
   usage?: TurnUsage;
   abort?: true;
+  consentDenied?: true;
   error?: true;
 };
 
@@ -159,6 +160,17 @@ async function executeSessionTurn(
       return { abort: true as const };
     }
 
+    if (error instanceof LLMGatewayError && error.type === 'CONSENT_DENIED') {
+      logger.info('session.turn.consent_denied', {
+        project_namespace: projectNamespace,
+        role_name: roleName,
+        session_id: sessionId,
+        turn_index: turnIndex,
+        duration_ms: duration,
+      });
+      return { consentDenied: true as const };
+    }
+
     logger.error('session.turn.error', {
       project_namespace: projectNamespace,
       role_name: roleName,
@@ -246,6 +258,13 @@ export async function runRoleTurn(
 
   if (turnResult.abort || turnResult.error) {
     return null;
+  }
+
+  if (turnResult.consentDenied) {
+    return {
+      handoff: { kind: 'awaiting_human' },
+      awaitingHumanReason: 'consent-denied'
+    };
   }
 
   if (turnResult.handoff) {

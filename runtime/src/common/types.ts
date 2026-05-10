@@ -7,7 +7,7 @@ export type FlowStatus =
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentRequestKind = 'file-write' | 'bash-command';
 export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
-export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent';
+export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent' | 'consent-denied';
 
 export type ConsentRequest =
   | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
@@ -216,6 +216,7 @@ export interface TurnUsage {
 export interface RoleTurnResult {
   handoff: HandoffResult;
   usage?: TurnUsage;
+  awaitingHumanReason?: AwaitingHumanReason;
 }
 
 export type OperatorEvent =
@@ -294,7 +295,7 @@ export interface LLMProvider {
 
 export class LLMGatewayError extends Error {
   constructor(
-    public readonly type: 'AUTH_ERROR' | 'RATE_LIMIT' | 'PROVIDER_MALFORMED' | 'UNKNOWN' | 'ABORTED',
+    public readonly type: 'AUTH_ERROR' | 'RATE_LIMIT' | 'PROVIDER_MALFORMED' | 'UNKNOWN' | 'ABORTED' | 'CONSENT_DENIED',
     message: string,
     public readonly partialText?: string
   ) {

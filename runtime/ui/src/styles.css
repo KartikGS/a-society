@@ -12,6 +12,7 @@
   --warning: #bb3e03;
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2322313f' opacity='.55'/%3E%3C/svg%3E");
   --node-active: #3b82f6;
+  --node-awaiting-human: #d97706;
   --node-backward: #d9485f;
   --node-backward-source: #72777f;
   --node-complete: #2f855a;
@@ -1247,8 +1248,18 @@ textarea {
   margin: 0;
 }
 
-.chat-status-row {
-  min-height: 0;
+.chat-subtitle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.chat-wait-pill {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  font-size: 12px;
 }
 
 .graph-panel {
@@ -1380,6 +1391,10 @@ textarea {
   background: var(--node-active);
 }
 
+.legend-awaiting-human {
+  background: var(--node-awaiting-human);
+}
+
 .legend-backward {
   background: var(--node-backward);
 }
@@ -1428,6 +1443,10 @@ textarea {
 
 .node-active {
   border-color: var(--node-active);
+}
+
+.node-awaiting-human {
+  border-color: var(--node-awaiting-human);
 }
 
 .node-backward {
@@ -2115,6 +2134,7 @@ textarea {
     --warning: #fb923c;
     --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23cdd9e5' opacity='.7'/%3E%3C/svg%3E");
     --node-active: #3b82f6;
+    --node-awaiting-human: #f59e0b;
     --node-backward: #f43f5e;
     --node-backward-source: #9ca3af;
     --node-complete: #22c55e;
