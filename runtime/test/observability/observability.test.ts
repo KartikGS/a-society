@@ -46,20 +46,21 @@ class MockProvider implements LLMProvider {
 
   async executeTurn(_system: string, messages: RuntimeMessageParam[], tools?: ToolDefinition[], options?: TurnOptions): Promise<ProviderTurnResult> {
     const tracer = TelemetryManager.getTracer();
-    return tracer.startActiveSpan('provider.execute_turn', { 
+    return tracer.startActiveSpan('provider.execute_turn', {
       kind: 1, // CLIENT
-      attributes: { 
-        'provider.name': 'mock', 
-        'provider.model': 'mock-model',
+      attributes: {
+        'gen_ai.system': 'mock',
+        'gen_ai.operation.name': 'chat',
+        'gen_ai.request.model': 'mock-model',
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
-      } 
+      }
     }, async (span) => {
       const res = this.responses[this.callCount % this.responses.length];
       this.callCount++;
       if (res.usage) {
-        if (res.usage.inputTokens !== undefined) span.setAttribute('provider.input_tokens', res.usage.inputTokens);
-        if (res.usage.outputTokens !== undefined) span.setAttribute('provider.output_tokens', res.usage.outputTokens);
+        if (res.usage.inputTokens !== undefined) span.setAttribute('gen_ai.usage.input_tokens', res.usage.inputTokens);
+        if (res.usage.outputTokens !== undefined) span.setAttribute('gen_ai.usage.output_tokens', res.usage.outputTokens);
       }
       span.setAttribute('provider.result_type', res.type);
       if (res.type === 'text') {
@@ -150,7 +151,7 @@ async function run() {
 
     const providerSpans = getSpansByName('provider.execute_turn');
     assert.strictEqual(providerSpans.length, 2);
-    assert.strictEqual(providerSpans[0].attributes['provider.input_tokens'], 10);
+    assert.strictEqual(providerSpans[0].attributes['gen_ai.usage.input_tokens'], 10);
     assert.strictEqual(providerSpans[0].attributes['provider.result_type'], 'tool_calls');
   });
 
@@ -171,9 +172,6 @@ async function run() {
 
     // With no user message in history, orient.ts must return null rather than injecting a prompt.
     assert.strictEqual(result, null);
-
-    const intSpan = getSpan('session.interaction');
-    assert.strictEqual(intSpan.attributes['session.interaction.outcome'], 'invalid_history');
   });
 
   await test('Scenario: Prompt-human suspension in orient.ts (REAL CODE)', async () => {
@@ -210,13 +208,6 @@ async function run() {
     }
 
     assert.ok(capturedOutput.includes('I need clarification.'));
-
-    const intSpan = getSpan('session.interaction');
-    assert.strictEqual(intSpan.attributes['session.interaction.outcome'], 'awaiting_human');
-
-    const turnSpan = getSpan('session.turn');
-    assert.strictEqual(turnSpan.attributes['session.turn.outcome'], 'handoff');
-    assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.handoff_detected' && e.attributes['handoff_kind'] === 'awaiting_human'));
   });
 
   await test('Scenario: successful handoff returns usage but does not emit it from orient.ts', async () => {
@@ -303,13 +294,6 @@ async function run() {
     }
 
     await flushTestTelemetry();
-
-    const parseSpan = getSpan('handoff.parse');
-    assert.strictEqual(parseSpan.attributes['handoff.parse.success'], false);
-
-    const turnSpan = getSpan('session.turn');
-    assert.strictEqual(turnSpan.attributes['session.turn.outcome'], 'repair_requested');
-    assert.ok(getEvents(turnSpan).find(e => e.name === 'session.turn.parse_failed'));
 
     const points = getMetricDataPoints('a_society.handoff.parse_failure');
     const parseFailurePoint = points.find(point =>

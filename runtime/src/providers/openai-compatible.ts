@@ -4,6 +4,18 @@ import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResu
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
+  ATTR_GEN_AI_PROVIDER_NAME,
+  ATTR_GEN_AI_OPERATION_NAME,
+  ATTR_GEN_AI_REQUEST_MODEL,
+  ATTR_GEN_AI_REQUEST_MAX_TOKENS,
+  ATTR_GEN_AI_USAGE_INPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
+  ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
+  GEN_AI_PROVIDER_NAME_VALUE_OPENAI,
+  GEN_AI_OPERATION_NAME_VALUE_CHAT,
+  METRIC_GEN_AI_CLIENT_OPERATION_DURATION,
+} from '@opentelemetry/semantic-conventions/incubating';
+import {
   appendThinkingSystemInstruction,
   DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS,
   resolveMaxOutputTokens,
@@ -49,12 +61,13 @@ export class OpenAICompatibleProvider implements LLMProvider {
     const meter = TelemetryManager.getMeter();
     const startTime = Date.now();
 
-    return tracer.startActiveSpan('provider.execute_turn', {
+    return tracer.startActiveSpan(`${GEN_AI_OPERATION_NAME_VALUE_CHAT} ${GEN_AI_PROVIDER_NAME_VALUE_OPENAI}`, {
       kind: SpanKind.CLIENT,
       attributes: {
-        'provider.name': 'openai-compatible',
-        'provider.model': this.model,
-        'provider.max_output_tokens': this.maxOutputTokens,
+        [ATTR_GEN_AI_PROVIDER_NAME]: GEN_AI_PROVIDER_NAME_VALUE_OPENAI,
+        [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
+        [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
+        [ATTR_GEN_AI_REQUEST_MAX_TOKENS]: this.maxOutputTokens,
         'provider.supports_thinking': this.supportsThinking,
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
@@ -159,9 +172,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
           ? { inputTokens, outputTokens }
           : undefined;
 
-        if (inputTokens !== undefined) span.setAttribute('provider.input_tokens', inputTokens);
-        if (outputTokens !== undefined) span.setAttribute('provider.output_tokens', outputTokens);
-        if (finishReason) span.setAttribute('provider.stop_reason', finishReason);
+        if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
+        if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
+        if (finishReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [finishReason]);
 
         if (toolCallAcc.size > 0) {
           const calls = Array.from(toolCallAcc.values()).map(acc => {
@@ -227,8 +240,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
         }
         throw new LLMGatewayError('UNKNOWN', `Unexpected provider error: ${err?.message || err}`);
       } finally {
-        const duration = Date.now() - startTime;
-        meter.createHistogram('a_society.provider.latency').record(duration, { provider: 'openai-compatible', model: this.model });
+        meter.createHistogram(METRIC_GEN_AI_CLIENT_OPERATION_DURATION, { unit: 's' })
+          .record((Date.now() - startTime) / 1000, {
+            [ATTR_GEN_AI_PROVIDER_NAME]: GEN_AI_PROVIDER_NAME_VALUE_OPENAI,
+            [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
+            [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
+          });
         span.end();
       }
     });

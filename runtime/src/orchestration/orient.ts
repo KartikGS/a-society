@@ -6,6 +6,16 @@ import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
 
+function extractFileRefs(content: string): string[] {
+  const refs: string[] = [];
+  const pattern = /\[FILE: ([^\]]+)\]/g;
+  let match;
+  while ((match = pattern.exec(content)) !== null) {
+    refs.push(match[1]);
+  }
+  return refs;
+}
+
 export function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined, role?: string): void {
   if (!renderer) return;
   if (!usage) {
@@ -204,7 +214,7 @@ export async function runRoleTurn(
       project_namespace: projectNamespace,
       role_name: roleName,
       session_id: sessionId,
-      content: systemPrompt.slice(0, 2000),
+      context_files: extractFileRefs(systemPrompt).join('\n'),
     });
   }
 
