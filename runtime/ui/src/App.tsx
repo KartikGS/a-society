@@ -43,7 +43,7 @@ interface FlowUiState {
   workflow: WorkflowGraph | null;
   composerValue: string;
   waitLabels: Record<string, string | null>;
-  stopRequested: boolean;
+  stopRequestedRoles: Record<string, boolean>;
   consentRequests: Record<string, ConsentRequest>;
   latestInputTokensByRole: Record<string, number>;
   compactingRoles: Record<string, boolean>;
@@ -79,7 +79,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     workflow: null,
     composerValue: '',
     waitLabels: {},
-    stopRequested: false,
+    stopRequestedRoles: {},
     consentRequests: {},
     latestInputTokensByRole: {},
     compactingRoles: {},
@@ -363,7 +363,7 @@ export function App() {
           roleFeeds: message.roleFeeds,
           lastHandoff: null,
           waitLabels: {},
-          stopRequested: false,
+          stopRequestedRoles: {},
           latestInputTokensByRole: {},
           compactingRoles: {},
           consentRequests: {},
@@ -440,7 +440,9 @@ export function App() {
             const roleKey = toRoleKey(event.role);
             return {
               ...state,
-              stopRequested: false,
+              stopRequestedRoles: roleKey
+                ? { ...state.stopRequestedRoles, [roleKey]: false }
+                : state.stopRequestedRoles,
               roleFeeds: item && roleKey ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
             };
           });
@@ -454,7 +456,9 @@ export function App() {
             const roleKey = toRoleKey(event.role);
             return {
               ...state,
-              stopRequested: false,
+              stopRequestedRoles: roleKey
+                ? { ...state.stopRequestedRoles, [roleKey]: false }
+                : state.stopRequestedRoles,
               roleFeeds: item && roleKey ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
             };
           });
@@ -474,9 +478,14 @@ export function App() {
                     ? toRoleKey(event.role)
                   : null;
           const compactedRole = event.kind === 'session.compacted' ? toRoleKey(event.role) : null;
+          const resumedRole = event.kind === 'human.resumed' ? toRoleKey(event.role) : null;
           return {
             ...state,
-            stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
+            stopRequestedRoles: event.kind === 'flow.completed'
+              ? {}
+              : resumedRole
+                ? { ...state.stopRequestedRoles, [resumedRole]: false }
+                : state.stopRequestedRoles,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
             latestInputTokensByRole: compactedRole
               ? { ...state.latestInputTokensByRole, [compactedRole]: 0 }
@@ -494,7 +503,7 @@ export function App() {
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
           ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: `Waiting for ${message.model} response.` }
+          waitLabels: { ...state.waitLabels, [roleKey]: 'Model is responding...' }
         }));
         return;
       }
@@ -503,7 +512,8 @@ export function App() {
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
           ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: null }
+          waitLabels: { ...state.waitLabels, [roleKey]: null },
+          stopRequestedRoles: { ...state.stopRequestedRoles, [roleKey]: false }
         }));
         return;
       }
@@ -552,7 +562,7 @@ export function App() {
               : !improvementGraphAvailable && state.selectedGraph === 'improvement'
                 ? 'flow'
                 : state.selectedGraph,
-            stopRequested: message.flowRun.status !== 'running' ? false : state.stopRequested,
+            stopRequestedRoles: message.flowRun.status !== 'running' ? {} : state.stopRequestedRoles,
             hasActiveSession: message.hasActiveSession,
             latestInputTokensByRole: { ...message.inputTokensByRole, ...state.latestInputTokensByRole },
           };
@@ -562,7 +572,7 @@ export function App() {
       case 'error':
         updateFlowUi(key, (state) => ({
           ...state,
-          stopRequested: false,
+          stopRequestedRoles: {},
           roleFeeds: appendFeedItem(state.roleFeeds, SYSTEM_ROLE_KEY, {
             id: nextFeedId(),
             type: 'error',
@@ -870,9 +880,12 @@ export function App() {
   }
 
   function handleStopActiveTurn(): void {
-    if (!activeTab || !activeUi || activeUi.stopRequested) return;
-    updateFlowUi(activeTab.key, (state) => ({ ...state, stopRequested: true }));
-    sendMessage({ type: 'stop_active_turn', flowRef: activeTab.ref, role: viewedRole ?? undefined });
+    if (!activeTab || !activeUi || !viewedRole || activeUi.stopRequestedRoles[viewedRole]) return;
+    updateFlowUi(activeTab.key, (state) => ({
+      ...state,
+      stopRequestedRoles: { ...state.stopRequestedRoles, [viewedRole]: true },
+    }));
+    sendMessage({ type: 'stop_active_turn', flowRef: activeTab.ref, role: viewedRole });
   }
 
   function handleCompactContext(): void {
@@ -966,6 +979,7 @@ export function App() {
     !viewedRoleAwaitingNodeId &&
     socket.status === 'open';
   const canStopViewedRole = canStop && isViewedRoleActive;
+  const stopRequestedForViewedRole = viewedRole ? Boolean(activeUi?.stopRequestedRoles[viewedRole]) : false;
 
   return (
     <main className="app-shell">
@@ -1083,7 +1097,7 @@ export function App() {
                   placeholder={inputPlaceholder}
                   showComposer={true}
                   canStop={canStopViewedRole}
-                  stopRequested={activeUi?.stopRequested ?? false}
+                  stopRequested={stopRequestedForViewedRole}
                   roles={roles}
                   selectedRole={viewedRole ?? undefined}
                   activeRoles={activeRoles}
