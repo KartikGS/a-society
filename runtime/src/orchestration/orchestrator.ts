@@ -5,6 +5,7 @@ import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
 import type { FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { emitUsage, runRoleTurn } from './orient.js';
+import { compactRoleSession, shouldAutoCompact } from './compaction.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
 import { buildWorkflowRepairGuidance } from '../framework-services/workflow-graph-validator.js';
@@ -14,6 +15,7 @@ import { parseRoleIdentity } from '../common/role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
+import { getActiveModelWithKey } from '../settings/settings-store.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -69,6 +71,53 @@ function removeAssistantDraftBeforeToolCalls(
   }
 }
 
+function appendCurrentNodeExchange(session: RoleSession, nodeId: string, message: RuntimeMessageParam): void {
+  if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
+    session.currentNodeContext = { nodeId, exchanges: [] };
+  }
+  session.currentNodeContext.exchanges.push(message);
+}
+
+function appendRuntimeMessage(
+  history: RuntimeMessageParam[],
+  session: RoleSession,
+  nodeId: string,
+  message: RuntimeMessageParam
+): void {
+  history.push(message);
+  appendCurrentNodeExchange(session, nodeId, message);
+}
+
+function upsertCurrentNodeAssistantDelta(session: RoleSession, nodeId: string, text: string): void {
+  if (!text) return;
+  if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
+    session.currentNodeContext = { nodeId, exchanges: [] };
+  }
+  const previous = session.currentNodeContext.exchanges[session.currentNodeContext.exchanges.length - 1];
+  if (previous?.role === 'assistant') {
+    previous.content += text;
+    return;
+  }
+  session.currentNodeContext.exchanges.push({ role: 'assistant', content: text });
+}
+
+function appendConversationMessagesToCurrentNode(
+  session: RoleSession,
+  nodeId: string,
+  messages: RuntimeMessageParam[]
+): void {
+  if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
+    session.currentNodeContext = { nodeId, exchanges: [] };
+  }
+  if (messages[0]?.role === 'assistant_tool_calls') {
+    const exchanges = session.currentNodeContext.exchanges;
+    if (exchanges[exchanges.length - 1]?.role === 'assistant') {
+      exchanges.splice(exchanges.length - 1, 1);
+    }
+  }
+  session.currentNodeContext.exchanges.push(...messages);
+}
+
 export class FlowOrchestrator {
   private renderer: OperatorRenderSink;
   private activeTurnControllers = new Map<string, { role: string; controller: AbortController }>();
@@ -90,6 +139,51 @@ export class FlowOrchestrator {
       stopped = true;
     }
     return stopped;
+  }
+
+  public hasActiveTurn(target?: { nodeId?: string; role?: string }): boolean {
+    for (const [nodeId, entry] of this.activeTurnControllers.entries()) {
+      if (target?.nodeId && target.nodeId !== nodeId) continue;
+      if (target?.role && this.roleKey(target.role) !== this.roleKey(entry.role)) continue;
+      if (!entry.controller.signal.aborted) return true;
+    }
+    return false;
+  }
+
+  public async compactRoleContext(
+    flowRun: FlowRun,
+    roleName: string,
+    trigger: 'manual' | 'auto' = 'manual'
+  ): Promise<{ compacted: boolean; archiveId?: string; reason?: string }> {
+    this.setFlowContext(flowRun);
+    const session = SessionStore.loadRoleSession(
+      this.roleKey(roleName),
+      this.requireFlowRef(),
+      this.requireWorkspaceRoot()
+    );
+    if (!session) {
+      return { compacted: false, reason: `No persisted session found for role "${roleName}".` };
+    }
+
+    const result = await compactRoleSession({
+      session,
+      flowRun,
+      roleName,
+      trigger
+    });
+
+    if (result.compacted) {
+      SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+      this.renderer.emit({
+        kind: 'session.compacted',
+        role: roleName,
+        nodeId: session.currentNodeContext?.nodeId ?? session.currentNodeId ?? '(unknown)',
+        trigger,
+        archiveId: result.archiveId!
+      });
+    }
+
+    return result;
   }
 
   public async runStoredFlow(
@@ -225,18 +319,6 @@ export class FlowOrchestrator {
 
         span.setAttribute('node.artifact_count', resolvedArtifacts.length);
 
-        // Emit role.active when the node has actually been claimed for execution.
-        const artifactBasename = resolvedArtifacts.length === 1
-          ? path.basename(resolvedArtifacts[0])
-          : undefined;
-        this.renderer.emit({
-          kind: 'role.active',
-          nodeId,
-          role: currentNodeDef.role,
-          artifactCount: resolvedArtifacts.length,
-          artifactBasename
-        });
-
         const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;
 
         let session = SessionStore.loadRoleSession(this.roleKey(roleName), this.requireFlowRef(), this.requireWorkspaceRoot());
@@ -266,7 +348,24 @@ export class FlowOrchestrator {
           session.transcriptHistory = injectedHistory;
           SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
         };
-        const sameNodeResume = session.isActive && session.currentNodeId === nodeId && injectedHistory.length > 0;
+        const isVisitedNode = !firstNodeVisit;
+        const isSameNode = session.currentNodeId === nodeId;
+        const sameNodeResume = session.isActive && isSameNode && injectedHistory.length > 0;
+        if (!isVisitedNode || !sameNodeResume) {
+          this.renderer.emit({
+            kind: 'role.active',
+            nodeId,
+            role: currentNodeDef.role,
+            artifactCount: resolvedArtifacts.length
+          });
+        }
+        if (sameNodeResume) {
+          if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
+            session.currentNodeContext = { nodeId, exchanges: [...injectedHistory] };
+          }
+        } else {
+          session.currentNodeContext = { nodeId, exchanges: [] };
+        }
         const rawNodeContext = firstNodeVisit ? {
           required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
           guidance: Array.isArray(currentNodeDef.guidance) ? currentNodeDef.guidance : undefined,
@@ -312,7 +411,7 @@ export class FlowOrchestrator {
             forwardHandoffTargets,
             backwardHandoffTargets
           });
-          injectedHistory.push({ role: 'user', content: nodeEntryMessage });
+          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
         } else if (!sameNodeResume) {
           const nodeEntryMessage = buildForwardNodeEntryMessage({
             nodeId,
@@ -321,7 +420,7 @@ export class FlowOrchestrator {
             projectNamespace: flowRun.projectNamespace,
             recordFolderPath: flowRun.recordFolderPath,
             activeArtifacts: resolvedArtifacts,
-            entryMode: session.currentNodeId === nodeId ? 'reopened-node' : 'role-transition',
+            entryMode: firstNodeVisit ? 'role-transition' : 'reopened-node',
             previousNodeId: session.currentNodeId,
             humanInput,
             includeWorkflowContract,
@@ -329,13 +428,13 @@ export class FlowOrchestrator {
             forwardHandoffTargets,
             backwardHandoffTargets
           });
-          injectedHistory.push({ role: 'user', content: nodeEntryMessage });
+          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
         } else if (humanInput) {
-          injectedHistory.push({ role: 'user', content: humanInput });
+          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: humanInput });
         }
 
         if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
-          injectedHistory.push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
           span.addEvent('session.interrupted_turn_continuation');
         }
 
@@ -371,10 +470,12 @@ export class FlowOrchestrator {
                 consentGate,
                 async (messages) => {
                   removeAssistantDraftBeforeToolCalls(injectedHistory, messages);
+                  appendConversationMessagesToCurrentNode(session, nodeId, messages);
                   saveRoleSession();
                 },
                 (text) => {
                   upsertAssistantDelta(injectedHistory, text);
+                  upsertCurrentNodeAssistantDelta(session, nodeId, text);
                   saveRoleSession();
                 }
               );
@@ -397,6 +498,7 @@ export class FlowOrchestrator {
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
                 flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'prompt-human');
+                await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
                 this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: 'prompt-human' });
                 break;
               }
@@ -421,9 +523,10 @@ export class FlowOrchestrator {
                     role: currentNodeDef.role,
                     nodeId
                   });
-                  injectedHistory.push({ role: 'user', content: guidance.modelRepairMessage });
+                  appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: guidance.modelRepairMessage });
                   session.transcriptHistory = injectedHistory;
                   SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                  await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
                   continue;
                 }
 
@@ -467,10 +570,14 @@ export class FlowOrchestrator {
               this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
 
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
+              const latestFlowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot()) ?? flowRun;
 
               session.transcriptHistory = injectedHistory;
               session.isActive = false;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+              if (this.roleHasFutureNode(wf, latestFlowRun, nodeId, currentNodeDef.role)) {
+                await this.autoCompactSessionIfNeeded(session, latestFlowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
+              }
               span.addEvent('store.session_saved', { 'session.id': sessionId, 'session.active': false });
               break;
             } else {
@@ -484,6 +591,8 @@ export class FlowOrchestrator {
             }
           } catch (e: any) {
             if (e instanceof HandoffParseError) {
+              this.applyLatestTurnUsage(session, e.usage);
+              emitUsage(this.renderer, e.usage, roleName);
               span.addEvent('handoff.parse_error_injected', {
                 error_type: e.name,
                 error_message: e.message.slice(0, 500)
@@ -496,9 +605,10 @@ export class FlowOrchestrator {
                 role: currentNodeDef.role,
                 nodeId
               });
-              injectedHistory.push({ role: 'user', content: e.details.modelRepairMessage });
+              appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: e.details.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+              await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, e.usage);
               continue;
             }
             if (e instanceof WorkflowError) {
@@ -512,9 +622,10 @@ export class FlowOrchestrator {
                 role: currentNodeDef.role,
                 nodeId
               });
-              injectedHistory.push({ role: 'user', content: guidance.modelRepairMessage });
+              appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: guidance.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+              await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory);
               continue;
             }
             span.recordException(e);
@@ -909,6 +1020,56 @@ export class FlowOrchestrator {
     if (!turnUsage) return;
     if (turnUsage.inputTokens === undefined && turnUsage.outputTokens === undefined) return;
     session.latestTurnUsage = { ...turnUsage };
+  }
+
+  private roleHasFutureNode(wf: any, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
+    const roleKey = this.roleKey(roleName);
+    return Array.isArray(wf.nodes) && wf.nodes.some((node: any) =>
+      node?.id !== currentNodeId &&
+      typeof node?.role === 'string' &&
+      this.roleKey(node.role) === roleKey &&
+      !flowRun.completedNodes.includes(node.id)
+    );
+  }
+
+  private async autoCompactSessionIfNeeded(
+    session: RoleSession,
+    flowRun: FlowRun,
+    nodeId: string,
+    roleName: string,
+    activeHistory: RuntimeMessageParam[],
+    usage: TurnUsage | undefined = session.latestTurnUsage
+  ): Promise<void> {
+    const contextWindow = getActiveModelWithKey()?.contextWindow ?? null;
+    if (!shouldAutoCompact(usage, contextWindow)) return;
+
+    try {
+      const result = await compactRoleSession({
+        session,
+        flowRun,
+        roleName,
+        trigger: 'auto'
+      });
+
+      if (!result.compacted) return;
+
+      activeHistory.splice(
+        0,
+        activeHistory.length,
+        ...(session.transcriptHistory as RuntimeMessageParam[])
+      );
+      SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+      this.renderer.emit({
+        kind: 'session.compacted',
+        role: roleName,
+        nodeId,
+        trigger: 'auto',
+        archiveId: result.archiveId!
+      });
+    } catch {
+      // Auto compaction is opportunistic. A failed compaction must not invalidate
+      // the role turn that just completed successfully.
+    }
   }
 
   private resolveActiveWorkflow(flowRun: FlowRun): any {

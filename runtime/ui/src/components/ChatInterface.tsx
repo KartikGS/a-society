@@ -27,6 +27,7 @@ interface ChatInterfaceProps {
   onStop?: () => void;
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
+  onCompactContext?: () => void;
 }
 
 function normalizeAssistantMarkdown(text: string): string {
@@ -158,7 +159,15 @@ function StopIcon() {
   );
 }
 
-function ContextRing({ contextWindow, inputTokens }: { contextWindow: number; inputTokens: number | null }) {
+function ContextRing({
+  contextWindow,
+  inputTokens,
+  onCompactContext
+}: {
+  contextWindow: number;
+  inputTokens: number | null;
+  onCompactContext?: () => void;
+}) {
   const RADIUS = 16;
   const STROKE = 3;
   const normalizedRadius = RADIUS - STROKE / 2;
@@ -168,7 +177,14 @@ function ContextRing({ contextWindow, inputTokens }: { contextWindow: number; in
   const pctDisplay = Math.round(pct * 100);
 
   return (
-    <div className="context-ring">
+    <button
+      type="button"
+      className="context-ring"
+      onClick={onCompactContext}
+      disabled={!onCompactContext}
+      aria-label="Compact context"
+      title="Compact context"
+    >
       <svg width={RADIUS * 2} height={RADIUS * 2} aria-hidden="true">
         <circle cx={RADIUS} cy={RADIUS} r={normalizedRadius} fill="none" stroke="var(--border)" strokeWidth={STROKE} />
         <circle
@@ -185,7 +201,7 @@ function ContextRing({ contextWindow, inputTokens }: { contextWindow: number; in
         <span>{inputTokens != null ? inputTokens.toLocaleString() : '0'} / {contextWindow.toLocaleString()} tokens</span>
         <span className="context-ring-tooltip-hint">Usage updated at end of LLM turn</span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -366,7 +382,11 @@ export function ChatInterface(props: ChatInterfaceProps) {
 
           <div className="composer-footer">
             {props.contextWindow ? (
-              <ContextRing contextWindow={props.contextWindow} inputTokens={props.latestInputTokens ?? null} />
+              <ContextRing
+                contextWindow={props.contextWindow}
+                inputTokens={props.latestInputTokens ?? null}
+                onCompactContext={props.onCompactContext}
+              />
             ) : null}
             <select
               className="consent-mode-select"

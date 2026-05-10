@@ -94,7 +94,15 @@ async function executeSessionTurn(
       });
     }
 
-    const parseResult = HandoffInterpreter.parse(result.text);
+    let parseResult: HandoffResult;
+    try {
+      parseResult = HandoffInterpreter.parse(result.text);
+    } catch (error: any) {
+      if (error instanceof HandoffParseError) {
+        error.usage = result.usage;
+      }
+      throw error;
+    }
 
     logger.info('session.turn.completed', {
       project_namespace: projectNamespace,

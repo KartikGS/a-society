@@ -54,6 +54,7 @@ function nextFeedId(): string {
 }
 
 const SYSTEM_ROLE_KEY = '__system__';
+const DEFAULT_SELECTED_ROLE_KEY = 'owner';
 
 function toRoleKey(role: string | null | undefined): string | null {
   if (!role) return null;
@@ -142,7 +143,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         id: nextFeedId(),
         type: 'activation',
         label: 'Activation',
-        text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).${event.artifactBasename ? ` Primary artifact: ${event.artifactBasename}.` : ''}`
+        text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).`
       };
     case 'activity.tool_call':
       return {
@@ -173,6 +174,13 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
       return null;
     case 'usage.turn_summary':
       return null;
+    case 'session.compacted':
+      return {
+        id: nextFeedId(),
+        type: 'event',
+        label: 'Context',
+        text: `${event.nodeId} context compacted (${event.trigger}).`
+      };
     case 'flow.forward_pass_closed':
       return {
         id: nextFeedId(),
@@ -228,6 +236,20 @@ function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: F
     };
   }
   return { ...feeds, [role]: [...existing, item] };
+}
+
+function collectSelectableRoles(roleFeeds: Record<string, FeedItem[]>, workflow: WorkflowGraph | null): string[] {
+  const roleSet = new Set<string>();
+  if (workflow) {
+    for (const node of workflow.nodes) {
+      const key = toRoleKey(node.role);
+      if (key && key !== SYSTEM_ROLE_KEY) roleSet.add(key);
+    }
+  }
+  for (const role of Object.keys(roleFeeds)) {
+    if (role !== SYSTEM_ROLE_KEY) roleSet.add(role);
+  }
+  return [...roleSet];
 }
 
 function titleForFlow(flowRun: FlowRun | FlowSummary | FlowRef): string {
@@ -409,11 +431,17 @@ export function App() {
                 ? toRoleKey(event.fromRole)
                 : event.kind === 'repair.requested'
                   ? toRoleKey(event.role ?? null)
+                  : event.kind === 'session.compacted'
+                    ? toRoleKey(event.role)
                   : null;
+          const compactedRole = event.kind === 'session.compacted' ? toRoleKey(event.role) : null;
           return {
             ...state,
             stopRequested: event.kind === 'flow.completed' || event.kind === 'human.resumed' ? false : state.stopRequested,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
+            latestInputTokensByRole: compactedRole
+              ? { ...state.latestInputTokensByRole, [compactedRole]: 0 }
+              : state.latestInputTokensByRole,
             roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
           };
         });
@@ -453,15 +481,18 @@ export function App() {
         return;
       }
       case 'input_text':
-        updateFlowUi(key, (state) => ({
-          ...state,
-          roleFeeds: appendFeedItem(state.roleFeeds, toRoleKey(message.role) ?? SYSTEM_ROLE_KEY, {
-            id: nextFeedId(),
-            type: 'user',
-            label: 'You',
-            text: message.text
-          })
-        }));
+        updateFlowUi(key, (state) => {
+          const roleKey = toRoleKey(message.role) ?? SYSTEM_ROLE_KEY;
+          return {
+            ...state,
+            roleFeeds: appendFeedItem(state.roleFeeds, roleKey, {
+              id: nextFeedId(),
+              type: 'user',
+              label: 'You',
+              text: message.text
+            })
+          };
+        });
         return;
       case 'flow_state':
         ensureTab(message.flowRef, titleForFlow(message.flowRun));
@@ -598,7 +629,7 @@ export function App() {
   const activeUi = activeTabKey ? flowUiByKey[activeTabKey] ?? null : null;
   const flowRun = activeUi?.flowRun ?? null;
   const workflow = activeUi?.workflow ?? null;
-  const selectedRole = activeUi?.selectedRole ?? null;
+  const selectedRole = activeUi?.selectedRole ?? DEFAULT_SELECTED_ROLE_KEY;
   const selectedGraph = activeUi?.selectedGraph ?? 'flow';
   const lastHandoff = activeUi?.lastHandoff ?? null;
   const backwardActive = activeUi?.backwardActive ?? EMPTY_STRINGS;
@@ -801,6 +832,12 @@ export function App() {
     sendMessage({ type: 'stop_active_turn', flowRef: activeTab.ref, role: viewedRole ?? undefined });
   }
 
+  function handleCompactContext(): void {
+    if (!activeTab || !viewedRole) return;
+    if (!ensureConfiguredModel()) return;
+    sendMessage({ type: 'compact_context', flowRef: activeTab.ref, role: viewedRole });
+  }
+
   function handleResumeFlow(): void {
     if (!activeTab) return;
     if (!ensureConfiguredModel()) return;
@@ -833,17 +870,8 @@ export function App() {
   ), [activeNodeIds, lastHandoffFromNodeId]);
 
   const roles = useMemo(() => {
-    const roleSet = new Set<string>();
-    if (workflow) {
-      for (const node of workflow.nodes) {
-        const key = toRoleKey(node.role);
-        if (key && key !== SYSTEM_ROLE_KEY) roleSet.add(key);
-      }
-    }
-    for (const role of Object.keys(activeUi?.roleFeeds ?? {})) {
-      if (role !== SYSTEM_ROLE_KEY) roleSet.add(role);
-    }
-    return roleSet.size > 0 ? [...roleSet] : EMPTY_STRINGS;
+    const roleList = collectSelectableRoles(activeUi?.roleFeeds ?? {}, workflow);
+    return roleList.length > 0 ? roleList : EMPTY_STRINGS;
   }, [activeUi?.roleFeeds, workflow]);
 
   const activeRoles = useMemo(() => {
@@ -857,8 +885,7 @@ export function App() {
     )];
   }, [flowRun, workflow]);
 
-  const autoSelectedRole = roles.length === 1 ? roles[0] : null;
-  const viewedRole = selectedRole ?? autoSelectedRole;
+  const viewedRole = selectedRole;
   const displayedFeed = viewedRole ? (activeUi?.roleFeeds[viewedRole] ?? []) : [];
   const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds[SYSTEM_ROLE_KEY] ?? []);
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
@@ -1008,6 +1035,7 @@ export function App() {
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
                   onConsentModeChange={handleConsentModeChange}
+                  onCompactContext={viewedRole ? handleCompactContext : undefined}
                   contextWindow={contextWindow}
                   latestInputTokens={viewedRole ? (activeUi?.latestInputTokensByRole[viewedRole] ?? null) : null}
                 />

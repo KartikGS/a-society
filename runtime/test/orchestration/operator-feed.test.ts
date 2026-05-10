@@ -130,8 +130,7 @@ test('role.active becomes a role feed activation item', () => {
     kind: 'role.active',
     nodeId: 'owner-gate',
     role: 'Owner',
-    artifactCount: 1,
-    artifactBasename: 'handoff.md',
+    artifactCount: 1
   };
 
   assert.strictEqual(isTransientOperatorEvent(event), false);
@@ -140,7 +139,7 @@ test('role.active becomes a role feed activation item', () => {
     id: 'owner_4',
     type: 'activation',
     label: 'Activation',
-    text: 'owner-gate (Owner) is active with 1 artifact(s). Primary artifact: handoff.md.',
+    text: 'owner-gate (Owner) is active with 1 artifact(s).',
   });
 });
 

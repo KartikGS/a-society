@@ -162,6 +162,18 @@ export interface RoleSession {
   roleName: string;
   logicalSessionId: string;
   transcriptHistory: unknown[];
+  currentNodeContext?: {
+    nodeId: string;
+    exchanges: RuntimeMessageParam[];
+  };
+  compactionArchives?: Array<{
+    id: string;
+    trigger: 'manual' | 'auto';
+    nodeId: string;
+    compactedAt: string;
+    archivedTranscriptHistory: RuntimeMessageParam[];
+    replacementMessage: RuntimeMessageParam;
+  }>;
   isActive: boolean;
   currentNodeId?: string;
   systemPrompt?: string;
@@ -205,13 +217,14 @@ export interface RoleTurnResult {
 
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
-  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number; artifactBasename?: string }
+  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: 'prompt-human' | 'autonomous-abort' }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; request: ConsentRequest }

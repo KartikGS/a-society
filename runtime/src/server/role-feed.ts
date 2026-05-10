@@ -66,7 +66,7 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
         id,
         type: 'activation',
         label: 'Activation',
-        text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).${event.artifactBasename ? ` Primary artifact: ${event.artifactBasename}.` : ''}`
+        text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).`
       };
     case 'activity.tool_call':
       return {
@@ -101,6 +101,13 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
       return null;
     case 'usage.turn_summary':
       return null;
+    case 'session.compacted':
+      return {
+        id,
+        type: 'event',
+        label: 'Context',
+        text: `${event.nodeId} context compacted (${event.trigger}).`
+      };
     case 'flow.forward_pass_closed':
       return {
         id,

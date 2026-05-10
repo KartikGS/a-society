@@ -791,8 +791,16 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: default;
+  cursor: pointer;
   flex-shrink: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.context-ring:disabled {
+  cursor: default;
 }
 
 .context-ring svg {
@@ -830,7 +838,8 @@ textarea {
   z-index: 50;
 }
 
-.context-ring:hover .context-ring-tooltip {
+.context-ring:hover .context-ring-tooltip,
+.context-ring:focus-visible .context-ring-tooltip {
   display: flex;
 }
 

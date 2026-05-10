@@ -363,7 +363,9 @@ async function run() {
       currentNodeId: 'owner-intake'
     }, flowRef(), workspaceRoot);
 
-    const flowRun = makeFlowRun();
+    const flowRun = makeFlowRun({
+      visitedNodeIds: ['owner-intake']
+    });
     SessionStore.saveFlowRun(flowRun);
     let seenMessages: RuntimeMessageParam[] = [];
 
@@ -376,7 +378,8 @@ async function run() {
       }
     ]));
 
-    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+    const sink = new RecordingOperatorSink();
+    const orchestrator = new FlowOrchestrator(sink);
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
@@ -396,6 +399,10 @@ async function run() {
     assert.ok(
       continuationMessage.content.includes('previous assistant response was interrupted'),
       'expected the resume turn to ask the role to continue'
+    );
+    assert.ok(
+      !sink.events.some(event => event.kind === 'role.active' && event.nodeId === 'owner-intake'),
+      'same active node resume should not emit a fresh role.active activation'
     );
   });
 
@@ -418,6 +425,7 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       completedNodes: ['owner-intake', 'ta'],
+      visitedNodeIds: ['owner-intake', 'ta'],
       completedEdgeArtifacts: {
         'owner-intake=>ta': path.relative(workspaceRoot, ownerArtifact1),
         'ta=>owner-gate': path.relative(workspaceRoot, taArtifact)
@@ -472,6 +480,7 @@ async function run() {
       readyNodes: ['owner-intake'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      visitedNodeIds: ['owner-intake'],
       pendingNodeArtifacts: {
         'owner-intake': [
           path.relative(workspaceRoot, ownerArtifact1),
@@ -504,6 +513,66 @@ async function run() {
     assert.ok(reopenedMessage, 'expected a reopened-node packet in the reused Owner session');
     assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
     assert.strictEqual(session!.currentNodeId, 'owner-intake');
+  });
+
+  await test('Orchestrator: backward re-entry to an earlier node is framed as reopened even after the role visited another node', async () => {
+    resetState();
+
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'Owner moved on to a later node.' }
+      ],
+      isActive: false,
+      currentNodeId: 'owner-gate'
+    }, flowRef(), workspaceRoot);
+
+    const flowRun = makeFlowRun({
+      readyNodes: ['owner-intake'],
+      runningNodes: [],
+      awaitingHumanNodes: {},
+      completedNodes: ['owner-gate'],
+      visitedNodeIds: ['owner-intake', 'owner-gate'],
+      pendingNodeArtifacts: {
+        'owner-intake': [
+          path.relative(workspaceRoot, ownerArtifact1),
+          path.relative(workspaceRoot, reviewFeedbackArtifact)
+        ]
+      }
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Need clarification. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const sink = new RecordingOperatorSink();
+    const orchestrator = new FlowOrchestrator(sink);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
+    } finally {
+      unpatch();
+    }
+
+    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    assert.ok(session !== null, 'backward re-entry should keep the prior role-scoped session');
+
+    const reopenedMessage = (session!.transcriptHistory as any[])
+      .find(message => message.role === 'user' && typeof message.content === 'string' &&
+        message.content.includes('workflow node has been reopened in the same role-scoped flow session'));
+
+    assert.ok(reopenedMessage, 'expected backward re-entry to use reopened-node framing');
+    assert.ok(!reopenedMessage.content.includes('continuing the same role-scoped flow session from workflow node owner-gate to owner-intake'));
+    assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
+    assert.strictEqual(session!.currentNodeId, 'owner-intake');
+    assert.ok(
+      sink.events.some(event => event.kind === 'role.active' && event.nodeId === 'owner-intake'),
+      'backward re-entry should emit a fresh role.active activation'
+    );
   });
 
   await test('Orchestrator: role instances with the same base role use separate sessions', async () => {

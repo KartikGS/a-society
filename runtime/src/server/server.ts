@@ -32,6 +32,7 @@ type ClientMessage =
   | { type: 'start_takeover_initialization'; projectNamespace: string }
   | { type: 'start_greenfield_initialization'; projectName: string }
   | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
+  | { type: 'compact_context'; flowRef: FlowRef; role: string }
   | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
   | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' }
   | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
@@ -412,6 +413,11 @@ function buildServer(workspaceRoot: string) {
           }
           emitTransientMessage(session, message);
           return;
+        }
+
+        if (message.event.kind === 'session.compacted') {
+          const roleKey = parseRoleIdentity(message.event.role).instanceRoleId;
+          session.latestInputTokensByRole[roleKey] = 0;
         }
 
         if (isTransientOperatorEvent(message.event)) {
@@ -932,6 +938,73 @@ function buildServer(workspaceRoot: string) {
     }
   }
 
+  function resolveWorkflowRoleName(flowRun: FlowRun, role: string): string {
+    const roleKey = role.trim();
+    const workflow = resolveWorkflow(flowRun);
+    const match = workflow?.nodes?.find((node: any) =>
+      typeof node.role === 'string' &&
+      parseRoleIdentity(node.role).instanceRoleId === roleKey
+    );
+    return typeof match?.role === 'string' ? match.role : role;
+  }
+
+  function handleCompactContext(ref: FlowRef, role: string): void {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
+      return;
+    }
+
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, missingModelError(ref));
+      return;
+    }
+
+    const roleName = resolveWorkflowRoleName(flowRun, role);
+    const roleKey = parseRoleIdentity(roleName).instanceRoleId;
+    const activeSession = activeSessions.get(flowKey(ref));
+    if (activeSession?.orchestrator.hasActiveTurn({ role: roleName })) {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'Context cannot be compacted while that role is actively receiving a model response.'
+      });
+      return;
+    }
+
+    const createdForCompaction = !activeSession || activeSession.finished;
+    const session = getOrCreateChoiceSession(ref);
+    void session.orchestrator.compactRoleContext(flowRun, roleName, 'manual')
+      .then((result) => {
+        if (!result.compacted) {
+          if (createdForCompaction) {
+            session.finished = true;
+          }
+          broadcastToFlow(ref, {
+            type: 'error',
+            flowRef: ref,
+            message: result.reason ?? 'No context was available to compact.'
+          });
+          return;
+        }
+        session.latestInputTokensByRole[roleKey] = 0;
+        if (createdForCompaction) {
+          session.finished = true;
+        }
+        emitFlowState(session);
+      })
+      .catch((error: any) => {
+        if (createdForCompaction) {
+          session.finished = true;
+        }
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      });
+  }
+
   function parseClientMessage(raw: string): ClientMessage | null {
     try {
       const parsed = JSON.parse(raw);
@@ -951,6 +1024,9 @@ function buildServer(workspaceRoot: string) {
         return parsed;
       }
       if (parsed?.type === 'stop_active_turn' && hasFlowRef(parsed.flowRef)) {
+        return parsed;
+      }
+      if (parsed?.type === 'compact_context' && hasFlowRef(parsed.flowRef) && typeof parsed.role === 'string') {
         return parsed;
       }
       if (parsed?.type === 'human_input' && hasFlowRef(parsed.flowRef) && typeof parsed.text === 'string') {
@@ -1316,6 +1392,11 @@ function buildServer(workspaceRoot: string) {
 
       if (message.type === 'stop_active_turn') {
         handleStopActiveTurn(message.flowRef, { nodeId: message.nodeId, role: message.role });
+        return;
+      }
+
+      if (message.type === 'compact_context') {
+        handleCompactContext(message.flowRef, message.role);
         return;
       }
 
