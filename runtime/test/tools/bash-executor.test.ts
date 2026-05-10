@@ -131,6 +131,131 @@ console.log('\nbash-executor › input validation');
 }
 
 // ---------------------------------------------------------------------------
+// denylist
+// ---------------------------------------------------------------------------
+console.log('\nbash-executor › denylist');
+{
+  const ws = makeTempWorkspace();
+  const ex = new BashToolExecutor(ws);
+
+  const deniedCases: Array<[string, string]> = [
+    [':(){ :|:& };:', 'fork bomb'],
+    ['mkfs.ext4 /dev/sda1', 'mkfs'],
+    ['dd if=/dev/zero of=/dev/sda', 'dd to block device'],
+    ['rm -rf /', 'rm -rf /'],
+    ['rm -r /', 'rm -r /'],
+    ['rm -fr /', 'rm -fr /'],
+    ['rm --recursive /', 'rm --recursive /'],
+  ];
+
+  for (const [command, label] of deniedCases) {
+    await test(`blocks: ${label}`, async () => {
+      const r = await ex.execute({ id: '1', name: 'run_command', input: { command } });
+      assert.strictEqual(r.isError, true);
+      assert.ok(r.content.includes('blocked'), `expected 'blocked' in: ${r.content}`);
+    });
+  }
+
+  const allowedCases: Array<[string, string]> = [
+    ['rm -rf /tmp/my-project', 'rm -rf of non-root path'],
+    ['echo hello', 'echo'],
+    ['ls /', 'ls /'],
+  ];
+
+  for (const [command, label] of allowedCases) {
+    await test(`does not block: ${label}`, async () => {
+      const r = await ex.validate({ id: '1', name: 'run_command', input: { command } });
+      assert.strictEqual(r, null);
+    });
+  }
+
+  cleanup(ws);
+}
+
+// ---------------------------------------------------------------------------
+// environment sanitization
+// ---------------------------------------------------------------------------
+console.log('\nbash-executor › env sanitization');
+{
+  const ws = makeTempWorkspace();
+  const ex = new BashToolExecutor(ws);
+
+  await test('credential env vars are not passed to child process', async () => {
+    process.env.TEST_FAKE_API_KEY = 'super-secret-value-aabbcc';
+    try {
+      const r = await ex.execute({ id: '1', name: 'run_command', input: { command: 'echo $TEST_FAKE_API_KEY' } });
+      assert.strictEqual(r.isError, false);
+      assert.ok(!r.content.includes('super-secret-value-aabbcc'), 'credential value leaked into output');
+    } finally {
+      delete process.env.TEST_FAKE_API_KEY;
+    }
+  });
+
+  await test('non-credential env vars are still accessible to child', async () => {
+    process.env.TEST_HARMLESS_VAR = 'harmless-value';
+    try {
+      const r = await ex.execute({ id: '2', name: 'run_command', input: { command: 'echo $TEST_HARMLESS_VAR' } });
+      assert.strictEqual(r.isError, false);
+      assert.ok(r.content.includes('harmless-value'));
+    } finally {
+      delete process.env.TEST_HARMLESS_VAR;
+    }
+  });
+
+  for (const suffix of ['_KEY', '_SECRET', '_TOKEN', '_PASSWORD', '_API_KEY']) {
+    await test(`strips var with suffix ${suffix}`, async () => {
+      const varName = `TEST_FAKE${suffix}`;
+      process.env[varName] = `credential-value-${suffix}-xyz123456`;
+      try {
+        const r = await ex.execute({ id: '1', name: 'run_command', input: { command: `echo $${varName}` } });
+        assert.ok(!r.content.includes(`credential-value-${suffix}-xyz123456`), `${suffix} value leaked`);
+      } finally {
+        delete process.env[varName];
+      }
+    });
+  }
+
+  cleanup(ws);
+}
+
+// ---------------------------------------------------------------------------
+// output redaction
+// ---------------------------------------------------------------------------
+console.log('\nbash-executor › output redaction');
+{
+  const ws = makeTempWorkspace();
+  const ex = new BashToolExecutor(ws);
+
+  await test('redacts stripped credential value that appears in command output', async () => {
+    process.env.TEST_FAKE_SECRET = 'my-very-secret-token-redact-me-now';
+    try {
+      fs.writeFileSync(path.join(ws, 'cred.txt'), 'my-very-secret-token-redact-me-now');
+      const r = await ex.execute({ id: '1', name: 'run_command', input: { command: 'cat cred.txt' } });
+      assert.ok(!r.content.includes('my-very-secret-token-redact-me-now'), 'credential not redacted from output');
+      assert.ok(r.content.includes('[REDACTED]'));
+    } finally {
+      delete process.env.TEST_FAKE_SECRET;
+    }
+  });
+
+  await test('redacts Anthropic key format from output', async () => {
+    const fakeKey = 'sk-ant-api03-AAAABBBBCCCCDDDDEEEEFFFFGGGG1234567890abcdef';
+    fs.writeFileSync(path.join(ws, 'key.txt'), fakeKey);
+    const r = await ex.execute({ id: '2', name: 'run_command', input: { command: 'cat key.txt' } });
+    assert.ok(!r.content.includes(fakeKey), 'Anthropic key not redacted');
+    assert.ok(r.content.includes('[REDACTED]'));
+  });
+
+  await test('does not redact normal output', async () => {
+    const r = await ex.execute({ id: '3', name: 'run_command', input: { command: 'echo "hello world"' } });
+    assert.ok(r.content.includes('hello world'));
+    assert.ok(!r.content.includes('[REDACTED]'));
+  });
+
+  cleanup(ws);
+}
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

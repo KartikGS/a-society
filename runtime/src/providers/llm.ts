@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult, TurnUsage } from '../common/types.js';
@@ -54,7 +55,7 @@ export class LLMGateway {
   private webSearchExecutor?: WebSearchExecutor;
   private tools?: ToolDefinition[];
 
-  constructor(workspaceRoot?: string, provider?: LLMProvider) {
+  constructor(workspaceRoot?: string, provider?: LLMProvider, projectNamespace?: string) {
     if (workspaceRoot) {
       configureSettingsStore(workspaceRoot);
     }
@@ -66,7 +67,11 @@ export class LLMGateway {
     }
 
     if (workspaceRoot) {
-      this.fileExecutor = new FileToolExecutor(workspaceRoot);
+      const writeRoots = projectNamespace ? [
+        path.join(workspaceRoot, projectNamespace),
+        path.join(workspaceRoot, '.a-society', 'a-docs', projectNamespace),
+      ] : undefined;
+      this.fileExecutor = new FileToolExecutor(workspaceRoot, writeRoots);
       this.bashExecutor = new BashToolExecutor(workspaceRoot);
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();
@@ -157,6 +162,18 @@ export class LLMGateway {
                 content = `Error: could not parse tool arguments: ${call.parseError}`;
                 isError = true;
               } else {
+                if (this.bashExecutor?.canHandle(call.name)) {
+                  const denylistResult = this.bashExecutor.validate(call);
+                  if (denylistResult) {
+                    return {
+                      role: 'tool_result' as const,
+                      callId: call.id,
+                      toolName: call.name,
+                      content: denylistResult.content,
+                      isError: true,
+                    };
+                  }
+                }
                 if (options?.consentGate) {
                   const decision = await options.consentGate.check({
                     toolName: call.name,

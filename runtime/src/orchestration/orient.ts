@@ -193,7 +193,7 @@ export async function runRoleTurn(
 
   const sessionId = crypto.randomUUID();
   const systemPrompt = providedSystemPrompt ?? '';
-  const llm = new LLMGateway(workspaceRoot);
+  const llm = new LLMGateway(workspaceRoot, undefined, projectNamespace);
   const history: RuntimeMessageParam[] = providedHistory ?? [];
 
   if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
