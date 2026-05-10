@@ -21,7 +21,7 @@ import * as SettingsStore from '../settings/settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
 import { defaultConsentState, normalizeConsentState } from '../common/types.js';
-import type { FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentRequest, ConsentResponseDecision, RoleSession } from '../common/types.js';
+import type { FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentRequest, ConsentResponseDecision, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from './role-feed.js';
 
@@ -86,6 +86,8 @@ const UI_DIST = path.resolve(
 );
 const UI_INDEX = path.join(UI_DIST, 'index.html');
 const HISTORY_LIMIT = 400;
+const STALE_CONSENT_TOOL_RESULT =
+  'Consent prompt was no longer available after runtime resume. The node is paused for operator guidance.';
 
 function isDirectExecution(): boolean {
   if (!process.argv[1]) return false;
@@ -366,6 +368,57 @@ function buildServer(workspaceRoot: string) {
     if (!message) return;
     session.lastFlowState = message;
     broadcastToFlow(session.flowRef, message);
+  }
+
+  function appendStaleConsentToolResults(messages: RuntimeMessageParam[]): boolean {
+    const last = messages[messages.length - 1];
+    if (last?.role !== 'assistant_tool_calls') return false;
+
+    for (const call of last.calls) {
+      messages.push({
+        role: 'tool_result',
+        callId: call.id,
+        toolName: call.name,
+        content: STALE_CONSENT_TOOL_RESULT,
+        isError: true,
+      });
+    }
+    return last.calls.length > 0;
+  }
+
+  function repairStaleConsentTranscript(ref: FlowRef, nodeId: string, role: string): void {
+    const roleKey = parseRoleIdentity(role).instanceRoleId;
+    const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+    if (!roleSession) return;
+
+    let changed = appendStaleConsentToolResults(roleSession.transcriptHistory as RuntimeMessageParam[]);
+    if (roleSession.currentNodeContext?.nodeId === nodeId) {
+      changed = appendStaleConsentToolResults(roleSession.currentNodeContext.exchanges) || changed;
+    }
+    if (changed) {
+      SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
+    }
+  }
+
+  async function normalizeStaleConsentWaits(ref: FlowRef): Promise<FlowRun | null> {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun) return null;
+
+    const staleConsentNodes = Object.entries(flowRun.awaitingHumanNodes)
+      .filter(([, state]) => state.reason === 'consent');
+    if (staleConsentNodes.length === 0) return flowRun;
+
+    for (const [nodeId, state] of staleConsentNodes) {
+      repairStaleConsentTranscript(ref, nodeId, state.role);
+    }
+
+    return SessionStore.updateFlowRun((flow) => {
+      for (const [nodeId, state] of Object.entries(flow.awaitingHumanNodes)) {
+        if (state.reason === 'consent') {
+          flow.awaitingHumanNodes[nodeId] = { role: state.role, reason: 'consent-denied' };
+        }
+      }
+    }, ref, workspaceRoot);
   }
 
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
@@ -652,8 +705,8 @@ function buildServer(workspaceRoot: string) {
     ).catch(() => {});
   }
 
-  function resumeFlow(socket: WebSocket, ref: FlowRef): void {
-    const flowRun = readFlowRun(ref);
+  async function resumeFlow(socket: WebSocket, ref: FlowRef): Promise<void> {
+    let flowRun = readFlowRun(ref);
     if (!flowRun) {
       sendToSocket(socket, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
       return;
@@ -675,6 +728,11 @@ function buildServer(workspaceRoot: string) {
     if (!SettingsStore.hasUsableConfiguredModel()) {
       sendToSocket(socket, missingModelError(ref));
       return;
+    }
+
+    const normalizedFlowRun = await normalizeStaleConsentWaits(ref);
+    if (normalizedFlowRun) {
+      flowRun = normalizedFlowRun;
     }
 
     const session = createSession(ref);
@@ -1390,7 +1448,13 @@ function buildServer(workspaceRoot: string) {
       }
 
       if (message.type === 'resume_flow') {
-        resumeFlow(socket, message.flowRef);
+        void resumeFlow(socket, message.flowRef).catch((error: any) => {
+          sendToSocket(socket, {
+            type: 'error',
+            flowRef: message.flowRef,
+            message: error instanceof Error ? error.message : String(error)
+          });
+        });
         return;
       }
 
