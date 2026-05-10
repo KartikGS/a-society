@@ -3,6 +3,18 @@ import { LLMGatewayError } from '../common/types.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
+  ATTR_GEN_AI_PROVIDER_NAME,
+  ATTR_GEN_AI_OPERATION_NAME,
+  ATTR_GEN_AI_REQUEST_MODEL,
+  ATTR_GEN_AI_REQUEST_MAX_TOKENS,
+  ATTR_GEN_AI_USAGE_INPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_OUTPUT_TOKENS,
+  ATTR_GEN_AI_RESPONSE_FINISH_REASONS,
+  GEN_AI_PROVIDER_NAME_VALUE_ANTHROPIC,
+  GEN_AI_OPERATION_NAME_VALUE_CHAT,
+  METRIC_GEN_AI_CLIENT_OPERATION_DURATION,
+} from '@opentelemetry/semantic-conventions/incubating';
+import {
   appendThinkingSystemInstruction,
   DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS,
   resolveMaxOutputTokens,
@@ -40,13 +52,16 @@ export class AnthropicProvider implements LLMProvider {
     options?: TurnOptions
   ): Promise<ProviderTurnResult> {
     const tracer = TelemetryManager.getTracer();
+    const meter = TelemetryManager.getMeter();
+    const startTime = Date.now();
 
-    return tracer.startActiveSpan('provider.execute_turn', {
+    return tracer.startActiveSpan(`${GEN_AI_OPERATION_NAME_VALUE_CHAT} ${GEN_AI_PROVIDER_NAME_VALUE_ANTHROPIC}`, {
       kind: SpanKind.CLIENT,
       attributes: {
-        'provider.name': 'anthropic',
-        'provider.model': this.model,
-        'provider.max_output_tokens': this.maxOutputTokens,
+        [ATTR_GEN_AI_PROVIDER_NAME]: GEN_AI_PROVIDER_NAME_VALUE_ANTHROPIC,
+        [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
+        [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
+        [ATTR_GEN_AI_REQUEST_MAX_TOKENS]: this.maxOutputTokens,
         'provider.supports_thinking': this.supportsThinking,
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
@@ -138,9 +153,9 @@ export class AnthropicProvider implements LLMProvider {
           ? { inputTokens, outputTokens }
           : undefined;
 
-        if (inputTokens !== undefined) span.setAttribute('provider.input_tokens', inputTokens);
-        if (outputTokens !== undefined) span.setAttribute('provider.output_tokens', outputTokens);
-        if (stopReason) span.setAttribute('provider.stop_reason', stopReason);
+        if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
+        if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
+        if (stopReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [stopReason]);
 
         if (toolUseBlocks.size > 0) {
           const calls = Array.from(toolUseBlocks.values()).map(b => {
@@ -172,6 +187,12 @@ export class AnthropicProvider implements LLMProvider {
         }
         throw error;
       } finally {
+        meter.createHistogram(METRIC_GEN_AI_CLIENT_OPERATION_DURATION, { unit: 's' })
+          .record((Date.now() - startTime) / 1000, {
+            [ATTR_GEN_AI_PROVIDER_NAME]: GEN_AI_PROVIDER_NAME_VALUE_ANTHROPIC,
+            [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
+            [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
+          });
         span.end();
       }
     });
