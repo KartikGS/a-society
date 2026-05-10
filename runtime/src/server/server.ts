@@ -1071,15 +1071,35 @@ function buildServer(workspaceRoot: string) {
       return;
     }
 
+    const roleName = resolveWorkflowRoleName(flowRun, role);
+    const roleKey = parseRoleIdentity(roleName).instanceRoleId;
     if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, {
+        type: 'operator_event',
+        flowRef: ref,
+        event: {
+          kind: 'session.compaction_failed',
+          role: roleName,
+          trigger: 'manual',
+          reason: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
+        }
+      });
       broadcastToFlow(ref, missingModelError(ref));
       return;
     }
 
-    const roleName = resolveWorkflowRoleName(flowRun, role);
-    const roleKey = parseRoleIdentity(roleName).instanceRoleId;
     const activeSession = activeSessions.get(flowKey(ref));
     if (activeSession?.orchestrator.hasActiveTurn({ role: roleName })) {
+      broadcastToFlow(ref, {
+        type: 'operator_event',
+        flowRef: ref,
+        event: {
+          kind: 'session.compaction_failed',
+          role: roleName,
+          trigger: 'manual',
+          reason: 'Context cannot be compacted while that role is actively receiving a model response.'
+        }
+      });
       broadcastToFlow(ref, {
         type: 'error',
         flowRef: ref,

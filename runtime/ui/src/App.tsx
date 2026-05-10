@@ -46,6 +46,7 @@ interface FlowUiState {
   stopRequested: boolean;
   consentRequests: Record<string, ConsentRequest>;
   latestInputTokensByRole: Record<string, number>;
+  compactingRoles: Record<string, boolean>;
   hasActiveSession: boolean;
 }
 
@@ -81,6 +82,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     stopRequested: false,
     consentRequests: {},
     latestInputTokensByRole: {},
+    compactingRoles: {},
     hasActiveSession: false,
   };
 }
@@ -174,10 +176,14 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
       return null;
     case 'usage.turn_summary':
       return null;
+    case 'session.compaction_started':
+      return null;
+    case 'session.compaction_failed':
+      return null;
     case 'session.compacted':
       return {
         id: nextFeedId(),
-        type: 'event',
+        type: 'tool',
         label: 'Context',
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
@@ -359,6 +365,7 @@ export function App() {
           waitLabels: {},
           stopRequested: false,
           latestInputTokensByRole: {},
+          compactingRoles: {},
           consentRequests: {},
         }));
         return;
@@ -404,6 +411,26 @@ export function App() {
               };
             });
           }
+          return;
+        }
+
+        if (event.kind === 'session.compaction_started') {
+          const roleKey = toRoleKey(event.role);
+          if (!roleKey) return;
+          updateFlowUi(key, (state) => ({
+            ...state,
+            compactingRoles: { ...state.compactingRoles, [roleKey]: true },
+          }));
+          return;
+        }
+
+        if (event.kind === 'session.compaction_failed') {
+          const roleKey = toRoleKey(event.role);
+          if (!roleKey) return;
+          updateFlowUi(key, (state) => ({
+            ...state,
+            compactingRoles: { ...state.compactingRoles, [roleKey]: false },
+          }));
           return;
         }
 
@@ -454,6 +481,9 @@ export function App() {
             latestInputTokensByRole: compactedRole
               ? { ...state.latestInputTokensByRole, [compactedRole]: 0 }
               : state.latestInputTokensByRole,
+            compactingRoles: compactedRole
+              ? { ...state.compactingRoles, [compactedRole]: false }
+              : state.compactingRoles,
             roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
           };
         });
@@ -848,6 +878,11 @@ export function App() {
   function handleCompactContext(): void {
     if (!activeTab || !viewedRole) return;
     if (!ensureConfiguredModel()) return;
+    if (activeUi?.compactingRoles[viewedRole]) return;
+    updateFlowUi(activeTab.key, (state) => ({
+      ...state,
+      compactingRoles: { ...state.compactingRoles, [viewedRole]: true },
+    }));
     sendMessage({ type: 'compact_context', flowRef: activeTab.ref, role: viewedRole });
   }
 
@@ -910,11 +945,18 @@ export function App() {
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
   const feedbackPrompt = feedbackConsentCopy(flowRun);
-  const visibleWaitLabel = isViewedRoleActive && viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
+  const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
+  const visibleWaitLabel = isViewedRoleCompacting
+    ? 'Compacting...'
+    : isViewedRoleActive && viewedRole
+      ? (activeUi?.waitLabels[viewedRole] ?? null)
+      : null;
   const hasActiveSession = activeUi?.hasActiveSession ?? false;
-  const inputDisabled = !hasActiveSession || !viewedRoleAwaitingNodeId;
+  const inputDisabled = isViewedRoleCompacting || !hasActiveSession || !viewedRoleAwaitingNodeId;
   const inputPlaceholder = !hasActiveSession
     ? 'Resume the flow to reply.'
+    : isViewedRoleCompacting
+      ? 'Compacting context...'
     : !inputDisabled
       ? 'Reply to the selected role prompt...'
       : 'Select a role that is awaiting input.';
@@ -1062,6 +1104,7 @@ export function App() {
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   contextWindow={contextWindow}
                   latestInputTokens={viewedRole ? (activeUi?.latestInputTokensByRole[viewedRole] ?? null) : null}
+                  isCompactingContext={isViewedRoleCompacting}
                 />
               </Panel>
             </PanelGroup>

@@ -849,6 +849,12 @@ textarea {
   font-size: 11px;
 }
 
+.context-ring-tooltip-action {
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .feed-label {
   margin: 0 0 8px;
   font-size: 12px;
@@ -2200,6 +2206,12 @@ textarea {
 
   .feed-item-event {
     background: rgba(22, 27, 34, 0.92);
+  }
+
+  .status-pill-wait {
+    background: rgba(251, 146, 60, 0.14);
+    border-color: rgba(251, 146, 60, 0.28);
+    color: #fed7aa;
   }
 
   .feed-compact-repair {

@@ -1,10 +1,17 @@
 import crypto from 'node:crypto';
+import { Writable } from 'node:stream';
 import { LLMGateway } from '../providers/llm.js';
 import type { FlowRun, RoleSession, RuntimeMessageParam, TurnUsage } from '../common/types.js';
 
 export const AUTO_COMPACTION_CONTEXT_RATIO = 0.8;
 
 export type CompactionTrigger = 'manual' | 'auto';
+
+const silentOutputStream = new Writable({
+  write(_chunk, _encoding, callback) {
+    callback();
+  }
+});
 
 export interface RoleSessionCompactionResult {
   compacted: boolean;
@@ -162,7 +169,8 @@ export async function compactRoleSession(options: {
       'Return only a concise operational summary of the supplied current-node conversation.',
       'Do not emit a handoff block. Do not call tools.'
     ].join('\n'),
-    [{ role: 'user', content: buildSummaryPrompt(nodeId, exchanges) }]
+    [{ role: 'user', content: buildSummaryPrompt(nodeId, exchanges) }],
+    { outputStream: silentOutputStream }
   );
 
   const archiveId = crypto.randomUUID();

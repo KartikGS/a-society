@@ -162,15 +162,35 @@ export class FlowOrchestrator {
       this.requireWorkspaceRoot()
     );
     if (!session) {
-      return { compacted: false, reason: `No persisted session found for role "${roleName}".` };
+      const reason = `No persisted session found for role "${roleName}".`;
+      this.renderer.emit({ kind: 'session.compaction_failed', role: roleName, trigger, reason });
+      return { compacted: false, reason };
     }
 
-    const result = await compactRoleSession({
-      session,
-      flowRun,
-      roleName,
-      trigger
-    });
+    this.renderer.emit({ kind: 'session.compaction_started', role: roleName, trigger });
+
+    let result: { compacted: boolean; archiveId?: string; reason?: string };
+    try {
+      result = await compactRoleSession({
+        session,
+        flowRun,
+        roleName,
+        trigger
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      this.renderer.emit({ kind: 'session.compaction_failed', role: roleName, trigger, reason });
+      throw error;
+    }
+
+    if (!result.compacted) {
+      this.renderer.emit({
+        kind: 'session.compaction_failed',
+        role: roleName,
+        trigger,
+        reason: result.reason ?? 'No context was available to compact.'
+      });
+    }
 
     if (result.compacted) {
       SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
@@ -1047,6 +1067,8 @@ export class FlowOrchestrator {
     const contextWindow = getActiveModelWithKey()?.contextWindow ?? null;
     if (!shouldAutoCompact(usage, contextWindow)) return;
 
+    this.renderer.emit({ kind: 'session.compaction_started', role: roleName, trigger: 'auto' });
+
     try {
       const result = await compactRoleSession({
         session,
@@ -1055,7 +1077,15 @@ export class FlowOrchestrator {
         trigger: 'auto'
       });
 
-      if (!result.compacted) return;
+      if (!result.compacted) {
+        this.renderer.emit({
+          kind: 'session.compaction_failed',
+          role: roleName,
+          trigger: 'auto',
+          reason: result.reason ?? 'No context was available to compact.'
+        });
+        return;
+      }
 
       activeHistory.splice(
         0,
@@ -1070,7 +1100,13 @@ export class FlowOrchestrator {
         trigger: 'auto',
         archiveId: result.archiveId!
       });
-    } catch {
+    } catch (error) {
+      this.renderer.emit({
+        kind: 'session.compaction_failed',
+        role: roleName,
+        trigger: 'auto',
+        reason: error instanceof Error ? error.message : String(error)
+      });
       // Auto compaction is opportunistic. A failed compaction must not invalidate
       // the role turn that just completed successfully.
     }

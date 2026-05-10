@@ -228,6 +228,8 @@ export type OperatorEvent =
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
+  | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
   | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
   | { kind: 'flow.completed' }

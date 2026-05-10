@@ -21,6 +21,7 @@ interface ChatInterfaceProps {
   consentMode?: ConsentMode;
   contextWindow?: number | null;
   latestInputTokens?: number | null;
+  isCompactingContext?: boolean;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
@@ -162,11 +163,13 @@ function StopIcon() {
 function ContextRing({
   contextWindow,
   inputTokens,
-  onCompactContext
+  onCompactContext,
+  isCompacting
 }: {
   contextWindow: number;
   inputTokens: number | null;
   onCompactContext?: () => void;
+  isCompacting?: boolean;
 }) {
   const RADIUS = 16;
   const STROKE = 3;
@@ -181,9 +184,8 @@ function ContextRing({
       type="button"
       className="context-ring"
       onClick={onCompactContext}
-      disabled={!onCompactContext}
+      disabled={!onCompactContext || isCompacting}
       aria-label="Compact context"
-      title="Compact context"
     >
       <svg width={RADIUS * 2} height={RADIUS * 2} aria-hidden="true">
         <circle cx={RADIUS} cy={RADIUS} r={normalizedRadius} fill="none" stroke="var(--border)" strokeWidth={STROKE} />
@@ -199,6 +201,7 @@ function ContextRing({
       <span className="context-ring-pct">{pctDisplay}%</span>
       <div className="context-ring-tooltip">
         <span>{inputTokens != null ? inputTokens.toLocaleString() : '0'} / {contextWindow.toLocaleString()} tokens</span>
+        <span className="context-ring-tooltip-action">{isCompacting ? 'Compacting...' : 'Click to compact'}</span>
         <span className="context-ring-tooltip-hint">Usage updated at end of LLM turn</span>
       </div>
     </button>
@@ -385,6 +388,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 contextWindow={props.contextWindow}
                 inputTokens={props.latestInputTokens ?? null}
                 onCompactContext={props.onCompactContext}
+                isCompacting={props.isCompactingContext}
               />
             ) : null}
             <select

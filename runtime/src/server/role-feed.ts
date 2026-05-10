@@ -15,7 +15,9 @@ export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | n
     if (
       event.kind === 'human.awaiting_input' ||
       event.kind === 'human.resumed' ||
-      event.kind === 'usage.turn_summary'
+      event.kind === 'usage.turn_summary' ||
+      event.kind === 'session.compaction_started' ||
+      event.kind === 'session.compaction_failed'
     ) {
       return null;
     }
@@ -101,10 +103,14 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
       return null;
     case 'usage.turn_summary':
       return null;
+    case 'session.compaction_started':
+      return null;
+    case 'session.compaction_failed':
+      return null;
     case 'session.compacted':
       return {
         id,
-        type: 'event',
+        type: 'tool',
         label: 'Context',
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
