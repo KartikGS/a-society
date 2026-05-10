@@ -97,9 +97,11 @@ export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
 
 export class FileToolExecutor {
   private readonly workspaceRoot: string;
+  private readonly writeRoots: string[] | null;
 
-  constructor(workspaceRoot: string) {
+  constructor(workspaceRoot: string, writeRoots?: string[]) {
     this.workspaceRoot = path.resolve(workspaceRoot);
+    this.writeRoots = writeRoots ? writeRoots.map(r => path.resolve(r)) : null;
   }
 
   async execute(call: ToolCall, _signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
@@ -116,11 +118,15 @@ export class FileToolExecutor {
         const reqPath = call.input.path as string;
         const oldString = call.input.old_string as string;
         const newString = call.input.new_string as string;
-        return await this.editFile(this.sandboxPath(reqPath), oldString, newString);
+        const resolved = this.sandboxPath(reqPath);
+        this.assertWriteAllowed(resolved);
+        return await this.editFile(resolved, oldString, newString);
       } else if (call.name === 'write_file') {
         const reqPath = call.input.path as string;
         const content = call.input.content as string;
-        return await this.writeFile(this.sandboxPath(reqPath), content);
+        const resolved = this.sandboxPath(reqPath);
+        this.assertWriteAllowed(resolved);
+        return await this.writeFile(resolved, content);
       } else if (call.name === 'list_directory') {
         const reqPath = call.input.path as string;
         return await this.listDirectory(this.sandboxPath(reqPath));
@@ -129,6 +135,9 @@ export class FileToolExecutor {
     } catch (err: any) {
       if (err.name === 'SandboxViolationError') {
         return { content: `Error: path '${call.input.path}' is outside the workspace root and cannot be accessed.`, isError: true };
+      }
+      if (err.name === 'WriteRestrictedError') {
+        return { content: `Error: path '${call.input.path}' is outside the permitted write area — writes are restricted to the project directory and its associated a-docs.`, isError: true };
       }
       return { content: `Error: could not execute tool: ${err.message}`, isError: true };
     }
@@ -142,6 +151,18 @@ export class FileToolExecutor {
     const err = new Error('Sandbox violation');
     err.name = 'SandboxViolationError';
     throw err;
+  }
+
+  private assertWriteAllowed(resolvedPath: string): void {
+    if (!this.writeRoots) return;
+    const allowed = this.writeRoots.some(
+      root => resolvedPath === root || resolvedPath.startsWith(root + path.sep)
+    );
+    if (!allowed) {
+      const err = new Error('Write restricted');
+      err.name = 'WriteRestrictedError';
+      throw err;
+    }
   }
 
   private async readFile(resolvedPath: string): Promise<{ content: string; isError: boolean }> {

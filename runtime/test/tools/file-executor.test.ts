@@ -252,6 +252,75 @@ console.log('\nfile-executor › sandbox');
 }
 
 // ---------------------------------------------------------------------------
+// write restrictions
+// ---------------------------------------------------------------------------
+console.log('\nfile-executor › write restrictions');
+{
+  const ws = makeTempWorkspace();
+  const projectDir = path.join(ws, 'my-project');
+  const aDocsDir = path.join(ws, '.a-society', 'a-docs', 'my-project');
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.mkdirSync(aDocsDir, { recursive: true });
+
+  const writeRoots = [projectDir, aDocsDir];
+  const ex = new FileToolExecutor(ws, writeRoots);
+
+  await test('write_file allowed inside project directory', async () => {
+    const r = await ex.execute({ id: '1', name: 'write_file', input: { path: 'my-project/notes.md', content: 'ok' } });
+    assert.strictEqual(r.isError, false);
+  });
+
+  await test('write_file allowed inside a-docs directory', async () => {
+    const r = await ex.execute({ id: '2', name: 'write_file', input: { path: '.a-society/a-docs/my-project/doc.md', content: 'ok' } });
+    assert.strictEqual(r.isError, false);
+  });
+
+  await test('write_file blocked outside permitted write roots', async () => {
+    const r = await ex.execute({ id: '3', name: 'write_file', input: { path: 'other-project/file.md', content: 'bad' } });
+    assert.strictEqual(r.isError, true);
+    assert.ok(r.content.includes('outside the permitted write area'));
+  });
+
+  await test('write_file blocked at workspace root', async () => {
+    const r = await ex.execute({ id: '4', name: 'write_file', input: { path: 'root-file.md', content: 'bad' } });
+    assert.strictEqual(r.isError, true);
+    assert.ok(r.content.includes('outside the permitted write area'));
+  });
+
+  await test('edit_file blocked outside permitted write roots', async () => {
+    const outsideFile = path.join(ws, 'other-project', 'existing.md');
+    fs.mkdirSync(path.dirname(outsideFile), { recursive: true });
+    fs.writeFileSync(outsideFile, 'original content');
+    const r = await ex.execute({ id: '5', name: 'edit_file', input: { path: 'other-project/existing.md', old_string: 'original', new_string: 'modified' } });
+    assert.strictEqual(r.isError, true);
+    assert.ok(r.content.includes('outside the permitted write area'));
+    assert.strictEqual(fs.readFileSync(outsideFile, 'utf8'), 'original content');
+  });
+
+  await test('read_file allowed anywhere in workspace even with write restrictions', async () => {
+    const outsideFile = path.join(ws, 'other-project', 'readable.md');
+    fs.mkdirSync(path.dirname(outsideFile), { recursive: true });
+    fs.writeFileSync(outsideFile, 'readable content');
+    const r = await ex.execute({ id: '6', name: 'read_file', input: { path: 'other-project/readable.md' } });
+    assert.strictEqual(r.isError, false);
+    assert.strictEqual(r.content, 'readable content');
+  });
+
+  await test('list_directory allowed anywhere in workspace even with write restrictions', async () => {
+    const r = await ex.execute({ id: '7', name: 'list_directory', input: { path: '.' } });
+    assert.strictEqual(r.isError, false);
+  });
+
+  await test('write roots with no restriction allows writes anywhere', async () => {
+    const unrestrictedEx = new FileToolExecutor(ws);
+    const r = await unrestrictedEx.execute({ id: '8', name: 'write_file', input: { path: 'anywhere.md', content: 'ok' } });
+    assert.strictEqual(r.isError, false);
+  });
+
+  cleanup(ws);
+}
+
+// ---------------------------------------------------------------------------
 // unknown tool
 // ---------------------------------------------------------------------------
 console.log('\nfile-executor › unknown tool');
