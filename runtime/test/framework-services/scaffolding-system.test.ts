@@ -40,8 +40,6 @@ function seedSourceFile(relativePath: string, content: string): void {
 }
 
 seedSourceFile('general/roles/owner/main.md', '# Owner\n\nOwner role content.\n');
-seedSourceFile('general/roles/curator/main.md', '# Curator\n\nCurator role content.\n');
-seedSourceFile('general/thinking/main.md', '# Thinking\n\nThinking content.\n');
 
 console.log('\nscaffolding-system');
 
@@ -58,7 +56,7 @@ test('renderStub: includes stub comment pointing to source_path', () => {
 });
 
 test('renderStub: handles TEMPLATE- prefix in filename', () => {
-  const content = renderStub({ path: 'communication/conversation/TEMPLATE-owner-to-curator-brief.md', scaffold: 'stub', source_path: 'general/instructions/communication/conversation/TEMPLATE-owner-to-curator-brief.md' });
+  const content = renderStub({ path: 'communication/conversation/TEMPLATE-owner-workflow-plan.md', scaffold: 'stub', source_path: 'general/instructions/communication/conversation/TEMPLATE-owner-workflow-plan.md' });
   assert.ok(content.startsWith('# Template:'), `Expected "# Template:" heading, got: ${content.slice(0, 50)}`);
 });
 
@@ -188,15 +186,14 @@ test('scaffold: throws if projectName is missing', () => {
   assert.throws(() => scaffold('/some/path', '', SOCIETY_ROOT, []), /projectName is required/);
 });
 
-// ── scaffoldFromManifestFile — live manifest ──────────────────────────────────
+// ── scaffoldFromManifestFile — live runtime a-docs manifest ───────────────────
 
-// Locate the actual framework manifest
-const FRAMEWORK_ROOT = path.resolve(__dirname, '../../..', '..');
-const SOCIETY_ACTUAL_ROOT = path.join(FRAMEWORK_ROOT, 'a-society');
-const MANIFEST_PATH = path.join(SOCIETY_ACTUAL_ROOT, 'general/manifest.yaml');
+// Locate the actual runtime a-docs manifest
+const SOCIETY_ACTUAL_ROOT = path.resolve(__dirname, '../../..');
+const MANIFEST_PATH = path.join(SOCIETY_ACTUAL_ROOT, 'runtime/contracts/a-docs-manifest.yaml');
 
 if (fs.existsSync(MANIFEST_PATH)) {
-  test('scaffoldFromManifestFile: runs against live manifest without throwing', () => {
+  test('scaffoldFromManifestFile: runs against live runtime a-docs manifest without throwing', () => {
     const projectRoot = path.join(TEMP_BASE, 'live-manifest-test');
     let result;
     assert.doesNotThrow(() => {
@@ -207,7 +204,7 @@ if (fs.existsSync(MANIFEST_PATH)) {
     assert.ok(Array.isArray(result!.failed));
   });
 
-  test('scaffoldFromManifestFile: creates required entries, no unexpected failures', () => {
+  test('scaffoldFromManifestFile: creates manifest entries, no unexpected failures', () => {
     const projectRoot = path.join(TEMP_BASE, 'live-manifest-test2');
     const result = scaffoldFromManifestFile(projectRoot, 'Live Test Project 2', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH);
     // Copy failures are allowed only if a source template is absent in the framework (index drift);
@@ -231,18 +228,12 @@ if (fs.existsSync(MANIFEST_PATH)) {
     }
   });
 
-  test('scaffoldFromManifestFile: includeOptional adds non-required entries', () => {
-    const projectRootRequired = path.join(TEMP_BASE, 'optional-required-only');
-    const projectRootOptional = path.join(TEMP_BASE, 'optional-with-optional');
-    const required = scaffoldFromManifestFile(projectRootRequired, 'Opt Test', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH);
-    const withOptional = scaffoldFromManifestFile(projectRootOptional, 'Opt Test', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH, { includeOptional: true });
-    assert.ok(
-      withOptional.created.length + withOptional.failed.length >= required.created.length + required.failed.length,
-      'includeOptional run should process at least as many entries as required-only run',
-    );
+  test('scaffoldFromManifestFile: live runtime manifest has no optional required flag', () => {
+    const content = fs.readFileSync(MANIFEST_PATH, 'utf8');
+    assert.ok(!content.includes('required:'), 'Runtime a-docs manifest should not contain required flags');
   });
 } else {
-  console.log(`  [skip] Live manifest tests — manifest not found at expected path`);
+  console.log(`  [skip] Live manifest tests — runtime a-docs manifest not found at expected path`);
 }
 
 // ── scaffoldFromManifestFile — error handling ────────────────────────────────

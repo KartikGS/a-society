@@ -2,13 +2,17 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   buildRuntimeHealthRepairGuidance,
   runRuntimeHealthChecks
 } from '../../src/framework-services/runtime-health-checks.js';
+import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 
 let passed = 0;
 let failed = 0;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const frameworkRoot = path.resolve(__dirname, '../../..');
 
 function test(name: string, fn: () => void): void {
   try {
@@ -27,12 +31,18 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   const workspaceRoot = tmpRoot;
   const projectNamespace = 'test-project';
   const projectRoot = path.join(workspaceRoot, projectNamespace);
+  const aSocietyRoot = path.join(workspaceRoot, 'a-society');
+  const manifestPath = path.join(aSocietyRoot, 'runtime', 'contracts', 'a-docs-manifest.yaml');
   const aDocsRoot = path.join(projectRoot, 'a-docs');
   const rolesRoot = path.join(aDocsRoot, 'roles', 'owner');
   const workflowRoot = path.join(aDocsRoot, 'workflow');
   const improvementRoot = path.join(aDocsRoot, 'improvement');
   const recordsRoot = path.join(aDocsRoot, 'records');
   const indexesRoot = path.join(aDocsRoot, 'indexes');
+
+  fs.symlinkSync(frameworkRoot, aSocietyRoot, 'dir');
+  fs.mkdirSync(projectRoot, { recursive: true });
+  scaffoldFromManifestFile(projectRoot, projectNamespace, aSocietyRoot, manifestPath);
 
   fs.mkdirSync(rolesRoot, { recursive: true });
   fs.mkdirSync(workflowRoot, { recursive: true });
@@ -73,7 +83,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
     'utf8'
   );
   fs.writeFileSync(path.join(improvementRoot, 'meta-analysis.md'), '# Meta Analysis\n', 'utf8');
-  fs.writeFileSync(path.join(improvementRoot, 'feedback.md'), '# Feedback\n', 'utf8');
 
   return { tmpRoot, workspaceRoot, projectNamespace, projectRoot };
 }

@@ -35,7 +35,7 @@ State where the project's index lives and explain the `$VARIABLE_NAME` conventio
 ### 3. Roles table (mandatory)
 A table with three columns: Role name, file path, one-line primary focus. Every role available in this project appears here. Roles not in this table do not exist in this project.
 
-**Minimum role set:** Every project must declare at minimum an Owner and a Curator at initialization. See `$INSTRUCTION_ROLES` — Minimum Role Set.
+**Minimum role set:** Every project must declare an Owner at initialization. Add additional domain roles, including Curator, only when the project needs that dedicated authority. See `$INSTRUCTION_ROLES` for role archetypes and ownership rules.
 
 **Role assignment rules:** Include these two rules explicitly in the roles table section of every `agents.md`:
 - Roles are assigned by the human before a session begins.
@@ -75,7 +75,7 @@ One paragraph. What is this project? What does it produce? Who does it serve? Cl
 State the index location and explain `$VAR` convention in two to three sentences. Agents see this early, before they encounter any `$VAR` references in the required reading list.
 
 **Step 3 — Build the roles table.**
-List every role. Include: role name, file path, one-line primary focus. Role entry documents should live at `roles/<role-id>/main.md`. Confirm that Owner and Curator are both present — a project missing either is not initialized. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
+List every role. Include: role name, file path, one-line primary focus. Role entry documents should live at `roles/<role-id>/main.md`. Confirm that Owner is present. Add Curator only when the project has a dedicated documentation-domain role. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
 
 **Step 4 — Add the required readings authority pointer.**
 State clearly that each role's required readings are maintained in its own `a-docs/roles/<role-id>/required-readings.yaml`. Provide a concrete example link.

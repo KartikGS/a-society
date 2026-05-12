@@ -1,4 +1,6 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validatePaths } from '../../src/framework-services/path-validator.js';
@@ -6,9 +8,11 @@ import { validatePaths } from '../../src/framework-services/path-validator.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
-const INTERNAL_INDEX = path.join(REPO_ROOT, 'a-society', 'a-docs', 'indexes', 'main.md');
-const PUBLIC_INDEX = path.join(REPO_ROOT, 'a-society', 'index.md');
+const SOCIETY_ROOT = path.resolve(__dirname, '..', '..', '..');
+const REPO_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'path-validator-root-'));
+fs.symlinkSync(SOCIETY_ROOT, path.join(REPO_ROOT, 'a-society'), 'dir');
+const INTERNAL_INDEX = path.join(SOCIETY_ROOT, 'a-docs', 'indexes', 'main.md');
+const PUBLIC_INDEX = path.join(SOCIETY_ROOT, 'index.md');
 const FIXTURE_INDEX = path.join(__dirname, 'fixtures', 'index-sample.md');
 
 let passed = 0;
@@ -128,4 +132,5 @@ report('public index', PUBLIC_INDEX);
 // --- Summary ---
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
+fs.rmSync(REPO_ROOT, { recursive: true, force: true });
 if (failed > 0) process.exit(1);

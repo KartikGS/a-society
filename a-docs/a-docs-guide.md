@@ -404,9 +404,9 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/main.md` — `$A_SOCIETY_IMPROVEMENT`
 
-**Why it exists:** Improvement decisions require both principled reasoning (when to split a file, when to add a protocol, when to cross-reference) and a standing project-specific backward pass reference. This file is the canonical home for the philosophy, traversal rules, and the mapping to the project-specific phase files the runtime injects. Without it, improvement philosophy gets buried in role files, the relation between philosophy and runtime-injected phase instructions is implicit, and each cycle reinvents the process.
+**Why it exists:** Improvement decisions require both principled reasoning (when to split a file, when to add a protocol, when to cross-reference) and a standing project-specific backward pass reference. This file is the canonical home for the philosophy, traversal rules, and the mapping to runtime-injected phase instructions. Without it, improvement philosophy gets buried in role files, the relation between philosophy and runtime-injected instructions is implicit, and each cycle reinvents the process.
 
-**What it owns:** The five improvement principles, the decision framework for applying them during backward-pass work, the backward pass traversal algorithm, and the cross-references to `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` and `$A_SOCIETY_IMPROVEMENT_FEEDBACK`.
+**What it owns:** The five improvement principles, the decision framework for applying them during backward-pass work, the backward pass traversal algorithm, and the cross-reference to `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS`. Runtime-owned final feedback guidance lives at `$A_SOCIETY_RUNTIME_FEEDBACK`.
 
 **What breaks without it:** Improvement sessions reinvent principles each time. Backward passes lack a standard structure. Findings are lost or misrouted instead of flowing through the correct approval path.
 
@@ -424,11 +424,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ### `improvement/feedback.md` — `$A_SOCIETY_IMPROVEMENT_FEEDBACK`
 
-**Why it exists:** The final backward-pass session has different responsibilities from findings sessions: confirming local framework maintenance is complete, separating local fixes from upstream changes, and producing one framework-feedback artifact for A-Society as a whole. It needs its own project-specific runtime injection target.
+**Why it exists:** This is the older project-owned final feedback instruction surface. It remains as local historical/reference context, but the active runtime-managed feedback step now uses `$A_SOCIETY_RUNTIME_FEEDBACK` instead of this project file.
 
-**What it owns:** The A-Society-specific feedback instructions: local-vs-upstream boundary rules, the expected content of the final framework-feedback artifact, and the guardrails that apply to closing the backward pass in this project.
+**What it owns:** Legacy A-Society-specific feedback instructions and the old local-vs-upstream boundary model for project-owned feedback sessions.
 
-**What breaks without it:** The Owner's final feedback session must infer A-Society-specific routing from a generic template or from the full protocol document, increasing the risk of backlog generation or mixing local maintenance with upstream requests.
+**What breaks without it:** No active runtime scaffold breaks; runtime feedback no longer depends on this file. Removing it would only lose historical/reference context unless all old references are migrated.
 
 **Do not consolidate with:** `improvement/main.md` or `improvement/meta-analysis.md` — the philosophy/traversal layer, findings-session layer, and final feedback layer serve different consumers and should remain separate.
 
@@ -590,6 +590,18 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ---
 
+### `runtime/contracts/a-docs-manifest.yaml` — `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST`
+
+**Why it exists:** The runtime needs one machine-readable contract for the project `a-docs/` file set it creates during initialization and expects to remain present during runtime health checks.
+
+**What it owns:** The scaffolded `a-docs/` target paths, whether each entry is required or conditional, the scaffold mode (`copy` or `stub`), and the source template or instruction path used to create each file.
+
+**What breaks without it:** Initialization and runtime health checks drift into separate hardcoded assumptions about what a healthy project `a-docs/` contains. Adding, moving, or retiring initialized artifacts becomes a multi-surface guess instead of a contract update.
+
+**Do not consolidate with:** `$A_SOCIETY_RUNTIME_INITIALIZATION` — initialization instructions tell the Owner what to do after scaffold; this manifest tells the runtime what to create and check. Do not consolidate with `$A_SOCIETY_AGENT_DOCS_GUIDE` — the guide explains why A-Society files exist for maintainers; this file is executable input.
+
+---
+
 ### `runtime/contracts/workflow.md` — `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`
 
 **Why it exists:** The runtime parses, validates, merges, and injects workflow YAML. Those executable semantics need one runtime-owned source instead of being repeated across general workflow instructions and A-Society records conventions.
@@ -652,9 +664,9 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ### `general/roles/` — folder
 
-**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates are those that every project instantiates regardless of project type (Owner, Curator). Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
+**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates are reusable across project types; the runtime default scaffold instantiates only the Owner, while roles such as Curator are opt-in. Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
 
-**What it owns:** Starting-point role documents for archetypes that apply across every project type — currently Owner and Curator.
+**What it owns:** Starting-point role documents for archetypes that can apply across project types — currently Owner and Curator.
 
 **What breaks without it:** Each project re-invents universal role documents from scratch. The instruction for roles exists, but the gap between instruction and a working role document is larger without a template.
 

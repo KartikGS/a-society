@@ -1,6 +1,6 @@
 # Role: Project Curator Agent
 
-> **Template usage:** This is a ready-made Curator role for any project using the A-Society framework. Customize the sections marked `[CUSTOMIZE]`. Sections without that marker are designed to work as-is for most projects.
+> **Template usage:** This is a ready-made Curator role for projects that choose a dedicated documentation-domain lead. Customize the sections marked `[CUSTOMIZE]`. Sections without that marker are designed to work as-is for most projects that use this role.
 
 ---
 

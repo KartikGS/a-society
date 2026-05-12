@@ -70,8 +70,8 @@ my-project/         ← your project
 |---|---|
 | `runtime/` | The executable layer — browser runtime, orchestration, scaffolding entry path, and initialization contract |
 | `general/instructions/` | How to create each agent-doc artifact for any project |
-| `general/roles/` | Ready-made role templates (Owner, Curator) |
-| `general/thinking/` | Reasoning frameworks and operational principles for agents |
+| `general/roles/` | Ready-made role templates (Owner plus opt-in cross-project roles such as Curator) |
+| `general/thinking/` | Optional reasoning frameworks and operational principles for agents |
 | `general/improvement/` | Protocols and templates for iterative doc improvement |
 | `a-docs/` | A-Society's own agent documentation — a live example of the framework applied |
 

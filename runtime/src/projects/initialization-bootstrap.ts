@@ -5,6 +5,7 @@ import type { FlowRun } from '../common/types.js';
 import { resolveProjectRecordsRoot, resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from '../framework-services/scaffolding-system.js';
 import { buildRecordId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
+import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH } from '../common/runtime-contracts.js';
 
 export type InitializationMode = 'takeover' | 'greenfield';
 
@@ -297,14 +298,14 @@ export function bootstrapInitializationFlow(
   }
 
   const aSocietyRoot = path.join(workspaceRoot, 'a-society');
-  const manifestPath = path.join(aSocietyRoot, 'general', 'manifest.yaml');
+  const manifestPath = path.join(workspaceRoot, RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH);
   const runtimeInitializationPath = path.join(workspaceRoot, RUNTIME_INITIALIZATION_RELATIVE_PATH);
 
   if (!fs.existsSync(aSocietyRoot)) {
     throw new Error(`A-Society root not found at ${aSocietyRoot}.`);
   }
   if (!fs.existsSync(manifestPath)) {
-    throw new Error(`Manifest not found at ${manifestPath}.`);
+    throw new Error(`Runtime a-docs manifest not found at ${manifestPath}.`);
   }
   if (!fs.existsSync(runtimeInitializationPath)) {
     throw new Error(`Runtime initialization guide not found at ${runtimeInitializationPath}.`);

@@ -1,6 +1,6 @@
 # Instruction: How to Create a `thinking/` Folder
 
-This document explains how to create a `thinking/` folder for a project's agent-docs. A thinking folder centralizes the cognitive and operational foundations that every agent in the project must internalize — before starting any work.
+This document explains how to create a `thinking/` folder for a project's agent-docs. A thinking folder centralizes cognitive and operational foundations when a project needs a standing cross-role reasoning layer beyond role files and workflow-node context.
 
 ---
 
@@ -85,7 +85,7 @@ A dedicated folder gives these documents one home each. Each file has one purpos
 
 ## Integration with `agents.md`
 
-Once created, the three files must be referenced in the project's `agents.md` as part of the Universal Standards required reading. Example format:
+Once created, the three files must be assigned to the role or workflow contexts that actually need them. If the project deliberately wants every agent to load them, reference them in the project's `agents.md` as Universal Standards. Example format:
 
 ```markdown
 ### Universal Standards (ALL agents)
@@ -110,7 +110,7 @@ Add all three files to the project's file path index before referencing them any
 
 ## When to Create This Folder
 
-Create the `thinking/` folder for every project during initialization. It is a default initialization artifact — not a conditional one.
+Create the `thinking/` folder only when the project needs a standing cross-role reasoning reference that is more concrete than the role files and workflow-node context. It is no longer a default initialization artifact.
 
 The thinking folder's documents are the behavioral foundation layer, designed to be read by every agent regardless of role. The three general templates (`$GENERAL_THINKING`, `$GENERAL_THINKING_REASONING`, `$GENERAL_THINKING_KEEP_IN_MIND`) require minimal project-specific knowledge to populate. The cost of creating them at initialization is low; the cost of operating without them is reasoning drift and repeated errors across sessions.
 

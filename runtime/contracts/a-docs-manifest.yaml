@@ -1,0 +1,143 @@
+# A-Society Runtime A-Docs Manifest
+#
+# Runtime-owned machine-readable contract for the a-docs/ surfaces that the
+# runtime scaffolds and later expects to remain healthy.
+#
+# Every entry in this file is part of the default runtime contract. Conditional,
+# project-type-specific, or workflow-specific artifacts should stay out of this
+# manifest until the runtime supports explicit scaffold profiles.
+#
+# Fields per entry:
+#   path        - file path relative to the project's a-docs/ root
+#   description - what the artifact is and why it exists
+#   scaffold    - copy: Scaffolding System copies from source_path
+#                 stub: Scaffolding System creates an empty titled file for the initializing Owner to fill
+#   source_path - path within a-society/ to the template (copy) or instruction (stub) the
+#                 Scaffolding System uses as the basis; relative to a-society/ root
+#
+# Maintainer: update this file when runtime initialization must create a new
+# default a-docs/ artifact, when runtime health checks must require or stop
+# requiring a default artifact, or when a copied general/ template is moved or
+# retired. This manifest governs the runtime scaffold and health baseline; the
+# general/ instructions govern how agents fill content. These are related but
+# not the same contract.
+#
+# Variable: $A_SOCIETY_RUNTIME_ADOCS_MANIFEST
+# Framework version introduced: v37.0
+
+manifest_version: "2.0"
+
+files:
+
+  # Entry point
+
+  - path: agents.md
+    description: "Agent orientation - minimal entry point for all agents working on this project; what the project is, the authority model, and project-wide invariants"
+    scaffold: stub
+    source_path: general/instructions/agents.md
+
+  - path: a-docs-guide.md
+    description: "a-docs guide - why each scaffolded agent-docs file exists and where future project-specific docs should be registered"
+    scaffold: stub
+    source_path: general/instructions/a-docs-guide.md
+
+  - path: a-docs-design.md
+    description: "a-docs design principles - cross-cutting rules for authoring and maintaining project agent-docs"
+    scaffold: copy
+    source_path: general/a-docs-design.md
+
+  # Indexes
+
+  - path: indexes/main.md
+    description: "File path index - single source of truth for key file locations; all $VAR references in agent-docs resolve here"
+    scaffold: stub
+    source_path: general/instructions/indexes/main.md
+
+  # Project information
+
+  - path: project-information/vision.md
+    description: "Project vision - what the project is, the problem it solves, the core bet, and direction for agents"
+    scaffold: stub
+    source_path: general/instructions/project-information/vision.md
+
+  - path: project-information/structure.md
+    description: "Folder structure - governing principle and placement rules for each folder in the project"
+    scaffold: stub
+    source_path: general/instructions/project-information/structure.md
+
+  - path: project-information/log.md
+    description: "Project log - current status, recent focus, next priorities; the answer to 'where did we leave off?' for any agent orienting at session start"
+    scaffold: stub
+    source_path: general/instructions/project-information/log.md
+
+  # Roles
+
+  - path: roles/owner/required-readings.yaml
+    description: "Owner startup-context authority - machine-readable required readings for the Owner role only"
+    scaffold: stub
+    source_path: general/instructions/roles/required-readings.md
+
+  - path: roles/owner/ownership.yaml
+    description: "Owner ownership file - surfaces the Owner is accountable for keeping true and current"
+    scaffold: stub
+    source_path: general/instructions/roles/ownership.md
+
+  - path: roles/owner/main.md
+    description: "Owner role - vision keeper, coordinator, and universal session entry point; routes work via distributed role ownership files and validates domain lead outcomes"
+    scaffold: copy
+    source_path: general/roles/owner/main.md
+
+  # Workflow
+
+  - path: workflow/main.yaml
+    description: "Canonical workflow definition - nodes, handoffs, invariants, escalation rules, and closure model for work done in this project"
+    scaffold: stub
+    source_path: general/instructions/workflow/main.md
+
+  # Improvement
+
+  - path: improvement/main.md
+    description: "Improvement - philosophy, backward pass protocol, traversal algorithm, and final feedback path"
+    scaffold: copy
+    source_path: general/improvement/main.md
+
+  - path: improvement/meta-analysis.md
+    description: "Project-specific meta-analysis phase instructions - injected by the runtime into backward pass meta-analysis sessions"
+    scaffold: copy
+    source_path: general/improvement/meta-analysis.md
+
+  # Communication
+
+  - path: communication/main.md
+    description: "Communication - entry point for conversation and coordination layers; which layer to consult for which question"
+    scaffold: stub
+    source_path: general/instructions/communication/main.md
+
+  - path: communication/conversation/main.md
+    description: "Conversation templates - permanent format references for inter-agent handoff artifacts used by this project"
+    scaffold: stub
+    source_path: general/instructions/communication/conversation/main.md
+
+  - path: communication/conversation/TEMPLATE-owner-workflow-plan.md
+    description: "Workflow plan template - instantiated by the Owner at intake as 01-owner-workflow-plan.md"
+    scaffold: copy
+    source_path: general/communication/conversation/TEMPLATE-owner-workflow-plan.md
+
+  - path: communication/coordination/main.md
+    description: "Coordination protocols - status vocabulary, handoff requirements, feedback protocol, and conflict resolution"
+    scaffold: stub
+    source_path: general/instructions/communication/coordination/main.md
+
+  # Records
+
+  - path: records/main.md
+    description: "Records convention - record ID and metadata model, artifact sequence, and placement rules for flow-level artifact tracking"
+    scaffold: stub
+    source_path: general/instructions/records/main.md
+
+  # Version record
+
+  - path: a-society-version.md
+    description: "A-Society version record - tracks which framework version this project was initialized at and which update reports have been applied"
+    scaffold: stub
+    source_path: general/instructions/a-society-version-record.md

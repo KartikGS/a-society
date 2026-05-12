@@ -6,13 +6,11 @@ interface ManifestEntry {
   path: string;
   scaffold: string;
   source_path: string;
-  required?: boolean;
   description?: string;
 }
 
 interface ScaffoldOptions {
   overwrite?: boolean;
-  includeOptional?: boolean;
 }
 
 interface ScaffoldCreatedItem {
@@ -147,9 +145,6 @@ export function scaffold(
 
 /**
  * Loads a manifest YAML file and runs scaffold() against it.
- *
- * Filters to required-only entries by default. Pass `options.includeOptional: true`
- * to include entries with `required: false`.
  */
 export function scaffoldFromManifestFile(
   projectRoot: string,
@@ -158,8 +153,6 @@ export function scaffoldFromManifestFile(
   manifestFilePath: string,
   options: ScaffoldOptions = {},
 ): ScaffoldResult {
-  const { includeOptional = false } = options;
-
   let content: string;
   try {
     content = fs.readFileSync(manifestFilePath, 'utf8');
@@ -178,7 +171,5 @@ export function scaffoldFromManifestFile(
     throw new Error('Manifest must contain a "files" array');
   }
 
-  const entries: ManifestEntry[] = includeOptional ? d.files : d.files.filter((f: any) => f.required === true);
-
-  return scaffold(projectRoot, projectName, aSocietyRoot, entries, options);
+  return scaffold(projectRoot, projectName, aSocietyRoot, d.files, options);
 }

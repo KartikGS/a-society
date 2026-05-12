@@ -8,6 +8,7 @@ import { validatePaths } from './path-validator.js';
 import { validateWorkflowFile } from './workflow-graph-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../context/required-reading.js';
+import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH } from '../common/runtime-contracts.js';
 
 export interface RuntimeHealthCheckResult {
   ok: boolean;
@@ -29,6 +30,52 @@ interface IndexEntry {
 interface OwnershipSurface {
   roleId: string;
   surfacePath: string;
+}
+
+function collectRuntimeAdocsManifestPaths(workspaceRoot: string, errors: string[]): string[] {
+  const manifestPath = path.join(workspaceRoot, RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH);
+  if (!isFile(manifestPath)) {
+    errors.push(`Runtime a-docs manifest is missing at ${path.relative(workspaceRoot, manifestPath)}`);
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = readYamlFile(manifestPath);
+  } catch (error: any) {
+    errors.push(`Cannot parse runtime a-docs manifest at ${path.relative(workspaceRoot, manifestPath)}: ${error.message}`);
+    return [];
+  }
+
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as Record<string, unknown>).files)) {
+    errors.push(`Runtime a-docs manifest at ${path.relative(workspaceRoot, manifestPath)} must contain a "files" array`);
+    return [];
+  }
+
+  const manifestPaths: string[] = [];
+  const files = (parsed as { files: unknown[] }).files;
+  files.forEach((entry, index) => {
+    if (!entry || typeof entry !== 'object') {
+      errors.push(`Runtime a-docs manifest files[${index}] must be an object`);
+      return;
+    }
+
+    const entryRecord = entry as Record<string, unknown>;
+    const entryPath = entryRecord.path;
+    if (typeof entryPath !== 'string' || entryPath.trim() === '') {
+      errors.push(`Runtime a-docs manifest files[${index}] has no path`);
+      return;
+    }
+
+    if (path.isAbsolute(entryPath) || entryPath.split(/[\\/]/).includes('..')) {
+      errors.push(`Runtime a-docs manifest files[${index}] has an invalid project-relative path: ${entryPath}`);
+      return;
+    }
+
+    manifestPaths.push(entryPath);
+  });
+
+  return manifestPaths;
 }
 
 function readIndexEntries(indexFilePath: string): IndexEntry[] {
@@ -332,6 +379,13 @@ export function runRuntimeHealthChecks(
     return { ok: false, errors };
   }
 
+  for (const manifestRelativePath of collectRuntimeAdocsManifestPaths(workspaceRoot, errors)) {
+    const expectedPath = path.join(aDocsRoot, manifestRelativePath);
+    if (!isFile(expectedPath)) {
+      addMissingFileError(errors, `Runtime manifest entry ${manifestRelativePath}`, expectedPath, workspaceRoot);
+    }
+  }
+
   if (!isDirectory(rolesRoot)) {
     errors.push(`Required roles folder is missing at ${path.relative(workspaceRoot, rolesRoot)}`);
   }
@@ -350,15 +404,6 @@ export function runRuntimeHealthChecks(
 
   if (!isFile(workflowPath)) {
     addMissingFileError(errors, 'Required workflow definition', workflowPath, workspaceRoot);
-  }
-
-  const metaAnalysisPath = path.join(improvementRoot, 'meta-analysis.md');
-  const feedbackPath = path.join(improvementRoot, 'feedback.md');
-  if (!isFile(metaAnalysisPath)) {
-    addMissingFileError(errors, 'Required backward-pass meta-analysis instructions', metaAnalysisPath, workspaceRoot);
-  }
-  if (!isFile(feedbackPath)) {
-    addMissingFileError(errors, 'Required backward-pass feedback instructions', feedbackPath, workspaceRoot);
   }
 
   const recordsRoot = resolveProjectRecordsRoot(workspaceRoot, projectNamespace);
@@ -518,10 +563,10 @@ export function buildRuntimeHealthRepairGuidance(
       `Errors: ${errors.join('; ')}`,
       'Repair the existing project structure in place. Do not start a new flow or create a replacement project tree.',
       'Minimum runtime surfaces that must be healthy include:',
+      '- every entry in $A_SOCIETY_RUNTIME_ADOCS_MANIFEST',
       '- a-docs/indexes/main.md with valid registered paths',
       '- a-docs/roles/<base-role-id>/{main.md, ownership.yaml, required-readings.yaml}',
       '- a-docs/workflow/main.yaml',
-      '- a-docs/improvement/{meta-analysis.md, feedback.md}',
       '- a records root at a-docs/records/ or legacy records/',
       completionInstruction,
       retryInstruction

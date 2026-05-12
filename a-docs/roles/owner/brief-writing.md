@@ -81,7 +81,7 @@ These checks remain the Owner's responsibility regardless of delegation:
 
 **Principle/application consistency scan.** When a directive both defines or revises a standing rule and applies that rule via domain lead work, compare the abstract rule text against the domain directives before handoff. The domain leads must be able to satisfy the requirement without contradiction.
 
-**New standing artifacts require downstream identification.** When a directive creates a new standing artifact, identify all downstream domains affected — required-readings, index registration, guide rationale, manifest semantics. Name these as domain directives rather than leaving domain leads to discover propagation obligations.
+**New standing artifacts require downstream identification.** When a directive creates a new standing artifact, identify all downstream domains affected — required-readings, index registration, guide rationale, and runtime a-docs manifest semantics when the initialized project shape changes. Name these as domain directives rather than leaving domain leads to discover propagation obligations.
 
 **Schema-code coupling check.** When a requirement changes a schema with a programmatic consumer, scope both the documentation domain and the executable domain in the same flow. Do not split documentation and code paths unless the workflow explicitly intends that separation.
 
