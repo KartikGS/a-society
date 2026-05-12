@@ -28,7 +28,7 @@ This document is the standing design reference for A-Society's unified executabl
 
 | Capability | Responsibility |
 |---|---|
-| Scaffolding | Create a project's `a-docs/` structure from the standing manifest |
+| Scaffolding | Create a project's `a-docs/` structure from `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` |
 | Workflow graph validation | Validate workflow graph structure and schema constraints |
 | Backward-pass planning | Compute backward-pass traversal order and findings-location data from `workflow.yaml` |
 | Path validation | Check that indexed paths resolve to existing files |

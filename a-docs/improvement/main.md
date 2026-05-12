@@ -146,9 +146,9 @@ The runtime calls `computeBackwardPassPlan(recordFolderPath, feedbackRole, mode)
 
 The role-specific backward pass instructions for this project live in:
 - `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` — injected into findings-producing backward pass sessions for A-Society
-- `$A_SOCIETY_IMPROVEMENT_FEEDBACK` — injected into the Owner feedback session for A-Society
+- `$A_SOCIETY_RUNTIME_FEEDBACK` — injected into the runtime-owned final feedback session
 
-`$GENERAL_IMPROVEMENT_META_ANALYSIS` and `$GENERAL_IMPROVEMENT_FEEDBACK` remain framework templates. They are not A-Society's own runtime injection targets.
+`$GENERAL_IMPROVEMENT_META_ANALYSIS` remains the reusable project meta-analysis template. `$GENERAL_IMPROVEMENT_FEEDBACK` is retained only for optional/manual project-owned feedback flows; it is not the runtime feedback target.
 
 **Bootstrapping exemption:** When a flow establishes a new record-folder requirement that the current folder cannot conform to (exempt-by-origin), Component 4 cannot be invoked for that flow's backward pass. This exemption must be acknowledged explicitly — never handled by silence. The Curator must either (a) note the exemption-by-origin in the backward pass initiation artifact, state the reason Component 4 is not being invoked, and proceed with manual ordering; or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 

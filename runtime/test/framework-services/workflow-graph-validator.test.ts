@@ -10,9 +10,9 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
+const SOCIETY_ROOT = path.resolve(__dirname, '..', '..', '..');
 const LIVE_WORKFLOWS = [
-  path.join(REPO_ROOT, 'a-society', 'a-docs', 'workflow', 'main.yaml'),
+  path.join(SOCIETY_ROOT, 'a-docs', 'workflow', 'main.yaml'),
 ];
 const FIXTURES = path.join(__dirname, 'fixtures');
 

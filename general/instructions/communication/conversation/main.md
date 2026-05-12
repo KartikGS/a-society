@@ -25,7 +25,7 @@ A record artifact carries a handoff or report for one unit of work and lives in 
 - Named with a sequenced prefix within the record folder (e.g., `02-proposal.md`)
 - Never replaced — each unit of work produces a distinct set of artifacts in a distinct folder
 
-**Example:** `02-curator-to-owner.md` in the active record folder — carries the Curator's proposal for this flow.
+**Example:** `02-domain-lead-to-owner.md` in the active record folder — carries a domain lead's proposal for this flow.
 
 Projects that use a records structure create all conversation artifacts as record artifacts. Projects without a records structure may use the live artifact pattern: a stable file path replaced between units of work after a pre-replacement check confirms the prior unit is closed.
 
@@ -35,7 +35,7 @@ A template defines the required structure for a conversation type. It is never r
 
 Template header notes should say: *"Create from this template into the active record folder as NN-[type].md."*
 
-**Example:** `TEMPLATE-curator-to-owner.md` — the canonical format for all Curator → Owner handoffs.
+**Example:** `TEMPLATE-domain-lead-to-owner.md` — the canonical format for a project's domain-lead proposal handoffs.
 
 ---
 

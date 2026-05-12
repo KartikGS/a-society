@@ -69,7 +69,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `a-society/runtime/contracts/handoff.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
 | `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` | `a-society/runtime/contracts/workflow.md` | Runtime-owned workflow YAML contract — schema, role-instance behavior, node-entry injection, and active-path routing semantics |
 | `$A_SOCIETY_RUNTIME_FEEDBACK` | `a-society/runtime/contracts/feedback.md` | Runtime-owned final backward-pass feedback contract — used by the runtime's A-Society feedback phase |
-| `$GENERAL_MANIFEST` | `a-society/general/manifest.yaml` | Minimum necessary files manifest — machine-readable source of truth for what a complete a-docs/ contains; primary input to the Scaffolding System |
+| `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` | `a-society/runtime/contracts/a-docs-manifest.yaml` | Runtime-owned a-docs manifest — machine-readable scaffold and health-check contract for default project `a-docs/` surfaces |
 | `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | `$GENERAL_OWNER_ROLE` | `a-society/general/roles/owner/main.md` | Ready-made Owner role template for any project |
 | `$GENERAL_OWNER_BRIEF_WRITING` | `a-society/general/roles/owner/brief-writing.md` | Ready-made Owner brief-writing and constraint-writing support doc template |
@@ -77,7 +77,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_OWNER_LOG_MANAGEMENT` | `a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
 | `$GENERAL_OWNER_TA_REVIEW` | `a-society/general/roles/owner/ta-advisory-review.md` | Ready-made Owner advisory and integration-gate review support doc template |
 | `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
-| `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator/main.md` | Ready-made Curator role template for any project |
+| `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator/main.md` | Ready-made Curator role template for projects with a dedicated documentation-domain lead |
 | `$GENERAL_CURATOR_IMPL_PRACTICES` | `a-society/general/roles/curator/implementation-practices.md` | Ready-made Curator proposal, implementation, and registration-practices support doc template |
 | `$GENERAL_TA_ROLE` | `a-society/general/project-types/executable/roles/technical-architect/main.md` | Ready-made Technical Architect (advisory-producing) role template for projects with an executable layer — authority, boundaries, and workflow-linked support-doc routing |
 | `$GENERAL_TA_ADVISORY_STANDARDS` | `a-society/general/project-types/executable/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template for projects with an executable layer |
@@ -102,20 +102,20 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_COMMUNICATION` | `a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer — artifact formats, templates, and lifecycle |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols — status models, handoff rules, feedback, and conflict resolution |
-| `$INSTRUCTION_THINKING` | `a-society/general/instructions/thinking/main.md` | How to create a thinking/ folder for any project |
+| `$INSTRUCTION_THINKING` | `a-society/general/instructions/thinking/main.md` | How to create an optional thinking/ folder when a project needs a standing reasoning layer |
 | `$INSTRUCTION_IMPROVEMENT` | `a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
-| `$GENERAL_THINKING` | `a-society/general/thinking/main.md` | Ready-made general principles template — cross-role operational rules |
-| `$GENERAL_THINKING_REASONING` | `a-society/general/thinking/reasoning.md` | Ready-made reasoning framework template — cognitive heuristics for agents |
-| `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Ready-made keep-in-mind template — operational reminders and hard stops |
+| `$GENERAL_THINKING` | `a-society/general/thinking/main.md` | Optional general principles template — cross-role operational rules |
+| `$GENERAL_THINKING_REASONING` | `a-society/general/thinking/reasoning.md` | Optional reasoning framework template — cognitive heuristics for agents |
+| `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Optional keep-in-mind template — operational reminders and hard stops |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
-| `$GENERAL_IMPROVEMENT_FEEDBACK` | `a-society/general/improvement/feedback.md` | Feedback phase instructions — injected into the Owner's final backward-pass feedback session by the runtime; contains scope rules, guardrails, and closure behavior |
+| `$GENERAL_IMPROVEMENT_FEEDBACK` | `a-society/general/improvement/feedback.md` | Optional/manual feedback phase instructions for non-runtime project-owned feedback flows |
 | `$GENERAL_IMPROVEMENT_REPORTS` | `a-society/general/improvement/reports/main.md` | Ready-made improvement reports index template |
 | `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |
 | `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` | `a-society/a-docs/improvement/meta-analysis.md` | A-Society project-specific meta-analysis phase instructions — runtime injection target for backward pass findings sessions in this project |
-| `$A_SOCIETY_IMPROVEMENT_FEEDBACK` | `a-society/a-docs/improvement/feedback.md` | A-Society project-specific feedback phase instructions — runtime injection target for the Owner's final backward-pass feedback session in this project |
+| `$A_SOCIETY_IMPROVEMENT_FEEDBACK` | `a-society/a-docs/improvement/feedback.md` | A-Society legacy/project-owned feedback phase instructions; runtime-managed feedback now uses `$A_SOCIETY_RUNTIME_FEEDBACK` |
 | `$A_SOCIETY_PRINCIPLES` | `a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |
 | `$A_SOCIETY_RUNTIME_INITIALIZATION` | `a-society/runtime/contracts/initialization.md` | Runtime-owned initialization contract — used when the browser runtime initializes a project through a single-node Owner flow |
 | `$A_SOCIETY_WORKFLOW` | `a-society/a-docs/workflow/main.yaml` | A-Society canonical workflow definition — the single permanent graph for framework, executable, and coordinated multi-role work |

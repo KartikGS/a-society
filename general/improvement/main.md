@@ -97,9 +97,9 @@ When evaluating a proposed fix during backward-pass work:
 
 ## Backward Pass Protocol
 
-The improvement process runs in two phases, each with its own instruction file:
+The improvement process runs in two phases, each with phase-specific instruction context:
 - **Meta-analysis:** `$GENERAL_IMPROVEMENT_META_ANALYSIS` — instructions for roles producing backward pass findings.
-- **Feedback:** `$GENERAL_IMPROVEMENT_FEEDBACK` — instructions for the coordinating Owner's final framework-feedback step.
+- **Feedback:** `$A_SOCIETY_RUNTIME_FEEDBACK` when the A-Society runtime manages upstream feedback. Manual/non-runtime projects may keep their own feedback guidance if they need one.
 
 The backward pass is only for the project's framework layer:
 - local `a-docs/`
@@ -108,4 +108,4 @@ The backward pass is only for the project's framework layer:
 
 It is not for the project's domain work product. Product bugs, feature requests, or editorial/content changes belong to the project's normal execution system, not the improvement loop.
 
-When using the A-Society runtime, these files are injected into the appropriate agent sessions automatically. For projects without the runtime, follow the traversal ordering rules in your project's `a-docs/improvement/` instantiation of this framework.
+When using the A-Society runtime, phase instructions are injected into the appropriate agent sessions automatically. For projects without the runtime, follow the traversal ordering rules in your project's `a-docs/improvement/` instantiation of this framework.

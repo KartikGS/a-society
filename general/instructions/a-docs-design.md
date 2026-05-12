@@ -34,7 +34,7 @@ Do not wait until the project is "mature." The point of the file is to shape the
 1. Start from `$GENERAL_ADOCS_DESIGN`.
 2. Place the instantiated file at the root of the project's `a-docs/` as `a-docs-design.md`.
 3. Register it in the project index as `$[PROJECT]_ADOCS_DESIGN`.
-4. Add it to the Owner and Curator starting-context set for the project (required readings or the project's equivalent startup-context mechanism).
+4. Add it to the Owner starting-context set, and to any documentation-domain role if the project has one.
 
 The general template should usually be adopted with minimal modification. Only project-specific wording that truly needs instantiation should change.
 

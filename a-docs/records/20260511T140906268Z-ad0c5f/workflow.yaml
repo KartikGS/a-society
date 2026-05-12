@@ -1,0 +1,12 @@
+workflow:
+  name: Runtime a-docs manifest relocation
+  summary: Manual Owner-proxy flow for relocating the a-docs manifest into runtime contracts and wiring runtime health checks to the same contract.
+  nodes:
+    - id: owner-intake
+      role: Owner
+    - id: owner-closure
+      role: Owner
+  edges:
+    - from: owner-intake
+      to: owner-closure
+      artifact: owner-closure

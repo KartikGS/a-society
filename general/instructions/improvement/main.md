@@ -127,18 +127,16 @@ If the project does not use records, `reports/` is the required storage location
 
 ## Project-Specific Phase Files (Runtime)
 
-When a project uses a programmatic runtime that orchestrates backward pass sessions, the runtime injects project-specific instructions into each session rather than relying on agents to load them from required-reading lists. These instructions must reside in the project's own `a-docs/improvement/`, not in the general framework library.
+When a project uses a programmatic runtime that orchestrates backward pass sessions, the runtime injects phase instructions directly rather than relying on agents to load them from required-reading lists. Project-specific meta-analysis instructions live in the project's own `a-docs/improvement/`. The final feedback step is runtime-owned and uses `$A_SOCIETY_RUNTIME_FEEDBACK`.
 
-**Two files are required when using the runtime:**
+**One project file is required when using the runtime:**
 
 - **`improvement/meta-analysis.md`** — injected into backward pass meta-analysis sessions. Contains the project's reflection categories, output format rules, findings template reference, and completion signal schema.
-- **`improvement/feedback.md`** — injected into the Owner's final backward-pass feedback session. Contains the project's feedback-scope rules, guardrails, and closure behavior.
 
-**Creating these files:**
+**Creating this file:**
 
-Base each file on the corresponding general framework template:
+Base the file on the corresponding general framework template:
 - `meta-analysis.md` → start from `$GENERAL_IMPROVEMENT_META_ANALYSIS`; resolve all `[PROJECT_*]` placeholders with values from the project's index
-- `feedback.md` → start from `$GENERAL_IMPROVEMENT_FEEDBACK`; no placeholders to resolve in the current template
 
 `[PROJECT_*]` placeholders to resolve for `meta-analysis.md` at minimum:
 - `[PROJECT_RECORDS]` — the path to the project's records folder (e.g., `my-project/a-docs/records`)
@@ -148,11 +146,11 @@ If the project uses a records structure, remove the non-records output path bran
 
 **Registering these files:**
 
-Add both to the project's file path index as `$[PROJECT]_IMPROVEMENT_META_ANALYSIS` and `$[PROJECT]_IMPROVEMENT_FEEDBACK`. See the Integration with the Index section below.
+Add the meta-analysis file to the project's file path index as `$[PROJECT]_IMPROVEMENT_META_ANALYSIS`. See the Integration with the Index section below.
 
 **When to create:**
 
-Create these files when initializing a project that will use the programmatic runtime. If adding runtime support to an existing project, create them as part of runtime setup. These files are not required for projects that run backward passes manually using agent sessions.
+Create this file when initializing a project that will use the programmatic runtime. If adding runtime support to an existing project, create it as part of runtime setup. It is not required for projects that run backward passes manually using agent sessions.
 
 ---
 
@@ -165,7 +163,6 @@ Add all key files to the project's file path index. At minimum:
 | `$[PROJECT]_IMPROVEMENT` | `/[project]/a-docs/improvement/main.md` | Improvement philosophy and backward pass protocol | Required |
 | `$[PROJECT]_IMPROVEMENT_REPORTS` | `/[project]/a-docs/improvement/reports/main.md` | Improvement reports index — naming conventions and template links | Optional: include only if the project uses `reports/` rather than a records structure for findings |
 | `$[PROJECT]_IMPROVEMENT_META_ANALYSIS` | `/[project]/a-docs/improvement/meta-analysis.md` | Project-specific meta-analysis phase instructions — runtime injection target for backward pass meta-analysis sessions | Conditional: required when project uses programmatic runtime |
-| `$[PROJECT]_IMPROVEMENT_FEEDBACK` | `/[project]/a-docs/improvement/feedback.md` | Project-specific feedback phase instructions — runtime injection target for the Owner's final backward-pass feedback session | Conditional: required when project uses programmatic runtime |
 
 ---
 
@@ -183,6 +180,6 @@ For traversal order, reference `$INSTRUCTION_IMPROVEMENT` — do not specify ord
 
 ## When to Create This Folder
 
-The `improvement/` folder is a required initialization artifact. Create it alongside `thinking/` when the project's a-docs are first set up.
+The `improvement/` folder is a required initialization artifact for projects initialized by the runtime. Create it when the project's a-docs are first set up. The `thinking/` folder is separate and should only be created when the project needs a standing cross-role reasoning layer.
 
 **Why:** The backward pass is the mechanism for collecting friction observations. Without it in place from the first execution cycle, friction goes untracked and cannot be analyzed. A project that defers the improvement folder loses signal from its earliest — often most instructive — cycles.

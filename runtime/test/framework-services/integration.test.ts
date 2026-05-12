@@ -51,9 +51,8 @@ function test(name: string, fn: () => void): void {
 
 // ── Path resolution ───────────────────────────────────────────────────────────
 
-const REPO_ROOT         = path.resolve(__dirname, '../../..', '..');
-const SOCIETY_ROOT      = path.join(REPO_ROOT, 'a-society');
-const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'general/manifest.yaml');
+const SOCIETY_ROOT      = path.resolve(__dirname, '../../..');
+const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'runtime/contracts/a-docs-manifest.yaml');
 const PUBLIC_INDEX      = path.join(SOCIETY_ROOT, 'index.md');
 const INTERNAL_INDEX    = path.join(SOCIETY_ROOT, 'a-docs/indexes/main.md');
 const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/main.yaml');
@@ -62,6 +61,7 @@ const VERSION_RECORD_FIXTURE = path.join(__dirname, 'fixtures', 'version-record-
 
 // Temp directory for the simulated project
 const TEMP_BASE     = fs.mkdtempSync(path.join(tmpdir(), 'a-society-integration-'));
+const REPO_ROOT     = path.join(TEMP_BASE, 'repo-root');
 const PROJECT_ROOT  = path.join(TEMP_BASE, 'test-project');
 const ADOCS_ROOT    = path.join(PROJECT_ROOT, 'a-docs');
 const RECORD_FOLDER = path.join(TEMP_BASE, 'record-folder');
@@ -71,6 +71,8 @@ function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }
 
 console.log('\nintegration');
 
+fs.mkdirSync(REPO_ROOT, { recursive: true });
+fs.symlinkSync(SOCIETY_ROOT, path.join(REPO_ROOT, 'a-society'), 'dir');
 fs.mkdirSync(RECORD_FOLDER, { recursive: true });
 fs.writeFileSync(
   RECORD_WORKFLOW,
@@ -96,7 +98,7 @@ fs.writeFileSync(
 import type { ScaffoldResult } from '../../src/framework-services/scaffolding-system.js';
 let scaffoldResult: ScaffoldResult | undefined;
 
-test('Scenario 1 — scaffold runs against live manifest without throwing', () => {
+test('Scenario 1 — scaffold runs against live runtime a-docs manifest without throwing', () => {
   assert.doesNotThrow(() => {
     scaffoldResult = scaffoldFromManifestFile(
       PROJECT_ROOT,
@@ -122,8 +124,9 @@ test('Scenario 1 — scaffold reports created and skipped arrays (no unexpected 
 test('Scenario 1 — a-docs/ directory tree was created', () => {
   assert.ok(fs.existsSync(ADOCS_ROOT), 'a-docs/ does not exist');
   assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'roles')), 'roles/ subdir missing');
-  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'thinking')), 'thinking/ subdir missing');
   assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'improvement')), 'improvement/ subdir missing');
+  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'roles', 'owner')), 'owner role subdir missing');
+  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'improvement', 'meta-analysis.md')), 'meta-analysis instruction missing');
 });
 
 // ── Scenario 2: Scaffold idempotency ─────────────────────────────────────────

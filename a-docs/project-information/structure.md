@@ -67,7 +67,7 @@ When you are unsure whether something belongs in `general/` vs another project's
 **Internal placement standard:** New runtime work is grouped by runtime capability, not left flat at the root or directly under `src/`.
 
 - `runtime/INVOCATION.md` remains the root operator-facing entry point. Package, build, environment, and installation files may also remain at the runtime root.
-- Runtime-injected or runtime-owned agent/session contracts belong under `runtime/contracts/`, not as additional root Markdown files.
+- Runtime-injected contracts, runtime-owned agent/session contracts, and runtime-owned scaffold/health contracts belong under `runtime/contracts/`, not as additional root files.
 - `runtime/src/` should contain capability folders rather than a large flat set of peer files. Standard capability folders are:
   - `orchestration/` — flow lifecycle, handoff routing, role-turn coordination, and runtime state transitions
   - `context/` — required-reading resolution, node-entry assembly, index/path resolution, and workflow-file context loading
@@ -98,8 +98,8 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **What belongs at the universal layer:**
 - Instruction documents that describe artifacts every project produces (vision, structure, agents.md, indexes, workflow definitions, records)
-- Role templates that every project instantiates regardless of domain (Owner, Curator)
-- Standards, patterns, and thinking frameworks every project can use verbatim
+- Role templates that are reusable across project types, whether default-scaffolded or opt-in
+- Standards, patterns, and thinking frameworks projects can use verbatim when they need that layer
 
 **What belongs at the category layer:**
 - Role templates that only make sense for a category of projects (e.g., a Technical Architect template under `general/project-types/executable/roles/technical-architect/`)
@@ -147,7 +147,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 **Purpose:** Role templates applicable to *every* project regardless of type. Universal-layer role templates live here; category-shaped role templates live under `general/project-types/<type>/roles/`.
 
 **What belongs here:**
-- Ready-made role templates that every project instantiates regardless of domain (Owner, Curator)
+- Ready-made role templates that are reusable across project types
 - Templates that a project would copy and customize for their own `a-docs/roles/`
 
 **What does not belong here:**
@@ -157,7 +157,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **The key test:** Would an adopting project of *any* type instantiate this role inside their own `a-docs/`? If yes — `general/roles/` is correct. If only projects of a specific category would instantiate it — it belongs under `general/project-types/<type>/roles/`. If the role is a service A-Society provides to other projects — it belongs in `a-society/a-docs/roles/`.
 
-**Example of the distinction:** The Owner and Curator roles belong in `general/roles/` because every project has its own Owner and Curator regardless of domain. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/contracts/initialization.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
+**Example of the distinction:** The Owner role belongs in `general/roles/` because every project has an Owner regardless of domain. The Curator role also belongs in `general/roles/` because a documentation-domain lead can be useful across project types, but it is opt-in rather than part of the default runtime scaffold. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/contracts/initialization.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
 
 ---
 

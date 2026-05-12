@@ -4,17 +4,17 @@
 
 An agent-docs guide is a rationale document that explains why each file and folder in a project's agent-docs exists — its purpose, what it is responsible for, what would break if it were removed, and what must not be consolidated with it.
 
-It is not a directory listing. It is not a folder structure guide. It is written for the Curator: the agent responsible for maintaining the project's documentation. Without it, a Curator maintaining files must guess at their purpose — and guessing leads to consolidation that should not happen, deletion of things that matter, and drift from original intent.
+It is not a directory listing. It is not a folder structure guide. It is written for whichever role owns documentation stewardship for the project. Without it, the owning role must guess at each file's purpose — and guessing leads to consolidation that should not happen, deletion of things that matter, and drift from original intent.
 
 ---
 
 ## Why Projects Need This Document
 
-Two failure modes emerge when a Curator lacks rationale context:
+Two failure modes emerge when the documentation owner lacks rationale context:
 
-**Consolidation errors:** The Curator merges two files that look similar but serve distinct purposes — for example, combining a vision document with a structure document because both describe the project. The result is a document that does neither job well and whose scope is unclear.
+**Consolidation errors:** The documentation owner merges two files that look similar but serve distinct purposes — for example, combining a vision document with a structure document because both describe the project. The result is a document that does neither job well and whose scope is unclear.
 
-**Purpose drift:** The Curator adds content to a file based on topic adjacency rather than ownership. Over time, files accumulate content that was never theirs to hold, and the original design intent is lost.
+**Purpose drift:** The documentation owner adds content to a file based on topic adjacency rather than ownership. Over time, files accumulate content that was never theirs to hold, and the original design intent is lost.
 
 The agent-docs guide prevents both by making the "why" explicit before any maintenance begins.
 
@@ -22,7 +22,7 @@ The agent-docs guide prevents both by making the "why" explicit before any maint
 
 ## Who Reads It
 
-The agent-docs guide is Curator context — it is not required reading for all agents. Add it to the Curator role's required reading list, not to `agents.md`.
+The agent-docs guide is documentation-owner context — it is not required reading for all agents. Add it to the Owner or dedicated documentation-domain role's required reading list, not to `agents.md`.
 
 Other agents (owners, analysts, implementers) do not need this level of file-by-file rationale. They need to know where things are (that is the index's job) and what the project is (that is `agents.md` and the vision's job).
 
@@ -32,7 +32,7 @@ Other agents (owners, analysts, implementers) do not need this level of file-by-
 
 ### One entry per significant file or folder
 
-Cover every file and folder that a Curator might touch, modify, or make a placement decision about. Do not cover every file mechanically — use judgment. A temporary working file does not need a rationale entry. A core structural document does.
+Cover every file and folder that the documentation-owning role might touch, modify, or make a placement decision about. Do not cover every file mechanically — use judgment. A temporary working file does not need a rationale entry. A core structural document does.
 
 ### For each entry, answer five questions:
 
@@ -85,7 +85,7 @@ Name it `a-docs-guide.md`.
 
 Register it in the project index as `$[PROJECT]_AGENT_DOCS_GUIDE`.
 
-Add it to the Curator role's `roles/curator/required-readings.yaml` — not to `agents.md`.
+Add it to the Owner's required readings, or to the dedicated documentation-domain role's required readings when the project has one. Do not duplicate it in `agents.md`.
 
 ---
 
@@ -96,6 +96,6 @@ The agent-docs guide must be updated whenever:
 - A file is removed or relocated
 - A file's purpose changes materially
 
-When adding a new file, the Curator must verify that it is assigned to at least one role's required reading or on-demand loading. An artifact with a rationale entry but no assigned reader is an orphan — it is documented but functionally invisible to every agent in the project. Catching this at creation time is easier than discovering it later.
+When adding a new file, the owning role must verify that it is assigned to at least one role's required reading or on-demand loading. An artifact with a rationale entry but no assigned reader is an orphan — it is documented but functionally invisible to every agent in the project. Catching this at creation time is easier than discovering it later.
 
-This is the Curator's responsibility. An outdated agent-docs guide is worse than none — it gives the Curator false confidence about a file's purpose.
+This is the documentation-owning role's responsibility. An outdated agent-docs guide is worse than none — it gives agents false confidence about a file's purpose.

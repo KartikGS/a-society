@@ -1,6 +1,6 @@
 # A-Society: Current Version
 
-**Version:** v36.0
+**Version:** v37.0
 
 ---
 
@@ -25,6 +25,7 @@ This scheme aligns directly with the impact classification on framework update r
 
 | Version | Date | Update Report |
 |---|---|---|
+| v37.0 | 2026-05-11 | 2026-05-11-runtime-adocs-manifest.md — A-docs manifest moved from `general/` into runtime contracts as `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST`; the old general manifest variable was retired; runtime health checks now read required file entries from the runtime manifest and `improvement/meta-analysis.md` / `improvement/feedback.md` are required runtime-managed project surfaces (Breaking × 2). |
 | v36.0 | 2026-05-02 | 2026-05-02-feedback-classification-and-curator-category-routing.md — Upstream feedback artifacts now require generality classification (universal / category-shaped / project-specific) per framework-improvement candidate; Curator template Scope Routing extended for two-tier `general/` model with category-creation Owner-approval gate; Curator Proposal Stage requires two-tier placement classification (Breaking × 4). |
 | v35.0 | 2026-05-02 | 2026-05-02-general-two-tier-partition.md — `general/` is now an explicit two-tier library: universal layer plus category layer at `general/project-types/<type>/`; Portability Constraint replaced with two-tier model; Technical Architect role template relocated under `general/project-types/executable/` (Breaking × 2). |
 | v34.0 | 2026-04-11 | 2026-04-11-startup-context-timing.md — Runtime contract distinguishes startup-injected context and manual reading requirements; role documents prohibited from instructing default rereads of injected files (Breaking). |
