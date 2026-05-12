@@ -363,6 +363,15 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 ref={textareaRef}
                 value={props.inputValue}
                 onChange={(event) => props.onInputChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (props.canStop) return;
+                    if (!props.inputDisabled && props.inputValue.trim().length > 0) {
+                      props.onSubmit();
+                    }
+                  }
+                }}
                 disabled={props.inputDisabled}
                 placeholder={props.placeholder}
                 rows={1}

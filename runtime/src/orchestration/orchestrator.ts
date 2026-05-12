@@ -8,12 +8,12 @@ import { emitUsage, runRoleTurn } from './orient.js';
 import { compactRoleSession, shouldAutoCompact } from './compaction.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
-import { buildWorkflowRepairGuidance } from '../framework-services/workflow-graph-validator.js';
+import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-services/workflow-graph-validator.js';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { canonicalWorkflowFilename, resolveFlowWorkflow } from '../context/workflow-file.js';
+import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
 
@@ -1113,6 +1113,14 @@ export class FlowOrchestrator {
   }
 
   private resolveActiveWorkflow(flowRun: FlowRun): any {
+    const rolesDir = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'roles');
+    const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
+    if (workflowFilePath) {
+      const validation = validateWorkflowFile(workflowFilePath, undefined, rolesDir);
+      if (!validation.valid) {
+        throw new WorkflowError(validation.errors.join('; '));
+      }
+    }
     try {
       return resolveFlowWorkflow(
         flowRun.recordFolderPath,

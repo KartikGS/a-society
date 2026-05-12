@@ -971,7 +971,7 @@ export function App() {
     : isViewedRoleCompacting
       ? 'Compacting context...'
     : !inputDisabled
-      ? 'Reply to the selected role prompt...'
+      ? 'Reply to the selected role.'
       : 'Select a role that is awaiting input.';
   const canStop =
     !!flowRun &&

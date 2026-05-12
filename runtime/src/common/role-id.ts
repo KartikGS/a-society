@@ -1,3 +1,5 @@
+export const REQUIRED_ROLE_FILES = ['main.md', 'ownership.yaml', 'required-readings.yaml'] as const;
+
 export function toKebabCaseRoleId(roleName: string): string {
   return roleName
     .trim()

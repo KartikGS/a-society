@@ -1,6 +1,7 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import yaml from 'js-yaml';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../common/role-id.js';
 
 export interface WorkflowNode {
   id: string;
@@ -48,7 +49,7 @@ export interface ValidationResult {
  *
  * Uses runtime type checks; accepts unknown input and reports all violations.
  */
-export function validateGraph(doc: unknown, strict?: boolean): string[] {
+export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string): string[] {
   const errors: string[] = [];
   const validateOptionalStringArray = (value: unknown, fieldPath: string) => {
     if (value === undefined) return;
@@ -196,6 +197,18 @@ export function validateGraph(doc: unknown, strict?: boolean): string[] {
       // role
       if (typeof node.role !== 'string' || node.role.trim() === '') {
         errors.push(`workflow.nodes[${i}].role must be a non-empty string`);
+      } else if (rolesDir) {
+        const { baseRoleId } = parseRoleIdentity(node.role);
+        const rolePath = path.join(rolesDir, baseRoleId);
+        if (!fs.existsSync(rolePath) || !fs.statSync(rolePath).isDirectory()) {
+          errors.push(`workflow.nodes[${i}].role "${node.role}" has no matching role folder at ${rolePath}`);
+        } else {
+          for (const required of REQUIRED_ROLE_FILES) {
+            if (!fs.existsSync(path.join(rolePath, required))) {
+              errors.push(`workflow.nodes[${i}].role "${node.role}" role folder is missing required file: ${required}`);
+            }
+          }
+        }
       }
       if ('human-collaborative' in node) {
         if (
@@ -370,7 +383,7 @@ export class WorkflowValidationError extends Error {
  *
  * Parses the YAML file and runs all schema checks.
  */
-export function validateWorkflowFile(filePath: string, strict?: boolean): ValidationResult {
+export function validateWorkflowFile(filePath: string, strict?: boolean, rolesDir?: string): ValidationResult {
   let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -385,6 +398,6 @@ export function validateWorkflowFile(filePath: string, strict?: boolean): Valida
     return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }
 
-  const errors = validateGraph(doc, strict);
+  const errors = validateGraph(doc, strict, rolesDir);
   return { valid: errors.length === 0, errors };
 }

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import yaml from 'js-yaml';
 import { resolveProjectRecordsRoot, resolveProjectRoot } from '../projects/draft-flow.js';
-import { parseRoleIdentity, toKebabCaseRoleId } from '../common/role-id.js';
+import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../common/role-id.js';
 import { validatePaths } from './path-validator.js';
 import { validateWorkflowFile } from './workflow-graph-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
@@ -451,19 +451,17 @@ export function runRuntimeHealthChecks(
         errors.push(`Role folder "${roleId}" must use kebab-case`);
       }
 
-      const roleMainPath = path.join(rolePath, 'main.md');
+      for (const filename of REQUIRED_ROLE_FILES) {
+        const filePath = path.join(rolePath, filename);
+        if (!isFile(filePath)) {
+          addMissingFileError(errors, `Role ${roleId} ${filename}`, filePath, workspaceRoot);
+        }
+      }
+
       const roleOwnershipPath = path.join(rolePath, 'ownership.yaml');
       const roleRequiredReadingsPath = path.join(rolePath, 'required-readings.yaml');
 
-      if (!isFile(roleMainPath)) {
-        addMissingFileError(errors, `Role ${roleId} main document`, roleMainPath, workspaceRoot);
-      }
-      if (!isFile(roleOwnershipPath)) {
-        addMissingFileError(errors, `Role ${roleId} ownership file`, roleOwnershipPath, workspaceRoot);
-      }
-      if (!isFile(roleRequiredReadingsPath)) {
-        addMissingFileError(errors, `Role ${roleId} required readings file`, roleRequiredReadingsPath, workspaceRoot);
-      } else {
+      if (isFile(roleRequiredReadingsPath)) {
         try {
           const variables = collectRoleRequiredReadingVariables(roleRequiredReadingsPath);
           roleRequiredReadingsByRoleId.set(roleId, new Set(variables));
@@ -493,7 +491,7 @@ export function runRuntimeHealthChecks(
   }
 
   if (isFile(workflowPath)) {
-    const validation = validateWorkflowFile(workflowPath);
+    const validation = validateWorkflowFile(workflowPath, undefined, rolesRoot);
     if (!validation.valid) {
       for (const validationError of validation.errors) {
         errors.push(`a-docs/workflow/main.yaml: ${validationError}`);
