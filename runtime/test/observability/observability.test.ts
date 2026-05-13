@@ -58,10 +58,7 @@ class MockProvider implements LLMProvider {
     }, async (span) => {
       const res = this.responses[this.callCount % this.responses.length];
       this.callCount++;
-      if (res.usage) {
-        if (res.usage.inputTokens !== undefined) span.setAttribute('gen_ai.usage.input_tokens', res.usage.inputTokens);
-        if (res.usage.outputTokens !== undefined) span.setAttribute('gen_ai.usage.output_tokens', res.usage.outputTokens);
-      }
+      if (res.contextUsage !== undefined) span.setAttribute('gen_ai.usage.input_tokens', res.contextUsage);
       span.setAttribute('provider.result_type', res.type);
       if (res.type === 'text') {
         options?.outputStream?.write(res.text);
@@ -134,12 +131,12 @@ async function run() {
         type: 'tool_calls', 
         calls: [{ id: 'call_1', name: 'read_file', input: { path: 'nonexistent.txt' } }], 
         continuationMessages: [{ role: 'assistant_tool_calls', calls: [{ id: 'call_1', name: 'read_file', input: { path: 'nonexistent.txt' } }] }],
-        usage: { inputTokens: 10, outputTokens: 20 }
+        contextUsage: 30
       },
       { 
         type: 'text', 
         text: 'File not found.',
-        usage: { inputTokens: 15, outputTokens: 5 }
+        contextUsage: 20
       }
     ]);
 
@@ -218,7 +215,7 @@ async function run() {
       {
         type: 'text',
         text: 'I need clarification. ```handoff\ntype: prompt-human\n```',
-        usage: { inputTokens: 12, outputTokens: 34 }
+        contextUsage: 46
       }
     ]);
     const sequence: string[] = [];
@@ -254,7 +251,7 @@ async function run() {
       );
       assert.deepStrictEqual(result, {
         handoff: { kind: 'awaiting_human' },
-        usage: { inputTokens: 12, outputTokens: 34 }
+        contextUsage: 46
       });
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;
@@ -312,7 +309,7 @@ async function run() {
       {
         type: 'text',
         text: 'I broke the handoff. ```handoff\ntarget_node_id:\n```',
-        usage: { inputTokens: 21, outputTokens: 8 }
+        contextUsage: 29
       }
     ]);
     const renderer = new CaptureRenderer();
@@ -378,7 +375,7 @@ async function run() {
       {
         type: 'text',
         text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
-        usage: { inputTokens: 55, outputTokens: 13 }
+        contextUsage: 68
       }
     ]);
     const renderer = new CaptureRenderer();
@@ -406,7 +403,7 @@ async function run() {
     assert.strictEqual(usageEvent.kind, 'usage.turn_summary');
     assert.deepStrictEqual(
       usageEvent,
-      { kind: 'usage.turn_summary', role: 'curator', availability: 'full', inputTokens: 55, outputTokens: 13 }
+      { kind: 'usage.turn_summary', role: 'curator', contextUsage: 68 }
     );
 
     const storedSession = SessionStore.loadRoleSession(
@@ -414,7 +411,7 @@ async function run() {
       { projectNamespace: 'a-society', flowId: 'accepted-handoff-flow' },
       tmpDir
     );
-    assert.deepStrictEqual(storedSession?.latestTurnUsage, { inputTokens: 55, outputTokens: 13 });
+    assert.strictEqual(storedSession?.latestContextUsage, 68);
   });
 
   await test('Scenario: validateWorkflowFile (REAL CODE)', async () => {

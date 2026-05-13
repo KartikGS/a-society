@@ -45,7 +45,7 @@ interface FlowUiState {
   waitLabels: Record<string, string | null>;
   stopRequestedRoles: Record<string, boolean>;
   consentRequests: Record<string, ConsentRequest>;
-  latestInputTokensByRole: Record<string, number>;
+  latestContextUsageByRole: Record<string, number>;
   compactingRoles: Record<string, boolean>;
   hasActiveSession: boolean;
 }
@@ -81,7 +81,7 @@ function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     waitLabels: {},
     stopRequestedRoles: {},
     consentRequests: {},
-    latestInputTokensByRole: {},
+    latestContextUsageByRole: {},
     compactingRoles: {},
     hasActiveSession: false,
   };
@@ -372,7 +372,7 @@ export function App() {
           lastHandoff: null,
           waitLabels: {},
           stopRequestedRoles: {},
-          latestInputTokensByRole: {},
+          latestContextUsageByRole: {},
           compactingRoles: {},
           consentRequests: {},
         }));
@@ -410,12 +410,12 @@ export function App() {
         }
 
         if (event.kind === 'usage.turn_summary') {
-          if (event.availability === 'full' || event.availability === 'output-unavailable') {
+          if (event.contextUsage != null) {
             updateFlowUi(key, (state) => {
               const role = toRoleKey(event.role) ?? SYSTEM_ROLE_KEY;
               return {
                 ...state,
-                latestInputTokensByRole: { ...state.latestInputTokensByRole, [role]: event.inputTokens! },
+                latestContextUsageByRole: { ...state.latestContextUsageByRole, [role]: event.contextUsage! },
               };
             });
           }
@@ -495,9 +495,9 @@ export function App() {
                 ? { ...state.stopRequestedRoles, [resumedRole]: false }
                 : state.stopRequestedRoles,
             lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
-            latestInputTokensByRole: compactedRole
-              ? { ...state.latestInputTokensByRole, [compactedRole]: 0 }
-              : state.latestInputTokensByRole,
+            latestContextUsageByRole: compactedRole
+              ? { ...state.latestContextUsageByRole, [compactedRole]: 0 }
+              : state.latestContextUsageByRole,
             compactingRoles: compactedRole
               ? { ...state.compactingRoles, [compactedRole]: false }
               : state.compactingRoles,
@@ -572,7 +572,7 @@ export function App() {
                 : state.selectedGraph,
             stopRequestedRoles: message.flowRun.status !== 'running' ? {} : state.stopRequestedRoles,
             hasActiveSession: message.hasActiveSession,
-            latestInputTokensByRole: { ...message.inputTokensByRole, ...state.latestInputTokensByRole },
+            latestContextUsageByRole: { ...message.contextUsageByRole, ...state.latestContextUsageByRole },
           };
         });
         void fetchProjectFlows(message.flowRef.projectNamespace);
@@ -1117,7 +1117,7 @@ export function App() {
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   contextWindow={contextWindow}
-                  latestInputTokens={viewedRole ? (activeUi?.latestInputTokensByRole[viewedRole] ?? null) : null}
+                  latestContextUsage={viewedRole ? (activeUi?.latestContextUsageByRole[viewedRole] ?? null) : null}
                   isCompactingContext={isViewedRoleCompacting}
                 />
               </Panel>

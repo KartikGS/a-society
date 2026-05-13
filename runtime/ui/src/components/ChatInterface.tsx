@@ -20,7 +20,7 @@ interface ChatInterfaceProps {
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
   contextWindow?: number | null;
-  latestInputTokens?: number | null;
+  latestContextUsage?: number | null;
   isCompactingContext?: boolean;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
@@ -162,12 +162,12 @@ function StopIcon() {
 
 function ContextRing({
   contextWindow,
-  inputTokens,
+  contextUsage,
   onCompactContext,
   isCompacting
 }: {
   contextWindow: number;
-  inputTokens: number | null;
+  contextUsage: number | null;
   onCompactContext?: () => void;
   isCompacting?: boolean;
 }) {
@@ -175,7 +175,7 @@ function ContextRing({
   const STROKE = 3;
   const normalizedRadius = RADIUS - STROKE / 2;
   const circumference = 2 * Math.PI * normalizedRadius;
-  const pct = inputTokens != null ? Math.min(inputTokens / contextWindow, 1) : 0;
+  const pct = contextUsage != null ? Math.min(contextUsage / contextWindow, 1) : 0;
   const strokeDashoffset = circumference * (1 - pct);
   const pctDisplay = Math.round(pct * 100);
 
@@ -200,7 +200,7 @@ function ContextRing({
       </svg>
       <span className="context-ring-pct">{pctDisplay}%</span>
       <div className="context-ring-tooltip">
-        <span>{inputTokens != null ? inputTokens.toLocaleString() : '0'} / {contextWindow.toLocaleString()} tokens</span>
+        <span>{contextUsage != null ? contextUsage.toLocaleString() : '0'} / {contextWindow.toLocaleString()} tokens</span>
         <span className="context-ring-tooltip-action">{isCompacting ? 'Compacting...' : 'Click to compact'}</span>
         <span className="context-ring-tooltip-hint">Usage updated at end of LLM turn</span>
       </div>
@@ -395,7 +395,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
             {props.contextWindow ? (
               <ContextRing
                 contextWindow={props.contextWindow}
-                inputTokens={props.latestInputTokens ?? null}
+                contextUsage={props.latestContextUsage ?? null}
                 onCompactContext={props.onCompactContext}
                 isCompacting={props.isCompactingContext}
               />

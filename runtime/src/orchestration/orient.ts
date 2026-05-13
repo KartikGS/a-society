@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, TurnUsage, ConsentGate } from '../common/types.js';
+import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
 import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
 import { buildRoleContext } from '../context/registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
@@ -16,28 +16,14 @@ function extractFileRefs(content: string): string[] {
   return refs;
 }
 
-export function emitUsage(renderer: OperatorRenderSink | undefined, usage: TurnUsage | undefined, role?: string): void {
+export function emitUsage(renderer: OperatorRenderSink | undefined, contextUsage: number | undefined, role?: string): void {
   if (!renderer) return;
-  if (!usage) {
-    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'both-unavailable' });
-    return;
-  }
-  const hasIn = usage.inputTokens !== undefined;
-  const hasOut = usage.outputTokens !== undefined;
-  if (hasIn && hasOut) {
-    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'full', inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
-  } else if (hasIn) {
-    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'output-unavailable', inputTokens: usage.inputTokens });
-  } else if (hasOut) {
-    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'input-unavailable', outputTokens: usage.outputTokens });
-  } else {
-    renderer.emit({ kind: 'usage.turn_summary', role, availability: 'both-unavailable' });
-  }
+  renderer.emit({ kind: 'usage.turn_summary', role, contextUsage });
 }
 
 type SessionTurnResult = {
   handoff?: HandoffResult;
-  usage?: TurnUsage;
+  contextUsage?: number;
   abort?: true;
   consentDenied?: true;
   error?: true;
@@ -113,7 +99,7 @@ async function executeSessionTurn(
       parseResult = HandoffInterpreter.parse(result.text);
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
-        error.usage = result.usage;
+        error.contextUsage = result.contextUsage;
       }
       throw error;
     }
@@ -128,7 +114,7 @@ async function executeSessionTurn(
       duration_ms: Date.now() - startTime,
     });
 
-    return { handoff: parseResult, usage: result.usage };
+    return { handoff: parseResult, contextUsage: result.contextUsage };
 
   } catch (error: any) {
     const duration = Date.now() - startTime;
@@ -275,7 +261,7 @@ export async function runRoleTurn(
   if (turnResult.handoff) {
     return {
       handoff: turnResult.handoff,
-      usage: turnResult.usage
+      contextUsage: turnResult.contextUsage
     };
   }
 

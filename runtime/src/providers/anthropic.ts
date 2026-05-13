@@ -149,8 +149,8 @@ export class AnthropicProvider implements LLMProvider {
         const outputTokens = finalMsg.usage?.output_tokens;
         const stopReason = finalMsg.stop_reason;
 
-        const usage = (inputTokens !== undefined || outputTokens !== undefined)
-          ? { inputTokens, outputTokens }
+        const contextUsage = (inputTokens !== undefined || outputTokens !== undefined)
+          ? (inputTokens ?? 0) + (outputTokens ?? 0)
           : undefined;
 
         if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
@@ -168,12 +168,12 @@ export class AnthropicProvider implements LLMProvider {
             type: 'tool_calls' as const,
             calls,
             continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
-            usage
+            contextUsage
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, usage };
+        return { type: 'text' as const, text: fullText, contextUsage };
 
       } catch (error: any) {
         renderer?.stopWait(options?.role ?? '');

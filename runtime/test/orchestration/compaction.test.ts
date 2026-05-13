@@ -25,11 +25,11 @@ async function test(name: string, fn: () => Promise<void> | void): Promise<void>
 console.log('\ncontext-compaction');
 
 await test('shouldAutoCompact uses 80 percent of the raw context window', () => {
-  assert.strictEqual(shouldAutoCompact({ inputTokens: 79 }, 100), false);
-  assert.strictEqual(shouldAutoCompact({ inputTokens: 80 }, 100), true);
-  assert.strictEqual(shouldAutoCompact({ inputTokens: 81 }, 100), true);
-  assert.strictEqual(shouldAutoCompact({ outputTokens: 100 }, 100), false);
-  assert.strictEqual(shouldAutoCompact({ inputTokens: 100 }, 0), false);
+  assert.strictEqual(shouldAutoCompact(79, 100), false);
+  assert.strictEqual(shouldAutoCompact(80, 100), true);
+  assert.strictEqual(shouldAutoCompact(81, 100), true);
+  assert.strictEqual(shouldAutoCompact(undefined, 100), false);
+  assert.strictEqual(shouldAutoCompact(100, 0), false);
 });
 
 await test('compactRoleSession archives raw history and replaces active history with a restoration message', async () => {
@@ -108,7 +108,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     assert.ok(replacement.content.includes('Summary of current-node decisions and unresolved repair.'));
     assert.ok(replacement.content.includes('owner-intake=>owner-review'));
     assert.ok(replacement.content.includes('Runtime repair prompt'));
-    assert.strictEqual(session.latestTurnUsage?.inputTokens, 0);
+    assert.strictEqual(session.latestContextUsage, 0);
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
     fs.rmSync(tmpDir, { recursive: true, force: true });

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult, TurnUsage } from '../common/types.js';
+import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
 import { LLMGatewayError } from '../common/types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from '../tools/file-executor.js';
 import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.js';
@@ -101,15 +101,13 @@ export class LLMGateway {
           const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
-            return { text: result.text, usage: result.usage };
+            return { text: result.text, contextUsage: result.contextUsage };
           }
           throwIfAborted(options?.signal);
           throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
         }
 
-        let accInputTokens = 0;
-        let accOutputTokens = 0;
-        let anyUsage = false;
+        let accContextUsage: number | undefined;
 
         const MAX_TOOL_ROUNDS = 50;
         let messages: RuntimeMessageParam[] = [...messageHistory];
@@ -130,17 +128,13 @@ export class LLMGateway {
             throwIfAborted(options?.signal, result.text);
           }
 
-          if (result.usage?.inputTokens !== undefined) { accInputTokens += result.usage.inputTokens; anyUsage = true; }
-          if (result.usage?.outputTokens !== undefined) { accOutputTokens += result.usage.outputTokens; anyUsage = true; }
+          if (result.contextUsage !== undefined) { accContextUsage = result.contextUsage; }
 
           if (result.type === 'text') {
-            const usage: TurnUsage | undefined = anyUsage
-              ? { inputTokens: accInputTokens, outputTokens: accOutputTokens }
-              : undefined;
             span.setAttribute('llm.tool_round_count', round);
             return {
               text: result.text,
-              usage
+              contextUsage: accContextUsage
             };
           }
 

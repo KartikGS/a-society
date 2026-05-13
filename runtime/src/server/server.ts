@@ -45,7 +45,7 @@ type FlowStateMessage = {
   flowRun: FlowRun;
   backwardActive: string[];
   hasActiveSession: boolean;
-  inputTokensByRole: Record<string, number>;
+  contextUsageByRole: Record<string, number>;
 };
 
 type HistoricalMessage = OperatorFeedMessage;
@@ -76,7 +76,7 @@ interface ActiveSession {
   finished: boolean;
   task: Promise<void>;
   consentGate: ConsentGateImpl;
-  latestInputTokensByRole: Record<string, number>;
+  latestContextUsageByRole: Record<string, number>;
 }
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -121,9 +121,8 @@ function recoverRoleFeedSequence(roleFeedHistory: Map<string, FeedItem[]>): Map<
   return sequence;
 }
 
-function latestInputTokensFromSession(session: RoleSession | null): number | null {
-  if (!session) return null;
-  return session.latestTurnUsage?.inputTokens ?? session.latestInputTokens ?? null;
+function latestContextUsageFromSession(session: RoleSession | null): number | null {
+  return session?.latestContextUsage ?? null;
 }
 
 function flowKey(ref: FlowRef): string {
@@ -332,14 +331,14 @@ function buildServer(workspaceRoot: string) {
     const backwardActive = session
       ? Array.from(session.backwardActive).filter((nodeId) => getOpenNodeIds(flowRun).includes(nodeId))
       : [];
-    const inputTokensByRole: Record<string, number> = session
-      ? { ...session.latestInputTokensByRole }
+    const contextUsageByRole: Record<string, number> = session
+      ? { ...session.latestContextUsageByRole }
       : Object.fromEntries(
           SessionStore.listRoleKeys(ref, workspaceRoot)
             .map((roleKey) => {
               const s = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
-              const inputTokens = latestInputTokensFromSession(s);
-              return inputTokens != null ? [roleKey, inputTokens] as const : null;
+              const contextUsage = latestContextUsageFromSession(s);
+              return contextUsage != null ? [roleKey, contextUsage] as const : null;
             })
             .filter((e): e is [string, number] => e !== null)
         );
@@ -349,7 +348,7 @@ function buildServer(workspaceRoot: string) {
       flowRun,
       backwardActive,
       hasActiveSession: session !== null && !session.finished,
-      inputTokensByRole,
+      contextUsageByRole,
     };
   }
 
@@ -509,10 +508,10 @@ function buildServer(workspaceRoot: string) {
         }
 
         if (message.event.kind === 'usage.turn_summary') {
-          const { role, availability, inputTokens } = message.event;
-          if (role && (availability === 'full' || availability === 'output-unavailable') && inputTokens != null) {
+          const { role, contextUsage } = message.event;
+          if (role && contextUsage != null) {
             const roleKey = parseRoleIdentity(role).instanceRoleId;
-            session.latestInputTokensByRole[roleKey] = inputTokens;
+            session.latestContextUsageByRole[roleKey] = contextUsage;
           }
           emitTransientMessage(session, message);
           return;
@@ -520,7 +519,7 @@ function buildServer(workspaceRoot: string) {
 
         if (message.event.kind === 'session.compacted') {
           const roleKey = parseRoleIdentity(message.event.role).instanceRoleId;
-          session.latestInputTokensByRole[roleKey] = 0;
+          session.latestContextUsageByRole[roleKey] = 0;
         }
 
         if (isTransientOperatorEvent(message.event)) {
@@ -561,12 +560,12 @@ function buildServer(workspaceRoot: string) {
 
     const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot);
     const roleFeedSequence = recoverRoleFeedSequence(roleFeedHistory);
-    const latestInputTokensByRole = Object.fromEntries(
+    const latestContextUsageByRole = Object.fromEntries(
       Array.from(roleFeedHistory.keys())
         .map((roleKey) => {
           const s = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
-          const inputTokens = latestInputTokensFromSession(s);
-          return inputTokens != null ? [roleKey, inputTokens] as const : null;
+          const contextUsage = latestContextUsageFromSession(s);
+          return contextUsage != null ? [roleKey, contextUsage] as const : null;
         })
         .filter((e): e is [string, number] => e !== null)
     );
@@ -585,7 +584,7 @@ function buildServer(workspaceRoot: string) {
       backwardActive: new Set<string>(),
       finished: false,
       task: Promise.resolve(),
-      latestInputTokensByRole,
+      latestContextUsageByRole,
     };
 
     activeSessions.set(flowKey(flowRef), session);
@@ -1126,7 +1125,7 @@ function buildServer(workspaceRoot: string) {
           });
           return;
         }
-        session.latestInputTokensByRole[roleKey] = 0;
+        session.latestContextUsageByRole[roleKey] = 0;
         if (createdForCompaction) {
           session.finished = true;
         }

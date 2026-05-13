@@ -180,8 +180,7 @@ export interface RoleSession {
   isActive: boolean;
   currentNodeId?: string;
   systemPrompt?: string;
-  latestTurnUsage?: TurnUsage;
-  latestInputTokens?: number;
+  latestContextUsage?: number;
 }
 
 
@@ -208,14 +207,9 @@ export type RuntimeMessageParam =
   | { role: 'assistant_tool_calls'; calls: ToolCall[]; text?: string }
   | { role: 'tool_result';         callId: string; toolName: string; content: string; isError: boolean };
 
-export interface TurnUsage {
-  inputTokens?: number;
-  outputTokens?: number;
-}
-
 export interface RoleTurnResult {
   handoff: HandoffResult;
-  usage?: TurnUsage;
+  contextUsage?: number;
   awaitingHumanReason?: AwaitingHumanReason;
 }
 
@@ -227,7 +221,7 @@ export type OperatorEvent =
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
   | { kind: 'human.resumed'; nodeId: string; role: string }
-  | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
@@ -280,12 +274,12 @@ export interface TurnOptions {
 
 export interface GatewayTurnResult {
   text: string;
-  usage?: TurnUsage;
+  contextUsage?: number;
 }
 
 export type ProviderTurnResult =
-  | { type: 'text';       text: string;                                                   usage?: TurnUsage }
-  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; usage?: TurnUsage };
+  | { type: 'text';       text: string;                                                   contextUsage?: number }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; contextUsage?: number };
 
 export interface LLMProvider {
   executeTurn(

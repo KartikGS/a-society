@@ -127,7 +127,7 @@ export type OperatorEvent =
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
   | { kind: 'human.resumed'; nodeId: string; role: string }
-  | { kind: 'usage.turn_summary'; role?: string; availability: 'full' | 'input-unavailable' | 'output-unavailable' | 'both-unavailable'; inputTokens?: number; outputTokens?: number }
+  | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
@@ -160,7 +160,7 @@ export type ServerMessage =
   | { type: 'wait_stop'; flowRef: FlowRef; role: string }
   | { type: 'output_text'; flowRef: FlowRef; role: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
-  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; inputTokensByRole: Record<string, number> }
+  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; contextUsageByRole: Record<string, number> }
   | { type: 'error'; flowRef: FlowRef; message: string }
 ;
 

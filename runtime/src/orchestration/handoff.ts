@@ -1,5 +1,5 @@
 import yaml from 'js-yaml';
-import type { HandoffResult, TurnUsage } from '../common/types.js';
+import type { HandoffResult } from '../common/types.js';
 
 export type HandoffRepairCode =
   | 'missing_block'
@@ -18,7 +18,7 @@ export interface HandoffRepairDetails {
 
 export class HandoffParseError extends Error {
   readonly details: HandoffRepairDetails;
-  usage?: TurnUsage;
+  contextUsage?: number;
   constructor(details: HandoffRepairDetails) {
     super(details.operatorSummary);
     this.name = 'HandoffParseError';

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, TurnUsage, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
+import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { emitUsage, runRoleTurn } from './orient.js';
 import { compactRoleSession, shouldAutoCompact } from './compaction.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
@@ -525,7 +525,7 @@ export class FlowOrchestrator {
 
             if (sessionResult) {
               const handoffResult = sessionResult.handoff;
-              const turnUsage = sessionResult.usage;
+              const turnUsage = sessionResult.contextUsage;
               this.applyLatestTurnUsage(session, turnUsage);
               emitUsage(this.renderer, turnUsage, roleName);
               if (handoffResult.kind === 'awaiting_human') {
@@ -628,8 +628,8 @@ export class FlowOrchestrator {
             }
           } catch (e: any) {
             if (e instanceof HandoffParseError) {
-              this.applyLatestTurnUsage(session, e.usage);
-              emitUsage(this.renderer, e.usage, roleName);
+              this.applyLatestTurnUsage(session, e.contextUsage);
+              emitUsage(this.renderer, e.contextUsage, roleName);
               span.addEvent('handoff.parse_error_injected', {
                 error_type: e.name,
                 error_message: e.message.slice(0, 500)
@@ -645,7 +645,7 @@ export class FlowOrchestrator {
               appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: e.details.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, e.usage);
+              await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, e.contextUsage);
               continue;
             }
             if (e instanceof WorkflowError) {
@@ -1062,10 +1062,10 @@ export class FlowOrchestrator {
     return parseRoleIdentity(roleName).instanceRoleId;
   }
 
-  private applyLatestTurnUsage(session: RoleSession, turnUsage: TurnUsage | undefined): void {
-    if (!turnUsage) return;
-    if (turnUsage.inputTokens === undefined && turnUsage.outputTokens === undefined) return;
-    session.latestTurnUsage = { ...turnUsage };
+  private applyLatestTurnUsage(session: RoleSession, contextUsage: number | undefined): void {
+    if (contextUsage !== undefined) {
+      session.latestContextUsage = contextUsage;
+    }
   }
 
   private roleHasFutureNode(wf: any, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
@@ -1084,10 +1084,10 @@ export class FlowOrchestrator {
     nodeId: string,
     roleName: string,
     activeHistory: RuntimeMessageParam[],
-    usage: TurnUsage | undefined = session.latestTurnUsage
+    contextUsage: number | undefined = session.latestContextUsage
   ): Promise<void> {
     const contextWindow = getActiveModelWithKey()?.contextWindow ?? null;
-    if (!shouldAutoCompact(usage, contextWindow)) return;
+    if (!shouldAutoCompact(contextUsage, contextWindow)) return;
 
     this.renderer.emit({ kind: 'session.compaction_started', role: roleName, trigger: 'auto' });
 

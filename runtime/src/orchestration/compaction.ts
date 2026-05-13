@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { Writable } from 'node:stream';
 import { LLMGateway } from '../providers/llm.js';
-import type { FlowRun, RoleSession, RuntimeMessageParam, TurnUsage } from '../common/types.js';
+import type { FlowRun, RoleSession, RuntimeMessageParam } from '../common/types.js';
 
 export const AUTO_COMPACTION_CONTEXT_RATIO = 0.8;
 
@@ -19,10 +19,10 @@ export interface RoleSessionCompactionResult {
   reason?: string;
 }
 
-export function shouldAutoCompact(usage: TurnUsage | undefined, contextWindow: number | null | undefined): boolean {
-  if (!usage || usage.inputTokens === undefined) return false;
+export function shouldAutoCompact(contextUsage: number | undefined, contextWindow: number | null | undefined): boolean {
+  if (contextUsage === undefined) return false;
   if (!contextWindow || contextWindow <= 0) return false;
-  return usage.inputTokens >= contextWindow * AUTO_COMPACTION_CONTEXT_RATIO;
+  return contextUsage >= contextWindow * AUTO_COMPACTION_CONTEXT_RATIO;
 }
 
 function formatRuntimeMessage(message: RuntimeMessageParam, index: number): string {
@@ -200,8 +200,7 @@ export async function compactRoleSession(options: {
     nodeId,
     exchanges: [replacementMessage]
   };
-  options.session.latestTurnUsage = { inputTokens: 0, outputTokens: 0 };
-  options.session.latestInputTokens = 0;
+  options.session.latestContextUsage = 0;
 
   return { compacted: true, archiveId };
 }

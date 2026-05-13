@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { LLMGatewayError } from '../common/types.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions, TurnUsage } from '../common/types.js';
+import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions } from '../common/types.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
@@ -76,6 +76,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       const renderer = options?.operatorRenderer;
       let fullText = '';
       const outputStream = options?.outputStream ?? process.stdout;
+      let contextUsage: number | undefined;
       let inputTokens: number | undefined;
       let outputTokens: number | undefined;
 
@@ -132,11 +133,14 @@ export class OpenAICompatibleProvider implements LLMProvider {
         const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
 
         for await (const chunk of stream) {
-          if (!chunk.choices.length && chunk.usage) {
+          if (chunk.usage) {
             inputTokens = chunk.usage.prompt_tokens ?? undefined;
             outputTokens = chunk.usage.completion_tokens ?? undefined;
-            continue;
+            if (inputTokens !== undefined || outputTokens !== undefined) {
+              contextUsage = (inputTokens ?? 0) + (outputTokens ?? 0);
+            }
           }
+          if (!chunk.choices.length) continue;
 
           const choice = chunk.choices[0];
           if (!choice) continue;
@@ -168,9 +172,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
         renderer?.stopWait(options?.role ?? '');
 
-        const usage: TurnUsage | undefined = (inputTokens !== undefined || outputTokens !== undefined)
-          ? { inputTokens, outputTokens }
-          : undefined;
 
         if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
         if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
@@ -189,12 +190,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
             type: 'tool_calls' as const,
             calls,
             continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
-            usage
+            contextUsage
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, usage };
+        return { type: 'text' as const, text: fullText, contextUsage };
       } catch (err: any) {
         renderer?.stopWait(options?.role ?? '');
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
