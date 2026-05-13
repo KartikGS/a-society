@@ -63,7 +63,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_COMMUNICATION` | `a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols |
-| `$INSTRUCTION_THINKING` | `a-society/general/instructions/thinking/main.md` | How to create an optional thinking/ folder when a project needs a standing reasoning layer |
 | `$INSTRUCTION_IMPROVEMENT` | `a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | **a-docs Templates** | | |
@@ -73,18 +72,10 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$GENERAL_OWNER_BRIEF_WRITING` | `a-society/general/roles/owner/brief-writing.md` | Ready-made Owner brief-writing and constraint-writing support doc template |
 | `$GENERAL_OWNER_REVIEW_BEHAVIOR` | `a-society/general/roles/owner/review-behavior.md` | Ready-made Owner contribution-review support doc template |
 | `$GENERAL_OWNER_LOG_MANAGEMENT` | `a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
-| `$GENERAL_OWNER_TA_REVIEW` | `a-society/general/roles/owner/ta-advisory-review.md` | Ready-made Owner advisory and integration-gate review support doc template |
 | `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
-| `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator/main.md` | Ready-made Curator role template for projects with a dedicated documentation-domain lead |
-| `$GENERAL_CURATOR_IMPL_PRACTICES` | `a-society/general/roles/curator/implementation-practices.md` | Ready-made Curator proposal, implementation, and registration-practices support doc template |
 | `$GENERAL_TA_ROLE` | `a-society/general/project-types/executable/roles/technical-architect/main.md` | Ready-made Technical Architect (advisory-producing) role template for projects with an executable layer — authority, boundaries, and workflow-linked support-doc routing |
-| `$GENERAL_TA_ADVISORY_STANDARDS` | `a-society/general/project-types/executable/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template for projects with an executable layer |
 | **Communication Templates** | | |
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
-| **Thinking Templates** | | |
-| `$GENERAL_THINKING` | `a-society/general/thinking/main.md` | Optional general principles template |
-| `$GENERAL_THINKING_REASONING` | `a-society/general/thinking/reasoning.md` | Optional reasoning framework template |
-| `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Optional keep-in-mind template |
 | **Improvement Templates** | | |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |

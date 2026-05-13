@@ -93,13 +93,13 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **Two-tier model:** `general/` is partitioned into a universal layer and a category layer (see `### general/project-types/` below). The universal layer is the default; the category layer is opt-in for adopting projects whose project type matches.
 
-- **Universal layer** — the `general/` root and all non-`project-types/` sub-folders (e.g., `general/instructions/`, `general/roles/`, `general/improvement/`, `general/thinking/`). Content here must apply without modification to *any* project type — software, writing, legal, research, or any other domain.
+- **Universal layer** — the `general/` root and all non-`project-types/` sub-folders (e.g., `general/instructions/`, `general/roles/`, `general/improvement/`). Content here must apply without modification to *any* project type — software, writing, legal, research, or any other domain.
 - **Category layer** — `general/project-types/<type>/`. Content here must apply without modification to any project of that category, but is not required to apply universally.
 
 **What belongs at the universal layer:**
 - Instruction documents that describe artifacts every project produces (vision, structure, agents.md, indexes, workflow definitions, records)
 - Role templates that are reusable across project types, whether default-scaffolded or opt-in
-- Standards, patterns, and thinking frameworks projects can use verbatim when they need that layer
+- Standards and patterns projects can use verbatim when they need that layer
 
 **What belongs at the category layer:**
 - Role templates that only make sense for a category of projects (e.g., a Technical Architect template under `general/project-types/executable/roles/technical-architect/`)
@@ -157,7 +157,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **The key test:** Would an adopting project of *any* type instantiate this role inside their own `a-docs/`? If yes — `general/roles/` is correct. If only projects of a specific category would instantiate it — it belongs under `general/project-types/<type>/roles/`. If the role is a service A-Society provides to other projects — it belongs in `a-society/a-docs/roles/`.
 
-**Example of the distinction:** The Owner role belongs in `general/roles/` because every project has an Owner regardless of domain. The Curator role also belongs in `general/roles/` because a documentation-domain lead can be useful across project types, but it is opt-in rather than part of the default runtime scaffold. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/contracts/initialization.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
+**Example of the distinction:** The Owner role belongs in `general/roles/` because every project has an Owner regardless of domain. Documentation-domain roles are described as archetypes in `$INSTRUCTION_ROLES`, but A-Society does not ship a universal Curator role template because real documentation stewardship differs too much by project. The Technical Architect role belongs under `general/project-types/executable/roles/technical-architect/` because it only makes sense for projects that have an executable layer to design. Runtime-owned initialization guidance belongs in `runtime/contracts/initialization.md` because the executable layer now performs initialization by running an Owner flow after scaffold.
 
 ---
 

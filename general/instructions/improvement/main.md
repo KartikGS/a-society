@@ -180,6 +180,6 @@ For traversal order, reference `$INSTRUCTION_IMPROVEMENT` — do not specify ord
 
 ## When to Create This Folder
 
-The `improvement/` folder is a required initialization artifact for projects initialized by the runtime. Create it when the project's a-docs are first set up. The `thinking/` folder is separate and should only be created when the project needs a standing cross-role reasoning layer.
+The `improvement/` folder is a required initialization artifact for projects initialized by the runtime. Create it when the project's a-docs are first set up.
 
 **Why:** The backward pass is the mechanism for collecting friction observations. Without it in place from the first execution cycle, friction goes untracked and cannot be analyzed. A project that defers the improvement folder loses signal from its earliest — often most instructive — cycles.

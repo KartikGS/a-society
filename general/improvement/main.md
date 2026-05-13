@@ -40,7 +40,7 @@ Organize project agent documentation so that:
 
 **Why this matters:** As more projects are added, cross-project agent infrastructure remains reusable without modification. Project-specific principles do not bleed into the cross-project layer.
 
-**Naming convention:** Use the project name as the subfolder key. Within each project folder, use domain-scoped subfolders (`thinking/`, `improvement/`, `project-principles/`, `governance/`).
+**Naming convention:** Use the project name as the subfolder key. Within each project folder, use domain-scoped subfolders (`improvement/`, `project-principles/`, `governance/`).
 
 ---
 

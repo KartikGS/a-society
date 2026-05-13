@@ -75,12 +75,8 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_OWNER_BRIEF_WRITING` | `a-society/general/roles/owner/brief-writing.md` | Ready-made Owner brief-writing and constraint-writing support doc template |
 | `$GENERAL_OWNER_REVIEW_BEHAVIOR` | `a-society/general/roles/owner/review-behavior.md` | Ready-made Owner contribution-review support doc template |
 | `$GENERAL_OWNER_LOG_MANAGEMENT` | `a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
-| `$GENERAL_OWNER_TA_REVIEW` | `a-society/general/roles/owner/ta-advisory-review.md` | Ready-made Owner advisory and integration-gate review support doc template |
 | `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
-| `$GENERAL_CURATOR_ROLE` | `a-society/general/roles/curator/main.md` | Ready-made Curator role template for projects with a dedicated documentation-domain lead |
-| `$GENERAL_CURATOR_IMPL_PRACTICES` | `a-society/general/roles/curator/implementation-practices.md` | Ready-made Curator proposal, implementation, and registration-practices support doc template |
 | `$GENERAL_TA_ROLE` | `a-society/general/project-types/executable/roles/technical-architect/main.md` | Ready-made Technical Architect (advisory-producing) role template for projects with an executable layer — authority, boundaries, and workflow-linked support-doc routing |
-| `$GENERAL_TA_ADVISORY_STANDARDS` | `a-society/general/project-types/executable/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template for projects with an executable layer |
 | `$INSTRUCTION_AGENT_DOCS_GUIDE` | `a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_ADOCS_DESIGN` | `a-society/general/instructions/a-docs-design.md` | How to create and maintain an a-docs design-principles file for any project |
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |
@@ -102,13 +98,9 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_COMMUNICATION` | `a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer — artifact formats, templates, and lifecycle |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols — status models, handoff rules, feedback, and conflict resolution |
-| `$INSTRUCTION_THINKING` | `a-society/general/instructions/thinking/main.md` | How to create an optional thinking/ folder when a project needs a standing reasoning layer |
 | `$INSTRUCTION_IMPROVEMENT` | `a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
-| `$GENERAL_THINKING` | `a-society/general/thinking/main.md` | Optional general principles template — cross-role operational rules |
-| `$GENERAL_THINKING_REASONING` | `a-society/general/thinking/reasoning.md` | Optional reasoning framework template — cognitive heuristics for agents |
-| `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Optional keep-in-mind template — operational reminders and hard stops |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
 | `$GENERAL_IMPROVEMENT_FEEDBACK` | `a-society/general/improvement/feedback.md` | Optional/manual feedback phase instructions for non-runtime project-owned feedback flows |

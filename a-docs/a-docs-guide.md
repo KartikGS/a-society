@@ -212,7 +212,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** A Curator agent has no specific behavioral contract or lead authority declaration. They may write directly to `general/` without approval, hardcode paths, seek unnecessary implementation approval for domain-internal decisions, or perform migration work without understanding the framework's boundaries. Role context injection fails.
 
-**Do not consolidate with:** `general/roles/curator/main.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
+**Do not consolidate with:** `roles/owner/main.md` — the Owner coordinates the project, while the Curator owns documentation stewardship within scope. Do not collapse A-Society's internal Curator role into a reusable general template; project documentation-stewardship roles should be created from `$INSTRUCTION_ROLES` and shaped to the adopting project's real needs.
 
 ---
 
@@ -224,7 +224,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Proposal and implementation detail creeps back into the role file, increasing startup context and weakening the workflow-linked support-doc model.
 
-**Do not consolidate with:** `roles/curator/main.md` — role contract vs. execution guidance. Do not consolidate with `general/roles/curator/main.md` — this document is specific to A-Society's own Curator operating on A-Society.
+**Do not consolidate with:** `roles/curator/main.md` — role contract vs. execution guidance.
 
 ---
 
@@ -357,22 +357,6 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Runtime-specific implementation rules drift back into role prose or disappear into old artifacts, and `$A_SOCIETY_RUNTIME_INVOCATION` can fall out of sync with the live executable surface.
 
 **Do not consolidate with:** `roles/orchestration-developer/main.md` — role contract vs. execution guidance. Do not consolidate with `$A_SOCIETY_WORKFLOW` — the workflow defines phase sequencing and gate placement; this file defines how the Orchestration Developer executes within that workflow.
-
----
-
-## `thinking/`
-
-### `thinking/` — folder
-
-**Why it exists:** Every agent working on a project needs a behavioral foundation layer — principles, reasoning heuristics, and hard stops — that apply regardless of role or task. Without a dedicated folder, these rules either bloat `agents.md`, scatter into role files (where they are re-stated inconsistently), or are missing entirely. The thinking folder gives each of the three documents a single, maintainable home.
-
-**What it owns:** Three files: `main.md` (cross-role operational principles), `reasoning.md` (cognitive framework for how agents reason through problems), and `keep-in-mind.md` (hard stops and operational reminders every agent must carry). All three are universal — loaded by every agent regardless of role.
-
-**What breaks without it:** Agents fall back on instinct for reasoning and principles. Drift appears across sessions. Reasoning errors repeat rather than being corrected by reference. The Universal Standards section of `agents.md` either becomes unwieldy or is omitted.
-
-**Do not consolidate with:** `agents.md` — that file is the orientation entry point; thinking/ is the substance of the universal standards it references. Do not consolidate with role files — thinking/ documents apply to every agent; role files apply to one role. Do not consolidate the three sub-documents: each answers a distinct question (principles, reasoning, reminders), and merging them reduces individual clarity and maintainability.
-
----
 
 ## `workflow/`
 
@@ -664,9 +648,9 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ### `general/roles/` — folder
 
-**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates are reusable across project types; the runtime default scaffold instantiates only the Owner, while roles such as Curator are opt-in. Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
+**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates must be genuinely reusable across project types; the runtime default scaffold instantiates only the Owner. Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
 
-**What it owns:** Starting-point role documents for archetypes that can apply across project types — currently Owner and Curator.
+**What it owns:** Starting-point role documents for archetypes that truly apply across project types — currently Owner.
 
 **What breaks without it:** Each project re-invents universal role documents from scratch. The instruction for roles exists, but the gap between instruction and a working role document is larger without a template.
 
@@ -688,4 +672,4 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 **Do not consolidate with `general/roles/` or other universal-layer folders:** Universal-layer content applies to every project type without modification; category-layer content applies only across the named category. Mixing them collapses the Portability Constraint.
 
-**Current categories:** `general/project-types/executable/` — projects with an executable layer (programmatic services, runtime orchestration, code-execution surfaces). Hosts the Technical Architect role template (`$GENERAL_TA_ROLE`, `$GENERAL_TA_ADVISORY_STANDARDS`) and is the home for future executable-layer-only patterns.
+**Current categories:** `general/project-types/executable/` — projects with an executable layer (programmatic services, runtime orchestration, code-execution surfaces). Hosts the Technical Architect role template (`$GENERAL_TA_ROLE`) and is the home for future executable-layer-only patterns.
