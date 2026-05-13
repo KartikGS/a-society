@@ -241,6 +241,7 @@ export interface OperatorRenderSink {
   emit(event: OperatorEvent): void;
   startWait(role: string, provider: string, model: string): void;
   stopWait(role: string): void;
+  sendError(message: string): void;
 }
 
 export type OperatorFeedMessage =

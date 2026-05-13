@@ -26,6 +26,7 @@ function createGate() {
     },
     startWait() {},
     stopWait() {},
+    sendError() {},
   });
   return { gate, events };
 }

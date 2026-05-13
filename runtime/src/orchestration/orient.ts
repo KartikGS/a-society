@@ -41,6 +41,7 @@ type SessionTurnResult = {
   abort?: true;
   consentDenied?: true;
   error?: true;
+  errorMessage?: string;
 };
 
 async function executeSessionTurn(
@@ -171,15 +172,16 @@ async function executeSessionTurn(
       return { consentDenied: true as const };
     }
 
+    const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('session.turn.error', {
       project_namespace: projectNamespace,
       role_name: roleName,
       session_id: sessionId,
       turn_index: turnIndex,
-      error_message: error instanceof Error ? error.message.slice(0, 500) : String(error),
+      error_message: errorMessage.slice(0, 500),
       duration_ms: duration,
     });
-    return { error: true as const };
+    return { error: true as const, errorMessage };
 
   } finally {
     meter.createHistogram('a_society.session.turn.duration').record(Date.now() - startTime, {
@@ -257,6 +259,9 @@ export async function runRoleTurn(
   );
 
   if (turnResult.abort || turnResult.error) {
+    if (turnResult.errorMessage) {
+      operatorRenderer?.sendError(turnResult.errorMessage);
+    }
     return null;
   }
 

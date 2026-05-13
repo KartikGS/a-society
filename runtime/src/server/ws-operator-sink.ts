@@ -3,7 +3,8 @@ import type { OperatorEvent, OperatorRenderSink } from '../common/types.js';
 export type RuntimeServerMessage =
   | { type: 'operator_event'; event: OperatorEvent }
   | { type: 'wait_start'; role: string; provider: string; model: string }
-  | { type: 'wait_stop'; role: string };
+  | { type: 'wait_stop'; role: string }
+  | { type: 'error'; message: string };
 
 export class WebSocketOperatorSink implements OperatorRenderSink {
   constructor(private readonly send: (msg: RuntimeServerMessage) => void) {}
@@ -18,5 +19,9 @@ export class WebSocketOperatorSink implements OperatorRenderSink {
 
   stopWait(role: string): void {
     this.send({ type: 'wait_stop', role });
+  }
+
+  sendError(message: string): void {
+    this.send({ type: 'error', message });
   }
 }

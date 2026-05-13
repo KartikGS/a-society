@@ -75,7 +75,14 @@ function appendCurrentNodeExchange(session: RoleSession, nodeId: string, message
   if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
     session.currentNodeContext = { nodeId, exchanges: [] };
   }
-  session.currentNodeContext.exchanges.push(message);
+  const exchanges = session.currentNodeContext.exchanges;
+  const last = exchanges[exchanges.length - 1];
+  if (message.role === 'user' && typeof message.content === 'string' &&
+      last?.role === 'user' && typeof last.content === 'string') {
+    last.content += '\n\n' + message.content;
+  } else {
+    exchanges.push(message);
+  }
 }
 
 function appendRuntimeMessage(
@@ -84,8 +91,15 @@ function appendRuntimeMessage(
   nodeId: string,
   message: RuntimeMessageParam
 ): void {
-  history.push(message);
-  appendCurrentNodeExchange(session, nodeId, message);
+  const last = history[history.length - 1];
+  if (message.role === 'user' && typeof message.content === 'string' &&
+      last?.role === 'user' && typeof last.content === 'string') {
+    last.content += '\n\n' + message.content;
+    appendCurrentNodeExchange(session, nodeId, message);
+  } else {
+    history.push(message);
+    appendCurrentNodeExchange(session, nodeId, message);
+  }
 }
 
 function upsertCurrentNodeAssistantDelta(session: RoleSession, nodeId: string, text: string): void {
@@ -319,7 +333,7 @@ export class FlowOrchestrator {
           }
         }
 
-        const wf = this.resolveActiveWorkflow(flowRun);
+        const wf = this.loadWorkflowDocument(flowRun);
         const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
         if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
 
@@ -913,6 +927,14 @@ export class FlowOrchestrator {
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
   }
 
+  private loadWorkflowDocument(flowRun: FlowRun): any {
+    const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
+    if (!workflowFilePath) {
+      throw new Error('No workflow found in this record. Please start a new flow.');
+    }
+    return resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace);
+  }
+
   private async claimReadyNodesForParallelRun(): Promise<string[]> {
     let claimedNodeIds: string[] = [];
     await SessionStore.updateFlowRun((flowRun) => {
@@ -921,7 +943,7 @@ export class FlowOrchestrator {
         return;
       }
 
-      const wf = this.resolveActiveWorkflow(flowRun);
+      const wf = this.loadWorkflowDocument(flowRun);
       const occupiedRoles = new Map<string, string>();
       for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
         const node = this.findNodeById(wf, nodeId);

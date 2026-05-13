@@ -201,7 +201,7 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
         const { baseRoleId } = parseRoleIdentity(node.role);
         const rolePath = path.join(rolesDir, baseRoleId);
         if (!fs.existsSync(rolePath) || !fs.statSync(rolePath).isDirectory()) {
-          errors.push(`workflow.nodes[${i}].role "${node.role}" has no matching role folder at ${rolePath}`);
+          errors.push(`workflow.nodes[${i}].role "${node.role}" (base role: "${baseRoleId}") has no matching role folder at ${rolePath}`);
         } else {
           for (const required of REQUIRED_ROLE_FILES) {
             if (!fs.existsSync(path.join(rolePath, required))) {
