@@ -2307,3 +2307,42 @@ textarea {
     background: rgba(251, 146, 60, 0.1);
   }
 }
+
+.error-toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  max-width: 22rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface-strong);
+  border: 1px solid rgba(187, 62, 3, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.error-toast-message {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--warning);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.error-toast-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--ink-soft);
+  padding: 0;
+}
+
+.error-toast-dismiss:hover {
+  color: var(--ink);
+}

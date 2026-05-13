@@ -9,4 +9,5 @@ export class RecordingOperatorSink implements OperatorRenderSink {
 
   startWait(_role: string, _provider: string, _model: string): void {}
   stopWait(_role: string): void {}
+  sendError(_message: string): void {}
 }

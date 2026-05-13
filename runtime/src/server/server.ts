@@ -485,6 +485,9 @@ function buildServer(workspaceRoot: string) {
       case 'wait_stop':
         emitTransientMessage(session, message);
         return;
+      case 'error':
+        emitTransientMessage(session, message);
+        return;
       case 'operator_event':
         if (message.event.kind === 'consent.requested') {
           void markNodeAwaitingConsent(session, message.event.request)

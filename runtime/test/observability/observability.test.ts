@@ -82,6 +82,7 @@ class CaptureRenderer implements OperatorRenderSink {
 
   startWait(_provider: string, _model: string): void {}
   stopWait(): void {}
+  sendError(_message: string): void {}
 }
 
 // --- Test Harness ---
@@ -584,7 +585,8 @@ async function run() {
         }
       },
       startWait() {},
-      stopWait() {}
+      stopWait() {},
+      sendError() {}
     };
 
     try {

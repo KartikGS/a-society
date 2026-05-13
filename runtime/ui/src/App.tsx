@@ -290,6 +290,14 @@ export function App() {
   const [tabs, setTabs] = useState<FlowTab[]>([]);
   const [activeTabKey, setActiveTabKey] = useState<string | null>(initialFlowRef ? flowKey(initialFlowRef) : null);
   const [flowUiByKey, setFlowUiByKey] = useState<Record<string, FlowUiState>>({});
+  const [errorToast, setErrorToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string): void => {
+    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
+    setErrorToast(message);
+    toastTimerRef.current = setTimeout(() => setErrorToast(null), 5000);
+  }, []);
 
   const updateFlowUi = useCallback((key: string, updater: (state: FlowUiState) => FlowUiState): void => {
     setFlowUiByKey((current) => {
@@ -570,16 +578,8 @@ export function App() {
         void fetchProjectFlows(message.flowRef.projectNamespace);
         return;
       case 'error':
-        updateFlowUi(key, (state) => ({
-          ...state,
-          stopRequestedRoles: {},
-          roleFeeds: appendFeedItem(state.roleFeeds, SYSTEM_ROLE_KEY, {
-            id: nextFeedId(),
-            type: 'error',
-            label: 'Runtime Error',
-            text: message.message
-          })
-        }));
+        updateFlowUi(key, (state) => ({ ...state, stopRequestedRoles: {} }));
+        showToast(message.message);
         if (message.flowRef.flowId === '__new__' || message.flowRef.flowId === '__system__') {
           setSelectorError(message.message);
         }
@@ -1189,6 +1189,13 @@ export function App() {
           </div>
         </div>
       ) : null}
+
+      {errorToast && (
+        <div className="error-toast" role="alert">
+          <span className="error-toast-message">{errorToast}</span>
+          <button className="error-toast-dismiss" onClick={() => setErrorToast(null)}>×</button>
+        </div>
+      )}
 
       {settingsOpen && (
         <SettingsModal
