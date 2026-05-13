@@ -93,13 +93,13 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 
 **Two-tier model:** `general/` is partitioned into a universal layer and a category layer (see `### general/project-types/` below). The universal layer is the default; the category layer is opt-in for adopting projects whose project type matches.
 
-- **Universal layer** — the `general/` root and all non-`project-types/` sub-folders (e.g., `general/instructions/`, `general/roles/`, `general/improvement/`, `general/thinking/`). Content here must apply without modification to *any* project type — software, writing, legal, research, or any other domain.
+- **Universal layer** — the `general/` root and all non-`project-types/` sub-folders (e.g., `general/instructions/`, `general/roles/`, `general/improvement/`). Content here must apply without modification to *any* project type — software, writing, legal, research, or any other domain.
 - **Category layer** — `general/project-types/<type>/`. Content here must apply without modification to any project of that category, but is not required to apply universally.
 
 **What belongs at the universal layer:**
 - Instruction documents that describe artifacts every project produces (vision, structure, agents.md, indexes, workflow definitions, records)
 - Role templates that are reusable across project types, whether default-scaffolded or opt-in
-- Standards, patterns, and thinking frameworks projects can use verbatim when they need that layer
+- Standards and patterns projects can use verbatim when they need that layer
 
 **What belongs at the category layer:**
 - Role templates that only make sense for a category of projects (e.g., a Technical Architect template under `general/project-types/executable/roles/technical-architect/`)

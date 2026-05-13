@@ -63,7 +63,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_COMMUNICATION` | `a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols |
-| `$INSTRUCTION_THINKING` | `a-society/general/instructions/thinking/main.md` | How to create an optional thinking/ folder when a project needs a standing reasoning layer |
 | `$INSTRUCTION_IMPROVEMENT` | `a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
 | `$INSTRUCTION_RECORDS` | `a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | **a-docs Templates** | | |
@@ -81,10 +80,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$GENERAL_TA_ADVISORY_STANDARDS` | `a-society/general/project-types/executable/roles/technical-architect/advisory-standards.md` | Ready-made Technical Architect advisory-standards support doc template for projects with an executable layer |
 | **Communication Templates** | | |
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
-| **Thinking Templates** | | |
-| `$GENERAL_THINKING` | `a-society/general/thinking/main.md` | Optional general principles template |
-| `$GENERAL_THINKING_REASONING` | `a-society/general/thinking/reasoning.md` | Optional reasoning framework template |
-| `$GENERAL_THINKING_KEEP_IN_MIND` | `a-society/general/thinking/keep-in-mind.md` | Optional keep-in-mind template |
 | **Improvement Templates** | | |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
