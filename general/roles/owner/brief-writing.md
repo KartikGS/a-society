@@ -36,24 +36,14 @@ When a directive defines or revises a standing rule and applies it via domain le
 
 When a directive removes or renames a structural element that other files consume, identify the affected domains and name the consuming sites in the relevant domain directives.
 
-When a directive introduces a schema, field, or structural vocabulary change, ensure both the documentation domain and any programmatic consumer domain are scoped in the same flow.
-
 ---
 
-## Owner-Domain Constraints
+## Constraints
 
-The Owner retains full constraint-writing authority for surfaces the Owner directly governs (per the distributed role ownership files). When implementing changes to their own surfaces, precision standards apply:
+Constraints in Owner directives must stay high-level and non-negotiable. Use them to protect project direction, explicit human decisions, ownership boundaries, invariants, acceptance criteria, and out-of-scope areas. Do not use constraints to prescribe the receiving role's implementation approach.
 
-- Literal replacements must quote the live raw string exactly
-- Structured-entry changes must state whether the full entry or a sub-element is in scope
-- Schema or vocabulary changes must scope surrounding prose sweeps
+A good constraint says what must remain true. It should leave the domain lead room to design the solution.
 
----
+When pointing to existing content that needs attention, summarize where it is and what needs to change. Exact replacement text is only appropriate when the human supplied exact wording or when the Owner is directly editing an Owner-governed surface.
 
-## Constraint-Writing Quality
-
-Decision artifacts and review constraints should be written with the same precision as directives. The receiving role should be able to follow the constraint mechanically, not infer its meaning.
-
-When a constraint authorizes or requires registration work, scope it by the specific files or variables in question, not by an ambiguous folder boundary.
-
-When a constraint retires an index variable or deletes a registered artifact, sweep the project for references to that variable before finalizing the scope.
+When a constraint authorizes registration or cleanup work, name the relevant files, variables, or surfaces clearly enough that the receiving role can find them, but do not dictate line-level edits.

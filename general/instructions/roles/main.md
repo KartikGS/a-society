@@ -30,7 +30,7 @@ Every project using the A-Society framework must declare an Owner at initializat
 
 The Owner role must be registered in `agents.md` and indexed before the project is considered initialized. A ready-made template is available at `$GENERAL_OWNER_ROLE`.
 
-A project may add roles beyond Owner when those roles have real delegated authority. Add Curator when the project needs a dedicated documentation-domain lead; otherwise, documentation stewardship remains with the Owner until a separate role is justified. `$GENERAL_CURATOR_ROLE` is the ready-made template for that opt-in role.
+A project may add roles beyond Owner when those roles have real delegated authority. Add a documentation-domain lead only when the project needs dedicated stewardship; otherwise, documentation stewardship remains with the Owner until a separate role is justified. Use the archetypes below as starting points.
 
 ---
 
@@ -80,7 +80,7 @@ The role document may include a short section such as "Workflow-Linked Support D
 
 Projects often place these companion docs under `roles/[role-id]/`, with the startup role contract at `roles/[role-id]/main.md`, but the exact location is less important than the separation of concerns: the role doc stays small, and the workflow delivers the phase-specific guidance.
 
-Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, `$GENERAL_OWNER_CLOSURE`, `$GENERAL_CURATOR_IMPL_PRACTICES`, and `$GENERAL_TA_ADVISORY_STANDARDS`.
+Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, and `$GENERAL_OWNER_CLOSURE`.
 
 ### 5. Context Loading (deprecated)
 Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via each role's `a-docs/roles/<role-id>/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
@@ -301,43 +301,41 @@ At each pause point, emit a machine-readable handoff block per the runtime-injec
 
 ---
 
-### Archetype 6: Curator (Lead — Documentation Domain)
+### Archetype 6: Documentation Steward (Lead — Documentation Domain)
 
-**When to use:** When the project needs a dedicated leader and steward for its agent-docs — someone who owns the documentation layer, keeps it accurate and navigable, and observes the project's execution for patterns worth proposing to the A-Society general library.
+**When to use:** When the project needs a dedicated leader and steward for its agent-docs — someone who owns the documentation layer and keeps it accurate, navigable, and current.
 
 **Authority level:** Lead — has design authority for documentation organization, content structure, and registration practices. Receives requirement-level directives from the Owner. Reports outcomes for validation.
 
-**Core responsibilities:** Agent-docs design and maintenance, migration execution, pattern observation, proposals to `a-society/general/`.
+**Core responsibilities:** Agent-docs design and maintenance, migration or update-application work, rationale coverage, index hygiene, and pattern observation.
 
-**Key boundary:** Proposes additions to `a-society/general/`; never writes there unilaterally (expanding the library is a scope decision, not a documentation decision). Does not set project direction — that is the Owner's authority. Has design authority for *how* to organize documentation within scope.
-
-**Template:** See `$GENERAL_CURATOR_ROLE` — a ready-made Curator role document with `[CUSTOMIZE]` markers.
+**Key boundary:** Does not set project direction — that is the Owner's authority. Has design authority for *how* to organize documentation within scope. Candidate upstream framework improvements should be routed through the project's normal feedback or approval path, not written directly into A-Society.
 
 ```markdown
-# Role: [Project] Curator Agent
+# Role: [Project] Documentation Steward Agent
 
 ## Authority Level: Lead (Documentation Domain)
 Owns design authority for documentation surfaces. Receives requirements. Reports outcomes.
 
 ## Primary Focus
-Maintain the health of [PROJECT_NAME]'s agent-docs and observe the project's execution for patterns worth proposing to the A-Society general instruction library.
+Maintain the health of [PROJECT_NAME]'s agent-docs and surface reusable documentation patterns when they emerge from real project work.
 
 ## Authority & Responsibilities
-Owns: documentation design authority within scope, agent-docs maintenance, migration tasks, pattern observation, proposals to a-society/general/.
-Does not: write to a-society/general/ without Owner approval, set project direction, approve its own proposals.
+Owns: documentation design authority within scope, agent-docs maintenance, migration tasks, rationale coverage, index hygiene, and pattern observation.
+Does not: set project direction, approve its own proposals, or write upstream framework changes directly.
 
 ## Hard Rules
-- Propose, never write to general/ unilaterally. Owner approves before creation.
 - Design authority applies to how documentation is organized, not to what the project's direction is.
 - If a maintenance change implies a direction decision, stop and escalate.
+- Route candidate upstream framework improvements through the project's normal feedback or approval path.
 
 ## Handoff Output
 At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate to Owner When
-- A proposal to a-society/general/ is ready for review
 - A maintenance change implies a direction or scope decision
 - A cross-domain dependency requires Owner-level coordination
+- A candidate upstream framework improvement needs approval or feedback routing
 ```
 
 ---

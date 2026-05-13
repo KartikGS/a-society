@@ -36,15 +36,15 @@ Adding a new `general/project-types/<type>/` category is a scope decision and re
 
 ---
 
-### `$GENERAL_TA_ROLE` and `$GENERAL_TA_ADVISORY_STANDARDS` relocated under `general/project-types/executable/`
+### `$GENERAL_TA_ROLE` relocated under `general/project-types/executable/`
 
 **Impact:** Breaking
-**Affected artifacts:** `$GENERAL_TA_ROLE` (path change), `$GENERAL_TA_ADVISORY_STANDARDS` (path change), `$GENERAL_MANIFEST` (source-path entries updated)
-**What changed:** The Technical Architect role template and its advisory-standards support doc moved from `a-society/general/roles/technical-architect/` to `a-society/general/project-types/executable/roles/technical-architect/`. The variable names (`$GENERAL_TA_ROLE`, `$GENERAL_TA_ADVISORY_STANDARDS`) are unchanged; only the resolved paths change. The manifest's `source_path` entries for both files have been updated accordingly. The descriptions in `$A_SOCIETY_INDEX` and `$A_SOCIETY_PUBLIC_INDEX` have been clarified to note the executable-layer scope.
+**Affected artifacts:** `$GENERAL_TA_ROLE` (path change)
+**What changed:** The Technical Architect role template moved from `a-society/general/roles/technical-architect/` to `a-society/general/project-types/executable/roles/technical-architect/`. The standalone reusable TA advisory-standards support doc is no longer part of the general template set. The descriptions in `$A_SOCIETY_INDEX` and `$A_SOCIETY_PUBLIC_INDEX` have been clarified to note the executable-layer scope.
 
 **Why:** The Technical Architect role only makes sense for projects that have an executable layer to design. Keeping it under universal-layer `general/roles/` violated the new category-layer rule. Relocating it under `general/project-types/executable/roles/technical-architect/` makes its scope explicit and establishes the first category-layer partition by migrating an existing template, rather than by introducing speculative empty structure.
 
-**Migration guidance:** Adopting projects that referenced these variables by name (`$GENERAL_TA_ROLE`, `$GENERAL_TA_ADVISORY_STANDARDS`) require no changes — variable resolution is unchanged. Adopting projects that hardcoded the prior path (`a-society/general/roles/technical-architect/...`) anywhere in their own `a-docs/` must update those references to the new path or replace them with variable references resolved through their own index. Adopting projects whose own scaffolding manifest pointed at the prior `source_path` (for example, a `$[PROJECT]_MANIFEST` carrying the same TA entry) must update those `source_path` fields to `general/project-types/executable/roles/technical-architect/main.md` and `general/project-types/executable/roles/technical-architect/advisory-standards.md`. Adopting projects that already instantiated their own Technical Architect role file inside their `a-docs/roles/` are unaffected — instantiated copies do not move.
+**Migration guidance:** Adopting projects that referenced `$GENERAL_TA_ROLE` by name require no changes. Adopting projects that hardcoded the prior path (`a-society/general/roles/technical-architect/...`) anywhere in their own `a-docs/` must update those references to the new role-template path or replace them with variable references resolved through their own index. Adopting projects that already instantiated their own Technical Architect role file or TA advisory standards inside their `a-docs/roles/` are unaffected — instantiated copies do not move.
 
 ---
 

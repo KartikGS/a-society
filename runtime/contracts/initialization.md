@@ -22,6 +22,23 @@ The active initialization brief in the record folder declares which mode is acti
 
 ---
 
+## Using Scaffold Sources
+
+The runtime scaffold has two source types:
+
+- **Copied templates** come from `general/` ready-made files. Treat them as starting material, not finished project truth.
+- **Stubbed files** point to a `source_path` instruction in their placeholder comment. Use that instruction to understand what the file should contain.
+
+When filling copied templates:
+
+- replace every `[CUSTOMIZE]` marker with project-specific content, or remove the section if it does not apply
+- remove template-only wording that explains how to use the template
+- keep framework-level defaults only when they are true for this project
+- do not add optional roles, support docs, or examples from `general/` unless the project actually needs them
+- prefer concrete project facts and workflow-node context over broad ceremonial guidance
+
+---
+
 ## What Initialization Must Produce
 
 By the time this initialization flow closes, the scaffolded `a-docs/` should be usable for normal Owner-led work.
@@ -31,7 +48,7 @@ That means, at minimum:
 - scaffold placeholders are rewritten into project-specific content
 - `a-docs/indexes/main.md` is no longer just the runtime bootstrap seed when more variables are needed
 - `a-docs/roles/owner/required-readings.yaml` is expanded to the startup context the Owner actually needs for future sessions
-- the compulsory project-information, role, workflow, thinking, improvement, and entry-point files are filled with real project content rather than left as templates
+- the compulsory project-information, role, workflow, improvement, and entry-point files are filled with real project content rather than left as templates
 
 The runtime seeded a minimal index and Owner required-readings file only to make initialization possible. Those seeds are starting points, not finished project truth.
 

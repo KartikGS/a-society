@@ -1,9 +1,5 @@
 # Role: Technical Architect Agent (Advisory-Producing Role)
 
-> **Template usage:** This is a ready-made template for any advisory-producing role in a project — a role whose primary output is implementation specifications and design advisories consumed by implementing roles. The most common instantiation is a Technical Architect, but the pattern applies to any role that scopes and specifies work rather than implementing it. Customize the sections marked `[CUSTOMIZE]`. Sections without that marker are designed to work as-is for most projects.
-
----
-
 ## Primary Focus
 
 Scope, evaluate, and specify work for implementing roles — producing advisories complete enough that an implementing role can proceed from the specification alone without requiring design clarification.

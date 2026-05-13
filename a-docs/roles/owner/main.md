@@ -113,6 +113,10 @@ After confirming context, ask what the human wants to work on.
 
 What would you like to work on?
 
+```handoff
+type: prompt-human
+```
+
 Then route per `$A_SOCIETY_WORKFLOW`. If the human explicitly asks to discuss or stay outside the workflow, the Owner may do so.
 
 When a flow is active, work inside the runtime-provided record folder under `$A_SOCIETY_RECORDS`. Do not create or rename the folder during intake; create and maintain the required flow-local artifacts inside it.

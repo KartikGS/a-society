@@ -212,7 +212,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** A Curator agent has no specific behavioral contract or lead authority declaration. They may write directly to `general/` without approval, hardcode paths, seek unnecessary implementation approval for domain-internal decisions, or perform migration work without understanding the framework's boundaries. Role context injection fails.
 
-**Do not consolidate with:** `general/roles/curator/main.md` — same reasoning as above. The general template is the pattern; this is the A-Society-specific instantiation.
+**Do not consolidate with:** `roles/owner/main.md` — the Owner coordinates the project, while the Curator owns documentation stewardship within scope. Do not collapse A-Society's internal Curator role into a reusable general template; project documentation-stewardship roles should be created from `$INSTRUCTION_ROLES` and shaped to the adopting project's real needs.
 
 ---
 
@@ -224,7 +224,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What breaks without it:** Proposal and implementation detail creeps back into the role file, increasing startup context and weakening the workflow-linked support-doc model.
 
-**Do not consolidate with:** `roles/curator/main.md` — role contract vs. execution guidance. Do not consolidate with `general/roles/curator/main.md` — this document is specific to A-Society's own Curator operating on A-Society.
+**Do not consolidate with:** `roles/curator/main.md` — role contract vs. execution guidance.
 
 ---
 
@@ -648,9 +648,9 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ### `general/roles/` — folder
 
-**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates are reusable across project types; the runtime default scaffold instantiates only the Owner, while roles such as Curator are opt-in. Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
+**Why it exists:** Ready-made role documents with `[CUSTOMIZE]` markers, scoped to the universal layer of `general/`. A project adopting the framework takes a universal-layer template, fills in the marked sections, and has a working role — without starting from a blank page. Universal-layer role templates must be genuinely reusable across project types; the runtime default scaffold instantiates only the Owner. Category-shaped role templates live under `general/project-types/<type>/roles/`, not here.
 
-**What it owns:** Starting-point role documents for archetypes that can apply across project types — currently Owner and Curator.
+**What it owns:** Starting-point role documents for archetypes that truly apply across project types — currently Owner.
 
 **What breaks without it:** Each project re-invents universal role documents from scratch. The instruction for roles exists, but the gap between instruction and a working role document is larger without a template.
 
@@ -672,4 +672,4 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 **Do not consolidate with `general/roles/` or other universal-layer folders:** Universal-layer content applies to every project type without modification; category-layer content applies only across the named category. Mixing them collapses the Portability Constraint.
 
-**Current categories:** `general/project-types/executable/` — projects with an executable layer (programmatic services, runtime orchestration, code-execution surfaces). Hosts the Technical Architect role template (`$GENERAL_TA_ROLE`, `$GENERAL_TA_ADVISORY_STANDARDS`) and is the home for future executable-layer-only patterns.
+**Current categories:** `general/project-types/executable/` — projects with an executable layer (programmatic services, runtime orchestration, code-execution surfaces). Hosts the Technical Architect role template (`$GENERAL_TA_ROLE`) and is the home for future executable-layer-only patterns.
