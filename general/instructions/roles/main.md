@@ -80,7 +80,7 @@ The role document may include a short section such as "Workflow-Linked Support D
 
 Projects often place these companion docs under `roles/[role-id]/`, with the startup role contract at `roles/[role-id]/main.md`, but the exact location is less important than the separation of concerns: the role doc stays small, and the workflow delivers the phase-specific guidance.
 
-Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, `$GENERAL_OWNER_TA_REVIEW`, `$GENERAL_OWNER_CLOSURE`, `$GENERAL_CURATOR_IMPL_PRACTICES`, and `$GENERAL_TA_ADVISORY_STANDARDS`.
+Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, `$GENERAL_OWNER_CLOSURE`, `$GENERAL_CURATOR_IMPL_PRACTICES`, and `$GENERAL_TA_ADVISORY_STANDARDS`.
 
 ### 5. Context Loading (deprecated)
 Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via each role's `a-docs/roles/<role-id>/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
