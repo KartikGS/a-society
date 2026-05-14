@@ -296,6 +296,18 @@ function buildServer(workspaceRoot: string) {
     if (!roleKey) return;
     const history = session.roleFeedHistory.get(roleKey) ?? [];
 
+    if (message.type === 'operator_event' && message.event.kind === 'activity.tool_result') {
+      const { toolName, isError } = message.event;
+      const idx = [...history].reverse().findIndex(item => item.type === 'tool' && item.text.startsWith(toolName));
+      if (idx !== -1) {
+        const realIdx = history.length - 1 - idx;
+        history[realIdx] = { ...history[realIdx], type: isError ? 'tool-error' : 'tool-success' };
+        session.roleFeedHistory.set(roleKey, history);
+        SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      }
+      return;
+    }
+
     const previous = history[history.length - 1];
     if (previous?.type === 'assistant' && message.type === 'output_text') {
       history[history.length - 1] = { ...previous, text: previous.text + message.text };

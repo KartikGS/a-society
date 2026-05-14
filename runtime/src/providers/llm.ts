@@ -205,6 +205,7 @@ export class LLMGateway {
                 : this.fileExecutor!.execute(call, options?.signal));
               content = res.content;
               isError = res.isError;
+              options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: res.isError });
             }
             throwIfAborted(options?.signal);
             await appendConversationMessages([{ role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError }]);

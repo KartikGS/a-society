@@ -123,6 +123,7 @@ export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
+  | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }

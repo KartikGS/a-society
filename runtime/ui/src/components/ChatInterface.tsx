@@ -290,7 +290,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
         ) : (
           props.messages.map((message) => (
             <article key={message.id} className={`feed-item feed-item-${message.type}`}>
-              {message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'tool' ? (
+              {message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'tool' || message.type === 'tool-success' || message.type === 'tool-error' ? (
                 <div className={`feed-compact-line feed-compact-${message.type}`}>
                   <span className="feed-compact-label">{message.label}</span>
                   <span className="feed-compact-text">{message.text}</span>
