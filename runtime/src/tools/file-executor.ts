@@ -213,11 +213,11 @@ export class FileToolExecutor {
       const original = fs.readFileSync(resolvedPath, 'utf8');
       const firstIdx = original.indexOf(oldString);
       if (firstIdx === -1) {
-        return { content: `Error: old_string not found in file.`, isError: true };
+        return { content: `Error: old_string not found in file. Read the relevant section again to get the current content before retrying.`, isError: true };
       }
       const secondIdx = original.indexOf(oldString, firstIdx + 1);
       if (secondIdx !== -1) {
-        return { content: `Error: old_string appears more than once in the file — provide more context to make it unique.`, isError: true };
+        return { content: `Error: old_string appears more than once in the file — read the relevant section again and include more surrounding context to make it unique.`, isError: true };
       }
       const updated = original.slice(0, firstIdx) + newString + original.slice(firstIdx + oldString.length);
       fs.writeFileSync(resolvedPath, updated, 'utf8');

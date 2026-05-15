@@ -111,9 +111,6 @@ export type ConsentRequest =
 
 export interface ConsentState {
   mode: ConsentMode;
-  fileWrites: {
-    allowAllEditsThisFlow: boolean;
-  };
   bash: {
     allowedCommands: Record<string, { command: string; grantedAt: string }>;
   };

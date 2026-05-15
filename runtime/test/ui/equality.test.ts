@@ -35,7 +35,6 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     stateVersion: '7',
     consentState: {
       mode,
-      fileWrites: { allowAllEditsThisFlow: false },
       bash: { allowedCommands: {} },
     },
   };

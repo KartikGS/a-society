@@ -43,7 +43,7 @@ function request(overrides: Partial<ConsentCheckRequest>): ConsentCheckRequest {
 
 console.log('\nconsent-gate');
 
-await test('file write Allow is one-shot and does not persist an edit grant', async () => {
+await test('file write allow_once is one-shot and next write still prompts', async () => {
   const { gate, events } = createGate();
 
   const first = gate.check(request({ toolName: 'write_file', input: { path: 'a.txt' } }));
@@ -54,7 +54,7 @@ await test('file write Allow is one-shot and does not persist an edit grant', as
 
   gate.respond('allow_once', 'Tester');
   assert.strictEqual(await first, 'proceed');
-  assert.strictEqual(gate.getState().fileWrites.allowAllEditsThisFlow, false);
+  assert.strictEqual(gate.getState().mode, 'no-access');
 
   void gate.check(request({ toolName: 'write_file', input: { path: 'b.txt' } }));
   assert.deepStrictEqual(events[2], {
@@ -64,18 +64,25 @@ await test('file write Allow is one-shot and does not persist an edit grant', as
   gate.respond('deny', 'Tester');
 });
 
-await test('Allow all edits this flow persists partial edit access', async () => {
+await test('partial-access mode allows all file writes without prompting', async () => {
   const { gate, events } = createGate();
+
+  gate.setMode('partial-access');
+  const eventCount = events.length;
+  assert.strictEqual(await gate.check(request({ toolName: 'edit_file', input: { path: 'a.txt' } })), 'proceed');
+  assert.strictEqual(await gate.check(request({ toolName: 'write_file', input: { path: 'b.txt' } })), 'proceed');
+  assert.strictEqual(events.length, eventCount);
+});
+
+await test('allow_flow on file write switches mode to partial-access', async () => {
+  const { gate } = createGate();
 
   const first = gate.check(request({ toolName: 'edit_file', input: { path: 'a.txt' } }));
   gate.respond('allow_flow', 'Tester');
   assert.strictEqual(await first, 'proceed');
   assert.strictEqual(gate.getState().mode, 'partial-access');
-  assert.strictEqual(gate.getState().fileWrites.allowAllEditsThisFlow, true);
 
-  const eventCount = events.length;
   assert.strictEqual(await gate.check(request({ toolName: 'write_file', input: { path: 'b.txt' } })), 'proceed');
-  assert.strictEqual(events.length, eventCount);
 });
 
 await test('consent requests preserve node and role metadata', async () => {
@@ -247,7 +254,6 @@ await test('old ask-shaped consent state hydrates to no-access', () => {
     normalizeConsentState({ mode: 'ask', fileWrites: 'granted', shellNetwork: 'granted' }),
     {
       mode: 'no-access',
-      fileWrites: { allowAllEditsThisFlow: false },
       bash: { allowedCommands: {} },
     }
   );

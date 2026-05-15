@@ -22,9 +22,6 @@ export interface ConsentCheckRequest {
 
 export interface ConsentState {
   mode: ConsentMode;
-  fileWrites: {
-    allowAllEditsThisFlow: boolean;
-  };
   bash: {
     allowedCommands: Record<string, { command: string; grantedAt: string }>;
   };
@@ -41,9 +38,6 @@ export interface FeedbackContext {
 export function defaultConsentState(): ConsentState {
   return {
     mode: 'no-access',
-    fileWrites: {
-      allowAllEditsThisFlow: false,
-    },
     bash: {
       allowedCommands: {},
     },
@@ -62,14 +56,6 @@ export function normalizeConsentState(raw: unknown): ConsentState {
         ? 'no-access'
         : fallback.mode;
 
-  const fileWrites = source.fileWrites && typeof source.fileWrites === 'object'
-    ? {
-        allowAllEditsThisFlow: Boolean(source.fileWrites.allowAllEditsThisFlow),
-      }
-    : {
-        allowAllEditsThisFlow: false,
-      };
-
   const allowedCommandsSource = source.bash?.allowedCommands;
   const allowedCommands: Record<string, { command: string; grantedAt: string }> = {};
   if (allowedCommandsSource && typeof allowedCommandsSource === 'object') {
@@ -84,7 +70,6 @@ export function normalizeConsentState(raw: unknown): ConsentState {
 
   return {
     mode,
-    fileWrites,
     bash: { allowedCommands },
   };
 }

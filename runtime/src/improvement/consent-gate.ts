@@ -179,19 +179,15 @@ export class ConsentGateImpl {
     if (this.state.mode === 'full-access') return true;
     if (this.state.mode === 'no-access') return false;
 
-    if (request.kind === 'file-write') {
-      return this.state.fileWrites.allowAllEditsThisFlow;
-    }
+    // partial-access: file writes always allowed; bash only if previously approved
+    if (request.kind === 'file-write') return true;
 
     const key = commandKey(request);
     return Boolean(key && this.state.bash.allowedCommands[key]);
   }
 
   private grantForFlow(request: ConsentRequest): void {
-    if (request.kind === 'file-write') {
-      this.state.fileWrites.allowAllEditsThisFlow = true;
-      return;
-    }
+    if (request.kind === 'file-write') return;
 
     const key = commandKey(request);
     if (!key) return;
