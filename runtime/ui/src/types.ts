@@ -55,6 +55,7 @@ export interface FlowRun {
   visitedNodeIds?: string[];
   completedEdgeArtifacts: Record<string, string>;
   pendingNodeArtifacts: Record<string, string[]>;
+  pendingHandoff: string[];
   status: 'running' | 'awaiting_improvement_choice' | 'awaiting_feedback_consent' | 'completed';
   stateVersion: string;
   improvementPhase?: ImprovementPhaseState;

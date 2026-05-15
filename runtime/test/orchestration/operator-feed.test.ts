@@ -41,7 +41,7 @@ const flowRun: FlowRun = {
   completedNodes: [],
   visitedNodeIds: [],
   completedEdgeArtifacts: {},
-  pendingNodeArtifacts: {},
+  pendingNodeArtifacts: {}, pendingHandoff: [],
   status: 'running',
   stateVersion: '7',
 };

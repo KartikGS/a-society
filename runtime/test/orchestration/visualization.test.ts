@@ -47,7 +47,7 @@ test('renderFlowStatus: single active node, no completed', () => {
     awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'start': ['p.md'] },
+    pendingNodeArtifacts: { 'start': ['p.md'] }, pendingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };
@@ -76,7 +76,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
         'fork=>t2': 'p2.md',
         't2=>join': 'p2.md'
       },
-      pendingNodeArtifacts: { 't1': ['p3.md'] },
+      pendingNodeArtifacts: { 't1': ['p3.md'] }, pendingHandoff: [],
       status: 'running',
       stateVersion: '7'
     };
@@ -102,7 +102,7 @@ test('renderFlowStatus: awaitingHumanNodes render explicit operator-input notice
     awaitingHumanNodes: { start: { role: 'Owner', reason: 'prompt-human' } },
     completedNodes: [],
     completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'start': [] },
+    pendingNodeArtifacts: { 'start': [] }, pendingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };
@@ -126,7 +126,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
       'fork=>t1': 'p2.md',
       'fork=>t2': 'p3.md'
     },
-    pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] },
+    pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] }, pendingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };
@@ -153,7 +153,7 @@ test('renderFlowStatus: completed flow', () => {
           't1=>join': 'p4.md',
           't2=>join': 'p2.md'
         },
-        pendingNodeArtifacts: {},
+        pendingNodeArtifacts: {}, pendingHandoff: [],
         status: 'completed',
         stateVersion: '7'
       };

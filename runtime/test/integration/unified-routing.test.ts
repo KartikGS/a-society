@@ -95,7 +95,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'start': [] },
+    pendingNodeArtifacts: { 'start': [] }, pendingHandoff: [],
     status: 'running',
     stateVersion: '7'
   });

@@ -69,6 +69,7 @@ async function runTest() {
     pendingNodeArtifacts: {
       review: [proposalToReviewRel],
     },
+    pendingHandoff: [],
     status: 'running',
     stateVersion: '7',
   });

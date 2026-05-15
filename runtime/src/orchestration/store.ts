@@ -66,6 +66,8 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
     );
   }
 
+  if (!flow.pendingHandoff) flow.pendingHandoff = [];
+
   if (!flow.workspaceRoot || !flow.recordFolderPath) {
     throw new Error('Persisted flow state is missing required workspaceRoot or recordFolderPath fields.');
   }

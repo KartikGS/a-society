@@ -171,6 +171,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
+    pendingHandoff: [],
     status: 'running',
     stateVersion: '7',
     ...overrides
@@ -192,6 +193,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
       'owner-one': [path.relative(workspaceRoot, ownerInstanceArtifact)],
       'owner-two': [path.relative(workspaceRoot, ownerInstanceArtifact)]
     },
+    pendingHandoff: [],
     status: 'running',
     stateVersion: '7',
     ...overrides
@@ -432,7 +434,8 @@ async function run() {
       },
       pendingNodeArtifacts: {
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
-      }
+      },
+      pendingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -486,7 +489,8 @@ async function run() {
           path.relative(workspaceRoot, ownerArtifact1),
           path.relative(workspaceRoot, reviewFeedbackArtifact)
         ]
-      }
+      },
+      pendingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -540,7 +544,8 @@ async function run() {
           path.relative(workspaceRoot, ownerArtifact1),
           path.relative(workspaceRoot, reviewFeedbackArtifact)
         ]
-      }
+      },
+      pendingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -629,7 +634,8 @@ async function run() {
       pendingNodeArtifacts: {
         'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
-      }
+      },
+      pendingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -665,7 +671,8 @@ async function run() {
       },
       pendingNodeArtifacts: {
         'ta': [path.relative(workspaceRoot, ownerArtifact1)]
-      }
+      },
+      pendingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 

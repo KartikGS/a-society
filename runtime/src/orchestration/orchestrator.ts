@@ -758,26 +758,15 @@ export class FlowOrchestrator {
       }
 
       if (forwardTargets.length > 0) {
-        if (forwardTargets.length !== outstandingOutgoingEdges.length) {
-          this.throwHandoffTransitionRepair(
-            `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s). ` +
-            `Emit one forward handoff target for each unresolved successor: ${outstandingOutgoingEdges.map((edge: any) => edge.to).join(', ')}.`
-          );
-        }
-
         const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
         const claimedTargets = new Set<string>();
 
-        for (const edge of outstandingOutgoingEdges) {
-          const targetNode = this.findNodeById(wf, edge.to);
-          const handoff = forwardTargets.find(h => h.target_node_id === targetNode.id);
-          if (!handoff) {
-            this.throwHandoffTransitionRepair(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
-          }
+        for (const handoff of forwardTargets) {
           if (claimedTargets.has(handoff.target_node_id)) {
             this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
           }
           claimedTargets.add(handoff.target_node_id);
+          const targetNode = this.findNodeById(wf, handoff.target_node_id);
           activationPairs.push({
             targetId: targetNode.id,
             artifact: handoff.artifact_path ?? '',
@@ -786,6 +775,14 @@ export class FlowOrchestrator {
         }
 
         this.removeOpenNode(latest, nodeId);
+
+        const coveredTargetIds = new Set(activationPairs.map(p => p.targetId));
+        for (const edge of outstandingOutgoingEdges) {
+          if (!coveredTargetIds.has(edge.to)) {
+            const key = this.edgeKey(nodeId, edge.to);
+            if (!latest.pendingHandoff.includes(key)) latest.pendingHandoff.push(key);
+          }
+        }
 
         for (const pair of activationPairs) {
           latest.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
@@ -845,6 +842,8 @@ export class FlowOrchestrator {
         const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
 
         for (const plan of reactivationPlans) {
+          const backwardKey = this.edgeKey(plan.targetId, nodeId);
+          if (!latest.pendingHandoff.includes(backwardKey)) latest.pendingHandoff.push(backwardKey);
           delete latest.completedEdgeArtifacts[plan.rejectedEdgeKey];
           this.removeCompletedNode(latest, plan.targetId);
           this.activateOrDefer(latest, wf, plan.targetId, plan.activationArtifacts);

@@ -126,6 +126,7 @@ export interface FlowRun {
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
   completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
+  pendingHandoff: string[];                        // `${from}=>${to}` edges not yet traversed (unhandled forward targets + rejected backward edges)
   status: FlowStatus;
   stateVersion: string;                        // Persistence version: "7" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
