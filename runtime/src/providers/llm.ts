@@ -158,6 +158,7 @@ export class LLMGateway {
               if (this.bashExecutor?.canHandle(call.name)) {
                 const denylistResult = this.bashExecutor.validate(call);
                 if (denylistResult) {
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, command: call.input?.command as string | undefined });
                   await appendConversationMessages([{
                     role: 'tool_result' as const,
                     callId: call.id,
@@ -165,6 +166,22 @@ export class LLMGateway {
                     content: denylistResult.content,
                     isError: true,
                   }]);
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: true });
+                  continue;
+                }
+              }
+              if (this.fileExecutor) {
+                const pathResult = this.fileExecutor.validate(call);
+                if (pathResult) {
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: call.input?.path as string | undefined });
+                  await appendConversationMessages([{
+                    role: 'tool_result' as const,
+                    callId: call.id,
+                    toolName: call.name,
+                    content: pathResult.content,
+                    isError: true,
+                  }]);
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: true });
                   continue;
                 }
               }
@@ -182,6 +199,9 @@ export class LLMGateway {
                   nodeId: options.nodeId,
                 }, options.signal);
                 if (decision === 'deny') {
+                  const pathArg = call.input?.path as string | undefined;
+                  const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
                   await appendConversationMessages([{
                     role: 'tool_result' as const,
                     callId: call.id,
@@ -189,6 +209,7 @@ export class LLMGateway {
                     content: 'Tool call denied: the user did not grant permission for this operation. The node is paused for operator guidance.',
                     isError: true,
                   }]);
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: true });
                   throw new LLMGatewayError(
                     'CONSENT_DENIED',
                     'Tool call denied by operator; awaiting human guidance.'

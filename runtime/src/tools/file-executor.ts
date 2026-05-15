@@ -95,6 +95,8 @@ export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
   }
 ];
 
+const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
+
 export class FileToolExecutor {
   private readonly workspaceRoot: string;
   private readonly writeRoots: string[] | null;
@@ -104,64 +106,48 @@ export class FileToolExecutor {
     this.writeRoots = writeRoots ? writeRoots.map(r => path.resolve(r)) : null;
   }
 
+  validate(call: ToolCall): { content: string; isError: boolean } | null {
+    const reqPath = call.input?.path as string | undefined;
+    if (!reqPath || typeof reqPath !== 'string') return null;
+
+    const resolved = path.resolve(this.workspaceRoot, reqPath);
+    const inWorkspace = resolved === this.workspaceRoot || resolved.startsWith(this.workspaceRoot + path.sep);
+    if (!inWorkspace) {
+      return { content: `Error: path '${reqPath}' is outside the workspace root and cannot be accessed.`, isError: true };
+    }
+
+    if (WRITE_TOOLS.has(call.name) && this.writeRoots) {
+      const allowed = this.writeRoots.some(root => resolved === root || resolved.startsWith(root + path.sep));
+      if (!allowed) {
+        return { content: `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory and its associated a-docs.`, isError: true };
+      }
+    }
+
+    return null;
+  }
+
   async execute(call: ToolCall, _signal?: AbortSignal): Promise<{ content: string; isError: boolean }> {
+    const pathError = this.validate(call);
+    if (pathError) return pathError;
+
+    const reqPath = call.input?.path as string | undefined;
+    const resolved = reqPath ? path.resolve(this.workspaceRoot, reqPath) : undefined;
+
     try {
       if (call.name === 'read_file') {
-        const reqPath = call.input.path as string;
-        return await this.readFile(this.sandboxPath(reqPath));
+        return await this.readFile(resolved!);
       } else if (call.name === 'read_file_lines') {
-        const reqPath = call.input.path as string;
-        const startLine = call.input.start_line as number;
-        const endLine = call.input.end_line as number;
-        return await this.readFileLines(this.sandboxPath(reqPath), startLine, endLine);
+        return await this.readFileLines(resolved!, call.input.start_line as number, call.input.end_line as number);
       } else if (call.name === 'edit_file') {
-        const reqPath = call.input.path as string;
-        const oldString = call.input.old_string as string;
-        const newString = call.input.new_string as string;
-        const resolved = this.sandboxPath(reqPath);
-        this.assertWriteAllowed(resolved);
-        return await this.editFile(resolved, oldString, newString);
+        return await this.editFile(resolved!, call.input.old_string as string, call.input.new_string as string);
       } else if (call.name === 'write_file') {
-        const reqPath = call.input.path as string;
-        const content = call.input.content as string;
-        const resolved = this.sandboxPath(reqPath);
-        this.assertWriteAllowed(resolved);
-        return await this.writeFile(resolved, content);
+        return await this.writeFile(resolved!, call.input.content as string);
       } else if (call.name === 'list_directory') {
-        const reqPath = call.input.path as string;
-        return await this.listDirectory(this.sandboxPath(reqPath));
+        return await this.listDirectory(resolved!);
       }
       return { content: `Error: unknown tool '${call.name}'`, isError: true };
     } catch (err: any) {
-      if (err.name === 'SandboxViolationError') {
-        return { content: `Error: path '${call.input.path}' is outside the workspace root and cannot be accessed.`, isError: true };
-      }
-      if (err.name === 'WriteRestrictedError') {
-        return { content: `Error: path '${call.input.path}' is outside the permitted write area — writes are restricted to the project directory and its associated a-docs.`, isError: true };
-      }
       return { content: `Error: could not execute tool: ${err.message}`, isError: true };
-    }
-  }
-
-  private sandboxPath(requestedPath: string): string {
-    const resolved = path.resolve(this.workspaceRoot, requestedPath || '');
-    if (resolved === this.workspaceRoot || resolved.startsWith(this.workspaceRoot + path.sep)) {
-      return resolved;
-    }
-    const err = new Error('Sandbox violation');
-    err.name = 'SandboxViolationError';
-    throw err;
-  }
-
-  private assertWriteAllowed(resolvedPath: string): void {
-    if (!this.writeRoots) return;
-    const allowed = this.writeRoots.some(
-      root => resolvedPath === root || resolvedPath.startsWith(root + path.sep)
-    );
-    if (!allowed) {
-      const err = new Error('Write restricted');
-      err.name = 'WriteRestrictedError';
-      throw err;
     }
   }
 
