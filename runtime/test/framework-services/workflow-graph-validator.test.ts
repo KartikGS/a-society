@@ -263,7 +263,7 @@ test('strict mode: non-Owner start node produces error', () => {
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role exactly "Owner"')));
 });
 
 test('strict mode: multiple start nodes produce error', () => {
@@ -294,7 +294,7 @@ test('strict mode: non-Owner end node produces error', () => {
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('end node "n2" must have role "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('end node "n2" must have role exactly "Owner"')));
 });
 
 test('strict mode: sole node must be Owner', () => {
@@ -306,7 +306,7 @@ test('strict mode: sole node must be Owner', () => {
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('sole node role must be "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('sole node role must be exactly "Owner"')));
 });
 
 test('strict mode: valid graph passes', () => {
@@ -328,7 +328,7 @@ test('strict mode: valid graph passes', () => {
   assert.deepStrictEqual(errors, []);
 });
 
-test('strict mode: numbered Owner role instances satisfy Owner start/end rules', () => {
+test('strict mode: numbered Owner instances at start/end produce errors', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -344,7 +344,8 @@ test('strict mode: numbered Owner role instances satisfy Owner start/end rules',
     },
   };
   const errors = validateGraph(graph, true);
-  assert.deepStrictEqual(errors, []);
+  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role exactly "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('end node "n3" must have role exactly "Owner"')));
 });
 
 test('live A-Society workflows pass validation (strict)', () => {

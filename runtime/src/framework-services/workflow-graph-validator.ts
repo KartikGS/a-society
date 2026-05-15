@@ -277,8 +277,8 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
 
     if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
       // Sole node case
-      if (parseRoleIdentity(workflow.nodes[0].role).baseRoleId !== 'owner') {
-        errors.push(`Strict mode violation: sole node role must be "Owner" (found "${workflow.nodes[0].role}")`);
+      if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== 'owner') {
+        errors.push(`Strict mode violation: sole node role must be exactly "Owner" (found "${workflow.nodes[0].role}")`);
       }
     } else {
       // General case: workflow must have exactly one start node, and it must be Owner.
@@ -292,17 +292,17 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
       }
 
       for (const node of startNodes) {
-        if (parseRoleIdentity(node.role).baseRoleId !== 'owner') {
+        if (parseRoleIdentity(node.role).instanceRoleId !== 'owner') {
           errors.push(
-            `Strict mode violation: start node "${node.id}" must have role "Owner" (found "${node.role}")`
+            `Strict mode violation: start node "${node.id}" must have role exactly "Owner", not an instance like "${node.role}"`
           );
         }
       }
 
       for (const node of endNodes) {
-        if (parseRoleIdentity(node.role).baseRoleId !== 'owner') {
+        if (parseRoleIdentity(node.role).instanceRoleId !== 'owner') {
           errors.push(
-            `Strict mode violation: end node "${node.id}" must have role "Owner" (found "${node.role}")`
+            `Strict mode violation: end node "${node.id}" must have role exactly "Owner", not an instance like "${node.role}"`
           );
         }
       }
