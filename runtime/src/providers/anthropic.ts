@@ -143,7 +143,6 @@ export class AnthropicProvider implements LLMProvider {
         });
 
         const finalMsg = await stream.finalMessage();
-        renderer?.responseEnd(options?.role ?? '');
 
         const inputTokens = finalMsg.usage?.input_tokens;
         const outputTokens = finalMsg.usage?.output_tokens;
@@ -176,7 +175,6 @@ export class AnthropicProvider implements LLMProvider {
         return { type: 'text' as const, text: fullText, contextUsage };
 
       } catch (error: any) {
-        renderer?.responseEnd(options?.role ?? '');
         if (error.name === 'AbortError' || error.type === 'aborted' || options?.signal?.aborted) {
           span.addEvent('provider.aborted');
           span.setStatus({ code: SpanStatusCode.OK });

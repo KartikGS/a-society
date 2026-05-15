@@ -170,6 +170,7 @@ async function executeSessionTurn(
     return { error: true as const, errorMessage };
 
   } finally {
+    operatorRenderer?.responseEnd(roleName);
     meter.createHistogram('a_society.session.turn.duration').record(Date.now() - startTime, {
       project_namespace: projectNamespace,
       role_name: roleName

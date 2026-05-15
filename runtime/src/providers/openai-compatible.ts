@@ -170,7 +170,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
           }
         }
 
-        renderer?.responseEnd(options?.role ?? '');
 
 
         if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
@@ -197,7 +196,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
         span.setAttribute('provider.result_type', 'text');
         return { type: 'text' as const, text: fullText, contextUsage };
       } catch (err: any) {
-        renderer?.responseEnd(options?.role ?? '');
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
           span.addEvent('provider.aborted');
           span.setStatus({ code: SpanStatusCode.OK });

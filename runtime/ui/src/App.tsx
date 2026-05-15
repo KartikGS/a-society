@@ -563,6 +563,7 @@ export function App() {
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
           ...state,
+          waitLabels: state.waitLabels[roleKey] ? state.waitLabels : { ...state.waitLabels, [roleKey]: 'Model is responding...' },
           roleFeeds: appendFeedItem(state.roleFeeds, roleKey, {
             id: nextFeedId(),
             type: 'assistant',
@@ -1010,7 +1011,8 @@ export function App() {
     hasActiveSession &&
     !viewedRoleAwaitingNodeId &&
     socket.status === 'open';
-  const canStopViewedRole = canStop && isViewedRoleActive;
+  const viewedRoleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
+  const canStopViewedRole = canStop && (!!viewedRoleWaitLabel || isViewedRoleActive);
   const stopRequestedForViewedRole = viewedRole ? Boolean(activeUi?.stopRequestedRoles[viewedRole]) : false;
 
   return (
