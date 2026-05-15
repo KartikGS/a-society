@@ -71,7 +71,7 @@ async function runTest() {
       'fork-gate=>branch-a': 'art-a.md',
       'fork-gate=>branch-b': 'art-b.md'
     },
-    pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] }, pendingHandoff: [],
+    pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] }, pendingHandoff: [], receivingHandoff: {},
     status: 'running',
     stateVersion: '7'
   });

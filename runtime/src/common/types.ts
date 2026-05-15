@@ -127,6 +127,7 @@ export interface FlowRun {
   completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   pendingHandoff: string[];                        // `${from}=>${to}` edges not yet traversed (unhandled forward targets + rejected backward edges)
+  receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
   status: FlowStatus;
   stateVersion: string;                        // Persistence version: "7" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress

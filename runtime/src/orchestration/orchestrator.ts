@@ -785,7 +785,12 @@ export class FlowOrchestrator {
         }
 
         for (const pair of activationPairs) {
-          latest.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
+          const forwardKey = this.edgeKey(nodeId, pair.targetId);
+          latest.completedEdgeArtifacts[forwardKey] = pair.artifact;
+          if (!latest.receivingHandoff[forwardKey]) latest.receivingHandoff[forwardKey] = [];
+          if (pair.artifact && !latest.receivingHandoff[forwardKey].includes(pair.artifact)) {
+            latest.receivingHandoff[forwardKey].push(pair.artifact);
+          }
           this.activateOrDefer(latest, wf, pair.targetId);
         }
 
@@ -823,6 +828,12 @@ export class FlowOrchestrator {
             this.throwHandoffTransitionRepair(
               `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
             );
+          }
+
+          const backwardHandoffKey = this.edgeKey(nodeId, targetNode.id);
+          if (!latest.receivingHandoff[backwardHandoffKey]) latest.receivingHandoff[backwardHandoffKey] = [];
+          if (handoff.artifact_path && !latest.receivingHandoff[backwardHandoffKey].includes(handoff.artifact_path)) {
+            latest.receivingHandoff[backwardHandoffKey].push(handoff.artifact_path);
           }
 
           reactivationPlans.push({

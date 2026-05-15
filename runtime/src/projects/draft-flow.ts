@@ -101,6 +101,7 @@ export function initializeDraftFlow(
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: {},
     pendingHandoff: [],
+    receivingHandoff: {},
     status: 'running',
     stateVersion: '7',
     feedbackContext: {

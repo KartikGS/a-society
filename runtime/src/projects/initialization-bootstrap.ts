@@ -369,6 +369,7 @@ export function bootstrapInitializationFlow(
         'owner-intake': activeArtifacts
       },
       pendingHandoff: [],
+      receivingHandoff: {},
       status: 'running',
       stateVersion: '7',
       feedbackContext: {
