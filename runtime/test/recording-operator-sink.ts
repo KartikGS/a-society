@@ -7,7 +7,8 @@ export class RecordingOperatorSink implements OperatorRenderSink {
     this.events.push(event);
   }
 
-  startWait(_role: string, _provider: string, _model: string): void {}
-  stopWait(_role: string): void {}
+  requestSent(_role: string, _provider: string, _model: string): void {}
+  receivingResponse(_role: string): void {}
+  responseEnd(_role: string): void {}
   sendError(_message: string): void {}
 }

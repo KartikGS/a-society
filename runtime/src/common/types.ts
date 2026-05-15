@@ -219,8 +219,9 @@ export type OperatorEvent =
 
 export interface OperatorRenderSink {
   emit(event: OperatorEvent): void;
-  startWait(role: string, provider: string, model: string): void;
-  stopWait(role: string): void;
+  requestSent(role: string, provider: string, model: string): void;
+  receivingResponse(role: string): void;
+  responseEnd(role: string): void;
   sendError(message: string): void;
 }
 

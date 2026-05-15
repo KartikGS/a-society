@@ -490,10 +490,13 @@ function buildServer(workspaceRoot: string) {
 
   function handleRuntimeMessage(session: ActiveSession, message: RuntimeServerMessage): void {
     switch (message.type) {
-      case 'wait_start':
+      case 'request_sent':
         emitTransientMessage(session, message);
         return;
-      case 'wait_stop':
+      case 'receiving_response':
+        emitTransientMessage(session, message);
+        return;
+      case 'response_end':
         emitTransientMessage(session, message);
         return;
       case 'error':

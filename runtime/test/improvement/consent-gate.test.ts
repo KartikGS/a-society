@@ -24,8 +24,9 @@ function createGate() {
     emit(event) {
       events.push(event);
     },
-    startWait() {},
-    stopWait() {},
+    requestSent() {},
+    receivingResponse() {},
+    responseEnd() {},
     sendError() {},
   });
   return { gate, events };
@@ -142,25 +143,6 @@ await test('one consent request can be in-flight per role', async () => {
   assert.strictEqual(await curator, 'deny');
 });
 
-await test('same-role consent requests are queued behind the visible request', async () => {
-  const { gate, events } = createGate();
-
-  const first = gate.check(request({ toolName: 'edit_file', input: { path: 'a.txt' }, nodeId: 'curator-node', role: 'Curator' }));
-  const second = gate.check(request({ toolName: 'edit_file', input: { path: 'b.txt' }, nodeId: 'curator-node', role: 'Curator' }));
-
-  assert.strictEqual(events.filter((event) => event.kind === 'consent.requested').length, 1);
-  assert.strictEqual(gate.getInFlightRequests().length, 1);
-
-  gate.respond('allow_once', 'curator');
-  assert.strictEqual(await first, 'proceed');
-  assert.strictEqual(events.filter((event) => event.kind === 'consent.requested').length, 2);
-  assert.deepStrictEqual(gate.getInFlightRequests(), [
-    { kind: 'file-write', toolName: 'edit_file', path: 'b.txt', nodeId: 'curator-node', role: 'Curator' },
-  ]);
-
-  gate.respond('deny', 'Curator');
-  assert.strictEqual(await second, 'deny');
-});
 
 await test('Allow all edits this flow resolves other visible file-write requests', async () => {
   const { gate, events } = createGate();

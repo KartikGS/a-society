@@ -530,7 +530,16 @@ export function App() {
         });
         return;
       }
-      case 'wait_start': {
+      case 'request_sent': {
+        const roleKey = toRoleKey(message.role);
+        if (!roleKey) return;
+        updateFlowUi(key, (state) => ({
+          ...state,
+          waitLabels: { ...state.waitLabels, [roleKey]: 'Waiting for model...' }
+        }));
+        return;
+      }
+      case 'receiving_response': {
         const roleKey = toRoleKey(message.role);
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
@@ -539,7 +548,7 @@ export function App() {
         }));
         return;
       }
-      case 'wait_stop': {
+      case 'response_end': {
         const roleKey = toRoleKey(message.role);
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
@@ -554,7 +563,6 @@ export function App() {
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
           ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: null },
           roleFeeds: appendFeedItem(state.roleFeeds, roleKey, {
             id: nextFeedId(),
             type: 'assistant',

@@ -2,8 +2,9 @@ import type { OperatorEvent, OperatorRenderSink } from '../common/types.js';
 
 export type RuntimeServerMessage =
   | { type: 'operator_event'; event: OperatorEvent }
-  | { type: 'wait_start'; role: string; provider: string; model: string }
-  | { type: 'wait_stop'; role: string }
+  | { type: 'request_sent'; role: string; provider: string; model: string }
+  | { type: 'receiving_response'; role: string }
+  | { type: 'response_end'; role: string }
   | { type: 'error'; message: string };
 
 export class WebSocketOperatorSink implements OperatorRenderSink {
@@ -13,12 +14,16 @@ export class WebSocketOperatorSink implements OperatorRenderSink {
     this.send({ type: 'operator_event', event });
   }
 
-  startWait(role: string, provider: string, model: string): void {
-    this.send({ type: 'wait_start', role, provider, model });
+  requestSent(role: string, provider: string, model: string): void {
+    this.send({ type: 'request_sent', role, provider, model });
   }
 
-  stopWait(role: string): void {
-    this.send({ type: 'wait_stop', role });
+  receivingResponse(role: string): void {
+    this.send({ type: 'receiving_response', role });
+  }
+
+  responseEnd(role: string): void {
+    this.send({ type: 'response_end', role });
   }
 
   sendError(message: string): void {

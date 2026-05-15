@@ -77,8 +77,9 @@ class CaptureRenderer implements OperatorRenderSink {
     this.events.push(event);
   }
 
-  startWait(_provider: string, _model: string): void {}
-  stopWait(): void {}
+  requestSent(_role: string, _provider: string, _model: string): void {}
+  receivingResponse(_role: string): void {}
+  responseEnd(_role: string): void {}
   sendError(_message: string): void {}
 }
 
@@ -581,8 +582,9 @@ async function run() {
           }
         }
       },
-      startWait() {},
-      stopWait() {},
+      requestSent() {},
+      receivingResponse() {},
+      responseEnd() {},
       sendError() {}
     };
 

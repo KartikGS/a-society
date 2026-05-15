@@ -15,7 +15,7 @@ import type {
 const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
 const GLOBAL_CONSENT_ROLE_KEY = '__global__';
 
-interface QueueEntry {
+interface InFlightEntry {
   request: ConsentRequest;
   resolve: (result: 'proceed' | 'deny') => void;
 }
@@ -81,8 +81,7 @@ function requestRoleKey(requestOrRole: ConsentRequest | string | undefined): str
 
 export class ConsentGateImpl {
   private state: ConsentState;
-  private queue: QueueEntry[] = [];
-  private inFlightByRole = new Map<string, QueueEntry>();
+  private inFlightByRole = new Map<string, InFlightEntry>();
   private operatorRenderer: OperatorRenderSink | null;
 
   constructor(
@@ -112,19 +111,19 @@ export class ConsentGateImpl {
     if (this.isGranted(request)) return 'proceed';
 
     return new Promise<'proceed' | 'deny'>((resolve) => {
-      const entry: QueueEntry = { request, resolve };
-
       if (signal?.aborted) {
         resolve('deny');
         return;
       }
 
+      const entry: InFlightEntry = { request, resolve };
+      const roleKey = requestRoleKey(request);
+      this.inFlightByRole.set(roleKey, entry);
+      this.operatorRenderer?.emit({ kind: 'consent.requested', request: entry.request });
+
       signal?.addEventListener('abort', () => {
         this.abortEntry(entry);
       }, { once: true });
-
-      this.queue.push(entry);
-      this.drain();
     });
   }
 
@@ -146,9 +145,8 @@ export class ConsentGateImpl {
     entry.resolve(decision === 'deny' ? 'deny' : 'proceed');
 
     if (decision === 'allow_flow') {
-      this.drainGranted(decision);
+      this.resolveGrantedInFlight(decision);
     }
-    this.drain();
   }
 
   setMode(mode: ConsentMode): void {
@@ -159,11 +157,6 @@ export class ConsentGateImpl {
       const inFlight = Array.from(this.inFlightByRole.values());
       this.inFlightByRole.clear();
       for (const entry of inFlight) {
-        entry.resolve('proceed');
-      }
-
-      const queued = this.queue.splice(0);
-      for (const entry of queued) {
         entry.resolve('proceed');
       }
     }
@@ -197,32 +190,7 @@ export class ConsentGateImpl {
     };
   }
 
-  private drain(): void {
-    let idx = 0;
-    while (idx < this.queue.length) {
-      const entry = this.queue[idx];
-      if (this.isGranted(entry.request)) {
-        this.queue.splice(idx, 1);
-        entry.resolve('proceed');
-        continue;
-      }
-
-      const roleKey = requestRoleKey(entry.request);
-      if (this.inFlightByRole.has(roleKey)) {
-        idx++;
-        continue;
-      }
-
-      this.queue.splice(idx, 1);
-      this.inFlightByRole.set(roleKey, entry);
-      this.operatorRenderer?.emit({
-        kind: 'consent.requested',
-        request: entry.request,
-      });
-    }
-  }
-
-  private drainGranted(decision: ConsentResponseDecision): void {
+  private resolveGrantedInFlight(decision: ConsentResponseDecision): void {
     for (const [roleKey, entry] of Array.from(this.inFlightByRole.entries())) {
       if (!this.isGranted(entry.request)) continue;
       this.inFlightByRole.delete(roleKey);
@@ -233,19 +201,9 @@ export class ConsentGateImpl {
       });
       entry.resolve('proceed');
     }
-
-    const remaining: QueueEntry[] = [];
-    for (const entry of this.queue) {
-      if (this.isGranted(entry.request)) {
-        entry.resolve('proceed');
-      } else {
-        remaining.push(entry);
-      }
-    }
-    this.queue = remaining;
   }
 
-  private abortEntry(entry: QueueEntry): void {
+  private abortEntry(entry: InFlightEntry): void {
     const roleKey = requestRoleKey(entry.request);
     if (this.inFlightByRole.get(roleKey) === entry) {
       this.inFlightByRole.delete(roleKey);
@@ -255,17 +213,10 @@ export class ConsentGateImpl {
         decision: 'deny',
       });
       entry.resolve('deny');
-      this.drain();
-      return;
-    }
-    const idx = this.queue.indexOf(entry);
-    if (idx !== -1) {
-      this.queue.splice(idx, 1);
-      entry.resolve('deny');
     }
   }
 
-  private resolveInFlightEntry(role: string): QueueEntry | null {
+  private resolveInFlightEntry(role: string): InFlightEntry | null {
     const roleKey = requestRoleKey(role);
     const entry = this.inFlightByRole.get(roleKey);
     if (!entry) return null;
@@ -284,11 +235,6 @@ export class ConsentGateImpl {
         decision: 'deny',
       });
       entry.resolve('deny');
-    }
-
-    const queued = this.queue.splice(0);
-    for (const q of queued) {
-      q.resolve('deny');
     }
   }
 }
