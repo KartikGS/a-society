@@ -25,3 +25,5 @@ surfaces:
     scope: "Repository license and distribution promise"
   - path: README.md
     scope: "External project framing and promise"
+  - path: assets/brand/
+    scope: "Public brand assets used by outward-facing framing surfaces"

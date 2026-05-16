@@ -85,6 +85,23 @@ When you are unsure whether something belongs in `general/` vs another project's
 
 ---
 
+### `assets/`
+
+**Purpose:** Public-facing visual assets used by outward-facing repository surfaces such as `README.md`.
+
+**What belongs here:**
+- Reusable brand marks, wordmarks, and banners
+- Public presentation visuals that support external framing surfaces
+
+**What does not belong here:**
+- Runtime UI implementation assets — those belong under `runtime/`
+- Agent documentation or reusable instruction content — those belong in `a-docs/` or `general/`
+- One-off working files that are not used by a standing public surface
+
+**Principle:** `assets/` supports how A-Society presents itself; it is not a fourth work-product layer. Add sub-folders only when a real reusable asset category exists.
+
+---
+
 ### `general/`
 
 **Purpose:** Everything A-Society distributes to other projects. `general/` is the shareable, reusable layer — the content that any project can take and apply directly, without modification within its tier. It is what A-Society *gives*; `a-docs/` is what A-Society *is*.

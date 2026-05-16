@@ -1,10 +1,45 @@
-# A-Society
+<p align="center">
+  <img src="assets/brand/a-society-mark.svg" alt="A-Society logo" width="112">
+</p>
 
-A portable agentic harness for project work: structured memory, role-based workflows, runtime orchestration, verification, and self-improvement.
+<h1 align="center">A-Society</h1>
+
+<p align="center">
+  <strong>An agentic harness for project work.</strong>
+</p>
+
+<p align="center">
+  Structured memory, role-based workflows, runtime orchestration, verification, and self-improvement.
+</p>
+
+<p align="center">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-5EEAD4?style=flat-square">
+  <img alt="Node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-F59E0B?style=flat-square">
+  <img alt="Browser runtime" src="https://img.shields.io/badge/runtime-browser%20UI-FB7185?style=flat-square">
+  <img alt="Project learning" src="https://img.shields.io/badge/feedback-self--improving-CBD5E1?style=flat-square">
+</p>
+
+<p align="center">
+  <a href="#getting-started">Getting Started</a> |
+  <a href="runtime/INVOCATION.md">Runtime Guide</a> |
+  <a href="general/">Reusable Library</a>
+</p>
+
+<p align="center">
+  <img src="assets/brand/a-society-banner.svg" alt="A-Society workflow banner">
+</p>
 
 ---
 
-## The Problem
+## What A Project Gets
+
+| Structured memory | Workflow execution | Cross-project learning |
+|---|---|---|
+| `a-docs/` preserves roles, rules, indexes, and standing project truth across sessions. | The runtime routes work through explicit roles, handoffs, records, and closure checks. | Feedback and backward-pass findings improve universal templates and project-type standards over time. |
+
+---
+
+## Why It Exists
 
 Agents are capable. The bottleneck is not capability — it is the operating environment around the agent.
 
