@@ -102,6 +102,7 @@ export function initializeDraftFlow(
     pendingNodeArtifacts: {},
     pendingHandoff: [],
     receivingHandoff: {},
+    historyHandoff: {},
     awaitingHandoff: [],
     status: 'running',
     stateVersion: '7',

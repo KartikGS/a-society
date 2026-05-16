@@ -171,7 +171,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     completedNodes: [],
     completedEdgeArtifacts: {},
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
-    pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: [],
+    pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7',
     ...overrides
@@ -193,7 +193,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
       'owner-one': [path.relative(workspaceRoot, ownerInstanceArtifact)],
       'owner-two': [path.relative(workspaceRoot, ownerInstanceArtifact)]
     },
-    pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: [],
+    pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7',
     ...overrides
@@ -435,7 +435,7 @@ async function run() {
       pendingNodeArtifacts: {
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
       },
-      pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: []
+      pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -490,7 +490,7 @@ async function run() {
           path.relative(workspaceRoot, reviewFeedbackArtifact)
         ]
       },
-      pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: []
+      pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -545,7 +545,7 @@ async function run() {
           path.relative(workspaceRoot, reviewFeedbackArtifact)
         ]
       },
-      pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: []
+      pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -635,7 +635,7 @@ async function run() {
         'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
       },
-      pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: []
+      pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -672,7 +672,7 @@ async function run() {
       pendingNodeArtifacts: {
         'ta': [path.relative(workspaceRoot, ownerArtifact1)]
       },
-      pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: []
+      pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 

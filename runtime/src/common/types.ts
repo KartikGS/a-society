@@ -129,6 +129,7 @@ export interface FlowRun {
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   pendingHandoff: string[];                        // `${from}=>${to}` edges not yet traversed (unhandled forward targets + rejected backward edges)
   receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
+  historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse
   awaitingHandoff: string[];                       // node IDs currently suspended waiting for an inbound handoff
   status: FlowStatus;
   stateVersion: string;                        // Persistence version: "7" for the current runtime schema

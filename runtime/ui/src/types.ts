@@ -57,6 +57,7 @@ export interface FlowRun {
   pendingNodeArtifacts: Record<string, string[]>;
   pendingHandoff: string[];
   receivingHandoff: Record<string, string[]>;
+  historyHandoff: Record<string, string[]>;
   awaitingHandoff: string[];
   status: 'running' | 'awaiting_improvement_choice' | 'awaiting_feedback_consent' | 'completed';
   stateVersion: string;

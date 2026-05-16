@@ -811,6 +811,15 @@ export class FlowOrchestrator {
           });
         }
 
+        const allHistoryArtifacts = new Set(Object.values(latest.historyHandoff).flat());
+        for (const pair of activationPairs) {
+          if (pair.artifact && allHistoryArtifacts.has(pair.artifact)) {
+            this.throwHandoffTransitionRepair(
+              `Artifact '${pair.artifact}' was already used in a previous handoff. Create a new artifact for this handoff.`
+            );
+          }
+        }
+
         this.removeOpenNode(latest, nodeId);
 
         const coveredTargetIds = new Set(activationPairs.map(p => p.targetId));
@@ -827,6 +836,10 @@ export class FlowOrchestrator {
           if (!latest.receivingHandoff[forwardKey]) latest.receivingHandoff[forwardKey] = [];
           if (pair.artifact && !latest.receivingHandoff[forwardKey].includes(pair.artifact)) {
             latest.receivingHandoff[forwardKey].push(pair.artifact);
+          }
+          if (!latest.historyHandoff[forwardKey]) latest.historyHandoff[forwardKey] = [];
+          if (pair.artifact && !latest.historyHandoff[forwardKey].includes(pair.artifact)) {
+            latest.historyHandoff[forwardKey].push(pair.artifact);
           }
           this.activateOrDefer(latest, wf, pair.targetId);
         }
@@ -851,11 +864,19 @@ export class FlowOrchestrator {
         }> = [];
         const claimedTargets = new Set<string>();
 
+        const backwardHistoryArtifacts = new Set(Object.values(latest.historyHandoff).flat());
+
         for (const handoff of backwardTargets) {
           if (claimedTargets.has(handoff.target_node_id)) {
             this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
           }
           claimedTargets.add(handoff.target_node_id);
+
+          if (handoff.artifact_path && backwardHistoryArtifacts.has(handoff.artifact_path)) {
+            this.throwHandoffTransitionRepair(
+              `Artifact '${handoff.artifact_path}' was already used in a previous handoff. Create a new artifact for this handoff.`
+            );
+          }
 
           const targetNode = this.findNodeById(wf, handoff.target_node_id);
           const rejectedEdgeKey = this.edgeKey(targetNode.id, nodeId);
@@ -871,6 +892,10 @@ export class FlowOrchestrator {
           if (!latest.receivingHandoff[backwardHandoffKey]) latest.receivingHandoff[backwardHandoffKey] = [];
           if (handoff.artifact_path && !latest.receivingHandoff[backwardHandoffKey].includes(handoff.artifact_path)) {
             latest.receivingHandoff[backwardHandoffKey].push(handoff.artifact_path);
+          }
+          if (!latest.historyHandoff[backwardHandoffKey]) latest.historyHandoff[backwardHandoffKey] = [];
+          if (handoff.artifact_path && !latest.historyHandoff[backwardHandoffKey].includes(handoff.artifact_path)) {
+            latest.historyHandoff[backwardHandoffKey].push(handoff.artifact_path);
           }
 
           reactivationPlans.push({
