@@ -370,6 +370,7 @@ export function bootstrapInitializationFlow(
       },
       pendingHandoff: [],
       receivingHandoff: {},
+      awaitingHandoff: [],
       status: 'running',
       stateVersion: '7',
       feedbackContext: {

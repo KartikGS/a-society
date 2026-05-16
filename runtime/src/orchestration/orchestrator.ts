@@ -599,6 +599,43 @@ export class FlowOrchestrator {
                 throw new Error(`Unexpected backward-pass-complete signal during forward pass at node '${nodeId}'.`);
               }
 
+              if (handoffResult.kind === 'await-handoff') {
+                const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+                const isPendingTarget = latestForCheck.pendingHandoff.some(k => k.split('=>')[1] === nodeId);
+                const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
+
+                if (!isPendingTarget && !isReceivingTarget) {
+                  this.renderer.emit({
+                    kind: 'repair.requested',
+                    scope: 'node',
+                    code: 'invalid_transition',
+                    summary: 'await-handoff invalid: no inbound handoff established',
+                    role: currentNodeDef.role,
+                    nodeId
+                  });
+                  appendRuntimeMessage(injectedHistory, session, nodeId, {
+                    role: 'user',
+                    content:
+                      `Error: await-handoff is only valid when another node has a pending or received handoff directed at node '${nodeId}'. ` +
+                      `No such handoff exists. To await a correction, first emit a handoff to the node you expect to receive work from, ` +
+                      `so that a pending or received handoff targeting '${nodeId}' is established before signaling await-handoff.`
+                  });
+                  session.transcriptHistory = injectedHistory;
+                  SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                  continue;
+                }
+
+                span.setAttribute('node.outcome', 'await_handoff');
+                session.transcriptHistory = injectedHistory;
+                session.isActive = false;
+                SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                flowRun = await SessionStore.updateFlowRun((latest) => {
+                  latest.runningNodes = latest.runningNodes.filter(id => id !== nodeId);
+                  if (!latest.awaitingHandoff.includes(nodeId)) latest.awaitingHandoff.push(nodeId);
+                }, this.requireFlowRef(), this.requireWorkspaceRoot());
+                break;
+              }
+
               // kind === 'targets'
               span.setAttribute('node.outcome', 'handoff');
               span.setAttribute('handoff.kind', handoffResult.kind);
@@ -1032,6 +1069,7 @@ export class FlowOrchestrator {
   private removeOpenNode(flowRun: FlowRun, nodeId: string) {
     flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
     flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
+    flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
     delete flowRun.pendingNodeArtifacts[nodeId];
   }
@@ -1314,6 +1352,7 @@ export class FlowOrchestrator {
       const baseArtifacts = this.collectIncomingArtifacts(flowRun, incomingEdges);
       const priorArtifacts = flowRun.pendingNodeArtifacts[candidateNodeId] ?? [];
       flowRun.pendingNodeArtifacts[candidateNodeId] = this.mergeArtifacts(baseArtifacts, priorArtifacts, extraArtifacts);
+      flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== candidateNodeId);
       if (!this.getOpenNodeIds(flowRun).includes(candidateNodeId)) {
         flowRun.readyNodes.push(candidateNodeId);
       }

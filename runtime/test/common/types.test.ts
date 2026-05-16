@@ -29,7 +29,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     awaitingHumanNodes: {},
     completedNodes: [],
     completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'node1': ['artifact.md'] }, pendingHandoff: [], receivingHandoff: {},
+    pendingNodeArtifacts: { 'node1': ['artifact.md'] }, pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };

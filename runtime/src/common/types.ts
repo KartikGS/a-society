@@ -92,7 +92,8 @@ export type HandoffResult =
   | { kind: 'forward-pass-closed'; recordFolderPath: string; artifactPath: string }
   | { kind: 'meta-analysis-complete'; findingsPath: string }
   | { kind: 'backward-pass-complete'; artifactPath: string }
-  | { kind: 'awaiting_human' };
+  | { kind: 'awaiting_human' }
+  | { kind: 'await-handoff' };
 
 export interface ImprovementPhaseState {
   status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
@@ -128,6 +129,7 @@ export interface FlowRun {
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   pendingHandoff: string[];                        // `${from}=>${to}` edges not yet traversed (unhandled forward targets + rejected backward edges)
   receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
+  awaitingHandoff: string[];                       // node IDs currently suspended waiting for an inbound handoff
   status: FlowStatus;
   stateVersion: string;                        // Persistence version: "7" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress

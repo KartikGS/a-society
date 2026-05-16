@@ -61,7 +61,7 @@ async function runTest() {
       producer: ['records/test-flow/01-owner-brief.md'],
       'branch-c': ['records/test-flow/01-ta-brief.md'],
     },
-    pendingHandoff: [], receivingHandoff: {},
+    pendingHandoff: [], receivingHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,
     stateVersion: '7'
   };
