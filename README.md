@@ -1,24 +1,24 @@
 # A-Society
 
-A portable framework for making any project agentic-friendly — with runtime-guided initialization and role-based ongoing work.
+A portable agentic harness for project work: structured memory, role-based workflows, runtime orchestration, verification, and self-improvement.
 
 ---
 
 ## The Problem
 
-Agents are capable. The bottleneck is not capability — it is context.
+Agents are capable. The bottleneck is not capability — it is the operating environment around the agent.
 
-Most projects are not set up in a way that agents can navigate confidently. There is no declared canonical tool, no structured role boundary, no single source of truth for key decisions. Agents that land in these projects must guess, infer from scattered clues, or ask repeated clarifying questions. The result is inconsistency, rework, and friction — not because the agent failed, but because the project was never made ready for one.
+Most projects are not set up in a way that agents can navigate confidently, act through a designed process, retain useful memory between sessions, or improve the project from the work they just performed. There is no declared canonical tool, no structured role boundary, no workflow authority, no durable record of decisions, and no feedback loop that turns recurring friction into better defaults. The result is inconsistency, rework, and friction — not because the agent failed, but because the project has no harness for agentic work.
 
-This is a solvable problem. And it is solved before the agent ever arrives.
+This is a solvable problem. It is solved by giving the project a standing agentic harness: structured memory, role boundaries, workflow execution, verification, and self-improvement.
 
 ---
 
 ## The Core Bet
 
-> The quality of agent output is determined more by the quality of the project's structure than by the capability of the agent.
+> The quality of agent output is determined more by the quality of the project's harness — its structure, workflow, memory, verification, and feedback loops — than by the capability of the agent alone.
 
-A well-structured project makes a good agent great. A poorly structured project makes a great agent mediocre.
+A well-harnessed project makes a good agent reliable. A poorly harnessed project makes a great agent guess.
 
 ---
 
@@ -38,18 +38,20 @@ When these standards conflict, A-Society prioritizes them in this order:
 
 ## What A-Society Is
 
-A-Society is a library of patterns, instructions, and role templates that any project owner can apply to structure their project so agents can operate within it confidently, from day one.
+A-Society is both a reusable library of project standards and an executable runtime for agentic work. It helps initialize projects, orchestrate role-based sessions, preserve handoff records, verify closure, and turn feedback from real flows into better future defaults.
 
 It is:
-- **Project-agnostic** — applies to software, writing, legal, research, and any other domain
-- **Domain-agnostic** — does not assume technical literacy
-- **Agent-agnostic** — does not depend on a specific AI model or platform
+- **Project-portable** — sits beside many kinds of projects without being embedded inside them
+- **Domain-flexible after setup** — can support software, writing, legal, research, design, and other project work once initialized
+- **Technically honest** — setup and operation currently require a technical operator or technical environment
+- **Agent-adaptable** — is not conceptually bound to one model or agent platform
+- **Learning across projects** — uses feedback to improve universal templates, project-type standards, runtime behavior, and initialization defaults
 
 ---
 
 ## How It Works
 
-A-Society is a standalone repository that sits alongside your project. You initialize an `a-docs/` folder inside your project through the runtime UI, which scaffolds the compulsory surfaces and then runs an Owner-led initialization flow that fills them with project truth.
+A-Society is a standalone repository that sits alongside your project. You initialize an `a-docs/` folder inside your project through the runtime UI, which scaffolds the compulsory surfaces and then runs an Owner-led initialization flow that fills them with project truth. After initialization, the runtime supports ongoing flows with role context, workflow routing, records, handoffs, closure checks, and improvement feedback.
 
 ```
 a-society/          ← this repo (the framework)
@@ -68,8 +70,9 @@ my-project/         ← your project
 
 | Folder | Contents |
 |---|---|
-| `runtime/` | The executable layer — browser runtime, orchestration, scaffolding entry path, and initialization contract |
+| `runtime/` | The executable layer — browser runtime, orchestration, context loading, records, handoffs, initialization, and improvement support |
 | `general/instructions/` | How to create each agent-doc artifact for any project |
+| `general/project-types/` | Reusable standards for approved project categories |
 | `general/roles/` | Ready-made universal role templates and support docs, currently centered on Owner |
 | `general/improvement/` | Protocols and templates for iterative doc improvement |
 | `a-docs/` | A-Society's own agent documentation — a live example of the framework applied |
@@ -90,7 +93,17 @@ your-workspace/
 └── a-society/        ← this repo
 ```
 
-**2. Start the runtime**
+**2. Install A-Society**
+
+From inside `a-society/`, run:
+
+```bash
+./install.sh
+```
+
+This installs the runtime dependencies and links the `a-society` command.
+
+**3. Start the runtime**
 
 From the workspace root, run:
 
@@ -98,13 +111,13 @@ From the workspace root, run:
 a-society
 ```
 
-The browser UI lists existing projects with `a-docs/`, existing projects without `a-docs/`, and a create-new-project path.
+The browser UI lists existing projects with `a-docs/`, existing projects without `a-docs/`, and a create-new-project path. On first use, configure and activate a model in Settings before starting project work.
 
 Choose your existing project. If it does not yet have `a-docs/`, the runtime scaffolds the compulsory files and then starts an Owner initialization flow that reads the project, asks only what it cannot infer, and fills the scaffolded files.
 
-**3. Done**
+**4. Done**
 
-Once approved, your project has a structured agent layer. Any agent you assign a role to can load context from `a-docs/` and operate confidently from the first session.
+Once approved, your project has a structured agent harness. Any agent you assign a role to can load context from `a-docs/`, follow the project's workflow, and preserve useful memory as work moves forward.
 
 ---
 
@@ -119,21 +132,33 @@ your-workspace/
 └── a-society/        ← this repo
 ```
 
-**2. Start the runtime**
+**2. Install A-Society**
+
+From inside `a-society/`, run:
+
+```bash
+./install.sh
+```
+
+This installs the runtime dependencies and links the `a-society` command.
+
+**3. Start the runtime**
 
 ```bash
 a-society
 ```
 
-**3. Create the project in the UI**
+Configure and activate a model in Settings before starting project work.
+
+**4. Create the project in the UI**
 
 Choose `Create New Project`, enter the project name, and let the runtime create the project folder and scaffold the compulsory `a-docs/`.
 
 The runtime then starts an Owner initialization flow. The Owner asks the startup questions interactively, fills the scaffolded files with real project truth, and leaves you with a usable first-pass `a-docs/`.
 
-**4. Improve as you go**
+**5. Improve as you go**
 
-Your `a-docs/` reflects where your project is today. As your vision sharpens, your `a-docs/` sharpens with it. Periodically run the Curator role to keep agent documentation aligned with how the project has evolved. You do not need a complete project to get value from the framework — every session builds on the last.
+Your `a-docs/` reflects where your project is today. As your vision sharpens, your `a-docs/` sharpens with it. Backward-pass analysis and optional upstream feedback turn completed work into better project memory and better A-Society defaults. You do not need a complete project to get value from the framework — every session builds on the last.
 
 ---
 
