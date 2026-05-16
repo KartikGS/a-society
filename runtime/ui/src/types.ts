@@ -55,7 +55,6 @@ export interface FlowRun {
   visitedNodeIds?: string[];
   completedHandoffs: string[];
   pendingNodeArtifacts: Record<string, string[]>;
-  pendingHandoff: string[];
   receivingHandoff: Record<string, string[]>;
   historyHandoff: Record<string, string[]>;
   awaitingHandoff: string[];

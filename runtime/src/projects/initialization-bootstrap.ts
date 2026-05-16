@@ -368,7 +368,6 @@ export function bootstrapInitializationFlow(
       pendingNodeArtifacts: {
         'owner-intake': activeArtifacts
       },
-      pendingHandoff: [],
       receivingHandoff: {},
       historyHandoff: {},
       awaitingHandoff: [],

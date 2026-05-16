@@ -47,7 +47,7 @@ test('renderFlowStatus: single active node, no completed', () => {
     awaitingHumanNodes: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: { 'start': ['p.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    pendingNodeArtifacts: { 'start': ['p.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };
@@ -71,7 +71,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       awaitingHumanNodes: {},
       completedNodes: ['start', 'fork', 't2'],
       completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't2=>join'],
-      pendingNodeArtifacts: { 't1': ['p3.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+      pendingNodeArtifacts: { 't1': ['p3.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
       stateVersion: '7'
     };
@@ -97,7 +97,7 @@ test('renderFlowStatus: awaitingHumanNodes render explicit operator-input notice
     awaitingHumanNodes: { start: { role: 'Owner', reason: 'prompt-human' } },
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: { 'start': [] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    pendingNodeArtifacts: { 'start': [] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };
@@ -117,7 +117,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     awaitingHumanNodes: {},
     completedNodes: ['start', 'fork'],
     completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2'],
-    pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
   };
@@ -138,7 +138,7 @@ test('renderFlowStatus: completed flow', () => {
         awaitingHumanNodes: {},
         completedNodes: ['start', 'fork', 't1', 't2', 'join'],
         completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't1=>join', 't2=>join'],
-        pendingNodeArtifacts: {}, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+        pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
         status: 'completed',
         stateVersion: '7'
       };

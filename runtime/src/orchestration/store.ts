@@ -66,7 +66,6 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
     );
   }
 
-  if (!flow.pendingHandoff) flow.pendingHandoff = [];
   if (!flow.receivingHandoff) flow.receivingHandoff = {};
   if (!flow.historyHandoff) flow.historyHandoff = {};
   if (!flow.awaitingHandoff) flow.awaitingHandoff = [];

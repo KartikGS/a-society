@@ -100,7 +100,6 @@ export function initializeDraftFlow(
     visitedNodeIds: [],
     completedHandoffs: [],
     pendingNodeArtifacts: {},
-    pendingHandoff: [],
     receivingHandoff: {},
     historyHandoff: {},
     awaitingHandoff: [],

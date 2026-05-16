@@ -78,7 +78,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: { start: [] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    pendingNodeArtifacts: { start: [] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
   });

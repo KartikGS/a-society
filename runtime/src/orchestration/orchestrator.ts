@@ -358,9 +358,9 @@ export class FlowOrchestrator {
           const isPredecessor = this.getIncomingEdges(wf, nodeId).some((e: any) => e.from === fromNodeId);
           return { fromNodeId, artifacts, direction: isPredecessor ? 'forward' as const : 'backward' as const };
         });
-        const pendingOutboundNodeIds = flowRun.pendingHandoff
-          .filter(k => k.split('=>')[0] === nodeId)
-          .map(k => k.split('=>')[1]);
+        const pendingOutboundNodeIds = this.getOutgoingEdges(wf, nodeId)
+          .filter((e: any) => !flowRun.completedHandoffs.includes(this.edgeKey(nodeId, e.to)))
+          .map((e: any) => e.to);
 
         const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;
 
@@ -623,7 +623,7 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'await-handoff') {
                 const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
-                const isPendingTarget = latestForCheck.pendingHandoff.some(k => k.split('=>')[1] === nodeId);
+                const isPendingTarget = this.getIncomingEdges(wf, nodeId).some((e: any) => !latestForCheck.completedHandoffs.includes(this.edgeKey(e.from, nodeId)));
                 const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
 
                 if (!isPendingTarget && !isReceivingTarget) {
@@ -843,17 +843,8 @@ export class FlowOrchestrator {
 
         this.removeOpenNode(latest, nodeId);
 
-        const coveredTargetIds = new Set(activationPairs.map(p => p.targetId));
-        for (const edge of outgoingEdges) {
-          if (!coveredTargetIds.has(edge.to)) {
-            const key = this.edgeKey(nodeId, edge.to);
-            if (!latest.pendingHandoff.includes(key)) latest.pendingHandoff.push(key);
-          }
-        }
-
         for (const pair of activationPairs) {
           const forwardKey = this.edgeKey(nodeId, pair.targetId);
-          latest.pendingHandoff = latest.pendingHandoff.filter(k => k !== forwardKey);
           if (!latest.completedHandoffs.includes(forwardKey)) latest.completedHandoffs.push(forwardKey);
           if (!latest.receivingHandoff[forwardKey]) latest.receivingHandoff[forwardKey] = [];
           if (pair.artifact && !latest.receivingHandoff[forwardKey].includes(pair.artifact)) {
@@ -931,8 +922,6 @@ export class FlowOrchestrator {
         const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
 
         for (const plan of reactivationPlans) {
-          const backwardKey = this.edgeKey(plan.targetId, nodeId);
-          if (!latest.pendingHandoff.includes(backwardKey)) latest.pendingHandoff.push(backwardKey);
           latest.completedHandoffs = latest.completedHandoffs.filter(k => k !== plan.rejectedEdgeKey);
           this.removeCompletedNode(latest, plan.targetId);
           this.activateOrDefer(latest, wf, plan.targetId);
@@ -1023,7 +1012,7 @@ export class FlowOrchestrator {
     return resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace);
   }
 
-  private deriveHandoffReadyNodes(flowRun: FlowRun): string[] {
+  private deriveHandoffReadyNodes(flowRun: FlowRun, wf: any): string[] {
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
     const awaitingHandoffSet = new Set(flowRun.awaitingHandoff);
     const openNodes = new Set(this.getOpenNodeIds(flowRun));
@@ -1032,16 +1021,12 @@ export class FlowOrchestrator {
     const result: string[] = [];
     const seen = new Set<string>();
 
-    // Condition 1: visited + has a pending outgoing handoff + not awaiting a handoff
-    for (const key of flowRun.pendingHandoff) {
-      const nodeId = key.split('=>')[0];
-      if (
-        !seen.has(nodeId) &&
-        visitedSet.has(nodeId) &&
-        !awaitingHandoffSet.has(nodeId) &&
-        !openNodes.has(nodeId) &&
-        !completedNodes.has(nodeId)
-      ) {
+    // Condition 1: visited + has a pending outgoing handoff (not yet in completedHandoffs) + not awaiting a handoff
+    for (const node of wf.nodes) {
+      const nodeId = node.id;
+      if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || openNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
+      const hasPendingOutgoing = this.getOutgoingEdges(wf, nodeId).some((e: any) => !flowRun.completedHandoffs.includes(this.edgeKey(nodeId, e.to)));
+      if (hasPendingOutgoing) {
         result.push(nodeId);
         seen.add(nodeId);
       }
@@ -1065,15 +1050,19 @@ export class FlowOrchestrator {
   private async claimReadyNodesForParallelRun(): Promise<string[]> {
     let claimedNodeIds: string[] = [];
     await SessionStore.updateFlowRun((flowRun) => {
-      const readyNodes2 = this.deriveHandoffReadyNodes(flowRun);
-      const allReadyNodes = this.mergeNodeIds(flowRun.readyNodes, readyNodes2);
-
-      if (flowRun.status !== 'running' || allReadyNodes.length === 0) {
+      if (flowRun.status !== 'running') {
         claimedNodeIds = [];
         return;
       }
 
       const wf = this.loadWorkflowDocument(flowRun);
+      const readyNodes2 = this.deriveHandoffReadyNodes(flowRun, wf);
+      const allReadyNodes = this.mergeNodeIds(flowRun.readyNodes, readyNodes2);
+
+      if (allReadyNodes.length === 0) {
+        claimedNodeIds = [];
+        return;
+      }
       const occupiedRoles = new Map<string, string>();
       for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
         const node = this.findNodeById(wf, nodeId);
