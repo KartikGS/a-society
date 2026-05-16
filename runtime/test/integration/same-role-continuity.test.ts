@@ -169,7 +169,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -188,7 +188,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: {
       'owner-one': [path.relative(workspaceRoot, ownerInstanceArtifact)],
       'owner-two': [path.relative(workspaceRoot, ownerInstanceArtifact)]
@@ -257,7 +257,7 @@ async function run() {
       role: 'owner',
       workspaceRoot,
       projectNamespace,
-      activeArtifacts: [path.relative(workspaceRoot, taArtifact)],
+      inboundHandoffs: [{ fromNodeId: 'owner-intake', artifacts: [path.relative(workspaceRoot, taArtifact)], direction: 'forward' }],
       entryMode: 'role-transition',
       previousNodeId: 'owner-intake'
     });
@@ -273,10 +273,10 @@ async function run() {
       role: 'owner',
       workspaceRoot,
       projectNamespace,
-      activeArtifacts: [
+      inboundHandoffs: [{ fromNodeId: 'reviewer', artifacts: [
         path.relative(workspaceRoot, ownerArtifact1),
         path.relative(workspaceRoot, reviewFeedbackArtifact)
-      ],
+      ], direction: 'backward' }],
       entryMode: 'reopened-node',
       previousNodeId: 'owner-intake'
     });
@@ -298,7 +298,7 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       completedNodes: [],
-      completedEdgeArtifacts: {},
+      completedHandoffs: [],
       pendingNodeArtifacts: {},
       status: 'completed',
       stateVersion: '5',
@@ -428,10 +428,7 @@ async function run() {
       awaitingHumanNodes: {},
       completedNodes: ['owner-intake', 'ta'],
       visitedNodeIds: ['owner-intake', 'ta'],
-      completedEdgeArtifacts: {
-        'owner-intake=>ta': path.relative(workspaceRoot, ownerArtifact1),
-        'ta=>owner-gate': path.relative(workspaceRoot, taArtifact)
-      },
+      completedHandoffs: ['owner-intake=>ta', 'ta=>owner-gate'],
       pendingNodeArtifacts: {
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
       },
@@ -666,9 +663,7 @@ async function run() {
       runningNodes: ['owner-intake', 'ta'],
       awaitingHumanNodes: {},
       completedNodes: [],
-      completedEdgeArtifacts: {
-        'owner-intake=>ta': path.relative(workspaceRoot, ownerArtifact1)
-      },
+      completedHandoffs: ['owner-intake=>ta'],
       pendingNodeArtifacts: {
         'ta': [path.relative(workspaceRoot, ownerArtifact1)]
       },
@@ -692,7 +687,7 @@ async function run() {
     }
 
     const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
-    assert.strictEqual(updated.completedEdgeArtifacts['ta=>owner-gate'], handoffArtifact);
+    assert.ok(updated.completedHandoffs.includes('ta=>owner-gate'), 'completed handoffs should include ta=>owner-gate');
     assert.ok(updated.readyNodes.includes('owner-gate'), 'busy same-role handoff target should be queued in readyNodes');
     assert.ok(updated.runningNodes.includes('owner-intake'), 'existing same-role node should remain running');
     assert.ok(!updated.runningNodes.includes('owner-gate'), 'busy same-role target should not be claimed immediately');

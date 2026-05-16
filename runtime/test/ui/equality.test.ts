@@ -29,7 +29,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
       'owner-intake': { role: 'Owner', reason: 'prompt-human' },
     },
     completedNodes: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: {}, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7',

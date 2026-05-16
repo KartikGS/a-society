@@ -70,8 +70,8 @@ function summarizeFlowState(flowRun: FlowRun, roleName: string, currentNodeId: s
   lines.push(`Current node: ${currentNodeId}`);
   lines.push(`Record folder: ${flowRun.recordFolderPath}`);
 
-  const handoffEntries = Object.entries(flowRun.completedEdgeArtifacts)
-    .filter(([edge]) => {
+  const handoffEntries = flowRun.completedHandoffs
+    .filter(edge => {
       const [from, to] = edge.split('=>');
       return from === currentNodeId || to === currentNodeId;
     });
@@ -79,8 +79,8 @@ function summarizeFlowState(flowRun: FlowRun, roleName: string, currentNodeId: s
   if (handoffEntries.length === 0) {
     lines.push('- (none)');
   } else {
-    for (const [edge, artifactPath] of handoffEntries) {
-      lines.push(`- ${edge}: ${artifactPath}`);
+    for (const edge of handoffEntries) {
+      lines.push(`- ${edge}`);
     }
   }
 

@@ -53,7 +53,7 @@ export interface FlowRun {
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   completedNodes: string[];
   visitedNodeIds?: string[];
-  completedEdgeArtifacts: Record<string, string>;
+  completedHandoffs: string[];
   pendingNodeArtifacts: Record<string, string[]>;
   pendingHandoff: string[];
   receivingHandoff: Record<string, string[]>;
@@ -122,7 +122,7 @@ export interface ConsentState {
 
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
-  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
+  | { kind: 'role.active'; nodeId: string; role: string }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }

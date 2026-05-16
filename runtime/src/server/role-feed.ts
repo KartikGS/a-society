@@ -68,7 +68,7 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
         id,
         type: 'activation',
         label: 'Activation',
-        text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).`
+        text: `${event.nodeId} (${event.role}) is active.`
       };
     case 'activity.tool_call':
       return {

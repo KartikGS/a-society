@@ -67,10 +67,7 @@ async function runTest() {
       'branch-b': { role: 'Reviewer', reason: 'prompt-human' }
     },
     completedNodes: ['fork-gate'],
-    completedEdgeArtifacts: {
-      'fork-gate=>branch-a': 'art-a.md',
-      'fork-gate=>branch-b': 'art-b.md'
-    },
+    completedHandoffs: ['fork-gate=>branch-a', 'fork-gate=>branch-b'],
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'

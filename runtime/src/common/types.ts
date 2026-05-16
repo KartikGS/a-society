@@ -125,7 +125,7 @@ export interface FlowRun {
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   completedNodes: string[];                       // node IDs that have finished
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
-  completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
+  completedHandoffs: string[];                     // `${from}=>${to}` edge keys for forward handoffs that have been made; removed on backward handoff
   pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
   pendingHandoff: string[];                        // `${from}=>${to}` edges not yet traversed (unhandled forward targets + rejected backward edges)
   receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
@@ -205,7 +205,7 @@ export interface RoleTurnResult {
 
 export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
-  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
+  | { kind: 'role.active'; nodeId: string; role: string }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }

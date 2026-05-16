@@ -137,7 +137,7 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
     areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
-    areStringMapsEqual(left.completedEdgeArtifacts, right.completedEdgeArtifacts) &&
+    areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     areStringArrayMapsEqual(left.pendingNodeArtifacts, right.pendingNodeArtifacts) &&
     areImprovementPhasesEqual(left.improvementPhase, right.improvementPhase) &&
     areFeedbackContextsEqual(left.feedbackContext, right.feedbackContext) &&

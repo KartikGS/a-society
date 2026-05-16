@@ -365,7 +365,7 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       completedNodes: [],
-      completedEdgeArtifacts: {},
+      completedHandoffs: [],
       pendingNodeArtifacts: { start: [] },
       status: 'running',
       stateVersion: '7'
@@ -522,7 +522,7 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       completedNodes: [],
-      completedEdgeArtifacts: {},
+      completedHandoffs: [],
       pendingNodeArtifacts: {}, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
       stateVersion: '7',

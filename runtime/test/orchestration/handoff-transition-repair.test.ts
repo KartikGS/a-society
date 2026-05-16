@@ -60,7 +60,7 @@ await test('incomplete forward handoff is modeled as repairable handoff parse st
     awaitingHumanNodes: {},
     completedNodes: [],
     visitedNodeIds: ['owner-intake'],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: {}, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7',

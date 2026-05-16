@@ -364,7 +364,7 @@ export function bootstrapInitializationFlow(
       awaitingHumanNodes: {},
       completedNodes: [],
       visitedNodeIds: [],
-      completedEdgeArtifacts: {},
+      completedHandoffs: [],
       pendingNodeArtifacts: {
         'owner-intake': activeArtifacts
       },

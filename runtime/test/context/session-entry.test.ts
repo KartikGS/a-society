@@ -58,7 +58,6 @@ test('buildForwardNodeEntryMessage: contains node header and first-node role-ses
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: []
   });
 
   assert.ok(msg.includes('Workflow node: owner-gate (role: Owner)'));
@@ -74,12 +73,12 @@ test('buildForwardNodeEntryMessage: renders active artifact file block with cont
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: [relPath]
+    inboundHandoffs: [{ fromNodeId: 'source-node', artifacts: [relPath], direction: 'forward' }]
   });
 
+  assert.ok(msg.includes('Handoff received from predecessor source-node:'));
   assert.ok(msg.includes(`[FILE: ${relPath}]`));
   assert.ok(msg.includes('Artifact content here.'));
-  assert.ok(msg.includes('Current task inputs:'));
 });
 
 test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missing artifact', () => {
@@ -88,7 +87,7 @@ test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missin
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: ['nonexistent/path.md']
+    inboundHandoffs: [{ fromNodeId: 'source-node', artifacts: ['nonexistent/path.md'], direction: 'forward' }]
   });
 
   assert.ok(msg.includes('(File does not exist yet)'));
@@ -100,7 +99,6 @@ test('buildForwardNodeEntryMessage: includes role-transition framing when previo
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: [],
     entryMode: 'role-transition',
     previousNodeId: 'owner-intake'
   });
@@ -115,7 +113,6 @@ test('buildForwardNodeEntryMessage: includes reopened-node framing when node re-
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: [],
     entryMode: 'reopened-node',
     previousNodeId: 'owner-gate'
   });
@@ -130,7 +127,6 @@ test('buildForwardNodeEntryMessage: includes human input section when provided',
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: [],
     humanInput: 'Please focus on the security section.'
   });
 
@@ -144,7 +140,6 @@ test('buildForwardNodeEntryMessage: renders node contract fields and node-specif
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: [],
     nodeContext: {
       required_readings: ['$TEST_NODE_DOC'],
       guidance: ['Use the approved review checklist.'],
@@ -171,7 +166,6 @@ test('buildForwardNodeEntryMessage: injects workflow contract when requested', (
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: [],
     includeWorkflowContract: true
   });
 
@@ -186,7 +180,6 @@ test('buildForwardNodeEntryMessage: omits workflow contract by default', () => {
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: []
   });
 
   assert.ok(!msg.includes('Runtime workflow contract:'));
@@ -199,7 +192,6 @@ test('buildForwardNodeEntryMessage: omits human input section when not provided'
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    activeArtifacts: []
   });
 
   assert.ok(!msg.includes('Human input:'));

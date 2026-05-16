@@ -51,9 +51,7 @@ async function runTest() {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: ['proposal'],
-    completedEdgeArtifacts: {
-      'proposal=>review': proposalToReviewRelPath,
-    },
+    completedHandoffs: ['proposal=>review'],
     pendingNodeArtifacts: {
       review: [proposalToReviewRelPath],
     },
@@ -81,7 +79,7 @@ async function runTest() {
 
   assert.ok(updated.readyNodes.includes('proposal'), 'proposal should reactivate after terminal-node backward handoff');
   assert.ok(!updated.readyNodes.includes('review'), 'terminal review node should stop being active after sending work back');
-  assert.ok(!('proposal=>review' in updated.completedEdgeArtifacts), 'realized predecessor edge must be invalidated');
+  assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'realized predecessor edge must be invalidated');
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts.proposal,
     [proposalToReviewRelPath, reviewFeedbackRelPath],

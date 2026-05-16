@@ -6,13 +6,20 @@ import { resolveVariableFromIndex } from './paths.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/workflow.md');
 
+export interface InboundHandoff {
+  fromNodeId: string;
+  artifacts: string[];
+  direction: 'forward' | 'backward';
+}
+
 export interface ForwardNodeEntryOptions {
   nodeId: string;
   role: string;
   workspaceRoot: string;
   projectNamespace: string;
   recordFolderPath?: string;
-  activeArtifacts: string[];
+  inboundHandoffs?: InboundHandoff[];
+  pendingOutboundNodeIds?: string[];
   entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
   previousNodeId?: string;
   humanInput?: string;
@@ -42,7 +49,8 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     workspaceRoot,
     projectNamespace,
     recordFolderPath,
-    activeArtifacts,
+    inboundHandoffs,
+    pendingOutboundNodeIds,
     entryMode = 'first-node',
     previousNodeId,
     humanInput,
@@ -76,15 +84,30 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
   }
 
   lines.push('');
-  lines.push('Current task inputs:');
 
-  for (const artifactPath of activeArtifacts) {
-    const fullPath = path.resolve(workspaceRoot, artifactPath);
-    lines.push(`[FILE: ${artifactPath}]`);
-    if (fs.existsSync(fullPath)) {
-      lines.push(fs.readFileSync(fullPath, 'utf8'));
-    } else {
-      lines.push('(File does not exist yet)');
+  if (inboundHandoffs && inboundHandoffs.length > 0) {
+    for (const { fromNodeId, artifacts, direction } of inboundHandoffs) {
+      const label = direction === 'forward'
+        ? `Handoff received from predecessor ${fromNodeId}:`
+        : `Handoff received from successor ${fromNodeId}. Please take necessary action so that the successor can complete its work:`;
+      lines.push(label);
+      for (const artifactPath of artifacts) {
+        const fullPath = path.resolve(workspaceRoot, artifactPath);
+        lines.push(`[FILE: ${artifactPath}]`);
+        if (fs.existsSync(fullPath)) {
+          lines.push(fs.readFileSync(fullPath, 'utf8'));
+        } else {
+          lines.push('(File does not exist yet)');
+        }
+        lines.push('');
+      }
+    }
+  }
+
+  if (pendingOutboundNodeIds && pendingOutboundNodeIds.length > 0) {
+    lines.push('Pending handoffs from the current node:');
+    for (const targetNodeId of pendingOutboundNodeIds) {
+      lines.push(`- ${targetNodeId}`);
     }
     lines.push('');
   }

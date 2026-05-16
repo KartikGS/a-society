@@ -56,7 +56,7 @@ async function runTest() {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: {
       producer: ['records/test-flow/01-owner-brief.md'],
       'branch-c': ['records/test-flow/01-ta-brief.md'],
@@ -80,14 +80,9 @@ async function runTest() {
   ]);
 
   const updated = SessionStore.loadFlowRun()!;
-  assert.deepStrictEqual(
-    updated.completedEdgeArtifacts,
-    {
-      'producer=>branch-a': 'records/test-flow/02-producer-to-a.md',
-      'producer=>branch-b': 'records/test-flow/02-producer-to-b.md',
-      'branch-c=>branch-b': 'records/test-flow/03-c-to-b.md',
-    },
-    'concurrent handoffs should persist all artifacts by edge'
+  assert.ok(
+    ['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k)),
+    'concurrent handoffs should record all edge keys'
   );
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts['branch-a'],

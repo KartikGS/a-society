@@ -98,7 +98,7 @@ export function initializeDraftFlow(
     awaitingHumanNodes: {},
     completedNodes: [],
     visitedNodeIds: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: {},
     pendingHandoff: [],
     receivingHandoff: {},

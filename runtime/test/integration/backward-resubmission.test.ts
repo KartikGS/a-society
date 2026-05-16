@@ -62,10 +62,7 @@ async function runTest() {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: ['proposal'],
-    completedEdgeArtifacts: {
-      'proposal=>review': proposalToReviewRel,
-      'proposal=>audit': proposalToAuditRel,
-    },
+    completedHandoffs: ['proposal=>review', 'proposal=>audit'],
     pendingNodeArtifacts: {
       review: [proposalToReviewRel],
     },
@@ -93,12 +90,8 @@ async function runTest() {
 
   assert.ok(updated.readyNodes.includes('proposal'), 'proposal should reactivate after backward handoff');
   assert.ok(!updated.readyNodes.includes('review'), 'review should no longer be active after sending work back');
-  assert.ok(!('proposal=>review' in updated.completedEdgeArtifacts), 'rejected edge must be invalidated');
-  assert.strictEqual(
-    updated.completedEdgeArtifacts['proposal=>audit'],
-    proposalToAuditRel,
-    'sibling completed edge must remain intact'
-  );
+  assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'rejected edge must be invalidated');
+  assert.ok(updated.completedHandoffs.includes('proposal=>audit'), 'sibling completed edge must remain intact');
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts.proposal,
     [proposalToReviewRel, reviewFeedbackRel],

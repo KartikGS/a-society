@@ -81,7 +81,7 @@ function findPendingJoins(flowRun: FlowRun, wf: WfGraph): Array<{ id: string; ro
   }
 
   const hasRealizedIncomingEdge = (fromId: string, toId: string): boolean =>
-    `${fromId}=>${toId}` in flowRun.completedEdgeArtifacts;
+    flowRun.completedHandoffs.includes(`${fromId}=>${toId}`);
 
   return wf.nodes
     .filter(n => {

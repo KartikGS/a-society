@@ -40,7 +40,7 @@ const flowRun: FlowRun = {
   awaitingHumanNodes: {},
   completedNodes: [],
   visitedNodeIds: [],
-  completedEdgeArtifacts: {},
+  completedHandoffs: [],
   pendingNodeArtifacts: {}, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
   status: 'running',
   stateVersion: '7',
@@ -130,7 +130,6 @@ test('role.active becomes a role feed activation item', () => {
     kind: 'role.active',
     nodeId: 'owner-gate',
     role: 'Owner',
-    artifactCount: 1
   };
 
   assert.strictEqual(isTransientOperatorEvent(event), false);

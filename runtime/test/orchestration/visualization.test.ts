@@ -46,7 +46,7 @@ test('renderFlowStatus: single active node, no completed', () => {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: { 'start': ['p.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
@@ -70,12 +70,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       runningNodes: [],
       awaitingHumanNodes: {},
       completedNodes: ['start', 'fork', 't2'],
-      completedEdgeArtifacts: {
-        'start=>fork': 'p1.md',
-        'fork=>t1': 'p3.md',
-        'fork=>t2': 'p2.md',
-        't2=>join': 'p2.md'
-      },
+      completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't2=>join'],
       pendingNodeArtifacts: { 't1': ['p3.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
       stateVersion: '7'
@@ -101,7 +96,7 @@ test('renderFlowStatus: awaitingHumanNodes render explicit operator-input notice
     runningNodes: [],
     awaitingHumanNodes: { start: { role: 'Owner', reason: 'prompt-human' } },
     completedNodes: [],
-    completedEdgeArtifacts: {},
+    completedHandoffs: [],
     pendingNodeArtifacts: { 'start': [] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
@@ -121,11 +116,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     runningNodes: [],
     awaitingHumanNodes: {},
     completedNodes: ['start', 'fork'],
-    completedEdgeArtifacts: {
-      'start=>fork': 'p1.md',
-      'fork=>t1': 'p2.md',
-      'fork=>t2': 'p3.md'
-    },
+    completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2'],
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] }, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: '7'
@@ -146,13 +137,7 @@ test('renderFlowStatus: completed flow', () => {
         runningNodes: [],
         awaitingHumanNodes: {},
         completedNodes: ['start', 'fork', 't1', 't2', 'join'],
-        completedEdgeArtifacts: {
-          'start=>fork': 'p1.md',
-          'fork=>t1': 'p4.md',
-          'fork=>t2': 'p2.md',
-          't1=>join': 'p4.md',
-          't2=>join': 'p2.md'
-        },
+        completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't1=>join', 't2=>join'],
         pendingNodeArtifacts: {}, pendingHandoff: [], receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
         status: 'completed',
         stateVersion: '7'
