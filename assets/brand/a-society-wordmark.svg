@@ -3,20 +3,20 @@
   <desc id="desc">A-Society wordmark with the four-shard logo.</desc>
   <defs>
     <linearGradient id="green" x1="30" y1="99" x2="87" y2="20" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#00B92C"/>
-      <stop offset="1" stop-color="#00F320"/>
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
     <linearGradient id="red" x1="95" y1="20" x2="154" y2="99" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F31721"/>
-      <stop offset="1" stop-color="#E40A1C"/>
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
     <linearGradient id="yellow" x1="29" y1="107" x2="87" y2="190" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFE100"/>
-      <stop offset="1" stop-color="#F3A900"/>
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
     <linearGradient id="blue" x1="154" y1="107" x2="95" y2="190" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#169BFF"/>
-      <stop offset="1" stop-color="#083BAF"/>
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
   </defs>
   <path d="M30 99L87 20L86 33L57 99H30Z" fill="url(#green)"/>
