@@ -14,6 +14,7 @@ import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
+import { WorkflowGraph } from './workflow-graph.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
 
@@ -334,8 +335,7 @@ export class FlowOrchestrator {
         }
 
         const wf = this.loadWorkflowDocument(flowRun);
-        const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
-        if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
+        const currentNodeDef = wf.findNodeById(nodeId);
 
         const roleName = currentNodeDef.role;
         span.setAttribute('role', roleName);
@@ -353,14 +353,10 @@ export class FlowOrchestrator {
         const inboundHandoffSnapshot = Object.entries(flowRun.receivingHandoff)
           .filter(([key]) => key.split('=>')[1] === nodeId)
           .map(([key, artifacts]) => ({ key, artifacts: [...artifacts] }));
-        const inboundHandoffs = inboundHandoffSnapshot.map(({ key, artifacts }) => {
-          const fromNodeId = key.split('=>')[0];
-          const isPredecessor = this.getIncomingEdges(wf, nodeId).some((e: any) => e.from === fromNodeId);
-          return { fromNodeId, artifacts, direction: isPredecessor ? 'forward' as const : 'backward' as const };
-        });
-        const pendingOutboundNodeIds = this.getOutgoingEdges(wf, nodeId)
-          .filter((e: any) => !flowRun.completedHandoffs.includes(this.edgeKey(nodeId, e.to)))
-          .map((e: any) => e.to);
+        const receivingHandoffSnapshot = inboundHandoffSnapshot.map(({ key, artifacts }) => ({
+          fromNodeId: key.split('=>')[0],
+          artifacts,
+        }));
 
         const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;
 
@@ -423,17 +419,17 @@ export class FlowOrchestrator {
         const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
 
         const forwardHandoffTargets = firstNodeVisit
-          ? this.getOutgoingEdges(wf, nodeId)
+          ? wf.getOutgoingEdges(nodeId)
               .map((edge: any) => {
-                const node = this.findNodeByIdOrNull(wf, edge.to);
+                const node = wf.findNodeByIdOrNull(edge.to);
                 return node ? { nodeId: node.id as string, role: node.role as string } : null;
               })
               .filter((t): t is { nodeId: string; role: string } => t !== null)
           : undefined;
         const backwardHandoffTargets = firstNodeVisit
-          ? this.getIncomingEdges(wf, nodeId)
+          ? wf.getIncomingEdges(nodeId)
               .map((edge: any) => {
-                const node = this.findNodeByIdOrNull(wf, edge.from);
+                const node = wf.findNodeByIdOrNull(edge.from);
                 return node ? { nodeId: node.id as string, role: node.role as string } : null;
               })
               .filter((t): t is { nodeId: string; role: string } => t !== null)
@@ -446,8 +442,9 @@ export class FlowOrchestrator {
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
             recordFolderPath: flowRun.recordFolderPath,
-            inboundHandoffs,
-            pendingOutboundNodeIds,
+            wf,
+            completedHandoffs: flowRun.completedHandoffs,
+            receivingHandoffSnapshot,
             humanInput,
             includeWorkflowContract,
             nodeContext,
@@ -462,8 +459,9 @@ export class FlowOrchestrator {
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
             recordFolderPath: flowRun.recordFolderPath,
-            inboundHandoffs,
-            pendingOutboundNodeIds,
+            wf,
+            completedHandoffs: flowRun.completedHandoffs,
+            receivingHandoffSnapshot,
             entryMode: firstNodeVisit ? 'role-transition' : 'reopened-node',
             previousNodeId: session.currentNodeId,
             humanInput,
@@ -623,7 +621,7 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'await-handoff') {
                 const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
-                const isPendingTarget = this.getIncomingEdges(wf, nodeId).some((e: any) => !latestForCheck.completedHandoffs.includes(this.edgeKey(e.from, nodeId)));
+                const isPendingTarget = wf.getIncomingEdges(nodeId).some((e: any) => !latestForCheck.completedHandoffs.includes(wf.edgeKey(e.from, nodeId)));
                 const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
 
                 if (!isPendingTarget && !isReceivingTarget) {
@@ -758,9 +756,9 @@ export class FlowOrchestrator {
     await SessionStore.updateFlowRun((latest) => {
       const wf = this.resolveActiveWorkflow(latest);
 
-      this.findNodeById(wf, nodeId);
-      const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
-      const incomingEdges = this.getIncomingEdges(wf, nodeId);
+      wf.findNodeById(nodeId);
+      const outgoingEdges = wf.getOutgoingEdges(nodeId);
+      const incomingEdges = wf.getIncomingEdges(nodeId);
 
       const forwardTargets: HandoffTarget[] = [];
       const backwardTargets: HandoffTarget[] = [];
@@ -784,7 +782,7 @@ export class FlowOrchestrator {
           continue;
         }
 
-        const targetExists = this.findNodeByIdOrNull(wf, targetNodeId);
+        const targetExists = wf.findNodeByIdOrNull(targetNodeId);
         if (!targetExists) {
           this.throwHandoffTransitionRepair(`Target node '${targetNodeId}' not found in workflow.`);
         }
@@ -824,7 +822,7 @@ export class FlowOrchestrator {
             this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
           }
           claimedTargets.add(handoff.target_node_id);
-          const targetNode = this.findNodeById(wf, handoff.target_node_id);
+          const targetNode = wf.findNodeById(handoff.target_node_id);
           activationPairs.push({
             targetId: targetNode.id,
             artifact: handoff.artifact_path ?? '',
@@ -844,7 +842,7 @@ export class FlowOrchestrator {
         this.removeOpenNode(latest, nodeId);
 
         for (const pair of activationPairs) {
-          const forwardKey = this.edgeKey(nodeId, pair.targetId);
+          const forwardKey = wf.edgeKey(nodeId, pair.targetId);
           if (!latest.completedHandoffs.includes(forwardKey)) latest.completedHandoffs.push(forwardKey);
           if (!latest.receivingHandoff[forwardKey]) latest.receivingHandoff[forwardKey] = [];
           if (pair.artifact && !latest.receivingHandoff[forwardKey].includes(pair.artifact)) {
@@ -890,8 +888,8 @@ export class FlowOrchestrator {
             );
           }
 
-          const targetNode = this.findNodeById(wf, handoff.target_node_id);
-          const rejectedEdgeKey = this.edgeKey(targetNode.id, nodeId);
+          const targetNode = wf.findNodeById(handoff.target_node_id);
+          const rejectedEdgeKey = wf.edgeKey(targetNode.id, nodeId);
 
           if (!latest.completedHandoffs.includes(rejectedEdgeKey)) {
             this.throwHandoffTransitionRepair(
@@ -899,7 +897,7 @@ export class FlowOrchestrator {
             );
           }
 
-          const backwardHandoffKey = this.edgeKey(nodeId, targetNode.id);
+          const backwardHandoffKey = wf.edgeKey(nodeId, targetNode.id);
           if (!latest.receivingHandoff[backwardHandoffKey]) latest.receivingHandoff[backwardHandoffKey] = [];
           if (handoff.artifact_path && !latest.receivingHandoff[backwardHandoffKey].includes(handoff.artifact_path)) {
             latest.receivingHandoff[backwardHandoffKey].push(handoff.artifact_path);
@@ -1004,15 +1002,15 @@ export class FlowOrchestrator {
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
   }
 
-  private loadWorkflowDocument(flowRun: FlowRun): any {
+  private loadWorkflowDocument(flowRun: FlowRun): WorkflowGraph {
     const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
     if (!workflowFilePath) {
       throw new Error('No workflow found in this record. Please start a new flow.');
     }
-    return resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace);
+    return new WorkflowGraph(resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace));
   }
 
-  private deriveHandoffReadyNodes(flowRun: FlowRun, wf: any): string[] {
+  private deriveHandoffReadyNodes(flowRun: FlowRun, wf: WorkflowGraph): string[] {
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
     const awaitingHandoffSet = new Set(flowRun.awaitingHandoff);
     const openNodes = new Set(this.getOpenNodeIds(flowRun));
@@ -1025,7 +1023,7 @@ export class FlowOrchestrator {
     for (const node of wf.nodes) {
       const nodeId = node.id;
       if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || openNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
-      const hasPendingOutgoing = this.getOutgoingEdges(wf, nodeId).some((e: any) => !flowRun.completedHandoffs.includes(this.edgeKey(nodeId, e.to)));
+      const hasPendingOutgoing = wf.getOutgoingEdges(nodeId).some((e: any) => !flowRun.completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
       if (hasPendingOutgoing) {
         result.push(nodeId);
         seen.add(nodeId);
@@ -1065,13 +1063,13 @@ export class FlowOrchestrator {
       }
       const occupiedRoles = new Map<string, string>();
       for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
-        const node = this.findNodeById(wf, nodeId);
+        const node = wf.findNodeById(nodeId);
         occupiedRoles.set(this.roleKey(node.role), nodeId);
       }
 
       const selected: string[] = [];
       for (const nodeId of allReadyNodes) {
-        const node = this.findNodeById(wf, nodeId);
+        const node = wf.findNodeById(nodeId);
         const nodeRoleKey = this.roleKey(node.role);
         const conflictingNodeId = occupiedRoles.get(nodeRoleKey);
         if (conflictingNodeId && conflictingNodeId !== nodeId) {
@@ -1189,9 +1187,9 @@ export class FlowOrchestrator {
     }
   }
 
-  private roleHasFutureNode(wf: any, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
+  private roleHasFutureNode(wf: WorkflowGraph, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
     const roleKey = this.roleKey(roleName);
-    return Array.isArray(wf.nodes) && wf.nodes.some((node: any) =>
+    return wf.nodes.some((node) =>
       node?.id !== currentNodeId &&
       typeof node?.role === 'string' &&
       this.roleKey(node.role) === roleKey &&
@@ -1255,7 +1253,7 @@ export class FlowOrchestrator {
     }
   }
 
-  private resolveActiveWorkflow(flowRun: FlowRun): any {
+  private resolveActiveWorkflow(flowRun: FlowRun): WorkflowGraph {
     const rolesDir = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'roles');
     const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
     if (workflowFilePath) {
@@ -1265,11 +1263,11 @@ export class FlowOrchestrator {
       }
     }
     try {
-      return resolveFlowWorkflow(
+      return new WorkflowGraph(resolveFlowWorkflow(
         flowRun.recordFolderPath,
         flowRun.workspaceRoot,
         flowRun.projectNamespace
-      );
+      ));
     } catch (error) {
       throw new WorkflowError((error as Error).message);
     }
@@ -1279,18 +1277,6 @@ export class FlowOrchestrator {
     return `${flowRun.flowId}__${this.roleKey(roleName)}`;
   }
 
-  private findNodeById(wf: any, nodeId: string): any {
-    const node = wf.nodes.find((n: any) => n.id === nodeId);
-    if (!node) {
-      throw new Error(`Node '${nodeId}' not found in workflow.`);
-    }
-    return node;
-  }
-
-  private findNodeByIdOrNull(wf: any, nodeId: string): any | null {
-    return wf.nodes.find((n: any) => n.id === nodeId) ?? null;
-  }
-
   private throwHandoffTransitionRepair(detail: string): never {
     throw new HandoffParseError({
       code: 'invalid_transition',
@@ -1298,21 +1284,6 @@ export class FlowOrchestrator {
       modelRepairMessage: `Error: ${detail} Correct the final \`handoff\` block and restate it.`
     });
   }
-
-  private getOutgoingEdges(wf: any, nodeId: string): any[] {
-    return (wf.edges || []).filter((edge: any) => edge.from === nodeId);
-  }
-
-  private getIncomingEdges(wf: any, nodeId: string): any[] {
-    return (wf.edges || []).filter((edge: any) => edge.to === nodeId);
-  }
-
-
-
-  private edgeKey(fromNodeId: string, toNodeId: string): string {
-    return `${fromNodeId}=>${toNodeId}`;
-  }
-
 
   private mergeNodeIds(...nodeGroups: string[][]): string[] {
     const seen = new Set<string>();
@@ -1335,12 +1306,12 @@ export class FlowOrchestrator {
     );
   }
 
-  private markNodeCompletedIfSettled(flowRun: FlowRun, wf: any, nodeId: string): void {
-    const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
+  private markNodeCompletedIfSettled(flowRun: FlowRun, wf: WorkflowGraph, nodeId: string): void {
+    const outgoingEdges = wf.getOutgoingEdges(nodeId);
     if (outgoingEdges.length === 0) return;
 
     const allSettled = outgoingEdges.every((edge: any) =>
-      flowRun.completedHandoffs.includes(this.edgeKey(edge.from, edge.to))
+      flowRun.completedHandoffs.includes(wf.edgeKey(edge.from, edge.to))
     );
 
     if (allSettled) {
@@ -1393,10 +1364,10 @@ export class FlowOrchestrator {
     }
   }
 
-  private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string) {
-    const incomingEdges = this.getIncomingEdges(wf, candidateNodeId);
+  private activateOrDefer(flowRun: FlowRun, wf: WorkflowGraph, candidateNodeId: string) {
+    const incomingEdges = wf.getIncomingEdges(candidateNodeId);
     const allComplete = incomingEdges.every((edge: any) =>
-      flowRun.completedHandoffs.includes(this.edgeKey(edge.from, edge.to))
+      flowRun.completedHandoffs.includes(wf.edgeKey(edge.from, edge.to))
     );
 
     if (allComplete) {

@@ -6,6 +6,7 @@ import {
   buildForwardNodeEntryMessage,
   buildImprovementEntryMessage
 } from '../../src/context/session-entry.js';
+import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
 
 let passed = 0;
 let failed = 0;
@@ -68,26 +69,32 @@ test('buildForwardNodeEntryMessage: contains node header and first-node role-ses
 
 test('buildForwardNodeEntryMessage: renders active artifact file block with content', () => {
   const relPath = path.relative(tmpDir, artifactPath);
+  const wf = new WorkflowGraph({ nodes: [{ id: 'source-node', role: 'Source' }, { id: 'owner-gate', role: 'Owner' }], edges: [{ from: 'source-node', to: 'owner-gate' }] });
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    inboundHandoffs: [{ fromNodeId: 'source-node', artifacts: [relPath], direction: 'forward' }]
+    wf,
+    completedHandoffs: [],
+    receivingHandoffSnapshot: [{ fromNodeId: 'source-node', artifacts: [relPath] }]
   });
 
-  assert.ok(msg.includes('Handoff received from predecessor source-node:'));
+  assert.ok(msg.includes('From predecessor source-node:'));
   assert.ok(msg.includes(`[FILE: ${relPath}]`));
   assert.ok(msg.includes('Artifact content here.'));
 });
 
 test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missing artifact', () => {
+  const wf = new WorkflowGraph({ nodes: [{ id: 'source-node', role: 'Source' }, { id: 'owner-gate', role: 'Owner' }], edges: [{ from: 'source-node', to: 'owner-gate' }] });
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
     role: 'Owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    inboundHandoffs: [{ fromNodeId: 'source-node', artifacts: ['nonexistent/path.md'], direction: 'forward' }]
+    wf,
+    completedHandoffs: [],
+    receivingHandoffSnapshot: [{ fromNodeId: 'source-node', artifacts: ['nonexistent/path.md'] }]
   });
 
   assert.ok(msg.includes('(File does not exist yet)'));

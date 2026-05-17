@@ -21,6 +21,7 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { ContextInjectionService } from '../../src/context/injection.js';
 import { buildForwardNodeEntryMessage } from '../../src/context/session-entry.js';
+import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
@@ -257,7 +258,9 @@ async function run() {
       role: 'owner',
       workspaceRoot,
       projectNamespace,
-      inboundHandoffs: [{ fromNodeId: 'owner-intake', artifacts: [path.relative(workspaceRoot, taArtifact)], direction: 'forward' }],
+      wf: new WorkflowGraph({ nodes: [{ id: 'owner-intake', role: 'owner' }, { id: 'owner-gate', role: 'owner' }], edges: [{ from: 'owner-intake', to: 'owner-gate' }] }),
+      completedHandoffs: [],
+      receivingHandoffSnapshot: [{ fromNodeId: 'owner-intake', artifacts: [path.relative(workspaceRoot, taArtifact)] }],
       entryMode: 'role-transition',
       previousNodeId: 'owner-intake'
     });
@@ -273,10 +276,12 @@ async function run() {
       role: 'owner',
       workspaceRoot,
       projectNamespace,
-      inboundHandoffs: [{ fromNodeId: 'reviewer', artifacts: [
+      wf: new WorkflowGraph({ nodes: [{ id: 'owner-intake', role: 'owner' }], edges: [] }),
+      completedHandoffs: [],
+      receivingHandoffSnapshot: [{ fromNodeId: 'reviewer', artifacts: [
         path.relative(workspaceRoot, ownerArtifact1),
         path.relative(workspaceRoot, reviewFeedbackArtifact)
-      ], direction: 'backward' }],
+      ] }],
       entryMode: 'reopened-node',
       previousNodeId: 'owner-intake'
     });
