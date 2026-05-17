@@ -201,6 +201,8 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         label: 'Complete',
         text: 'Orchestration completed.'
       };
+    case 'activity.tool_result':
+      return null;
     case 'consent.requested':
     case 'consent.resolved':
     case 'consent.mode_changed':
@@ -234,6 +236,17 @@ function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string | null):
 
 function getConsentRequestRoleKey(request: ConsentRequest | null | undefined): string | null {
   return toRoleKey(request?.role);
+}
+
+function resolveToolFeedItem(feeds: Record<string, FeedItem[]>, role: string, toolName: string, isError: boolean): Record<string, FeedItem[]> {
+  const existing = feeds[role] ?? [];
+  const idx = [...existing].reverse().findIndex(item => item.type === 'tool' && item.text.startsWith(toolName));
+  if (idx === -1) return feeds;
+  const realIdx = existing.length - 1 - idx;
+  const updated = existing.map((item, i) =>
+    i === realIdx ? { ...item, type: (isError ? 'tool-error' : 'tool-success') as FeedItem['type'] } : item
+  );
+  return { ...feeds, [role]: updated };
 }
 
 function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
@@ -473,6 +486,17 @@ export function App() {
           return;
         }
 
+        if (event.kind === 'activity.tool_result') {
+          const roleKey = toRoleKey(event.role);
+          if (roleKey) {
+            updateFlowUi(key, (state) => ({
+              ...state,
+              roleFeeds: resolveToolFeedItem(state.roleFeeds, roleKey, event.toolName, event.isError)
+            }));
+          }
+          return;
+        }
+
         updateFlowUi(key, (state) => {
           const item = formatOperatorEvent(event);
           const feedRole =
@@ -506,7 +530,16 @@ export function App() {
         });
         return;
       }
-      case 'wait_start': {
+      case 'request_sent': {
+        const roleKey = toRoleKey(message.role);
+        if (!roleKey) return;
+        updateFlowUi(key, (state) => ({
+          ...state,
+          waitLabels: { ...state.waitLabels, [roleKey]: 'Waiting for model...' }
+        }));
+        return;
+      }
+      case 'receiving_response': {
         const roleKey = toRoleKey(message.role);
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
@@ -515,7 +548,7 @@ export function App() {
         }));
         return;
       }
-      case 'wait_stop': {
+      case 'response_end': {
         const roleKey = toRoleKey(message.role);
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
@@ -530,7 +563,7 @@ export function App() {
         if (!roleKey) return;
         updateFlowUi(key, (state) => ({
           ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: null },
+          waitLabels: state.waitLabels[roleKey] ? state.waitLabels : { ...state.waitLabels, [roleKey]: 'Model is responding...' },
           roleFeeds: appendFeedItem(state.roleFeeds, roleKey, {
             id: nextFeedId(),
             type: 'assistant',
@@ -978,7 +1011,8 @@ export function App() {
     hasActiveSession &&
     !viewedRoleAwaitingNodeId &&
     socket.status === 'open';
-  const canStopViewedRole = canStop && isViewedRoleActive;
+  const viewedRoleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
+  const canStopViewedRole = canStop && (!!viewedRoleWaitLabel || isViewedRoleActive);
   const stopRequestedForViewedRole = viewedRole ? Boolean(activeUi?.stopRequestedRoles[viewedRole]) : false;
 
   return (

@@ -128,6 +128,8 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
         label: 'Complete',
         text: 'Orchestration completed.'
       };
+    case 'activity.tool_result':
+      return null;
     case 'consent.requested':
     case 'consent.resolved':
     case 'consent.mode_changed':

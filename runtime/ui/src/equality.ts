@@ -116,10 +116,7 @@ function areConsentStatesEqual(
     if (leftCommands[key].grantedAt !== rightCommands[key].grantedAt) return false;
   }
 
-  return (
-    left.mode === right.mode &&
-    Boolean(left.fileWrites?.allowAllEditsThisFlow) === Boolean(right.fileWrites?.allowAllEditsThisFlow)
-  );
+  return left.mode === right.mode;
 }
 
 export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): boolean {

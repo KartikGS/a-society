@@ -72,7 +72,7 @@ export class AnthropicProvider implements LLMProvider {
       let fullText = '';
 
       try {
-        renderer?.startWait(options?.role ?? '', 'anthropic', this.model);
+        renderer?.requestSent(options?.role ?? '', 'anthropic', this.model);
 
         const anthropicMessages: any[] = messages.map(msg => {
           if (msg.role === 'user') return { role: 'user', content: msg.content };
@@ -118,6 +118,8 @@ export class AnthropicProvider implements LLMProvider {
 
         const toolUseBlocks = new Map<number, { id: string, name: string, inputJson: string }>();
 
+        renderer?.receivingResponse(options?.role ?? '');
+
         stream.on('streamEvent', (event) => {
           if (event.type === 'content_block_start') {
             const chunk = event as any;
@@ -125,13 +127,11 @@ export class AnthropicProvider implements LLMProvider {
             if (block.type === 'tool_use') {
               toolUseBlocks.set(chunk.index, { id: block.id, name: block.name, inputJson: '' });
               span.addEvent('provider.tool_use_block_received', { 'tool.name': block.name, 'tool.id': block.id });
-              renderer?.stopWait(options?.role ?? '');
             }
           } else if (event.type === 'content_block_delta') {
             const chunk = event as any;
             const delta = chunk.delta as any;
             if (delta.type === 'text_delta') {
-              if (fullText === '') renderer?.stopWait(options?.role ?? '');
               outputStream.write(delta.text);
               options?.onAssistantTextDelta?.(delta.text);
               fullText += delta.text;
@@ -143,7 +143,6 @@ export class AnthropicProvider implements LLMProvider {
         });
 
         const finalMsg = await stream.finalMessage();
-        renderer?.stopWait(options?.role ?? '');
 
         const inputTokens = finalMsg.usage?.input_tokens;
         const outputTokens = finalMsg.usage?.output_tokens;
@@ -176,7 +175,6 @@ export class AnthropicProvider implements LLMProvider {
         return { type: 'text' as const, text: fullText, contextUsage };
 
       } catch (error: any) {
-        renderer?.stopWait(options?.role ?? '');
         if (error.name === 'AbortError' || error.type === 'aborted' || options?.signal?.aborted) {
           span.addEvent('provider.aborted');
           span.setStatus({ code: SpanStatusCode.OK });

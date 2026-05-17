@@ -111,9 +111,6 @@ export type ConsentRequest =
 
 export interface ConsentState {
   mode: ConsentMode;
-  fileWrites: {
-    allowAllEditsThisFlow: boolean;
-  };
   bash: {
     allowedCommands: Record<string, { command: string; grantedAt: string }>;
   };
@@ -123,6 +120,7 @@ export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
+  | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
@@ -156,8 +154,9 @@ export type ServerMessage =
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
   | { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> }
   | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }
-  | { type: 'wait_start'; flowRef: FlowRef; role: string; provider: string; model: string }
-  | { type: 'wait_stop'; flowRef: FlowRef; role: string }
+  | { type: 'request_sent'; flowRef: FlowRef; role: string; provider: string; model: string }
+  | { type: 'receiving_response'; flowRef: FlowRef; role: string }
+  | { type: 'response_end'; flowRef: FlowRef; role: string }
   | { type: 'output_text'; flowRef: FlowRef; role: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
   | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; contextUsageByRole: Record<string, number> }

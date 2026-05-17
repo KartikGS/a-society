@@ -22,9 +22,6 @@ export interface ConsentCheckRequest {
 
 export interface ConsentState {
   mode: ConsentMode;
-  fileWrites: {
-    allowAllEditsThisFlow: boolean;
-  };
   bash: {
     allowedCommands: Record<string, { command: string; grantedAt: string }>;
   };
@@ -41,9 +38,6 @@ export interface FeedbackContext {
 export function defaultConsentState(): ConsentState {
   return {
     mode: 'no-access',
-    fileWrites: {
-      allowAllEditsThisFlow: false,
-    },
     bash: {
       allowedCommands: {},
     },
@@ -62,14 +56,6 @@ export function normalizeConsentState(raw: unknown): ConsentState {
         ? 'no-access'
         : fallback.mode;
 
-  const fileWrites = source.fileWrites && typeof source.fileWrites === 'object'
-    ? {
-        allowAllEditsThisFlow: Boolean(source.fileWrites.allowAllEditsThisFlow),
-      }
-    : {
-        allowAllEditsThisFlow: false,
-      };
-
   const allowedCommandsSource = source.bash?.allowedCommands;
   const allowedCommands: Record<string, { command: string; grantedAt: string }> = {};
   if (allowedCommandsSource && typeof allowedCommandsSource === 'object') {
@@ -84,7 +70,6 @@ export function normalizeConsentState(raw: unknown): ConsentState {
 
   return {
     mode,
-    fileWrites,
     bash: { allowedCommands },
   };
 }
@@ -217,6 +202,7 @@ export type OperatorEvent =
   | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
+  | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
@@ -233,8 +219,9 @@ export type OperatorEvent =
 
 export interface OperatorRenderSink {
   emit(event: OperatorEvent): void;
-  startWait(role: string, provider: string, model: string): void;
-  stopWait(role: string): void;
+  requestSent(role: string, provider: string, model: string): void;
+  receivingResponse(role: string): void;
+  responseEnd(role: string): void;
   sendError(message: string): void;
 }
 
@@ -252,6 +239,8 @@ export type FeedItemType =
   | 'handoff'
   | 'repair'
   | 'tool'
+  | 'tool-success'
+  | 'tool-error'
   | 'activation';
 
 export interface FeedItem {
