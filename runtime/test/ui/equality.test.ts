@@ -28,11 +28,12 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     awaitingHumanNodes: {
       'owner-intake': { role: 'Owner', reason: 'prompt-human' },
     },
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: '8',
     consentState: {
       mode,
       bash: { allowedCommands: {} },
@@ -55,6 +56,17 @@ test('areFlowRunsEqual detects stored bash consent changes', () => {
   right.consentState!.bash.allowedCommands['npm test'] = {
     command: 'npm test',
     grantedAt: '2026-05-03T00:00:00.000Z',
+  };
+
+  assert.strictEqual(areFlowRunsEqual(left, right), false);
+});
+
+test('areFlowRunsEqual detects queued human input changes', () => {
+  const left = flowWithConsent('partial-access');
+  const right = flowWithConsent('partial-access');
+  right.pendingHumanInputs['owner-intake'] = {
+    text: 'Proceed with the narrower option.',
+    receivedAt: '2026-05-17T00:00:00.000Z',
   };
 
   assert.strictEqual(areFlowRunsEqual(left, right), false);

@@ -606,6 +606,19 @@ function buildServer(workspaceRoot: string) {
     return session;
   }
 
+  function startFlowRunner(session: ActiveSession, projectNamespace: string): void {
+    void attachSessionTask(session, () =>
+      session.orchestrator.runStoredFlow(
+        workspaceRoot,
+        projectNamespace,
+        session.outputBridge,
+        session.flowRef.flowId,
+        (role) => createRoleOutputStream(session, role),
+        session.consentGate
+      )
+    ).catch(() => {});
+  }
+
   function attachSessionTask(session: ActiveSession, taskFactory: () => Promise<void>): Promise<void> {
     session.task = taskFactory()
       .catch((error: any) => {
@@ -683,16 +696,7 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(flowRef);
     emitFlowState(session);
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        projectNamespace,
-        session.outputBridge,
-        flowRef.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      )
-    ).catch(() => {});
+    startFlowRunner(session, projectNamespace);
   }
 
   function startInitializationFlow(socket: WebSocket, projectNamespace: string, mode: 'takeover' | 'greenfield'): void {
@@ -710,16 +714,7 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(flowRef);
     emitFlowState(session);
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        flowRun.projectNamespace,
-        session.outputBridge,
-        flowRef.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      )
-    ).catch(() => {});
+    startFlowRunner(session, flowRun.projectNamespace);
   }
 
   async function resumeFlow(socket: WebSocket, ref: FlowRef): Promise<void> {
@@ -754,22 +749,13 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(ref);
     sendFlowState(socket, ref);
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        flowRun.projectNamespace,
-        session.outputBridge,
-        ref.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      )
-    ).catch(() => {});
+    startFlowRunner(session, flowRun.projectNamespace);
   }
 
-  function resumeAwaitingHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): void {
+  async function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): Promise<void> {
     const flowRun = readFlowRun(ref);
     if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No suspended flow is waiting for operator input.' });
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
       return;
     }
 
@@ -781,6 +767,19 @@ function buildServer(workspaceRoot: string) {
     let targetNodeId: string;
     try {
       targetNodeId = resolveAwaitingHumanNode(flowRun, target);
+      await SessionStore.updateFlowRun((latest) => {
+        const awaitingState = latest.awaitingHumanNodes[targetNodeId];
+        if (!awaitingState || !isAwaitingHumanReply(awaitingState.reason)) {
+          throw new Error(`Node '${targetNodeId}' is no longer awaiting human input.`);
+        }
+        if (latest.pendingHumanInputs[targetNodeId]) {
+          throw new Error(`Node '${targetNodeId}' already has queued human input.`);
+        }
+        latest.pendingHumanInputs[targetNodeId] = {
+          text,
+          receivedAt: new Date().toISOString(),
+        };
+      }, ref, workspaceRoot);
     } catch (error: any) {
       broadcastToFlow(ref, {
         type: 'error',
@@ -790,101 +789,19 @@ function buildServer(workspaceRoot: string) {
       return;
     }
 
-    const session = createSession(ref);
+    let session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      session = createSession(ref);
+      startFlowRunner(session, flowRun.projectNamespace);
+    }
+
     emitHistoricalMessage(session, {
       type: 'input_text',
       role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
       text,
     });
-
-    void attachSessionTask(session, async () => {
-      let currentFlow = readFlowRun(ref);
-      if (!currentFlow) {
-        throw new Error('Suspended flow state disappeared before the resume step began.');
-      }
-
-      await session.orchestrator.advanceFlow(
-        currentFlow,
-        targetNodeId,
-        text,
-        session.outputBridge,
-        session.consentGate,
-        (role) => createRoleOutputStream(session, role)
-      );
-
-      await session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        currentFlow.projectNamespace,
-        session.outputBridge,
-        ref.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      );
-
-      currentFlow = readFlowRun(ref);
-      if (currentFlow?.status === 'completed') {
-        session.sink.emit({ kind: 'flow.completed' });
-      }
-    }).catch(() => {});
-  }
-
-  function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): void {
-    const activeSession = activeSessions.get(flowKey(ref));
-    if (activeSession && !activeSession.finished) {
-      const flowRun = readFlowRun(ref);
-      if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
-        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
-        return;
-      }
-
-      if (!SettingsStore.hasUsableConfiguredModel()) {
-        broadcastToFlow(ref, missingModelError(ref));
-        return;
-      }
-
-      let targetNodeId: string;
-      try {
-        targetNodeId = resolveAwaitingHumanNode(flowRun, target);
-      } catch (error: any) {
-        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
-        return;
-      }
-
-      emitHistoricalMessage(activeSession, {
-        type: 'input_text',
-        role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
-        text,
-      });
-      void activeSession.orchestrator.advanceFlow(
-        flowRun,
-        targetNodeId,
-        text,
-        activeSession.outputBridge,
-        activeSession.consentGate,
-        (role) => createRoleOutputStream(activeSession, role)
-      ).then(() => activeSession.orchestrator.runStoredFlow(
-        workspaceRoot,
-        flowRun.projectNamespace,
-        activeSession.outputBridge,
-        ref.flowId,
-        (role) => createRoleOutputStream(activeSession, role),
-        activeSession.consentGate
-      )).catch((error: any) => {
-        emitHistoricalMessage(activeSession, {
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error)
-        });
-      });
-      return;
-    }
-
-    const flowRun = readFlowRun(ref);
-    if (flowRun && hasAwaitingHumanNodes(flowRun)) {
-      resumeAwaitingHumanInput(ref, text, target);
-      return;
-    }
-
-    broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active runtime session is waiting for human input.' });
+    session.orchestrator.wake();
+    emitFlowState(session);
   }
 
   function getOrCreateChoiceSession(ref: FlowRef): ActiveSession {
@@ -1580,7 +1497,13 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      handleHumanInput(message.flowRef, message.text, { nodeId: message.nodeId, role: message.role });
+      void handleHumanInput(message.flowRef, message.text, { nodeId: message.nodeId, role: message.role }).catch((error: any) => {
+        sendToSocket(socket, {
+          type: 'error',
+          flowRef: message.flowRef,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      });
     });
 
     socket.on('close', () => {

@@ -362,6 +362,7 @@ export function bootstrapInitializationFlow(
       readyNodes: ['owner-intake'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
       visitedNodeIds: [],
       completedHandoffs: [],
@@ -372,7 +373,7 @@ export function bootstrapInitializationFlow(
       historyHandoff: {},
       awaitingHandoff: [],
       status: 'running',
-      stateVersion: '7',
+      stateVersion: '8',
       feedbackContext: {
         kind: 'initialization',
         initializationMode: mode,

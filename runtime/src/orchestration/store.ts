@@ -59,10 +59,10 @@ function getRoleFeedPath(workspaceRoot: string, ref: FlowRef, roleKey: string): 
 }
 
 function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: FlowRef): FlowRun {
-  if (flow.stateVersion !== '7') {
+  if (flow.stateVersion !== '8') {
     throw new Error(
       `Unsupported persisted flow state version "${String((flow as any).stateVersion ?? 'missing')}". ` +
-      'This runtime only supports flow state version "7".'
+      'This runtime only supports flow state version "8".'
     );
   }
 
@@ -109,6 +109,9 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
   }
   if (!flow.awaitingHumanNodes || typeof flow.awaitingHumanNodes !== 'object') {
     throw new Error('Persisted flow state is missing awaitingHumanNodes.');
+  }
+  if (!flow.pendingHumanInputs || typeof flow.pendingHumanInputs !== 'object') {
+    throw new Error('Persisted flow state is missing pendingHumanInputs.');
   }
   if (!Array.isArray(flow.completedHandoffs)) {
     flow.completedHandoffs = [];

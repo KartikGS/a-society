@@ -45,11 +45,12 @@ test('renderFlowStatus: single active node, no completed', () => {
     readyNodes: ['start'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: { 'start': ['p.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   };
 
   const output = renderFlowStatus(flowRun, WF);
@@ -69,11 +70,12 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       readyNodes: ['t1'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: ['start', 'fork', 't2'],
       completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't2=>join'],
       pendingNodeArtifacts: { 't1': ['p3.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
-      stateVersion: '7'
+      stateVersion: '8'
     };
   
     const output = renderFlowStatus(flowRun, WF);
@@ -95,11 +97,12 @@ test('renderFlowStatus: awaitingHumanNodes render explicit operator-input notice
     readyNodes: [],
     runningNodes: [],
     awaitingHumanNodes: { start: { role: 'Owner', reason: 'prompt-human' } },
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: { 'start': [] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('Status: running'), 'must show flow phase status');
@@ -115,11 +118,12 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     readyNodes: ['t1', 't2'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: ['start', 'fork'],
     completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2'],
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('[→] t1 (TD)'));
@@ -136,11 +140,12 @@ test('renderFlowStatus: completed flow', () => {
         readyNodes: [],
         runningNodes: [],
         awaitingHumanNodes: {},
+        pendingHumanInputs: {},
         completedNodes: ['start', 'fork', 't1', 't2', 'join'],
         completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't1=>join', 't2=>join'],
         pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
         status: 'completed',
-        stateVersion: '7'
+        stateVersion: '8'
       };
     
       const output = renderFlowStatus(flowRun, WF);

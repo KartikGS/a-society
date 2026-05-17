@@ -123,6 +123,7 @@ export interface FlowRun {
   readyNodes: string[];                           // node IDs eligible to execute
   runningNodes: string[];                         // node IDs claimed by a live runtime turn
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
+  pendingHumanInputs: Record<string, { text: string; receivedAt: string }>; // durable operator replies queued for scheduler consumption
   completedNodes: string[];                       // node IDs that have finished
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
   completedHandoffs: string[];                     // `${from}=>${to}` edge keys for forward handoffs that have been made; removed on backward handoff
@@ -131,7 +132,7 @@ export interface FlowRun {
   historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse
   awaitingHandoff: string[];                       // node IDs currently suspended waiting for an inbound handoff
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "7" for the current runtime schema
+  stateVersion: string;                        // Persistence version: "8" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
   feedbackContext?: FeedbackContext;           // Runtime-owned context for the optional upstream feedback step
   consentState?: ConsentState;

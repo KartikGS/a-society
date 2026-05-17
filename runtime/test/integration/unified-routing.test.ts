@@ -93,11 +93,12 @@ async function runTest() {
     readyNodes: ['start'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: { 'start': [] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   });
 
   const sink = new RecordingOperatorSink();

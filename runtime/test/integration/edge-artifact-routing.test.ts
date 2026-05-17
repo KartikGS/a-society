@@ -55,6 +55,7 @@ async function runTest() {
     readyNodes: ['producer', 'branch-c'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: {
@@ -63,7 +64,7 @@ async function runTest() {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,
-    stateVersion: '7'
+    stateVersion: '8'
   };
   SessionStore.saveFlowRun(flowRun);
 

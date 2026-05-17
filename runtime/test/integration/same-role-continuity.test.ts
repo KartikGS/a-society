@@ -160,6 +160,34 @@ function flowRef(flowId = 'test-flow-id') {
   return { projectNamespace, flowId };
 }
 
+async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) {
+      throw new Error('Timed out waiting for scheduler state.');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
+async function runStoredFlowUntil(
+  orchestrator: FlowOrchestrator,
+  flowId: string,
+  output: Writable,
+  predicate: () => boolean
+): Promise<void> {
+  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, output, flowId);
+  try {
+    await waitUntil(predicate);
+  } finally {
+    await SessionStore.updateFlowRun((flow) => {
+      flow.status = 'completed';
+    }, flowRef(flowId), workspaceRoot);
+    orchestrator.wake();
+    await runPromise;
+  }
+}
+
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   return {
     flowId: 'test-flow-id',
@@ -169,12 +197,13 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     readyNodes: ['owner-intake'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: '8',
     ...overrides
   };
 }
@@ -188,6 +217,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     readyNodes: ['owner-one', 'owner-two'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: {
@@ -196,7 +226,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: '8',
     ...overrides
   };
 }
@@ -291,7 +321,7 @@ async function run() {
     assert.ok(msg.includes('Reviewer requests revision to the Owner brief.'));
   });
 
-  await test('Store: loading a non-v7 flow is rejected', async () => {
+  await test('Store: loading a non-v8 flow is rejected', async () => {
     resetState();
 
     const v5Flow: any = {
@@ -302,6 +332,7 @@ async function run() {
       readyNodes: [],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
       completedHandoffs: [],
       pendingNodeArtifacts: {},
@@ -314,7 +345,7 @@ async function run() {
 
     assert.throws(
       () => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot),
-      /only supports flow state version "7"/
+      /only supports flow state version "8"/
     );
   });
 
@@ -354,6 +385,70 @@ async function run() {
     const lastMessage = session!.transcriptHistory[session!.transcriptHistory.length - 1] as RuntimeMessageParam;
     assert.strictEqual(lastMessage.role, 'assistant');
     assert.strictEqual(lastMessage.content, finalText);
+  });
+
+  await test('Orchestrator: queued human input is consumed by the stored-flow scheduler', async () => {
+    resetState();
+
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'What should I optimize for?' }
+      ],
+      isActive: true,
+      currentNodeId: 'owner-intake'
+    }, flowRef(), workspaceRoot);
+
+    const flowRun = makeFlowRun({
+      readyNodes: [],
+      awaitingHumanNodes: {
+        'owner-intake': { role: 'owner', reason: 'prompt-human' }
+      },
+      pendingHumanInputs: {
+        'owner-intake': {
+          text: 'Optimize for correctness first.',
+          receivedAt: '2026-05-17T00:00:00.000Z'
+        }
+      },
+      visitedNodeIds: ['owner-intake']
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Understood. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const sink = new RecordingOperatorSink();
+    const orchestrator = new FlowOrchestrator(sink);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        return Boolean(
+          updated &&
+          Object.keys(updated.pendingHumanInputs).length === 0 &&
+          updated.awaitingHumanNodes['owner-intake']
+        );
+      });
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot)!;
+    assert.deepStrictEqual(updated.pendingHumanInputs, {});
+    assert.ok(updated.awaitingHumanNodes['owner-intake'], 'node should be waiting again after the mock turn re-prompts');
+    assert.ok(
+      sink.events.some((event) => event.kind === 'human.resumed' && event.nodeId === 'owner-intake'),
+      'queued input should resume the suspended node through the scheduler'
+    );
+    assert.ok(
+      session.transcriptHistory.some((message: any) => message.role === 'user' && message.content.includes('Optimize for correctness first.')),
+      'queued human input should be appended to the resumed transcript'
+    );
   });
 
   await test('Orchestrator: interrupted same-node resume appends continuation prompt', async () => {
@@ -431,6 +526,7 @@ async function run() {
       readyNodes: ['owner-gate'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: ['owner-intake', 'ta'],
       visitedNodeIds: ['owner-intake', 'ta'],
       completedHandoffs: ['owner-intake=>ta', 'ta=>owner-gate'],
@@ -485,6 +581,7 @@ async function run() {
       readyNodes: ['owner-intake'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       visitedNodeIds: ['owner-intake'],
       pendingNodeArtifacts: {
         'owner-intake': [
@@ -539,6 +636,7 @@ async function run() {
       readyNodes: ['owner-intake'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: ['owner-gate'],
       visitedNodeIds: ['owner-intake', 'owner-gate'],
       pendingNodeArtifacts: {
@@ -626,6 +724,79 @@ async function run() {
     assert.ok((ownerTwoSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
   });
 
+  await test('Orchestrator: multiple queued human replies resume distinct role instances in one scheduler pass', async () => {
+    resetState();
+
+    SessionStore.saveRoleSession({
+      roleName: 'owner_1',
+      logicalSessionId: ownerInstanceSessionId(1),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-one entry message' },
+        { role: 'assistant', content: 'Owner one asks.' }
+      ],
+      isActive: true,
+      currentNodeId: 'owner-one'
+    }, flowRef('instance-flow-id'), workspaceRoot);
+    SessionStore.saveRoleSession({
+      roleName: 'owner_2',
+      logicalSessionId: ownerInstanceSessionId(2),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-two entry message' },
+        { role: 'assistant', content: 'Owner two asks.' }
+      ],
+      isActive: true,
+      currentNodeId: 'owner-two'
+    }, flowRef('instance-flow-id'), workspaceRoot);
+
+    const flowRun = makeInstanceFlowRun({
+      readyNodes: [],
+      awaitingHumanNodes: {
+        'owner-one': { role: 'owner_1', reason: 'prompt-human' },
+        'owner-two': { role: 'owner_2', reason: 'prompt-human' }
+      },
+      pendingHumanInputs: {
+        'owner-one': { text: 'Answer one.', receivedAt: '2026-05-17T00:00:00.000Z' },
+        'owner-two': { text: 'Answer two.', receivedAt: '2026-05-17T00:00:00.001Z' }
+      },
+      visitedNodeIds: ['owner-one', 'owner-two']
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Owner one continues. ```handoff\ntype: prompt-human\n```' },
+      { type: 'text', text: 'Owner two continues. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const sink = new RecordingOperatorSink();
+    const orchestrator = new FlowOrchestrator(sink);
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+        const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot);
+        return Boolean(
+          updated &&
+          Object.keys(updated.pendingHumanInputs).length === 0 &&
+          updated.awaitingHumanNodes['owner-one'] &&
+          updated.awaitingHumanNodes['owner-two']
+        );
+      });
+    } finally {
+      unpatch();
+    }
+
+    const resumedNodeIds = sink.events
+      .filter((event) => event.kind === 'human.resumed')
+      .map((event: any) => event.nodeId)
+      .sort();
+    assert.deepStrictEqual(resumedNodeIds, ['owner-one', 'owner-two']);
+
+    const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot)!;
+    assert.deepStrictEqual(updated.pendingHumanInputs, {});
+    assert.ok(updated.awaitingHumanNodes['owner-one']);
+    assert.ok(updated.awaitingHumanNodes['owner-two']);
+  });
+
   await test('Orchestrator: same-role-instance ready nodes are serialized by the scheduler', async () => {
     resetState();
 
@@ -633,6 +804,7 @@ async function run() {
       readyNodes: ['owner-intake', 'owner-gate'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       pendingNodeArtifacts: {
         'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
         'owner-gate': [path.relative(workspaceRoot, taArtifact)]
@@ -649,7 +821,14 @@ async function run() {
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     try {
-      await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, output, flowRun.flowId);
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+        const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot);
+        return Boolean(
+          updated &&
+          updated.readyNodes.includes('owner-gate') &&
+          updated.awaitingHumanNodes['owner-intake']
+        );
+      });
     } finally {
       unpatch();
     }
@@ -667,6 +846,7 @@ async function run() {
       readyNodes: [],
       runningNodes: ['owner-intake', 'ta'],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
       completedHandoffs: ['owner-intake=>ta'],
       pendingNodeArtifacts: {

@@ -95,6 +95,8 @@ When the runtime emits a `type: prompt-human` handoff signal, the runtime persis
 
 If more than one role instance is awaiting input, the browser message must identify the target role instance or node.
 
+Human replies are queued durably on the flow and consumed by that flow's single live runner. The runner drains runnable work, sleeps when no work is available, and wakes when a queued reply arrives; it does not create a second runner for the same flow just to process operator input.
+
 When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
 ### Tool permission modes
@@ -137,8 +139,9 @@ Forward-pass flow state uses explicit scheduler fields:
 - `readyNodes` — nodes whose dependencies are satisfied and are waiting to start
 - `runningNodes` — nodes currently claimed by live runtime turns
 - `awaitingHumanNodes` — nodes suspended for targeted operator input
+- `pendingHumanInputs` — durable operator replies queued for the single flow runner to consume
 
-On runtime resume, persisted `runningNodes` are treated as stale process-local work and returned to `readyNodes` before scheduling continues.
+On cold runtime resume, persisted `runningNodes` are treated as stale process-local work and returned to `readyNodes` before scheduling continues. Live operator replies wake the existing runner instead of re-entering cold-resume recovery.
 
 ### Same-node `prompt-human` resume
 

@@ -96,6 +96,7 @@ export function initializeDraftFlow(
     readyNodes: ['owner-intake'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     visitedNodeIds: [],
     completedHandoffs: [],
@@ -104,7 +105,7 @@ export function initializeDraftFlow(
     historyHandoff: {},
     awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: '8',
     feedbackContext: {
       kind: 'standard',
     }

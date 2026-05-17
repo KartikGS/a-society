@@ -51,6 +51,7 @@ export interface FlowRun {
   readyNodes: string[];
   runningNodes: string[];
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
+  pendingHumanInputs: Record<string, { text: string; receivedAt: string }>;
   completedNodes: string[];
   visitedNodeIds?: string[];
   completedHandoffs: string[];

@@ -38,12 +38,13 @@ const flowRun: FlowRun = {
   readyNodes: [],
   runningNodes: [],
   awaitingHumanNodes: {},
+  pendingHumanInputs: {},
   completedNodes: [],
   visitedNodeIds: [],
   completedHandoffs: [],
   pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
   status: 'running',
-  stateVersion: '7',
+  stateVersion: '8',
 };
 
 SessionStore.saveFlowRun(flowRun, ref, tmpDir);

@@ -50,6 +50,7 @@ async function runTest() {
     readyNodes: ['review'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: ['proposal'],
     completedHandoffs: ['proposal=>review'],
     pendingNodeArtifacts: {
@@ -57,7 +58,7 @@ async function runTest() {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: '8',
   });
 
   SessionStore.saveRoleSession({

@@ -12,8 +12,8 @@ import { seedTestModelSettings } from './settings-test-utils.js';
  * Verification: resumed multi-node flows emit flow.resumed with open-node count.
  *
  * Pre-saves a running flow with two nodes waiting for human input.
- * Calls runStoredFlow, which emits the open-node count and finds no
- * ready nodes to advance.
+ * Starts the live stored-flow runner, observes the open-node count, then closes
+ * the fixture flow so the test can finish.
  */
 async function runTest() {
   console.log("Starting resume-parallel integration test...");
@@ -66,11 +66,12 @@ async function runTest() {
       'branch-a': { role: 'Developer', reason: 'prompt-human' },
       'branch-b': { role: 'Reviewer', reason: 'prompt-human' }
     },
+    pendingHumanInputs: {},
     completedNodes: ['fork-gate'],
     completedHandoffs: ['fork-gate=>branch-a', 'fork-gate=>branch-b'],
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   });
 
   const sink = new RecordingOperatorSink();
@@ -79,7 +80,10 @@ async function runTest() {
   const outputStream = new PassThrough();
 
   try {
-    await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, outputStream);
+    const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, outputStream);
+    while (!sink.events.some(e => e.kind === 'flow.resumed')) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
 
     const resumeEvent = sink.events.find(e => e.kind === 'flow.resumed');
 
@@ -92,6 +96,12 @@ async function runTest() {
     assert.ok(hasResumedNotice, "Expected sink to contain flow.resumed event.");
     assert.strictEqual(resumeEvent?.kind === 'flow.resumed' ? resumeEvent.activeNodeCount : 0, 2);
     assert.deepStrictEqual(sink.events.map(e => e.kind), ['flow.resumed']);
+
+    await SessionStore.updateFlowRun((flow) => {
+      flow.status = 'completed';
+    }, { projectNamespace, flowId: 'test-resume-flow-id' }, workspaceRoot);
+    orchestrator.wake();
+    await runPromise;
 
     console.log("Resume-parallel test PASSED.");
   } catch (e: any) {

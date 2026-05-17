@@ -58,12 +58,13 @@ await test('incomplete forward handoff is modeled as repairable handoff parse st
     readyNodes: [],
     runningNodes: ['owner-intake'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     visitedNodeIds: ['owner-intake'],
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: '8',
   };
 
   const ref = { projectNamespace, flowId };

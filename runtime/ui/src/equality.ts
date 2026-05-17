@@ -62,6 +62,24 @@ function areAwaitingHumanMapsEqual(
   return true;
 }
 
+function arePendingHumanInputMapsEqual(
+  left: FlowRun['pendingHumanInputs'],
+  right: FlowRun['pendingHumanInputs']
+): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (!(key in right)) return false;
+    if (left[key].text !== right[key].text) return false;
+    if (left[key].receivedAt !== right[key].receivedAt) return false;
+  }
+
+  return true;
+}
+
 function areImprovementPhasesEqual(
   left: FlowRun['improvementPhase'],
   right: FlowRun['improvementPhase']
@@ -135,6 +153,7 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areStringArraysEqual(left.readyNodes, right.readyNodes) &&
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
+    arePendingHumanInputMapsEqual(left.pendingHumanInputs, right.pendingHumanInputs) &&
     areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&

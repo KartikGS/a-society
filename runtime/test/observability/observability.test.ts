@@ -364,11 +364,12 @@ async function run() {
       readyNodes: ['start'],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
       completedHandoffs: [],
       pendingNodeArtifacts: { start: [] },
       status: 'running',
-      stateVersion: '7'
+      stateVersion: '8'
     };
     SessionStore.saveFlowRun(flowRun);
 
@@ -521,11 +522,12 @@ async function run() {
       readyNodes: [],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
       completedHandoffs: [],
       pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
-      stateVersion: '7',
+      stateVersion: '8',
       improvementPhase: null,
       recordFolderPath: recordDir,
       feedbackContext: {

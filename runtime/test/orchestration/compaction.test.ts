@@ -76,6 +76,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     readyNodes: [],
     runningNodes: ['owner-review'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: ['owner-intake'],
     completedHandoffs: ['owner-intake=>owner-review'],
     pendingNodeArtifacts: {
@@ -83,7 +84,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   };
 
   try {
@@ -130,11 +131,12 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     readyNodes: [],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: '8'
   };
 
   const result = await compactRoleSession({
