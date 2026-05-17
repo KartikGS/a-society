@@ -1,0 +1,26 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">A-Society mark</title>
+  <desc id="desc">Four colored geometric shards arranged around an open central diamond.</desc>
+  <defs>
+    <linearGradient id="green" x1="53" y1="114" x2="123" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="red" x1="133" y1="18" x2="204" y2="114" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="52" y1="124" x2="123" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="204" y1="124" x2="133" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+  </defs>
+  <path d="M53 114L123 18L122 34L86 114H53Z" fill="url(#green)"/>
+  <path d="M133 18L204 114H171L134 34L133 18Z" fill="url(#red)"/>
+  <path d="M52 124L88 128L122 210L123 224L52 124Z" fill="url(#yellow)"/>
+  <path d="M168 128L204 124L133 224L134 210L168 128Z" fill="url(#blue)"/>
+</svg>

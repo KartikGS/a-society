@@ -11,7 +11,5 @@ npm link
 echo ""
 echo "Installation complete. The 'a-society' command is now available."
 echo ""
-echo "Before running, set your Anthropic API key:"
-echo "  export ANTHROPIC_API_KEY=your_api_key_here"
-echo ""
 echo "Usage: cd to your workspace root, then run 'a-society'"
+echo "After startup, configure and activate a model in the browser Settings UI before starting project work."

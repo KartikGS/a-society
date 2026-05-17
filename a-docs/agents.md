@@ -7,7 +7,7 @@ This file is the entry point for any agent working on the A-Society project. Rea
 
 ## What Is This Project?
 
-A-Society is a reusable, portable framework for making any project agentic-friendly — before agents are deployed. It is a library of patterns, instructions, and role templates that any project owner can apply to structure their project so agents can operate confidently from the first session.
+A-Society is a reusable, portable agentic harness for project work: structured memory, role-based workflows, runtime orchestration, verification, and self-improvement. It combines reusable project standards with an executable runtime so initialized projects can run agent work through explicit roles, preserve flow records, and improve from feedback across project types.
 
 ---
 
