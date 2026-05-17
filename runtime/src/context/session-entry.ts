@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveVariableFromIndex } from './paths.js';
-import { WorkflowGraph } from '../orchestration/workflow-graph.js';
+import type { WorkflowGraph } from '../orchestration/workflow-graph.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/workflow.md');
@@ -31,6 +31,7 @@ export interface ForwardNodeEntryOptions {
   };
   forwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
   backwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
+  staleForwardArtifacts?: Array<{ toNodeId: string; artifacts: string[] }>;
 }
 
 /**
@@ -54,7 +55,8 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     includeWorkflowContract,
     nodeContext,
     forwardHandoffTargets,
-    backwardHandoffTargets
+    backwardHandoffTargets,
+    staleForwardArtifacts
   } = opts;
   const lines: string[] = [];
 
@@ -114,6 +116,19 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
             lines.push('(File does not exist yet)');
           }
           lines.push('');
+        }
+        if (direction === 'backward' && staleForwardArtifacts) {
+          const stale = staleForwardArtifacts.find(s => s.toNodeId === fromNodeId);
+          if (stale && stale.artifacts.length > 0) {
+            lines.push(
+              `Note: the following artifact(s) were sent to ${fromNodeId} but had not yet been reviewed when ${fromNodeId} raised the above concern. ` +
+              `Take both the backward handoff and these unreviewed artifacts into account when making your next handoff:`
+            );
+            for (const artifactPath of stale.artifacts) {
+              lines.push(`- ${artifactPath}`);
+            }
+            lines.push('');
+          }
         }
       }
     }
