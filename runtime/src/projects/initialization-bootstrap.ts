@@ -373,7 +373,7 @@ export function bootstrapInitializationFlow(
       historyHandoff: {},
       awaitingHandoff: [],
       status: 'running',
-      stateVersion: '8',
+      stateVersion: '9',
       feedbackContext: {
         kind: 'initialization',
         initializationMode: mode,

@@ -44,7 +44,7 @@ const flowRun: FlowRun = {
   completedHandoffs: [],
   pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
   status: 'running',
-  stateVersion: '8',
+  stateVersion: '9',
 };
 
 SessionStore.saveFlowRun(flowRun, ref, tmpDir);

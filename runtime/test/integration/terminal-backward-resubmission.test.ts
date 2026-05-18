@@ -58,7 +58,7 @@ async function runTest() {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8',
+    stateVersion: '9',
   });
 
   SessionStore.saveRoleSession({

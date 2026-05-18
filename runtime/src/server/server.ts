@@ -239,7 +239,7 @@ function buildServer(workspaceRoot: string) {
       return null;
     }
 
-    return readImprovementWorkflow(flowRun.improvementPhase.forwardPassClosure.recordFolderPath);
+    return readImprovementWorkflow(flowRun.recordFolderPath);
   }
 
   function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {

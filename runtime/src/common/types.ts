@@ -89,7 +89,7 @@ export interface HandoffTarget {
 
 export type HandoffResult =
   | { kind: 'targets'; targets: HandoffTarget[] }
-  | { kind: 'forward-pass-closed'; recordFolderPath: string; artifactPath: string }
+  | { kind: 'forward-pass-closed' }
   | { kind: 'meta-analysis-complete'; findingsPath: string }
   | { kind: 'backward-pass-complete'; artifactPath: string }
   | { kind: 'awaiting_human' }
@@ -107,10 +107,6 @@ export interface ImprovementPhaseState {
   feedbackArtifactPath?: string;               // repo-relative path assigned for optional upstream feedback
   feedbackConsent?: 'pending' | 'granted' | 'denied';
   singleRole?: boolean;                        // true when the workflow has only one unique base role
-  forwardPassClosure: {
-    recordFolderPath: string;
-    artifactPath: string;
-  };
 }
 
 export interface FlowRun {
@@ -132,7 +128,7 @@ export interface FlowRun {
   historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse
   awaitingHandoff: string[];                       // node IDs currently suspended waiting for an inbound handoff
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "8" for the current runtime schema
+  stateVersion: string;                        // Persistence version: "9" for the current runtime schema
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
   feedbackContext?: FeedbackContext;           // Runtime-owned context for the optional upstream feedback step
   consentState?: ConsentState;
@@ -216,7 +212,7 @@ export type OperatorEvent =
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
-  | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
+  | { kind: 'flow.forward_pass_closed' }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; request: ConsentRequest }
   | { kind: 'consent.resolved'; request: ConsentRequest; decision: ConsentResponseDecision }

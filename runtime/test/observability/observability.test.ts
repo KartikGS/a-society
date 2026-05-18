@@ -369,7 +369,7 @@ async function run() {
       completedHandoffs: [],
       pendingNodeArtifacts: { start: [] },
       status: 'running',
-      stateVersion: '8'
+      stateVersion: '9'
     };
     SessionStore.saveFlowRun(flowRun);
 
@@ -448,10 +448,7 @@ async function run() {
     const { Writable } = await import('node:stream');
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    ImprovementOrchestrator.markAwaitingChoice(
-      flowRun,
-      { recordFolderPath: tmpDir, artifactPath: 'test.md' }
-    );
+    ImprovementOrchestrator.markAwaitingChoice(flowRun);
     ImprovementOrchestrator.skipImprovement(flowRun, output);
 
     assert.strictEqual(flowRun.status, 'completed');
@@ -513,8 +510,6 @@ async function run() {
     const assignedFeedbackFilePath = path.join(tmpDir, feedbackArtifactPath);
     fs.mkdirSync(path.dirname(assignedFeedbackFilePath), { recursive: true });
     fs.writeFileSync(assignedFeedbackFilePath, 'Existing feedback target', 'utf8');
-    const closureArtifactPath = path.relative(tmpDir, path.join(recordDir, '00-owner-closure.md'));
-
     const flowRun: any = {
       flowId: 'repair-flow',
       workspaceRoot: tmpDir,
@@ -527,7 +522,7 @@ async function run() {
       completedHandoffs: [],
       pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
-      stateVersion: '8',
+      stateVersion: '9',
       improvementPhase: null,
       recordFolderPath: recordDir,
       feedbackContext: {
@@ -591,10 +586,7 @@ async function run() {
     };
 
     try {
-      ImprovementOrchestrator.markAwaitingChoice(
-        flowRun,
-        { recordFolderPath: recordDir, artifactPath: closureArtifactPath }
-      );
+      ImprovementOrchestrator.markAwaitingChoice(flowRun);
       await ImprovementOrchestrator.runImprovement(
         flowRun,
         'graph-based',

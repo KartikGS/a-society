@@ -71,7 +71,7 @@ async function runTest() {
     completedHandoffs: ['fork-gate=>branch-a', 'fork-gate=>branch-b'],
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8'
+    stateVersion: '9'
   });
 
   const sink = new RecordingOperatorSink();

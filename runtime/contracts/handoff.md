@@ -66,8 +66,6 @@ Use typed signals when the output is not routing to another workflow node but tr
 **`forward-pass-closed`**
 ```yaml
 type: forward-pass-closed
-record_folder_path: <string>
-artifact_path: <string>
 ```
 
 **`meta-analysis-complete`**
@@ -107,8 +105,6 @@ Emit `type: await-handoff` to suspend the current node and wait for an inbound h
 
 **`type`** — One of `forward-pass-closed`, `meta-analysis-complete`, `backward-pass-complete`, `prompt-human`, or `await-handoff`.
 
-**`record_folder_path`** — Repo-relative path to the active record folder. Used only by `forward-pass-closed`.
-
 **`findings_path`** — Repo-relative path to the runtime-assigned findings artifact produced in a meta-analysis session. Used only by `meta-analysis-complete`.
 
 ---
@@ -142,8 +138,6 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-to-curator
 
 ```handoff
 type: forward-pass-closed
-record_folder_path: [project-name]/a-docs/records/[record-folder]
-artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-closure.md
 ```
 
 **Meta-analysis completion**

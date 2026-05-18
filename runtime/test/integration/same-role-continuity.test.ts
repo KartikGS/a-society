@@ -203,7 +203,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8',
+    stateVersion: '9',
     ...overrides
   };
 }
@@ -226,7 +226,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8',
+    stateVersion: '9',
     ...overrides
   };
 }
@@ -345,7 +345,7 @@ async function run() {
 
     assert.throws(
       () => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot),
-      /only supports flow state version "8"/
+      /only supports flow state version "9"/
     );
   });
 
@@ -795,6 +795,51 @@ async function run() {
     assert.deepStrictEqual(updated.pendingHumanInputs, {});
     assert.ok(updated.awaitingHumanNodes['owner-one']);
     assert.ok(updated.awaitingHumanNodes['owner-two']);
+  });
+
+  await test('Orchestrator: awaiting-handoff node wakes on inbound successor handoff', async () => {
+    resetState();
+
+    const flowRun = makeFlowRun({
+      readyNodes: [],
+      runningNodes: [],
+      awaitingHumanNodes: {},
+      visitedNodeIds: ['owner-intake', 'ta'],
+      completedHandoffs: [],
+      receivingHandoff: {
+        'ta=>owner-intake': [path.relative(workspaceRoot, taArtifact)]
+      },
+      historyHandoff: {
+        'owner-intake=>ta': [path.relative(workspaceRoot, ownerArtifact1)],
+        'ta=>owner-intake': [path.relative(workspaceRoot, taArtifact)]
+      },
+      awaitingHandoff: ['owner-intake']
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Owner received successor return. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        return Boolean(
+          updated &&
+          !updated.awaitingHandoff.includes('owner-intake') &&
+          updated.awaitingHumanNodes['owner-intake']
+        );
+      });
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    assert.ok(!updated.awaitingHandoff.includes('owner-intake'));
+    assert.ok(updated.awaitingHumanNodes['owner-intake']);
   });
 
   await test('Orchestrator: same-role-instance ready nodes are serialized by the scheduler', async () => {

@@ -105,7 +105,7 @@ export function initializeDraftFlow(
     historyHandoff: {},
     awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8',
+    stateVersion: '9',
     feedbackContext: {
       kind: 'standard',
     }

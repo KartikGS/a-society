@@ -32,7 +32,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     completedHandoffs: [],
     pendingNodeArtifacts: { 'node1': ['artifact.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8'
+    stateVersion: '9'
   };
 
   assert.strictEqual(flowRun.readyNodes.length, 1);

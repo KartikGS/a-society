@@ -59,10 +59,10 @@ function getRoleFeedPath(workspaceRoot: string, ref: FlowRef, roleKey: string): 
 }
 
 function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: FlowRef): FlowRun {
-  if (flow.stateVersion !== '8') {
+  if (flow.stateVersion !== '9') {
     throw new Error(
       `Unsupported persisted flow state version "${String((flow as any).stateVersion ?? 'missing')}". ` +
-      'This runtime only supports flow state version "8".'
+      'This runtime only supports flow state version "9".'
     );
   }
 

@@ -86,10 +86,6 @@ export interface ImprovementPhaseState {
   feedbackArtifactPath?: string;
   feedbackConsent?: 'pending' | 'granted' | 'denied';
   singleRole?: boolean;
-  forwardPassClosure: {
-    recordFolderPath: string;
-    artifactPath: string;
-  };
 }
 
 export interface FlowRef {
@@ -133,7 +129,7 @@ export type OperatorEvent =
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
-  | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
+  | { kind: 'flow.forward_pass_closed' }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; request: ConsentRequest }
   | { kind: 'consent.resolved'; request: ConsentRequest; decision: ConsentResponseDecision }

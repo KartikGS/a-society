@@ -119,7 +119,7 @@ function projectEventToFeedItem(event: OperatorEvent, id: string): FeedItem | nu
         id,
         type: 'event',
         label: 'Forward Pass',
-        text: `Forward pass closed via ${event.artifactBasename}.`
+        text: 'Forward pass closed.'
       };
     case 'flow.completed':
       return {

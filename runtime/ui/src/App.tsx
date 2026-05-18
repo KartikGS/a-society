@@ -192,7 +192,7 @@ function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
         id: nextFeedId(),
         type: 'event',
         label: 'Forward Pass',
-        text: `Forward pass closed via ${event.artifactBasename}.`
+        text: 'Forward pass closed.'
       };
     case 'flow.completed':
       return {

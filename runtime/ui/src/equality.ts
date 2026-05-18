@@ -92,8 +92,6 @@ function areImprovementPhasesEqual(
     left.mode === right.mode &&
     left.currentStep === right.currentStep &&
     left.improvementWorkflowPath === right.improvementWorkflowPath &&
-    left.forwardPassClosure.recordFolderPath === right.forwardPassClosure.recordFolderPath &&
-    left.forwardPassClosure.artifactPath === right.forwardPassClosure.artifactPath &&
     areStringArraysEqual(left.completedRoles, right.completedRoles) &&
     areStringMapsEqual(left.findingsProduced, right.findingsProduced) &&
     areStringArraysEqual(left.activeNodeIds, right.activeNodeIds) &&

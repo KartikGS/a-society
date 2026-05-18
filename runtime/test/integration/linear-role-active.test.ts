@@ -96,7 +96,7 @@ async function runTest() {
     pendingNodeArtifacts: { 'start': [] },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8'
+    stateVersion: '9'
   });
 
   const sink = new RecordingOperatorSink();

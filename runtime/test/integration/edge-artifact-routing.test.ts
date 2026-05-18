@@ -64,7 +64,7 @@ async function runTest() {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,
-    stateVersion: '8'
+    stateVersion: '9'
   };
   SessionStore.saveFlowRun(flowRun);
 

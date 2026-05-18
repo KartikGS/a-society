@@ -33,7 +33,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8',
+    stateVersion: '9',
     consentState: {
       mode,
       bash: { allowedCommands: {} },

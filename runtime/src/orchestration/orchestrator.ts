@@ -644,19 +644,12 @@ export class FlowOrchestrator {
                 flowRun = await SessionStore.updateFlowRun((latest) => {
                   this.removeOpenNode(latest, nodeId);
                   this.addCompletedNode(latest, nodeId);
-                  ImprovementOrchestrator.markAwaitingChoice(latest, {
-                    recordFolderPath: handoffResult.recordFolderPath,
-                    artifactPath: handoffResult.artifactPath
-                  }, singleRole);
+                  ImprovementOrchestrator.markAwaitingChoice(latest, singleRole);
                 }, this.requireFlowRef(), this.requireWorkspaceRoot());
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-                this.renderer.emit({
-                  kind: 'flow.forward_pass_closed',
-                  recordFolderPath: handoffResult.recordFolderPath,
-                  artifactBasename: path.basename(handoffResult.artifactPath)
-                });
+                this.renderer.emit({ kind: 'flow.forward_pass_closed' });
                 return;
               }
 
@@ -710,8 +703,6 @@ export class FlowOrchestrator {
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
-              this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
               const latestFlowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot()) ?? flowRun;
 
@@ -797,8 +788,6 @@ export class FlowOrchestrator {
         `Please create the record folder, create ${canonicalWorkflowFilename()} inside it, and restate your handoff.`
       );
     }
-    this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-
     let direction: AppliedHandoffDirection | null = null;
     let eventTargets: Array<{ nodeId: string; role: string; artifactBasename?: string }> = [];
 
@@ -845,6 +834,8 @@ export class FlowOrchestrator {
           `Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`
         );
       }
+
+      this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
 
       if (handoffs.length === 0) {
         if (outgoingEdges.length > 0) {
@@ -1064,17 +1055,9 @@ export class FlowOrchestrator {
   private deriveHandoffReadyNodes(flowRun: FlowRun, wf: WorkflowGraph): string[] {
     const receivingHandoffKeys = Object.keys(flowRun.receivingHandoff);
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(nodeId => {
-      const predecessorIds = new Set(wf.getIncomingEdges(nodeId).map(e => e.from));
-      // Keep waiting if node still has an outstanding backward handoff to a predecessor.
-      if (receivingHandoffKeys.some(key => {
-        const [from, to] = key.split('=>');
-        return from === nodeId && predecessorIds.has(to);
-      })) return true;
-      // Release once a predecessor has sent a new handoff.
-      return !receivingHandoffKeys.some(key => {
-        const [from, to] = key.split('=>');
-        return to === nodeId && predecessorIds.has(from);
-      });
+      // Any undelivered inbound handoff wakes an awaiting node, regardless of whether
+      // the sender is a predecessor (forward reply) or successor (backward return).
+      return !receivingHandoffKeys.some(key => key.split('=>')[1] === nodeId);
     });
 
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);

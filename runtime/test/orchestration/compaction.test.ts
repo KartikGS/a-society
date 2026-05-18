@@ -84,7 +84,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8'
+    stateVersion: '9'
   };
 
   try {
@@ -136,7 +136,7 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '8'
+    stateVersion: '9'
   };
 
   const result = await compactRoleSession({

@@ -115,17 +115,7 @@ export class HandoffInterpreter {
         } else if (typeof payload === 'object' && payload !== null) {
           if ('type' in payload) {
             if (payload.type === 'forward-pass-closed') {
-              if (typeof payload.record_folder_path !== 'string' || payload.record_folder_path.trim() === '') {
-                throw missingRequiredField('forward-pass-closed block missing record_folder_path');
-              }
-              if (typeof payload.artifact_path !== 'string' || payload.artifact_path.trim() === '') {
-                throw missingRequiredField('forward-pass-closed block missing artifact_path');
-              }
-              result = {
-                kind: 'forward-pass-closed',
-                recordFolderPath: payload.record_folder_path,
-                artifactPath: payload.artifact_path,
-              };
+              result = { kind: 'forward-pass-closed' };
             } else if (payload.type === 'meta-analysis-complete') {
               if (typeof payload.findings_path !== 'string' || payload.findings_path.trim() === '') {
                 throw missingRequiredField('meta-analysis-complete block missing findings_path');
