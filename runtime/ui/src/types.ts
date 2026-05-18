@@ -96,6 +96,8 @@ export interface FlowRef {
 export interface FlowSummary extends FlowRef {
   status: FlowRun['status'];
   recordFolderPath: string;
+  openable: boolean;
+  stateVersion: string;
   recordName?: string;
   recordSummary?: string;
   updatedAt?: string;

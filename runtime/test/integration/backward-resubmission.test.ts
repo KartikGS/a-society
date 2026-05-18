@@ -6,6 +6,7 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
   console.log('Starting backward-resubmission integration test...');
 
@@ -69,7 +70,7 @@ async function runTest() {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
   });
 
   SessionStore.saveRoleSession({

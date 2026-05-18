@@ -7,6 +7,7 @@ import { LLMGateway } from '../../src/providers/llm.js';
 import type { FlowRun, GatewayTurnResult, RoleSession, RuntimeMessageParam } from '../../src/common/types.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -84,7 +85,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   try {
@@ -136,7 +137,7 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   const result = await compactRoleSession({

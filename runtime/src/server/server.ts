@@ -223,6 +223,17 @@ function buildServer(workspaceRoot: string) {
     return SessionStore.loadFlowRun(ref, workspaceRoot);
   }
 
+  function readFlowRunForHttp(ref: FlowRef, res: Response): FlowRun | null | undefined {
+    try {
+      return readFlowRun(ref);
+    } catch (error: any) {
+      res.status(409).json({
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return undefined;
+    }
+  }
+
   function resolveWorkflow(flowRun: FlowRun | null): any | null {
     if (!flowRun) return null;
     const workflowPath = findWorkflowFilePath(flowRun.recordFolderPath);
@@ -671,7 +682,18 @@ function buildServer(workspaceRoot: string) {
   }
 
   function openFlow(socket: WebSocket, ref: FlowRef): void {
-    const flowRun = readFlowRun(ref);
+    let flowRun: FlowRun | null;
+    try {
+      flowRun = readFlowRun(ref);
+    } catch (error: any) {
+      sendToSocket(socket, {
+        type: 'error',
+        flowRef: ref,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return;
+    }
+
     if (!flowRun) {
       sendToSocket(socket, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
       return;
@@ -1167,7 +1189,9 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    res.json(readFlowRun(ref));
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
+    res.json(flowRun);
   });
 
   app.get('/api/flows/:projectNamespace/:flowId/workflow', (req: Request, res: Response) => {
@@ -1175,7 +1199,8 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    const flowRun = readFlowRun(ref);
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
     if (!flowRun) {
       res.status(404).json({ message: 'No flow state found.' });
       return;
@@ -1200,7 +1225,8 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    const flowRun = readFlowRun(ref);
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
     if (!flowRun) {
       res.status(404).json({ message: 'No flow state found.' });
       return;
@@ -1243,7 +1269,8 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    const flowRun = readFlowRun(ref);
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
     if (!flowRun) {
       res.status(404).json({ message: 'No flow state found.' });
       return;

@@ -8,6 +8,7 @@ import os from 'node:os';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 /**
  * Verification: resumed multi-node flows emit flow.resumed with open-node count.
  *
@@ -71,7 +72,7 @@ async function runTest() {
     completedHandoffs: ['fork-gate=>branch-a', 'fork-gate=>branch-b'],
     pendingNodeArtifacts: { 'branch-a': ['art-a.md'], 'branch-b': ['art-b.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   });
 
   const sink = new RecordingOperatorSink();

@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { areFlowRunsEqual } from '../../ui/src/equality.js';
 import type { ConsentMode, FlowRun } from '../../ui/src/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -33,7 +34,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
     consentState: {
       mode,
       bash: { allowedCommands: {} },

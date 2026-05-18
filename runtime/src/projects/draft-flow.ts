@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import type { FlowRun } from '../common/types.js';
+import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
 import { buildRecordId, readRecordMetadata, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 
 const LEGACY_FLOW_MARKER_FILENAME = '.a-society-flow.json';
@@ -105,7 +105,7 @@ export function initializeDraftFlow(
     historyHandoff: {},
     awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
     feedbackContext: {
       kind: 'standard',
     }

@@ -6,6 +6,7 @@ import { SessionStore } from '../../src/orchestration/store.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -44,7 +45,7 @@ const flowRun: FlowRun = {
   completedHandoffs: [],
   pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
   status: 'running',
-  stateVersion: '9',
+  stateVersion: CURRENT_FLOW_STATE_VERSION,
 };
 
 SessionStore.saveFlowRun(flowRun, ref, tmpDir);

@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import type { FlowRun } from '../../src/common/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -32,7 +33,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     completedHandoffs: [],
     pendingNodeArtifacts: { 'node1': ['artifact.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   assert.strictEqual(flowRun.readyNodes.length, 1);

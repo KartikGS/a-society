@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import type { FlowRun } from '../common/types.js';
+import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
 import { resolveProjectRecordsRoot, resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from '../framework-services/scaffolding-system.js';
 import { buildRecordId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
@@ -373,7 +373,7 @@ export function bootstrapInitializationFlow(
       historyHandoff: {},
       awaitingHandoff: [],
       status: 'running',
-      stateVersion: '9',
+      stateVersion: CURRENT_FLOW_STATE_VERSION,
       feedbackContext: {
         kind: 'initialization',
         initializationMode: mode,

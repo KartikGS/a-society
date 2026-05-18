@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeConsentState } from '../common/types.js';
+import { CURRENT_FLOW_STATE_VERSION, normalizeConsentState } from '../common/types.js';
 import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../common/types.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { repairMovedRecordFolder } from '../projects/draft-flow.js';
@@ -59,10 +59,10 @@ function getRoleFeedPath(workspaceRoot: string, ref: FlowRef, roleKey: string): 
 }
 
 function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: FlowRef): FlowRun {
-  if (flow.stateVersion !== '9') {
+  if (flow.stateVersion !== CURRENT_FLOW_STATE_VERSION) {
     throw new Error(
       `Unsupported persisted flow state version "${String((flow as any).stateVersion ?? 'missing')}". ` +
-      'This runtime only supports flow state version "9".'
+      `This runtime only supports flow state version "${CURRENT_FLOW_STATE_VERSION}".`
     );
   }
 
@@ -356,16 +356,42 @@ export class SessionStore {
       if (!fs.existsSync(flowPath)) continue;
 
       try {
-        const flow = SessionStore.loadFlowRun(ref, workspaceRoot);
-        if (!flow) continue;
+        const raw = JSON.parse(fs.readFileSync(flowPath, 'utf8')) as FlowRun;
+        const updatedAt = fs.statSync(flowPath).mtime.toISOString();
+
+        if (raw.stateVersion !== CURRENT_FLOW_STATE_VERSION) {
+          if (
+            typeof raw.recordFolderPath !== 'string' ||
+            typeof raw.status !== 'string'
+          ) {
+            continue;
+          }
+
+          summaries.push({
+            projectNamespace,
+            flowId: ref.flowId,
+            status: raw.status,
+            recordFolderPath: raw.recordFolderPath,
+            openable: false,
+            stateVersion: String(raw.stateVersion ?? 'missing'),
+            recordName: raw.recordName,
+            recordSummary: raw.recordSummary,
+            updatedAt,
+          });
+          continue;
+        }
+
+        const flow = validateAndHydrateFlow(raw, workspaceRoot, ref);
         summaries.push({
           projectNamespace,
           flowId: flow.flowId,
           status: flow.status,
           recordFolderPath: flow.recordFolderPath,
+          openable: true,
+          stateVersion: flow.stateVersion,
           recordName: flow.recordName,
           recordSummary: flow.recordSummary,
-          updatedAt: fs.statSync(flowPath).mtime.toISOString(),
+          updatedAt,
         });
       } catch {
         continue;

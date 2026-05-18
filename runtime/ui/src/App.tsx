@@ -719,9 +719,10 @@ export function App() {
   const lastHandoff = activeUi?.lastHandoff ?? null;
   const backwardActive = activeUi?.backwardActive ?? EMPTY_STRINGS;
   const projectFlows = selectedProject ? projectFlowsByProject[selectedProject] ?? [] : [];
+  const hasActiveFlowState = flowRun !== null;
 
   useEffect(() => {
-    if (socket.status !== 'open' || !activeTab) {
+    if (socket.status !== 'open' || !activeTab || !hasActiveFlowState) {
       return;
     }
 
@@ -733,6 +734,12 @@ export function App() {
           `/api/flows/${encodeURIComponent(activeTab.ref.projectNamespace)}/${encodeURIComponent(activeTab.ref.flowId)}/state`
         );
         if (!response.ok) {
+          if (response.status === 409) {
+            const payload = await response.json().catch(() => null) as { message?: string } | null;
+            updateFlowUi(activeTab.key, (state) => ({ ...state, flowRun: null }));
+            showToast(payload?.message ?? 'This flow is incompatible with the current runtime.');
+            return;
+          }
           throw new Error(await response.text());
         }
 
@@ -757,7 +764,7 @@ export function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [socket.status, activeTab, updateFlowUi]);
+  }, [socket.status, activeTab, hasActiveFlowState, updateFlowUi, showToast]);
 
   function resolveInputTargetRole(): string {
     if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {

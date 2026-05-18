@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Writable } from 'node:stream';
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import {
   setupTestTelemetry,
   clearTestSpans,
@@ -369,7 +370,7 @@ async function run() {
       completedHandoffs: [],
       pendingNodeArtifacts: { start: [] },
       status: 'running',
-      stateVersion: '9'
+      stateVersion: CURRENT_FLOW_STATE_VERSION
     };
     SessionStore.saveFlowRun(flowRun);
 
@@ -522,7 +523,7 @@ async function run() {
       completedHandoffs: [],
       pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
-      stateVersion: '9',
+      stateVersion: CURRENT_FLOW_STATE_VERSION,
       improvementPhase: null,
       recordFolderPath: recordDir,
       feedbackContext: {
@@ -608,7 +609,7 @@ async function run() {
     }
 
     assert.strictEqual(flowRun.status, 'completed');
-    assert.strictEqual(flowRun.stateVersion, '7', 'improvement initialization must keep the latest state version');
+    assert.strictEqual(flowRun.stateVersion, CURRENT_FLOW_STATE_VERSION, 'improvement initialization must keep the latest state version');
     assert.ok(fs.existsSync(path.join(recordDir, 'improvement.yaml')), 'improvement run should persist improvement.yaml');
     assert.strictEqual(flowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
     assert.deepStrictEqual(flowRun.improvementPhase?.activeNodeIds, []);

@@ -26,6 +26,7 @@ import { LLMGateway } from '../../src/providers/llm.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 // ---- Harness setup ----
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
@@ -203,7 +204,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
     ...overrides
   };
 }
@@ -226,7 +227,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
     ...overrides
   };
 }
@@ -321,7 +322,7 @@ async function run() {
     assert.ok(msg.includes('Reviewer requests revision to the Owner brief.'));
   });
 
-  await test('Store: loading a non-v8 flow is rejected', async () => {
+  await test('Store: loading a non-v9 flow is rejected but it remains listable for deletion', async () => {
     resetState();
 
     const v5Flow: any = {
@@ -345,7 +346,22 @@ async function run() {
 
     assert.throws(
       () => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot),
-      /only supports flow state version "9"/
+      new RegExp(`only supports flow state version "${CURRENT_FLOW_STATE_VERSION}"`)
+    );
+
+    assert.deepStrictEqual(
+      SessionStore.listFlowSummaries(workspaceRoot, projectNamespace),
+      [{
+        projectNamespace,
+        flowId: 'v5-flow',
+        status: 'completed',
+        recordFolderPath: recordDir,
+        openable: false,
+        stateVersion: '5',
+        recordName: undefined,
+        recordSummary: undefined,
+        updatedAt: fs.statSync(path.join(v5FlowDir, 'flow.json')).mtime.toISOString(),
+      }]
     );
   });
 

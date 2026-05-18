@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { renderFlowStatus } from '../../src/orchestration/visualization.js';
 import type { FlowRun } from '../../src/common/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -50,7 +51,7 @@ test('renderFlowStatus: single active node, no completed', () => {
     completedHandoffs: [],
     pendingNodeArtifacts: { 'start': ['p.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   const output = renderFlowStatus(flowRun, WF);
@@ -75,7 +76,7 @@ test('renderFlowStatus: multiple active, multiple completed, pending join', () =
       completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't2=>join'],
       pendingNodeArtifacts: { 't1': ['p3.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
-      stateVersion: '9'
+      stateVersion: CURRENT_FLOW_STATE_VERSION
     };
   
     const output = renderFlowStatus(flowRun, WF);
@@ -102,7 +103,7 @@ test('renderFlowStatus: awaitingHumanNodes render explicit operator-input notice
     completedHandoffs: [],
     pendingNodeArtifacts: { 'start': [] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('Status: running'), 'must show flow phase status');
@@ -123,7 +124,7 @@ test('renderFlowStatus: multiple active nodes renders all', () => {
     completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2'],
     pendingNodeArtifacts: { 't1': ['p2.md'], 't2': ['p3.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
   const output = renderFlowStatus(flowRun, WF);
   assert.ok(output.includes('[→] t1 (TD)'));
@@ -145,7 +146,7 @@ test('renderFlowStatus: completed flow', () => {
         completedHandoffs: ['start=>fork', 'fork=>t1', 'fork=>t2', 't1=>join', 't2=>join'],
         pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
         status: 'completed',
-        stateVersion: '9'
+        stateVersion: CURRENT_FLOW_STATE_VERSION
       };
     
       const output = renderFlowStatus(flowRun, WF);

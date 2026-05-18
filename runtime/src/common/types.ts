@@ -4,6 +4,8 @@ export type FlowStatus =
   | 'awaiting_feedback_consent'
   | 'completed';
 
+export const CURRENT_FLOW_STATE_VERSION = '9';
+
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentRequestKind = 'file-write' | 'bash-command';
 export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
@@ -128,7 +130,7 @@ export interface FlowRun {
   historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse
   awaitingHandoff: string[];                       // node IDs currently suspended waiting for an inbound handoff
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "9" for the current runtime schema
+  stateVersion: string;                        // Persistence version; current writes use CURRENT_FLOW_STATE_VERSION
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
   feedbackContext?: FeedbackContext;           // Runtime-owned context for the optional upstream feedback step
   consentState?: ConsentState;
@@ -142,6 +144,8 @@ export interface FlowRef {
 export interface FlowSummary extends FlowRef {
   status: FlowStatus;
   recordFolderPath: string;
+  openable: boolean;
+  stateVersion: string;
   recordName?: string;
   recordSummary?: string;
   updatedAt?: string;

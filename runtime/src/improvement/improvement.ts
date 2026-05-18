@@ -10,6 +10,7 @@ import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import { SessionStore } from '../orchestration/store.js';
 import { runRoleTurn } from '../orchestration/orient.js';
+import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } from '../common/types.js';
 import { HandoffParseError } from '../orchestration/handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
@@ -277,7 +278,7 @@ export class ImprovementOrchestrator {
       feedbackConsent: 'pending',
       singleRole: singleRole ?? false,
     };
-    flowRun.stateVersion = '9';
+    flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
   }
 
   static skipImprovement(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): void {
@@ -360,7 +361,7 @@ export class ImprovementOrchestrator {
           feedbackConsent: 'pending',
         };
         flowRun.status = 'running';
-        flowRun.stateVersion = '9';
+        flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 

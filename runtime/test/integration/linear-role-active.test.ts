@@ -9,6 +9,7 @@ import os from 'node:os';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 /**
  * Correction 3 verification: a full linear orchestration run emits exactly one
  * role.active notice for the successor node when it is claimed.
@@ -96,7 +97,7 @@ async function runTest() {
     pendingNodeArtifacts: { 'start': [] },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   });
 
   const sink = new RecordingOperatorSink();

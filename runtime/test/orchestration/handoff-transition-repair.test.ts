@@ -8,6 +8,7 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import type { FlowRun } from '../../src/common/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -74,7 +75,7 @@ await test('incomplete forward handoff is modeled as repairable handoff parse st
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
   };
 
   const ref = { projectNamespace, flowId };
@@ -135,7 +136,7 @@ await test('invalid target is reported before missing artifact', async () => {
     completedHandoffs: [],
     pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '9',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
   };
 
   const ref = { projectNamespace, flowId };
