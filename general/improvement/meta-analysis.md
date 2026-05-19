@@ -2,6 +2,8 @@
 
 Instructions for roles producing backward pass findings.
 
+Scope: the project's framework layer only — `a-docs/`, workflow and coordination surfaces, and agent-facing tooling guidance. Not for domain work product; bugs, feature requests, and content changes belong to the project's normal execution system.
+
 ---
 
 ### Depth
@@ -68,9 +70,9 @@ When the reviewed artifact lives in the project's `a-docs/` or affects the agent
 2. **Conditional-instruction check:** Does this document contain instructions applicable only at a specific node or workflow type? If yes, flag the section for extraction to the node document where it applies, and add a pointer.
 3. **Workflow-delivery check:** If a role document depends on node-specific support docs, does the active workflow surface those docs at the node where they are needed? If not, flag the gap as pointer-only JIT: the support doc exists, but the workflow is not delivering it at node entry.
 4. **Role document scope check:** Does this role document contain anything beyond routing guidance, ownership declaration, and pointers to node-specific documents? If yes, flag the excess.
-6. **agents.md scope check:** Does the project's `agents.md` contain anything beyond: what the project is (one paragraph), the authority/conflict resolution model, and project-wide invariants? If yes, flag it for removal.
-7. **Addition-without-removal check:** When a new instruction is added to a role document or `agents.md`, does any existing content become redundant or vestigial? If yes, flag it. Adding without checking what the addition makes obsolete is how garbage accumulates.
-8. **Repeated-header matching guidance:** When editing files with repeated semantic sub-headers (for example, `### Roles` appearing under multiple parent `##` headings), include the parent section header in the match context to preserve placement integrity. A mis-edit that places content under the wrong parent due to ambiguous header matching is a structural error, not a minor slip.
+5. **agents.md scope check:** Does the project's `agents.md` contain anything beyond: what the project is (one paragraph), the authority/conflict resolution model, and project-wide invariants? If yes, flag it for removal.
+6. **Addition-without-removal check:** When a new instruction is added to a role document or `agents.md`, does any existing content become redundant or vestigial? If yes, flag it. Adding without checking what the addition makes obsolete is how garbage accumulates.
+7. **Repeated-header matching guidance:** When editing files with repeated semantic sub-headers (for example, `### Roles` appearing under multiple parent `##` headings), include the parent section header in the match context to preserve placement integrity. A mis-edit that places content under the wrong parent due to ambiguous header matching is a structural error, not a minor slip.
 
 ---
 
