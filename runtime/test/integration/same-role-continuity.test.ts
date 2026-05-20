@@ -856,6 +856,53 @@ async function run() {
     assert.ok(updated.awaitingHumanNodes['owner-intake']);
   });
 
+  await test('Orchestrator: same-role received handoffs are claimed in graph order', async () => {
+    resetState();
+
+    const flowRun = makeFlowRun({
+      runningNodes: [],
+      awaitingHumanNodes: {},
+      pendingHumanInputs: {},
+      pendingNodeArtifacts: {},
+      receivingHandoff: {
+        // Insert the later graph node first; graph order should still claim owner-intake.
+        'ta=>owner-gate': [path.relative(workspaceRoot, taArtifact)],
+        'ta=>owner-intake': [path.relative(workspaceRoot, reviewFeedbackArtifact)]
+      },
+      historyHandoff: {
+        'ta=>owner-gate': [path.relative(workspaceRoot, taArtifact)],
+        'ta=>owner-intake': [path.relative(workspaceRoot, reviewFeedbackArtifact)]
+      },
+      awaitingHandoff: []
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Owner intake receives first by graph order. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+    const output = new Writable({ write(_c, _e, cb) { cb(); } });
+
+    try {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        return Boolean(updated && updated.awaitingHumanNodes['owner-intake']);
+      });
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    assert.ok(updated.awaitingHumanNodes['owner-intake'], 'earlier graph node should claim the owner role first');
+    assert.ok(!updated.runningNodes.includes('owner-gate'), 'later same-role node should not be claimed first');
+    assert.deepStrictEqual(
+      updated.receivingHandoff['ta=>owner-gate'],
+      [path.relative(workspaceRoot, taArtifact)],
+      'later same-role received handoff should remain ready for a later scheduler pass'
+    );
+  });
+
   await test('Orchestrator: same-role-instance initial running nodes are serialized by the scheduler', async () => {
     resetState();
 

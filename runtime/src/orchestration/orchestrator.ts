@@ -1072,10 +1072,16 @@ export class FlowOrchestrator {
 
   private deriveRunnableNodeIds(flowRun: FlowRun, wf: WorkflowGraph): string[] {
     const receivingHandoffKeys = Object.keys(flowRun.receivingHandoff);
+    const receivingHandoffTargetIds = new Set<string>();
+    for (const key of receivingHandoffKeys) {
+      const targetId = key.split('=>')[1];
+      if (targetId) receivingHandoffTargetIds.add(targetId);
+    }
+
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(nodeId => {
       // Any undelivered inbound handoff wakes an awaiting node, regardless of whether
       // the sender is a predecessor (forward reply) or successor (backward return).
-      return !receivingHandoffKeys.some(key => key.split('=>')[1] === nodeId);
+      return !receivingHandoffTargetIds.has(nodeId);
     });
 
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
@@ -1098,17 +1104,19 @@ export class FlowOrchestrator {
       }
     }
 
-    // Condition 2: has received a handoff (appears as "to" in receivingHandoff)
-    for (const key of Object.keys(flowRun.receivingHandoff)) {
-      const nodeId = key.split('=>')[1];
+    // Condition 2: has received a handoff. Iterate workflow nodes so that
+    // simultaneous same-role handoffs are claimed in graph order, not object
+    // insertion order from receivingHandoff.
+    for (const node of wf.nodes) {
+      const nodeId = node.id;
+      if (!receivingHandoffTargetIds.has(nodeId)) continue;
       // A received handoff may intentionally reopen a completed node, especially
-      // during backward-pass correction. The only structural guard here is that
-      // the target node still exists in the active workflow.
+      // during backward-pass correction. Iterating wf.nodes is the structural
+      // guard that the target node still exists in the active workflow.
       if (
         !seen.has(nodeId) &&
         !activeNodes.has(nodeId) &&
-        !awaitingHandoffSet.has(nodeId) &&
-        Boolean(wf.findNodeByIdOrNull(nodeId))
+        !awaitingHandoffSet.has(nodeId)
       ) {
         result.push(nodeId);
         seen.add(nodeId);
