@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveVariableFromIndex } from './paths.js';
+import type { WorkflowGraph } from '../orchestration/workflow-graph.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/workflow.md');
@@ -12,7 +13,9 @@ export interface ForwardNodeEntryOptions {
   workspaceRoot: string;
   projectNamespace: string;
   recordFolderPath?: string;
-  activeArtifacts: string[];
+  wf?: WorkflowGraph;
+  completedHandoffs?: string[];
+  receivingHandoffSnapshot?: Array<{ fromNodeId: string; artifacts: string[] }>;
   entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
   previousNodeId?: string;
   humanInput?: string;
@@ -28,6 +31,7 @@ export interface ForwardNodeEntryOptions {
   };
   forwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
   backwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
+  staleForwardArtifacts?: Array<{ toNodeId: string; artifacts: string[] }>;
 }
 
 /**
@@ -42,14 +46,17 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     workspaceRoot,
     projectNamespace,
     recordFolderPath,
-    activeArtifacts,
+    wf,
+    completedHandoffs,
+    receivingHandoffSnapshot,
     entryMode = 'first-node',
     previousNodeId,
     humanInput,
     includeWorkflowContract,
     nodeContext,
     forwardHandoffTargets,
-    backwardHandoffTargets
+    backwardHandoffTargets,
+    staleForwardArtifacts
   } = opts;
   const lines: string[] = [];
 
@@ -76,17 +83,73 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
   }
 
   lines.push('');
-  lines.push('Current task inputs:');
 
-  for (const artifactPath of activeArtifacts) {
-    const fullPath = path.resolve(workspaceRoot, artifactPath);
-    lines.push(`[FILE: ${artifactPath}]`);
-    if (fs.existsSync(fullPath)) {
-      lines.push(fs.readFileSync(fullPath, 'utf8'));
-    } else {
-      lines.push('(File does not exist yet)');
+  if (wf && completedHandoffs !== undefined) {
+    const inboundHandoffs = (receivingHandoffSnapshot ?? []).map(({ fromNodeId, artifacts }) => ({
+      fromNodeId,
+      artifacts,
+      direction: wf.getIncomingEdges(nodeId).some(e => e.from === fromNodeId) ? 'forward' as const : 'backward' as const,
+    }));
+    const notReceivedFromNodeIds = wf.getIncomingEdges(nodeId)
+      .filter(e => !completedHandoffs.includes(wf.edgeKey(e.from, nodeId)))
+      .map(e => e.from);
+    const sentToNodeIds = wf.getOutgoingEdges(nodeId)
+      .filter(e => completedHandoffs.includes(wf.edgeKey(nodeId, e.to)))
+      .map(e => e.to);
+    const notSentToNodeIds = wf.getOutgoingEdges(nodeId)
+      .filter(e => !completedHandoffs.includes(wf.edgeKey(nodeId, e.to)))
+      .map(e => e.to);
+
+    if (inboundHandoffs.length > 0) {
+      lines.push('Handoffs received:');
+      for (const { fromNodeId, artifacts, direction } of inboundHandoffs) {
+        const label = direction === 'forward'
+          ? `From predecessor ${fromNodeId}:`
+          : `From successor ${fromNodeId} (please take necessary action so the successor can complete its work):`;
+        lines.push(label);
+        for (const artifactPath of artifacts) {
+          const fullPath = path.resolve(workspaceRoot, artifactPath);
+          lines.push(`[FILE: ${artifactPath}]`);
+          if (fs.existsSync(fullPath)) {
+            lines.push(fs.readFileSync(fullPath, 'utf8'));
+          } else {
+            lines.push('(File does not exist yet)');
+          }
+          lines.push('');
+        }
+        if (direction === 'backward' && staleForwardArtifacts) {
+          const stale = staleForwardArtifacts.find(s => s.toNodeId === fromNodeId);
+          if (stale && stale.artifacts.length > 0) {
+            lines.push(
+              `Note: the following previously queued forward artifact(s) to ${fromNodeId} are superseded by the backward handoff above. ` +
+              `Do not treat them as delivered current work; use these paths only as prior context when creating the corrected replacement handoff:`
+            );
+            for (const artifactPath of stale.artifacts) {
+              lines.push(`- ${artifactPath}`);
+            }
+            lines.push('');
+          }
+        }
+      }
     }
-    lines.push('');
+
+    if (notReceivedFromNodeIds.length > 0) {
+      lines.push('Handoffs not yet received from:');
+      for (const id of notReceivedFromNodeIds) lines.push(`- ${id}`);
+      lines.push('');
+    }
+
+    if (sentToNodeIds.length > 0) {
+      lines.push('Handoffs already sent to:');
+      for (const id of sentToNodeIds) lines.push(`- ${id}`);
+      lines.push('');
+    }
+
+    if (notSentToNodeIds.length > 0) {
+      lines.push('Handoffs not yet sent to:');
+      for (const id of notSentToNodeIds) lines.push(`- ${id}`);
+      lines.push('');
+    }
   }
 
   if (humanInput) {

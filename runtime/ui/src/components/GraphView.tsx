@@ -9,6 +9,7 @@ import {
   type Edge,
   type Node
 } from '@xyflow/react';
+import { getActiveNodeIds } from '../../../src/common/flow-state.js';
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
 import type { FlowRef, FlowRun, WorkflowGraph } from '../types';
 
@@ -32,21 +33,6 @@ interface GraphViewProps {
 const EMPTY_GRAPH_STATE: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] };
 const EMPTY_STRINGS: string[] = [];
 
-function getOpenNodeIds(flowRun: FlowRun): string[] {
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const nodeId of [
-    ...flowRun.readyNodes,
-    ...flowRun.runningNodes,
-    ...Object.keys(flowRun.awaitingHumanNodes)
-  ]) {
-    if (seen.has(nodeId)) continue;
-    seen.add(nodeId);
-    ids.push(nodeId);
-  }
-  return ids;
-}
-
 const NODE_SIZE = 140;
 
 function buildReactFlowState(
@@ -68,7 +54,7 @@ function buildReactFlowState(
   }
   dagre.layout(g);
 
-  const openNodeIds = getOpenNodeIds(flowRun);
+  const activeNodeIds = getActiveNodeIds(flowRun);
   const awaitingHumanNodeIds = Object.keys(flowRun.awaitingHumanNodes);
   const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
   const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
@@ -80,11 +66,11 @@ function buildReactFlowState(
       ? improvementCompletedNodeIds.includes(node.id)
       : flowRun.completedNodes.includes(node.id);
     const isBackward = graphMode === 'flow' && backwardActive.includes(node.id);
-    const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && openNodeIds.includes(node.id);
+    const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && activeNodeIds.includes(node.id);
     const isAwaitingHuman = graphMode === 'flow' && awaitingHumanNodeIds.includes(node.id);
     const isActive = graphMode === 'improvement'
       ? improvementActiveNodeIds.includes(node.id)
-      : openNodeIds.includes(node.id);
+      : activeNodeIds.includes(node.id);
 
     let tone = 'node-neutral';
     if (isCompleted) tone = 'node-completed';
@@ -136,9 +122,9 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
     left.recordName === right.recordName &&
     left.recordSummary === right.recordSummary &&
     left.status === right.status &&
-    areStringArraysEqual(left.readyNodes, right.readyNodes) &&
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areStringArraysEqual(Object.keys(left.awaitingHumanNodes), Object.keys(right.awaitingHumanNodes)) &&
+    areStringArraysEqual(left.awaitingHandoff, right.awaitingHandoff) &&
     areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     left.improvementPhase?.status === right.improvementPhase?.status &&
     left.improvementPhase?.mode === right.improvementPhase?.mode &&

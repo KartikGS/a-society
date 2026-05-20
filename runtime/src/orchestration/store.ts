@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { normalizeConsentState } from '../common/types.js';
+import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
+import { CURRENT_FLOW_STATE_VERSION, normalizeConsentState } from '../common/types.js';
 import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../common/types.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { repairMovedRecordFolder } from '../projects/draft-flow.js';
@@ -19,17 +20,6 @@ function assertSafeSegment(label: string, value: string): string {
     throw new Error(`Invalid ${label} "${value}".`);
   }
   return trimmed;
-}
-
-function flowKey(ref: FlowRef): string {
-  return `${ref.projectNamespace}/${ref.flowId}`;
-}
-
-function flowRefFromRun(flow: FlowRun): FlowRef {
-  return {
-    projectNamespace: flow.projectNamespace,
-    flowId: flow.flowId,
-  };
 }
 
 function getProjectStateDir(workspaceRoot: string, projectNamespace: string): string {
@@ -59,12 +49,16 @@ function getRoleFeedPath(workspaceRoot: string, ref: FlowRef, roleKey: string): 
 }
 
 function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: FlowRef): FlowRun {
-  if (flow.stateVersion !== '7') {
+  if (flow.stateVersion !== CURRENT_FLOW_STATE_VERSION) {
     throw new Error(
       `Unsupported persisted flow state version "${String((flow as any).stateVersion ?? 'missing')}". ` +
-      'This runtime only supports flow state version "7".'
+      `This runtime only supports flow state version "${CURRENT_FLOW_STATE_VERSION}".`
     );
   }
+
+  if (!flow.receivingHandoff) flow.receivingHandoff = {};
+  if (!flow.historyHandoff) flow.historyHandoff = {};
+  if (!flow.awaitingHandoff) flow.awaitingHandoff = [];
 
   if (!flow.workspaceRoot || !flow.recordFolderPath) {
     throw new Error('Persisted flow state is missing required workspaceRoot or recordFolderPath fields.');
@@ -97,20 +91,17 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
     }
   }
 
-  if (!Array.isArray(flow.readyNodes)) {
-    throw new Error('Persisted flow state is missing readyNodes.');
-  }
   if (!Array.isArray(flow.runningNodes)) {
     throw new Error('Persisted flow state is missing runningNodes.');
   }
   if (!flow.awaitingHumanNodes || typeof flow.awaitingHumanNodes !== 'object') {
     throw new Error('Persisted flow state is missing awaitingHumanNodes.');
   }
-  if (!flow.completedEdgeArtifacts || typeof flow.completedEdgeArtifacts !== 'object') {
-    throw new Error('Persisted flow state is missing completedEdgeArtifacts.');
+  if (!flow.pendingHumanInputs || typeof flow.pendingHumanInputs !== 'object') {
+    throw new Error('Persisted flow state is missing pendingHumanInputs.');
   }
-  if (!flow.pendingNodeArtifacts || typeof flow.pendingNodeArtifacts !== 'object') {
-    throw new Error('Persisted flow state is missing pendingNodeArtifacts.');
+  if (!Array.isArray(flow.completedHandoffs)) {
+    flow.completedHandoffs = [];
   }
   if (!Array.isArray(flow.visitedNodeIds)) {
     flow.visitedNodeIds = [];
@@ -349,16 +340,42 @@ export class SessionStore {
       if (!fs.existsSync(flowPath)) continue;
 
       try {
-        const flow = SessionStore.loadFlowRun(ref, workspaceRoot);
-        if (!flow) continue;
+        const raw = JSON.parse(fs.readFileSync(flowPath, 'utf8')) as FlowRun;
+        const updatedAt = fs.statSync(flowPath).mtime.toISOString();
+
+        if (raw.stateVersion !== CURRENT_FLOW_STATE_VERSION) {
+          if (
+            typeof raw.recordFolderPath !== 'string' ||
+            typeof raw.status !== 'string'
+          ) {
+            continue;
+          }
+
+          summaries.push({
+            projectNamespace,
+            flowId: ref.flowId,
+            status: raw.status,
+            recordFolderPath: raw.recordFolderPath,
+            openable: false,
+            stateVersion: String(raw.stateVersion ?? 'missing'),
+            recordName: raw.recordName,
+            recordSummary: raw.recordSummary,
+            updatedAt,
+          });
+          continue;
+        }
+
+        const flow = validateAndHydrateFlow(raw, workspaceRoot, ref);
         summaries.push({
           projectNamespace,
           flowId: flow.flowId,
           status: flow.status,
           recordFolderPath: flow.recordFolderPath,
+          openable: true,
+          stateVersion: flow.stateVersion,
           recordName: flow.recordName,
           recordSummary: flow.recordSummary,
-          updatedAt: fs.statSync(flowPath).mtime.toISOString(),
+          updatedAt,
         });
       } catch {
         continue;

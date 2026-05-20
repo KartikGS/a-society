@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { areFlowRunsEqual } from '../../ui/src/equality.js';
 import type { ConsentMode, FlowRun } from '../../ui/src/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -23,16 +24,16 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    readyNodes: [],
     runningNodes: [],
     awaitingHumanNodes: {
       'owner-intake': { role: 'Owner', reason: 'prompt-human' },
     },
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: {},
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
     consentState: {
       mode,
       bash: { allowedCommands: {} },
@@ -55,6 +56,17 @@ test('areFlowRunsEqual detects stored bash consent changes', () => {
   right.consentState!.bash.allowedCommands['npm test'] = {
     command: 'npm test',
     grantedAt: '2026-05-03T00:00:00.000Z',
+  };
+
+  assert.strictEqual(areFlowRunsEqual(left, right), false);
+});
+
+test('areFlowRunsEqual detects queued human input changes', () => {
+  const left = flowWithConsent('partial-access');
+  const right = flowWithConsent('partial-access');
+  right.pendingHumanInputs['owner-intake'] = {
+    text: 'Proceed with the narrower option.',
+    receivedAt: '2026-05-17T00:00:00.000Z',
   };
 
   assert.strictEqual(areFlowRunsEqual(left, right), false);

@@ -6,6 +6,7 @@ import { SessionStore } from '../../src/orchestration/store.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -35,15 +36,15 @@ const flowRun: FlowRun = {
   workspaceRoot: tmpDir,
   projectNamespace,
   recordFolderPath,
-  readyNodes: [],
   runningNodes: [],
   awaitingHumanNodes: {},
+  pendingHumanInputs: {},
   completedNodes: [],
   visitedNodeIds: [],
-  completedEdgeArtifacts: {},
-  pendingNodeArtifacts: {},
+  completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
   status: 'running',
-  stateVersion: '7',
+  stateVersion: CURRENT_FLOW_STATE_VERSION,
 };
 
 SessionStore.saveFlowRun(flowRun, ref, tmpDir);
@@ -130,7 +131,6 @@ test('role.active becomes a role feed activation item', () => {
     kind: 'role.active',
     nodeId: 'owner-gate',
     role: 'Owner',
-    artifactCount: 1
   };
 
   assert.strictEqual(isTransientOperatorEvent(event), false);
@@ -139,15 +139,29 @@ test('role.active becomes a role feed activation item', () => {
     id: 'owner_4',
     type: 'activation',
     label: 'Activation',
-    text: 'owner-gate (Owner) is active with 1 artifact(s).',
+    text: 'owner-gate (Owner) is active.',
+  });
+});
+
+test('role.resumed becomes a visible role feed boundary', () => {
+  const event: OperatorEvent = {
+    kind: 'role.resumed',
+    nodeId: 'owner-intake',
+    role: 'Owner',
+    reason: 'interrupted-turn',
+  };
+
+  assert.strictEqual(isTransientOperatorEvent(event), false);
+  assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
+  assert.deepStrictEqual(projectMessageToFeedItem({ type: 'operator_event', event }, 'owner_5'), {
+    id: 'owner_5',
+    type: 'resume',
+    label: 'Resume',
+    text: 'owner-intake (Owner) resumed after an interrupted response.',
   });
 });
 
 test('projectMessageToFeedItem returns null for events that do not become feed items', () => {
-  assert.strictEqual(
-    projectMessageToFeedItem({ type: 'operator_event', event: { kind: 'flow.resumed', flowId: 'x', activeNodeCount: 1 } }, 'x'),
-    null
-  );
   assert.strictEqual(
     projectMessageToFeedItem({ type: 'error', message: 'boom' }, 'x'),
     null

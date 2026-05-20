@@ -83,7 +83,9 @@ function FlowList(props: {
         </button>
       </div>
       <div className="sidebar-project-list">
-        {props.flows.map((flow) => (
+        {props.flows.map((flow) => {
+          const incompatible = !flow.openable;
+          return (
           <div
             key={flow.flowId}
             className="sidebar-flow-row"
@@ -93,11 +95,14 @@ function FlowList(props: {
             <button
               type="button"
               className="sidebar-flow-open-btn"
-              disabled={props.disabled}
+              disabled={props.disabled || incompatible}
+              title={incompatible ? `Incompatible flow state v${flow.stateVersion}; delete this record to remove it.` : undefined}
               onClick={() => props.onOpenFlow(flow)}
             >
               <span className="sidebar-project-name">{flow.recordName ?? flow.flowId}</span>
-              <span className="sidebar-project-path">{flow.status}</span>
+              <span className="sidebar-project-path">
+                {incompatible ? `incompatible v${flow.stateVersion}` : flow.status}
+              </span>
             </button>
             <button
               type="button"
@@ -109,7 +114,8 @@ function FlowList(props: {
               ×
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
       {props.flows.length === 0 ? (
         <p className="sidebar-empty-state">No saved records yet.</p>

@@ -12,7 +12,9 @@ import { TelemetryManager } from '../observability/observability.js';
 import { SessionStore } from '../orchestration/store.js';
 import { FlowOrchestrator } from '../orchestration/orchestrator.js';
 import { ImprovementOrchestrator, type ImprovementMode } from '../improvement/improvement.js';
+import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { getActiveNodeIds } from '../common/flow-state.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
 import { bootstrapInitializationFlow } from '../projects/initialization-bootstrap.js';
 import { initializeDraftFlow } from '../projects/draft-flow.js';
@@ -125,22 +127,11 @@ function latestContextUsageFromSession(session: RoleSession | null): number | nu
   return session?.latestContextUsage ?? null;
 }
 
-function flowKey(ref: FlowRef): string {
-  return `${ref.projectNamespace}/${ref.flowId}`;
-}
-
 function missingModelError(ref: FlowRef): ServerMessage {
   return {
     type: 'error',
     flowRef: ref,
     message: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
-  };
-}
-
-function flowRefFromRun(flowRun: FlowRun): FlowRef {
-  return {
-    projectNamespace: flowRun.projectNamespace,
-    flowId: flowRun.flowId,
   };
 }
 
@@ -150,21 +141,6 @@ function hasFlowRef(value: any): value is FlowRef {
     typeof value.projectNamespace === 'string' &&
     typeof value.flowId === 'string'
   );
-}
-
-function getOpenNodeIds(flowRun: FlowRun): string[] {
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const nodeId of [
-    ...flowRun.readyNodes,
-    ...flowRun.runningNodes,
-    ...Object.keys(flowRun.awaitingHumanNodes)
-  ]) {
-    if (seen.has(nodeId)) continue;
-    seen.add(nodeId);
-    ids.push(nodeId);
-  }
-  return ids;
 }
 
 function isAwaitingHumanReply(reason: FlowRun['awaitingHumanNodes'][string]['reason']): boolean {
@@ -223,6 +199,17 @@ function buildServer(workspaceRoot: string) {
     return SessionStore.loadFlowRun(ref, workspaceRoot);
   }
 
+  function readFlowRunForHttp(ref: FlowRef, res: Response): FlowRun | null | undefined {
+    try {
+      return readFlowRun(ref);
+    } catch (error: any) {
+      res.status(409).json({
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return undefined;
+    }
+  }
+
   function resolveWorkflow(flowRun: FlowRun | null): any | null {
     if (!flowRun) return null;
     const workflowPath = findWorkflowFilePath(flowRun.recordFolderPath);
@@ -239,7 +226,7 @@ function buildServer(workspaceRoot: string) {
       return null;
     }
 
-    return readImprovementWorkflow(flowRun.improvementPhase.forwardPassClosure.recordFolderPath);
+    return readImprovementWorkflow(flowRun.recordFolderPath);
   }
 
   function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {
@@ -341,7 +328,7 @@ function buildServer(workspaceRoot: string) {
     const flowRun = readFlowRun(ref);
     if (!flowRun) return null;
     const backwardActive = session
-      ? Array.from(session.backwardActive).filter((nodeId) => getOpenNodeIds(flowRun).includes(nodeId))
+      ? Array.from(session.backwardActive).filter((nodeId) => getActiveNodeIds(flowRun).includes(nodeId))
       : [];
     const contextUsageByRole: Record<string, number> = session
       ? { ...session.latestContextUsageByRole }
@@ -434,7 +421,6 @@ function buildServer(workspaceRoot: string) {
 
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
     await SessionStore.updateFlowRun((flow) => {
-      flow.readyNodes = flow.readyNodes.filter((id) => id !== request.nodeId);
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
       flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent' };
       flow.status = 'running';
@@ -454,7 +440,6 @@ function buildServer(workspaceRoot: string) {
       if (decision === 'deny') {
         flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent-denied' };
         flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
-        flow.readyNodes = flow.readyNodes.filter((id) => id !== request.nodeId);
         flow.status = 'running';
         return;
       }
@@ -606,6 +591,19 @@ function buildServer(workspaceRoot: string) {
     return session;
   }
 
+  function startFlowRunner(session: ActiveSession, projectNamespace: string): void {
+    void attachSessionTask(session, () =>
+      session.orchestrator.runStoredFlow(
+        workspaceRoot,
+        projectNamespace,
+        session.outputBridge,
+        session.flowRef.flowId,
+        (role) => createRoleOutputStream(session, role),
+        session.consentGate
+      )
+    ).catch(() => {});
+  }
+
   function attachSessionTask(session: ActiveSession, taskFactory: () => Promise<void>): Promise<void> {
     session.task = taskFactory()
       .catch((error: any) => {
@@ -658,7 +656,18 @@ function buildServer(workspaceRoot: string) {
   }
 
   function openFlow(socket: WebSocket, ref: FlowRef): void {
-    const flowRun = readFlowRun(ref);
+    let flowRun: FlowRun | null;
+    try {
+      flowRun = readFlowRun(ref);
+    } catch (error: any) {
+      sendToSocket(socket, {
+        type: 'error',
+        flowRef: ref,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return;
+    }
+
     if (!flowRun) {
       sendToSocket(socket, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
       return;
@@ -683,16 +692,7 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(flowRef);
     emitFlowState(session);
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        projectNamespace,
-        session.outputBridge,
-        flowRef.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      )
-    ).catch(() => {});
+    startFlowRunner(session, projectNamespace);
   }
 
   function startInitializationFlow(socket: WebSocket, projectNamespace: string, mode: 'takeover' | 'greenfield'): void {
@@ -710,16 +710,7 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(flowRef);
     emitFlowState(session);
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        flowRun.projectNamespace,
-        session.outputBridge,
-        flowRef.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      )
-    ).catch(() => {});
+    startFlowRunner(session, flowRun.projectNamespace);
   }
 
   async function resumeFlow(socket: WebSocket, ref: FlowRef): Promise<void> {
@@ -754,22 +745,13 @@ function buildServer(workspaceRoot: string) {
 
     const session = createSession(ref);
     sendFlowState(socket, ref);
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        flowRun.projectNamespace,
-        session.outputBridge,
-        ref.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      )
-    ).catch(() => {});
+    startFlowRunner(session, flowRun.projectNamespace);
   }
 
-  function resumeAwaitingHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): void {
+  async function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): Promise<void> {
     const flowRun = readFlowRun(ref);
     if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No suspended flow is waiting for operator input.' });
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
       return;
     }
 
@@ -781,6 +763,19 @@ function buildServer(workspaceRoot: string) {
     let targetNodeId: string;
     try {
       targetNodeId = resolveAwaitingHumanNode(flowRun, target);
+      await SessionStore.updateFlowRun((latest) => {
+        const awaitingState = latest.awaitingHumanNodes[targetNodeId];
+        if (!awaitingState || !isAwaitingHumanReply(awaitingState.reason)) {
+          throw new Error(`Node '${targetNodeId}' is no longer awaiting human input.`);
+        }
+        if (latest.pendingHumanInputs[targetNodeId]) {
+          throw new Error(`Node '${targetNodeId}' already has queued human input.`);
+        }
+        latest.pendingHumanInputs[targetNodeId] = {
+          text,
+          receivedAt: new Date().toISOString(),
+        };
+      }, ref, workspaceRoot);
     } catch (error: any) {
       broadcastToFlow(ref, {
         type: 'error',
@@ -790,101 +785,19 @@ function buildServer(workspaceRoot: string) {
       return;
     }
 
-    const session = createSession(ref);
+    let session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      session = createSession(ref);
+      startFlowRunner(session, flowRun.projectNamespace);
+    }
+
     emitHistoricalMessage(session, {
       type: 'input_text',
       role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
       text,
     });
-
-    void attachSessionTask(session, async () => {
-      let currentFlow = readFlowRun(ref);
-      if (!currentFlow) {
-        throw new Error('Suspended flow state disappeared before the resume step began.');
-      }
-
-      await session.orchestrator.advanceFlow(
-        currentFlow,
-        targetNodeId,
-        text,
-        session.outputBridge,
-        session.consentGate,
-        (role) => createRoleOutputStream(session, role)
-      );
-
-      await session.orchestrator.runStoredFlow(
-        workspaceRoot,
-        currentFlow.projectNamespace,
-        session.outputBridge,
-        ref.flowId,
-        (role) => createRoleOutputStream(session, role),
-        session.consentGate
-      );
-
-      currentFlow = readFlowRun(ref);
-      if (currentFlow?.status === 'completed') {
-        session.sink.emit({ kind: 'flow.completed' });
-      }
-    }).catch(() => {});
-  }
-
-  function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): void {
-    const activeSession = activeSessions.get(flowKey(ref));
-    if (activeSession && !activeSession.finished) {
-      const flowRun = readFlowRun(ref);
-      if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
-        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
-        return;
-      }
-
-      if (!SettingsStore.hasUsableConfiguredModel()) {
-        broadcastToFlow(ref, missingModelError(ref));
-        return;
-      }
-
-      let targetNodeId: string;
-      try {
-        targetNodeId = resolveAwaitingHumanNode(flowRun, target);
-      } catch (error: any) {
-        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
-        return;
-      }
-
-      emitHistoricalMessage(activeSession, {
-        type: 'input_text',
-        role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
-        text,
-      });
-      void activeSession.orchestrator.advanceFlow(
-        flowRun,
-        targetNodeId,
-        text,
-        activeSession.outputBridge,
-        activeSession.consentGate,
-        (role) => createRoleOutputStream(activeSession, role)
-      ).then(() => activeSession.orchestrator.runStoredFlow(
-        workspaceRoot,
-        flowRun.projectNamespace,
-        activeSession.outputBridge,
-        ref.flowId,
-        (role) => createRoleOutputStream(activeSession, role),
-        activeSession.consentGate
-      )).catch((error: any) => {
-        emitHistoricalMessage(activeSession, {
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error)
-        });
-      });
-      return;
-    }
-
-    const flowRun = readFlowRun(ref);
-    if (flowRun && hasAwaitingHumanNodes(flowRun)) {
-      resumeAwaitingHumanInput(ref, text, target);
-      return;
-    }
-
-    broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active runtime session is waiting for human input.' });
+    session.orchestrator.wake();
+    emitFlowState(session);
   }
 
   function getOrCreateChoiceSession(ref: FlowRef): ActiveSession {
@@ -1250,7 +1163,9 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    res.json(readFlowRun(ref));
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
+    res.json(flowRun);
   });
 
   app.get('/api/flows/:projectNamespace/:flowId/workflow', (req: Request, res: Response) => {
@@ -1258,7 +1173,8 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    const flowRun = readFlowRun(ref);
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
     if (!flowRun) {
       res.status(404).json({ message: 'No flow state found.' });
       return;
@@ -1283,7 +1199,8 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    const flowRun = readFlowRun(ref);
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
     if (!flowRun) {
       res.status(404).json({ message: 'No flow state found.' });
       return;
@@ -1326,7 +1243,8 @@ function buildServer(workspaceRoot: string) {
       projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
       flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
     };
-    const flowRun = readFlowRun(ref);
+    const flowRun = readFlowRunForHttp(ref, res);
+    if (flowRun === undefined) return;
     if (!flowRun) {
       res.status(404).json({ message: 'No flow state found.' });
       return;
@@ -1580,7 +1498,13 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      handleHumanInput(message.flowRef, message.text, { nodeId: message.nodeId, role: message.role });
+      void handleHumanInput(message.flowRef, message.text, { nodeId: message.nodeId, role: message.role }).catch((error: any) => {
+        sendToSocket(socket, {
+          type: 'error',
+          flowRef: message.flowRef,
+          message: error instanceof Error ? error.message : String(error)
+        });
+      });
     });
 
     socket.on('close', () => {

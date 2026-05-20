@@ -130,7 +130,7 @@ Node notes such as "Curator A" or "Curator B" are descriptive only. They do not 
 
 Edges may connect neighboring nodes with the same role instance. The runtime treats the second node as a continuation of the same flow-scoped role-instance session and injects that node's current task inputs before the role continues.
 
-If two nodes share the same role instance and become ready at the same time, the runtime keeps both in ready order but claims only the earliest ready node for that role instance. Later same-role-instance nodes wait until the role instance is no longer running or awaiting human input.
+If two nodes share the same role instance and become runnable at the same time, the runtime claims only the earliest runnable node for that role instance. Later same-role-instance nodes wait in derived scheduler state, or in the runner's initial-node list during startup/recovery, until the role instance is no longer running or awaiting human input.
 
 If a flow needs separate runtime histories for the same base role, use separate numbered role instances. If distinct role instances are used, they may run in parallel.
 

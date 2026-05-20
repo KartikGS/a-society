@@ -9,6 +9,7 @@ import os from 'node:os';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 /**
  * Correction 4 verification: a real forward-pass-closed signal drives through
  * the orchestrator, emits the approved operator notice, and persists an
@@ -72,7 +73,8 @@ async function runTest() {
   fs.writeFileSync(path.join(projectADocsPath, 'improvement', 'feedback.md'), 'Feedback instructions');
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  // The artifact basename used in the handoff block determines what appears in the notice
+  // The closure signal no longer carries artifact metadata; this file simply mirrors
+  // the kind of record content a real closure node may still produce.
   const closureArtifactPath = path.join(recordPath, 'closure-artifact.md');
   fs.writeFileSync(closureArtifactPath, "Forward pass closure artifact.");
 
@@ -82,14 +84,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['start'],
-    runningNodes: [],
+    runningNodes: ['start'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'start': [] },
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   });
 
   const sink = new RecordingOperatorSink();
@@ -109,8 +111,6 @@ async function runTest() {
     const handoffBlock =
       "```handoff\n" +
       "type: forward-pass-closed\n" +
-      `record_folder_path: '${recordPath}'\n` +
-      `artifact_path: '${closureArtifactPath}'\n` +
       "```";
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Forward pass done. " + handoffBlock } }] })}\n\n`);
     res.write(`data: [DONE]\n\n`);
@@ -131,13 +131,13 @@ async function runTest() {
     console.log(assistantOut);
 
     const hasForwardPassNotice = sink.events.some(
-      e => e.kind === 'flow.forward_pass_closed' && e.artifactBasename === 'closure-artifact.md'
+      e => e.kind === 'flow.forward_pass_closed'
     );
 
     console.log("Validation:");
     console.log(`- Sink has flow.forward_pass_closed event: ${hasForwardPassNotice ? "Yes" : "No"}`);
 
-    assert.ok(hasForwardPassNotice, "Expected sink to contain flow.forward_pass_closed event for closure-artifact.md");
+    assert.ok(hasForwardPassNotice, "Expected sink to contain flow.forward_pass_closed event");
 
     assert.ok(!assistantOut.includes('Enter 1, 2, or 3:'),
       "Expected improvement mode selection to move out of the assistant stream.");
@@ -146,9 +146,9 @@ async function runTest() {
     assert.strictEqual(finalFlow.status, 'awaiting_improvement_choice',
       "Expected flow to pause for improvement mode selection after forward-pass closure.");
     assert.strictEqual(finalFlow.improvementPhase?.status, 'awaiting_choice',
-      "Expected improvement phase to persist awaiting-choice state.");
-    assert.strictEqual(finalFlow.improvementPhase?.forwardPassClosure.artifactPath, closureArtifactPath,
-      "Expected forward-pass closure artifact metadata to be persisted.");
+      "Expected forward-pass closure to enter improvement choice without persisting redundant closure metadata.");
+    assert.ok(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase),
+      "Expected forward-pass closure metadata to be omitted from persisted improvement state.");
 
     console.log("Forward-pass-closure test PASSED.");
   } catch (e: any) {

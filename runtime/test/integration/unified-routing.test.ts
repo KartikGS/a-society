@@ -11,6 +11,7 @@ import os from 'node:os';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
   console.log("Starting unified-routing integration test...");
 
@@ -90,14 +91,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['start'],
-    runningNodes: [],
+    runningNodes: ['start'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'start': [] },
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   });
 
   const sink = new RecordingOperatorSink();
@@ -170,7 +171,7 @@ async function runTest() {
 
     console.log("Validation:");
     console.log(`- Node 'start' completed: ${updatedFlow.completedNodes.includes('start') ? "Yes" : "No"}`);
-    console.log(`- Node 'next' is active: ${updatedFlow.readyNodes.includes('next') ? "Yes" : "No"}`);
+    console.log(`- Node 'next' received handoff: ${updatedFlow.receivingHandoff['start=>next'] ? "Yes" : "No"}`);
     console.log(`- Repair message injected into history: ${repairInjected ? "Yes" : "No"}`);
     console.log(`- Canonical node guidance injected from main workflow: ${canonicalGuidanceInjected ? "Yes" : "No"}`);
     console.log(`- Sink has handoff event: ${hasHandoffNotice ? "Yes" : "No"}`);
@@ -178,7 +179,7 @@ async function runTest() {
     console.log(`- Sink has repair event: ${hasRepairNotice ? "Yes" : "No"}`);
 
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed.");
-    assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to be active.");
+    assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['mock.md'], "Expected node 'next' to receive a handoff.");
     assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
     assert.ok(canonicalGuidanceInjected, "Expected node contract guidance to be resolved from a-docs/workflow/main.yaml.");
     assert.ok(hasHandoffNotice, "Expected sink to contain a handoff.applied event.");

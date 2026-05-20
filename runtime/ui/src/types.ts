@@ -1,5 +1,36 @@
-import type { FeedItem, FeedItemType } from '../../src/common/types.js';
-export type { FeedItem, FeedItemType };
+import type {
+  AwaitingHumanReason,
+  ConsentMode,
+  ConsentRequest,
+  ConsentResponseDecision,
+  ConsentState,
+  FeedbackContext,
+  FeedbackContextKind,
+  FeedItem,
+  FeedItemType,
+  FlowRef,
+  FlowRun,
+  FlowSummary,
+  ImprovementPhaseState,
+  OperatorEvent,
+} from '../../src/common/types.js';
+
+export type {
+  AwaitingHumanReason,
+  ConsentMode,
+  ConsentRequest,
+  ConsentResponseDecision,
+  ConsentState,
+  FeedbackContext,
+  FeedbackContextKind,
+  FeedItem,
+  FeedItemType,
+  FlowRef,
+  FlowRun,
+  FlowSummary,
+  ImprovementPhaseState,
+  OperatorEvent,
+};
 
 export type ProviderType = 'anthropic' | 'openai-compatible';
 export type InputModality = 'image' | 'audio' | 'video';
@@ -40,100 +71,6 @@ export interface ProjectDiscovery {
   withADocs: ProjectSummary[];
   withoutADocs: ProjectSummary[];
 }
-
-export interface FlowRun {
-  flowId: string;
-  workspaceRoot: string;
-  projectNamespace: string;
-  recordFolderPath: string;
-  recordName?: string;
-  recordSummary?: string;
-  readyNodes: string[];
-  runningNodes: string[];
-  awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
-  completedNodes: string[];
-  visitedNodeIds?: string[];
-  completedEdgeArtifacts: Record<string, string>;
-  pendingNodeArtifacts: Record<string, string[]>;
-  status: 'running' | 'awaiting_improvement_choice' | 'awaiting_feedback_consent' | 'completed';
-  stateVersion: string;
-  improvementPhase?: ImprovementPhaseState;
-  feedbackContext?: FeedbackContext;
-  consentState?: ConsentState;
-}
-
-export type FeedbackContextKind = 'standard' | 'initialization' | 'update-application';
-
-export interface FeedbackContext {
-  kind: FeedbackContextKind;
-  initializationMode?: 'takeover' | 'greenfield';
-  updateReportPaths?: string[];
-}
-
-export interface ImprovementPhaseState {
-  status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
-  mode?: 'graph-based' | 'parallel' | 'none';
-  currentStep: number;
-  completedRoles: string[];
-  findingsProduced: Record<string, string>;
-  improvementWorkflowPath?: string;
-  activeNodeIds?: string[];
-  completedNodeIds?: string[];
-  feedbackArtifactPath?: string;
-  feedbackConsent?: 'pending' | 'granted' | 'denied';
-  singleRole?: boolean;
-  forwardPassClosure: {
-    recordFolderPath: string;
-    artifactPath: string;
-  };
-}
-
-export interface FlowRef {
-  projectNamespace: string;
-  flowId: string;
-}
-
-export interface FlowSummary extends FlowRef {
-  status: FlowRun['status'];
-  recordFolderPath: string;
-  recordName?: string;
-  recordSummary?: string;
-  updatedAt?: string;
-}
-
-export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
-export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
-export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent' | 'consent-denied';
-
-export type ConsentRequest =
-  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
-  | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string };
-
-export interface ConsentState {
-  mode: ConsentMode;
-  bash: {
-    allowedCommands: Record<string, { command: string; grantedAt: string }>;
-  };
-}
-
-export type OperatorEvent =
-  | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
-  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
-  | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
-  | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
-  | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
-  | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
-  | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
-  | { kind: 'human.resumed'; nodeId: string; role: string }
-  | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
-  | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
-  | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
-  | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
-  | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
-  | { kind: 'flow.completed' }
-  | { kind: 'consent.requested'; request: ConsentRequest }
-  | { kind: 'consent.resolved'; request: ConsentRequest; decision: ConsentResponseDecision }
-  | { kind: 'consent.mode_changed'; mode: ConsentMode };
 
 export type ClientMessage =
   | { type: 'open_flow'; flowRef: FlowRef }

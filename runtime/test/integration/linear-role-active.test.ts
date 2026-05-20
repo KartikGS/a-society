@@ -9,6 +9,7 @@ import os from 'node:os';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 /**
  * Correction 3 verification: a full linear orchestration run emits exactly one
  * role.active notice for the successor node when it is claimed.
@@ -87,14 +88,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['start'],
-    runningNodes: [],
+    runningNodes: ['start'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'start': [] },
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   });
 
   const sink = new RecordingOperatorSink();
@@ -138,7 +139,7 @@ async function runTest() {
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
-    assert.ok(flowAfterStart.readyNodes.includes('next'), "Expected 'next' to be ready.");
+    assert.deepStrictEqual(flowAfterStart.receivingHandoff['start=>next'], ['start-output.md'], "Expected 'next' to receive the handoff.");
 
     console.log("\n--- Advancing 'next' node ---");
     await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, outputStream);
@@ -157,7 +158,7 @@ async function runTest() {
     );
     const flowAfterNext = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");
-    assert.ok(flowAfterNext.readyNodes.includes('end'), "Expected successor node 'end' to be ready.");
+    assert.deepStrictEqual(flowAfterNext.receivingHandoff['next=>end'], ['next-output.md'], "Expected successor node 'end' to receive the handoff.");
 
     console.log("Linear-role-active test PASSED.");
   } catch (e: any) {

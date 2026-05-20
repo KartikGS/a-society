@@ -10,6 +10,7 @@ import os from 'node:os';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
   console.log('Starting missing-artifact-handoff integration test...');
 
@@ -73,14 +74,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['start'],
-    runningNodes: [],
+    runningNodes: ['start'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { start: [] },
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   });
 
   const sink = new RecordingOperatorSink();
@@ -117,7 +118,7 @@ async function runTest() {
       (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
     );
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
-    assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to activate after repaired handoff.");
+    assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['valid-output.md'], "Expected node 'next' to receive the repaired handoff.");
     assert.ok(repairNotice, 'Expected sink to contain a repair.requested event with scope "node".');
     assert.strictEqual(repairNotice.role, 'start');
     assert.strictEqual(repairNotice.nodeId, 'start');

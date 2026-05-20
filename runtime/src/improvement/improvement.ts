@@ -10,6 +10,7 @@ import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import { SessionStore } from '../orchestration/store.js';
 import { runRoleTurn } from '../orchestration/orient.js';
+import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } from '../common/types.js';
 import { HandoffParseError } from '../orchestration/handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
@@ -263,7 +264,6 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 export class ImprovementOrchestrator {
   static markAwaitingChoice(
     flowRun: FlowRun,
-    signal: { recordFolderPath: string; artifactPath: string },
     singleRole?: boolean,
   ): void {
     flowRun.status = 'awaiting_improvement_choice';
@@ -277,15 +277,13 @@ export class ImprovementOrchestrator {
       feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
       feedbackConsent: 'pending',
       singleRole: singleRole ?? false,
-      forwardPassClosure: signal
     };
-    flowRun.stateVersion = '7';
+    flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
   }
 
   static skipImprovement(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): void {
-    const forwardPassClosure = flowRun.improvementPhase?.forwardPassClosure;
-    if (!forwardPassClosure) {
-      throw new Error('[improvement] Cannot skip improvement: forward-pass closure metadata is missing.');
+    if (!flowRun.improvementPhase) {
+      throw new Error('[improvement] Cannot skip improvement: improvement phase state is missing.');
     }
 
     flowRun.status = 'completed';
@@ -300,7 +298,6 @@ export class ImprovementOrchestrator {
       completedNodeIds: flowRun.improvementPhase?.completedNodeIds ?? [],
       feedbackArtifactPath: flowRun.improvementPhase?.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun),
       feedbackConsent: flowRun.improvementPhase?.feedbackConsent,
-      forwardPassClosure
     };
     saveImprovementFlow(flowRun);
     outputStream?.write(`[improvement] No improvement selected. Record closed.\n`);
@@ -308,8 +305,8 @@ export class ImprovementOrchestrator {
 
   static skipFeedback(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): void {
     const improvementPhase = flowRun.improvementPhase;
-    if (!improvementPhase?.forwardPassClosure) {
-      throw new Error('[improvement] Cannot skip feedback: forward-pass closure metadata is missing.');
+    if (!improvementPhase) {
+      throw new Error('[improvement] Cannot skip feedback: improvement phase state is missing.');
     }
 
     flowRun.status = 'completed';
@@ -331,24 +328,24 @@ export class ImprovementOrchestrator {
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
   ): Promise<void> {
-    const signal = flowRun.improvementPhase?.forwardPassClosure;
-    if (!signal) {
-      throw new Error('[improvement] Cannot start improvement: forward-pass closure metadata is missing.');
+    if (!flowRun.improvementPhase) {
+      throw new Error('[improvement] Cannot start improvement: improvement phase state is missing.');
     }
+    const recordFolderPath = flowRun.recordFolderPath;
 
     const tracer = TelemetryManager.getTracer();
     return tracer.startActiveSpan('improvement.orchestrate', {
       kind: SpanKind.INTERNAL,
       attributes: {
         'flow.id': flowRun.flowId,
-        'improvement.record_folder': signal.recordFolderPath,
+        'improvement.record_folder': recordFolderPath,
       }
     }, async (span) => {
       try {
         span.setAttribute('improvement.mode', mode);
         span.addEvent('improvement.mode_selected', { mode });
-        const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
-        const improvementWorkflowFilePath = writeImprovementWorkflow(signal.recordFolderPath, plan, mode);
+        const plan = computeBackwardPassPlan(recordFolderPath, FEEDBACK_ROLE, mode);
+        const improvementWorkflowFilePath = writeImprovementWorkflow(recordFolderPath, plan, mode);
 
         flowRun.improvementPhase = {
           ...flowRun.improvementPhase,
@@ -362,10 +359,9 @@ export class ImprovementOrchestrator {
           completedNodeIds: [],
           feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
           feedbackConsent: 'pending',
-          forwardPassClosure: signal
         };
         flowRun.status = 'running';
-        flowRun.stateVersion = '7';
+        flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'improvement_initialized' });
 
@@ -418,14 +414,13 @@ export class ImprovementOrchestrator {
                   kind: 'role.active',
                   nodeId: improvementGraphNodeId,
                   role: roleName,
-                  artifactCount: 0
                 });
 
                 if (entry.stepType === 'meta-analysis') {
                   const findingsRoles = entry.findingsRolesToInject;
-                  const findingsFilePaths = locateFindingsFiles(signal.recordFolderPath, findingsRoles);
+                  const findingsFilePaths = locateFindingsFiles(recordFolderPath, findingsRoles);
                   const assignedFindingsFilePath = deterministicFindingsFilePath(
-                    signal.recordFolderPath,
+                    recordFolderPath,
                     roleName
                   );
                   fs.mkdirSync(path.dirname(assignedFindingsFilePath), { recursive: true });
@@ -436,9 +431,9 @@ export class ImprovementOrchestrator {
                   
                   // §2.6 / §3.6 Warning for missing findings
                   for (const expectedRole of findingsRoles) {
-                    const perRoleFiles = locateFindingsFiles(signal.recordFolderPath, [expectedRole]);
+                    const perRoleFiles = locateFindingsFiles(recordFolderPath, [expectedRole]);
                     if (perRoleFiles.length === 0) {
-                      outputStream.write(`[improvement] Role ${entry.role}: expected findings from ${expectedRole} but no matching file found in ${signal.recordFolderPath}. Proceeding without findings for this role.\n`);
+                      outputStream.write(`[improvement] Role ${entry.role}: expected findings from ${expectedRole} but no matching file found in ${recordFolderPath}. Proceeding without findings for this role.\n`);
                       span.addEvent('improvement.no_findings_warning', {
                         step_index: i,
                         role: entry.role,
@@ -458,7 +453,7 @@ export class ImprovementOrchestrator {
 
                   const userMessage = buildImprovementEntryMessage({
                     stepLabel: 'meta-analysis',
-                    recordFolderPath: signal.recordFolderPath,
+                    recordFolderPath,
                     workspaceRoot: flowRun.workspaceRoot,
                     instructionFilePath: metaAnalysisInstructionPath,
                     findingsFilePaths,
@@ -558,10 +553,10 @@ export class ImprovementOrchestrator {
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
   ): Promise<void> {
-    const signal = flowRun.improvementPhase?.forwardPassClosure;
-    if (!signal) {
-      throw new Error('[improvement] Cannot run feedback: forward-pass closure metadata is missing.');
+    if (!flowRun.improvementPhase) {
+      throw new Error('[improvement] Cannot run feedback: improvement phase state is missing.');
     }
+    const recordFolderPath = flowRun.recordFolderPath;
 
     const currentStep = flowRun.improvementPhase?.currentStep;
     if (currentStep === undefined) {
@@ -573,7 +568,7 @@ export class ImprovementOrchestrator {
       kind: SpanKind.INTERNAL,
       attributes: {
         'flow.id': flowRun.flowId,
-        'improvement.record_folder': signal.recordFolderPath,
+        'improvement.record_folder': recordFolderPath,
       }
     }, async (span) => {
       try {
@@ -582,7 +577,7 @@ export class ImprovementOrchestrator {
           throw new Error('[improvement] Cannot run feedback: improvement mode is missing.');
         }
 
-        const plan = computeBackwardPassPlan(signal.recordFolderPath, FEEDBACK_ROLE, mode);
+        const plan = computeBackwardPassPlan(recordFolderPath, FEEDBACK_ROLE, mode);
         const group = plan[currentStep];
         if (!group || !group.some(entry => entry.stepType === 'feedback')) {
           throw new Error('[improvement] Cannot run feedback: the current improvement step is not a feedback step.');
@@ -593,7 +588,7 @@ export class ImprovementOrchestrator {
         fs.mkdirSync(path.dirname(assignedFeedbackFilePath), { recursive: true });
 
         const existingPhase = flowRun.improvementPhase;
-        if (!existingPhase?.forwardPassClosure) {
+        if (!existingPhase) {
           throw new Error('[improvement] Cannot run feedback: improvement phase state is incomplete.');
         }
 
@@ -609,7 +604,6 @@ export class ImprovementOrchestrator {
           completedNodeIds: existingPhase.completedNodeIds ?? [],
           feedbackArtifactPath: assignedFeedbackRepoPath,
           feedbackConsent: 'granted',
-          forwardPassClosure: existingPhase.forwardPassClosure,
         };
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'feedback_started', step_index: currentStep });
@@ -622,15 +616,14 @@ export class ImprovementOrchestrator {
             kind: 'role.active',
             nodeId: improvementGraphNodeId,
             role: roleName,
-            artifactCount: 0
           });
 
-          const allFindingsFiles = locateAllFindingsFiles(signal.recordFolderPath);
+          const allFindingsFiles = locateAllFindingsFiles(recordFolderPath);
           const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
 
           const userMessage = buildImprovementEntryMessage({
             stepLabel: 'feedback',
-            recordFolderPath: signal.recordFolderPath,
+            recordFolderPath,
             workspaceRoot: flowRun.workspaceRoot,
             instructionFilePath: feedbackInstructionPath,
             findingsFilePaths: allFindingsFiles,

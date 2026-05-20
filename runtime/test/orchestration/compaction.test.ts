@@ -7,6 +7,7 @@ import { LLMGateway } from '../../src/providers/llm.js';
 import type { FlowRun, GatewayTurnResult, RoleSession, RuntimeMessageParam } from '../../src/common/types.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -73,18 +74,14 @@ await test('compactRoleSession archives raw history and replaces active history 
     workspaceRoot: tmpDir,
     projectNamespace: 'project',
     recordFolderPath: path.join(tmpDir, 'project', 'a-docs', 'records', 'flow'),
-    readyNodes: [],
     runningNodes: ['owner-review'],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: ['owner-intake'],
-    completedEdgeArtifacts: {
-      'owner-intake=>owner-review': 'project/a-docs/records/flow/01-owner.md'
-    },
-    pendingNodeArtifacts: {
-      'owner-review': ['project/a-docs/records/flow/01-owner.md']
-    },
+    completedHandoffs: ['owner-intake=>owner-review'],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   try {
@@ -128,14 +125,14 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     workspaceRoot: '.',
     projectNamespace: 'project',
     recordFolderPath: 'project/a-docs/records/flow',
-    readyNodes: [],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: {},
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   const result = await compactRoleSession({

@@ -1,6 +1,7 @@
 import assert from 'node:assert';
 import type { FlowRun } from '../../src/common/types.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
 
@@ -24,20 +25,19 @@ test('FlowRun: conforms to new multi-node structure', () => {
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    readyNodes: ['node1'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: { 'node1': ['artifact.md'] },
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
-  assert.strictEqual(flowRun.readyNodes.length, 1);
+  assert.strictEqual(flowRun.runningNodes.length, 0);
   assert.strictEqual(flowRun.completedNodes.length, 0);
-  assert.ok(flowRun.pendingNodeArtifacts['node1']);
-  assert.strictEqual(flowRun.pendingNodeArtifacts['node1'][0], 'artifact.md');
+  assert.deepStrictEqual(flowRun.receivingHandoff, {});
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

@@ -1,5 +1,8 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import { flowKey } from '../../src/common/flow-ref.js';
+import { getActiveNodeIds } from '../../src/common/flow-state.js';
+import { operatorEventToFeedItem } from '../../src/common/operator-feed.js';
 import { parseRoleIdentity } from '../../src/common/role-id.js';
 import { ChatInterface, type FeedItem } from './components/ChatInterface';
 import { GraphView, type GraphMode } from './components/GraphView';
@@ -62,11 +65,6 @@ function toRoleKey(role: string | null | undefined): string | null {
   if (role === SYSTEM_ROLE_KEY) return SYSTEM_ROLE_KEY;
   return parseRoleIdentity(role).instanceRoleId;
 }
-
-function flowKey(ref: FlowRef): string {
-  return `${ref.projectNamespace}/${ref.flowId}`;
-}
-
 
 function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
   return {
@@ -137,92 +135,7 @@ function feedbackConsentCopy(flowRun: FlowRun | null): { title: string; body: st
 }
 
 function formatOperatorEvent(event: OperatorEvent): FeedItem | null {
-  switch (event.kind) {
-    case 'flow.resumed':
-      return null;
-    case 'role.active':
-      return {
-        id: nextFeedId(),
-        type: 'activation',
-        label: 'Activation',
-        text: `${event.nodeId} (${event.role}) is active with ${event.artifactCount} artifact(s).`
-      };
-    case 'activity.tool_call':
-      return {
-        id: nextFeedId(),
-        type: 'tool',
-        label: 'Tool Call',
-        text: event.command ? `${event.toolName}: ${event.command}` : event.path ? `${event.toolName} ${event.path}` : event.toolName
-      };
-    case 'handoff.applied':
-      return {
-        id: nextFeedId(),
-        type: 'handoff',
-        label: 'Handoff',
-        text: event.targets.length === 0
-          ? `${event.fromNodeId} (${event.fromRole}) completed its terminal step.`
-          : `${event.fromNodeId} (${event.fromRole}) handed off to ${event.targets.map((target) => `${target.nodeId} (${target.role})`).join(', ')}.`
-      };
-    case 'repair.requested':
-      return {
-        id: nextFeedId(),
-        type: 'repair',
-        label: 'Repair Requested',
-        text: event.summary
-      };
-    case 'human.awaiting_input':
-      return null;
-    case 'human.resumed':
-      return null;
-    case 'usage.turn_summary':
-      return null;
-    case 'session.compaction_started':
-      return null;
-    case 'session.compaction_failed':
-      return null;
-    case 'session.compacted':
-      return {
-        id: nextFeedId(),
-        type: 'tool',
-        label: 'Context',
-        text: `${event.nodeId} context compacted (${event.trigger}).`
-      };
-    case 'flow.forward_pass_closed':
-      return {
-        id: nextFeedId(),
-        type: 'event',
-        label: 'Forward Pass',
-        text: `Forward pass closed via ${event.artifactBasename}.`
-      };
-    case 'flow.completed':
-      return {
-        id: nextFeedId(),
-        type: 'event',
-        label: 'Complete',
-        text: 'Orchestration completed.'
-      };
-    case 'activity.tool_result':
-      return null;
-    case 'consent.requested':
-    case 'consent.resolved':
-    case 'consent.mode_changed':
-      return null;
-  }
-}
-
-function getOpenNodeIds(flowRun: FlowRun): string[] {
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const nodeId of [
-    ...flowRun.readyNodes,
-    ...flowRun.runningNodes,
-    ...Object.keys(flowRun.awaitingHumanNodes)
-  ]) {
-    if (seen.has(nodeId)) continue;
-    seen.add(nodeId);
-    ids.push(nodeId);
-  }
-  return ids;
+  return operatorEventToFeedItem(event, nextFeedId());
 }
 
 function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
@@ -500,7 +413,7 @@ export function App() {
         updateFlowUi(key, (state) => {
           const item = formatOperatorEvent(event);
           const feedRole =
-            event.kind === 'human.resumed' || event.kind === 'activity.tool_call'
+            event.kind === 'human.resumed' || event.kind === 'role.resumed' || event.kind === 'activity.tool_call'
               ? toRoleKey(event.role)
               : event.kind === 'handoff.applied'
                 ? toRoleKey(event.fromRole)
@@ -510,7 +423,7 @@ export function App() {
                     ? toRoleKey(event.role)
                   : null;
           const compactedRole = event.kind === 'session.compacted' ? toRoleKey(event.role) : null;
-          const resumedRole = event.kind === 'human.resumed' ? toRoleKey(event.role) : null;
+          const resumedRole = event.kind === 'human.resumed' || event.kind === 'role.resumed' ? toRoleKey(event.role) : null;
           return {
             ...state,
             stopRequestedRoles: event.kind === 'flow.completed'
@@ -719,9 +632,10 @@ export function App() {
   const lastHandoff = activeUi?.lastHandoff ?? null;
   const backwardActive = activeUi?.backwardActive ?? EMPTY_STRINGS;
   const projectFlows = selectedProject ? projectFlowsByProject[selectedProject] ?? [] : [];
+  const hasActiveFlowState = flowRun !== null;
 
   useEffect(() => {
-    if (socket.status !== 'open' || !activeTab) {
+    if (socket.status !== 'open' || !activeTab || !hasActiveFlowState) {
       return;
     }
 
@@ -733,6 +647,12 @@ export function App() {
           `/api/flows/${encodeURIComponent(activeTab.ref.projectNamespace)}/${encodeURIComponent(activeTab.ref.flowId)}/state`
         );
         if (!response.ok) {
+          if (response.status === 409) {
+            const payload = await response.json().catch(() => null) as { message?: string } | null;
+            updateFlowUi(activeTab.key, (state) => ({ ...state, flowRun: null }));
+            showToast(payload?.message ?? 'This flow is incompatible with the current runtime.');
+            return;
+          }
           throw new Error(await response.text());
         }
 
@@ -757,14 +677,14 @@ export function App() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [socket.status, activeTab, updateFlowUi]);
+  }, [socket.status, activeTab, hasActiveFlowState, updateFlowUi, showToast]);
 
   function resolveInputTargetRole(): string {
     if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {
       return selectedRole;
     }
-    if (flowRun && workflow && getOpenNodeIds(flowRun).length === 1) {
-      const activeNode = workflow.nodes.find((node) => node.id === getOpenNodeIds(flowRun)[0]);
+    if (flowRun && workflow && getActiveNodeIds(flowRun).length === 1) {
+      const activeNode = workflow.nodes.find((node) => node.id === getActiveNodeIds(flowRun)[0]);
       if (activeNode) return toRoleKey(activeNode.role) ?? SYSTEM_ROLE_KEY;
     }
     if (selectedRole) return selectedRole;
@@ -953,7 +873,7 @@ export function App() {
     updateFlowUi(activeTabKey, (state) => ({ ...state, selectedGraph: mode }));
   }, [activeTabKey, updateFlowUi]);
 
-  const activeNodeIds = flowRun ? getOpenNodeIds(flowRun) : undefined;
+  const activeNodeIds = flowRun ? getActiveNodeIds(flowRun) : undefined;
   const improvementGraphAvailable = hasImprovementGraph(flowRun);
   const graphMode = selectedGraph === 'improvement' && improvementGraphAvailable ? 'improvement' : 'flow';
   const lastHandoffFromNodeId = lastHandoff?.fromNodeId;
@@ -972,7 +892,7 @@ export function App() {
     if (!flowRun || !workflow) return EMPTY_STRINGS;
 
     return [...new Set(
-      getOpenNodeIds(flowRun)
+      getActiveNodeIds(flowRun)
         .map((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.role)
         .map((role) => (role ? toRoleKey(role) : null))
         .filter((role): role is string => role !== null)

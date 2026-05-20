@@ -62,6 +62,24 @@ function areAwaitingHumanMapsEqual(
   return true;
 }
 
+function arePendingHumanInputMapsEqual(
+  left: FlowRun['pendingHumanInputs'],
+  right: FlowRun['pendingHumanInputs']
+): boolean {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (!(key in right)) return false;
+    if (left[key].text !== right[key].text) return false;
+    if (left[key].receivedAt !== right[key].receivedAt) return false;
+  }
+
+  return true;
+}
+
 function areImprovementPhasesEqual(
   left: FlowRun['improvementPhase'],
   right: FlowRun['improvementPhase']
@@ -74,8 +92,6 @@ function areImprovementPhasesEqual(
     left.mode === right.mode &&
     left.currentStep === right.currentStep &&
     left.improvementWorkflowPath === right.improvementWorkflowPath &&
-    left.forwardPassClosure.recordFolderPath === right.forwardPassClosure.recordFolderPath &&
-    left.forwardPassClosure.artifactPath === right.forwardPassClosure.artifactPath &&
     areStringArraysEqual(left.completedRoles, right.completedRoles) &&
     areStringMapsEqual(left.findingsProduced, right.findingsProduced) &&
     areStringArraysEqual(left.activeNodeIds, right.activeNodeIds) &&
@@ -132,13 +148,15 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     left.recordSummary === right.recordSummary &&
     left.status === right.status &&
     left.stateVersion === right.stateVersion &&
-    areStringArraysEqual(left.readyNodes, right.readyNodes) &&
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
+    arePendingHumanInputMapsEqual(left.pendingHumanInputs, right.pendingHumanInputs) &&
     areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
-    areStringMapsEqual(left.completedEdgeArtifacts, right.completedEdgeArtifacts) &&
-    areStringArrayMapsEqual(left.pendingNodeArtifacts, right.pendingNodeArtifacts) &&
+    areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
+    areStringArrayMapsEqual(left.receivingHandoff, right.receivingHandoff) &&
+    areStringArrayMapsEqual(left.historyHandoff, right.historyHandoff) &&
+    areStringArraysEqual(left.awaitingHandoff, right.awaitingHandoff) &&
     areImprovementPhasesEqual(left.improvementPhase, right.improvementPhase) &&
     areFeedbackContextsEqual(left.feedbackContext, right.feedbackContext) &&
     areConsentStatesEqual(left.consentState, right.consentState)

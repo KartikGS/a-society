@@ -14,6 +14,7 @@ Emit a machine-readable block at every session pause point:
 - when signaling forward-pass closure
 - when signaling backward-pass progress or completion
 - when pausing for human input
+- when suspending to wait for an inbound handoff from another node
 
 Do not emit a block for:
 
@@ -65,8 +66,6 @@ Use typed signals when the output is not routing to another workflow node but tr
 **`forward-pass-closed`**
 ```yaml
 type: forward-pass-closed
-record_folder_path: <string>
-artifact_path: <string>
 ```
 
 **`meta-analysis-complete`**
@@ -89,6 +88,13 @@ type: prompt-human
 Emit `type: prompt-human` only when the session cannot continue without a human reply.
 Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis or feedback sessions; those sessions must end with `meta-analysis-complete` or `backward-pass-complete`.
 
+**`await-handoff`**
+```yaml
+type: await-handoff
+```
+
+Emit `type: await-handoff` to suspend the current node and wait for an inbound handoff from another node. Valid only when the current node already has a pending or received handoff directed at it (i.e. it previously emitted a handoff to the node it expects a reply from). If no such handoff exists the runtime will reject the signal and ask the role to emit the outbound handoff first.
+
 ---
 
 ## Field Definitions
@@ -97,9 +103,7 @@ Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis
 
 **`artifact_path`** — Repo-relative path to the primary artifact for the next phase or terminal signal.
 
-**`type`** — One of `forward-pass-closed`, `meta-analysis-complete`, `backward-pass-complete`, or `prompt-human`.
-
-**`record_folder_path`** — Repo-relative path to the active record folder. Used only by `forward-pass-closed`.
+**`type`** — One of `forward-pass-closed`, `meta-analysis-complete`, `backward-pass-complete`, `prompt-human`, or `await-handoff`.
 
 **`findings_path`** — Repo-relative path to the runtime-assigned findings artifact produced in a meta-analysis session. Used only by `meta-analysis-complete`.
 
@@ -134,8 +138,6 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-to-curator
 
 ```handoff
 type: forward-pass-closed
-record_folder_path: [project-name]/a-docs/records/[record-folder]
-artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-closure.md
 ```
 
 **Meta-analysis completion**
@@ -159,3 +161,11 @@ type: prompt-human
 ```
 
 When the final feedback step completes, emit `type: backward-pass-complete` with the feedback artifact path. This is a terminal signal, not a routing handoff.
+
+**Await inbound handoff**
+
+```handoff
+type: await-handoff
+```
+
+Emitted after the node has already sent a handoff to another node and is now suspending to wait for that node to send work back.

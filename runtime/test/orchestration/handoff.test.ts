@@ -47,11 +47,9 @@ test('parse (Null artifact): handles null artifact_path', () => {
 });
 
 test('parse (forward-pass-closed): returns closure signal', () => {
-  const text = "```handoff\ntype: forward-pass-closed\nrecord_folder_path: a-society/a-docs/records/example-flow\nartifact_path: a-society/a-docs/records/example-flow/08-owner-closure.md\n```";
+  const text = "```handoff\ntype: forward-pass-closed\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual(result.kind, 'forward-pass-closed');
-  assert.strictEqual((result as any).recordFolderPath, 'a-society/a-docs/records/example-flow');
-  assert.strictEqual((result as any).artifactPath, 'a-society/a-docs/records/example-flow/08-owner-closure.md');
 });
 
 test('parse (meta-analysis-complete): returns findings signal', () => {
@@ -122,14 +120,6 @@ test('parse (Invalid typed signal): throws unknown_signal_type code with operato
 });
 
 test('parse (Typed signal missing required fields): throws missing_required_field code', () => {
-  const forwardPassText = "```handoff\ntype: forward-pass-closed\nartifact_path: a-society/a-docs/records/example-flow/08-owner-closure.md\n```";
-  let fwdErr: any;
-  assert.throws(() => {
-    HandoffInterpreter.parse(forwardPassText);
-  }, (e: any) => { fwdErr = e; return e instanceof HandoffParseError; });
-  assert.strictEqual(fwdErr.details.code, 'missing_required_field');
-  assert.ok(fwdErr.details.modelRepairMessage.includes('missing record_folder_path'));
-
   const findingsText = "```handoff\ntype: meta-analysis-complete\n```";
   let findErr: any;
   assert.throws(() => {

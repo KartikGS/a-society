@@ -4,6 +4,8 @@ export type FlowStatus =
   | 'awaiting_feedback_consent'
   | 'completed';
 
+export const CURRENT_FLOW_STATE_VERSION = '11';
+
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentRequestKind = 'file-write' | 'bash-command';
 export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
@@ -89,10 +91,11 @@ export interface HandoffTarget {
 
 export type HandoffResult =
   | { kind: 'targets'; targets: HandoffTarget[] }
-  | { kind: 'forward-pass-closed'; recordFolderPath: string; artifactPath: string }
+  | { kind: 'forward-pass-closed' }
   | { kind: 'meta-analysis-complete'; findingsPath: string }
   | { kind: 'backward-pass-complete'; artifactPath: string }
-  | { kind: 'awaiting_human' };
+  | { kind: 'awaiting_human' }
+  | { kind: 'await-handoff' };
 
 export interface ImprovementPhaseState {
   status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
@@ -106,10 +109,6 @@ export interface ImprovementPhaseState {
   feedbackArtifactPath?: string;               // repo-relative path assigned for optional upstream feedback
   feedbackConsent?: 'pending' | 'granted' | 'denied';
   singleRole?: boolean;                        // true when the workflow has only one unique base role
-  forwardPassClosure: {
-    recordFolderPath: string;
-    artifactPath: string;
-  };
 }
 
 export interface FlowRun {
@@ -119,15 +118,17 @@ export interface FlowRun {
   recordFolderPath: string;
   recordName?: string;
   recordSummary?: string;
-  readyNodes: string[];                           // node IDs eligible to execute
   runningNodes: string[];                         // node IDs claimed by a live runtime turn
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
+  pendingHumanInputs: Record<string, { text: string; receivedAt: string }>; // durable operator replies queued for scheduler consumption
   completedNodes: string[];                       // node IDs that have finished
   visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
-  completedEdgeArtifacts: Record<string, string>; // `${from}=>${to}` → artifact_path carried on that handoff
-  pendingNodeArtifacts: Record<string, string[]>; // nodeId → list of input artifacts waiting for it
+  completedHandoffs: string[];                     // `${from}=>${to}` edge keys for forward handoffs that have been made; removed on backward handoff
+  receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
+  historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse
+  awaitingHandoff: string[];                       // node IDs currently suspended waiting for an inbound handoff
   status: FlowStatus;
-  stateVersion: string;                        // Persistence version: "7" for the current runtime schema
+  stateVersion: string;                        // Persistence version; current writes use CURRENT_FLOW_STATE_VERSION
   improvementPhase?: ImprovementPhaseState;    // Present only when improvement is in progress
   feedbackContext?: FeedbackContext;           // Runtime-owned context for the optional upstream feedback step
   consentState?: ConsentState;
@@ -141,6 +142,8 @@ export interface FlowRef {
 export interface FlowSummary extends FlowRef {
   status: FlowStatus;
   recordFolderPath: string;
+  openable: boolean;
+  stateVersion: string;
   recordName?: string;
   recordSummary?: string;
   updatedAt?: string;
@@ -199,11 +202,11 @@ export interface RoleTurnResult {
 }
 
 export type OperatorEvent =
-  | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
-  | { kind: 'role.active'; nodeId: string; role: string; artifactCount: number }
+  | { kind: 'role.active'; nodeId: string; role: string }
+  | { kind: 'role.resumed'; nodeId: string; role: string; reason: 'interrupted-turn' }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
-  | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
+  | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
   | { kind: 'human.resumed'; nodeId: string; role: string }
@@ -211,7 +214,7 @@ export type OperatorEvent =
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
-  | { kind: 'flow.forward_pass_closed'; recordFolderPath: string; artifactBasename: string }
+  | { kind: 'flow.forward_pass_closed' }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; request: ConsentRequest }
   | { kind: 'consent.resolved'; request: ConsentRequest; decision: ConsentResponseDecision }
@@ -237,6 +240,7 @@ export type FeedItemType =
   | 'event'
   | 'error'
   | 'handoff'
+  | 'resume'
   | 'repair'
   | 'tool'
   | 'tool-success'

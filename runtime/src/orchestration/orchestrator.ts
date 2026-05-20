@@ -12,8 +12,10 @@ import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
+import { WorkflowGraph } from './workflow-graph.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
 
@@ -24,7 +26,7 @@ export class WorkflowError extends Error {
   }
 }
 
-type AppliedHandoffDirection = 'forward' | 'backward' | 'terminal';
+type ClaimedRunnableWork = { nodeId: string; humanInput?: string };
 
 const INTERRUPTED_TURN_CONTINUATION_MESSAGE =
   'The previous assistant response was interrupted during streaming. Continue from where you left off. Do not repeat completed content unless needed for coherence.';
@@ -138,6 +140,8 @@ export class FlowOrchestrator {
   private flowRef: FlowRef | null = null;
   private workspaceRoot: string | null = null;
   private boundSigintHandler: (() => void) | null = null;
+  private wakeGeneration = 0;
+  private wakeWaiters = new Set<() => void>();
 
   constructor(renderer: OperatorRenderSink) {
     this.renderer = renderer;
@@ -162,6 +166,14 @@ export class FlowOrchestrator {
       if (!entry.controller.signal.aborted) return true;
     }
     return false;
+  }
+
+  public wake(): void {
+    this.wakeGeneration += 1;
+    for (const wakeWaiter of this.wakeWaiters) {
+      wakeWaiter();
+    }
+    this.wakeWaiters.clear();
   }
 
   public async compactRoleContext(
@@ -263,17 +275,29 @@ export class FlowOrchestrator {
 
         this.setFlowContext(flowRun);
 
-        flowRun = await this.releaseStaleRunningNodes();
-        const resumedOpenNodes = this.getOpenNodeIds(flowRun);
-        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: resumedOpenNodes.length });
+        const initialNodeIds = await this.takeInitialRunningNodes();
+        flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
 
         rootSpan.setAttribute('flow.id', flowRun.flowId);
         rootSpan.setAttribute('flow.project_namespace', flowRun.projectNamespace);
         rootSpan.addEvent('flow.established', { 'flow.id': flowRun.flowId, 'record_folder_path': path.relative(workspaceRoot, flowRun.recordFolderPath) });
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
-        await this.runReadyNodesUntilBlocked(outputStream, outputStreamFactory, consentGate);
-        flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+        while (true) {
+          const observedWakeGeneration = this.wakeGeneration;
+          await this.runReadyNodesUntilBlocked(
+            outputStream,
+            outputStreamFactory,
+            consentGate,
+            initialNodeIds
+          );
+          initialNodeIds.length = 0;
+          flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+          if (flowRun.status !== 'running') {
+            break;
+          }
+          await this.waitForWakeAfter(observedWakeGeneration).promise;
+        }
 
         rootSpan.setAttribute('flow.status', flowRun.status);
         meter.createCounter('a_society.flow.completed').add(1, { project_namespace: flowRun.projectNamespace, status: flowRun.status });
@@ -334,8 +358,7 @@ export class FlowOrchestrator {
         }
 
         const wf = this.loadWorkflowDocument(flowRun);
-        const currentNodeDef = wf.nodes.find((n: any) => n.id === nodeId);
-        if (!currentNodeDef) throw new Error(`Node '${nodeId}' not found in workflow.`);
+        const currentNodeDef = wf.findNodeById(nodeId);
 
         const roleName = currentNodeDef.role;
         span.setAttribute('role', roleName);
@@ -350,9 +373,35 @@ export class FlowOrchestrator {
         const visitedNodeIds = flowRun.visitedNodeIds ?? (flowRun.visitedNodeIds = []);
         const firstNodeVisit = !visitedNodeIds.includes(nodeId);
 
-        const resolvedArtifacts = flowRun.pendingNodeArtifacts[nodeId] ?? [];
+        const inboundHandoffSnapshot = Object.entries(flowRun.receivingHandoff)
+          .map(([key, artifacts]) => {
+            const handoff = this.parseHandoffKey(key);
+            return handoff ? { ...handoff, key, artifacts: [...artifacts] } : null;
+          })
+          .filter((handoff): handoff is { fromNodeId: string; targetId: string; key: string; artifacts: string[] } =>
+            handoff !== null &&
+            handoff.targetId === nodeId &&
+            this.isDeliverableInboundHandoff(flowRun, wf, nodeId, handoff.fromNodeId)
+          )
+          .map(({ key, artifacts }) => ({ key, artifacts }));
+        const receivingHandoffSnapshot = inboundHandoffSnapshot.map(({ key, artifacts }) => ({
+          fromNodeId: key.split('=>')[0],
+          artifacts,
+        }));
 
-        span.setAttribute('node.artifact_count', resolvedArtifacts.length);
+        // Stale forward handoffs: nodeId sent to a successor, but that successor sent a backward handoff back.
+        // These are superseded and should not be delivered to the successor — collect them for context and cleanup.
+        const backwardSenderIds = new Set(
+          inboundHandoffSnapshot
+            .map(({ key }) => key.split('=>')[0])
+            .filter(from => wf.getIncomingEdges(nodeId).every(e => e.from !== from))
+        );
+        const staleForwardSnapshot = Object.entries(flowRun.receivingHandoff)
+          .filter(([key]) => {
+            const [from, to] = key.split('=>');
+            return from === nodeId && backwardSenderIds.has(to);
+          })
+          .map(([key, artifacts]) => ({ key, toNodeId: key.split('=>')[1], artifacts: [...artifacts] }));
 
         const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;
 
@@ -391,7 +440,6 @@ export class FlowOrchestrator {
             kind: 'role.active',
             nodeId,
             role: currentNodeDef.role,
-            artifactCount: resolvedArtifacts.length
           });
         }
         if (sameNodeResume) {
@@ -416,21 +464,23 @@ export class FlowOrchestrator {
         const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
 
         const forwardHandoffTargets = firstNodeVisit
-          ? this.getOutgoingEdges(wf, nodeId)
+          ? wf.getOutgoingEdges(nodeId)
               .map((edge: any) => {
-                const node = this.findNodeByIdOrNull(wf, edge.to);
+                const node = wf.findNodeByIdOrNull(edge.to);
                 return node ? { nodeId: node.id as string, role: node.role as string } : null;
               })
               .filter((t): t is { nodeId: string; role: string } => t !== null)
           : undefined;
         const backwardHandoffTargets = firstNodeVisit
-          ? this.getIncomingEdges(wf, nodeId)
+          ? wf.getIncomingEdges(nodeId)
               .map((edge: any) => {
-                const node = this.findNodeByIdOrNull(wf, edge.from);
+                const node = wf.findNodeByIdOrNull(edge.from);
                 return node ? { nodeId: node.id as string, role: node.role as string } : null;
               })
               .filter((t): t is { nodeId: string; role: string } => t !== null)
           : undefined;
+
+        const staleForwardArtifacts = staleForwardSnapshot.map(({ toNodeId, artifacts }) => ({ toNodeId, artifacts }));
 
         if (injectedHistory.length === 0) {
           const nodeEntryMessage = buildForwardNodeEntryMessage({
@@ -439,7 +489,10 @@ export class FlowOrchestrator {
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
             recordFolderPath: flowRun.recordFolderPath,
-            activeArtifacts: resolvedArtifacts,
+            wf,
+            completedHandoffs: flowRun.completedHandoffs,
+            receivingHandoffSnapshot,
+            staleForwardArtifacts,
             humanInput,
             includeWorkflowContract,
             nodeContext,
@@ -454,7 +507,10 @@ export class FlowOrchestrator {
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
             recordFolderPath: flowRun.recordFolderPath,
-            activeArtifacts: resolvedArtifacts,
+            wf,
+            completedHandoffs: flowRun.completedHandoffs,
+            receivingHandoffSnapshot,
+            staleForwardArtifacts,
             entryMode: firstNodeVisit ? 'role-transition' : 'reopened-node',
             previousNodeId: session.currentNodeId,
             humanInput,
@@ -469,6 +525,12 @@ export class FlowOrchestrator {
         }
 
         if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
+          this.renderer.emit({
+            kind: 'role.resumed',
+            nodeId,
+            role: currentNodeDef.role,
+            reason: 'interrupted-turn',
+          });
           appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
           span.addEvent('session.interrupted_turn_continuation');
         }
@@ -486,6 +548,32 @@ export class FlowOrchestrator {
         session.currentNodeId = nodeId;
         session.isActive = true;
         saveRoleSession();
+
+        if (humanInput !== undefined) {
+          await SessionStore.updateFlowRun((latest) => {
+            const pending = latest.pendingHumanInputs[nodeId];
+            if (pending?.text === humanInput) {
+              delete latest.pendingHumanInputs[nodeId];
+            }
+          }, this.requireFlowRef(), this.requireWorkspaceRoot());
+        }
+
+        if (!sameNodeResume && (inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0)) {
+          flowRun = await SessionStore.updateFlowRun((latest) => {
+            for (const { key, artifacts } of inboundHandoffSnapshot) {
+              if (!(key in latest.receivingHandoff)) continue;
+              latest.receivingHandoff[key] = latest.receivingHandoff[key].filter(a => !artifacts.includes(a));
+              if (latest.receivingHandoff[key].length === 0) {
+                delete latest.receivingHandoff[key];
+              }
+            }
+            for (const { key } of staleForwardSnapshot) {
+              delete latest.receivingHandoff[key];
+              latest.completedHandoffs = latest.completedHandoffs.filter(k => k !== key);
+            }
+          }, this.requireFlowRef(), this.requireWorkspaceRoot());
+        }
+
         span.addEvent('store.flow_saved', { 'flow.status': flowRun.status });
 
         while (true) {
@@ -575,19 +663,12 @@ export class FlowOrchestrator {
                 flowRun = await SessionStore.updateFlowRun((latest) => {
                   this.removeOpenNode(latest, nodeId);
                   this.addCompletedNode(latest, nodeId);
-                  ImprovementOrchestrator.markAwaitingChoice(latest, {
-                    recordFolderPath: handoffResult.recordFolderPath,
-                    artifactPath: handoffResult.artifactPath
-                  }, singleRole);
+                  ImprovementOrchestrator.markAwaitingChoice(latest, singleRole);
                 }, this.requireFlowRef(), this.requireWorkspaceRoot());
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-                this.renderer.emit({
-                  kind: 'flow.forward_pass_closed',
-                  recordFolderPath: handoffResult.recordFolderPath,
-                  artifactBasename: path.basename(handoffResult.artifactPath)
-                });
+                this.renderer.emit({ kind: 'flow.forward_pass_closed' });
                 return;
               }
 
@@ -599,13 +680,48 @@ export class FlowOrchestrator {
                 throw new Error(`Unexpected backward-pass-complete signal during forward pass at node '${nodeId}'.`);
               }
 
+              if (handoffResult.kind === 'await-handoff') {
+                const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+                const isPendingTarget = wf.getIncomingEdges(nodeId).some((e: any) => !latestForCheck.completedHandoffs.includes(wf.edgeKey(e.from, nodeId)));
+                const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
+
+                if (!isPendingTarget && !isReceivingTarget) {
+                  this.renderer.emit({
+                    kind: 'repair.requested',
+                    scope: 'node',
+                    code: 'invalid_transition',
+                    summary: 'await-handoff invalid: no inbound handoff established',
+                    role: currentNodeDef.role,
+                    nodeId
+                  });
+                  appendRuntimeMessage(injectedHistory, session, nodeId, {
+                    role: 'user',
+                    content:
+                      `Error: await-handoff is only valid when another node has a pending or received handoff directed at node '${nodeId}'. ` +
+                      `No such handoff exists. To await a correction, first emit a handoff to the node you expect to receive work from, ` +
+                      `so that a pending or received handoff targeting '${nodeId}' is established before signaling await-handoff.`
+                  });
+                  session.transcriptHistory = injectedHistory;
+                  SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                  continue;
+                }
+
+                span.setAttribute('node.outcome', 'await_handoff');
+                session.transcriptHistory = injectedHistory;
+                session.isActive = false;
+                SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
+                flowRun = await SessionStore.updateFlowRun((latest) => {
+                  latest.runningNodes = latest.runningNodes.filter(id => id !== nodeId);
+                  if (!latest.awaitingHandoff.includes(nodeId)) latest.awaitingHandoff.push(nodeId);
+                }, this.requireFlowRef(), this.requireWorkspaceRoot());
+                break;
+              }
+
               // kind === 'targets'
               span.setAttribute('node.outcome', 'handoff');
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
-              this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
               const latestFlowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot()) ?? flowRun;
 
@@ -682,7 +798,7 @@ export class FlowOrchestrator {
     nodeId: string,
     fromRole: string,
     handoffs: HandoffTarget[]
-  ): Promise<AppliedHandoffDirection> {
+  ): Promise<void> {
     this.setFlowContext(flowRun);
     if (!fs.existsSync(flowRun.recordFolderPath)) {
       throw new WorkflowError(
@@ -691,30 +807,26 @@ export class FlowOrchestrator {
         `Please create the record folder, create ${canonicalWorkflowFilename()} inside it, and restate your handoff.`
       );
     }
-    this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
-
-    let direction: AppliedHandoffDirection | null = null;
-    let eventTargets: Array<{ nodeId: string; role: string; artifactBasename?: string }> = [];
+    let eventTargets: Array<{ nodeId: string; role: string }> = [];
 
     await SessionStore.updateFlowRun((latest) => {
       const wf = this.resolveActiveWorkflow(latest);
 
-      this.findNodeById(wf, nodeId);
-      const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
-      const incomingEdges = this.getIncomingEdges(wf, nodeId);
-      const outstandingOutgoingEdges = this.getOutstandingOutgoingEdges(latest, wf, nodeId);
+      wf.findNodeById(nodeId);
+      const outgoingEdges = wf.getOutgoingEdges(nodeId);
+      const incomingEdges = wf.getIncomingEdges(nodeId);
 
       const forwardTargets: HandoffTarget[] = [];
       const backwardTargets: HandoffTarget[] = [];
 
       for (const handoff of handoffs) {
         const targetNodeId = handoff.target_node_id;
-        const isForward = outstandingOutgoingEdges.some((edge: any) => edge.to === targetNodeId);
+        const isForward = outgoingEdges.some((edge: any) => edge.to === targetNodeId);
         const isBackward = incomingEdges.some((edge: any) => edge.from === targetNodeId);
 
         if (isForward && isBackward) {
           this.throwHandoffTransitionRepair(
-            `Target node '${targetNodeId}' is both an unresolved successor and a predecessor of '${nodeId}', which is unsupported.`
+            `Target node '${targetNodeId}' is both a successor and a predecessor of '${nodeId}', which is unsupported.`
           );
         }
         if (isForward) {
@@ -726,20 +838,16 @@ export class FlowOrchestrator {
           continue;
         }
 
-        const targetExists = this.findNodeByIdOrNull(wf, targetNodeId);
+        const targetExists = wf.findNodeByIdOrNull(targetNodeId);
         if (!targetExists) {
           this.throwHandoffTransitionRepair(`Target node '${targetNodeId}' not found in workflow.`);
         }
         this.throwHandoffTransitionRepair(
-          `Unauthorized transition: node '${nodeId}' may hand forward only to unresolved successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
+          `Unauthorized transition: node '${nodeId}' may hand forward only to successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
         );
       }
 
-      if (forwardTargets.length > 0 && backwardTargets.length > 0) {
-        this.throwHandoffTransitionRepair(
-          `Node '${nodeId}' emitted a mixed forward/backward handoff. Emit either successor targets or predecessor targets, not both.`
-        );
-      }
+      this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
 
       if (handoffs.length === 0) {
         if (outgoingEdges.length > 0) {
@@ -747,9 +855,8 @@ export class FlowOrchestrator {
         }
         this.removeOpenNode(latest, nodeId);
         this.addCompletedNode(latest, nodeId);
-        direction = 'terminal';
         eventTargets = [];
-        if (this.getOpenNodeIds(latest).length === 0) {
+        if (!this.hasUnsettledOrRunnableWork(latest, wf)) {
           latest.status = 'completed';
         } else {
           latest.status = 'running';
@@ -757,116 +864,120 @@ export class FlowOrchestrator {
         return;
       }
 
-      if (forwardTargets.length > 0) {
-        if (forwardTargets.length !== outstandingOutgoingEdges.length) {
+      const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
+      const claimedForwardTargets = new Set<string>();
+
+      for (const handoff of forwardTargets) {
+        if (claimedForwardTargets.has(handoff.target_node_id)) {
+          this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
+        }
+        claimedForwardTargets.add(handoff.target_node_id);
+        const targetNode = wf.findNodeById(handoff.target_node_id);
+        activationPairs.push({
+          targetId: targetNode.id,
+          artifact: handoff.artifact_path ?? '',
+          role: targetNode.role
+        });
+      }
+
+      const allHistoryArtifacts = new Set(Object.values(latest.historyHandoff).flat());
+      for (const pair of activationPairs) {
+        if (pair.artifact && allHistoryArtifacts.has(pair.artifact)) {
           this.throwHandoffTransitionRepair(
-            `Node '${nodeId}' has ${outstandingOutgoingEdges.length} outstanding outgoing edge(s) but emitted ${forwardTargets.length} forward handoff target(s). ` +
-            `Emit one forward handoff target for each unresolved successor: ${outstandingOutgoingEdges.map((edge: any) => edge.to).join(', ')}.`
+            `Artifact '${pair.artifact}' was already used in a previous handoff. Create a new artifact for this handoff.`
+          );
+        }
+      }
+
+      const reactivationPlans: Array<{
+        targetId: string;
+        role: string;
+        rejectedEdgeKey: string;
+        backwardHandoffKey: string;
+        artifact: string;
+      }> = [];
+      const claimedBackwardTargets = new Set<string>();
+
+      for (const handoff of backwardTargets) {
+        if (claimedBackwardTargets.has(handoff.target_node_id)) {
+          this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
+        }
+        claimedBackwardTargets.add(handoff.target_node_id);
+
+        if (handoff.artifact_path && allHistoryArtifacts.has(handoff.artifact_path)) {
+          this.throwHandoffTransitionRepair(
+            `Artifact '${handoff.artifact_path}' was already used in a previous handoff. Create a new artifact for this handoff.`
           );
         }
 
-        const activationPairs: Array<{ targetId: string; artifact: string; role: string }> = [];
-        const claimedTargets = new Set<string>();
+        const targetNode = wf.findNodeById(handoff.target_node_id);
+        const rejectedEdgeKey = wf.edgeKey(targetNode.id, nodeId);
 
-        for (const edge of outstandingOutgoingEdges) {
-          const targetNode = this.findNodeById(wf, edge.to);
-          const handoff = forwardTargets.find(h => h.target_node_id === targetNode.id);
-          if (!handoff) {
-            this.throwHandoffTransitionRepair(`Node '${nodeId}' did not emit a forward handoff for required target '${targetNode.id}'.`);
-          }
-          if (claimedTargets.has(handoff.target_node_id)) {
-            this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate forward handoffs for target '${handoff.target_node_id}'.`);
-          }
-          claimedTargets.add(handoff.target_node_id);
-          activationPairs.push({
-            targetId: targetNode.id,
-            artifact: handoff.artifact_path ?? '',
-            role: targetNode.role
-          });
+        if (!latest.completedHandoffs.includes(rejectedEdgeKey)) {
+          this.throwHandoffTransitionRepair(
+            `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
+          );
         }
 
-        this.removeOpenNode(latest, nodeId);
+        reactivationPlans.push({
+          targetId: targetNode.id,
+          role: targetNode.role,
+          rejectedEdgeKey,
+          backwardHandoffKey: wf.edgeKey(nodeId, targetNode.id),
+          artifact: handoff.artifact_path ?? '',
+        });
+      }
 
-        for (const pair of activationPairs) {
-          latest.completedEdgeArtifacts[this.edgeKey(nodeId, pair.targetId)] = pair.artifact;
-          this.activateOrDefer(latest, wf, pair.targetId);
+      this.removeOpenNode(latest, nodeId);
+
+      for (const pair of activationPairs) {
+        const forwardKey = wf.edgeKey(nodeId, pair.targetId);
+        if (!latest.completedHandoffs.includes(forwardKey)) latest.completedHandoffs.push(forwardKey);
+        if (!latest.receivingHandoff[forwardKey]) latest.receivingHandoff[forwardKey] = [];
+        if (pair.artifact && !latest.receivingHandoff[forwardKey].includes(pair.artifact)) {
+          latest.receivingHandoff[forwardKey].push(pair.artifact);
         }
+        if (!latest.historyHandoff[forwardKey]) latest.historyHandoff[forwardKey] = [];
+        if (pair.artifact && !latest.historyHandoff[forwardKey].includes(pair.artifact)) {
+          latest.historyHandoff[forwardKey].push(pair.artifact);
+        }
+      }
 
+      if (reactivationPlans.length > 0) {
+        this.removeCompletedNode(latest, nodeId);
+        if (!latest.awaitingHandoff.includes(nodeId)) latest.awaitingHandoff.push(nodeId);
+      } else {
         this.markNodeCompletedIfSettled(latest, wf, nodeId);
-        latest.status = 'running';
-        direction = 'forward';
-        eventTargets = activationPairs.map(p => ({
+      }
+
+      const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
+      for (const plan of reactivationPlans) {
+        if (!latest.receivingHandoff[plan.backwardHandoffKey]) latest.receivingHandoff[plan.backwardHandoffKey] = [];
+        if (plan.artifact && !latest.receivingHandoff[plan.backwardHandoffKey].includes(plan.artifact)) {
+          latest.receivingHandoff[plan.backwardHandoffKey].push(plan.artifact);
+        }
+        if (!latest.historyHandoff[plan.backwardHandoffKey]) latest.historyHandoff[plan.backwardHandoffKey] = [];
+        if (plan.artifact && !latest.historyHandoff[plan.backwardHandoffKey].includes(plan.artifact)) {
+          latest.historyHandoff[plan.backwardHandoffKey].push(plan.artifact);
+        }
+        latest.completedHandoffs = latest.completedHandoffs.filter(k => k !== plan.rejectedEdgeKey);
+        this.removeCompletedNode(latest, plan.targetId);
+        reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
+      }
+
+      latest.status = 'running';
+      eventTargets = [
+        ...activationPairs.map(p => ({
           nodeId: p.targetId,
           role: p.role,
-          artifactBasename: p.artifact ? path.basename(p.artifact) : undefined
-        }));
-        return;
-      }
-
-      if (backwardTargets.length > 0) {
-        const reactivationPlans: Array<{
-          targetId: string;
-          role: string;
-          rejectedEdgeKey: string;
-          activationArtifacts: string[];
-        }> = [];
-        const claimedTargets = new Set<string>();
-
-        for (const handoff of backwardTargets) {
-          if (claimedTargets.has(handoff.target_node_id)) {
-            this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted duplicate backward handoffs for target '${handoff.target_node_id}'.`);
-          }
-          claimedTargets.add(handoff.target_node_id);
-
-          const targetNode = this.findNodeById(wf, handoff.target_node_id);
-          const rejectedEdgeKey = this.edgeKey(targetNode.id, nodeId);
-          const rejectedArtifactPath = latest.completedEdgeArtifacts[rejectedEdgeKey];
-
-          if (!rejectedArtifactPath) {
-            this.throwHandoffTransitionRepair(
-              `Node '${nodeId}' attempted to send work back to predecessor '${targetNode.id}', but edge '${rejectedEdgeKey}' is not currently realized.`
-            );
-          }
-
-          reactivationPlans.push({
-            targetId: targetNode.id,
-            role: targetNode.role,
-            rejectedEdgeKey,
-            activationArtifacts: [
-              rejectedArtifactPath,
-              handoff.artifact_path ?? '',
-            ].filter((artifact): artifact is string => artifact.trim() !== '')
-          });
-        }
-
-        this.removeOpenNode(latest, nodeId);
-        this.removeCompletedNode(latest, nodeId);
-
-        const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
-
-        for (const plan of reactivationPlans) {
-          delete latest.completedEdgeArtifacts[plan.rejectedEdgeKey];
-          this.removeCompletedNode(latest, plan.targetId);
-          this.activateOrDefer(latest, wf, plan.targetId, plan.activationArtifacts);
-          reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
-        }
-
-        latest.status = 'running';
-        direction = 'backward';
-        eventTargets = reactivatedTargets.map(target => ({
+        })),
+        ...reactivatedTargets.map(target => ({
           nodeId: target.targetId,
           role: target.role,
-          artifactBasename: undefined
-        }));
-        return;
-      }
-
-      this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted no valid handoff targets.`);
+        }))
+      ];
+      return;
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
-
-    if (!direction) {
-      throw new Error(`Node '${nodeId}' emitted no valid handoff targets.`);
-    }
 
     this.renderer.emit({
       kind: 'handoff.applied',
@@ -874,35 +985,38 @@ export class FlowOrchestrator {
       fromRole,
       targets: eventTargets
     });
-
-    return direction;
   }
 
   private async runReadyNodesUntilBlocked(
     outputStream: NodeJS.WritableStream,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
-    consentGate?: ConsentGate
+    consentGate?: ConsentGate,
+    initialNodeIds: string[] = []
   ): Promise<void> {
     const runningTasks = new Map<string, Promise<void>>();
     let firstError: unknown = null;
+    let pendingInitialNodeIds = this.mergeNodeIds(initialNodeIds);
 
     while (true) {
-      const claimedNodeIds = await this.claimReadyNodesForParallelRun();
-      for (const claimedNodeId of claimedNodeIds) {
-        if (runningTasks.has(claimedNodeId)) continue;
+      const observedWakeGeneration = this.wakeGeneration;
+      const claimedWorkItems = await this.claimRunnableWorkForParallelRun(pendingInitialNodeIds);
+      const claimedNodeIds = claimedWorkItems.map((item) => item.nodeId);
+      pendingInitialNodeIds = pendingInitialNodeIds.filter((nodeId) => !claimedNodeIds.includes(nodeId));
+      for (const claimedWork of claimedWorkItems) {
+        if (runningTasks.has(claimedWork.nodeId)) continue;
         const task = this.advanceFlow(
           SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!,
-          claimedNodeId,
-          undefined,
+          claimedWork.nodeId,
+          claimedWork.humanInput,
           outputStream,
           consentGate,
           outputStreamFactory
         ).catch((error) => {
           if (!firstError) firstError = error;
         }).finally(() => {
-          runningTasks.delete(claimedNodeId);
+          runningTasks.delete(claimedWork.nodeId);
         });
-        runningTasks.set(claimedNodeId, task);
+        runningTasks.set(claimedWork.nodeId, task);
       }
 
       if (firstError) {
@@ -914,60 +1028,159 @@ export class FlowOrchestrator {
         return;
       }
 
-      await Promise.race(runningTasks.values());
+      const wakeWait = this.waitForWakeAfter(observedWakeGeneration);
+      await Promise.race([...runningTasks.values(), wakeWait.promise]);
+      wakeWait.cancel();
     }
   }
 
-  private async releaseStaleRunningNodes(): Promise<FlowRun> {
-    return SessionStore.updateFlowRun((flowRun) => {
+  private async takeInitialRunningNodes(): Promise<string[]> {
+    let initialNodeIds: string[] = [];
+    await SessionStore.updateFlowRun((flowRun) => {
       if (flowRun.runningNodes.length > 0) {
-        flowRun.readyNodes = this.mergeNodeIds(flowRun.readyNodes, flowRun.runningNodes);
+        initialNodeIds = [...flowRun.runningNodes];
         flowRun.runningNodes = [];
       }
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
+    return initialNodeIds;
   }
 
-  private loadWorkflowDocument(flowRun: FlowRun): any {
+  private loadWorkflowDocument(flowRun: FlowRun): WorkflowGraph {
     const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
     if (!workflowFilePath) {
       throw new Error('No workflow found in this record. Please start a new flow.');
     }
-    return resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace);
+    return new WorkflowGraph(resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace));
   }
 
-  private async claimReadyNodesForParallelRun(): Promise<string[]> {
-    let claimedNodeIds: string[] = [];
+  private deriveRunnableNodeIds(flowRun: FlowRun, wf: WorkflowGraph): string[] {
+    const receivingHandoffs = Object.keys(flowRun.receivingHandoff)
+      .map((key) => this.parseHandoffKey(key))
+      .filter((handoff): handoff is { fromNodeId: string; targetId: string } => handoff !== null);
+    const hasWakeableInboundHandoff = (nodeId: string): boolean =>
+      receivingHandoffs.some(({ fromNodeId, targetId }) =>
+        targetId === nodeId && this.isDeliverableInboundHandoff(flowRun, wf, nodeId, fromNodeId)
+      );
+
+    flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(nodeId => {
+      return !hasWakeableInboundHandoff(nodeId);
+    });
+
+    const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
+    const awaitingHandoffSet = new Set(flowRun.awaitingHandoff);
+    const activeNodes = new Set(getActiveNodeIds(flowRun));
+    const completedNodes = new Set(flowRun.completedNodes);
+
+    const result: string[] = [];
+    const seen = new Set<string>();
+
+    // Visited nodes that still owe an outgoing handoff are runnable again without a
+    // persisted ready queue. This covers partial fan-out and reopened backward-pass sources.
+    for (const node of wf.nodes) {
+      const nodeId = node.id;
+      if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || activeNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
+      const hasPendingOutgoing = wf.getOutgoingEdges(nodeId).some((e: any) => !flowRun.completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
+      if (hasPendingOutgoing) {
+        result.push(nodeId);
+        seen.add(nodeId);
+      }
+    }
+
+    // Condition 2: has received a handoff. Iterate workflow nodes so that
+    // simultaneous same-role handoffs are claimed in graph order, not object
+    // insertion order from receivingHandoff.
+    for (const node of wf.nodes) {
+      const nodeId = node.id;
+      if (!hasWakeableInboundHandoff(nodeId)) continue;
+      // A received handoff may intentionally reopen a completed node, especially
+      // during backward-pass correction. Iterating wf.nodes is the structural
+      // guard that the target node still exists in the active workflow.
+      if (
+        !seen.has(nodeId) &&
+        !activeNodes.has(nodeId) &&
+        !awaitingHandoffSet.has(nodeId)
+      ) {
+        result.push(nodeId);
+        seen.add(nodeId);
+      }
+    }
+
+    return result;
+  }
+
+  private pruneInitialNodeIds(flowRun: FlowRun, wf: WorkflowGraph, initialNodeIds: string[]): string[] {
+    return this.mergeNodeIds(initialNodeIds).filter((nodeId) => {
+      if (!wf.findNodeByIdOrNull(nodeId)) return false;
+      if (flowRun.completedNodes.includes(nodeId)) return false;
+      if (flowRun.runningNodes.includes(nodeId)) return false;
+      if (flowRun.awaitingHandoff.includes(nodeId)) return false;
+      if (flowRun.awaitingHumanNodes[nodeId]) return false;
+      return true;
+    });
+  }
+
+  private hasUnsettledOrRunnableWork(flowRun: FlowRun, wf: WorkflowGraph): boolean {
+    if (getActiveNodeIds(flowRun).length > 0) return true;
+    if (flowRun.awaitingHandoff.length > 0) return true;
+    if (this.deriveRunnableNodeIds(flowRun, wf).length > 0) return true;
+    return false;
+  }
+
+  private async claimRunnableWorkForParallelRun(initialNodeIds: string[] = []): Promise<ClaimedRunnableWork[]> {
+    let claimedWork: ClaimedRunnableWork[] = [];
     await SessionStore.updateFlowRun((flowRun) => {
-      if (flowRun.status !== 'running' || flowRun.readyNodes.length === 0) {
-        claimedNodeIds = [];
+      if (flowRun.status !== 'running') {
+        claimedWork = [];
         return;
       }
 
       const wf = this.loadWorkflowDocument(flowRun);
+      const runnableNodeIds = this.deriveRunnableNodeIds(flowRun, wf);
+      const resumableHumanNodeIds = Object.keys(flowRun.pendingHumanInputs)
+        .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes);
+      const pendingInitialNodeIds = this.pruneInitialNodeIds(flowRun, wf, initialNodeIds);
+      const allRunnableNodeIds = pendingInitialNodeIds.length > 0
+        ? this.mergeNodeIds(resumableHumanNodeIds, pendingInitialNodeIds)
+        : this.mergeNodeIds(resumableHumanNodeIds, runnableNodeIds);
+
+      if (allRunnableNodeIds.length === 0) {
+        claimedWork = [];
+        return;
+      }
       const occupiedRoles = new Map<string, string>();
       for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
-        const node = this.findNodeById(wf, nodeId);
+        const node = wf.findNodeByIdOrNull(nodeId);
+        if (!node) continue;
         occupiedRoles.set(this.roleKey(node.role), nodeId);
       }
 
-      const selected: string[] = [];
-      for (const nodeId of flowRun.readyNodes) {
-        const node = this.findNodeById(wf, nodeId);
+      const selected: ClaimedRunnableWork[] = [];
+      for (const nodeId of allRunnableNodeIds) {
+        const node = wf.findNodeByIdOrNull(nodeId);
+        if (!node) continue;
         const nodeRoleKey = this.roleKey(node.role);
         const conflictingNodeId = occupiedRoles.get(nodeRoleKey);
         if (conflictingNodeId && conflictingNodeId !== nodeId) {
           continue;
         }
         occupiedRoles.set(nodeRoleKey, nodeId);
-        selected.push(nodeId);
+        selected.push({
+          nodeId,
+          humanInput: flowRun.pendingHumanInputs[nodeId]?.text,
+        });
       }
 
-      flowRun.readyNodes = flowRun.readyNodes.filter(id => !selected.includes(id));
-      flowRun.runningNodes = this.mergeNodeIds(flowRun.runningNodes, selected);
+      const selectedNodeIds = selected.map((item) => item.nodeId);
+      for (const item of selected) {
+        if (item.humanInput !== undefined) {
+          delete flowRun.awaitingHumanNodes[item.nodeId];
+        }
+      }
+      flowRun.runningNodes = this.mergeNodeIds(flowRun.runningNodes, selectedNodeIds);
       flowRun.status = 'running';
-      claimedNodeIds = selected;
+      claimedWork = selected;
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
-    return claimedNodeIds;
+    return claimedWork;
   }
 
   private async claimNodeForAdvance(nodeId: string, hasHumanInput: boolean): Promise<{ flowRun: FlowRun; resumedFromHuman: boolean }> {
@@ -979,6 +1192,7 @@ export class FlowOrchestrator {
 
       if (latest.runningNodes.includes(nodeId)) {
         latest.status = 'running';
+        resumedFromHuman = hasHumanInput && Boolean(latest.pendingHumanInputs[nodeId]);
         return;
       }
 
@@ -994,11 +1208,12 @@ export class FlowOrchestrator {
         throw new Error(`Node '${nodeId}' is awaiting targeted human input and cannot advance without a reply.`);
       }
 
-      if (!latest.readyNodes.includes(nodeId)) {
+      const wf = this.loadWorkflowDocument(latest);
+      const runnableNodeIds = this.deriveRunnableNodeIds(latest, wf);
+      if (!runnableNodeIds.includes(nodeId)) {
         throw new Error(`Node '${nodeId}' is not ready, running, or awaiting human input.`);
       }
 
-      latest.readyNodes = latest.readyNodes.filter(id => id !== nodeId);
       latest.runningNodes = this.mergeNodeIds(latest.runningNodes, [nodeId]);
       latest.status = 'running';
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
@@ -1012,7 +1227,6 @@ export class FlowOrchestrator {
     reason: AwaitingHumanReason
   ): Promise<FlowRun> {
     return SessionStore.updateFlowRun((flowRun) => {
-      flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
       flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
       flowRun.awaitingHumanNodes[nodeId] = { role, reason };
       flowRun.status = 'running';
@@ -1020,10 +1234,9 @@ export class FlowOrchestrator {
   }
 
   private removeOpenNode(flowRun: FlowRun, nodeId: string) {
-    flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
     flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
+    flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
-    delete flowRun.pendingNodeArtifacts[nodeId];
   }
 
   private addCompletedNode(flowRun: FlowRun, nodeId: string) {
@@ -1068,14 +1281,58 @@ export class FlowOrchestrator {
     }
   }
 
-  private roleHasFutureNode(wf: any, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
+  private roleHasFutureNode(wf: WorkflowGraph, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
     const roleKey = this.roleKey(roleName);
-    return Array.isArray(wf.nodes) && wf.nodes.some((node: any) =>
+    return wf.nodes.some((node) =>
       node?.id !== currentNodeId &&
       typeof node?.role === 'string' &&
       this.roleKey(node.role) === roleKey &&
       !flowRun.completedNodes.includes(node.id)
     );
+  }
+
+  private parseHandoffKey(key: string): { fromNodeId: string; targetId: string } | null {
+    const [fromNodeId, targetId] = key.split('=>');
+    return fromNodeId && targetId ? { fromNodeId, targetId } : null;
+  }
+
+  private isPredecessor(wf: WorkflowGraph, nodeId: string, possiblePredecessorId: string): boolean {
+    return wf.getIncomingEdges(nodeId).some((edge: any) => edge.from === possiblePredecessorId);
+  }
+
+  private isSuccessor(wf: WorkflowGraph, nodeId: string, possibleSuccessorId: string): boolean {
+    return wf.getOutgoingEdges(nodeId).some((edge: any) => edge.to === possibleSuccessorId);
+  }
+
+  private hasActiveBackwardHandoffToPredecessor(
+    flowRun: FlowRun,
+    wf: WorkflowGraph,
+    nodeId: string,
+    predecessorId: string
+  ): boolean {
+    return (
+      this.isPredecessor(wf, nodeId, predecessorId) &&
+      Object.prototype.hasOwnProperty.call(flowRun.receivingHandoff, wf.edgeKey(nodeId, predecessorId))
+    );
+  }
+
+  private isDeliverableInboundHandoff(
+    flowRun: FlowRun,
+    wf: WorkflowGraph,
+    nodeId: string,
+    fromNodeId: string
+  ): boolean {
+    if (this.isSuccessor(wf, nodeId, fromNodeId)) {
+      return true;
+    }
+
+    if (!this.isPredecessor(wf, nodeId, fromNodeId)) {
+      return false;
+    }
+
+    // A forward handoff from a predecessor is stale while the target still has
+    // an active backward correction request addressed to that same predecessor.
+    return !this.hasActiveBackwardHandoffToPredecessor(flowRun, wf, nodeId, fromNodeId);
   }
 
   private async autoCompactSessionIfNeeded(
@@ -1134,7 +1391,7 @@ export class FlowOrchestrator {
     }
   }
 
-  private resolveActiveWorkflow(flowRun: FlowRun): any {
+  private resolveActiveWorkflow(flowRun: FlowRun): WorkflowGraph {
     const rolesDir = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'roles');
     const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
     if (workflowFilePath) {
@@ -1144,11 +1401,11 @@ export class FlowOrchestrator {
       }
     }
     try {
-      return resolveFlowWorkflow(
+      return new WorkflowGraph(resolveFlowWorkflow(
         flowRun.recordFolderPath,
         flowRun.workspaceRoot,
         flowRun.projectNamespace
-      );
+      ));
     } catch (error) {
       throw new WorkflowError((error as Error).message);
     }
@@ -1158,61 +1415,12 @@ export class FlowOrchestrator {
     return `${flowRun.flowId}__${this.roleKey(roleName)}`;
   }
 
-  private findNodeById(wf: any, nodeId: string): any {
-    const node = wf.nodes.find((n: any) => n.id === nodeId);
-    if (!node) {
-      throw new Error(`Node '${nodeId}' not found in workflow.`);
-    }
-    return node;
-  }
-
-  private findNodeByIdOrNull(wf: any, nodeId: string): any | null {
-    return wf.nodes.find((n: any) => n.id === nodeId) ?? null;
-  }
-
   private throwHandoffTransitionRepair(detail: string): never {
     throw new HandoffParseError({
       code: 'invalid_transition',
       operatorSummary: 'Handoff target mismatch',
       modelRepairMessage: `Error: ${detail} Correct the final \`handoff\` block and restate it.`
     });
-  }
-
-  private getOutgoingEdges(wf: any, nodeId: string): any[] {
-    return (wf.edges || []).filter((edge: any) => edge.from === nodeId);
-  }
-
-  private getIncomingEdges(wf: any, nodeId: string): any[] {
-    return (wf.edges || []).filter((edge: any) => edge.to === nodeId);
-  }
-
-  private getOutstandingOutgoingEdges(flowRun: FlowRun, wf: any, nodeId: string): any[] {
-    return this.getOutgoingEdges(wf, nodeId).filter(
-      (edge: any) => !(this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts)
-    );
-  }
-
-  private edgeKey(fromNodeId: string, toNodeId: string): string {
-    return `${fromNodeId}=>${toNodeId}`;
-  }
-
-  private collectIncomingArtifacts(flowRun: FlowRun, incomingEdges: any[]): string[] {
-    return incomingEdges
-      .map((edge: any) => flowRun.completedEdgeArtifacts[this.edgeKey(edge.from, edge.to)] ?? '')
-      .filter((artifact: string) => artifact !== '');
-  }
-
-  private mergeArtifacts(...artifactGroups: string[][]): string[] {
-    const seen = new Set<string>();
-    const merged: string[] = [];
-    for (const group of artifactGroups) {
-      for (const artifact of group) {
-        if (!artifact || seen.has(artifact)) continue;
-        seen.add(artifact);
-        merged.push(artifact);
-      }
-    }
-    return merged;
   }
 
   private mergeNodeIds(...nodeGroups: string[][]): string[] {
@@ -1228,20 +1436,36 @@ export class FlowOrchestrator {
     return merged;
   }
 
-  private getOpenNodeIds(flowRun: FlowRun): string[] {
-    return this.mergeNodeIds(
-      flowRun.readyNodes,
-      flowRun.runningNodes,
-      Object.keys(flowRun.awaitingHumanNodes)
-    );
+  private waitForWakeAfter(observedWakeGeneration: number): { promise: Promise<void>; cancel: () => void } {
+    if (this.wakeGeneration !== observedWakeGeneration) {
+      return {
+        promise: Promise.resolve(),
+        cancel: () => {},
+      };
+    }
+
+    let resolver: (() => void) | null = null;
+    const promise = new Promise<void>((resolve) => {
+      resolver = resolve;
+      this.wakeWaiters.add(resolve);
+    });
+
+    return {
+      promise,
+      cancel: () => {
+        if (resolver) {
+          this.wakeWaiters.delete(resolver);
+        }
+      },
+    };
   }
 
-  private markNodeCompletedIfSettled(flowRun: FlowRun, wf: any, nodeId: string): void {
-    const outgoingEdges = this.getOutgoingEdges(wf, nodeId);
+  private markNodeCompletedIfSettled(flowRun: FlowRun, wf: WorkflowGraph, nodeId: string): void {
+    const outgoingEdges = wf.getOutgoingEdges(nodeId);
     if (outgoingEdges.length === 0) return;
 
     const allSettled = outgoingEdges.every((edge: any) =>
-      this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts
+      flowRun.completedHandoffs.includes(wf.edgeKey(edge.from, edge.to))
     );
 
     if (allSettled) {
@@ -1291,22 +1515,6 @@ export class FlowOrchestrator {
         operatorSummary: 'Referenced artifact unavailable',
         modelRepairMessage: `Error: The handoff referenced artifact_path "${artifactPath}", but that path is not a file. Write the artifact file first, then restate the same handoff.`
       });
-    }
-  }
-
-  private activateOrDefer(flowRun: FlowRun, wf: any, candidateNodeId: string, extraArtifacts: string[] = []) {
-    const incomingEdges = this.getIncomingEdges(wf, candidateNodeId);
-    const allComplete = incomingEdges.every((edge: any) =>
-      this.edgeKey(edge.from, edge.to) in flowRun.completedEdgeArtifacts
-    );
-
-    if (allComplete) {
-      const baseArtifacts = this.collectIncomingArtifacts(flowRun, incomingEdges);
-      const priorArtifacts = flowRun.pendingNodeArtifacts[candidateNodeId] ?? [];
-      flowRun.pendingNodeArtifacts[candidateNodeId] = this.mergeArtifacts(baseArtifacts, priorArtifacts, extraArtifacts);
-      if (!this.getOpenNodeIds(flowRun).includes(candidateNodeId)) {
-        flowRun.readyNodes.push(candidateNodeId);
-      }
     }
   }
 

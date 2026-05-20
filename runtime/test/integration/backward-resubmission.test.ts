@@ -6,6 +6,7 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
   console.log('Starting backward-resubmission integration test...');
 
@@ -58,19 +59,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['review'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: ['proposal'],
-    completedEdgeArtifacts: {
-      'proposal=>review': proposalToReviewRel,
-      'proposal=>audit': proposalToAuditRel,
-    },
-    pendingNodeArtifacts: {
-      review: [proposalToReviewRel],
-    },
+    completedHandoffs: ['proposal=>review', 'proposal=>audit'],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
-    stateVersion: '7',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
   });
 
   SessionStore.saveRoleSession({
@@ -90,19 +86,10 @@ async function runTest() {
 
   const updated = SessionStore.loadFlowRun()!;
 
-  assert.ok(updated.readyNodes.includes('proposal'), 'proposal should reactivate after backward handoff');
-  assert.ok(!updated.readyNodes.includes('review'), 'review should no longer be active after sending work back');
-  assert.ok(!('proposal=>review' in updated.completedEdgeArtifacts), 'rejected edge must be invalidated');
-  assert.strictEqual(
-    updated.completedEdgeArtifacts['proposal=>audit'],
-    proposalToAuditRel,
-    'sibling completed edge must remain intact'
-  );
-  assert.deepStrictEqual(
-    updated.pendingNodeArtifacts.proposal,
-    [proposalToReviewRel, reviewFeedbackRel],
-    'reactivated predecessor should receive the rejected artifact plus current feedback'
-  );
+  assert.deepStrictEqual(updated.receivingHandoff['review=>proposal'], [reviewFeedbackRel], 'proposal should receive the backward handoff');
+  assert.ok(updated.awaitingHandoff.includes('review'), 'review should suspend after sending work back');
+  assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'rejected edge must be invalidated');
+  assert.ok(updated.completedHandoffs.includes('proposal=>audit'), 'sibling completed edge must remain intact');
   assert.ok(!updated.completedNodes.includes('proposal'), 'reactivated predecessor should be removed from completedNodes');
   const reopenedSession = SessionStore.loadRoleSession('backward-flow__curator');
   assert.ok(reopenedSession, 'role-scoped predecessor session should be preserved for re-entry');

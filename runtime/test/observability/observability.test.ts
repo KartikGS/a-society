@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Writable } from 'node:stream';
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import {
   setupTestTelemetry,
   clearTestSpans,
@@ -361,14 +362,13 @@ async function run() {
       workspaceRoot: tmpDir,
       projectNamespace: 'a-society',
       recordFolderPath: recordDir,
-      readyNodes: ['start'],
-      runningNodes: [],
+      runningNodes: ['start'],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
-      completedEdgeArtifacts: {},
-      pendingNodeArtifacts: { start: [] },
+      completedHandoffs: [],
       status: 'running',
-      stateVersion: '7'
+      stateVersion: CURRENT_FLOW_STATE_VERSION
     };
     SessionStore.saveFlowRun(flowRun);
 
@@ -447,10 +447,7 @@ async function run() {
     const { Writable } = await import('node:stream');
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    ImprovementOrchestrator.markAwaitingChoice(
-      flowRun,
-      { recordFolderPath: tmpDir, artifactPath: 'test.md' }
-    );
+    ImprovementOrchestrator.markAwaitingChoice(flowRun);
     ImprovementOrchestrator.skipImprovement(flowRun, output);
 
     assert.strictEqual(flowRun.status, 'completed');
@@ -512,20 +509,18 @@ async function run() {
     const assignedFeedbackFilePath = path.join(tmpDir, feedbackArtifactPath);
     fs.mkdirSync(path.dirname(assignedFeedbackFilePath), { recursive: true });
     fs.writeFileSync(assignedFeedbackFilePath, 'Existing feedback target', 'utf8');
-    const closureArtifactPath = path.relative(tmpDir, path.join(recordDir, '00-owner-closure.md'));
-
     const flowRun: any = {
       flowId: 'repair-flow',
       workspaceRoot: tmpDir,
       projectNamespace: improvementNamespace,
-      readyNodes: [],
       runningNodes: [],
       awaitingHumanNodes: {},
+      pendingHumanInputs: {},
       completedNodes: [],
-      completedEdgeArtifacts: {},
-      pendingNodeArtifacts: {},
+      completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
-      stateVersion: '7',
+      stateVersion: CURRENT_FLOW_STATE_VERSION,
       improvementPhase: null,
       recordFolderPath: recordDir,
       feedbackContext: {
@@ -589,10 +584,7 @@ async function run() {
     };
 
     try {
-      ImprovementOrchestrator.markAwaitingChoice(
-        flowRun,
-        { recordFolderPath: recordDir, artifactPath: closureArtifactPath }
-      );
+      ImprovementOrchestrator.markAwaitingChoice(flowRun);
       await ImprovementOrchestrator.runImprovement(
         flowRun,
         'graph-based',
@@ -614,7 +606,7 @@ async function run() {
     }
 
     assert.strictEqual(flowRun.status, 'completed');
-    assert.strictEqual(flowRun.stateVersion, '7', 'improvement initialization must keep the latest state version');
+    assert.strictEqual(flowRun.stateVersion, CURRENT_FLOW_STATE_VERSION, 'improvement initialization must keep the latest state version');
     assert.ok(fs.existsSync(path.join(recordDir, 'improvement.yaml')), 'improvement run should persist improvement.yaml');
     assert.strictEqual(flowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
     assert.deepStrictEqual(flowRun.improvementPhase?.activeNodeIds, []);

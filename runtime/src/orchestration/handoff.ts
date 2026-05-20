@@ -31,7 +31,7 @@ function missingBlock(): HandoffParseError {
     code: 'missing_block',
     operatorSummary: 'Malformed handoff block',
     modelRepairMessage:
-      'Error: No handoff block found. Please end your response with a fenced code block tagged `handoff`. Use either the target form (`target_node_id` + `artifact_path`) or an appropriate typed signal (`prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or `backward-pass-complete`).'
+      'Error: No handoff block found. Please end your response with a fenced code block tagged `handoff`. Use either the target form (`target_node_id` + `artifact_path`) or an appropriate typed signal (`prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, `backward-pass-complete`, or `await-handoff`).'
   });
 }
 
@@ -65,7 +65,7 @@ function unknownSignalType(type: string): HandoffParseError {
     code: 'unknown_signal_type',
     operatorSummary: `Unsupported handoff signal type "${type}"`,
     modelRepairMessage:
-      `Error: Unknown handoff signal type: "${type}". Supported typed signal forms are: forward-pass-closed, meta-analysis-complete, backward-pass-complete, prompt-human.`
+      `Error: Unknown handoff signal type: "${type}". Supported typed signal forms are: forward-pass-closed, meta-analysis-complete, backward-pass-complete, prompt-human, await-handoff.`
   });
 }
 
@@ -115,17 +115,7 @@ export class HandoffInterpreter {
         } else if (typeof payload === 'object' && payload !== null) {
           if ('type' in payload) {
             if (payload.type === 'forward-pass-closed') {
-              if (typeof payload.record_folder_path !== 'string' || payload.record_folder_path.trim() === '') {
-                throw missingRequiredField('forward-pass-closed block missing record_folder_path');
-              }
-              if (typeof payload.artifact_path !== 'string' || payload.artifact_path.trim() === '') {
-                throw missingRequiredField('forward-pass-closed block missing artifact_path');
-              }
-              result = {
-                kind: 'forward-pass-closed',
-                recordFolderPath: payload.record_folder_path,
-                artifactPath: payload.artifact_path,
-              };
+              result = { kind: 'forward-pass-closed' };
             } else if (payload.type === 'meta-analysis-complete') {
               if (typeof payload.findings_path !== 'string' || payload.findings_path.trim() === '') {
                 throw missingRequiredField('meta-analysis-complete block missing findings_path');
@@ -144,6 +134,8 @@ export class HandoffInterpreter {
               };
             } else if (payload.type === 'prompt-human') {
               result = { kind: 'awaiting_human' };
+            } else if (payload.type === 'await-handoff') {
+              result = { kind: 'await-handoff' };
             } else {
               throw unknownSignalType(String(payload.type));
             }

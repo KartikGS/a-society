@@ -6,6 +6,7 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 
+import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
   console.log('Starting edge-artifact-routing integration test...');
 
@@ -52,17 +53,14 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['producer', 'branch-c'],
     runningNodes: [],
     awaitingHumanNodes: {},
+    pendingHumanInputs: {},
     completedNodes: [],
-    completedEdgeArtifacts: {},
-    pendingNodeArtifacts: {
-      producer: ['records/test-flow/01-owner-brief.md'],
-      'branch-c': ['records/test-flow/01-ta-brief.md'],
-    },
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,
-    stateVersion: '7'
+    stateVersion: CURRENT_FLOW_STATE_VERSION
   };
   SessionStore.saveFlowRun(flowRun);
 
@@ -79,28 +77,14 @@ async function runTest() {
   ]);
 
   const updated = SessionStore.loadFlowRun()!;
-  assert.deepStrictEqual(
-    updated.completedEdgeArtifacts,
-    {
-      'producer=>branch-a': 'records/test-flow/02-producer-to-a.md',
-      'producer=>branch-b': 'records/test-flow/02-producer-to-b.md',
-      'branch-c=>branch-b': 'records/test-flow/03-c-to-b.md',
-    },
-    'concurrent handoffs should persist all artifacts by edge'
-  );
-  assert.deepStrictEqual(
-    updated.pendingNodeArtifacts['branch-a'],
-    ['records/test-flow/02-producer-to-a.md'],
-    'branch-a should receive only its own edge artifact'
-  );
   assert.ok(
-    updated.readyNodes.includes('branch-b'),
-    'branch-b should activate once both concurrent predecessors complete'
+    ['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k)),
+    'concurrent handoffs should record all edge keys'
   );
-  assert.deepStrictEqual(
-    updated.pendingNodeArtifacts['branch-b'],
-    ['records/test-flow/02-producer-to-b.md', 'records/test-flow/03-c-to-b.md'],
-    'join activation must use the edge-specific artifact for producer=>branch-b, not producer=>branch-a'
+  assert.deepStrictEqual(updated.receivingHandoff['producer=>branch-a'], ['records/test-flow/02-producer-to-a.md']);
+  assert.ok(
+    updated.receivingHandoff['producer=>branch-b'] && updated.receivingHandoff['branch-c=>branch-b'],
+    'branch-b should receive both concurrent predecessor handoffs'
   );
 
   console.log('Integration test PASSED.');

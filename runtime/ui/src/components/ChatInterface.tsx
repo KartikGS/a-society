@@ -46,7 +46,7 @@ function consentAllowFlowLabel(request: ConsentRequest): string {
   if (request.kind === 'file-write') {
     return 'Allow all edits this flow';
   }
-  return `Allow ${request.command} this flow`;
+  return 'Allow this command for this flow';
 }
 
 type MarkdownSegment =
@@ -290,7 +290,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
         ) : (
           props.messages.map((message) => (
             <article key={message.id} className={`feed-item feed-item-${message.type}`}>
-              {message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'tool' || message.type === 'tool-success' || message.type === 'tool-error' ? (
+              {message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'resume' || message.type === 'tool' || message.type === 'tool-success' || message.type === 'tool-error' ? (
                 <div className={`feed-compact-line feed-compact-${message.type}`}>
                   <span className="feed-compact-label">{message.label}</span>
                   <span className="feed-compact-text">{message.text}</span>
@@ -330,7 +330,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   className="consent-btn consent-btn-allow"
                   onClick={() => props.onConsentResponse?.('allow_once')}
                 >
-                  Allow
+                  {props.consentRequest.kind === 'bash-command' ? 'Allow this command' : 'Allow'}
                 </button>
                 <button
                   type="button"
