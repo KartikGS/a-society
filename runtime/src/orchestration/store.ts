@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
 import { CURRENT_FLOW_STATE_VERSION, normalizeConsentState } from '../common/types.js';
 import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../common/types.js';
 import { parseRoleIdentity } from '../common/role-id.js';
@@ -19,17 +20,6 @@ function assertSafeSegment(label: string, value: string): string {
     throw new Error(`Invalid ${label} "${value}".`);
   }
   return trimmed;
-}
-
-function flowKey(ref: FlowRef): string {
-  return `${ref.projectNamespace}/${ref.flowId}`;
-}
-
-function flowRefFromRun(flow: FlowRun): FlowRef {
-  return {
-    projectNamespace: flow.projectNamespace,
-    flowId: flow.flowId,
-  };
 }
 
 function getProjectStateDir(workspaceRoot: string, projectNamespace: string): string {
@@ -101,9 +91,6 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
     }
   }
 
-  if (!Array.isArray(flow.readyNodes)) {
-    throw new Error('Persisted flow state is missing readyNodes.');
-  }
   if (!Array.isArray(flow.runningNodes)) {
     throw new Error('Persisted flow state is missing runningNodes.');
   }

@@ -8,7 +8,7 @@
  *  2. Later same-role node reuses the same role-scoped session and appends a node-transition packet
  *  3. Reopened same-role node keeps the prior role-scoped session and appends a reopen packet
  *  4. Separate role instances with the same base role use separate sessions
- *  5. Same-role-instance ready nodes are serialized by the scheduler
+ *  5. Same-role-instance runnable nodes are serialized by the scheduler
  */
 
 import assert from 'node:assert';
@@ -195,7 +195,6 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordDir,
-    readyNodes: ['owner-intake'],
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -215,7 +214,6 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: instanceRecordDir,
-    readyNodes: ['owner-one', 'owner-two'],
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -330,7 +328,6 @@ async function run() {
       workspaceRoot,
       projectNamespace,
       recordFolderPath: recordDir,
-      readyNodes: [],
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
@@ -368,7 +365,7 @@ async function run() {
   await test('Orchestrator: streamed assistant text is persisted before the turn completes', async () => {
     resetState();
 
-    const flowRun = makeFlowRun();
+    const flowRun = makeFlowRun({ runningNodes: ['owner-intake'] });
     SessionStore.saveFlowRun(flowRun);
     const finalText = 'Partial paid output completed. ```handoff\ntype: prompt-human\n```';
     let partialObserved = false;
@@ -418,7 +415,6 @@ async function run() {
     }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
-      readyNodes: [],
       awaitingHumanNodes: {
         'owner-intake': { role: 'owner', reason: 'prompt-human' }
       },
@@ -482,6 +478,7 @@ async function run() {
     }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
+      runningNodes: ['owner-intake'],
       visitedNodeIds: ['owner-intake']
     });
     SessionStore.saveFlowRun(flowRun);
@@ -522,6 +519,10 @@ async function run() {
       !sink.events.some(event => event.kind === 'role.active' && event.nodeId === 'owner-intake'),
       'same active node resume should not emit a fresh role.active activation'
     );
+    assert.ok(
+      sink.events.some(event => event.kind === 'role.resumed' && event.nodeId === 'owner-intake' && event.reason === 'interrupted-turn'),
+      'interrupted same-node resume should emit a visible resume boundary'
+    );
   });
 
   await test('Orchestrator: later same-role node reuses role-scoped session and appends transition packet', async () => {
@@ -539,8 +540,7 @@ async function run() {
     }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
-      readyNodes: ['owner-gate'],
-      runningNodes: [],
+      runningNodes: ['owner-gate'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
       completedNodes: ['owner-intake', 'ta'],
@@ -594,8 +594,7 @@ async function run() {
     }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
-      readyNodes: ['owner-intake'],
-      runningNodes: [],
+      runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
       visitedNodeIds: ['owner-intake'],
@@ -649,8 +648,7 @@ async function run() {
     }, flowRef(), workspaceRoot);
 
     const flowRun = makeFlowRun({
-      readyNodes: ['owner-intake'],
-      runningNodes: [],
+      runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
       completedNodes: ['owner-gate'],
@@ -699,7 +697,7 @@ async function run() {
   await test('Orchestrator: role instances with the same base role use separate sessions', async () => {
     resetState();
 
-    const flowRun = makeInstanceFlowRun();
+    const flowRun = makeInstanceFlowRun({ runningNodes: ['owner-one'] });
     SessionStore.saveFlowRun(flowRun);
 
     const unpatch = patchLLM(new MockProvider([
@@ -713,6 +711,8 @@ async function run() {
     try {
       await orchestrator.advanceFlow(flowRun, 'owner-one', undefined, output);
       const afterOwnerOne = SessionStore.loadFlowRun({ projectNamespace, flowId: 'instance-flow-id' }, workspaceRoot)!;
+      afterOwnerOne.runningNodes = ['owner-two'];
+      SessionStore.saveFlowRun(afterOwnerOne, flowRef('instance-flow-id'), workspaceRoot);
       await orchestrator.advanceFlow(afterOwnerOne, 'owner-two', undefined, output);
     } finally {
       unpatch();
@@ -765,7 +765,6 @@ async function run() {
     }, flowRef('instance-flow-id'), workspaceRoot);
 
     const flowRun = makeInstanceFlowRun({
-      readyNodes: [],
       awaitingHumanNodes: {
         'owner-one': { role: 'owner_1', reason: 'prompt-human' },
         'owner-two': { role: 'owner_2', reason: 'prompt-human' }
@@ -817,7 +816,6 @@ async function run() {
     resetState();
 
     const flowRun = makeFlowRun({
-      readyNodes: [],
       runningNodes: [],
       awaitingHumanNodes: {},
       visitedNodeIds: ['owner-intake', 'ta'],
@@ -858,12 +856,11 @@ async function run() {
     assert.ok(updated.awaitingHumanNodes['owner-intake']);
   });
 
-  await test('Orchestrator: same-role-instance ready nodes are serialized by the scheduler', async () => {
+  await test('Orchestrator: same-role-instance initial running nodes are serialized by the scheduler', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
-      readyNodes: ['owner-intake', 'owner-gate'],
-      runningNodes: [],
+      runningNodes: ['owner-intake', 'owner-gate'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
       pendingNodeArtifacts: {
@@ -886,7 +883,6 @@ async function run() {
         const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot);
         return Boolean(
           updated &&
-          updated.readyNodes.includes('owner-gate') &&
           updated.awaitingHumanNodes['owner-intake']
         );
       });
@@ -895,7 +891,6 @@ async function run() {
     }
 
     const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
-    assert.ok(updated.readyNodes.includes('owner-gate'), 'later same-role node should remain ready');
     assert.ok(!updated.runningNodes.includes('owner-gate'), 'later same-role node should not be claimed while owner-intake is suspended');
     assert.ok(updated.awaitingHumanNodes['owner-intake'], 'first same-role node should be awaiting human input');
   });
@@ -904,7 +899,6 @@ async function run() {
     resetState();
 
     const flowRun = makeFlowRun({
-      readyNodes: [],
       runningNodes: ['owner-intake', 'ta'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
@@ -934,7 +928,7 @@ async function run() {
 
     const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
     assert.ok(updated.completedHandoffs.includes('ta=>owner-gate'), 'completed handoffs should include ta=>owner-gate');
-    assert.ok(updated.readyNodes.includes('owner-gate'), 'busy same-role handoff target should be queued in readyNodes');
+    assert.deepStrictEqual(updated.receivingHandoff['ta=>owner-gate'], [handoffArtifact], 'busy same-role handoff target should receive the handoff');
     assert.ok(updated.runningNodes.includes('owner-intake'), 'existing same-role node should remain running');
     assert.ok(!updated.runningNodes.includes('owner-gate'), 'busy same-role target should not be claimed immediately');
     assert.ok(

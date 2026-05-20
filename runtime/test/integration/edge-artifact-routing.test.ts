@@ -53,7 +53,6 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['producer', 'branch-c'],
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -92,8 +91,8 @@ async function runTest() {
     'branch-a should receive only its own edge artifact'
   );
   assert.ok(
-    updated.readyNodes.includes('branch-b'),
-    'branch-b should activate once both concurrent predecessors complete'
+    updated.receivingHandoff['producer=>branch-b'] && updated.receivingHandoff['branch-c=>branch-b'],
+    'branch-b should receive both concurrent predecessor handoffs'
   );
   assert.deepStrictEqual(
     updated.pendingNodeArtifacts['branch-b'],

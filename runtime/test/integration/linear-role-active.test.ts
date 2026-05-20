@@ -88,8 +88,7 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['start'],
-    runningNodes: [],
+    runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedNodes: [],
@@ -141,7 +140,7 @@ async function runTest() {
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
-    assert.ok(flowAfterStart.readyNodes.includes('next'), "Expected 'next' to be ready.");
+    assert.deepStrictEqual(flowAfterStart.receivingHandoff['start=>next'], ['start-output.md'], "Expected 'next' to receive the handoff.");
 
     console.log("\n--- Advancing 'next' node ---");
     await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, outputStream);
@@ -160,7 +159,7 @@ async function runTest() {
     );
     const flowAfterNext = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");
-    assert.ok(flowAfterNext.readyNodes.includes('end'), "Expected successor node 'end' to be ready.");
+    assert.deepStrictEqual(flowAfterNext.receivingHandoff['next=>end'], ['next-output.md'], "Expected successor node 'end' to receive the handoff.");
 
     console.log("Linear-role-active test PASSED.");
   } catch (e: any) {

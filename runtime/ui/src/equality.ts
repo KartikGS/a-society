@@ -148,7 +148,6 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     left.recordSummary === right.recordSummary &&
     left.status === right.status &&
     left.stateVersion === right.stateVersion &&
-    areStringArraysEqual(left.readyNodes, right.readyNodes) &&
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
     arePendingHumanInputMapsEqual(left.pendingHumanInputs, right.pendingHumanInputs) &&
@@ -156,6 +155,9 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     areStringArrayMapsEqual(left.pendingNodeArtifacts, right.pendingNodeArtifacts) &&
+    areStringArrayMapsEqual(left.receivingHandoff, right.receivingHandoff) &&
+    areStringArrayMapsEqual(left.historyHandoff, right.historyHandoff) &&
+    areStringArraysEqual(left.awaitingHandoff, right.awaitingHandoff) &&
     areImprovementPhasesEqual(left.improvementPhase, right.improvementPhase) &&
     areFeedbackContextsEqual(left.feedbackContext, right.feedbackContext) &&
     areConsentStatesEqual(left.consentState, right.consentState)

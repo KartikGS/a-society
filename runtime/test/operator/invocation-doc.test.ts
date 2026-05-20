@@ -64,7 +64,7 @@ test('INVOCATION.md: documents role instance parallel behavior', () => {
     'Expected INVOCATION.md to document numbered role instances'
   );
   assert.ok(
-    doc.includes('leaves later same-role-instance nodes in `readyNodes`'),
+    doc.includes("runner's initial-node list"),
     'Expected INVOCATION.md to describe same-role-instance serialization'
   );
   assert.ok(
@@ -74,7 +74,7 @@ test('INVOCATION.md: documents role instance parallel behavior', () => {
 });
 
 test('INVOCATION.md: documents explicit scheduler fields and distinct-role parallelism', () => {
-  assert.ok(doc.includes('readyNodes'), 'Expected INVOCATION.md to document readyNodes');
+  assert.ok(doc.includes('There is no persisted ready queue'), 'Expected INVOCATION.md to document derived readiness');
   assert.ok(doc.includes('runningNodes'), 'Expected INVOCATION.md to document runningNodes');
   assert.ok(doc.includes('awaitingHumanNodes'), 'Expected INVOCATION.md to document awaitingHumanNodes');
   assert.ok(

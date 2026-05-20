@@ -12,7 +12,9 @@ import { TelemetryManager } from '../observability/observability.js';
 import { SessionStore } from '../orchestration/store.js';
 import { FlowOrchestrator } from '../orchestration/orchestrator.js';
 import { ImprovementOrchestrator, type ImprovementMode } from '../improvement/improvement.js';
+import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { getActiveNodeIds } from '../common/flow-state.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
 import { bootstrapInitializationFlow } from '../projects/initialization-bootstrap.js';
 import { initializeDraftFlow } from '../projects/draft-flow.js';
@@ -125,22 +127,11 @@ function latestContextUsageFromSession(session: RoleSession | null): number | nu
   return session?.latestContextUsage ?? null;
 }
 
-function flowKey(ref: FlowRef): string {
-  return `${ref.projectNamespace}/${ref.flowId}`;
-}
-
 function missingModelError(ref: FlowRef): ServerMessage {
   return {
     type: 'error',
     flowRef: ref,
     message: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
-  };
-}
-
-function flowRefFromRun(flowRun: FlowRun): FlowRef {
-  return {
-    projectNamespace: flowRun.projectNamespace,
-    flowId: flowRun.flowId,
   };
 }
 
@@ -150,21 +141,6 @@ function hasFlowRef(value: any): value is FlowRef {
     typeof value.projectNamespace === 'string' &&
     typeof value.flowId === 'string'
   );
-}
-
-function getOpenNodeIds(flowRun: FlowRun): string[] {
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const nodeId of [
-    ...flowRun.readyNodes,
-    ...flowRun.runningNodes,
-    ...Object.keys(flowRun.awaitingHumanNodes)
-  ]) {
-    if (seen.has(nodeId)) continue;
-    seen.add(nodeId);
-    ids.push(nodeId);
-  }
-  return ids;
 }
 
 function isAwaitingHumanReply(reason: FlowRun['awaitingHumanNodes'][string]['reason']): boolean {
@@ -352,7 +328,7 @@ function buildServer(workspaceRoot: string) {
     const flowRun = readFlowRun(ref);
     if (!flowRun) return null;
     const backwardActive = session
-      ? Array.from(session.backwardActive).filter((nodeId) => getOpenNodeIds(flowRun).includes(nodeId))
+      ? Array.from(session.backwardActive).filter((nodeId) => getActiveNodeIds(flowRun).includes(nodeId))
       : [];
     const contextUsageByRole: Record<string, number> = session
       ? { ...session.latestContextUsageByRole }
@@ -445,7 +421,6 @@ function buildServer(workspaceRoot: string) {
 
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
     await SessionStore.updateFlowRun((flow) => {
-      flow.readyNodes = flow.readyNodes.filter((id) => id !== request.nodeId);
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
       flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent' };
       flow.status = 'running';
@@ -465,7 +440,6 @@ function buildServer(workspaceRoot: string) {
       if (decision === 'deny') {
         flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent-denied' };
         flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
-        flow.readyNodes = flow.readyNodes.filter((id) => id !== request.nodeId);
         flow.status = 'running';
         return;
       }

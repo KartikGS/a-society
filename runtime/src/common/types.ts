@@ -4,7 +4,7 @@ export type FlowStatus =
   | 'awaiting_feedback_consent'
   | 'completed';
 
-export const CURRENT_FLOW_STATE_VERSION = '9';
+export const CURRENT_FLOW_STATE_VERSION = '10';
 
 export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
 export type ConsentRequestKind = 'file-write' | 'bash-command';
@@ -118,7 +118,6 @@ export interface FlowRun {
   recordFolderPath: string;
   recordName?: string;
   recordSummary?: string;
-  readyNodes: string[];                           // node IDs eligible to execute
   runningNodes: string[];                         // node IDs claimed by a live runtime turn
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   pendingHumanInputs: Record<string, { text: string; receivedAt: string }>; // durable operator replies queued for scheduler consumption
@@ -204,8 +203,8 @@ export interface RoleTurnResult {
 }
 
 export type OperatorEvent =
-  | { kind: 'flow.resumed'; flowId: string; activeNodeCount: number }
   | { kind: 'role.active'; nodeId: string; role: string }
+  | { kind: 'role.resumed'; nodeId: string; role: string; reason: 'interrupted-turn' }
   | { kind: 'activity.tool_call'; role: string; toolName: string; path?: string; command?: string }
   | { kind: 'activity.tool_result'; role: string; toolName: string; isError: boolean }
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string; artifactBasename?: string }> }
@@ -242,6 +241,7 @@ export type FeedItemType =
   | 'event'
   | 'error'
   | 'handoff'
+  | 'resume'
   | 'repair'
   | 'tool'
   | 'tool-success'

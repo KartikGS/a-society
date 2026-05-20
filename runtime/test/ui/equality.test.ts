@@ -24,7 +24,6 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    readyNodes: [],
     runningNodes: [],
     awaitingHumanNodes: {
       'owner-intake': { role: 'Owner', reason: 'prompt-human' },

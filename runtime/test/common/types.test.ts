@@ -25,7 +25,6 @@ test('FlowRun: conforms to new multi-node structure', () => {
     workspaceRoot: '.',
     projectNamespace: 'test-project',
     recordFolderPath: './records/r1',
-    readyNodes: ['node1'],
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -36,7 +35,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
-  assert.strictEqual(flowRun.readyNodes.length, 1);
+  assert.strictEqual(flowRun.runningNodes.length, 0);
   assert.strictEqual(flowRun.completedNodes.length, 0);
   assert.ok(flowRun.pendingNodeArtifacts['node1']);
   assert.strictEqual(flowRun.pendingNodeArtifacts['node1'][0], 'artifact.md');

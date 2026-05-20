@@ -12,6 +12,7 @@ import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { WorkflowGraph } from './workflow-graph.js';
@@ -275,9 +276,8 @@ export class FlowOrchestrator {
 
         this.setFlowContext(flowRun);
 
-        flowRun = await this.releaseStaleRunningNodes();
-        const resumedOpenNodes = this.getOpenNodeIds(flowRun);
-        this.renderer.emit({ kind: 'flow.resumed', flowId: flowRun.flowId, activeNodeCount: resumedOpenNodes.length });
+        const initialNodeIds = await this.takeInitialRunningNodes();
+        flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
 
         rootSpan.setAttribute('flow.id', flowRun.flowId);
         rootSpan.setAttribute('flow.project_namespace', flowRun.projectNamespace);
@@ -286,7 +286,13 @@ export class FlowOrchestrator {
 
         while (true) {
           const observedWakeGeneration = this.wakeGeneration;
-          await this.runReadyNodesUntilBlocked(outputStream, outputStreamFactory, consentGate);
+          await this.runReadyNodesUntilBlocked(
+            outputStream,
+            outputStreamFactory,
+            consentGate,
+            initialNodeIds
+          );
+          initialNodeIds.length = 0;
           flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
           if (flowRun.status !== 'running') {
             break;
@@ -512,6 +518,12 @@ export class FlowOrchestrator {
         }
 
         if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
+          this.renderer.emit({
+            kind: 'role.resumed',
+            nodeId,
+            role: currentNodeDef.role,
+            reason: 'interrupted-turn',
+          });
           appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
           span.addEvent('session.interrupted_turn_continuation');
         }
@@ -845,7 +857,7 @@ export class FlowOrchestrator {
         this.addCompletedNode(latest, nodeId);
         direction = 'terminal';
         eventTargets = [];
-        if (this.getOpenNodeIds(latest).length === 0) {
+          if (!this.hasUnsettledOrRunnableWork(latest, wf)) {
           latest.status = 'completed';
         } else {
           latest.status = 'running';
@@ -995,14 +1007,18 @@ export class FlowOrchestrator {
   private async runReadyNodesUntilBlocked(
     outputStream: NodeJS.WritableStream,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
-    consentGate?: ConsentGate
+    consentGate?: ConsentGate,
+    initialNodeIds: string[] = []
   ): Promise<void> {
     const runningTasks = new Map<string, Promise<void>>();
     let firstError: unknown = null;
+    let pendingInitialNodeIds = this.mergeNodeIds(initialNodeIds);
 
     while (true) {
       const observedWakeGeneration = this.wakeGeneration;
-      const claimedWorkItems = await this.claimRunnableWorkForParallelRun();
+      const claimedWorkItems = await this.claimRunnableWorkForParallelRun(pendingInitialNodeIds);
+      const claimedNodeIds = claimedWorkItems.map((item) => item.nodeId);
+      pendingInitialNodeIds = pendingInitialNodeIds.filter((nodeId) => !claimedNodeIds.includes(nodeId));
       for (const claimedWork of claimedWorkItems) {
         if (runningTasks.has(claimedWork.nodeId)) continue;
         const task = this.advanceFlow(
@@ -1035,13 +1051,15 @@ export class FlowOrchestrator {
     }
   }
 
-  private async releaseStaleRunningNodes(): Promise<FlowRun> {
-    return SessionStore.updateFlowRun((flowRun) => {
+  private async takeInitialRunningNodes(): Promise<string[]> {
+    let initialNodeIds: string[] = [];
+    await SessionStore.updateFlowRun((flowRun) => {
       if (flowRun.runningNodes.length > 0) {
-        flowRun.readyNodes = this.mergeNodeIds(flowRun.readyNodes, flowRun.runningNodes);
+        initialNodeIds = [...flowRun.runningNodes];
         flowRun.runningNodes = [];
       }
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
+    return initialNodeIds;
   }
 
   private loadWorkflowDocument(flowRun: FlowRun): WorkflowGraph {
@@ -1052,7 +1070,7 @@ export class FlowOrchestrator {
     return new WorkflowGraph(resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace));
   }
 
-  private deriveHandoffReadyNodes(flowRun: FlowRun, wf: WorkflowGraph): string[] {
+  private deriveRunnableNodeIds(flowRun: FlowRun, wf: WorkflowGraph): string[] {
     const receivingHandoffKeys = Object.keys(flowRun.receivingHandoff);
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(nodeId => {
       // Any undelivered inbound handoff wakes an awaiting node, regardless of whether
@@ -1062,16 +1080,17 @@ export class FlowOrchestrator {
 
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
     const awaitingHandoffSet = new Set(flowRun.awaitingHandoff);
-    const openNodes = new Set(this.getOpenNodeIds(flowRun));
+    const activeNodes = new Set(getActiveNodeIds(flowRun));
     const completedNodes = new Set(flowRun.completedNodes);
 
     const result: string[] = [];
     const seen = new Set<string>();
 
-    // Condition 1: visited + has a pending outgoing handoff (not yet in completedHandoffs) + not awaiting a handoff
+    // Visited nodes that still owe an outgoing handoff are runnable again without a
+    // persisted ready queue. This covers partial fan-out and reopened backward-pass sources.
     for (const node of wf.nodes) {
       const nodeId = node.id;
-      if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || openNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
+      if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || activeNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
       const hasPendingOutgoing = wf.getOutgoingEdges(nodeId).some((e: any) => !flowRun.completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
       if (hasPendingOutgoing) {
         result.push(nodeId);
@@ -1082,10 +1101,14 @@ export class FlowOrchestrator {
     // Condition 2: has received a handoff (appears as "to" in receivingHandoff)
     for (const key of Object.keys(flowRun.receivingHandoff)) {
       const nodeId = key.split('=>')[1];
+      // A received handoff may intentionally reopen a completed node, especially
+      // during backward-pass correction. The only structural guard here is that
+      // the target node still exists in the active workflow.
       if (
         !seen.has(nodeId) &&
-        !openNodes.has(nodeId) &&
-        !awaitingHandoffSet.has(nodeId)
+        !activeNodes.has(nodeId) &&
+        !awaitingHandoffSet.has(nodeId) &&
+        Boolean(wf.findNodeByIdOrNull(nodeId))
       ) {
         result.push(nodeId);
         seen.add(nodeId);
@@ -1095,7 +1118,25 @@ export class FlowOrchestrator {
     return result;
   }
 
-  private async claimRunnableWorkForParallelRun(): Promise<ClaimedRunnableWork[]> {
+  private pruneInitialNodeIds(flowRun: FlowRun, wf: WorkflowGraph, initialNodeIds: string[]): string[] {
+    return this.mergeNodeIds(initialNodeIds).filter((nodeId) => {
+      if (!wf.findNodeByIdOrNull(nodeId)) return false;
+      if (flowRun.completedNodes.includes(nodeId)) return false;
+      if (flowRun.runningNodes.includes(nodeId)) return false;
+      if (flowRun.awaitingHandoff.includes(nodeId)) return false;
+      if (flowRun.awaitingHumanNodes[nodeId]) return false;
+      return true;
+    });
+  }
+
+  private hasUnsettledOrRunnableWork(flowRun: FlowRun, wf: WorkflowGraph): boolean {
+    if (getActiveNodeIds(flowRun).length > 0) return true;
+    if (flowRun.awaitingHandoff.length > 0) return true;
+    if (this.deriveRunnableNodeIds(flowRun, wf).length > 0) return true;
+    return false;
+  }
+
+  private async claimRunnableWorkForParallelRun(initialNodeIds: string[] = []): Promise<ClaimedRunnableWork[]> {
     let claimedWork: ClaimedRunnableWork[] = [];
     await SessionStore.updateFlowRun((flowRun) => {
       if (flowRun.status !== 'running') {
@@ -1104,10 +1145,13 @@ export class FlowOrchestrator {
       }
 
       const wf = this.loadWorkflowDocument(flowRun);
-      const readyNodes2 = this.deriveHandoffReadyNodes(flowRun, wf);
+      const runnableNodeIds = this.deriveRunnableNodeIds(flowRun, wf);
       const resumableHumanNodeIds = Object.keys(flowRun.pendingHumanInputs)
         .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes);
-      const allRunnableNodeIds = this.mergeNodeIds(resumableHumanNodeIds, flowRun.readyNodes, readyNodes2);
+      const pendingInitialNodeIds = this.pruneInitialNodeIds(flowRun, wf, initialNodeIds);
+      const allRunnableNodeIds = pendingInitialNodeIds.length > 0
+        ? this.mergeNodeIds(resumableHumanNodeIds, pendingInitialNodeIds)
+        : this.mergeNodeIds(resumableHumanNodeIds, runnableNodeIds);
 
       if (allRunnableNodeIds.length === 0) {
         claimedWork = [];
@@ -1115,13 +1159,15 @@ export class FlowOrchestrator {
       }
       const occupiedRoles = new Map<string, string>();
       for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
-        const node = wf.findNodeById(nodeId);
+        const node = wf.findNodeByIdOrNull(nodeId);
+        if (!node) continue;
         occupiedRoles.set(this.roleKey(node.role), nodeId);
       }
 
       const selected: ClaimedRunnableWork[] = [];
       for (const nodeId of allRunnableNodeIds) {
-        const node = wf.findNodeById(nodeId);
+        const node = wf.findNodeByIdOrNull(nodeId);
+        if (!node) continue;
         const nodeRoleKey = this.roleKey(node.role);
         const conflictingNodeId = occupiedRoles.get(nodeRoleKey);
         if (conflictingNodeId && conflictingNodeId !== nodeId) {
@@ -1134,9 +1180,7 @@ export class FlowOrchestrator {
         });
       }
 
-      // Only filter readyNodes — readyNodes2 nodes aren't stored there
       const selectedNodeIds = selected.map((item) => item.nodeId);
-      flowRun.readyNodes = flowRun.readyNodes.filter(id => !selectedNodeIds.includes(id));
       for (const item of selected) {
         if (item.humanInput !== undefined) {
           delete flowRun.awaitingHumanNodes[item.nodeId];
@@ -1174,11 +1218,12 @@ export class FlowOrchestrator {
         throw new Error(`Node '${nodeId}' is awaiting targeted human input and cannot advance without a reply.`);
       }
 
-      if (!latest.readyNodes.includes(nodeId)) {
+      const wf = this.loadWorkflowDocument(latest);
+      const runnableNodeIds = this.deriveRunnableNodeIds(latest, wf);
+      if (!runnableNodeIds.includes(nodeId)) {
         throw new Error(`Node '${nodeId}' is not ready, running, or awaiting human input.`);
       }
 
-      latest.readyNodes = latest.readyNodes.filter(id => id !== nodeId);
       latest.runningNodes = this.mergeNodeIds(latest.runningNodes, [nodeId]);
       latest.status = 'running';
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
@@ -1192,7 +1237,6 @@ export class FlowOrchestrator {
     reason: AwaitingHumanReason
   ): Promise<FlowRun> {
     return SessionStore.updateFlowRun((flowRun) => {
-      flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
       flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
       flowRun.awaitingHumanNodes[nodeId] = { role, reason };
       flowRun.status = 'running';
@@ -1200,7 +1244,6 @@ export class FlowOrchestrator {
   }
 
   private removeOpenNode(flowRun: FlowRun, nodeId: string) {
-    flowRun.readyNodes = flowRun.readyNodes.filter(id => id !== nodeId);
     flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
@@ -1358,14 +1401,6 @@ export class FlowOrchestrator {
       }
     }
     return merged;
-  }
-
-  private getOpenNodeIds(flowRun: FlowRun): string[] {
-    return this.mergeNodeIds(
-      flowRun.readyNodes,
-      flowRun.runningNodes,
-      Object.keys(flowRun.awaitingHumanNodes)
-    );
   }
 
   private waitForWakeAfter(observedWakeGeneration: number): { promise: Promise<void>; cancel: () => void } {

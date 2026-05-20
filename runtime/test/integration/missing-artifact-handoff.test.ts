@@ -74,8 +74,7 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['start'],
-    runningNodes: [],
+    runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedNodes: [],
@@ -119,7 +118,7 @@ async function runTest() {
       (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
     );
     assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
-    assert.ok(updatedFlow.readyNodes.includes('next'), "Expected node 'next' to activate after repaired handoff.");
+    assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['valid-output.md'], "Expected node 'next' to receive the repaired handoff.");
     assert.ok(repairNotice, 'Expected sink to contain a repair.requested event with scope "node".');
     assert.strictEqual(repairNotice.role, 'start');
     assert.strictEqual(repairNotice.nodeId, 'start');

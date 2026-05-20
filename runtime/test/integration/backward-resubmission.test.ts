@@ -59,7 +59,6 @@ async function runTest() {
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
-    readyNodes: ['review'],
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -90,8 +89,8 @@ async function runTest() {
 
   const updated = SessionStore.loadFlowRun()!;
 
-  assert.ok(updated.readyNodes.includes('proposal'), 'proposal should reactivate after backward handoff');
-  assert.ok(!updated.readyNodes.includes('review'), 'review should no longer be active after sending work back');
+  assert.deepStrictEqual(updated.receivingHandoff['review=>proposal'], [reviewFeedbackRel], 'proposal should receive the backward handoff');
+  assert.ok(updated.awaitingHandoff.includes('review'), 'review should suspend after sending work back');
   assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'rejected edge must be invalidated');
   assert.ok(updated.completedHandoffs.includes('proposal=>audit'), 'sibling completed edge must remain intact');
   assert.deepStrictEqual(

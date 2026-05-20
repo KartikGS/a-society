@@ -130,18 +130,18 @@ The runtime no longer bootstraps from empty orchestration state. A project must 
 - initialized projects use a stored draft flow created by the server
 - initialization runs use a stored single-node Owner flow created after scaffold
 
-The runtime then claims ready nodes in `readyNodes` order, runs distinct-role nodes concurrently, and leaves later ready nodes with an already-occupied role instance queued in `readyNodes` until that role instance is free.
+The runtime starts from persisted `runningNodes`. Fresh draft and initialization flows persist `owner-intake` in `runningNodes`; cold resume reuses the nodes that were already in `runningNodes` before the previous process died. The runner takes those initial running nodes, clears them from persisted state, and then claims them as live work. After those initial nodes drain, runnable work is derived from the flow state: pending human input, inbound handoffs, and visited nodes that still owe outgoing handoffs.
 
 ### Flow state scheduler fields
 
-Forward-pass flow state uses explicit scheduler fields:
+Forward-pass flow state persists only durable scheduler facts:
 
-- `readyNodes` — nodes whose dependencies are satisfied and are waiting to start
 - `runningNodes` — nodes currently claimed by live runtime turns
 - `awaitingHumanNodes` — nodes suspended for targeted operator input
 - `pendingHumanInputs` — durable operator replies queued for the single flow runner to consume
+- `receivingHandoff` / `awaitingHandoff` — durable handoff delivery and handoff suspension state
 
-On cold runtime resume, persisted `runningNodes` are treated as stale process-local work and returned to `readyNodes` before scheduling continues. Live operator replies wake the existing runner instead of re-entering cold-resume recovery.
+There is no persisted ready queue. At runner startup, persisted `runningNodes` are taken as initial work and cleared before live claims are made. Live operator replies wake the existing runner instead of re-entering cold-resume recovery.
 
 ### Same-node `prompt-human` resume
 
@@ -157,13 +157,13 @@ When a backward edge reopens a node for the same role instance, the runtime keep
 
 ### Same-role-instance scheduling
 
-Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple ready nodes share a role instance, the runtime claims only the earliest ready node for that role instance and leaves later same-role-instance nodes in `readyNodes`. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
+Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple runnable nodes share a role instance, the runtime claims only the earliest runnable node for that role instance; later same-role-instance work remains derivable from flow state or the runner's initial-node list until that role instance is free. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
 
 ---
 
 ## Session Transcript Access
 
-In graph mode, clicking a ready, running, awaiting-human, or completed node fetches that node's persisted role-scoped transcript and displays it in the UI when a session file exists.
+In graph mode, clicking a running, awaiting-human, or completed node fetches that node's persisted role-scoped transcript and displays it in the UI when a session file exists.
 
 Transcript resolution path:
 
@@ -212,7 +212,7 @@ Resume behavior:
 - Selecting a flow opens it in graph mode
 - The browser feed is replayed from `{stateDir}/{projectNamespace}/{flowId}/roles/<roleKey>/feed.json` when available
 - Role-scoped session continuity is preserved from persisted role transcript files
-- Stale persisted `runningNodes` are returned to `readyNodes`
+- Persisted `runningNodes` are taken as initial runner work and cleared before live claims are made
 
 ---
 

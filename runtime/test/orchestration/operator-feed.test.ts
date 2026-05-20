@@ -36,7 +36,6 @@ const flowRun: FlowRun = {
   workspaceRoot: tmpDir,
   projectNamespace,
   recordFolderPath,
-  readyNodes: [],
   runningNodes: [],
   awaitingHumanNodes: {},
   pendingHumanInputs: {},
@@ -140,15 +139,29 @@ test('role.active becomes a role feed activation item', () => {
     id: 'owner_4',
     type: 'activation',
     label: 'Activation',
-    text: 'owner-gate (Owner) is active with 1 artifact(s).',
+    text: 'owner-gate (Owner) is active.',
+  });
+});
+
+test('role.resumed becomes a visible role feed boundary', () => {
+  const event: OperatorEvent = {
+    kind: 'role.resumed',
+    nodeId: 'owner-intake',
+    role: 'Owner',
+    reason: 'interrupted-turn',
+  };
+
+  assert.strictEqual(isTransientOperatorEvent(event), false);
+  assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
+  assert.deepStrictEqual(projectMessageToFeedItem({ type: 'operator_event', event }, 'owner_5'), {
+    id: 'owner_5',
+    type: 'resume',
+    label: 'Resume',
+    text: 'owner-intake (Owner) resumed after an interrupted response.',
   });
 });
 
 test('projectMessageToFeedItem returns null for events that do not become feed items', () => {
-  assert.strictEqual(
-    projectMessageToFeedItem({ type: 'operator_event', event: { kind: 'flow.resumed', flowId: 'x', activeNodeCount: 1 } }, 'x'),
-    null
-  );
   assert.strictEqual(
     projectMessageToFeedItem({ type: 'error', message: 'boom' }, 'x'),
     null
