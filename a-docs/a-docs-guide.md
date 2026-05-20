@@ -606,7 +606,7 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 **What breaks without it:** The runtime falls back to project-specific Owner instructions for A-Society feedback, creating role ambiguity and inconsistent framework signal.
 
-**Do not consolidate with:** `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` — the handoff contract defines machine-readable signal syntax; this file defines the feedback phase's work. Do not consolidate with `$GENERAL_IMPROVEMENT_FEEDBACK` — the general file is a project template, while this is the runtime-owned execution contract.
+**Do not consolidate with:** `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` — the handoff contract defines machine-readable signal syntax; this file defines the feedback phase's work.
 
 ---
 

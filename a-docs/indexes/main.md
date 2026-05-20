@@ -18,11 +18,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_ARCHITECTURE` | `a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
 | `$A_SOCIETY_LOG` | `a-society/a-docs/project-information/log.md` | A-Society project log — current state and next priorities for agents orienting at session start |
 | `$A_SOCIETY_INDEX` | `a-society/a-docs/indexes/main.md` | This file — the A-Society file path index |
-| `$GENERAL_FEEDBACK_TEMPLATE` | `a-society/general/feedback/template-feedback.md` | Single upstream feedback report template — reference format for the runtime-managed final feedback step |
-| `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Legacy compatibility note for the retired consent-file model |
-| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Legacy migration-focused feedback outline retained for historical references |
 | `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `a-society/general/instructions/a-society-version-record.md` | How to create and maintain an A-Society version record in any initialized project |
-| `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How runtime-managed projects ask for upstream feedback consent per flow |
 | `$INSTRUCTION_TOOLING` | `a-society/general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `a-society/general/instructions/project-information/vision.md` | How to create a vision document for any project |
 | `$INSTRUCTION_STRUCTURE` | `a-society/general/instructions/project-information/structure.md` | How to create a structure document for any project |
@@ -103,9 +99,6 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
-| `$GENERAL_IMPROVEMENT_FEEDBACK` | `a-society/general/improvement/feedback.md` | Optional/manual feedback phase instructions for non-runtime project-owned feedback flows |
-| `$GENERAL_IMPROVEMENT_REPORTS` | `a-society/general/improvement/reports/main.md` | Ready-made improvement reports index template |
-| `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |
 | `$A_SOCIETY_IMPROVEMENT_META_ANALYSIS` | `a-society/a-docs/improvement/meta-analysis.md` | A-Society project-specific meta-analysis phase instructions — runtime injection target for backward pass findings sessions in this project |
 | `$A_SOCIETY_IMPROVEMENT_FEEDBACK` | `a-society/a-docs/improvement/feedback.md` | A-Society legacy/project-owned feedback phase instructions; runtime-managed feedback now uses `$A_SOCIETY_RUNTIME_FEEDBACK` |
 | `$A_SOCIETY_PRINCIPLES` | `a-society/a-docs/project-information/principles.md` | A-Society design principles — context efficiency, consent, feedback, and structure rules |

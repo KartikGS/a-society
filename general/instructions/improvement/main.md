@@ -52,11 +52,10 @@ The final feedback step is not a local maintenance routing loop. It produces one
 
 ## What Is an `improvement/` Folder?
 
-An `improvement/` folder contains one required component and up to two optional:
+An `improvement/` folder contains one required component and one optional:
 
 1. **Philosophy and protocol** (`main.md`) — required: the principles that govern how improvement decisions are made, combined with the backward pass protocol
-2. **Reports** (`reports/`) — optional: the storage location for backward pass findings, for projects that do not use a records structure
-3. **Phase-specific instruction files** (`meta-analysis.md`, `feedback.md`) — optional: present when the project uses a programmatic runtime that injects session context into backward pass agents. See **Project-Specific Phase Files (Runtime)** below.
+2. **Phase-specific instruction files** (`meta-analysis.md`) — optional: present when the project uses a programmatic runtime that injects session context into backward pass agents. See **Project-Specific Phase Files (Runtime)** below.
 
 Together they answer: "How does this project's a-docs stay aligned with how the project actually works?"
 
@@ -99,39 +98,13 @@ A dedicated folder separates improvement infrastructure from normal execution in
 
 ---
 
-### `reports/` — Reports Folder (Optional)
-
-**What it is:** The storage location for backward pass findings in projects that do not use a records structure.
-
-If the project uses a records structure (see `$INSTRUCTION_RECORDS`), backward pass findings are sequenced artifacts within the record folder — not files in `reports/`. In that case, this folder may be omitted or repurposed for non-flow-specific improvement artifacts (e.g., a periodic framework-feedback review that spans multiple flows).
-
-> **Note on record-folder artifacts:** When a project uses a records structure, backward pass findings are sequenced files within `a-docs/records/[identifier]/`. These are regular repository-tracked files — not system artifact-directory outputs. Do not apply artifact-directory write restrictions to `a-docs/records/` paths. Findings artifacts and completion artifacts in record folders are committed to the project repository alongside all other agent-docs.
-
-If the project does not use records, `reports/` is the required storage location for all backward pass findings.
-
-**What belongs here (when used):**
-- `main.md` — index of the reports folder with naming conventions and template references
-- One file per backward pass findings report, following the naming convention from the protocol
-
-**What does not belong here:**
-- Protocol or philosophy documents (those go in `main.md`)
-- Plans, requirements, or feature artifacts (those go in `workflow/`)
-- Non-improvement artifacts of any kind
-
-**Starting point for `reports/main.md`:** Use `$GENERAL_IMPROVEMENT_REPORTS` as the template.
-
-**Starting point for template files:**
-- Backward pass findings: `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
-
----
-
 ## Project-Specific Phase Files (Runtime)
 
 When a project uses a programmatic runtime that orchestrates backward pass sessions, the runtime injects phase instructions directly rather than relying on agents to load them from required-reading lists. Project-specific meta-analysis instructions live in the project's own `a-docs/improvement/`. The final feedback step is runtime-owned and uses `$A_SOCIETY_RUNTIME_FEEDBACK`.
 
 **One project file is required when using the runtime:**
 
-- **`improvement/meta-analysis.md`** — injected into backward pass meta-analysis sessions. Contains the project's reflection categories, output format rules, findings template reference, and completion signal schema.
+- **`improvement/meta-analysis.md`** — injected into backward pass meta-analysis sessions. Contains the project's reflection categories, output format rules, and completion signal schema.
 
 **Creating this file:**
 
@@ -140,9 +113,6 @@ Base the file on the corresponding general framework template:
 
 `[PROJECT_*]` placeholders to resolve for `meta-analysis.md` at minimum:
 - `[PROJECT_RECORDS]` — the path to the project's records folder (e.g., `my-project/a-docs/records`)
-- `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]` — the variable registered in the project's index for the findings template
-
-If the project uses a records structure, remove the non-records output path branch from the template. If the project does not use records, remove the records branch.
 
 **Registering these files:**
 
@@ -161,7 +131,6 @@ Add all key files to the project's file path index. At minimum:
 | Variable | Path | Description | Required? |
 |---|---|---|---|
 | `$[PROJECT]_IMPROVEMENT` | `/[project]/a-docs/improvement/main.md` | Improvement philosophy and backward pass protocol | Required |
-| `$[PROJECT]_IMPROVEMENT_REPORTS` | `/[project]/a-docs/improvement/reports/main.md` | Improvement reports index — naming conventions and template links | Optional: include only if the project uses `reports/` rather than a records structure for findings |
 | `$[PROJECT]_IMPROVEMENT_META_ANALYSIS` | `/[project]/a-docs/improvement/meta-analysis.md` | Project-specific meta-analysis phase instructions — runtime injection target for backward pass meta-analysis sessions | Conditional: required when project uses programmatic runtime |
 
 ---
