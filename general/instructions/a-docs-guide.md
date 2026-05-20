@@ -22,9 +22,7 @@ The agent-docs guide prevents both by making the "why" explicit before any maint
 
 ## Who Reads It
 
-The agent-docs guide is documentation-owner context — it is not required reading for all agents. Add it to the Owner or dedicated documentation-domain role's required reading list, not to `agents.md`.
-
-Other agents (owners, analysts, implementers) do not need this level of file-by-file rationale. They need to know where things are (that is the index's job) and what the project is (that is `agents.md` and the vision's job).
+The agent-docs guide is maintenance context — it is not required reading for all agents. Add it to the required reading lists of roles that own or maintain a-docs surfaces, not to `agents.md`.
 
 ---
 
@@ -32,7 +30,7 @@ Other agents (owners, analysts, implementers) do not need this level of file-by-
 
 ### One entry per significant file or folder
 
-Cover every file and folder that the documentation-owning role might touch, modify, or make a placement decision about. Do not cover every file mechanically — use judgment. A temporary working file does not need a rationale entry. A core structural document does.
+Cover every file and folder that any a-docs-owning role might touch, modify, or make a placement decision about. Do not cover every file mechanically — use judgment. A temporary working file does not need a rationale entry. A core structural document does.
 
 ### For each entry, answer five questions:
 
@@ -40,7 +38,7 @@ Cover every file and folder that the documentation-owning role might touch, modi
 2. **What it owns** — what is this file responsible for? What content belongs here and nowhere else?
 3. **What breaks without it** — if this file were removed or absorbed into another, what specifically fails?
 4. **What not to consolidate it with** — name the adjacent files that look similar but must remain separate, and explain why.
-5. **Who reads it** — which role loads this file, and when? Agent-docs exist for agents. An artifact that no role is assigned to read is an orphan — it occupies index space and maintenance burden without influencing any agent's behavior. Every artifact must appear in at least one role's required reading or be loaded on-demand by a specific role during a specific operation.
+5. **Who reads it** — which role loads this file, and when? If no role reads it, the artifact's value is in question.
 
 Not every entry needs all five. Short files with obvious purpose can be brief. Files at risk of being misunderstood or consolidated need more. But question 5 should always have an answer — if it does not, the artifact's value is in question.
 
@@ -85,7 +83,7 @@ Name it `a-docs-guide.md`.
 
 Register it in the project index as `$[PROJECT]_AGENT_DOCS_GUIDE`.
 
-Add it to the Owner's required readings, or to the dedicated documentation-domain role's required readings when the project has one. Do not duplicate it in `agents.md`.
+Add it to the required readings of any role that owns or maintains a-docs surfaces. Do not duplicate it in `agents.md`.
 
 ---
 
@@ -98,4 +96,4 @@ The agent-docs guide must be updated whenever:
 
 When adding a new file, the owning role must verify that it is assigned to at least one role's required reading or on-demand loading. An artifact with a rationale entry but no assigned reader is an orphan — it is documented but functionally invisible to every agent in the project. Catching this at creation time is easier than discovering it later.
 
-This is the documentation-owning role's responsibility. An outdated agent-docs guide is worse than none — it gives agents false confidence about a file's purpose.
+An outdated agent-docs guide is worse than none — it gives agents false confidence about a file's purpose.

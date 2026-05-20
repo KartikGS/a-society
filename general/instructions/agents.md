@@ -2,164 +2,56 @@
 
 ## What Is agents.md?
 
-`agents.md` is the primary orientation document for every agent working on a project. It is the first file any agent reads — before role files, before standards, before task specifications. Everything else is reached from here.
+`agents.md` is the minimal orientation entry point for every agent working on a project. It is the first file any agent reads. Its scope is narrow by design: it contains only what every agent needs regardless of role, session type, or workflow phase.
 
-It answers four questions an agent has at the start of any session:
-
-1. **What project am I in?** — a brief description and pointer to the vision
-2. **What role am I playing?** — the role table, with links to role files
-An `agents.md` that answers all three questions clearly reduces session startup time to near zero. An agent that has read it is oriented; one that has not is not — regardless of what else they may have loaded.
-
----
-
-## Why Every Project Needs One
-
-Without `agents.md`, agents either:
-- Start from wherever they happen to land — reading files ad-hoc, building partial context, missing critical constraints
-- Ask the human "what should I read?" at the start of every session — adding friction that compounds across every role, every session, every collaborator
-
-`agents.md` is the fix. It is a single document that front-loads all orientation. The human writes it once. Every agent reads it every time. The cost is one document; the benefit is every session starting correctly.
-
-**It is also the contract between the human and the agent system.** What `agents.md` declares, agents treat as authoritative. What it does not declare, agents do not invent.
+The runtime handles role assignment, required-reading injection, and context loading. `agents.md` is not the mechanism for those — it is the document that answers the questions no role file or injected context can answer first.
 
 ---
 
 ## What Every agents.md Must Contain
 
 ### 1. Project description (mandatory)
-One paragraph: what is this project? Not the vision in full — a one-paragraph summary with a pointer to the full vision document. The agent should be able to read this in ten seconds and know what kind of project they are in.
 
-### 2. File path index reference (mandatory)
-State where the project's index lives and explain the `$VARIABLE_NAME` convention. Every agent must know: when they see `$VAR` in a doc, they look up the index. This should appear early — before the required reading list.
+One paragraph: what is this project? What does it produce? Who does it serve? Close with a pointer to the full vision document if one exists.
 
-### 3. Roles table (mandatory)
-A table with three columns: Role name, file path, one-line primary focus. Every role available in this project appears here. Roles not in this table do not exist in this project.
+### 2. Authority and conflict resolution (mandatory)
 
-**Minimum role set:** Every project must declare an Owner at initialization. Add additional domain roles, including Curator, only when the project needs that dedicated authority. See `$INSTRUCTION_ROLES` for role archetypes and ownership rules.
+When two documents give conflicting guidance, which takes precedence? State the precedence order explicitly. The standard hierarchy is: project vision → project structure → role document → agents.md. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
 
-**Role assignment rules:** Include these two rules explicitly in the roles table section of every `agents.md`:
-- Roles are assigned by the human before a session begins.
-- An agent operates in exactly one role per session. An agent may not assume a role or shift to a different role mid-session without explicit human instruction.
+### 3. Project-wide invariants (mandatory)
 
-### 4. Required readings authority (mandatory)
-Declare that required readings are maintained per role in `a-docs/roles/<role-id>/required-readings.yaml`. Give one concrete example path such as `a-docs/roles/owner/required-readings.yaml`. See `$INSTRUCTION_REQUIRED_READINGS` for the maintenance protocol.
-
-### 6. Authority and conflict resolution (mandatory)
-When two documents give conflicting guidance, which takes precedence? **The expected authority hierarchy is: project vision (highest precedence) → project structure → role document → agents.md.** State this order explicitly. Do not invert it — placing the role document above the vision or structure inverts the intended hierarchy. End with: "if the conflict cannot be resolved using these sources, stop and ask the human."
-
-### 7. Project invariants (mandatory)
-Rules that apply across all roles and all sessions, regardless of task. These are the non-negotiable constraints of the project that no role document can override. Keep this list short — if it grows long, some invariants belong in role documents or the vision instead.
-
-If the project uses records, archives, or other historical artifacts, include an invariant stating that agents must use standing documents as task authority for new work. Historical records are immutable traceability artifacts unless the project explicitly designates a specific historical artifact as the authoritative long-lived reference.
+Rules that apply across all roles and all sessions. These are non-negotiable constraints no role document can override. Keep this list short — three to seven rules. If it grows longer, some invariants belong in role documents or the vision.
 
 ---
 
 ## What Does NOT Belong in agents.md
 
-- **Full role documentation** — that belongs in role files
-- **Implementation details or specifications** — those belong in task-specific documents
-- **Historical context** — what the project used to do belongs in archived artifacts, not the orientation document
-- **Comprehensive process documentation** — that belongs in a workflow document
-- **Anything that changes frequently** — agents.md should be stable. If a section needs frequent updating, it belongs in a document linked from agents.md, not in agents.md itself
+- **Roles and role files** — the runtime assigns roles; agents already know their role when the session starts
+- **Required readings** — the runtime injects these per role; agents.md does not list or point to them
+- **File path index explanation** — the runtime resolves index references; agents.md does not explain the `$VAR` convention
+- **Phase-specific instructions** — those belong in the workflow or phase documents that create the moment
+- **Role-specific content** — anything only some agents need does not belong in the document all agents read
+- **Anything that changes frequently** — agents.md should be stable; if a section needs frequent updating, it belongs elsewhere
 
-If `agents.md` grows long, it has drifted. Extract sections into their correct home and replace them with a single link.
+If agents.md grows long, it has drifted. Extract sections into their correct home.
 
 ---
 
 ## How to Write One
 
 **Step 1 — Write the project description.**
-One paragraph. What is this project? What does it produce? Who does it serve? Close with a pointer to the full vision document.
+One paragraph. What is this project? Close with a pointer to the full vision document.
 
-**Step 2 — Add the file path index reference.**
-State the index location and explain `$VAR` convention in two to three sentences. Agents see this early, before they encounter any `$VAR` references in the required reading list.
+**Step 2 — Write authority and conflict resolution.**
+List documents in precedence order. The standard hierarchy: project vision → project structure → role document → agents.md. End with escalation to human when no source resolves the conflict.
 
-**Step 3 — Build the roles table.**
-List every role. Include: role name, file path, one-line primary focus. Role entry documents should live at `roles/<role-id>/main.md`. Confirm that Owner is present. Add Curator only when the project has a dedicated documentation-domain role. Add the role assignment rules: roles are assigned by the human; one role per agent per session; no mid-session role shifts without explicit instruction.
-
-**Step 4 — Add the required readings authority pointer.**
-State clearly that each role's required readings are maintained in its own `a-docs/roles/<role-id>/required-readings.yaml`. Provide a concrete example link.
-
-**Step 6 — Write authority and conflict resolution.**
-List the documents in precedence order. **The expected hierarchy is: project vision → project structure → role document → agents.md.** Three to five items is typical. End with the escalation to human.
-
-**Step 7 — Write the invariants.**
-Three to seven short rules. These are the project-level constraints that apply to every agent, every session. If you find yourself writing more than seven, some belong in role documents.
-
-If the project keeps historical records, use one invariant to distinguish current authority from historical traceability: standing documents govern new work; records and archives are consulted for traceability, active-flow inputs, or explicitly designated authoritative references.
+**Step 3 — Write the invariants.**
+Three to seven short rules. Non-negotiable constraints that apply to every agent, every session. If a rule only applies to one role or one phase, it does not belong here.
 
 ---
 
 ## Format Rules
 
-- **Short.** An `agents.md` that takes more than five minutes to read is too long. Agents read it at the start of every session. Length is a friction cost paid repeatedly.
-- **Stable.** Roles and invariants should change rarely. If `agents.md` changes frequently, something upstream (the vision, the structure) is unstable.
-- **No redundancy.** Do not repeat content from role files or the vision in `agents.md`. Pointer to the source; do not copy the content. Duplication creates drift.
-- **Imperative tone.** "Read this file first." Not "you may want to read this file first." Agents follow clear instructions.
-
----
-
-## Examples Across Project Types
-
-### Software project
-```
-## What Is This Project?
-[Product name] is a [type] application that [purpose]. Full vision: $VISION.
-
-## File Path Index
-Key file paths are in `indexes/main.md`. Resolve $VAR references there.
-
-## Roles
-| Role | File | Focus |
-|---|---|---|
-| Tech Lead | roles/tech-lead/main.md | Technical decisions and execution |
-| BA | roles/ba/main.md | Requirements and scope |
-| Backend | roles/backend/main.md | API and data layer |
-
-## Required Reading
-Each role's required readings are maintained in `a-docs/roles/<role-id>/required-readings.yaml`.
-
-## Invariants
-- Never use npm or yarn — pnpm only.
-- Do not write feature code as Tech Lead.
-- All scope changes require human approval.
-- Use standing documents as task authority for new work; records are traceability artifacts unless explicitly designated authoritative.
-```
-
-### Editorial / writing project
-```
-## What Is This Project?
-[Publication name] is a [type] publication covering [topic]. Full vision: $VISION.
-
-## File Path Index
-Key file paths are in `indexes/main.md`. Resolve $VAR references there.
-
-## Roles
-| Role | File | Focus |
-|---|---|---|
-| Editor | roles/editor/main.md | Voice, quality, and final approval |
-| Writer | roles/writer/main.md | Drafting within approved briefs |
-
-## Required Reading
-Each role's required readings are maintained in `a-docs/roles/<role-id>/required-readings.yaml`.
-
-## Invariants
-- Never publish without editor approval.
-- Citation format: [standard]. No exceptions.
-- Drafts live in /drafts/ until approved.
-- Use standing documents as task authority for new work; records are traceability artifacts unless explicitly designated authoritative.
-```
-
----
-
-## What Makes an agents.md Fail
-
-**Too long.** If agents skim it, they miss invariants. Keep it to what every agent truly needs, every session.
-
-**Missing the required readings pointer.** A project without a pointer to the authoritative reading list leaves agents to guess what they should load, or rely on stale ad-hoc lists and instructions.
-
-**Roles not in a table.** A prose description of roles is ambiguous. The table is a declaration: these roles exist, these do not.
-
-**Invariants buried in prose.** If invariants are not visually distinct, agents miss them. They should be a named list, not paragraphs.
-
-**Updated frequently.** A frequently-updated `agents.md` signals that something upstream is unstable. Fix the upstream problem; do not treat `agents.md` as a changelog.
+- **Short.** Agents read this at the start of every session. Length is a friction cost paid repeatedly.
+- **Stable.** Invariants should change rarely. If agents.md changes frequently, something upstream is unstable — fix the upstream problem.
+- **No redundancy.** Do not repeat content from role files, the vision, or injected runtime context. Every piece of information has one home.

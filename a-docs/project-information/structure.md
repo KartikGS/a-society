@@ -210,22 +210,6 @@ Project-information documents form a coherent category: they are all read at ori
 
 ---
 
-### `general/feedback/`
-
-**Purpose:** Feedback-reference artifacts for upstream A-Society feedback. The active surface is a single general feedback template that matches the runtime's optional final feedback step. Legacy stream-specific templates remain here only as compatibility references for historical artifacts.
-
-**What belongs here:**
-- The general upstream feedback template
-- Compatibility references for older feedback formats or older update reports that still mention them
-
-**What does not belong here:**
-- Actual feedback reports filed by adopting projects — those go to `a-society/feedback/`
-- Project-level consent records or scaffolding requirements — the runtime now asks for upstream-feedback consent per flow at feedback time
-
-**Principle:** Files here define or preserve feedback artifact formats. They do not define project scaffolding requirements.
-
----
-
 ## How This Structure Grows
 
 New instruction types are added to `general/instructions/` (or a sub-folder if they form a coherent category with existing instructions).

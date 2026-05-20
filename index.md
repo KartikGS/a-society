@@ -22,11 +22,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
 | **Feedback** | | |
 | `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — new runtime-generated feedback lands directly here |
-| `$GENERAL_FEEDBACK_TEMPLATE` | `a-society/general/feedback/template-feedback.md` | Single upstream feedback report template — reference format for the runtime-managed final feedback step |
-| `$INSTRUCTION_CONSENT` | `a-society/general/instructions/consent.md` | How runtime-managed projects ask for upstream feedback consent per flow |
-| `$GENERAL_FEEDBACK_CONSENT` | `a-society/general/feedback/consent.md` | Legacy compatibility note for the retired consent-file model |
-| `$GENERAL_FEEDBACK_MIGRATION_TEMPLATE` | `a-society/general/feedback/template-migration.md` | Legacy migration-focused feedback outline retained for historical references |
-| `$GENERAL_FEEDBACK_CURATOR_SIGNAL_TEMPLATE` | `a-society/general/feedback/template-curator-signal.md` | Legacy project-feedback outline retained for historical references |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Legacy initialization-feedback template retained for historical references |
 | `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Legacy initialization-feedback collection retained for historical artifacts |
 | `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Legacy migration-feedback collection retained for historical artifacts |
@@ -79,6 +74,3 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | **Improvement Templates** | | |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |
-| `$GENERAL_IMPROVEMENT_FEEDBACK` | `a-society/general/improvement/feedback.md` | Optional/manual feedback phase instructions for non-runtime project-owned feedback flows |
-| `$GENERAL_IMPROVEMENT_REPORTS` | `a-society/general/improvement/reports/main.md` | Ready-made improvement reports index template |
-| `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS` | `a-society/general/improvement/reports/template-findings.md` | Backward pass findings report template |

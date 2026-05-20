@@ -93,11 +93,7 @@ When the reviewed artifact lives in `a-docs/` or affects the agent-documentation
 
 ### Output Format
 
-- *If the project uses records:* `a-society/a-docs/records/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder
-
-Before selecting a sequence number, read the record folder's current contents to identify the actual next available number — intermediate artifacts filed during registration or late forward-pass steps may have shifted the sequence forward from its expected position.
-
-**Template:** `$GENERAL_IMPROVEMENT_TEMPLATE_FINDINGS`
+File findings as a sequenced artifact in the active record folder: `a-society/a-docs/records/[identifier]/NN-<role>-findings.md`
 
 ---
 
