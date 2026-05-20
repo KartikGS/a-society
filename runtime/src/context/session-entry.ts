@@ -121,8 +121,8 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
           const stale = staleForwardArtifacts.find(s => s.toNodeId === fromNodeId);
           if (stale && stale.artifacts.length > 0) {
             lines.push(
-              `Note: the following artifact(s) were sent to ${fromNodeId} but had not yet been reviewed when ${fromNodeId} raised the above concern. ` +
-              `Take both the backward handoff and these unreviewed artifacts into account when making your next handoff:`
+              `Note: the following previously queued forward artifact(s) to ${fromNodeId} are superseded by the backward handoff above. ` +
+              `Do not treat them as delivered current work; use these paths only as prior context when creating the corrected replacement handoff:`
             );
             for (const artifactPath of stale.artifacts) {
               lines.push(`- ${artifactPath}`);

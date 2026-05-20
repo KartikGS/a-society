@@ -32,6 +32,8 @@ const projectNamespace = 'test-project';
 const projectRoot = path.join(tmpDir, projectNamespace);
 const artifactPath = path.join(tmpDir, 'test-artifact.md');
 fs.writeFileSync(artifactPath, 'Artifact content here.');
+const backwardFeedbackPath = path.join(tmpDir, 'backward-feedback.md');
+fs.writeFileSync(backwardFeedbackPath, 'Backward feedback content.');
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'indexes'), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles'), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles', 'node-doc'), { recursive: true });
@@ -98,6 +100,33 @@ test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missin
   });
 
   assert.ok(msg.includes('(File does not exist yet)'));
+});
+
+test('buildForwardNodeEntryMessage: renders superseded forward artifact paths for backward correction context', () => {
+  const forwardRelPath = path.relative(tmpDir, artifactPath);
+  const backwardRelPath = path.relative(tmpDir, backwardFeedbackPath);
+  const wf = new WorkflowGraph({
+    nodes: [{ id: 'owner-intake', role: 'Owner' }, { id: 'review', role: 'Reviewer' }],
+    edges: [{ from: 'owner-intake', to: 'review' }]
+  });
+  const msg = buildForwardNodeEntryMessage({
+    nodeId: 'owner-intake',
+    role: 'Owner',
+    workspaceRoot: tmpDir,
+    projectNamespace,
+    wf,
+    completedHandoffs: [],
+    receivingHandoffSnapshot: [{ fromNodeId: 'review', artifacts: [backwardRelPath] }],
+    staleForwardArtifacts: [{ toNodeId: 'review', artifacts: [forwardRelPath] }]
+  });
+
+  assert.ok(msg.includes('From successor review'));
+  assert.ok(msg.includes('Backward feedback content.'));
+  assert.ok(msg.includes('previously queued forward artifact(s) to review are superseded'));
+  assert.ok(msg.includes('Do not treat them as delivered current work'));
+  assert.ok(msg.includes(`- ${forwardRelPath}`));
+  assert.ok(!msg.includes(`[FILE: ${forwardRelPath}]`));
+  assert.ok(!msg.includes('Artifact content here.'));
 });
 
 test('buildForwardNodeEntryMessage: includes role-transition framing when previous node provided', () => {

@@ -34,7 +34,7 @@ function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: s
   fs.writeFileSync(path.join(roleDir, 'required-readings.yaml'), `role: ${roleId}\nrequired_readings: []\n`);
 }
 
-await test('incomplete forward handoff is modeled as repairable handoff parse state', async () => {
+await test('partial forward handoff is accepted and leaves remaining successors unresolved', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-handoff-transition-'));
   const projectNamespace = 'test-project';
   const flowId = 'test-flow';
@@ -81,21 +81,18 @@ await test('incomplete forward handoff is modeled as repairable handoff parse st
   SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
 
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-  await assert.rejects(
-    () => orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'Owner', [
-      {
-        target_node_id: 'branch-a',
-        artifact_path: path.relative(workspaceRoot, artifactPath),
-      },
-    ]),
-    (error: any) => {
-      assert.ok(error instanceof HandoffParseError);
-      assert.strictEqual(error.details.code, 'invalid_transition');
-      assert.strictEqual(error.details.operatorSummary, 'Handoff target mismatch');
-      assert.ok(error.details.modelRepairMessage.includes('branch-a, branch-b'));
-      return true;
-    }
-  );
+  await orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'Owner', [
+    {
+      target_node_id: 'branch-a',
+      artifact_path: path.relative(workspaceRoot, artifactPath),
+    },
+  ]);
+
+  const updated = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+  assert.deepStrictEqual(updated.receivingHandoff['owner-intake=>branch-a'], [path.relative(workspaceRoot, artifactPath)]);
+  assert.ok(updated.completedHandoffs.includes('owner-intake=>branch-a'));
+  assert.ok(!updated.completedHandoffs.includes('owner-intake=>branch-b'));
+  assert.ok(!updated.completedNodes.includes('owner-intake'), 'node should remain incomplete until all outgoing handoffs are settled');
 
   fs.rmSync(workspaceRoot, { recursive: true, force: true });
 });
@@ -155,6 +152,98 @@ await test('invalid target is reported before missing artifact', async () => {
       assert.ok(!error.details.modelRepairMessage.includes('missing-artifact.md'));
       return true;
     }
+  );
+
+  fs.rmSync(workspaceRoot, { recursive: true, force: true });
+});
+
+await test('mixed forward and backward handoffs are applied edge-by-edge', async () => {
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-mixed-handoff-'));
+  const projectNamespace = 'test-project';
+  const flowId = 'test-flow';
+  const recordFolderPath = path.join(workspaceRoot, projectNamespace, 'a-docs', 'records', flowId);
+  fs.mkdirSync(recordFolderPath, { recursive: true });
+  scaffoldRole(workspaceRoot, projectNamespace, 'owner');
+  scaffoldRole(workspaceRoot, projectNamespace, 'curator');
+
+  fs.writeFileSync(path.join(recordFolderPath, 'workflow.yaml'), `workflow:
+  name: test-flow
+  nodes:
+    - id: source-a
+      role: Owner_1
+    - id: source-b
+      role: Owner_2
+    - id: current
+      role: Curator
+    - id: sink
+      role: Owner_3
+  edges:
+    - from: source-a
+      to: current
+    - from: source-b
+      to: current
+    - from: current
+      to: sink
+`);
+
+  const forwardArtifact = path.join(recordFolderPath, 'current-to-sink.md');
+  const backwardArtifact = path.join(recordFolderPath, 'current-to-source-b.md');
+  fs.writeFileSync(forwardArtifact, 'forward-ready output');
+  fs.writeFileSync(backwardArtifact, 'source-b needs correction');
+
+  const flowRun: FlowRun = {
+    flowId,
+    workspaceRoot,
+    projectNamespace,
+    recordFolderPath,
+    runningNodes: ['current'],
+    awaitingHumanNodes: {},
+    pendingHumanInputs: {},
+    completedNodes: ['source-a', 'source-b'],
+    visitedNodeIds: ['source-a', 'source-b', 'current'],
+    completedHandoffs: ['source-a=>current', 'source-b=>current'],
+    receivingHandoff: {},
+    historyHandoff: {
+      'source-a=>current': ['source-a.md'],
+      'source-b=>current': ['source-b.md'],
+    },
+    awaitingHandoff: [],
+    status: 'running',
+    stateVersion: CURRENT_FLOW_STATE_VERSION,
+  };
+
+  const ref = { projectNamespace, flowId };
+  SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
+
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
+  await orchestrator.applyHandoffAndAdvance(flowRun, 'current', 'Curator', [
+    {
+      target_node_id: 'sink',
+      artifact_path: path.relative(workspaceRoot, forwardArtifact),
+    },
+    {
+      target_node_id: 'source-b',
+      artifact_path: path.relative(workspaceRoot, backwardArtifact),
+    },
+  ]);
+
+  const updated = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+  assert.deepStrictEqual(updated.receivingHandoff['current=>sink'], [path.relative(workspaceRoot, forwardArtifact)]);
+  assert.deepStrictEqual(updated.receivingHandoff['current=>source-b'], [path.relative(workspaceRoot, backwardArtifact)]);
+  assert.ok(updated.completedHandoffs.includes('current=>sink'), 'forward edge should be realized');
+  assert.ok(updated.completedHandoffs.includes('source-a=>current'), 'unrejected input edge should remain realized');
+  assert.ok(!updated.completedHandoffs.includes('source-b=>current'), 'rejected input edge should be invalidated');
+  assert.ok(updated.awaitingHandoff.includes('current'), 'current node should wait for corrected input');
+  assert.ok(!updated.completedNodes.includes('current'), 'mixed handoff must not complete current node');
+  assert.ok(!updated.completedNodes.includes('source-b'), 'rejected predecessor should be reopened');
+  assert.ok(
+    sink.events.some((event) =>
+      event.kind === 'handoff.applied' &&
+      event.targets.some((target) => target.nodeId === 'sink') &&
+      event.targets.some((target) => target.nodeId === 'source-b')
+    ),
+    'operator event should include both forward and backward targets'
   );
 
   fs.rmSync(workspaceRoot, { recursive: true, force: true });

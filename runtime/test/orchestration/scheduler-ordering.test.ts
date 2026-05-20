@@ -67,5 +67,54 @@ test('received handoff runnable nodes follow graph order, not receivingHandoff i
   assert.deepStrictEqual(runnableNodeIds, ['owner-intake', 'owner-gate']);
 });
 
+test('awaiting node does not wake from stale forward handoff while its backward handoff is active', () => {
+  const wf = new WorkflowGraph({
+    nodes: [
+      { id: 'a', role: 'owner' },
+      { id: 'b', role: 'reviewer' },
+    ],
+    edges: [
+      { from: 'a', to: 'b' },
+    ],
+  });
+  const flowRun = makeFlowRun({
+    receivingHandoff: {
+      'a=>b': ['old-forward.md'],
+      'b=>a': ['backward-correction.md'],
+    },
+    awaitingHandoff: ['b'],
+  });
+
+  const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+  const runnableNodeIds = (orchestrator as any).deriveRunnableNodeIds(flowRun, wf);
+
+  assert.deepStrictEqual(runnableNodeIds, ['a']);
+  assert.deepStrictEqual(flowRun.awaitingHandoff, ['b']);
+});
+
+test('awaiting node wakes from corrected forward handoff after backward handoff is consumed', () => {
+  const wf = new WorkflowGraph({
+    nodes: [
+      { id: 'a', role: 'owner' },
+      { id: 'b', role: 'reviewer' },
+    ],
+    edges: [
+      { from: 'a', to: 'b' },
+    ],
+  });
+  const flowRun = makeFlowRun({
+    receivingHandoff: {
+      'a=>b': ['corrected-forward.md'],
+    },
+    awaitingHandoff: ['b'],
+  });
+
+  const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+  const runnableNodeIds = (orchestrator as any).deriveRunnableNodeIds(flowRun, wf);
+
+  assert.deepStrictEqual(runnableNodeIds, ['b']);
+  assert.deepStrictEqual(flowRun.awaitingHandoff, []);
+});
+
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exit(1);
