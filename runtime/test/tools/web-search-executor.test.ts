@@ -24,8 +24,12 @@ function stubFetch(status: number, body: unknown): void {
   });
 }
 
-function stubFetchNetworkError(message: string): void {
-  (globalThis as any).fetch = async () => { throw new Error(message); };
+function stubFetchNetworkError(message: string, cause?: Record<string, unknown>): void {
+  (globalThis as any).fetch = async () => {
+    const err = new Error(message);
+    if (cause) (err as any).cause = cause;
+    throw err;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -117,15 +121,29 @@ console.log('\nweb-search-executor › successful responses');
     assert.strictEqual(capturedBody.max_results, 1);
   });
 
-  await test('sends api_key and query in request body', async () => {
+  await test('sends bearer auth header and query in request body', async () => {
     let capturedBody: any;
+    let capturedHeaders: any;
     (globalThis as any).fetch = async (_url: string, init: RequestInit) => {
+      capturedHeaders = init.headers;
       capturedBody = JSON.parse(init.body as string);
       return { ok: true, status: 200, json: async () => ({ results: [] }), text: async () => '' };
     };
     await ex.execute({ id: '5', name: 'web_search', input: { query: 'my search' } });
-    assert.strictEqual(capturedBody.api_key, 'test-key');
+    assert.strictEqual(capturedHeaders.Authorization, 'Bearer test-key');
     assert.strictEqual(capturedBody.query, 'my search');
+    assert.strictEqual(capturedBody.api_key, undefined);
+  });
+
+  await test('does not duplicate Bearer prefix when key already includes it', async () => {
+    const bearerEx = new WebSearchExecutor('Bearer existing-key');
+    let capturedHeaders: any;
+    (globalThis as any).fetch = async (_url: string, init: RequestInit) => {
+      capturedHeaders = init.headers;
+      return { ok: true, status: 200, json: async () => ({ results: [] }), text: async () => '' };
+    };
+    await bearerEx.execute({ id: '6', name: 'web_search', input: { query: 'my search' } });
+    assert.strictEqual(capturedHeaders.Authorization, 'Bearer existing-key');
   });
 }
 
@@ -149,6 +167,41 @@ console.log('\nweb-search-executor › error handling');
     assert.strictEqual(r.isError, true);
     assert.ok(r.content.includes('network request failed'));
     assert.ok(r.content.includes('network timeout'));
+    assert.ok(r.content.includes('runtime process'));
+  });
+
+  await test('retries retryable network failures before returning results', async () => {
+    let calls = 0;
+    (globalThis as any).fetch = async () => {
+      calls++;
+      if (calls === 1) {
+        const err = new Error('fetch failed');
+        (err as any).cause = { code: 'ETIMEDOUT', address: '52.1.243.68', port: 443 };
+        throw err;
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          results: [{ title: 'Recovered', url: 'https://example.com/recovered', content: 'Recovered content.', score: 1 }]
+        }),
+        text: async () => ''
+      };
+    };
+
+    const r = await ex.execute({ id: '3', name: 'web_search', input: { query: 'test' } });
+    assert.strictEqual(r.isError, false);
+    assert.strictEqual(calls, 2);
+    assert.ok(r.content.includes('Recovered'));
+  });
+
+  await test('returns detailed error after retryable network failures are exhausted', async () => {
+    stubFetchNetworkError('fetch failed', { code: 'ETIMEDOUT', address: '52.1.243.68', port: 443 });
+    const r = await ex.execute({ id: '4', name: 'web_search', input: { query: 'test' } });
+    assert.strictEqual(r.isError, true);
+    assert.ok(r.content.includes('after 2 attempts'));
+    assert.ok(r.content.includes('ETIMEDOUT'));
+    assert.ok(r.content.includes('52.1.243.68:443'));
   });
 
   await test('returns error on malformed JSON response', async () => {
@@ -158,7 +211,7 @@ console.log('\nweb-search-executor › error handling');
       json: async () => { throw new SyntaxError('Unexpected token'); },
       text: async () => ''
     });
-    const r = await ex.execute({ id: '3', name: 'web_search', input: { query: 'test' } });
+    const r = await ex.execute({ id: '5', name: 'web_search', input: { query: 'test' } });
     assert.strictEqual(r.isError, true);
     assert.ok(r.content.includes('failed to parse'));
   });

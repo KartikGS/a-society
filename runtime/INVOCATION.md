@@ -35,6 +35,14 @@ The runtime server can start without a model, but runtime work cannot proceed un
 - The Settings modal stays open until a usable active model exists
 - Environment variables in `.env` no longer select the runtime model
 
+### Web Search Connectivity
+
+Web search is Tavily-backed. Enabling it in Settings requires a Tavily API key, and successful tool calls require outbound HTTPS access from the runtime process to:
+
+`https://api.tavily.com/search`
+
+If the runtime is launched from a sandboxed command environment without network access, `web_search` calls fail with a network error even when the API key is valid. Start the runtime from a normal operator terminal, or grant network access to the runtime process before relying on web search.
+
 ---
 
 ## UI Modes
