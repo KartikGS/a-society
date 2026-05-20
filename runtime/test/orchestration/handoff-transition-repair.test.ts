@@ -72,7 +72,7 @@ await test('incomplete forward handoff is modeled as repairable handoff parse st
     completedNodes: [],
     visitedNodeIds: ['owner-intake'],
     completedHandoffs: [],
-    pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
   };
@@ -132,7 +132,7 @@ await test('invalid target is reported before missing artifact', async () => {
     completedNodes: [],
     visitedNodeIds: ['owner-intake'],
     completedHandoffs: [],
-    pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
   };

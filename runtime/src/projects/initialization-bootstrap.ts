@@ -213,7 +213,10 @@ function buildInitializationBrief(
   return lines.join('\n') + '\n';
 }
 
-function buildInitializationWorkflowDocument(): string {
+function buildInitializationWorkflowDocument(
+  initializationGuideContent: string,
+  initializationBriefContent: string
+): string {
   return yaml.dump({
     workflow: {
       name: 'Runtime Project Initialization',
@@ -228,7 +231,9 @@ function buildInitializationWorkflowDocument(): string {
             'Use the runtime initialization guide and initialization brief as the authoritative instructions for this flow.',
             'The runtime already scaffolded the compulsory a-docs files; fill those files rather than recreating them.',
             'Ask batched questions only after reading what the project already reveals.',
-            'When the compulsory scaffolded surfaces are populated enough for normal Owner-led work, close the forward pass from this node.'
+            'When the compulsory scaffolded surfaces are populated enough for normal Owner-led work, close the forward pass from this node.',
+            `Runtime initialization guide:\n\n${initializationGuideContent.trim()}`,
+            `Runtime initialization brief:\n\n${initializationBriefContent.trim()}`
           ],
           inputs: [
             'Runtime initialization guide artifact',
@@ -257,27 +262,6 @@ function buildInitializationWorkflowDocument(): string {
       edges: []
     }
   }, { noRefs: true, lineWidth: 120 });
-}
-
-function buildInitializationArtifacts(
-  workspaceRoot: string,
-  projectNamespace: string,
-  projectRoot: string,
-  recordFolderPath: string,
-  scaffoldResult: ScaffoldResult,
-  mode: InitializationMode
-): string[] {
-  const briefPath = path.join(recordFolderPath, '00-runtime-initialization-brief.md');
-  fs.writeFileSync(
-    briefPath,
-    buildInitializationBrief(workspaceRoot, projectNamespace, projectRoot, recordFolderPath, mode, scaffoldResult),
-    'utf8'
-  );
-
-  return [
-    RUNTIME_INITIALIZATION_RELATIVE_PATH,
-    path.relative(workspaceRoot, briefPath)
-  ];
 }
 
 export function bootstrapInitializationFlow(
@@ -337,21 +321,22 @@ export function bootstrapInitializationFlow(
   const recordFolderPath = path.join(recordsRoot, flowId);
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(recordFolderPath, 'workflow.yaml'),
-    buildInitializationWorkflowDocument(),
-    'utf8'
-  );
-  syncRecordMetadataFromWorkflow(recordFolderPath, flowId);
-
-  const activeArtifacts = buildInitializationArtifacts(
+  const initializationGuideContent = fs.readFileSync(runtimeInitializationPath, 'utf8');
+  const initializationBriefContent = buildInitializationBrief(
     workspaceRoot,
     namespace,
     projectRoot,
     recordFolderPath,
-    scaffoldResult,
-    mode
+    mode,
+    scaffoldResult
   );
+
+  fs.writeFileSync(
+    path.join(recordFolderPath, 'workflow.yaml'),
+    buildInitializationWorkflowDocument(initializationGuideContent, initializationBriefContent),
+    'utf8'
+  );
+  syncRecordMetadataFromWorkflow(recordFolderPath, flowId);
 
   return {
     flowRun: {
@@ -365,9 +350,6 @@ export function bootstrapInitializationFlow(
       completedNodes: [],
       visitedNodeIds: [],
       completedHandoffs: [],
-      pendingNodeArtifacts: {
-        'owner-intake': activeArtifacts
-      },
       receivingHandoff: {},
       historyHandoff: {},
       awaitingHandoff: [],

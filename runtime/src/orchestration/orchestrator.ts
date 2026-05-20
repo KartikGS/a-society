@@ -1255,7 +1255,6 @@ export class FlowOrchestrator {
     flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
-    delete flowRun.pendingNodeArtifacts[nodeId];
   }
 
   private addCompletedNode(flowRun: FlowRun, nodeId: string) {

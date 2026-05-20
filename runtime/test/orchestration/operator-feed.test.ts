@@ -42,7 +42,7 @@ const flowRun: FlowRun = {
   completedNodes: [],
   visitedNodeIds: [],
   completedHandoffs: [],
-  pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
   status: 'running',
   stateVersion: CURRENT_FLOW_STATE_VERSION,
 };

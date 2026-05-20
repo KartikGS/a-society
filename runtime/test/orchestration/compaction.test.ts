@@ -79,9 +79,6 @@ await test('compactRoleSession archives raw history and replaces active history 
     pendingHumanInputs: {},
     completedNodes: ['owner-intake'],
     completedHandoffs: ['owner-intake=>owner-review'],
-    pendingNodeArtifacts: {
-      'owner-review': ['project/a-docs/records/flow/01-owner.md']
-    },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -133,7 +130,7 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
   };

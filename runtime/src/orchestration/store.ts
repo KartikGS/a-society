@@ -103,9 +103,6 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
   if (!Array.isArray(flow.completedHandoffs)) {
     flow.completedHandoffs = [];
   }
-  if (!flow.pendingNodeArtifacts || typeof flow.pendingNodeArtifacts !== 'object') {
-    throw new Error('Persisted flow state is missing pendingNodeArtifacts.');
-  }
   if (!Array.isArray(flow.visitedNodeIds)) {
     flow.visitedNodeIds = [];
   }

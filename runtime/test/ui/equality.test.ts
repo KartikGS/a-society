@@ -31,7 +31,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: {}, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
     consentState: {

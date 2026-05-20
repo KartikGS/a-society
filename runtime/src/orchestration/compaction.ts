@@ -84,16 +84,6 @@ function summarizeFlowState(flowRun: FlowRun, roleName: string, currentNodeId: s
     }
   }
 
-  const pendingArtifacts = flowRun.pendingNodeArtifacts[currentNodeId] ?? [];
-  lines.push('Current node pending artifacts:');
-  if (pendingArtifacts.length === 0) {
-    lines.push('- (none)');
-  } else {
-    for (const artifactPath of pendingArtifacts) {
-      lines.push(`- ${artifactPath}`);
-    }
-  }
-
   return lines.join('\n');
 }
 

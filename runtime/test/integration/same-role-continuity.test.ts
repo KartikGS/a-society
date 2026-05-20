@@ -200,7 +200,6 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: { 'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)] },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
@@ -219,10 +218,6 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: {
-      'owner-one': [path.relative(workspaceRoot, ownerInstanceArtifact)],
-      'owner-two': [path.relative(workspaceRoot, ownerInstanceArtifact)]
-    },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
@@ -320,7 +315,7 @@ async function run() {
     assert.ok(msg.includes('Reviewer requests revision to the Owner brief.'));
   });
 
-  await test('Store: loading a non-v9 flow is rejected but it remains listable for deletion', async () => {
+  await test('Store: loading an incompatible flow is rejected but it remains listable for deletion', async () => {
     resetState();
 
     const v5Flow: any = {
@@ -333,7 +328,6 @@ async function run() {
       pendingHumanInputs: {},
       completedNodes: [],
       completedHandoffs: [],
-      pendingNodeArtifacts: {},
       status: 'completed',
       stateVersion: '5',
     };
@@ -546,9 +540,6 @@ async function run() {
       completedNodes: ['owner-intake', 'ta'],
       visitedNodeIds: ['owner-intake', 'ta'],
       completedHandoffs: ['owner-intake=>ta', 'ta=>owner-gate'],
-      pendingNodeArtifacts: {
-        'owner-gate': [path.relative(workspaceRoot, taArtifact)]
-      },
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
@@ -598,12 +589,6 @@ async function run() {
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
       visitedNodeIds: ['owner-intake'],
-      pendingNodeArtifacts: {
-        'owner-intake': [
-          path.relative(workspaceRoot, ownerArtifact1),
-          path.relative(workspaceRoot, reviewFeedbackArtifact)
-        ]
-      },
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
@@ -653,12 +638,6 @@ async function run() {
       pendingHumanInputs: {},
       completedNodes: ['owner-gate'],
       visitedNodeIds: ['owner-intake', 'owner-gate'],
-      pendingNodeArtifacts: {
-        'owner-intake': [
-          path.relative(workspaceRoot, ownerArtifact1),
-          path.relative(workspaceRoot, reviewFeedbackArtifact)
-        ]
-      },
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
@@ -863,7 +842,6 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      pendingNodeArtifacts: {},
       receivingHandoff: {
         // Insert the later graph node first; graph order should still claim owner-intake.
         'ta=>owner-gate': [path.relative(workspaceRoot, taArtifact)],
@@ -910,10 +888,6 @@ async function run() {
       runningNodes: ['owner-intake', 'owner-gate'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      pendingNodeArtifacts: {
-        'owner-intake': [path.relative(workspaceRoot, ownerArtifact1)],
-        'owner-gate': [path.relative(workspaceRoot, taArtifact)]
-      },
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
@@ -951,9 +925,6 @@ async function run() {
       pendingHumanInputs: {},
       completedNodes: [],
       completedHandoffs: ['owner-intake=>ta'],
-      pendingNodeArtifacts: {
-        'ta': [path.relative(workspaceRoot, ownerArtifact1)]
-      },
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);

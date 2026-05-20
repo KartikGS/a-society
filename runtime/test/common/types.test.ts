@@ -30,15 +30,14 @@ test('FlowRun: conforms to new multi-node structure', () => {
     pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: { 'node1': ['artifact.md'] }, receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
   };
 
   assert.strictEqual(flowRun.runningNodes.length, 0);
   assert.strictEqual(flowRun.completedNodes.length, 0);
-  assert.ok(flowRun.pendingNodeArtifacts['node1']);
-  assert.strictEqual(flowRun.pendingNodeArtifacts['node1'][0], 'artifact.md');
+  assert.deepStrictEqual(flowRun.receivingHandoff, {});
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

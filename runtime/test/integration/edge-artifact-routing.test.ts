@@ -58,10 +58,6 @@ async function runTest() {
     pendingHumanInputs: {},
     completedNodes: [],
     completedHandoffs: [],
-    pendingNodeArtifacts: {
-      producer: ['records/test-flow/01-owner-brief.md'],
-      'branch-c': ['records/test-flow/01-ta-brief.md'],
-    },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,
     stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -85,19 +81,10 @@ async function runTest() {
     ['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k)),
     'concurrent handoffs should record all edge keys'
   );
-  assert.deepStrictEqual(
-    updated.pendingNodeArtifacts['branch-a'],
-    ['records/test-flow/02-producer-to-a.md'],
-    'branch-a should receive only its own edge artifact'
-  );
+  assert.deepStrictEqual(updated.receivingHandoff['producer=>branch-a'], ['records/test-flow/02-producer-to-a.md']);
   assert.ok(
     updated.receivingHandoff['producer=>branch-b'] && updated.receivingHandoff['branch-c=>branch-b'],
     'branch-b should receive both concurrent predecessor handoffs'
-  );
-  assert.deepStrictEqual(
-    updated.pendingNodeArtifacts['branch-b'],
-    ['records/test-flow/02-producer-to-b.md', 'records/test-flow/03-c-to-b.md'],
-    'join activation must use the edge-specific artifact for producer=>branch-b, not producer=>branch-a'
   );
 
   console.log('Integration test PASSED.');

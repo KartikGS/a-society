@@ -64,9 +64,6 @@ async function runTest() {
     pendingHumanInputs: {},
     completedNodes: ['proposal'],
     completedHandoffs: ['proposal=>review', 'proposal=>audit'],
-    pendingNodeArtifacts: {
-      review: [proposalToReviewRel],
-    },
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
@@ -93,11 +90,6 @@ async function runTest() {
   assert.ok(updated.awaitingHandoff.includes('review'), 'review should suspend after sending work back');
   assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'rejected edge must be invalidated');
   assert.ok(updated.completedHandoffs.includes('proposal=>audit'), 'sibling completed edge must remain intact');
-  assert.deepStrictEqual(
-    updated.pendingNodeArtifacts.proposal,
-    [proposalToReviewRel, reviewFeedbackRel],
-    'reactivated predecessor should receive the rejected artifact plus current feedback'
-  );
   assert.ok(!updated.completedNodes.includes('proposal'), 'reactivated predecessor should be removed from completedNodes');
   const reopenedSession = SessionStore.loadRoleSession('backward-flow__curator');
   assert.ok(reopenedSession, 'role-scoped predecessor session should be preserved for re-entry');
