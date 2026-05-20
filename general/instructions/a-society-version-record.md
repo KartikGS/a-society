@@ -5,9 +5,9 @@
 The A-Society version record is a file in a project's `a-docs/` that records:
 
 1. The version of the A-Society framework that was active when the project was initialized
-2. A log of framework update reports the project's Curator has applied since initialization
+2. A log of framework update reports that have been applied since initialization
 
-It is the project's ledger for its position in the A-Society version history. Without it, a Curator joining mid-lifecycle has no way to determine which update reports have already been applied and which are still pending.
+It is the project's ledger for its position in the A-Society version history. Without it, there is no way to determine which update reports have already been applied and which are still pending.
 
 ---
 
@@ -19,7 +19,7 @@ The Owner creates this file during initialization — after the other foundation
 
 ## Who Maintains It
 
-The project's Curator. After each migration cycle — after implementing a framework update report — the Curator adds a row to the Applied Updates log.
+The role responsible for applying a given update report adds a row to the Applied Updates log after each report is implemented.
 
 ---
 
@@ -60,7 +60,7 @@ Replace the placeholder row once the first update is applied. Each row records: 
 
 ---
 
-## How to Apply Update Reports (Curator)
+## How to Apply Update Reports
 
 When performing migration tasks:
 

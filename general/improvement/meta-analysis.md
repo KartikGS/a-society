@@ -2,17 +2,13 @@
 
 Instructions for roles producing backward pass findings.
 
+Scope: the project's framework layer only — `a-docs/`, workflow and coordination surfaces, and agent-facing tooling guidance. Not for domain work product; bugs, feature requests, and content changes belong to the project's normal execution system.
+
 ---
 
-### When to Run
+### Depth
 
-Run the backward pass after every substantive forward pass — any work that involved multiple phases or touched structural decisions. For trivial edits with no friction, the backward pass can be minimal — a single sentence noting that no friction was observed is sufficient. The backward pass is always done; depth varies.
-
-The depth of the backward pass should be proportional to the work:
-- **Lightweight:** 1–3 top findings, brief rationale. Use for routine work.
-- **Full:** Structured per-agent findings using the findings template. Use when blocking friction, ambiguity, or contradictions were encountered during the forward pass.
-
-The agent decides which depth is appropriate. If unsure, default to lightweight.
+Depth is proportional to the work. **Lightweight:** 1–3 top findings, brief rationale — for routine work. **Full:** structured per-agent findings using the findings template — when blocking friction, ambiguity, or contradictions were encountered during the forward pass. If unsure, default to lightweight.
 
 ---
 
@@ -39,13 +35,11 @@ Backward pass meta-analysis is allowed to directly correct local standing framew
 - If you own a standing local surface in the project's `ownership.yaml`, update it during this phase when the needed change is clear.
 - The Owner may directly update Owner-owned governance surfaces during this phase as well.
 - Historical records are immutable. Do not rewrite old record artifacts, reports, or archived logs.
-- Upstream A-Society changes are not direct local fixes. Capture them as framework feedback for the final feedback phase.
 
 Your findings artifact should record:
 - what friction you encountered
 - what local correction you made, if any
 - what still needs Owner attention locally
-- what should be elevated as A-Society feedback
 
 ---
 
@@ -57,19 +51,10 @@ Your findings artifact should record:
 
 ---
 
-### Generalizable Findings
-
-When a finding appears project-agnostic — meaning it would apply equally to a software project, a writing project, and a research project — flag it explicitly as a potential framework contribution. Note it in the findings artifact so it is not lost.
-
-The project Owner will decide what belongs in the final framework-feedback artifact. Your job here is to flag the candidate clearly, not to route it yourself.
-
----
-
 ### Useful Lenses
 
 When evaluating whether a finding warrants action, consider:
 
-- **Portability:** Is the fix specific to this project, or should it propagate to the general library?
 - **Evolvability:** Does the fix reduce future edit cost (e.g., canonical source + cross-reference instead of duplication)?
 - **Proportionality:** Is the fix worth the disruption? Small friction in a rare edge case may not warrant a doc change.
 
@@ -82,24 +67,18 @@ These are judgment aids, not mandatory per-finding assessments.
 When the reviewed artifact lives in the project's `a-docs/` or affects the agent-documentation layer, apply these additional checks:
 
 1. **Redundancy check:** Does this document reference, explain, or link anything already in the agent's starting context via required readings or runtime injection? If yes, flag the specific lines for removal.
-2. **Phase-coupling check:** Does this role document contain instructions applicable only at a specific workflow phase? If yes, flag the section for extraction to a phase-specific document and add a pointer.
-3. **Workflow-conditioning check:** Does this document contain instructions applicable only in specific workflow types? If yes, flag the section for extraction.
-4. **Workflow-delivery check:** If a role document depends on phase-specific support docs, does the active workflow surface those docs at the node or gate where they are needed? If not, flag the gap as pointer-only JIT: the support doc exists, but the workflow is not delivering it at phase entry.
-5. **Role document scope check:** Does this role document contain anything beyond routing guidance, ownership declaration, and pointers to phase-specific documents? If yes, flag the excess.
-6. **agents.md scope check:** Does the project's `agents.md` contain anything beyond: what the project is (one paragraph), the authority/conflict resolution model, and project-wide invariants? If yes, flag it for removal.
-7. **Addition-without-removal check:** When a new instruction is added to a role document or `agents.md`, does any existing content become redundant or vestigial? If yes, flag it. Adding without checking what the addition makes obsolete is how garbage accumulates.
-8. **Repeated-header matching guidance:** When editing files with repeated semantic sub-headers (for example, `### Roles` appearing under multiple parent `##` headings), include the parent section header in the match context to preserve placement integrity. A mis-edit that places content under the wrong parent due to ambiguous header matching is a structural error, not a minor slip.
+2. **Conditional-instruction check:** Does this document contain instructions applicable only at a specific node or workflow type? If yes, flag the section for extraction to the node document where it applies, and add a pointer.
+3. **Workflow-delivery check:** If a role document depends on node-specific support docs, does the active workflow surface those docs at the node where they are needed? If not, flag the gap as pointer-only JIT: the support doc exists, but the workflow is not delivering it at node entry.
+4. **Role document scope check:** Does this role document contain anything beyond routing guidance, ownership declaration, and pointers to node-specific documents? If yes, flag the excess.
+5. **agents.md scope check:** Does the project's `agents.md` contain anything beyond: what the project is (one paragraph), the authority/conflict resolution model, and project-wide invariants? If yes, flag it for removal.
+6. **Addition-without-removal check:** When a new instruction is added to a role document or `agents.md`, does any existing content become redundant or vestigial? If yes, flag it. Adding without checking what the addition makes obsolete is how garbage accumulates.
+7. **Repeated-header matching guidance:** When editing files with repeated semantic sub-headers (for example, `### Roles` appearing under multiple parent `##` headings), include the parent section header in the match context to preserve placement integrity. A mis-edit that places content under the wrong parent due to ambiguous header matching is a structural error, not a minor slip.
 
 ---
 
 ### Output Format
 
-- *If the project uses records:* `[PROJECT_RECORDS]/[identifier]/NN-<role>-findings.md` — findings are sequenced artifacts in the active record folder
-- *If the project does not use records:* `[PROJECT_IMPROVEMENT_REPORTS]/META-YYYYMMDD-<TASK-ID>-<role>-findings.md`
-
-The project's `improvement/main.md` declares which path applies.
-
-Before selecting a sequence number, read the record folder's current contents to identify the actual next available number — intermediate artifacts filed during registration or late forward-pass steps may have shifted the sequence forward from its expected position.
+File findings as a sequenced artifact in the active record folder: `NN-<role>-findings.md`
 
 **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
 

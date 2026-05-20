@@ -1,0 +1,105 @@
+<svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">A-Society workflow banner</title>
+  <desc id="desc">A branching workflow graph with work moving forward, improvement moving backward, and markdown documents storing project memory.</desc>
+  <defs>
+    <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#08111F"/>
+      <stop offset="0.52" stop-color="#0B1220"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <marker id="arrow-work" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1L10 6L1 11" stroke="#E2E8F0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-improve" markerWidth="12" markerHeight="12" refX="2" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1L10 6L1 11" stroke="#94A3B8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-memory" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M1 1L8 5L1 9" stroke="#CBD5E1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <filter id="node-glow" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset/>
+      <feGaussianBlur stdDeviation="8"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.16 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+    <g id="doc">
+      <path d="M0 0H38L54 16V78H0V0Z" fill="#0F172A" stroke="#CBD5E1" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M38 0V16H54" stroke="#CBD5E1" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M12 27H40" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+      <path d="M12 40H36" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+      <path d="M12 53H31" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round"/>
+    </g>
+  </defs>
+
+  <rect width="1600" height="520" rx="32" fill="url(#banner-bg)"/>
+  <path d="M72 88H1528" stroke="#172033"/>
+  <path d="M72 432H1528" stroke="#172033"/>
+
+  <path d="M214 58H1386" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-work)"/>
+  <text x="800" y="42" fill="#E2E8F0" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" text-anchor="middle" letter-spacing="0">work</text>
+
+  <path d="M1386 462H214" stroke="#94A3B8" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-improve)"/>
+  <text x="800" y="498" fill="#94A3B8" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="28" font-weight="600" text-anchor="middle" letter-spacing="0">improve</text>
+
+  <g stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M128 260H282" stroke="#00C43A"/>
+    <path d="M282 260L408 176" stroke="#00C43A"/>
+    <path d="M282 260L408 344" stroke="#00C43A"/>
+    <path d="M408 176H560" stroke="#00C43A"/>
+    <path d="M408 344H560" stroke="#00C43A"/>
+    <path d="M560 176L694 260" stroke="#00C43A"/>
+    <path d="M560 344L694 260" stroke="#00C43A"/>
+
+    <path d="M694 260H842" stroke="#FACC15"/>
+    <path d="M842 260L972 176" stroke="#FACC15"/>
+    <path d="M842 260L972 344" stroke="#FACC15"/>
+
+    <path d="M972 176L1104 260" stroke="#EF233C"/>
+    <path d="M972 344L1104 260" stroke="#2563EB"/>
+
+    <path d="M1104 260H1240" stroke="#475569"/>
+    <path d="M1240 260L1368 176" stroke="#475569"/>
+    <path d="M1240 260L1368 344" stroke="#475569"/>
+    <path d="M1368 176L1480 260" stroke="#475569"/>
+    <path d="M1368 344L1480 260" stroke="#475569"/>
+  </g>
+
+  <g filter="url(#node-glow)">
+    <circle cx="128" cy="260" r="18" fill="#00C43A"/>
+    <circle cx="282" cy="260" r="18" fill="#00C43A"/>
+    <circle cx="408" cy="176" r="18" fill="#00C43A"/>
+    <circle cx="408" cy="344" r="18" fill="#00C43A"/>
+    <circle cx="560" cy="176" r="18" fill="#00C43A"/>
+    <circle cx="560" cy="344" r="18" fill="#00C43A"/>
+    <circle cx="694" cy="260" r="20" fill="#00C43A"/>
+
+    <circle cx="842" cy="260" r="21" fill="#FACC15"/>
+    <circle cx="972" cy="176" r="21" fill="#FACC15"/>
+    <circle cx="972" cy="344" r="21" fill="#2563EB"/>
+    <circle cx="1104" cy="260" r="21" fill="#EF233C"/>
+
+    <circle cx="1240" cy="260" r="18" fill="#475569"/>
+    <circle cx="1368" cy="176" r="18" fill="#475569"/>
+    <circle cx="1368" cy="344" r="18" fill="#475569"/>
+    <circle cx="1480" cy="260" r="18" fill="#475569"/>
+  </g>
+
+  <g opacity="0.96">
+    <use href="#doc" x="304" y="76"/>
+    <path d="M331 154C318 184 302 216 286 242" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-memory)"/>
+
+    <use href="#doc" x="697" y="370"/>
+    <path d="M724 370C718 340 710 312 704 286" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-memory)"/>
+
+    <use href="#doc" x="831" y="74"/>
+    <path d="M842 239C842 206 846 180 858 152" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-memory)"/>
+
+    <use href="#doc" x="1073" y="370"/>
+    <path d="M1100 286C1100 316 1100 340 1100 362" stroke="#CBD5E1" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow-memory)"/>
+  </g>
+
+</svg>

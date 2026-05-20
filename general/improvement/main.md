@@ -29,34 +29,7 @@ Avoid adding new principled content as a section inside an existing large file. 
 
 ---
 
-## Principle 2: Project-Agnostic Folder Structure
-
-**Separate project-specific content from cross-project agent infrastructure.**
-
-Organize project agent documentation so that:
-- Cross-project agent standards live in a dedicated framework directory (e.g., `a-society/`)
-- Project-specific content lives under the project's own `a-docs/` folder
-- Each project's `a-docs/` folder contains its own domain-scoped folders
-
-**Why this matters:** As more projects are added, cross-project agent infrastructure remains reusable without modification. Project-specific principles do not bleed into the cross-project layer.
-
-**Naming convention:** Use the project name as the subfolder key. Within each project folder, use domain-scoped subfolders (`improvement/`, `project-principles/`, `governance/`).
-
----
-
-## Principle 3: Surfaced Authority Over Transitive Reference Chasing
-
-**A cross-reference does not automatically become required reading. Load what the role or workflow explicitly surfaces as authority for the task.**
-
-Cross-references are useful pointers to authoritative homes, but recursively loading every referenced document bloats context and makes it harder for agents to distinguish "nice to know" from "must act on now."
-
-**Rule for agents:** Use standing documents and workflow-delivered context as task authority. Follow a cross-reference when the current task specifically requires that topic, not merely because the reference exists.
-
-**Rule for doc authors:** If a role or workflow node truly needs a document every time, surface it explicitly through `required-readings.yaml` or node-specific workflow injection. Do not rely on passive reference chains to deliver required context.
-
----
-
-## Principle 4: Simplicity Over Protocol
+## Principle 2: Simplicity Over Protocol
 
 **Before creating a new process rule, ask: is the user consultation path adequate?**
 
@@ -71,7 +44,7 @@ Creating a formal authority protocol adds ceremony and cognitive overhead for fu
 
 ---
 
-## Principle 5: Separation of Concerns in Documentation
+## Principle 3: Separation of Concerns in Documentation
 
 **Each file should have one primary purpose. Cross-reference; do not consolidate.**
 
@@ -91,21 +64,4 @@ When evaluating a proposed fix during backward-pass work:
 1. **Before deciding "add to X"** — ask whether X is the right home. Would a new dedicated file serve the atomic change site principle better?
 2. **Before deciding "add a new protocol"** — ask whether user consultation adequately handles the edge case. Reject the protocol if the informal path is sufficient.
 3. **Before deciding "add a cross-reference"** — ensure the cross-reference uses a `$VARIABLE_NAME`. The implementing agent must be able to follow it without interpretation.
-4. **When creating new content** — decide first whether it is project-specific or cross-project. Place it accordingly.
 
----
-
-## Backward Pass Protocol
-
-The improvement process runs in two phases, each with phase-specific instruction context:
-- **Meta-analysis:** `$GENERAL_IMPROVEMENT_META_ANALYSIS` — instructions for roles producing backward pass findings.
-- **Feedback:** `$A_SOCIETY_RUNTIME_FEEDBACK` when the A-Society runtime manages upstream feedback. Manual/non-runtime projects may keep their own feedback guidance if they need one.
-
-The backward pass is only for the project's framework layer:
-- local `a-docs/`
-- local workflow and coordination surfaces
-- local agent-facing tooling/runtime guidance
-
-It is not for the project's domain work product. Product bugs, feature requests, or editorial/content changes belong to the project's normal execution system, not the improvement loop.
-
-When using the A-Society runtime, phase instructions are injected into the appropriate agent sessions automatically. For projects without the runtime, follow the traversal ordering rules in your project's `a-docs/improvement/` instantiation of this framework.

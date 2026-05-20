@@ -1,0 +1,27 @@
+<svg width="760" height="220" viewBox="0 0 760 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">A-Society wordmark</title>
+  <desc id="desc">A-Society wordmark with the four-shard logo.</desc>
+  <defs>
+    <linearGradient id="green" x1="30" y1="99" x2="87" y2="20" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="red" x1="95" y1="20" x2="154" y2="99" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="yellow" x1="29" y1="107" x2="87" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="154" y1="107" x2="95" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#64748B"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+  </defs>
+  <path d="M30 99L87 20L86 33L57 99H30Z" fill="url(#green)"/>
+  <path d="M95 20L154 99H127L96 33L95 20Z" fill="url(#red)"/>
+  <path d="M29 107L59 111L86 178L87 190L29 107Z" fill="url(#yellow)"/>
+  <path d="M125 111L154 107L95 190L96 178L125 111Z" fill="url(#blue)"/>
+  <text x="202" y="132" fill="#0B1220" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="72" font-weight="700" letter-spacing="0">A-Society</text>
+</svg>
