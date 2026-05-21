@@ -1,11 +1,13 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
-config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
+config({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
 
 import express, { type Express, type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
+import os from 'node:os';
+import { exec } from 'node:child_process';
 import { PassThrough, Writable } from 'node:stream';
 import { WebSocketServer, WebSocket } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
@@ -102,6 +104,32 @@ function parsePort(rawPort: string | undefined): number {
     throw new Error(`Invalid A_SOCIETY_UI_PORT value "${rawPort}". Expected an integer between 1 and 65535.`);
   }
   return parsed;
+}
+
+function resolveWorkspaceRoot(): string {
+  return path.resolve(process.env.A_SOCIETY_WORKSPACE_ROOT || process.env.INIT_CWD || process.cwd());
+}
+
+function buildOpenCommand(url: string): string | null {
+  switch (os.platform()) {
+    case 'darwin':
+      return `open "${url}"`;
+    case 'win32':
+      return `start "" "${url}"`;
+    default:
+      return `xdg-open "${url}"`;
+  }
+}
+
+function openBrowser(url: string): void {
+  const command = buildOpenCommand(url);
+  if (!command) return;
+
+  exec(command, (error) => {
+    if (error) {
+      process.stderr.write(`[runtime/server] Browser auto-open skipped: ${error.message}\n`);
+    }
+  });
 }
 
 function isPromptLine(text: string): boolean {
@@ -1548,8 +1576,12 @@ export async function startServer(workspaceRoot: string, port: number): Promise<
 
 async function main(): Promise<void> {
   const port = parsePort(process.env.A_SOCIETY_UI_PORT);
-  await startServer(process.cwd(), port);
-  process.stderr.write(`[runtime/server] UI available at http://localhost:${port}\n`);
+  const workspaceRoot = resolveWorkspaceRoot();
+  console.log(workspaceRoot)
+  const url = `http://localhost:${port}`;
+  await startServer(workspaceRoot, port);
+  openBrowser(url);
+  process.stderr.write(`[runtime/server] UI available at ${url}\n`);
 }
 
 if (isDirectExecution()) {

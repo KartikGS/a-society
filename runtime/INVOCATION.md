@@ -6,9 +6,15 @@ This is the sole default operator-facing executable reference for A-Society. It 
 
 ## Startup
 
-### `a-society`
+### `npm --prefix ./a-society/runtime start`
 
 Starts the local runtime UI server, attempts to open the browser, and prints the local URL to `stderr`.
+
+Run from the workspace root:
+
+```bash
+npm --prefix ./a-society/runtime start
+```
 
 Default URL:
 
@@ -21,9 +27,10 @@ Override the port with:
 Example:
 
 ```bash
-export A_SOCIETY_UI_PORT=4010
-a-society
+A_SOCIETY_UI_PORT=4010 npm --prefix ./a-society/runtime start
 ```
+
+When launched through npm, the runtime uses npm's `INIT_CWD` as the workspace root. To set the workspace root explicitly, use `A_SOCIETY_WORKSPACE_ROOT`.
 
 If the selected port is already in use, the runtime prints a clear error and exits non-zero.
 

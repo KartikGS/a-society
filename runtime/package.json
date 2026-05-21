@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "Unified executable layer for the A-Society framework",
   "type": "module",
-  "bin": {
-    "a-society": "./bin/a-society"
-  },
   "scripts": {
     "start": "tsx src/server/server.ts",
     "build:ui": "vite build",

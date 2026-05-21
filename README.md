@@ -128,22 +128,20 @@ your-workspace/
 └── a-society/        ← this repo
 ```
 
-**2. Install A-Society**
+**2. Install runtime dependencies**
 
-From inside `a-society/`, run:
+From the workspace root, run:
 
 ```bash
-./install.sh
+npm --prefix ./a-society/runtime install
 ```
-
-This installs the runtime dependencies and links the `a-society` command.
 
 **3. Start the runtime**
 
 From the workspace root, run:
 
 ```bash
-a-society
+npm --prefix ./a-society/runtime start
 ```
 
 The browser UI lists existing projects with `a-docs/`, existing projects without `a-docs/`, and a create-new-project path. On first use, configure and activate a model in Settings before starting project work.
@@ -167,20 +165,18 @@ your-workspace/
 └── a-society/        ← this repo
 ```
 
-**2. Install A-Society**
+**2. Install runtime dependencies**
 
-From inside `a-society/`, run:
+From the workspace root, run:
 
 ```bash
-./install.sh
+npm --prefix ./a-society/runtime install
 ```
-
-This installs the runtime dependencies and links the `a-society` command.
 
 **3. Start the runtime**
 
 ```bash
-a-society
+npm --prefix ./a-society/runtime start
 ```
 
 Configure and activate a model in Settings before starting project work.
