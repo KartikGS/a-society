@@ -1,5 +1,4 @@
-import express, { type Express, type Request, type Response } from 'express';
-import fs from 'node:fs';
+import express, { type Express } from 'express';
 import path from 'node:path';
 import http from 'node:http';
 import { PassThrough, Writable } from 'node:stream';
@@ -17,11 +16,11 @@ import { bootstrapInitializationFlow } from '../projects/initialization-bootstra
 import { initializeDraftFlow } from '../projects/draft-flow.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import * as SettingsStore from '../settings/settings-store.js';
-import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
-import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
 import { defaultConsentState, normalizeConsentState } from '../common/types.js';
 import type { FeedItem, FlowRef, FlowRun, OperatorEvent, ConsentMode, ConsentRequest, ConsentResponseDecision, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
+import { createFlowReadModel } from './flow-read-model.js';
+import { registerFlowRoutes } from './flow-routes.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from './role-feed.js';
 import { parseClientMessage, type FlowScopedHistoricalMessage, type FlowStateMessage, type HistoricalMessage, type ServerMessage } from './protocol.js';
 import { registerSettingsRoutes } from './settings-routes.js';
@@ -130,61 +129,9 @@ function buildServer(workspaceRoot: string) {
   const wss = new WebSocketServer({ server: httpServer });
   const socketHub = new SocketHub();
   const activeSessions = new Map<string, ActiveSession>();
-
-  function readFlowRun(ref: FlowRef): FlowRun | null {
-    return SessionStore.loadFlowRun(ref, workspaceRoot);
-  }
-
-  function readFlowRunForHttp(ref: FlowRef, res: Response): FlowRun | null | undefined {
-    try {
-      return readFlowRun(ref);
-    } catch (error: any) {
-      res.status(409).json({
-        message: error instanceof Error ? error.message : String(error)
-      });
-      return undefined;
-    }
-  }
-
-  function resolveWorkflow(flowRun: FlowRun | null): any | null {
-    if (!flowRun) return null;
-    const workflowPath = findWorkflowFilePath(flowRun.recordFolderPath);
-    if (!workflowPath) return null;
-    try {
-      return resolveFlowWorkflow(flowRun.recordFolderPath, flowRun.workspaceRoot, flowRun.projectNamespace);
-    } catch {
-      return null;
-    }
-  }
-
-  function resolveImprovementWorkflow(flowRun: FlowRun | null): any | null {
-    if (!flowRun || flowRun.improvementPhase?.mode === undefined || flowRun.improvementPhase.mode === 'none') {
-      return null;
-    }
-
-    return readImprovementWorkflow(flowRun.recordFolderPath);
-  }
-
-  function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {
-    const workflow = resolveWorkflow(flowRun);
-    const node = workflow?.nodes?.find((candidate: any) => candidate.id === nodeId);
-    if (!node) {
-      return null;
-    }
-
-    const flowRef = flowRefFromRun(flowRun);
-    const roleKey = parseRoleIdentity(node.role).instanceRoleId;
-    const session = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
-    if (!session) {
-      return null;
-    }
-
-    return {
-      nodeId,
-      role: node.role,
-      transcript: session.transcriptHistory
-    };
-  }
+  const flowReadModel = createFlowReadModel(workspaceRoot);
+  const readFlowRun = flowReadModel.readFlowRun;
+  const resolveWorkflow = flowReadModel.resolveWorkflow;
 
   function sendToSocket(socket: WebSocket, message: ServerMessage): void {
     socketHub.send(socket, message);
@@ -1001,119 +948,15 @@ function buildServer(workspaceRoot: string) {
       });
   }
 
-  app.get('/api/projects', (_req: Request, res: Response) => {
-    res.json(discoverProjects(workspaceRoot));
-  });
-
-  app.get('/api/projects/:projectNamespace/flows', (req: Request, res: Response) => {
-    const projectNamespace = Array.isArray(req.params.projectNamespace)
-      ? req.params.projectNamespace[0]
-      : req.params.projectNamespace;
-    res.json(SessionStore.listFlowSummaries(workspaceRoot, projectNamespace));
-  });
-
-  app.get('/api/flows/:projectNamespace/:flowId/state', (req: Request, res: Response) => {
-    const ref = {
-      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
-      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
-    };
-    const flowRun = readFlowRunForHttp(ref, res);
-    if (flowRun === undefined) return;
-    res.json(flowRun);
-  });
-
-  app.get('/api/flows/:projectNamespace/:flowId/workflow', (req: Request, res: Response) => {
-    const ref = {
-      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
-      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
-    };
-    const flowRun = readFlowRunForHttp(ref, res);
-    if (flowRun === undefined) return;
-    if (!flowRun) {
-      res.status(404).json({ message: 'No flow state found.' });
-      return;
+  registerFlowRoutes(app, {
+    workspaceRoot,
+    flowReadModel,
+    onFlowDeleted(projectNamespace) {
+      socketHub.forEachClient((socket) => {
+        sendProjectFlows(socket, projectNamespace);
+      });
     }
-
-    const workflow = resolveWorkflow(flowRun);
-    if (!workflow) {
-      res.status(404).json({ message: 'Workflow graph is unavailable for this flow.' });
-      return;
-    }
-
-    res.json({
-      name: typeof workflow.name === 'string' ? workflow.name : undefined,
-      summary: typeof workflow.summary === 'string' ? workflow.summary : undefined,
-      nodes: Array.isArray(workflow.nodes) ? workflow.nodes : [],
-      edges: Array.isArray(workflow.edges) ? workflow.edges : []
-    });
   });
-
-  app.get('/api/flows/:projectNamespace/:flowId/improvement-workflow', (req: Request, res: Response) => {
-    const ref = {
-      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
-      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
-    };
-    const flowRun = readFlowRunForHttp(ref, res);
-    if (flowRun === undefined) return;
-    if (!flowRun) {
-      res.status(404).json({ message: 'No flow state found.' });
-      return;
-    }
-
-    const workflow = resolveImprovementWorkflow(flowRun);
-    if (!workflow) {
-      res.status(404).json({ message: 'Improvement graph is unavailable for this flow.' });
-      return;
-    }
-
-    res.json({
-      name: typeof workflow.name === 'string' ? workflow.name : undefined,
-      summary: typeof workflow.summary === 'string' ? workflow.summary : undefined,
-      nodes: Array.isArray(workflow.nodes) ? workflow.nodes : [],
-      edges: Array.isArray(workflow.edges) ? workflow.edges : []
-    });
-  });
-
-  app.delete('/api/flows/:projectNamespace/:flowId', (req: Request, res: Response) => {
-    const ref = {
-      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
-      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
-    };
-
-    const { recordFolderPath } = SessionStore.deleteFlow(ref, workspaceRoot);
-    if (recordFolderPath && fs.existsSync(recordFolderPath)) {
-      fs.rmSync(recordFolderPath, { recursive: true, force: true });
-    }
-
-    socketHub.forEachClient((socket) => {
-      sendProjectFlows(socket, ref.projectNamespace);
-    });
-
-    res.status(200).json({ ok: true });
-  });
-
-  app.get('/api/flows/:projectNamespace/:flowId/transcripts/:nodeId', (req: Request, res: Response) => {
-    const ref = {
-      projectNamespace: Array.isArray(req.params.projectNamespace) ? req.params.projectNamespace[0] : req.params.projectNamespace,
-      flowId: Array.isArray(req.params.flowId) ? req.params.flowId[0] : req.params.flowId,
-    };
-    const flowRun = readFlowRunForHttp(ref, res);
-    if (flowRun === undefined) return;
-    if (!flowRun) {
-      res.status(404).json({ message: 'No flow state found.' });
-      return;
-    }
-
-    const nodeId = Array.isArray(req.params.nodeId) ? req.params.nodeId[0] : req.params.nodeId;
-    const payload = buildTranscriptPayload(flowRun, nodeId);
-    if (!payload) {
-      res.status(404).json({ message: `No transcript found for node "${nodeId}".` });
-      return;
-    }
-
-    res.json(payload);
-  });
-
   registerSettingsRoutes(app);
   registerStaticUi(app);
 
