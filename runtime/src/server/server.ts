@@ -9,7 +9,7 @@ import * as SettingsStore from '../settings/settings-store.js';
 import { createFlowReadModel } from './flow-read-model.js';
 import { registerFlowRoutes } from './flow-routes.js';
 import { parseClientMessage } from './protocol.js';
-import { createRuntimeSessionManager } from './runtime-session-manager.js';
+import { createRuntimeSessionManager } from './runtime-session/manager.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { SocketHub } from './socket-hub.js';
 import { registerStaticUi } from './static-ui.js';

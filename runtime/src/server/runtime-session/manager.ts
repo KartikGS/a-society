@@ -1,9 +1,8 @@
-import { PassThrough, Writable } from 'node:stream';
+import { PassThrough } from 'node:stream';
 import type { WebSocket } from 'ws';
-import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
-import { getActiveNodeIds } from '../common/flow-state.js';
-import { parseRoleIdentity } from '../common/role-id.js';
-import { defaultConsentState, normalizeConsentState } from '../common/types.js';
+import { flowKey, flowRefFromRun } from '../../common/flow-ref.js';
+import { parseRoleIdentity } from '../../common/role-id.js';
+import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   ConsentMode,
   ConsentRequest,
@@ -12,112 +11,31 @@ import type {
   FlowRef,
   FlowRun,
   OperatorEvent,
-  RoleSession,
-  RuntimeMessageParam,
-} from '../common/types.js';
-import { ConsentGateImpl } from '../improvement/consent-gate.js';
-import { ImprovementOrchestrator, type ImprovementMode } from '../improvement/improvement.js';
-import { FlowOrchestrator } from '../orchestration/orchestrator.js';
-import { SessionStore } from '../orchestration/store.js';
-import { bootstrapInitializationFlow } from '../projects/initialization-bootstrap.js';
-import { initializeDraftFlow } from '../projects/draft-flow.js';
-import * as SettingsStore from '../settings/settings-store.js';
-import type { FlowReadModel } from './flow-read-model.js';
-import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from './role-feed.js';
-import type { FlowScopedHistoricalMessage, FlowStateMessage, HistoricalMessage, ServerMessage } from './protocol.js';
-import type { SocketHub } from './socket-hub.js';
-import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
-
-interface ActiveSession {
-  flowRef: FlowRef;
-  projectNamespace: string;
-  inputBridge: PassThrough;
-  outputBridge: PassThrough;
-  sink: WebSocketOperatorSink;
-  orchestrator: FlowOrchestrator;
-  roleFeedHistory: Map<string, FeedItem[]>;
-  roleFeedSequence: Map<string, number>;
-  lastFlowState: FlowStateMessage | null;
-  backwardActive: Set<string>;
-  finished: boolean;
-  task: Promise<void>;
-  consentGate: ConsentGateImpl;
-  latestContextUsageByRole: Record<string, number>;
-}
-
-type RuntimeSessionManagerOptions = {
-  workspaceRoot: string;
-  socketHub: SocketHub;
-  flowReadModel: FlowReadModel;
-};
-
-const HISTORY_LIMIT = 400;
-const STALE_CONSENT_TOOL_RESULT =
-  'Consent prompt was no longer available after runtime resume. The node is paused for operator guidance.';
-
-function isPromptLine(text: string): boolean {
-  return text === '\n> ' || text === '> ' || text === '\r\n> ';
-}
-
-function recoverRoleFeedSequence(roleFeedHistory: Map<string, FeedItem[]>): Map<string, number> {
-  const sequence = new Map<string, number>();
-  for (const [roleKey, items] of roleFeedHistory) {
-    const prefix = `${roleKey}_`;
-    let max = -1;
-    for (const item of items) {
-      if (!item.id.startsWith(prefix)) continue;
-      const seq = parseInt(item.id.slice(prefix.length), 10);
-      if (Number.isFinite(seq) && seq > max) max = seq;
-    }
-    sequence.set(roleKey, max + 1);
-  }
-  return sequence;
-}
-
-function latestContextUsageFromSession(session: RoleSession | null): number | null {
-  return session?.latestContextUsage ?? null;
-}
-
-function isAwaitingHumanReply(reason: FlowRun['awaitingHumanNodes'][string]['reason']): boolean {
-  return reason !== 'consent';
-}
-
-function hasAwaitingHumanNodes(flowRun: FlowRun): boolean {
-  return Object.values(flowRun.awaitingHumanNodes).some((state) => isAwaitingHumanReply(state.reason));
-}
-
-function resolveAwaitingHumanNode(flowRun: FlowRun, target?: { nodeId?: string; role?: string }): string {
-  const awaitingNodeIds = Object.keys(flowRun.awaitingHumanNodes)
-    .filter((nodeId) => isAwaitingHumanReply(flowRun.awaitingHumanNodes[nodeId].reason));
-  if (target?.nodeId) {
-    const awaitingState = flowRun.awaitingHumanNodes[target.nodeId];
-    if (!awaitingState) {
-      throw new Error(`Node '${target.nodeId}' is not awaiting human input.`);
-    }
-    if (!isAwaitingHumanReply(awaitingState.reason)) {
-      throw new Error(`Node '${target.nodeId}' is awaiting consent, not a text reply.`);
-    }
-    return target.nodeId;
-  }
-
-  if (target?.role) {
-    const roleKey = parseRoleIdentity(target.role).instanceRoleId;
-    const matches = awaitingNodeIds.filter((nodeId) =>
-      parseRoleIdentity(flowRun.awaitingHumanNodes[nodeId].role).instanceRoleId === roleKey
-    );
-    if (matches.length === 1) return matches[0];
-    if (matches.length === 0) {
-      throw new Error(`Role '${target.role}' is not awaiting human input.`);
-    }
-    throw new Error(`Role '${target.role}' has multiple awaiting nodes. Specify nodeId.`);
-  }
-
-  if (awaitingNodeIds.length === 1) {
-    return awaitingNodeIds[0];
-  }
-
-  throw new Error('Multiple nodes are awaiting human input. Specify nodeId or role.');
-}
+} from '../../common/types.js';
+import { ConsentGateImpl } from '../../improvement/consent-gate.js';
+import { ImprovementOrchestrator, type ImprovementMode } from '../../improvement/improvement.js';
+import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
+import { SessionStore } from '../../orchestration/store.js';
+import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
+import { initializeDraftFlow } from '../../projects/draft-flow.js';
+import * as SettingsStore from '../../settings/settings-store.js';
+import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
+import { isTransientOperatorEvent } from '../role-feed.js';
+import {
+  createRoleOutputStream,
+  loadLatestContextUsageByRole,
+  recoverRoleFeedSequence,
+  rememberMessage,
+} from './feed.js';
+import { buildFlowStateMessage } from './flow-state.js';
+import {
+  hasAwaitingHumanNodes,
+  isAwaitingHumanReply,
+  resolveAwaitingHumanNode,
+} from './human-input.js';
+import { normalizeStaleConsentWaits } from './stale-consent.js';
+import type { ActiveSession, RuntimeSessionManagerOptions } from './types.js';
+import { WebSocketOperatorSink, type RuntimeServerMessage } from '../ws-operator-sink.js';
 
 export function createRuntimeSessionManager(options: RuntimeSessionManagerOptions) {
   const { workspaceRoot, socketHub, flowReadModel } = options;
@@ -155,51 +73,8 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     };
   }
 
-  function nextFeedItemId(session: ActiveSession, roleKey: string): string {
-    const seq = session.roleFeedSequence.get(roleKey) ?? 0;
-    session.roleFeedSequence.set(roleKey, seq + 1);
-    return `${roleKey}_${seq}`;
-  }
-
-  function rememberMessage(session: ActiveSession, message: HistoricalMessage): void {
-    const roleKey = getOperatorFeedRoleKey(message);
-    if (!roleKey) return;
-    const history = session.roleFeedHistory.get(roleKey) ?? [];
-
-    if (message.type === 'operator_event' && message.event.kind === 'activity.tool_result') {
-      const { toolName, isError } = message.event;
-      const idx = [...history].reverse().findIndex(item => item.type === 'tool' && item.text.startsWith(toolName));
-      if (idx !== -1) {
-        const realIdx = history.length - 1 - idx;
-        history[realIdx] = { ...history[realIdx], type: isError ? 'tool-error' : 'tool-success' };
-        session.roleFeedHistory.set(roleKey, history);
-        SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
-      }
-      return;
-    }
-
-    const previous = history[history.length - 1];
-    if (previous?.type === 'assistant' && message.type === 'output_text') {
-      history[history.length - 1] = { ...previous, text: previous.text + message.text };
-      session.roleFeedHistory.set(roleKey, history);
-      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
-      return;
-    }
-
-    const id = nextFeedItemId(session, roleKey);
-    const item = projectMessageToFeedItem(message, id);
-    if (!item) return;
-
-    history.push(item);
-    if (history.length > HISTORY_LIMIT) {
-      history.splice(0, history.length - HISTORY_LIMIT);
-    }
-    session.roleFeedHistory.set(roleKey, history);
-    SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
-  }
-
   function emitHistoricalMessage(session: ActiveSession, message: HistoricalMessage): void {
-    rememberMessage(session, message);
+    rememberMessage(session, message, workspaceRoot);
     broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as FlowScopedHistoricalMessage);
   }
 
@@ -207,36 +82,13 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as ServerMessage);
   }
 
-  function buildFlowStateMessage(session: ActiveSession | null, ref: FlowRef): FlowStateMessage | null {
-    const flowRun = readFlowRun(ref);
-    if (!flowRun) return null;
-    const backwardActive = session
-      ? Array.from(session.backwardActive).filter((nodeId) => getActiveNodeIds(flowRun).includes(nodeId))
-      : [];
-    const contextUsageByRole: Record<string, number> = session
-      ? { ...session.latestContextUsageByRole }
-      : Object.fromEntries(
-          SessionStore.listRoleKeys(ref, workspaceRoot)
-            .map((roleKey) => {
-              const s = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
-              const contextUsage = latestContextUsageFromSession(s);
-              return contextUsage != null ? [roleKey, contextUsage] as const : null;
-            })
-            .filter((e): e is [string, number] => e !== null)
-        );
-    return {
-      type: 'flow_state',
-      flowRef: ref,
-      flowRun,
-      backwardActive,
-      hasActiveSession: session !== null && !session.finished,
-      contextUsageByRole,
-    };
+  function readFlowStateMessage(session: ActiveSession | null, ref: FlowRef) {
+    return buildFlowStateMessage(session, ref, readFlowRun, workspaceRoot);
   }
 
   function sendFlowState(socket: WebSocket, ref: FlowRef): void {
     const session = activeSessions.get(flowKey(ref)) ?? null;
-    const message = buildFlowStateMessage(session, ref);
+    const message = readFlowStateMessage(session, ref);
     if (!message) return;
     if (session) {
       session.lastFlowState = message;
@@ -245,61 +97,10 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   function emitFlowState(session: ActiveSession): void {
-    const message = buildFlowStateMessage(session, session.flowRef);
+    const message = readFlowStateMessage(session, session.flowRef);
     if (!message) return;
     session.lastFlowState = message;
     broadcastToFlow(session.flowRef, message);
-  }
-
-  function appendStaleConsentToolResults(messages: RuntimeMessageParam[]): boolean {
-    const last = messages[messages.length - 1];
-    if (last?.role !== 'assistant_tool_calls') return false;
-
-    for (const call of last.calls) {
-      messages.push({
-        role: 'tool_result',
-        callId: call.id,
-        toolName: call.name,
-        content: STALE_CONSENT_TOOL_RESULT,
-        isError: true,
-      });
-    }
-    return last.calls.length > 0;
-  }
-
-  function repairStaleConsentTranscript(ref: FlowRef, nodeId: string, role: string): void {
-    const roleKey = parseRoleIdentity(role).instanceRoleId;
-    const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
-    if (!roleSession) return;
-
-    let changed = appendStaleConsentToolResults(roleSession.transcriptHistory as RuntimeMessageParam[]);
-    if (roleSession.currentNodeContext?.nodeId === nodeId) {
-      changed = appendStaleConsentToolResults(roleSession.currentNodeContext.exchanges) || changed;
-    }
-    if (changed) {
-      SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
-    }
-  }
-
-  async function normalizeStaleConsentWaits(ref: FlowRef): Promise<FlowRun | null> {
-    const flowRun = readFlowRun(ref);
-    if (!flowRun) return null;
-
-    const staleConsentNodes = Object.entries(flowRun.awaitingHumanNodes)
-      .filter(([, state]) => state.reason === 'consent');
-    if (staleConsentNodes.length === 0) return flowRun;
-
-    for (const [nodeId, state] of staleConsentNodes) {
-      repairStaleConsentTranscript(ref, nodeId, state.role);
-    }
-
-    return SessionStore.updateFlowRun((flow) => {
-      for (const [nodeId, state] of Object.entries(flow.awaitingHumanNodes)) {
-        if (state.reason === 'consent') {
-          flow.awaitingHumanNodes[nodeId] = { role: state.role, reason: 'consent-denied' };
-        }
-      }
-    }, ref, workspaceRoot);
   }
 
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
@@ -443,15 +244,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
 
     const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot);
     const roleFeedSequence = recoverRoleFeedSequence(roleFeedHistory);
-    const latestContextUsageByRole = Object.fromEntries(
-      Array.from(roleFeedHistory.keys())
-        .map((roleKey) => {
-          const s = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
-          const contextUsage = latestContextUsageFromSession(s);
-          return contextUsage != null ? [roleKey, contextUsage] as const : null;
-        })
-        .filter((e): e is [string, number] => e !== null)
-    );
+    const latestContextUsageByRole = loadLatestContextUsageByRole(flowRef, roleFeedHistory, workspaceRoot);
 
     session = {
       flowRef,
@@ -474,18 +267,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     return session;
   }
 
-  function createRoleOutputStream(session: ActiveSession, role: string): NodeJS.WritableStream {
-    return new Writable({
-      write(chunk, _encoding, callback) {
-        const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-        if (text && !isPromptLine(text)) {
-          emitHistoricalMessage(session, { type: 'output_text', role, text });
-        }
-        callback();
-      }
-    });
-  }
-
   function startFlowRunner(session: ActiveSession, projectNamespace: string): void {
     void attachSessionTask(session, () =>
       session.orchestrator.runStoredFlow(
@@ -493,7 +274,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         projectNamespace,
         session.outputBridge,
         session.flowRef.flowId,
-        (role) => createRoleOutputStream(session, role),
+        (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
         session.consentGate
       )
     ).catch(() => {});
@@ -633,7 +414,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const normalizedFlowRun = await normalizeStaleConsentWaits(ref);
+    const normalizedFlowRun = await normalizeStaleConsentWaits(ref, readFlowRun, workspaceRoot);
     if (normalizedFlowRun) {
       flowRun = normalizedFlowRun;
     }
@@ -750,7 +531,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         mode,
         session.outputBridge,
         session.sink,
-        (roleName) => createRoleOutputStream(session, roleName)
+        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage)
       );
 
       const latestFlow = readFlowRun(ref);
@@ -808,7 +589,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         currentFlow,
         session.outputBridge,
         session.sink,
-        (roleName) => createRoleOutputStream(session, roleName)
+        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage)
       );
 
       const latestFlow = readFlowRun(ref);
@@ -849,7 +630,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       flow.consentState = normalizeConsentState(flow.consentState);
       flow.consentState.mode = mode;
     }, ref, workspaceRoot).then(() => {
-      const msg = buildFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
+      const msg = readFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
       if (msg) broadcastToFlow(ref, msg);
     });
   }
