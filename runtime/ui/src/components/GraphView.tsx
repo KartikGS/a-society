@@ -153,6 +153,11 @@ function GraphViewComponent({
   const [loadedGraphMode, setLoadedGraphMode] = useState<GraphMode | null>(null);
   const [error, setError] = useState<{ mode: GraphMode; message: string } | null>(null);
   const workflowRef = useRef<WorkflowGraph | null>(null);
+  const onWorkflowLoadedRef = useRef(onWorkflowLoaded);
+
+  useEffect(() => {
+    onWorkflowLoadedRef.current = onWorkflowLoaded;
+  }, [onWorkflowLoaded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -174,7 +179,7 @@ function GraphViewComponent({
           setWorkflow(graph);
           setLoadedGraphMode(graphMode);
           if (graphMode === 'flow') {
-            onWorkflowLoaded?.(graph);
+            onWorkflowLoadedRef.current?.(graph);
           }
         }
         setError(null);
@@ -199,7 +204,7 @@ function GraphViewComponent({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [flowRef.projectNamespace, flowRef.flowId, graphMode, recordFolderPath, onWorkflowLoaded]);
+  }, [flowRef.projectNamespace, flowRef.flowId, graphMode, recordFolderPath]);
 
   const visibleWorkflow = loadedGraphMode === graphMode ? workflow : null;
   const visibleError = error?.mode === graphMode ? error.message : null;

@@ -1,20 +1,15 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { flowKey } from '../../src/common/flow-ref.js';
-import {
-  SETTINGS_REQUIRED_MESSAGE,
-  SYSTEM_ROLE_KEY,
-} from './app/constants';
 import { createActiveFlowView } from './app/active-flow-view';
+import { SETTINGS_REQUIRED_MESSAGE } from './app/constants';
 import {
   createFlowUiState,
-  titleForFlow,
   type FlowTab,
   type FlowUiState,
 } from './app/flow-ui';
 import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import {
-  deleteFlow as deleteFlowApi,
   fetchActiveModelContextWindow,
   fetchFlowState,
   fetchProjectFlows as fetchProjectFlowsApi,
@@ -22,26 +17,23 @@ import {
   IncompatibleFlowError,
 } from './app/runtime-api';
 import { handleServerMessage } from './app/server-messages';
+import { useAppCommands } from './app/use-app-commands';
 import { ChatInterface } from './components/ChatInterface';
 import { EmptyGraphPanel } from './components/EmptyGraphPanel';
 import { FeedbackConsentModal } from './components/FeedbackConsentModal';
 import { FlowTabs } from './components/FlowTabs';
-import type { GraphMode } from './components/GraphView';
 import { ImprovementChoiceModal } from './components/ImprovementChoiceModal';
 import { ProjectSelector } from './components/ProjectSelector';
 import { SettingsModal } from './components/SettingsModal';
-import { areFlowRunsEqual, areWorkflowGraphsEqual } from './equality';
+import { areFlowRunsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
 import type {
   ClientMessage,
-  ConsentMode,
-  ConsentResponseDecision,
   FlowRef,
   FlowSummary,
   ProjectDiscovery,
   ServerMessage,
   SettingsStatus,
-  WorkflowGraph,
 } from './types';
 
 const GraphView = lazy(async () => {
@@ -140,12 +132,6 @@ export function App() {
     socketSend(message);
   }, [socketSend]);
 
-  const openFlow = useCallback((ref: FlowRef, title = ref.flowId): void => {
-    ensureTab(ref, title);
-    updateFlowUi(flowKey(ref), (state) => state);
-    sendMessage({ type: 'open_flow', flowRef: ref });
-  }, [ensureTab, updateFlowUi, sendMessage]);
-
   const activeView = useMemo(() => createActiveFlowView({
     tabs,
     activeTabKey,
@@ -157,7 +143,6 @@ export function App() {
 
   const {
     activeTab,
-    activeUi,
     flowRun,
     backwardActive,
     projectFlows,
@@ -180,7 +165,6 @@ export function App() {
     inputPlaceholder,
     canStopViewedRole,
     stopRequestedForViewedRole,
-    inputTargetRole,
     composerValue,
     latestContextUsage,
   } = activeView;
@@ -194,6 +178,57 @@ export function App() {
     setSettingsOpen(true);
     return false;
   }, [hasConfiguredModel]);
+
+  const appCommandInput = useMemo(() => ({
+    activeView,
+    activeTabKey,
+    newProjectName,
+    ensureConfiguredModel,
+    ensureTab,
+    refreshProjectFlows,
+    sendMessage,
+    updateFlowUi,
+    setSelectedProject,
+    setNewProjectName,
+    setSelectorError,
+    setActiveTabKey,
+    setTabs,
+    setFlowUiByKey,
+  }), [
+    activeTabKey,
+    activeView,
+    ensureConfiguredModel,
+    ensureTab,
+    newProjectName,
+    refreshProjectFlows,
+    sendMessage,
+    updateFlowUi,
+  ]);
+
+  const {
+    openFlow,
+    handleProjectSelect,
+    handleExistingInitialization,
+    handleCreateNewProject,
+    handleOpenFlow,
+    handleNewFlow,
+    handleDeleteFlow,
+    handleTabSelect,
+    handleCloseTab,
+    handleSubmit,
+    handleImprovementChoice,
+    handleFeedbackConsentChoice,
+    handleConsentResponse,
+    handleConsentModeChange,
+    handleStopActiveTurn,
+    handleCompactContext,
+    handleResumeFlow,
+    handleWorkflowLoaded,
+    handleGraphNodeClick,
+    handleGraphModeChange,
+    handleRoleSelect,
+    handleComposerChange,
+  } = useAppCommands(appCommandInput);
 
   useEffect(() => {
     const ref = initialUrlFlowRef.current;
@@ -290,183 +325,6 @@ export function App() {
     };
   }, [socket.status, activeTab, hasActiveFlowState, updateFlowUi, showToast]);
 
-  function handleProjectSelect(projectNamespace: string | null): void {
-    setSelectedProject(projectNamespace);
-    setNewProjectName('');
-    setSelectorError(null);
-    if (projectNamespace) {
-      void refreshProjectFlows(projectNamespace);
-    }
-  }
-
-  function handleExistingInitialization(projectNamespace: string): void {
-    if (!ensureConfiguredModel()) return;
-    setSelectedProject(projectNamespace);
-    setNewProjectName('');
-    setSelectorError(null);
-    sendMessage({ type: 'start_takeover_initialization', projectNamespace });
-  }
-
-  function handleCreateNewProject(): void {
-    const projectName = newProjectName.trim();
-    if (!projectName) return;
-    if (!ensureConfiguredModel()) return;
-
-    setSelectedProject(projectName);
-    setSelectorError(null);
-    sendMessage({ type: 'start_greenfield_initialization', projectName });
-  }
-
-  function handleOpenFlow(flow: FlowSummary): void {
-    openFlow({ projectNamespace: flow.projectNamespace, flowId: flow.flowId }, titleForFlow(flow));
-  }
-
-  function handleNewFlow(projectNamespace: string): void {
-    if (!ensureConfiguredModel()) return;
-    setSelectorError(null);
-    sendMessage({ type: 'start_initialized_flow', projectNamespace });
-  }
-
-  async function handleDeleteFlow(flow: FlowSummary): Promise<void> {
-    const label = flow.recordName ?? flow.flowId;
-    if (!window.confirm(`Delete "${label}" and all its artifacts? This cannot be undone.`)) return;
-
-    try {
-      await deleteFlowApi(flow);
-
-      const key = flowKey(flow);
-      setTabs((current) => current.filter((tab) => tab.key !== key));
-      setFlowUiByKey((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-      if (activeTabKey === key) {
-        setActiveTabKey(null);
-        writeUrlFlowRef(null);
-      }
-
-      void refreshProjectFlows(flow.projectNamespace);
-    } catch (err) {
-      setSelectorError(err instanceof Error ? err.message : 'Failed to delete flow.');
-    }
-  }
-
-  function handleTabSelect(tab: FlowTab): void {
-    setActiveTabKey(tab.key);
-    setSelectedProject(tab.ref.projectNamespace);
-    writeUrlFlowRef(tab.ref);
-    sendMessage({ type: 'open_flow', flowRef: tab.ref });
-  }
-
-  function handleCloseTab(tab: FlowTab): void {
-    setTabs((current) => {
-      const next = current.filter((t) => t.key !== tab.key);
-      if (activeTabKey === tab.key) {
-        const idx = current.findIndex((t) => t.key === tab.key);
-        const fallback = next[idx] ?? next[idx - 1] ?? null;
-        setActiveTabKey(fallback?.key ?? null);
-        writeUrlFlowRef(fallback?.ref ?? null);
-        if (fallback) {
-          setSelectedProject(fallback.ref.projectNamespace);
-        }
-      }
-      return next;
-    });
-    setFlowUiByKey((current) => {
-      const next = { ...current };
-      delete next[tab.key];
-      return next;
-    });
-  }
-
-  function handleSubmit(): void {
-    if (!activeTab || !activeUi) return;
-    if (!ensureConfiguredModel()) return;
-    const text = activeUi.composerValue.trim();
-    if (!text) return;
-    updateFlowUi(activeTab.key, (state) => ({
-      ...state,
-      composerValue: '',
-    }));
-    sendMessage({
-      type: 'human_input',
-      flowRef: activeTab.ref,
-      text,
-      role: inputTargetRole === SYSTEM_ROLE_KEY ? undefined : inputTargetRole
-    });
-  }
-
-  function handleImprovementChoice(mode: 'graph-based' | 'parallel' | 'none'): void {
-    if (!activeTab) return;
-    if (mode !== 'none' && !ensureConfiguredModel()) return;
-    if (mode !== 'none') {
-      updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
-    }
-    sendMessage({ type: 'improvement_choice', flowRef: activeTab.ref, mode });
-  }
-
-  function handleFeedbackConsentChoice(decision: 'granted' | 'denied'): void {
-    if (!activeTab) return;
-    if (decision === 'granted' && !ensureConfiguredModel()) return;
-    if (decision === 'granted') {
-      updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
-    }
-    sendMessage({ type: 'feedback_consent_choice', flowRef: activeTab.ref, decision });
-  }
-
-  function handleConsentResponse(decision: ConsentResponseDecision): void {
-    if (!activeTab || !visibleConsentRequest) return;
-    const role = visibleConsentRequest.role;
-    sendMessage({ type: 'consent_response', flowRef: activeTab.ref, decision, role });
-  }
-
-  function handleConsentModeChange(mode: ConsentMode): void {
-    if (!activeTab) return;
-    sendMessage({ type: 'consent_mode', flowRef: activeTab.ref, mode });
-  }
-
-  function handleStopActiveTurn(): void {
-    if (!activeTab || !activeUi || !viewedRole || activeUi.stopRequestedRoles[viewedRole]) return;
-    updateFlowUi(activeTab.key, (state) => ({
-      ...state,
-      stopRequestedRoles: { ...state.stopRequestedRoles, [viewedRole]: true },
-    }));
-    sendMessage({ type: 'stop_active_turn', flowRef: activeTab.ref, role: viewedRole });
-  }
-
-  function handleCompactContext(): void {
-    if (!activeTab || !viewedRole) return;
-    if (!ensureConfiguredModel()) return;
-    if (activeUi?.compactingRoles[viewedRole]) return;
-    updateFlowUi(activeTab.key, (state) => ({
-      ...state,
-      compactingRoles: { ...state.compactingRoles, [viewedRole]: true },
-    }));
-    sendMessage({ type: 'compact_context', flowRef: activeTab.ref, role: viewedRole });
-  }
-
-  function handleResumeFlow(): void {
-    if (!activeTab) return;
-    if (!ensureConfiguredModel()) return;
-    sendMessage({ type: 'resume_flow', flowRef: activeTab.ref });
-  }
-
-  const handleWorkflowLoaded = useCallback((graph: WorkflowGraph) => {
-    if (!activeTabKey) return;
-    updateFlowUi(activeTabKey, (state) => ({
-      ...state,
-      workflow: areWorkflowGraphsEqual(state.workflow, graph) ? state.workflow : graph
-    }));
-  }, [activeTabKey, updateFlowUi]);
-
-  const handleGraphNodeClick = useCallback((_nodeId: string) => { }, []);
-
-  const handleGraphModeChange = useCallback((mode: GraphMode) => {
-    if (!activeTabKey) return;
-    updateFlowUi(activeTabKey, (state) => ({ ...state, selectedGraph: mode }));
-  }, [activeTabKey, updateFlowUi]);
-
   return (
     <main className="app-shell">
       <PanelGroup orientation="horizontal">
@@ -550,14 +408,8 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? 'no-access'}
-                  onRoleSelect={(role) => {
-                    if (!activeTabKey) return;
-                    updateFlowUi(activeTabKey, (state) => ({ ...state, selectedRole: role }));
-                  }}
-                  onInputChange={(value) => {
-                    if (!activeTabKey) return;
-                    updateFlowUi(activeTabKey, (state) => ({ ...state, composerValue: value }));
-                  }}
+                  onRoleSelect={handleRoleSelect}
+                  onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
