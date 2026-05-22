@@ -4,7 +4,6 @@ import { flowKey, flowRefFromRun } from '../../common/flow-ref.js';
 import { parseRoleIdentity } from '../../common/role-id.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
-  ConsentMode,
   ConsentRequest,
   ConsentResponseDecision,
   FeedItem,
@@ -13,7 +12,6 @@ import type {
   OperatorEvent,
 } from '../../common/types.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
-import { ImprovementOrchestrator, type ImprovementMode } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import { SessionStore } from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
@@ -21,6 +19,7 @@ import { initializeDraftFlow } from '../../projects/draft-flow.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
 import { isTransientOperatorEvent } from '../role-feed.js';
+import { createRuntimeSessionCommands } from './commands.js';
 import {
   createRoleOutputStream,
   loadLatestContextUsageByRole,
@@ -28,11 +27,6 @@ import {
   rememberMessage,
 } from './feed.js';
 import { buildFlowStateMessage } from './flow-state.js';
-import {
-  hasAwaitingHumanNodes,
-  isAwaitingHumanReply,
-  resolveAwaitingHumanNode,
-} from './human-input.js';
 import { normalizeStaleConsentWaits } from './stale-consent.js';
 import type { ActiveSession, RuntimeSessionManagerOptions } from './types.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from '../ws-operator-sink.js';
@@ -424,316 +418,21 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     startFlowRunner(session, flowRun.projectNamespace);
   }
 
-  async function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): Promise<void> {
-    const flowRun = readFlowRun(ref);
-    if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
-      return;
-    }
-
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
-      return;
-    }
-
-    let targetNodeId: string;
-    try {
-      targetNodeId = resolveAwaitingHumanNode(flowRun, target);
-      await SessionStore.updateFlowRun((latest) => {
-        const awaitingState = latest.awaitingHumanNodes[targetNodeId];
-        if (!awaitingState || !isAwaitingHumanReply(awaitingState.reason)) {
-          throw new Error(`Node '${targetNodeId}' is no longer awaiting human input.`);
-        }
-        if (latest.pendingHumanInputs[targetNodeId]) {
-          throw new Error(`Node '${targetNodeId}' already has queued human input.`);
-        }
-        latest.pendingHumanInputs[targetNodeId] = {
-          text,
-          receivedAt: new Date().toISOString(),
-        };
-      }, ref, workspaceRoot);
-    } catch (error: any) {
-      broadcastToFlow(ref, {
-        type: 'error',
-        flowRef: ref,
-        message: error instanceof Error ? error.message : String(error)
-      });
-      return;
-    }
-
-    let session = activeSessions.get(flowKey(ref));
-    if (!session || session.finished) {
-      session = createSession(ref);
-      startFlowRunner(session, flowRun.projectNamespace);
-    }
-
-    emitHistoricalMessage(session, {
-      type: 'input_text',
-      role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
-      text,
-    });
-    session.orchestrator.wake();
-    emitFlowState(session);
-  }
-
-  function getOrCreateChoiceSession(ref: FlowRef): ActiveSession {
-    const existing = activeSessions.get(flowKey(ref));
-    if (existing && !existing.finished) {
-      return existing;
-    }
-    return createSession(ref);
-  }
-
-  function handleImprovementChoice(ref: FlowRef, mode: ImprovementMode | 'none'): void {
-    const flowRun = readFlowRun(ref);
-    if (!flowRun || flowRun.status !== 'awaiting_improvement_choice') {
-      broadcastToFlow(ref, {
-        type: 'error',
-        flowRef: ref,
-        message: 'The runtime is not currently waiting for an improvement mode selection.'
-      });
-      return;
-    }
-
-    const session = getOrCreateChoiceSession(ref);
-    const label = mode === 'none' ? 'No improvement' : mode === 'graph-based' ? 'Graph-based improvement' : 'Parallel improvement';
-    emitHistoricalMessage(session, {
-      type: 'input_text',
-      text: label,
-    });
-
-    if (mode === 'none') {
-      try {
-        ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
-        session.sink.emit({ kind: 'flow.completed' });
-      } catch (error: any) {
-        emitHistoricalMessage(session, {
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error)
-        });
-      }
-      return;
-    }
-
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
-      return;
-    }
-
-    void attachSessionTask(session, async () => {
-      const currentFlow = readFlowRun(ref);
-      if (!currentFlow) {
-        throw new Error('Flow state disappeared before the improvement phase began.');
-      }
-
-      await ImprovementOrchestrator.runImprovement(
-        currentFlow,
-        mode,
-        session.outputBridge,
-        session.sink,
-        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage)
-      );
-
-      const latestFlow = readFlowRun(ref);
-      if (latestFlow?.status === 'completed') {
-        session.sink.emit({ kind: 'flow.completed' });
-      }
-    }).catch(() => {});
-
-    setImmediate(() => emitFlowState(session));
-  }
-
-  function handleFeedbackConsentChoice(ref: FlowRef, decision: 'granted' | 'denied'): void {
-    const flowRun = readFlowRun(ref);
-    if (!flowRun || flowRun.status !== 'awaiting_feedback_consent') {
-      broadcastToFlow(ref, {
-        type: 'error',
-        flowRef: ref,
-        message: 'The runtime is not currently waiting for a feedback consent decision.'
-      });
-      return;
-    }
-
-    const session = getOrCreateChoiceSession(ref);
-    const label = decision === 'granted' ? 'Generate upstream feedback' : 'Skip upstream feedback';
-    emitHistoricalMessage(session, {
-      type: 'input_text',
-      text: label,
-    });
-
-    if (decision === 'denied') {
-      try {
-        ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
-        session.sink.emit({ kind: 'flow.completed' });
-      } catch (error: any) {
-        emitHistoricalMessage(session, {
-          type: 'error',
-          message: error instanceof Error ? error.message : String(error)
-        });
-      }
-      return;
-    }
-
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
-      return;
-    }
-
-    void attachSessionTask(session, async () => {
-      const currentFlow = readFlowRun(ref);
-      if (!currentFlow) {
-        throw new Error('Flow state disappeared before the feedback step began.');
-      }
-
-      await ImprovementOrchestrator.runFeedback(
-        currentFlow,
-        session.outputBridge,
-        session.sink,
-        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage)
-      );
-
-      const latestFlow = readFlowRun(ref);
-      if (latestFlow?.status === 'completed') {
-        session.sink.emit({ kind: 'flow.completed' });
-      }
-    }).catch(() => {});
-
-    setImmediate(() => emitFlowState(session));
-  }
-
-  function handleConsentResponse(ref: FlowRef, decision: ConsentResponseDecision, role: string): void {
-    const session = activeSessions.get(flowKey(ref));
-    if (!session || session.finished) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active session for consent response.' });
-      return;
-    }
-    session.consentGate.respond(decision, role);
-  }
-
-  function handleConsentMode(ref: FlowRef, mode: ConsentMode): void {
-    const session = activeSessions.get(flowKey(ref));
-    if (session && !session.finished) {
-      const inFlightRequests = session.consentGate.getInFlightRequests();
-      session.consentGate.setMode(mode);
-      if (mode === 'full-access') {
-        for (const inFlight of inFlightRequests) {
-          void clearNodeAwaitingConsent(session, inFlight, 'allow_flow');
-        }
-      }
-      return;
-    }
-    // No active session -- persist mode change directly to the flow state.
-    void SessionStore.updateFlowRun((flow) => {
-      if (!flow.consentState) {
-        flow.consentState = defaultConsentState();
-      }
-      flow.consentState = normalizeConsentState(flow.consentState);
-      flow.consentState.mode = mode;
-    }, ref, workspaceRoot).then(() => {
-      const msg = readFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
-      if (msg) broadcastToFlow(ref, msg);
-    });
-  }
-
-  function handleStopActiveTurn(ref: FlowRef, target?: { nodeId?: string; role?: string }): void {
-    const activeSession = activeSessions.get(flowKey(ref));
-    if (!activeSession || activeSession.finished) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active runtime session is currently running.' });
-      return;
-    }
-
-    const stopped = activeSession.orchestrator.abortActiveTurn(target);
-    if (!stopped) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active turn is currently stoppable.' });
-    }
-  }
-
-  function resolveWorkflowRoleName(flowRun: FlowRun, role: string): string {
-    const roleKey = role.trim();
-    const workflow = resolveWorkflow(flowRun);
-    const match = workflow?.nodes?.find((node: any) =>
-      typeof node.role === 'string' &&
-      parseRoleIdentity(node.role).instanceRoleId === roleKey
-    );
-    return typeof match?.role === 'string' ? match.role : role;
-  }
-
-  function handleCompactContext(ref: FlowRef, role: string): void {
-    const flowRun = readFlowRun(ref);
-    if (!flowRun) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
-      return;
-    }
-
-    const roleName = resolveWorkflowRoleName(flowRun, role);
-    const roleKey = parseRoleIdentity(roleName).instanceRoleId;
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, {
-        type: 'operator_event',
-        flowRef: ref,
-        event: {
-          kind: 'session.compaction_failed',
-          role: roleName,
-          trigger: 'manual',
-          reason: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
-        }
-      });
-      broadcastToFlow(ref, missingModelError(ref));
-      return;
-    }
-
-    const activeSession = activeSessions.get(flowKey(ref));
-    if (activeSession?.orchestrator.hasActiveTurn({ role: roleName })) {
-      broadcastToFlow(ref, {
-        type: 'operator_event',
-        flowRef: ref,
-        event: {
-          kind: 'session.compaction_failed',
-          role: roleName,
-          trigger: 'manual',
-          reason: 'Context cannot be compacted while that role is actively receiving a model response.'
-        }
-      });
-      broadcastToFlow(ref, {
-        type: 'error',
-        flowRef: ref,
-        message: 'Context cannot be compacted while that role is actively receiving a model response.'
-      });
-      return;
-    }
-
-    const createdForCompaction = !activeSession || activeSession.finished;
-    const session = getOrCreateChoiceSession(ref);
-    void session.orchestrator.compactRoleContext(flowRun, roleName, 'manual')
-      .then((result) => {
-        if (!result.compacted) {
-          if (createdForCompaction) {
-            session.finished = true;
-          }
-          broadcastToFlow(ref, {
-            type: 'error',
-            flowRef: ref,
-            message: result.reason ?? 'No context was available to compact.'
-          });
-          return;
-        }
-        session.latestContextUsageByRole[roleKey] = 0;
-        if (createdForCompaction) {
-          session.finished = true;
-        }
-        emitFlowState(session);
-      })
-      .catch((error: any) => {
-        if (createdForCompaction) {
-          session.finished = true;
-        }
-        broadcastToFlow(ref, {
-          type: 'error',
-          flowRef: ref,
-          message: error instanceof Error ? error.message : String(error)
-        });
-      });
-  }
+  const commands = createRuntimeSessionCommands({
+    workspaceRoot,
+    activeSessions,
+    readFlowRun,
+    resolveWorkflow,
+    createSession,
+    startFlowRunner,
+    attachSessionTask,
+    emitHistoricalMessage,
+    emitFlowState,
+    broadcastToFlow,
+    missingModelError,
+    clearNodeAwaitingConsent,
+    readFlowStateMessage,
+  });
 
   return {
     sendToSocket,
@@ -742,13 +441,13 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     startFreshFlow,
     startInitializationFlow,
     resumeFlow,
-    handleHumanInput,
-    handleImprovementChoice,
-    handleFeedbackConsentChoice,
-    handleConsentResponse,
-    handleConsentMode,
-    handleStopActiveTurn,
-    handleCompactContext,
+    handleHumanInput: commands.handleHumanInput,
+    handleImprovementChoice: commands.handleImprovementChoice,
+    handleFeedbackConsentChoice: commands.handleFeedbackConsentChoice,
+    handleConsentResponse: commands.handleConsentResponse,
+    handleConsentMode: commands.handleConsentMode,
+    handleStopActiveTurn: commands.handleStopActiveTurn,
+    handleCompactContext: commands.handleCompactContext,
   };
 }
 
