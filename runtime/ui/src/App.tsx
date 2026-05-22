@@ -1,25 +1,18 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { flowKey } from '../../src/common/flow-ref.js';
-import { getActiveNodeIds } from '../../src/common/flow-state.js';
 import {
-  DEFAULT_SELECTED_ROLE_KEY,
-  EMPTY_STRINGS,
   SETTINGS_REQUIRED_MESSAGE,
   SYSTEM_ROLE_KEY,
 } from './app/constants';
-import { feedbackConsentCopy } from './app/feedback-copy';
+import { createActiveFlowView } from './app/active-flow-view';
 import {
-  collectSelectableRoles,
   createFlowUiState,
-  getAwaitingNodeIdForRole,
-  hasImprovementGraph,
   titleForFlow,
   type FlowTab,
   type FlowUiState,
 } from './app/flow-ui';
 import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
-import { toRoleKey } from './app/roles';
 import {
   deleteFlow as deleteFlowApi,
   fetchActiveModelContextWindow,
@@ -153,9 +146,44 @@ export function App() {
     sendMessage({ type: 'open_flow', flowRef: ref });
   }, [ensureTab, updateFlowUi, sendMessage]);
 
-  const activeTab = useMemo(() => (
-    activeTabKey ? tabs.find((tab) => tab.key === activeTabKey) ?? null : null
-  ), [activeTabKey, tabs]);
+  const activeView = useMemo(() => createActiveFlowView({
+    tabs,
+    activeTabKey,
+    flowUiByKey,
+    selectedProject,
+    projectFlowsByProject,
+    socketOpen: socket.status === 'open',
+  }), [activeTabKey, flowUiByKey, projectFlowsByProject, selectedProject, socket.status, tabs]);
+
+  const {
+    activeTab,
+    activeUi,
+    flowRun,
+    backwardActive,
+    projectFlows,
+    hasActiveFlowState,
+    graphMode,
+    improvementGraphAvailable,
+    backwardSources,
+    roles,
+    activeRoles,
+    viewedRole,
+    visibleFeed,
+    visibleConsentRequest,
+    isAwaitingImprovementChoice,
+    isAwaitingFeedbackConsent,
+    feedbackPrompt,
+    isViewedRoleCompacting,
+    visibleWaitLabel,
+    hasActiveSession,
+    inputDisabled,
+    inputPlaceholder,
+    canStopViewedRole,
+    stopRequestedForViewedRole,
+    inputTargetRole,
+    composerValue,
+    latestContextUsage,
+  } = activeView;
 
   const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
   const settingsReady = settingsStatus !== null;
@@ -225,16 +253,6 @@ export function App() {
     return () => { cancelled = true; };
   }, [selectedProject, setProjectFlows]);
 
-  const activeUi = activeTabKey ? flowUiByKey[activeTabKey] ?? null : null;
-  const flowRun = activeUi?.flowRun ?? null;
-  const workflow = activeUi?.workflow ?? null;
-  const selectedRole = activeUi?.selectedRole ?? DEFAULT_SELECTED_ROLE_KEY;
-  const selectedGraph = activeUi?.selectedGraph ?? 'flow';
-  const lastHandoff = activeUi?.lastHandoff ?? null;
-  const backwardActive = activeUi?.backwardActive ?? EMPTY_STRINGS;
-  const projectFlows = selectedProject ? projectFlowsByProject[selectedProject] ?? [] : [];
-  const hasActiveFlowState = flowRun !== null;
-
   useEffect(() => {
     if (socket.status !== 'open' || !activeTab || !hasActiveFlowState) {
       return;
@@ -271,18 +289,6 @@ export function App() {
       window.clearInterval(timer);
     };
   }, [socket.status, activeTab, hasActiveFlowState, updateFlowUi, showToast]);
-
-  function resolveInputTargetRole(): string {
-    if (flowRun && selectedRole && getAwaitingNodeIdForRole(flowRun, selectedRole)) {
-      return selectedRole;
-    }
-    if (flowRun && workflow && getActiveNodeIds(flowRun).length === 1) {
-      const activeNode = workflow.nodes.find((node) => node.id === getActiveNodeIds(flowRun)[0]);
-      if (activeNode) return toRoleKey(activeNode.role) ?? SYSTEM_ROLE_KEY;
-    }
-    if (selectedRole) return selectedRole;
-    return SYSTEM_ROLE_KEY;
-  }
 
   function handleProjectSelect(projectNamespace: string | null): void {
     setSelectedProject(projectNamespace);
@@ -379,7 +385,6 @@ export function App() {
     if (!ensureConfiguredModel()) return;
     const text = activeUi.composerValue.trim();
     if (!text) return;
-    const targetRole = resolveInputTargetRole();
     updateFlowUi(activeTab.key, (state) => ({
       ...state,
       composerValue: '',
@@ -388,7 +393,7 @@ export function App() {
       type: 'human_input',
       flowRef: activeTab.ref,
       text,
-      role: targetRole === SYSTEM_ROLE_KEY ? undefined : targetRole
+      role: inputTargetRole === SYSTEM_ROLE_KEY ? undefined : inputTargetRole
     });
   }
 
@@ -462,68 +467,6 @@ export function App() {
     updateFlowUi(activeTabKey, (state) => ({ ...state, selectedGraph: mode }));
   }, [activeTabKey, updateFlowUi]);
 
-  const activeNodeIds = flowRun ? getActiveNodeIds(flowRun) : undefined;
-  const improvementGraphAvailable = hasImprovementGraph(flowRun);
-  const graphMode = selectedGraph === 'improvement' && improvementGraphAvailable ? 'improvement' : 'flow';
-  const lastHandoffFromNodeId = lastHandoff?.fromNodeId;
-  const backwardSources = useMemo(() => (
-    activeNodeIds && lastHandoffFromNodeId && activeNodeIds.includes(lastHandoffFromNodeId)
-      ? [lastHandoffFromNodeId]
-      : EMPTY_STRINGS
-  ), [activeNodeIds, lastHandoffFromNodeId]);
-
-  const roles = useMemo(() => {
-    const roleList = collectSelectableRoles(activeUi?.roleFeeds ?? {}, workflow);
-    return roleList.length > 0 ? roleList : EMPTY_STRINGS;
-  }, [activeUi?.roleFeeds, workflow]);
-
-  const activeRoles = useMemo(() => {
-    if (!flowRun || !workflow) return EMPTY_STRINGS;
-
-    return [...new Set(
-      getActiveNodeIds(flowRun)
-        .map((nodeId) => workflow.nodes.find((node) => node.id === nodeId)?.role)
-        .map((role) => (role ? toRoleKey(role) : null))
-        .filter((role): role is string => role !== null)
-    )];
-  }, [flowRun, workflow]);
-
-  const viewedRole = selectedRole;
-  const displayedFeed = viewedRole ? (activeUi?.roleFeeds[viewedRole] ?? []) : [];
-  const visibleFeed = displayedFeed.length > 0 ? displayedFeed : (activeUi?.roleFeeds[SYSTEM_ROLE_KEY] ?? []);
-  const visibleConsentRequest =
-    viewedRole
-      ? activeUi?.consentRequests[viewedRole] ?? null
-      : null;
-  const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
-  const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
-  const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
-  const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
-  const feedbackPrompt = feedbackConsentCopy(flowRun);
-  const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
-  const visibleWaitLabel = isViewedRoleCompacting
-    ? 'Compacting...'
-    : isViewedRoleActive && viewedRole
-      ? (activeUi?.waitLabels[viewedRole] ?? null)
-      : null;
-  const hasActiveSession = activeUi?.hasActiveSession ?? false;
-  const inputDisabled = isViewedRoleCompacting || !hasActiveSession || !viewedRoleAwaitingNodeId;
-  const inputPlaceholder = !hasActiveSession
-    ? 'Resume the flow to reply.'
-    : isViewedRoleCompacting
-      ? 'Compacting context...'
-    : !inputDisabled
-      ? 'Reply to the selected role.'
-      : 'Select a role that is awaiting input.';
-  const canStop =
-    !!flowRun &&
-    hasActiveSession &&
-    !viewedRoleAwaitingNodeId &&
-    socket.status === 'open';
-  const viewedRoleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
-  const canStopViewedRole = canStop && (!!viewedRoleWaitLabel || isViewedRoleActive);
-  const stopRequestedForViewedRole = viewedRole ? Boolean(activeUi?.stopRequestedRoles[viewedRole]) : false;
-
   return (
     <main className="app-shell">
       <PanelGroup orientation="horizontal">
@@ -596,7 +539,7 @@ export function App() {
                   }
                   messages={visibleFeed}
                   waitingLabel={visibleWaitLabel}
-                  inputValue={activeUi?.composerValue ?? ''}
+                  inputValue={composerValue}
                   inputDisabled={inputDisabled}
                   placeholder={inputPlaceholder}
                   showComposer={true}
@@ -621,7 +564,7 @@ export function App() {
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   contextWindow={contextWindow}
-                  latestContextUsage={viewedRole ? (activeUi?.latestContextUsageByRole[viewedRole] ?? null) : null}
+                  latestContextUsage={latestContextUsage}
                   isCompactingContext={isViewedRoleCompacting}
                 />
               </Panel>
