@@ -8,13 +8,11 @@ import {
   SETTINGS_REQUIRED_MESSAGE,
   SYSTEM_ROLE_KEY,
 } from './app/constants';
-import { appendFeedItem, formatOperatorEvent, nextFeedId, resolveToolFeedItem } from './app/feed';
 import { feedbackConsentCopy } from './app/feedback-copy';
 import {
   collectSelectableRoles,
   createFlowUiState,
   getAwaitingNodeIdForRole,
-  getConsentRequestRoleKey,
   hasImprovementGraph,
   titleForFlow,
   type FlowTab,
@@ -22,6 +20,15 @@ import {
 } from './app/flow-ui';
 import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import { toRoleKey } from './app/roles';
+import {
+  deleteFlow as deleteFlowApi,
+  fetchActiveModelContextWindow,
+  fetchFlowState,
+  fetchProjectFlows as fetchProjectFlowsApi,
+  fetchSettingsStatus as fetchSettingsStatusApi,
+  IncompatibleFlowError,
+} from './app/runtime-api';
+import { handleServerMessage } from './app/server-messages';
 import { ChatInterface } from './components/ChatInterface';
 import { EmptyGraphPanel } from './components/EmptyGraphPanel';
 import { FeedbackConsentModal } from './components/FeedbackConsentModal';
@@ -30,15 +37,13 @@ import type { GraphMode } from './components/GraphView';
 import { ImprovementChoiceModal } from './components/ImprovementChoiceModal';
 import { ProjectSelector } from './components/ProjectSelector';
 import { SettingsModal } from './components/SettingsModal';
-import { areFlowRunsEqual, areStringArraysEqual, areWorkflowGraphsEqual } from './equality';
+import { areFlowRunsEqual, areWorkflowGraphsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
-import { normalizeSettingsStatus } from './model-config';
 import type {
   ClientMessage,
   ConsentMode,
   ConsentResponseDecision,
   FlowRef,
-  FlowRun,
   FlowSummary,
   ProjectDiscovery,
   ServerMessage,
@@ -100,292 +105,40 @@ export function App() {
     writeUrlFlowRef(ref);
   }, []);
 
-  const fetchSettingsStatus = useCallback(async (): Promise<void> => {
+  const refreshSettingsStatus = useCallback(async (): Promise<void> => {
     try {
-      const response = await fetch('/api/settings/status');
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      const status = normalizeSettingsStatus(await response.json());
-      if (!status) {
-        throw new Error('Invalid settings status response.');
-      }
-      setSettingsStatus(status);
+      setSettingsStatus(await fetchSettingsStatusApi());
     } catch {
       setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 });
     }
   }, []);
 
-  const fetchProjectFlows = useCallback(async (projectNamespace: string): Promise<void> => {
+  const setProjectFlows = useCallback((projectNamespace: string, flows: FlowSummary[]): void => {
+    setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: flows }));
+  }, []);
+
+  const refreshProjectFlows = useCallback(async (projectNamespace: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/flows`);
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      const flows = await response.json() as FlowSummary[];
-      setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: flows }));
+      setProjectFlows(projectNamespace, await fetchProjectFlowsApi(projectNamespace));
     } catch {
       setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: current[projectNamespace] ?? [] }));
     }
-  }, []);
+  }, [setProjectFlows]);
 
-  function handleIncomingMessage(message: ServerMessage): void {
-    if (message.type === 'init') {
-      setProjects(message.projects);
-      setNewProjectName('');
-      setSelectorError(null);
-      return;
-    }
-
-    if (message.type === 'flow_summaries') {
-      setProjectFlowsByProject((current) => ({ ...current, [message.projectNamespace]: message.flows }));
-      return;
-    }
-
-    const key = flowKey(message.flowRef);
-
-    switch (message.type) {
-      case 'feed_replay':
-        updateFlowUi(key, (state) => ({
-          ...state,
-          roleFeeds: message.roleFeeds,
-          lastHandoff: null,
-          waitLabels: {},
-          stopRequestedRoles: {},
-          latestContextUsageByRole: {},
-          compactingRoles: {},
-          consentRequests: {},
-        }));
-        return;
-      case 'operator_event': {
-        const event = message.event;
-
-        if (event.kind === 'consent.requested') {
-          updateFlowUi(key, (state) => ({
-            ...state,
-            consentRequests: {
-              ...state.consentRequests,
-              [getConsentRequestRoleKey(event.request) ?? SYSTEM_ROLE_KEY]: event.request,
-            },
-          }));
-          return;
-        }
-
-        if (event.kind === 'consent.resolved') {
-          updateFlowUi(key, (state) => {
-            const roleKey = getConsentRequestRoleKey(event.request) ?? SYSTEM_ROLE_KEY;
-            const nextConsentRequests = { ...state.consentRequests };
-            delete nextConsentRequests[roleKey];
-            return { ...state, consentRequests: nextConsentRequests };
-          });
-          return;
-        }
-
-        if (event.kind === 'consent.mode_changed') {
-          updateFlowUi(key, (state) => ({
-            ...state,
-            consentRequests: event.mode === 'full-access' ? {} : state.consentRequests,
-          }));
-          return;
-        }
-
-        if (event.kind === 'usage.turn_summary') {
-          if (event.contextUsage != null) {
-            updateFlowUi(key, (state) => {
-              const role = toRoleKey(event.role) ?? SYSTEM_ROLE_KEY;
-              return {
-                ...state,
-                latestContextUsageByRole: { ...state.latestContextUsageByRole, [role]: event.contextUsage! },
-              };
-            });
-          }
-          return;
-        }
-
-        if (event.kind === 'session.compaction_started') {
-          const roleKey = toRoleKey(event.role);
-          if (!roleKey) return;
-          updateFlowUi(key, (state) => ({
-            ...state,
-            compactingRoles: { ...state.compactingRoles, [roleKey]: true },
-          }));
-          return;
-        }
-
-        if (event.kind === 'session.compaction_failed') {
-          const roleKey = toRoleKey(event.role);
-          if (!roleKey) return;
-          updateFlowUi(key, (state) => ({
-            ...state,
-            compactingRoles: { ...state.compactingRoles, [roleKey]: false },
-          }));
-          return;
-        }
-
-        if (event.kind === 'role.active') {
-          updateFlowUi(key, (state) => {
-            const item = formatOperatorEvent(event);
-            const roleKey = toRoleKey(event.role);
-            return {
-              ...state,
-              stopRequestedRoles: roleKey
-                ? { ...state.stopRequestedRoles, [roleKey]: false }
-                : state.stopRequestedRoles,
-              roleFeeds: item && roleKey ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
-            };
-          });
-          setSelectorError(null);
-          return;
-        }
-
-        if (event.kind === 'human.awaiting_input') {
-          updateFlowUi(key, (state) => {
-            const item = formatOperatorEvent(event);
-            const roleKey = toRoleKey(event.role);
-            return {
-              ...state,
-              stopRequestedRoles: roleKey
-                ? { ...state.stopRequestedRoles, [roleKey]: false }
-                : state.stopRequestedRoles,
-              roleFeeds: item && roleKey ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
-            };
-          });
-          return;
-        }
-
-        if (event.kind === 'activity.tool_result') {
-          const roleKey = toRoleKey(event.role);
-          if (roleKey) {
-            updateFlowUi(key, (state) => ({
-              ...state,
-              roleFeeds: resolveToolFeedItem(state.roleFeeds, roleKey, event.toolName, event.isError)
-            }));
-          }
-          return;
-        }
-
-        updateFlowUi(key, (state) => {
-          const item = formatOperatorEvent(event);
-          const feedRole =
-            event.kind === 'human.resumed' || event.kind === 'role.resumed' || event.kind === 'activity.tool_call'
-              ? toRoleKey(event.role)
-              : event.kind === 'handoff.applied'
-                ? toRoleKey(event.fromRole)
-                : event.kind === 'repair.requested'
-                  ? toRoleKey(event.role ?? null)
-                  : event.kind === 'session.compacted'
-                    ? toRoleKey(event.role)
-                  : null;
-          const compactedRole = event.kind === 'session.compacted' ? toRoleKey(event.role) : null;
-          const resumedRole = event.kind === 'human.resumed' || event.kind === 'role.resumed' ? toRoleKey(event.role) : null;
-          return {
-            ...state,
-            stopRequestedRoles: event.kind === 'flow.completed'
-              ? {}
-              : resumedRole
-                ? { ...state.stopRequestedRoles, [resumedRole]: false }
-                : state.stopRequestedRoles,
-            lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
-            latestContextUsageByRole: compactedRole
-              ? { ...state.latestContextUsageByRole, [compactedRole]: 0 }
-              : state.latestContextUsageByRole,
-            compactingRoles: compactedRole
-              ? { ...state.compactingRoles, [compactedRole]: false }
-              : state.compactingRoles,
-            roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
-          };
-        });
-        return;
-      }
-      case 'request_sent': {
-        const roleKey = toRoleKey(message.role);
-        if (!roleKey) return;
-        updateFlowUi(key, (state) => ({
-          ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: 'Waiting for model...' }
-        }));
-        return;
-      }
-      case 'receiving_response': {
-        const roleKey = toRoleKey(message.role);
-        if (!roleKey) return;
-        updateFlowUi(key, (state) => ({
-          ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: 'Model is responding...' }
-        }));
-        return;
-      }
-      case 'response_end': {
-        const roleKey = toRoleKey(message.role);
-        if (!roleKey) return;
-        updateFlowUi(key, (state) => ({
-          ...state,
-          waitLabels: { ...state.waitLabels, [roleKey]: null },
-          stopRequestedRoles: { ...state.stopRequestedRoles, [roleKey]: false }
-        }));
-        return;
-      }
-      case 'output_text': {
-        const roleKey = toRoleKey(message.role);
-        if (!roleKey) return;
-        updateFlowUi(key, (state) => ({
-          ...state,
-          waitLabels: state.waitLabels[roleKey] ? state.waitLabels : { ...state.waitLabels, [roleKey]: 'Model is responding...' },
-          roleFeeds: appendFeedItem(state.roleFeeds, roleKey, {
-            id: nextFeedId(),
-            type: 'assistant',
-            label: 'Assistant',
-            text: message.text
-          })
-        }));
-        return;
-      }
-      case 'input_text':
-        updateFlowUi(key, (state) => {
-          const roleKey = toRoleKey(message.role) ?? SYSTEM_ROLE_KEY;
-          return {
-            ...state,
-            roleFeeds: appendFeedItem(state.roleFeeds, roleKey, {
-              id: nextFeedId(),
-              type: 'user',
-              label: 'You',
-              text: message.text
-            })
-          };
-        });
-        return;
-      case 'flow_state':
-        ensureTab(message.flowRef, titleForFlow(message.flowRun));
-        updateFlowUi(key, (state) => {
-          const improvementGraphAvailable = hasImprovementGraph(message.flowRun);
-          const wasImprovementGraphAvailable = hasImprovementGraph(state.flowRun);
-          return {
-            ...state,
-            flowRun: areFlowRunsEqual(state.flowRun, message.flowRun) ? state.flowRun : message.flowRun,
-            backwardActive: areStringArraysEqual(state.backwardActive, message.backwardActive)
-              ? state.backwardActive
-              : message.backwardActive,
-            selectedGraph: improvementGraphAvailable && !wasImprovementGraphAvailable && message.flowRun.improvementPhase?.status === 'running'
-              ? 'improvement'
-              : !improvementGraphAvailable && state.selectedGraph === 'improvement'
-                ? 'flow'
-                : state.selectedGraph,
-            stopRequestedRoles: message.flowRun.status !== 'running' ? {} : state.stopRequestedRoles,
-            hasActiveSession: message.hasActiveSession,
-            latestContextUsageByRole: { ...message.contextUsageByRole, ...state.latestContextUsageByRole },
-          };
-        });
-        void fetchProjectFlows(message.flowRef.projectNamespace);
-        return;
-      case 'error':
-        updateFlowUi(key, (state) => ({ ...state, stopRequestedRoles: {} }));
-        showToast(message.message);
-        if (message.flowRef.flowId === '__new__' || message.flowRef.flowId === '__system__') {
-          setSelectorError(message.message);
-        }
-        return;
-    }
-  }
+  const handleIncomingMessage = useCallback((message: ServerMessage): void => {
+    handleServerMessage(message, {
+      updateFlowUi,
+      ensureTab,
+      setProjects,
+      setProjectFlows,
+      setNewProjectName,
+      setSelectorError,
+      refreshProjectFlows: (projectNamespace) => {
+        void refreshProjectFlows(projectNamespace);
+      },
+      showToast,
+    });
+  }, [ensureTab, refreshProjectFlows, setProjectFlows, showToast, updateFlowUi]);
 
   const socket = useWebSocket(socketUrl, { onMessage: handleIncomingMessage });
 
@@ -423,11 +176,9 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/settings/status')
-      .then(async (res) => {
-        if (cancelled || !res.ok) return;
-        const status = normalizeSettingsStatus(await res.json());
-        if (!cancelled && status) setSettingsStatus(status);
+    fetchSettingsStatusApi()
+      .then((status) => {
+        if (!cancelled) setSettingsStatus(status);
       })
       .catch(() => { if (!cancelled) setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 }); });
     return () => { cancelled = true; };
@@ -435,11 +186,9 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/settings/active-model/context-window')
-      .then(async (res) => {
-        if (cancelled || !res.ok) return;
-        const data = await res.json() as { contextWindow: number | null };
-        if (!cancelled) setContextWindow(data.contextWindow ?? null);
+    fetchActiveModelContextWindow()
+      .then((modelContextWindow) => {
+        if (!cancelled) setContextWindow(modelContextWindow);
       })
       .catch(() => { });
     return () => { cancelled = true; };
@@ -467,16 +216,14 @@ export function App() {
     let cancelled = false;
     void (async () => {
       try {
-        const response = await fetch(`/api/projects/${encodeURIComponent(selectedProject)}/flows`);
-        if (!response.ok) throw new Error(await response.text());
-        const flows = await response.json() as FlowSummary[];
-        if (!cancelled) setProjectFlowsByProject((current) => ({ ...current, [selectedProject]: flows }));
+        const flows = await fetchProjectFlowsApi(selectedProject);
+        if (!cancelled) setProjectFlows(selectedProject, flows);
       } catch {
         if (!cancelled) setProjectFlowsByProject((current) => ({ ...current, [selectedProject]: current[selectedProject] ?? [] }));
       }
     })();
     return () => { cancelled = true; };
-  }, [selectedProject]);
+  }, [selectedProject, setProjectFlows]);
 
   const activeUi = activeTabKey ? flowUiByKey[activeTabKey] ?? null : null;
   const flowRun = activeUi?.flowRun ?? null;
@@ -497,27 +244,19 @@ export function App() {
 
     const syncFlowState = async () => {
       try {
-        const response = await fetch(
-          `/api/flows/${encodeURIComponent(activeTab.ref.projectNamespace)}/${encodeURIComponent(activeTab.ref.flowId)}/state`
-        );
-        if (!response.ok) {
-          if (response.status === 409) {
-            const payload = await response.json().catch(() => null) as { message?: string } | null;
-            updateFlowUi(activeTab.key, (state) => ({ ...state, flowRun: null }));
-            showToast(payload?.message ?? 'This flow is incompatible with the current runtime.');
-            return;
-          }
-          throw new Error(await response.text());
-        }
-
-        const nextFlowRun = await response.json() as FlowRun | null;
+        const nextFlowRun = await fetchFlowState(activeTab.ref);
         if (cancelled || !nextFlowRun) return;
 
         updateFlowUi(activeTab.key, (state) => ({
           ...state,
           flowRun: areFlowRunsEqual(state.flowRun, nextFlowRun) ? state.flowRun : nextFlowRun,
         }));
-      } catch {
+      } catch (err) {
+        if (!cancelled && err instanceof IncompatibleFlowError) {
+          updateFlowUi(activeTab.key, (state) => ({ ...state, flowRun: null }));
+          showToast(err.message);
+          return;
+        }
         // Keep the last known state while the server catches up.
       }
     };
@@ -550,7 +289,7 @@ export function App() {
     setNewProjectName('');
     setSelectorError(null);
     if (projectNamespace) {
-      void fetchProjectFlows(projectNamespace);
+      void refreshProjectFlows(projectNamespace);
     }
   }
 
@@ -587,11 +326,7 @@ export function App() {
     if (!window.confirm(`Delete "${label}" and all its artifacts? This cannot be undone.`)) return;
 
     try {
-      const response = await fetch(
-        `/api/flows/${encodeURIComponent(flow.projectNamespace)}/${encodeURIComponent(flow.flowId)}`,
-        { method: 'DELETE' },
-      );
-      if (!response.ok) throw new Error(await response.text());
+      await deleteFlowApi(flow);
 
       const key = flowKey(flow);
       setTabs((current) => current.filter((tab) => tab.key !== key));
@@ -605,7 +340,7 @@ export function App() {
         writeUrlFlowRef(null);
       }
 
-      void fetchProjectFlows(flow.projectNamespace);
+      void refreshProjectFlows(flow.projectNamespace);
     } catch (err) {
       setSelectorError(err instanceof Error ? err.message : 'Failed to delete flow.');
     }
@@ -922,7 +657,7 @@ export function App() {
         <SettingsModal
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
-          onModelsChange={() => { void fetchSettingsStatus(); }}
+          onModelsChange={() => { void refreshSettingsStatus(); }}
         />
       )}
     </main>
