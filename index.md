@@ -19,7 +19,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_RUNTIME_INITIALIZATION` | `a-society/runtime/contracts/initialization.md` | Runtime-owned initialization contract — used by the browser runtime when taking over an existing project without `a-docs/` or starting a greenfield project |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` | `a-society/runtime/contracts/a-docs-manifest.yaml` | Runtime-owned a-docs manifest — machine-readable scaffold and health-check contract for default project `a-docs/` surfaces |
 | `$A_SOCIETY_RUNTIME_FEEDBACK` | `a-society/runtime/contracts/feedback.md` | Runtime-owned final backward-pass feedback contract — used by the runtime's A-Society feedback phase |
-| `$A_SOCIETY_INSTALL_SCRIPT` | `a-society/install.sh` | A-Society installation script — installs the `a-society` CLI command via npm link; run once from the repository root |
 | **Feedback** | | |
 | `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — new runtime-generated feedback lands directly here |
 | `$ONBOARDING_SIGNAL_TEMPLATE` | `a-society/feedback/onboarding/_template.md` | Legacy initialization-feedback template retained for historical references |

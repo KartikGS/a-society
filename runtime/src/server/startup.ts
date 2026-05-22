@@ -1,20 +1,23 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
-config({ path: fileURLToPath(new URL('../.env', import.meta.url)) });
-
-import { TelemetryManager } from '../src/observability/observability.js';
-TelemetryManager.init();
+config({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
 
 import os from 'node:os';
+import path from 'node:path';
 import { exec } from 'node:child_process';
-import { startServer } from '../src/server/server.js';
+import { TelemetryManager } from '../observability/observability.js';
+import { startServer } from './server.js';
 
-function parsePort(rawPort: string | undefined): number {
+export function parsePort(rawPort: string | undefined): number {
   const parsed = Number(rawPort ?? '3000');
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
     throw new Error(`Invalid A_SOCIETY_UI_PORT value "${rawPort}". Expected an integer between 1 and 65535.`);
   }
   return parsed;
+}
+
+export function resolveWorkspaceRoot(): string {
+  return path.resolve(process.env.A_SOCIETY_WORKSPACE_ROOT || process.env.INIT_CWD || process.cwd());
 }
 
 function buildOpenCommand(url: string): string | null {
@@ -39,24 +42,17 @@ function openBrowser(url: string): void {
   });
 }
 
-async function main() {
-  const workspaceRoot = process.cwd();
+async function main(): Promise<void> {
   const port = parsePort(process.env.A_SOCIETY_UI_PORT);
+  const workspaceRoot = resolveWorkspaceRoot();
   const url = `http://localhost:${port}`;
-
-  try {
-    await startServer(workspaceRoot, port);
-    openBrowser(url);
-    process.stderr.write(`[runtime/server] UI available at ${url}\n`);
-  } catch (err: any) {
-    process.stderr.write(`${err.message}\n`);
-    process.exit(1);
-  }
+  await startServer(workspaceRoot, port);
+  openBrowser(url);
+  process.stderr.write(`[runtime/server] UI available at ${url}\n`);
 }
 
-try {
-  await main();
-} catch (err: any) {
-  console.error(`Fatal error:`, err);
+main().catch(async (error) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  await TelemetryManager.shutdown();
   process.exit(1);
-}
+});

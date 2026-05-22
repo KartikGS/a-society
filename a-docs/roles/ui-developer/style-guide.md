@@ -34,11 +34,11 @@ export function ChatInterface(props: ChatInterfaceProps) { ... }
 export const ChatInterface = (props: ChatInterfaceProps) => { ... }
 ```
 
-**Pure computation helpers before the component.** Functions that compute derived values (e.g., `computeDepths`, `buildReactFlowState`, `formatOperatorEvent`) are defined as plain functions above the component in the same file. They do not use hooks and have no side effects.
+**Pure computation helpers stay close to their ownership boundary.** Component-specific helpers such as `buildReactFlowState` stay above the component in the same file. Cross-component view models, protocol reducers, routing/feed helpers, runtime API wrappers, and command hooks belong under `src/app/`.
 
 **One component per file.** Do not colocate sibling components in the same file. Each file exports one primary component (the component matching the filename) plus any interfaces or helpers it needs.
 
-**Components in `src/components/`.** Hooks in `src/hooks/`. Do not create additional subdirectory levels unless the folder would exceed five files.
+**Components in `src/components/`.** Browser/runtime primitives that are not tied to one component live in `src/app/`: view models, command hooks, server-message reducers, routing helpers, feed helpers, runtime API wrappers, and other app-shell utilities. Generic reusable hooks may live in `src/hooks/`. Do not create additional subdirectory levels unless the folder would exceed five files.
 
 **3-Pane IDE Layout.** The main workspace uses a persistent, resizable 3-pane layout:
 - **Left Pane (Sidebar):** Project explorer, creation, and record selection (`ProjectSelector` acting as a sidebar).
@@ -51,13 +51,20 @@ This layout is managed by the `react-resizable-panels` library via the `<PanelGr
 
 ## State Model
 
-**State lives in `App.tsx`.** `App` is the single state owner for all cross-component data. Components below `App` are controlled — they receive data and callbacks via props and do not hold local copies of shared state.
+**`App.tsx` owns cross-component state; `src/app/` owns orchestration helpers.** `App` remains the shell that holds shared React state, lifecycle effects, and layout composition. Cross-component derivation and command logic should be extracted into `src/app/` modules instead of accumulating inline in `App.tsx`.
+
+Standing `src/app/` responsibilities include:
+- Active-flow view-model derivation (`active-flow-view.ts`)
+- User command wiring (`use-app-commands.ts`)
+- Server-message application (`server-messages.ts`)
+- Runtime REST wrappers (`runtime-api.ts`)
+- Feed, routing, role, and modal-copy helpers
 
 **Local state is allowed for two cases only:**
 1. UI-only state with no effect on other components (e.g., `feedEndRef` in `ChatInterface` for scroll behavior).
-2. Data fetched independently by a component that `App` does not own (e.g., `workflow` state in `GraphView`, which fetches `/api/workflow` on its own polling interval).
+2. Data fetched independently by a component that `App` does not own (e.g., `workflow` state in `GraphView`, which fetches the flow workflow endpoints on its own polling interval).
 
-When in doubt, lift state to `App`.
+When in doubt, keep the state owner in `App` and move only derived read models, command handlers, or transport helpers into `src/app/`.
 
 **No state management library.** React's built-in `useState`, `useRef`, and `useEffect` are sufficient. Do not introduce Redux, Zustand, Jotai, or any equivalent.
 
@@ -70,7 +77,7 @@ setRoleFeeds((current) => ({ ...current, [role]: [...existing, item] }));
 
 ## Event Handler Naming
 
-**Handlers defined in `App` use `handleX`.** `handleIncomingMessage`, `handleProjectSelect`, `handleSubmit`, `handleImprovementChoice`.
+**Handlers defined by the app shell or command hooks use `handleX`.** `handleIncomingMessage`, `handleProjectSelect`, `handleSubmit`, `handleImprovementChoice`.
 
 **Props that accept callbacks use `onX`.** `onMessage`, `onSelect`, `onSubmit`, `onInputChange`, `onRoleSelect`, `onNodeClick`, `onWorkflowLoaded`.
 
@@ -125,6 +132,8 @@ Type-assert JSON responses at the call site: `await response.json() as MyType`.
 **Reconnection is the hook's responsibility.** The hook reconnects automatically on close with a 1 s delay. Components do not implement reconnection logic.
 
 **Messages are typed.** The hook accepts `ClientMessage` for sends and delivers `ServerMessage` to the `onMessage` callback. Do not send or receive raw strings.
+
+**Server-message application belongs in `src/app/server-messages.ts`.** Keep the WebSocket hook transport-only. Do not re-accumulate protocol-specific state transitions in `App.tsx`.
 
 ---
 
@@ -206,7 +215,7 @@ Do not add intermediate breakpoints without a layout justification.
 
 **Node style resets are applied inline.** The inline `style` on each node clears ReactFlow's default borders and backgrounds so the inner `div` controls all visual state:
 ```ts
-style: { border: 'none', background: 'transparent', boxShadow: 'none', padding: 0, width: 220 }
+style: { border: 'none', background: 'transparent', boxShadow: 'none', padding: 0, width: NODE_SIZE, height: NODE_SIZE }
 ```
 Do not remove these resets.
 

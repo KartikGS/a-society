@@ -19,7 +19,7 @@ This document is the standing design reference for A-Society's unified executabl
 | Role | Owns |
 |---|---|
 | Framework Services Developer | Deterministic executable framework services and their internal implementation details |
-| Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration, CLI/operator behavior, observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
+| Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration, browser/operator behavior, observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
 | Curator | Standing executable docs, coupling references, indexes, update reports, and verification of operator-facing references |
 
 ---
@@ -42,7 +42,8 @@ These capabilities live under the executable layer rooted in `runtime/`.
 
 | Capability | Responsibility |
 |---|---|
-| Operator interface | CLI entry points and operator-facing flow controls |
+| Operator interface | Local runtime server startup, browser UI serving, WebSocket protocol, and operator-facing flow controls |
+| Runtime session backend | Stored-flow lifecycle, WebSocket-backed session replay, operator commands, runtime event routing, consent transitions, and flow-state projection |
 | Flow orchestration | Forward-pass routing, pause handling, trigger execution, and terminal-state handling |
 | Context injection | Required-reading resolution and turn-context assembly |
 | Session store | Durable runtime state, session persistence, and status tracking |
@@ -74,6 +75,12 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 - per-role `required-readings.yaml` schema used by runtime context injection
 
 These dependencies are tracked and maintained via `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
+
+## Server Implementation Boundary
+
+`runtime/src/server/server.ts` is a composition boundary, not the home for all backend behavior. It should initialize the server, register routes, parse WebSocket messages, and delegate to capability modules.
+
+Runtime session behavior is a nested server subdomain under `runtime/src/server/runtime-session/`. Its internal modules separate lifecycle wiring, operator commands, runtime event routing, consent state transitions, feed persistence/replay, flow-state projection, human-input targeting, stale-consent recovery, and shared session types.
 
 ---
 
