@@ -1,15 +1,11 @@
 import { PassThrough } from 'node:stream';
 import type { WebSocket } from 'ws';
 import { flowKey, flowRefFromRun } from '../../common/flow-ref.js';
-import { parseRoleIdentity } from '../../common/role-id.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
-  ConsentRequest,
-  ConsentResponseDecision,
   FeedItem,
   FlowRef,
   FlowRun,
-  OperatorEvent,
 } from '../../common/types.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
@@ -18,8 +14,9 @@ import { bootstrapInitializationFlow } from '../../projects/initialization-boots
 import { initializeDraftFlow } from '../../projects/draft-flow.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
-import { isTransientOperatorEvent } from '../role-feed.js';
 import { createRuntimeSessionCommands } from './commands.js';
+import { createRuntimeSessionConsent } from './consent.js';
+import { createRuntimeSessionEvents } from './events.js';
 import {
   createRoleOutputStream,
   loadLatestContextUsageByRole,
@@ -97,130 +94,22 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     broadcastToFlow(session.flowRef, message);
   }
 
-  async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
-    await SessionStore.updateFlowRun((flow) => {
-      flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
-      flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent' };
-      flow.status = 'running';
-    }, session.flowRef, workspaceRoot);
-    emitFlowState(session);
-  }
+  const consent = createRuntimeSessionConsent({
+    workspaceRoot,
+    activeSessions,
+    emitFlowState,
+    readFlowStateMessage,
+    broadcastToFlow,
+  });
 
-  async function clearNodeAwaitingConsent(
-    session: ActiveSession,
-    request: ConsentRequest,
-    decision: ConsentResponseDecision
-  ): Promise<void> {
-    await SessionStore.updateFlowRun((flow) => {
-      flow.consentState = session.consentGate.getState();
-      if (flow.awaitingHumanNodes[request.nodeId]?.reason !== 'consent') return;
-
-      if (decision === 'deny') {
-        flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent-denied' };
-        flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
-        flow.status = 'running';
-        return;
-      }
-
-      delete flow.awaitingHumanNodes[request.nodeId];
-      if (
-        !flow.completedNodes.includes(request.nodeId) &&
-        !flow.runningNodes.includes(request.nodeId)
-      ) {
-        flow.runningNodes.push(request.nodeId);
-      }
-      flow.status = 'running';
-    }, session.flowRef, workspaceRoot);
-    emitFlowState(session);
-  }
-
-  function updateBackwardTracking(session: ActiveSession, event: OperatorEvent): void {
-    if (event.kind !== 'handoff.applied') return;
-
-    const flowRun = readFlowRun(session.flowRef);
-    const workflow = resolveWorkflow(flowRun);
-    if (!workflow) return;
-
-    for (const target of event.targets) {
-      const isBackwardTarget = (workflow.edges ?? []).some(
-        (edge: any) => edge.from === target.nodeId && edge.to === event.fromNodeId
-      );
-      if (isBackwardTarget) {
-        session.backwardActive.add(target.nodeId);
-      }
-    }
-  }
-
-  function handleRuntimeMessage(session: ActiveSession, message: RuntimeServerMessage): void {
-    switch (message.type) {
-      case 'request_sent':
-        emitTransientMessage(session, message);
-        return;
-      case 'receiving_response':
-        emitTransientMessage(session, message);
-        return;
-      case 'response_end':
-        emitTransientMessage(session, message);
-        return;
-      case 'error':
-        emitTransientMessage(session, message);
-        return;
-      case 'operator_event':
-        if (message.event.kind === 'consent.requested') {
-          void markNodeAwaitingConsent(session, message.event.request)
-            .finally(() => emitTransientMessage(session, message));
-          return;
-        }
-
-        if (message.event.kind === 'consent.resolved') {
-          void clearNodeAwaitingConsent(session, message.event.request, message.event.decision)
-            .finally(() => emitTransientMessage(session, message));
-          return;
-        }
-
-        if (message.event.kind === 'consent.mode_changed') {
-          void SessionStore.updateFlowRun((flow) => {
-            flow.consentState = session.consentGate.getState();
-          }, session.flowRef, workspaceRoot).then(() => emitFlowState(session));
-          return;
-        }
-
-        if (message.event.kind === 'usage.turn_summary') {
-          const { role, contextUsage } = message.event;
-          if (role && contextUsage != null) {
-            const roleKey = parseRoleIdentity(role).instanceRoleId;
-            session.latestContextUsageByRole[roleKey] = contextUsage;
-          }
-          emitTransientMessage(session, message);
-          return;
-        }
-
-        if (message.event.kind === 'session.compacted') {
-          const roleKey = parseRoleIdentity(message.event.role).instanceRoleId;
-          session.latestContextUsageByRole[roleKey] = 0;
-        }
-
-        if (isTransientOperatorEvent(message.event)) {
-          return;
-        }
-
-        updateBackwardTracking(session, message.event);
-        emitHistoricalMessage(session, message);
-
-        if (
-          message.event.kind === 'handoff.applied' ||
-          message.event.kind === 'flow.completed' ||
-          message.event.kind === 'role.active'
-        ) {
-          setImmediate(() => emitFlowState(session));
-        }
-
-        if (message.event.kind === 'flow.completed') {
-          session.finished = true;
-        }
-        return;
-    }
-  }
+  const events = createRuntimeSessionEvents({
+    readFlowRun,
+    resolveWorkflow,
+    emitTransientMessage,
+    emitHistoricalMessage,
+    emitFlowState,
+    consent,
+  });
 
   function createSession(flowRef: FlowRef): ActiveSession {
     // The WebSocket sink closes over the session before the session object is assembled.
@@ -231,7 +120,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     const outputBridge = new PassThrough();
     outputBridge.setEncoding('utf8');
 
-    const sink = new WebSocketOperatorSink((message) => handleRuntimeMessage(session, message));
+    const sink = new WebSocketOperatorSink((message) => events.handleRuntimeMessage(session, message));
     const orchestrator = new FlowOrchestrator(sink);
     const initialConsentState = normalizeConsentState(readFlowRun(flowRef)?.consentState ?? defaultConsentState());
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
@@ -430,8 +319,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     emitFlowState,
     broadcastToFlow,
     missingModelError,
-    clearNodeAwaitingConsent,
-    readFlowStateMessage,
+    consent,
   });
 
   return {

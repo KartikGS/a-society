@@ -22,6 +22,14 @@ Implementation lives under `runtime/`. Standing executable design and coupling r
 | Update comparison | Identifies which framework update reports an adopting project has not yet applied |
 | Orchestration | Manages agent sessions end to end: context injection, handoff routing, improvement/feedback gating, observability, and operator-facing runtime behavior |
 
+## Runtime Server Shape
+
+The browser backend lives under `runtime/src/server/`.
+
+- `server.ts` is the composition layer: it initializes stores, builds the HTTP and WebSocket server, registers routes, parses socket messages, and delegates runtime behavior.
+- Standalone route and transport helpers remain direct `server/` modules when they are small and bounded.
+- WebSocket-backed flow session behavior lives under `runtime/src/server/runtime-session/`. That subdomain owns session lifecycle, operator commands, runtime event routing, consent state transitions, feed replay, flow-state projection, human-input target resolution, stale-consent repair, and shared session types.
+
 ## Standing Ownership Boundary
 
 - `runtime/` is the sole standing executable implementation root

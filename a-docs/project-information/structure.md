@@ -47,7 +47,7 @@ When you are unsure whether something belongs in `general/` vs another project's
 
 ### `runtime/`
 
-**Purpose:** A-Society's executable layer root — the standing home for operator-facing runtime behavior, orchestration/session management, and permanent executable framework services. The runtime calls LLM APIs directly, provides the executable CLI surface, and is the surviving umbrella root for executable implementation.
+**Purpose:** A-Society's executable layer root — the standing home for operator-facing runtime behavior, orchestration/session management, and permanent executable framework services. The runtime calls LLM APIs directly, provides the operator-facing web server and browser UI surface, and is the surviving umbrella root for executable implementation.
 
 **What belongs here:**
 - TypeScript source files implementing orchestration components (context injection, session management, handoff routing, provider gateways, observability, and similar)
@@ -74,7 +74,7 @@ When you are unsure whether something belongs in `general/` vs another project's
   - `framework-services/` — deterministic framework services such as scaffolding, validation, comparison, and backward-pass ordering
   - `improvement/` — backward-pass orchestration, findings/feedback flow control, and generated improvement workflow data
   - `projects/` — project discovery, initialization bootstrap, draft flow creation, record metadata, and project-scoped runtime setup
-  - `server/` — HTTP, WebSocket, and browser-operator backend surfaces
+  - `server/` — HTTP, WebSocket, and browser-operator backend surfaces. Keep the server entry file focused on composition; cohesive backend subdomains such as runtime session management may use nested folders under `server/`.
   - `providers/` — LLM provider adapters and provider configuration
   - `tools/` — model-callable tool executors
   - `observability/` — telemetry, metrics, tracing, and runtime diagnostics

@@ -1,9 +1,7 @@
 import { flowKey } from '../../common/flow-ref.js';
 import { parseRoleIdentity } from '../../common/role-id.js';
-import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   ConsentMode,
-  ConsentRequest,
   ConsentResponseDecision,
   FlowRef,
   FlowRun,
@@ -12,7 +10,8 @@ import { ImprovementOrchestrator, type ImprovementMode } from '../../improvement
 import { SessionStore } from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
-import type { FlowStateMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
+import type { HistoricalMessage, ServerMessage } from '../protocol.js';
+import type { RuntimeSessionConsent } from './consent.js';
 import { createRoleOutputStream } from './feed.js';
 import {
   hasAwaitingHumanNodes,
@@ -33,12 +32,7 @@ type RuntimeSessionCommandsDeps = {
   emitFlowState: (session: ActiveSession) => void;
   broadcastToFlow: (ref: FlowRef, message: ServerMessage) => void;
   missingModelError: (ref: FlowRef) => ServerMessage;
-  clearNodeAwaitingConsent: (
-    session: ActiveSession,
-    request: ConsentRequest,
-    decision: ConsentResponseDecision
-  ) => Promise<void>;
-  readFlowStateMessage: (session: ActiveSession | null, ref: FlowRef) => FlowStateMessage | null;
+  consent: RuntimeSessionConsent;
 };
 
 export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
@@ -54,8 +48,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitFlowState,
     broadcastToFlow,
     missingModelError,
-    clearNodeAwaitingConsent,
-    readFlowStateMessage,
+    consent,
   } = deps;
 
   async function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): Promise<void> {
@@ -251,22 +244,12 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       session.consentGate.setMode(mode);
       if (mode === 'full-access') {
         for (const inFlight of inFlightRequests) {
-          void clearNodeAwaitingConsent(session, inFlight, 'allow_flow');
+          void consent.clearNodeAwaitingConsent(session, inFlight, 'allow_flow');
         }
       }
       return;
     }
-    // No active session -- persist mode change directly to the flow state.
-    void SessionStore.updateFlowRun((flow) => {
-      if (!flow.consentState) {
-        flow.consentState = defaultConsentState();
-      }
-      flow.consentState = normalizeConsentState(flow.consentState);
-      flow.consentState.mode = mode;
-    }, ref, workspaceRoot).then(() => {
-      const msg = readFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
-      if (msg) broadcastToFlow(ref, msg);
-    });
+    consent.persistInactiveConsentMode(ref, mode);
   }
 
   function handleStopActiveTurn(ref: FlowRef, target?: { nodeId?: string; role?: string }): void {

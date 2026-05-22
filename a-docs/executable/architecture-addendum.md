@@ -11,6 +11,8 @@ This document records the standing governance rules for A-Society's unified exec
 - standing executable design and coupling references live under `a-docs/executable/`
 - `runtime/INVOCATION.md` is the root operator-facing entry point; additional runtime-owned agent/session contracts belong under `runtime/contracts/`
 - `runtime/src/` is organized by executable capability rather than by a flat file list. Standard capability folders are `orchestration/`, `context/`, `framework-services/`, `improvement/`, `projects/`, `server/`, `providers/`, `tools/`, `observability/`, `settings/`, and `common/`
+- Within `runtime/src/server/`, `server.ts` should remain a composition layer for HTTP/WebSocket setup, route registration, socket message parsing, and delegation. Do not re-accumulate runtime session lifecycle, command handling, event routing, or consent transitions in `server.ts`.
+- Cohesive server subdomains may use nested folders under `runtime/src/server/`. The standing runtime-session subdomain belongs under `runtime/src/server/runtime-session/`.
 - source tests should mirror capability folders when a capability has more than one test file
 - root contracts and flat `runtime/src/` files are not valid placement for new work; use the capability folders and `runtime/contracts/`
 
