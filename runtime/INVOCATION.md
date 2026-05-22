@@ -85,7 +85,7 @@ The UI switches to graph mode on the first `role.active` operator event. `role.a
 
 When a project has existing flow state, the client lists the project's saved records in the left pane. Selecting a record opens it as an in-app tab and scopes the URL to that active tab.
 
-The active tab is mirrored in the URL with `project` and `flow` query parameters. Switching tabs updates those parameters; loading a URL with both parameters reopens that flow.
+The active tab is mirrored in the URL as `/projects/:projectNamespace/flows/:flowId`. Switching tabs updates that route; loading the route reopens that flow. The UI also accepts the older `?project=...&flow=...` form for compatibility and rewrites it to the route form after a flow is selected.
 
 ---
 
