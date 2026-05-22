@@ -1,0 +1,113 @@
+import express, { type Express, type Request, type Response } from 'express';
+import * as SettingsStore from '../settings/settings-store.js';
+
+export function registerSettingsRoutes(app: Express): void {
+  app.use(express.json());
+
+  app.get('/api/settings/models', (_req: Request, res: Response) => {
+    res.json(SettingsStore.listModels());
+  });
+
+  app.get('/api/settings/status', (_req: Request, res: Response) => {
+    res.json({
+      hasConfiguredModel: SettingsStore.hasUsableConfiguredModel(),
+      modelCount: SettingsStore.listModels().length
+    });
+  });
+
+  app.get('/api/settings/active-model/context-window', (_req: Request, res: Response) => {
+    const model = SettingsStore.getActiveModelWithKey();
+    res.json({ contextWindow: model?.contextWindow ?? null });
+  });
+
+  app.get('/api/settings/tools', (_req: Request, res: Response) => {
+    res.json(SettingsStore.getToolSettings());
+  });
+
+  app.post('/api/settings/models', (req: Request, res: Response) => {
+    const { apiKey, ...params } = req.body as any;
+    if (!params.displayName || !params.providerType || !params.modelId) {
+      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
+      return;
+    }
+    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
+      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
+      return;
+    }
+    const model = SettingsStore.createModel({
+      displayName: String(params.displayName),
+      providerType: params.providerType as 'anthropic' | 'openai-compatible',
+      providerBaseUrl: String(params.providerBaseUrl ?? ''),
+      modelId: String(params.modelId),
+      contextWindow: Number(params.contextWindow) || 0,
+      maxOutputTokens: Number(params.maxOutputTokens) || 0,
+      supportsThinking: Boolean(params.supportsThinking),
+      supportedInputTypes: Array.isArray(params.supportedInputTypes)
+        ? params.supportedInputTypes
+            .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
+              value === 'image' || value === 'audio' || value === 'video')
+        : [],
+    }, String(apiKey ?? ''));
+    res.status(201).json(model);
+  });
+
+  app.put('/api/settings/models/:id', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const { apiKey, ...params } = req.body as any;
+    if (!params.displayName || !params.providerType || !params.modelId) {
+      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
+      return;
+    }
+    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
+      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
+      return;
+    }
+
+    try {
+      const model = SettingsStore.updateModel(id, {
+        displayName: String(params.displayName),
+        providerType: params.providerType as 'anthropic' | 'openai-compatible',
+        providerBaseUrl: String(params.providerBaseUrl ?? ''),
+        modelId: String(params.modelId),
+        contextWindow: Number(params.contextWindow) || 0,
+        maxOutputTokens: Number(params.maxOutputTokens) || 0,
+        supportsThinking: Boolean(params.supportsThinking),
+        supportedInputTypes: Array.isArray(params.supportedInputTypes)
+          ? params.supportedInputTypes
+              .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
+                value === 'image' || value === 'audio' || value === 'video')
+          : [],
+      }, typeof apiKey === 'string' ? apiKey : undefined);
+      res.json(model);
+    } catch (err: any) {
+      res.status(404).json({ message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.post('/api/settings/models/:id/activate', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    try {
+      SettingsStore.activateModel(id);
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(404).json({ message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.delete('/api/settings/models/:id', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    SettingsStore.deleteModel(id);
+    res.json({ ok: true });
+  });
+
+  app.put('/api/settings/tools/web-search', (req: Request, res: Response) => {
+    const enabled = req.body?.enabled === true;
+    const apiKey = typeof req.body?.apiKey === 'string' ? req.body.apiKey : undefined;
+
+    try {
+      res.json(SettingsStore.updateWebSearchToolSettings({ enabled, apiKey }));
+    } catch (err: any) {
+      res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+}

@@ -1,15 +1,10 @@
-import { config } from 'dotenv';
-import { fileURLToPath } from 'node:url';
-config({ path: fileURLToPath(new URL('../../.env', import.meta.url)) });
-
 import express, { type Express, type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-import os from 'node:os';
-import { exec } from 'node:child_process';
 import { PassThrough, Writable } from 'node:stream';
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+import type { WebSocket } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
 import { SessionStore } from '../orchestration/store.js';
 import { FlowOrchestrator } from '../orchestration/orchestrator.js';
@@ -20,51 +15,18 @@ import { getActiveNodeIds } from '../common/flow-state.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from './ws-operator-sink.js';
 import { bootstrapInitializationFlow } from '../projects/initialization-bootstrap.js';
 import { initializeDraftFlow } from '../projects/draft-flow.js';
-import { discoverProjects, type ProjectDiscovery } from '../projects/project-discovery.js';
+import { discoverProjects } from '../projects/project-discovery.js';
 import * as SettingsStore from '../settings/settings-store.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
 import { defaultConsentState, normalizeConsentState } from '../common/types.js';
-import type { FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent, OperatorFeedMessage, ConsentMode, ConsentRequest, ConsentResponseDecision, RoleSession, RuntimeMessageParam } from '../common/types.js';
+import type { FeedItem, FlowRef, FlowRun, OperatorEvent, ConsentMode, ConsentRequest, ConsentResponseDecision, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import { ConsentGateImpl } from '../improvement/consent-gate.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from './role-feed.js';
-
-type ClientMessage =
-  | { type: 'open_flow'; flowRef: FlowRef }
-  | { type: 'resume_flow'; flowRef: FlowRef }
-  | { type: 'start_initialized_flow'; projectNamespace: string }
-  | { type: 'start_takeover_initialization'; projectNamespace: string }
-  | { type: 'start_greenfield_initialization'; projectName: string }
-  | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
-  | { type: 'compact_context'; flowRef: FlowRef; role: string }
-  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
-  | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' }
-  | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
-  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
-
-type FlowStateMessage = {
-  type: 'flow_state';
-  flowRef: FlowRef;
-  flowRun: FlowRun;
-  backwardActive: string[];
-  hasActiveSession: boolean;
-  contextUsageByRole: Record<string, number>;
-};
-
-type HistoricalMessage = OperatorFeedMessage;
-
-type FlowScopedHistoricalMessage = HistoricalMessage & { flowRef: FlowRef };
-
-type FeedReplayMessage = { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> };
-
-type ServerMessage =
-  | { type: 'init'; projects: ProjectDiscovery }
-  | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
-  | FeedReplayMessage
-  | FlowStateMessage
-  | FlowScopedHistoricalMessage
-  | (RuntimeServerMessage & { flowRef: FlowRef });
+import { parseClientMessage, type FlowScopedHistoricalMessage, type FlowStateMessage, type HistoricalMessage, type ServerMessage } from './protocol.js';
+import { registerSettingsRoutes } from './settings-routes.js';
+import { SocketHub } from './socket-hub.js';
+import { registerStaticUi } from './static-ui.js';
 
 interface ActiveSession {
   flowRef: FlowRef;
@@ -83,54 +45,9 @@ interface ActiveSession {
   latestContextUsageByRole: Record<string, number>;
 }
 
-const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const UI_DIST = path.resolve(
-  MODULE_DIR,
-  MODULE_DIR.split(path.sep).includes('dist') ? '../../ui' : '../../dist/ui'
-);
-const UI_INDEX = path.join(UI_DIST, 'index.html');
 const HISTORY_LIMIT = 400;
 const STALE_CONSENT_TOOL_RESULT =
   'Consent prompt was no longer available after runtime resume. The node is paused for operator guidance.';
-
-function isDirectExecution(): boolean {
-  if (!process.argv[1]) return false;
-  return path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-}
-
-function parsePort(rawPort: string | undefined): number {
-  const parsed = Number(rawPort ?? '3000');
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
-    throw new Error(`Invalid A_SOCIETY_UI_PORT value "${rawPort}". Expected an integer between 1 and 65535.`);
-  }
-  return parsed;
-}
-
-function resolveWorkspaceRoot(): string {
-  return path.resolve(process.env.A_SOCIETY_WORKSPACE_ROOT || process.env.INIT_CWD || process.cwd());
-}
-
-function buildOpenCommand(url: string): string | null {
-  switch (os.platform()) {
-    case 'darwin':
-      return `open "${url}"`;
-    case 'win32':
-      return `start "" "${url}"`;
-    default:
-      return `xdg-open "${url}"`;
-  }
-}
-
-function openBrowser(url: string): void {
-  const command = buildOpenCommand(url);
-  if (!command) return;
-
-  exec(command, (error) => {
-    if (error) {
-      process.stderr.write(`[runtime/server] Browser auto-open skipped: ${error.message}\n`);
-    }
-  });
-}
 
 function isPromptLine(text: string): boolean {
   return text === '\n> ' || text === '> ' || text === '\r\n> ';
@@ -161,14 +78,6 @@ function missingModelError(ref: FlowRef): ServerMessage {
     flowRef: ref,
     message: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
   };
-}
-
-function hasFlowRef(value: any): value is FlowRef {
-  return (
-    value &&
-    typeof value.projectNamespace === 'string' &&
-    typeof value.flowId === 'string'
-  );
 }
 
 function isAwaitingHumanReply(reason: FlowRun['awaitingHumanNodes'][string]['reason']): boolean {
@@ -219,8 +128,7 @@ function buildServer(workspaceRoot: string) {
   const app = express();
   const httpServer = http.createServer(app);
   const wss = new WebSocketServer({ server: httpServer });
-  const clients = new Set<WebSocket>();
-  const socketSubscriptions = new Map<WebSocket, string>();
+  const socketHub = new SocketHub();
   const activeSessions = new Map<string, ActiveSession>();
 
   function readFlowRun(ref: FlowRef): FlowRun | null {
@@ -279,17 +187,11 @@ function buildServer(workspaceRoot: string) {
   }
 
   function sendToSocket(socket: WebSocket, message: ServerMessage): void {
-    if (socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify(message));
+    socketHub.send(socket, message);
   }
 
   function broadcastToFlow(ref: FlowRef, message: ServerMessage): void {
-    const key = flowKey(ref);
-    for (const socket of clients) {
-      if (socketSubscriptions.get(socket) === key) {
-        sendToSocket(socket, message);
-      }
-    }
+    socketHub.broadcastToFlow(ref, message);
   }
 
   function sendProjectFlows(socket: WebSocket, projectNamespace: string): void {
@@ -654,7 +556,7 @@ function buildServer(workspaceRoot: string) {
   }
 
   function subscribeSocket(socket: WebSocket, ref: FlowRef): void {
-    socketSubscriptions.set(socket, flowKey(ref));
+    socketHub.subscribe(socket, ref);
   }
 
   function replaySessionState(socket: WebSocket, ref: FlowRef): void {
@@ -1099,82 +1001,6 @@ function buildServer(workspaceRoot: string) {
       });
   }
 
-  function parseClientMessage(raw: string): ClientMessage | null {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.type === 'open_flow' && hasFlowRef(parsed.flowRef)) {
-        return parsed;
-      }
-      if (parsed?.type === 'resume_flow' && hasFlowRef(parsed.flowRef)) {
-        return parsed;
-      }
-      if (parsed?.type === 'start_initialized_flow' && typeof parsed.projectNamespace === 'string') {
-        return parsed;
-      }
-      if (parsed?.type === 'start_takeover_initialization' && typeof parsed.projectNamespace === 'string') {
-        return parsed;
-      }
-      if (parsed?.type === 'start_greenfield_initialization' && typeof parsed.projectName === 'string') {
-        return parsed;
-      }
-      if (parsed?.type === 'stop_active_turn' && hasFlowRef(parsed.flowRef)) {
-        return parsed;
-      }
-      if (parsed?.type === 'compact_context' && hasFlowRef(parsed.flowRef) && typeof parsed.role === 'string') {
-        return parsed;
-      }
-      if (parsed?.type === 'human_input' && hasFlowRef(parsed.flowRef) && typeof parsed.text === 'string') {
-        return parsed;
-      }
-      if (
-        parsed?.type === 'improvement_choice' &&
-        hasFlowRef(parsed.flowRef) &&
-        (parsed.mode === 'graph-based' || parsed.mode === 'parallel' || parsed.mode === 'none')
-      ) {
-        return parsed;
-      }
-      if (
-        parsed?.type === 'feedback_consent_choice' &&
-        hasFlowRef(parsed.flowRef) &&
-        (parsed.decision === 'granted' || parsed.decision === 'denied')
-      ) {
-        return parsed;
-      }
-      if (
-        parsed?.type === 'consent_response' &&
-        hasFlowRef(parsed.flowRef) &&
-        (
-          parsed.decision === 'allow_once' ||
-          parsed.decision === 'allow_flow' ||
-          parsed.decision === 'deny' ||
-          parsed.decision === 'granted' ||
-          parsed.decision === 'denied'
-        ) &&
-        typeof parsed.role === 'string'
-      ) {
-        if (parsed.decision === 'granted') parsed.decision = 'allow_once';
-        if (parsed.decision === 'denied') parsed.decision = 'deny';
-        return parsed;
-      }
-      if (
-        parsed?.type === 'consent_mode' &&
-        hasFlowRef(parsed.flowRef) &&
-        (
-          parsed.mode === 'no-access' ||
-          parsed.mode === 'partial-access' ||
-          parsed.mode === 'full-access' ||
-          parsed.mode === 'ask'
-        )
-      ) {
-        if (parsed.mode === 'ask') parsed.mode = 'no-access';
-        return parsed;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
   app.get('/api/projects', (_req: Request, res: Response) => {
     res.json(discoverProjects(workspaceRoot));
   });
@@ -1259,9 +1085,9 @@ function buildServer(workspaceRoot: string) {
       fs.rmSync(recordFolderPath, { recursive: true, force: true });
     }
 
-    for (const socket of clients) {
+    socketHub.forEachClient((socket) => {
       sendProjectFlows(socket, ref.projectNamespace);
-    }
+    });
 
     res.status(200).json({ ok: true });
   });
@@ -1288,126 +1114,11 @@ function buildServer(workspaceRoot: string) {
     res.json(payload);
   });
 
-  app.use(express.json());
-
-  app.get('/api/settings/models', (_req: Request, res: Response) => {
-    res.json(SettingsStore.listModels());
-  });
-
-  app.get('/api/settings/status', (_req: Request, res: Response) => {
-    res.json({
-      hasConfiguredModel: SettingsStore.hasUsableConfiguredModel(),
-      modelCount: SettingsStore.listModels().length
-    });
-  });
-
-  app.get('/api/settings/active-model/context-window', (_req: Request, res: Response) => {
-    const model = SettingsStore.getActiveModelWithKey();
-    res.json({ contextWindow: model?.contextWindow ?? null });
-  });
-
-  app.get('/api/settings/tools', (_req: Request, res: Response) => {
-    res.json(SettingsStore.getToolSettings());
-  });
-
-  app.post('/api/settings/models', (req: Request, res: Response) => {
-    const { apiKey, ...params } = req.body as any;
-    if (!params.displayName || !params.providerType || !params.modelId) {
-      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
-      return;
-    }
-    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
-      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
-      return;
-    }
-    const model = SettingsStore.createModel({
-      displayName: String(params.displayName),
-      providerType: params.providerType as 'anthropic' | 'openai-compatible',
-      providerBaseUrl: String(params.providerBaseUrl ?? ''),
-      modelId: String(params.modelId),
-      contextWindow: Number(params.contextWindow) || 0,
-      maxOutputTokens: Number(params.maxOutputTokens) || 0,
-      supportsThinking: Boolean(params.supportsThinking),
-      supportedInputTypes: Array.isArray(params.supportedInputTypes)
-        ? params.supportedInputTypes
-            .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
-              value === 'image' || value === 'audio' || value === 'video')
-        : [],
-    }, String(apiKey ?? ''));
-    res.status(201).json(model);
-  });
-
-  app.put('/api/settings/models/:id', (req: Request, res: Response) => {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const { apiKey, ...params } = req.body as any;
-    if (!params.displayName || !params.providerType || !params.modelId) {
-      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
-      return;
-    }
-    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
-      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
-      return;
-    }
-
-    try {
-      const model = SettingsStore.updateModel(id, {
-        displayName: String(params.displayName),
-        providerType: params.providerType as 'anthropic' | 'openai-compatible',
-        providerBaseUrl: String(params.providerBaseUrl ?? ''),
-        modelId: String(params.modelId),
-        contextWindow: Number(params.contextWindow) || 0,
-        maxOutputTokens: Number(params.maxOutputTokens) || 0,
-        supportsThinking: Boolean(params.supportsThinking),
-        supportedInputTypes: Array.isArray(params.supportedInputTypes)
-          ? params.supportedInputTypes
-              .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
-                value === 'image' || value === 'audio' || value === 'video')
-          : [],
-      }, typeof apiKey === 'string' ? apiKey : undefined);
-      res.json(model);
-    } catch (err: any) {
-      res.status(404).json({ message: err instanceof Error ? err.message : String(err) });
-    }
-  });
-
-  app.post('/api/settings/models/:id/activate', (req: Request, res: Response) => {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    try {
-      SettingsStore.activateModel(id);
-      res.json({ ok: true });
-    } catch (err: any) {
-      res.status(404).json({ message: err instanceof Error ? err.message : String(err) });
-    }
-  });
-
-  app.delete('/api/settings/models/:id', (req: Request, res: Response) => {
-    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    SettingsStore.deleteModel(id);
-    res.json({ ok: true });
-  });
-
-  app.put('/api/settings/tools/web-search', (req: Request, res: Response) => {
-    const enabled = req.body?.enabled === true;
-    const apiKey = typeof req.body?.apiKey === 'string' ? req.body.apiKey : undefined;
-
-    try {
-      res.json(SettingsStore.updateWebSearchToolSettings({ enabled, apiKey }));
-    } catch (err: any) {
-      res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
-    }
-  });
-
-  app.use(express.static(UI_DIST));
-  app.get('*', (_req: Request, res: Response) => {
-    if (!fs.existsSync(UI_INDEX)) {
-      res.status(503).send('UI assets are not built. Run `npm run build:ui` in a-society/runtime/.');
-      return;
-    }
-    res.sendFile(UI_INDEX);
-  });
+  registerSettingsRoutes(app);
+  registerStaticUi(app);
 
   wss.on('connection', (socket) => {
-    clients.add(socket);
+    socketHub.add(socket);
 
     sendToSocket(socket, {
       type: 'init',
@@ -1536,8 +1247,7 @@ function buildServer(workspaceRoot: string) {
     });
 
     socket.on('close', () => {
-      clients.delete(socket);
-      socketSubscriptions.delete(socket);
+      socketHub.remove(socket);
     });
   });
 
@@ -1571,23 +1281,5 @@ export async function startServer(workspaceRoot: string, port: number): Promise<
     httpServer.once('error', onError);
     httpServer.once('listening', onListening);
     httpServer.listen(port, '0.0.0.0');
-  });
-}
-
-async function main(): Promise<void> {
-  const port = parsePort(process.env.A_SOCIETY_UI_PORT);
-  const workspaceRoot = resolveWorkspaceRoot();
-  console.log(workspaceRoot)
-  const url = `http://localhost:${port}`;
-  await startServer(workspaceRoot, port);
-  openBrowser(url);
-  process.stderr.write(`[runtime/server] UI available at ${url}\n`);
-}
-
-if (isDirectExecution()) {
-  main().catch(async (error) => {
-    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-    await TelemetryManager.shutdown();
-    process.exit(1);
   });
 }

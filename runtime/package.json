@@ -4,7 +4,7 @@
   "description": "Unified executable layer for the A-Society framework",
   "type": "module",
   "scripts": {
-    "start": "tsx src/server/server.ts",
+    "start": "tsx src/server/startup.ts",
     "build:ui": "vite build",
     "build": "tsc && npm run build:ui",
     "lint": "eslint .",
