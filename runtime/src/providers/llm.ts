@@ -2,7 +2,7 @@ import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
-import { LLMGatewayError } from '../common/types.js';
+import { CONSENT_CHECK_RESULT, LLMGatewayError } from '../common/types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from '../tools/file-executor.js';
 import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.js';
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-search-executor.js';
@@ -198,7 +198,7 @@ export class LLMGateway {
                   role: options.role,
                   nodeId: options.nodeId,
                 }, options.signal);
-                if (decision === 'deny') {
+                if (decision === CONSENT_CHECK_RESULT.DENY) {
                   const pathArg = call.input?.path as string | undefined;
                   const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
                   options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });

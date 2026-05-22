@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { areFlowRunsEqual } from '../../ui/src/equality.js';
 import type { ConsentMode, FlowRun } from '../../ui/src/types.js';
 
+import { CONSENT_MODE } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 let passed = 0;
 let failed = 0;
@@ -45,14 +46,14 @@ console.log('\nui/equality');
 
 test('areFlowRunsEqual detects consent mode changes', () => {
   assert.strictEqual(
-    areFlowRunsEqual(flowWithConsent('partial-access'), flowWithConsent('no-access')),
+    areFlowRunsEqual(flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS), flowWithConsent(CONSENT_MODE.NO_ACCESS)),
     false
   );
 });
 
 test('areFlowRunsEqual detects stored bash consent changes', () => {
-  const left = flowWithConsent('partial-access');
-  const right = flowWithConsent('partial-access');
+  const left = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
+  const right = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
   right.consentState!.bash.allowedCommands['npm test'] = {
     command: 'npm test',
     grantedAt: '2026-05-03T00:00:00.000Z',
@@ -62,8 +63,8 @@ test('areFlowRunsEqual detects stored bash consent changes', () => {
 });
 
 test('areFlowRunsEqual detects queued human input changes', () => {
-  const left = flowWithConsent('partial-access');
-  const right = flowWithConsent('partial-access');
+  const left = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
+  const right = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
   right.pendingHumanInputs['owner-intake'] = {
     text: 'Proceed with the narrower option.',
     receivedAt: '2026-05-17T00:00:00.000Z',

@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findWorkflowFilePath, parseWorkflowFile } from '../context/workflow-file.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
+import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
 import { toKebabCaseRoleId } from '../common/role-id.js';
 
 export interface WorkflowNode {
@@ -55,6 +57,7 @@ export function deterministicFindingsFilePath(
  * Linear flows have exactly one entry in each inner array.
  */
 export type BackwardPassPlan = BackwardPassEntry[][];
+type BackwardPassMode = Exclude<ProtocolImprovementChoiceMode, typeof IMPROVEMENT_CHOICE_MODE.NONE>;
 
 export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter {
   if (!doc || typeof doc !== 'object') {
@@ -160,7 +163,7 @@ export function buildBackwardPassPlan(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   feedbackRole: string,
-  mode: 'graph-based' | 'parallel',
+  mode: BackwardPassMode,
 ): BackwardPassPlan {
   const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
   const hasOutgoing = new Set(edges.map(e => e.from));
@@ -170,7 +173,7 @@ export function buildBackwardPassPlan(
     throw new Error('workflow.nodes must produce at least one terminal node');
   }
 
-  if (mode === 'parallel') {
+  if (mode === IMPROVEMENT_CHOICE_MODE.PARALLEL) {
     const roles = Array.from(new Set(nodes.map(n => n.role)));
     const metaAnalysisGroup: BackwardPassEntry[] = roles.map(role => ({
       role,
@@ -189,7 +192,7 @@ export function buildBackwardPassPlan(
     return [metaAnalysisGroup, feedbackGroup];
   }
 
-  // mode === 'graph-based'
+  // mode === graph-based
 
   // Step 1: Compute topological order position (BFS from sources)
   const incomingCount: Record<string, number> = {};
@@ -308,7 +311,7 @@ export function buildBackwardPassPlan(
 export function computeBackwardPassPlan(
   recordFolderPath: string,
   feedbackRole: string,
-  mode: 'graph-based' | 'parallel',
+  mode: BackwardPassMode,
 ): BackwardPassPlan {
   const workflowFilePath = findWorkflowFilePath(recordFolderPath);
   if (!workflowFilePath) {

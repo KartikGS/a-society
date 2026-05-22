@@ -3,9 +3,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { LLMGateway, LLMGatewayError } from '../../src/providers/llm.js';
-import { defaultConsentState } from '../../src/common/types.js';
+import { CONSENT_CHECK_RESULT, defaultConsentState } from '../../src/common/types.js';
 import type {
   ConsentCheckRequest,
+  ConsentCheckResult,
   ConsentGate,
   ConsentMode,
   ConsentRequest,
@@ -102,21 +103,21 @@ class ToolCallThenTextProvider implements LLMProvider {
 class BlockingConsentGate implements ConsentGate {
   public requests: ConsentCheckRequest[] = [];
   private checkedResolve!: () => void;
-  private decisionResolve: ((result: 'proceed' | 'deny') => void) | null = null;
+  private decisionResolve: ((result: ConsentCheckResult) => void) | null = null;
 
   public readonly checked = new Promise<void>((resolve) => {
     this.checkedResolve = resolve;
   });
 
-  check(request: ConsentCheckRequest): Promise<'proceed' | 'deny'> {
+  check(request: ConsentCheckRequest): Promise<ConsentCheckResult> {
     this.requests.push(request);
     this.checkedResolve();
-    return new Promise<'proceed' | 'deny'>((resolve) => {
+    return new Promise<ConsentCheckResult>((resolve) => {
       this.decisionResolve = resolve;
     });
   }
 
-  resolve(decision: 'proceed' | 'deny'): void {
+  resolve(decision: ConsentCheckResult): void {
     this.decisionResolve?.(decision);
   }
 
@@ -179,7 +180,7 @@ await test('tool-call continuation and denial result are recorded before consent
   assert.strictEqual(persistedBatches.length, 1);
   assert.strictEqual(persistedBatches[0][0].role, 'assistant_tool_calls');
 
-  gate.resolve('deny');
+  gate.resolve(CONSENT_CHECK_RESULT.DENY);
   await assert.rejects(
     pendingTurn,
     (error: unknown) => {

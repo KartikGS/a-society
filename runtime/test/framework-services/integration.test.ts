@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import {
   scaffoldFromManifestFile,
 } from '../../src/framework-services/scaffolding-system.js';
@@ -196,7 +197,7 @@ test('Scenario 4 — workflow graph validator runs on live workflow and reports 
 
 test('Scenario 4 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
   assert.doesNotThrow(() => {
-    backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'Owner', 'graph-based');
+    backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'Owner', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
     // Flatten 2D plan to flat array for downstream assertions
     backwardOrder = backwardPlan.flat();
   });

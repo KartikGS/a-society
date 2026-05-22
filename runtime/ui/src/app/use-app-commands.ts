@@ -1,5 +1,14 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { flowKey } from '../../../src/common/flow-ref.js';
+import {
+  CLIENT_MESSAGE_TYPE,
+  FEEDBACK_CONSENT_DECISION,
+  IMPROVEMENT_CHOICE_MODE,
+} from '../../../src/common/protocol-constants.js';
+import type {
+  ProtocolFeedbackConsentDecision,
+  ProtocolImprovementChoiceMode,
+} from '../../../src/common/protocol-constants.js';
 import type { GraphMode } from '../components/GraphView';
 import { areWorkflowGraphsEqual } from '../equality';
 import type {
@@ -62,7 +71,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
   const openFlow = useCallback((ref: FlowRef, title = ref.flowId): void => {
     ensureTab(ref, title);
     updateFlowUi(flowKey(ref), (state) => state);
-    sendMessage({ type: 'open_flow', flowRef: ref });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.OPEN_FLOW, flowRef: ref });
   }, [ensureTab, sendMessage, updateFlowUi]);
 
   const handleProjectSelect = useCallback((projectNamespace: string | null): void => {
@@ -79,17 +88,17 @@ export function useAppCommands(input: UseAppCommandsInput) {
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
-    sendMessage({ type: 'start_takeover_initialization', projectNamespace });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION, projectNamespace });
   }, [ensureConfiguredModel, sendMessage, setNewProjectName, setSelectedProject, setSelectorError]);
 
   const handleCreateNewProject = useCallback((): void => {
-    const projectName = newProjectName.trim();
-    if (!projectName) return;
+    const projectNamespace = newProjectName.trim();
+    if (!projectNamespace) return;
     if (!ensureConfiguredModel()) return;
 
-    setSelectedProject(projectName);
+    setSelectedProject(projectNamespace);
     setSelectorError(null);
-    sendMessage({ type: 'start_greenfield_initialization', projectName });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION, projectNamespace });
   }, [ensureConfiguredModel, newProjectName, sendMessage, setSelectedProject, setSelectorError]);
 
   const handleOpenFlow = useCallback((flow: FlowSummary): void => {
@@ -99,7 +108,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
   const handleNewFlow = useCallback((projectNamespace: string): void => {
     if (!ensureConfiguredModel()) return;
     setSelectorError(null);
-    sendMessage({ type: 'start_initialized_flow', projectNamespace });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW, projectNamespace });
   }, [ensureConfiguredModel, sendMessage, setSelectorError]);
 
   const handleDeleteFlow = useCallback(async (flow: FlowSummary): Promise<void> => {
@@ -131,7 +140,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     setActiveTabKey(tab.key);
     setSelectedProject(tab.ref.projectNamespace);
     writeUrlFlowRef(tab.ref);
-    sendMessage({ type: 'open_flow', flowRef: tab.ref });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.OPEN_FLOW, flowRef: tab.ref });
   }, [sendMessage, setActiveTabKey, setSelectedProject]);
 
   const handleCloseTab = useCallback((tab: FlowTab): void => {
@@ -165,35 +174,35 @@ export function useAppCommands(input: UseAppCommandsInput) {
       composerValue: '',
     }));
     sendMessage({
-      type: 'human_input',
+      type: CLIENT_MESSAGE_TYPE.HUMAN_INPUT,
       flowRef: activeTab.ref,
       text,
       role: inputTargetRole === SYSTEM_ROLE_KEY ? undefined : inputTargetRole
     });
   }, [activeTab, activeUi, ensureConfiguredModel, inputTargetRole, sendMessage, updateFlowUi]);
 
-  const handleImprovementChoice = useCallback((mode: 'graph-based' | 'parallel' | 'none'): void => {
+  const handleImprovementChoice = useCallback((mode: ProtocolImprovementChoiceMode): void => {
     if (!activeTab) return;
-    if (mode !== 'none' && !ensureConfiguredModel()) return;
-    if (mode !== 'none') {
+    if (mode !== IMPROVEMENT_CHOICE_MODE.NONE && !ensureConfiguredModel()) return;
+    if (mode !== IMPROVEMENT_CHOICE_MODE.NONE) {
       updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
     }
-    sendMessage({ type: 'improvement_choice', flowRef: activeTab.ref, mode });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE, flowRef: activeTab.ref, mode });
   }, [activeTab, ensureConfiguredModel, sendMessage, updateFlowUi]);
 
-  const handleFeedbackConsentChoice = useCallback((decision: 'granted' | 'denied'): void => {
+  const handleFeedbackConsentChoice = useCallback((decision: ProtocolFeedbackConsentDecision): void => {
     if (!activeTab) return;
-    if (decision === 'granted' && !ensureConfiguredModel()) return;
-    if (decision === 'granted') {
+    if (decision === FEEDBACK_CONSENT_DECISION.GRANTED && !ensureConfiguredModel()) return;
+    if (decision === FEEDBACK_CONSENT_DECISION.GRANTED) {
       updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
     }
-    sendMessage({ type: 'feedback_consent_choice', flowRef: activeTab.ref, decision });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE, flowRef: activeTab.ref, decision });
   }, [activeTab, ensureConfiguredModel, sendMessage, updateFlowUi]);
 
   const handleConsentResponse = useCallback((decision: ConsentResponseDecision): void => {
     if (!activeTab || !visibleConsentRequest) return;
     sendMessage({
-      type: 'consent_response',
+      type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,
       flowRef: activeTab.ref,
       decision,
       role: visibleConsentRequest.role,
@@ -202,7 +211,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
 
   const handleConsentModeChange = useCallback((mode: ConsentMode): void => {
     if (!activeTab) return;
-    sendMessage({ type: 'consent_mode', flowRef: activeTab.ref, mode });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.CONSENT_MODE, flowRef: activeTab.ref, mode });
   }, [activeTab, sendMessage]);
 
   const handleStopActiveTurn = useCallback((): void => {
@@ -211,7 +220,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
       ...state,
       stopRequestedRoles: { ...state.stopRequestedRoles, [viewedRole]: true },
     }));
-    sendMessage({ type: 'stop_active_turn', flowRef: activeTab.ref, role: viewedRole });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN, flowRef: activeTab.ref, role: viewedRole });
   }, [activeTab, activeUi, sendMessage, updateFlowUi, viewedRole]);
 
   const handleCompactContext = useCallback((): void => {
@@ -222,13 +231,13 @@ export function useAppCommands(input: UseAppCommandsInput) {
       ...state,
       compactingRoles: { ...state.compactingRoles, [viewedRole]: true },
     }));
-    sendMessage({ type: 'compact_context', flowRef: activeTab.ref, role: viewedRole });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT, flowRef: activeTab.ref, role: viewedRole });
   }, [activeTab, activeUi, ensureConfiguredModel, sendMessage, updateFlowUi, viewedRole]);
 
   const handleResumeFlow = useCallback((): void => {
     if (!activeTab) return;
     if (!ensureConfiguredModel()) return;
-    sendMessage({ type: 'resume_flow', flowRef: activeTab.ref });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.RESUME_FLOW, flowRef: activeTab.ref });
   }, [activeTab, ensureConfiguredModel, sendMessage]);
 
   const handleWorkflowLoaded = useCallback((graph: WorkflowGraph): void => {

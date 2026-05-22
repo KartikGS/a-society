@@ -1,4 +1,14 @@
 import { flowKey } from '../../common/flow-ref.js';
+import {
+  CONSENT_MODE,
+  CONSENT_RESPONSE_DECISION,
+  FEEDBACK_CONSENT_DECISION,
+  IMPROVEMENT_CHOICE_MODE,
+} from '../../common/protocol-constants.js';
+import type {
+  ProtocolFeedbackConsentDecision,
+  ProtocolImprovementChoiceMode,
+} from '../../common/protocol-constants.js';
 import { parseRoleIdentity } from '../../common/role-id.js';
 import type {
   ConsentMode,
@@ -6,7 +16,7 @@ import type {
   FlowRef,
   FlowRun,
 } from '../../common/types.js';
-import { ImprovementOrchestrator, type ImprovementMode } from '../../improvement/improvement.js';
+import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { SessionStore } from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
@@ -111,7 +121,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     return createSession(ref);
   }
 
-  function handleImprovementChoice(ref: FlowRef, mode: ImprovementMode | 'none'): void {
+  function handleImprovementChoice(ref: FlowRef, mode: ProtocolImprovementChoiceMode): void {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_improvement_choice') {
       broadcastToFlow(ref, {
@@ -123,13 +133,17 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const session = getOrCreateChoiceSession(ref);
-    const label = mode === 'none' ? 'No improvement' : mode === 'graph-based' ? 'Graph-based improvement' : 'Parallel improvement';
+    const label = mode === IMPROVEMENT_CHOICE_MODE.NONE
+      ? 'No improvement'
+      : mode === IMPROVEMENT_CHOICE_MODE.GRAPH_BASED
+        ? 'Graph-based improvement'
+        : 'Parallel improvement';
     emitHistoricalMessage(session, {
       type: 'input_text',
       text: label,
     });
 
-    if (mode === 'none') {
+    if (mode === IMPROVEMENT_CHOICE_MODE.NONE) {
       try {
         ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
         session.sink.emit({ kind: 'flow.completed' });
@@ -170,7 +184,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     setImmediate(() => emitFlowState(session));
   }
 
-  function handleFeedbackConsentChoice(ref: FlowRef, decision: 'granted' | 'denied'): void {
+  function handleFeedbackConsentChoice(ref: FlowRef, decision: ProtocolFeedbackConsentDecision): void {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_feedback_consent') {
       broadcastToFlow(ref, {
@@ -182,13 +196,13 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const session = getOrCreateChoiceSession(ref);
-    const label = decision === 'granted' ? 'Generate upstream feedback' : 'Skip upstream feedback';
+    const label = decision === FEEDBACK_CONSENT_DECISION.GRANTED ? 'Generate upstream feedback' : 'Skip upstream feedback';
     emitHistoricalMessage(session, {
       type: 'input_text',
       text: label,
     });
 
-    if (decision === 'denied') {
+    if (decision === FEEDBACK_CONSENT_DECISION.DENIED) {
       try {
         ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
         session.sink.emit({ kind: 'flow.completed' });
@@ -242,9 +256,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     if (session && !session.finished) {
       const inFlightRequests = session.consentGate.getInFlightRequests();
       session.consentGate.setMode(mode);
-      if (mode === 'full-access') {
+      if (mode === CONSENT_MODE.FULL_ACCESS) {
         for (const inFlight of inFlightRequests) {
-          void consent.clearNodeAwaitingConsent(session, inFlight, 'allow_flow');
+          void consent.clearNodeAwaitingConsent(session, inFlight, CONSENT_RESPONSE_DECISION.ALLOW_FLOW);
         }
       }
       return;

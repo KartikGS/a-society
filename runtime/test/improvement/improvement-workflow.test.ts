@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import type { BackwardPassPlan } from '../../src/framework-services/backward-pass-orderer.js';
 import {
   buildImprovementWorkflowDocument,
@@ -84,7 +85,7 @@ test('improvementNodeId uses role slug plus step type', () => {
 });
 
 test('parallel improvement graph connects every role to feedback', () => {
-  const doc = buildImprovementWorkflowDocument(parallelPlan, 'parallel');
+  const doc = buildImprovementWorkflowDocument(parallelPlan, IMPROVEMENT_CHOICE_MODE.PARALLEL);
 
   assert.strictEqual(doc.workflow.name, 'Parallel Improvement');
   assert.deepStrictEqual(doc.workflow.nodes.map(node => node.id), [
@@ -99,7 +100,7 @@ test('parallel improvement graph connects every role to feedback', () => {
 });
 
 test('graph-based improvement graph follows backward-pass execution steps', () => {
-  const doc = buildImprovementWorkflowDocument(graphPlan, 'graph-based');
+  const doc = buildImprovementWorkflowDocument(graphPlan, IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
 
   assert.strictEqual(doc.workflow.name, 'Graph-Based Improvement');
   assert.deepStrictEqual(doc.workflow.edges, [
@@ -111,7 +112,7 @@ test('graph-based improvement graph follows backward-pass execution steps', () =
 test('writeImprovementWorkflow persists improvement.yaml and readImprovementWorkflow reads it back', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-improvement-workflow-'));
   try {
-    const filePath = writeImprovementWorkflow(tmpDir, parallelPlan, 'parallel');
+    const filePath = writeImprovementWorkflow(tmpDir, parallelPlan, IMPROVEMENT_CHOICE_MODE.PARALLEL);
     assert.strictEqual(path.basename(filePath), 'improvement.yaml');
     assert.ok(fs.existsSync(filePath), 'expected improvement.yaml to exist');
 

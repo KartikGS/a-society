@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { BackwardPassEntry, BackwardPassPlan } from '../framework-services/backward-pass-orderer.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
+import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
 import { toKebabCaseRoleId } from '../common/role-id.js';
 
 export const IMPROVEMENT_WORKFLOW_FILENAME = 'improvement.yaml';
@@ -29,6 +31,8 @@ export interface ImprovementWorkflowDocument {
   workflow: ImprovementWorkflowDefinition;
 }
 
+type ImprovementWorkflowMode = Exclude<ProtocolImprovementChoiceMode, typeof IMPROVEMENT_CHOICE_MODE.NONE>;
+
 export function improvementNodeId(entry: BackwardPassEntry): string {
   return `${toKebabCaseRoleId(entry.role)}-${entry.stepType}`;
 }
@@ -37,13 +41,13 @@ export function improvementWorkflowPath(recordFolderPath: string): string {
   return path.join(recordFolderPath, IMPROVEMENT_WORKFLOW_FILENAME);
 }
 
-function improvementWorkflowName(mode: 'graph-based' | 'parallel'): string {
-  return mode === 'parallel' ? 'Parallel Improvement' : 'Graph-Based Improvement';
+function improvementWorkflowName(mode: ImprovementWorkflowMode): string {
+  return mode === IMPROVEMENT_CHOICE_MODE.PARALLEL ? 'Parallel Improvement' : 'Graph-Based Improvement';
 }
 
 export function buildImprovementWorkflowDocument(
   plan: BackwardPassPlan,
-  mode: 'graph-based' | 'parallel',
+  mode: ImprovementWorkflowMode,
 ): ImprovementWorkflowDocument {
   const nodes: ImprovementWorkflowNode[] = [];
   const edges: ImprovementWorkflowEdge[] = [];
@@ -86,7 +90,7 @@ export function buildImprovementWorkflowDocument(
 export function writeImprovementWorkflow(
   recordFolderPath: string,
   plan: BackwardPassPlan,
-  mode: 'graph-based' | 'parallel',
+  mode: ImprovementWorkflowMode,
 ): string {
   const filePath = improvementWorkflowPath(recordFolderPath);
   const document = buildImprovementWorkflowDocument(plan, mode);

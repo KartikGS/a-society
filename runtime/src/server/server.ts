@@ -4,6 +4,7 @@ import http from 'node:http';
 import { WebSocketServer } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
 import { SessionStore } from '../orchestration/store.js';
+import { CLIENT_MESSAGE_TYPE } from '../common/protocol-constants.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import * as SettingsStore from '../settings/settings-store.js';
 import { createFlowReadModel } from './flow-read-model.js';
@@ -54,12 +55,12 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      if (message.type === 'open_flow') {
+      if (message.type === CLIENT_MESSAGE_TYPE.OPEN_FLOW) {
         runtimeSessions.openFlow(socket, message.flowRef);
         return;
       }
 
-      if (message.type === 'resume_flow') {
+      if (message.type === CLIENT_MESSAGE_TYPE.RESUME_FLOW) {
         void runtimeSessions.resumeFlow(socket, message.flowRef).catch((error: any) => {
           runtimeSessions.sendToSocket(socket, {
             type: 'error',
@@ -70,7 +71,7 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      if (message.type === 'start_initialized_flow') {
+      if (message.type === CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW) {
         const projectExists = discoverProjects(workspaceRoot).withADocs.some(
           (project) => project.folderName === message.projectNamespace
         );
@@ -87,7 +88,7 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      if (message.type === 'start_takeover_initialization') {
+      if (message.type === CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION) {
         const projectExists = discoverProjects(workspaceRoot).withoutADocs.some(
           (project) => project.folderName === message.projectNamespace
         );
@@ -112,45 +113,45 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
-      if (message.type === 'start_greenfield_initialization') {
+      if (message.type === CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION) {
         try {
-          runtimeSessions.startInitializationFlow(socket, message.projectName, 'greenfield');
+          runtimeSessions.startInitializationFlow(socket, message.projectNamespace, 'greenfield');
         } catch (error: any) {
           runtimeSessions.sendToSocket(socket, {
             type: 'error',
-            flowRef: { projectNamespace: message.projectName, flowId: '__new__' },
+            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
             message: error instanceof Error ? error.message : String(error)
           });
         }
         return;
       }
 
-      if (message.type === 'stop_active_turn') {
+      if (message.type === CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN) {
         runtimeSessions.handleStopActiveTurn(message.flowRef, { nodeId: message.nodeId, role: message.role });
         return;
       }
 
-      if (message.type === 'compact_context') {
+      if (message.type === CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT) {
         runtimeSessions.handleCompactContext(message.flowRef, message.role);
         return;
       }
 
-      if (message.type === 'improvement_choice') {
+      if (message.type === CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE) {
         runtimeSessions.handleImprovementChoice(message.flowRef, message.mode);
         return;
       }
 
-      if (message.type === 'feedback_consent_choice') {
+      if (message.type === CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE) {
         runtimeSessions.handleFeedbackConsentChoice(message.flowRef, message.decision);
         return;
       }
 
-      if (message.type === 'consent_response') {
+      if (message.type === CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE) {
         runtimeSessions.handleConsentResponse(message.flowRef, message.decision, message.role);
         return;
       }
 
-      if (message.type === 'consent_mode') {
+      if (message.type === CLIENT_MESSAGE_TYPE.CONSENT_MODE) {
         runtimeSessions.handleConsentMode(message.flowRef, message.mode);
         return;
       }

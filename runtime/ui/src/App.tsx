@@ -1,6 +1,7 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
 import { flowKey } from '../../src/common/flow-ref.js';
+import { CLIENT_MESSAGE_TYPE, CONSENT_MODE } from '../../src/common/protocol-constants.js';
 import { createActiveFlowView } from './app/active-flow-view';
 import { SETTINGS_REQUIRED_MESSAGE } from './app/constants';
 import {
@@ -271,7 +272,7 @@ export function App() {
     if (socket.status !== 'open' || !activeTab) return;
     if (socket.connectionId === lastSubscribedConnectionId.current) return;
     lastSubscribedConnectionId.current = socket.connectionId;
-    sendMessage({ type: 'open_flow', flowRef: activeTab.ref });
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.OPEN_FLOW, flowRef: activeTab.ref });
   }, [socket.status, socket.connectionId, activeTab, sendMessage]);
 
   useEffect(() => {
@@ -407,7 +408,7 @@ export function App() {
                   selectedRole={viewedRole ?? undefined}
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
-                  consentMode={flowRun?.consentState?.mode ?? 'no-access'}
+                  consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}

@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import {
   buildBackwardPassPlan,
   deterministicFindingsFilePath,
@@ -53,7 +54,7 @@ const REPEATED_EDGES: WorkflowEdge[] = [
 ];
 
 test('buildBackwardPassPlan (Graph-based, Linear): verifies order and injection', () => {
-  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Owner', 'graph-based');
+  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Owner', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
   
   // Backward order: Curator (meta) -> Owner (meta) -> Owner (feedback)
   assert.strictEqual(result.length, 3);
@@ -69,7 +70,7 @@ test('buildBackwardPassPlan (Graph-based, Linear): verifies order and injection'
 });
 
 test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace §2.5', () => {
-  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', 'graph-based');
+  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
   
   // Distances from c2 (Curator):
   // c2: 0 -> Curator max=0 (initial)
@@ -100,7 +101,7 @@ test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace 
 });
 
 test('buildBackwardPassPlan (Parallel Mode): all roles in one group, no injection', () => {
-  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', 'parallel');
+  const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', IMPROVEMENT_CHOICE_MODE.PARALLEL);
   
   // Roles: Owner, Curator, Technical Architect
   assert.strictEqual(result.length, 2);
@@ -156,7 +157,7 @@ test('locateAllFindingsFiles: returns all deterministic findings files', () => {
 });
 
 test('feedback entry has correct fields', () => {
-  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Admin', 'graph-based');
+  const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'Admin', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
   const feedbackGroup = result[result.length - 1];
   assert.strictEqual(feedbackGroup.length, 1);
   assert.strictEqual(feedbackGroup[0].role, 'Admin');

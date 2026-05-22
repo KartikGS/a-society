@@ -1,3 +1,4 @@
+import { IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
 import type { FeedItem } from '../components/ChatInterface';
 import type { GraphMode } from '../components/GraphView';
 import type {
@@ -86,5 +87,8 @@ export function titleForFlow(flowRun: FlowRun | FlowSummary | FlowRef): string {
 }
 
 export function hasImprovementGraph(flowRun: FlowRun | null): boolean {
-  return flowRun?.improvementPhase?.mode === 'graph-based' || flowRun?.improvementPhase?.mode === 'parallel';
+  return (
+    flowRun?.improvementPhase?.mode === IMPROVEMENT_CHOICE_MODE.GRAPH_BASED ||
+    flowRun?.improvementPhase?.mode === IMPROVEMENT_CHOICE_MODE.PARALLEL
+  );
 }

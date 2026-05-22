@@ -1,5 +1,9 @@
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import {
+  CONSENT_MODE,
+  CONSENT_RESPONSE_DECISION,
+} from '../../../src/common/protocol-constants.js';
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem } from '../types';
 
 export type { FeedItem };
@@ -328,21 +332,21 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 <button
                   type="button"
                   className="consent-btn consent-btn-allow"
-                  onClick={() => props.onConsentResponse?.('allow_once')}
+                  onClick={() => props.onConsentResponse?.(CONSENT_RESPONSE_DECISION.ALLOW_ONCE)}
                 >
                   {props.consentRequest.kind === 'bash-command' ? 'Allow this command' : 'Allow'}
                 </button>
                 <button
                   type="button"
                   className="consent-btn consent-btn-allow-flow"
-                  onClick={() => props.onConsentResponse?.('allow_flow')}
+                  onClick={() => props.onConsentResponse?.(CONSENT_RESPONSE_DECISION.ALLOW_FLOW)}
                 >
                   {consentAllowFlowLabel(props.consentRequest)}
                 </button>
                 <button
                   type="button"
                   className="consent-btn consent-btn-deny"
-                  onClick={() => props.onConsentResponse?.('deny')}
+                  onClick={() => props.onConsentResponse?.(CONSENT_RESPONSE_DECISION.DENY)}
                 >
                   Deny
                 </button>
@@ -402,13 +406,13 @@ export function ChatInterface(props: ChatInterfaceProps) {
             ) : null}
             <select
               className="consent-mode-select"
-              value={props.consentMode ?? 'no-access'}
+              value={props.consentMode ?? CONSENT_MODE.NO_ACCESS}
               onChange={(e) => props.onConsentModeChange?.(e.target.value as ConsentMode)}
               title="Tool permission mode for this flow"
             >
-              <option value="no-access">No Access</option>
-              <option value="partial-access">Partial Access</option>
-              <option value="full-access">Full Access</option>
+              <option value={CONSENT_MODE.NO_ACCESS}>No Access</option>
+              <option value={CONSENT_MODE.PARTIAL_ACCESS}>Partial Access</option>
+              <option value={CONSENT_MODE.FULL_ACCESS}>Full Access</option>
             </select>
           </div>
         </div>

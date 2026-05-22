@@ -7,23 +7,35 @@ import type {
   FlowSummary,
   OperatorFeedMessage,
 } from '../common/types.js';
-import type { ImprovementMode } from '../improvement/improvement.js';
+import {
+  CLIENT_MESSAGE_TYPE,
+  CONSENT_MODES,
+  CONSENT_RESPONSE_DECISIONS,
+  FEEDBACK_CONSENT_DECISIONS,
+  FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES,
+  IMPROVEMENT_CHOICE_MODES,
+  PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES,
+} from '../common/protocol-constants.js';
+import type {
+  ProtocolFeedbackConsentDecision,
+  ProtocolImprovementChoiceMode,
+} from '../common/protocol-constants.js';
 import type { ProjectDiscovery } from '../projects/project-discovery.js';
 import type { RuntimeServerMessage } from './ws-operator-sink.js';
 
 export type ClientMessage =
-  | { type: 'open_flow'; flowRef: FlowRef }
-  | { type: 'resume_flow'; flowRef: FlowRef }
-  | { type: 'start_initialized_flow'; projectNamespace: string }
-  | { type: 'start_takeover_initialization'; projectNamespace: string }
-  | { type: 'start_greenfield_initialization'; projectName: string }
-  | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
-  | { type: 'compact_context'; flowRef: FlowRef; role: string }
-  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
-  | { type: 'improvement_choice'; flowRef: FlowRef; mode: ImprovementMode | 'none' }
-  | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
-  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
+  | { type: typeof CLIENT_MESSAGE_TYPE.OPEN_FLOW; flowRef: FlowRef }
+  | { type: typeof CLIENT_MESSAGE_TYPE.RESUME_FLOW; flowRef: FlowRef }
+  | { type: typeof CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW; projectNamespace: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION; projectNamespace: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION; projectNamespace: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN; flowRef: FlowRef; nodeId?: string; role?: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT; flowRef: FlowRef; role: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.HUMAN_INPUT; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE; flowRef: FlowRef; mode: ProtocolImprovementChoiceMode }
+  | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode };
 
 export type FlowStateMessage = {
   type: 'flow_state';
@@ -56,76 +68,79 @@ export function hasFlowRef(value: unknown): value is FlowRef {
   );
 }
 
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value is T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value);
+}
+
+function hasOptionalString(value: Record<string, unknown>, key: string): boolean {
+  return value[key] === undefined || typeof value[key] === 'string';
+}
+
 export function parseClientMessage(raw: string): ClientMessage | null {
   try {
-    const parsed: any = JSON.parse(raw);
-    if (parsed?.type === 'open_flow' && hasFlowRef(parsed.flowRef)) {
-      return parsed;
-    }
-    if (parsed?.type === 'resume_flow' && hasFlowRef(parsed.flowRef)) {
-      return parsed;
-    }
-    if (parsed?.type === 'start_initialized_flow' && typeof parsed.projectNamespace === 'string') {
-      return parsed;
-    }
-    if (parsed?.type === 'start_takeover_initialization' && typeof parsed.projectNamespace === 'string') {
-      return parsed;
-    }
-    if (parsed?.type === 'start_greenfield_initialization' && typeof parsed.projectName === 'string') {
-      return parsed;
-    }
-    if (parsed?.type === 'stop_active_turn' && hasFlowRef(parsed.flowRef)) {
-      return parsed;
-    }
-    if (parsed?.type === 'compact_context' && hasFlowRef(parsed.flowRef) && typeof parsed.role === 'string') {
-      return parsed;
-    }
-    if (parsed?.type === 'human_input' && hasFlowRef(parsed.flowRef) && typeof parsed.text === 'string') {
-      return parsed;
-    }
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isObject(parsed)) return null;
+
     if (
-      parsed?.type === 'improvement_choice' &&
+      isOneOf(parsed.type, FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES) &&
       hasFlowRef(parsed.flowRef) &&
-      (parsed.mode === 'graph-based' || parsed.mode === 'parallel' || parsed.mode === 'none')
+      hasOptionalString(parsed, 'nodeId') &&
+      hasOptionalString(parsed, 'role')
+    ) return parsed as ClientMessage;
+
+    if (isOneOf(parsed.type, PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES) && typeof parsed.projectNamespace === 'string') {
+      return parsed as ClientMessage;
+    }
+
+    if (parsed.type === CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT && hasFlowRef(parsed.flowRef) && typeof parsed.role === 'string') {
+      return parsed as ClientMessage;
+    }
+
+    if (
+      parsed.type === CLIENT_MESSAGE_TYPE.HUMAN_INPUT &&
+      hasFlowRef(parsed.flowRef) &&
+      typeof parsed.text === 'string' &&
+      hasOptionalString(parsed, 'nodeId') &&
+      hasOptionalString(parsed, 'role')
+    ) return parsed as ClientMessage;
+
+    if (
+      parsed.type === CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE &&
+      hasFlowRef(parsed.flowRef) &&
+      isOneOf(parsed.mode, IMPROVEMENT_CHOICE_MODES)
     ) {
-      return parsed;
+      return parsed as ClientMessage;
     }
+
     if (
-      parsed?.type === 'feedback_consent_choice' &&
+      parsed.type === CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE &&
       hasFlowRef(parsed.flowRef) &&
-      (parsed.decision === 'granted' || parsed.decision === 'denied')
+      isOneOf(parsed.decision, FEEDBACK_CONSENT_DECISIONS)
     ) {
-      return parsed;
+      return parsed as ClientMessage;
     }
+
     if (
-      parsed?.type === 'consent_response' &&
+      parsed.type === CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE &&
       hasFlowRef(parsed.flowRef) &&
-      (
-        parsed.decision === 'allow_once' ||
-        parsed.decision === 'allow_flow' ||
-        parsed.decision === 'deny' ||
-        parsed.decision === 'granted' ||
-        parsed.decision === 'denied'
-      ) &&
+      isOneOf(parsed.decision, CONSENT_RESPONSE_DECISIONS) &&
       typeof parsed.role === 'string'
     ) {
-      if (parsed.decision === 'granted') parsed.decision = 'allow_once';
-      if (parsed.decision === 'denied') parsed.decision = 'deny';
-      return parsed;
+      return parsed as ClientMessage;
     }
+
     if (
-      parsed?.type === 'consent_mode' &&
+      parsed.type === CLIENT_MESSAGE_TYPE.CONSENT_MODE &&
       hasFlowRef(parsed.flowRef) &&
-      (
-        parsed.mode === 'no-access' ||
-        parsed.mode === 'partial-access' ||
-        parsed.mode === 'full-access' ||
-        parsed.mode === 'ask'
-      )
+      isOneOf(parsed.mode, CONSENT_MODES)
     ) {
-      if (parsed.mode === 'ask') parsed.mode = 'no-access';
-      return parsed;
+      return parsed as ClientMessage;
     }
+
     return null;
   } catch {
     return null;

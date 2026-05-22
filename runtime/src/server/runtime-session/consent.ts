@@ -1,4 +1,5 @@
 import { flowKey } from '../../common/flow-ref.js';
+import { CONSENT_RESPONSE_DECISION } from '../../common/protocol-constants.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   ConsentMode,
@@ -45,7 +46,7 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
       flow.consentState = session.consentGate.getState();
       if (flow.awaitingHumanNodes[request.nodeId]?.reason !== 'consent') return;
 
-      if (decision === 'deny') {
+      if (decision === CONSENT_RESPONSE_DECISION.DENY) {
         flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent-denied' };
         flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
         flow.status = 'running';

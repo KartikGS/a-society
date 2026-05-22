@@ -1,4 +1,5 @@
 import { flowRefFromRun } from '../common/flow-ref.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
@@ -28,7 +29,11 @@ export function createFlowReadModel(workspaceRoot: string) {
   }
 
   function resolveImprovementWorkflow(flowRun: FlowRun | null): any | null {
-    if (!flowRun || flowRun.improvementPhase?.mode === undefined || flowRun.improvementPhase.mode === 'none') {
+    if (
+      !flowRun ||
+      flowRun.improvementPhase?.mode === undefined ||
+      flowRun.improvementPhase.mode === IMPROVEMENT_CHOICE_MODE.NONE
+    ) {
       return null;
     }
 

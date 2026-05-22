@@ -12,6 +12,10 @@ import { SessionStore } from '../orchestration/store.js';
 import { runRoleTurn } from '../orchestration/orient.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } from '../common/types.js';
+import {
+  FEEDBACK_CONSENT_STATUS,
+  IMPROVEMENT_CHOICE_MODE,
+} from '../common/protocol-constants.js';
 import { HandoffParseError } from '../orchestration/handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
@@ -27,7 +31,9 @@ const RUNTIME_FEEDBACK_SYSTEM_PROMPT = [
 ].join('\n');
 
 type ExpectedImprovementSignalKind = 'meta-analysis-complete' | 'backward-pass-complete';
-export type ImprovementMode = 'graph-based' | 'parallel';
+export type ImprovementMode =
+  | typeof IMPROVEMENT_CHOICE_MODE.GRAPH_BASED
+  | typeof IMPROVEMENT_CHOICE_MODE.PARALLEL;
 
 type ExpectedImprovementSignal<K extends ExpectedImprovementSignalKind> = Extract<HandoffResult, { kind: K }>;
 type ExpectedSignalRepair = {
@@ -275,7 +281,7 @@ export class ImprovementOrchestrator {
       activeNodeIds: [],
       completedNodeIds: [],
       feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
-      feedbackConsent: 'pending',
+      feedbackConsent: FEEDBACK_CONSENT_STATUS.PENDING,
       singleRole: singleRole ?? false,
     };
     flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
@@ -289,7 +295,7 @@ export class ImprovementOrchestrator {
     flowRun.status = 'completed';
     flowRun.improvementPhase = {
       status: 'skipped',
-      mode: 'none',
+      mode: IMPROVEMENT_CHOICE_MODE.NONE,
       currentStep: flowRun.improvementPhase?.currentStep ?? 0,
       completedRoles: flowRun.improvementPhase?.completedRoles ?? [],
       findingsProduced: flowRun.improvementPhase?.findingsProduced ?? {},
@@ -315,7 +321,7 @@ export class ImprovementOrchestrator {
       status: 'completed',
       activeNodeIds: [],
       feedbackArtifactPath: improvementPhase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun),
-      feedbackConsent: 'denied',
+      feedbackConsent: FEEDBACK_CONSENT_STATUS.DENIED,
     };
     saveImprovementFlow(flowRun);
     outputStream?.write('[improvement] Upstream feedback skipped. Flow closed.\n');
@@ -358,7 +364,7 @@ export class ImprovementOrchestrator {
           activeNodeIds: [],
           completedNodeIds: [],
           feedbackArtifactPath: assignedFeedbackArtifactRelativePath(flowRun),
-          feedbackConsent: 'pending',
+          feedbackConsent: FEEDBACK_CONSENT_STATUS.PENDING,
         };
         flowRun.status = 'running';
         flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
@@ -377,7 +383,7 @@ export class ImprovementOrchestrator {
             flowRun.improvementPhase.status = 'awaiting_feedback_consent';
             flowRun.improvementPhase.activeNodeIds = [];
             flowRun.improvementPhase.feedbackArtifactPath = flowRun.improvementPhase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
-            flowRun.improvementPhase.feedbackConsent = 'pending';
+            flowRun.improvementPhase.feedbackConsent = FEEDBACK_CONSENT_STATUS.PENDING;
             saveImprovementFlow(flowRun);
             span.addEvent('store.flow_saved', { stage: 'awaiting_feedback_consent', step_index: i });
             outputStream.write(
@@ -573,7 +579,7 @@ export class ImprovementOrchestrator {
     }, async (span) => {
       try {
         const mode = flowRun.improvementPhase?.mode;
-        if (!mode || mode === 'none') {
+        if (!mode || mode === IMPROVEMENT_CHOICE_MODE.NONE) {
           throw new Error('[improvement] Cannot run feedback: improvement mode is missing.');
         }
 
@@ -603,7 +609,7 @@ export class ImprovementOrchestrator {
           activeNodeIds: group.map(improvementNodeId),
           completedNodeIds: existingPhase.completedNodeIds ?? [],
           feedbackArtifactPath: assignedFeedbackRepoPath,
-          feedbackConsent: 'granted',
+          feedbackConsent: FEEDBACK_CONSENT_STATUS.GRANTED,
         };
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'feedback_started', step_index: currentStep });
@@ -694,7 +700,7 @@ export class ImprovementOrchestrator {
           activeNodeIds: [],
           completedNodeIds: plan.flatMap(stepGroup => stepGroup.map(improvementNodeId)),
           feedbackArtifactPath: assignedFeedbackRepoPath,
-          feedbackConsent: 'granted',
+          feedbackConsent: FEEDBACK_CONSENT_STATUS.GRANTED,
         };
         saveImprovementFlow(flowRun);
         span.addEvent('store.flow_saved', { stage: 'feedback_completed' });

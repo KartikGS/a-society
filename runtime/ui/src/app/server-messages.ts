@@ -1,4 +1,5 @@
 import { flowKey } from '../../../src/common/flow-ref.js';
+import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
 import type { FlowRef, FlowSummary, OperatorEvent, ProjectDiscovery, ServerMessage } from '../types';
 import { SYSTEM_ROLE_KEY } from './constants';
@@ -73,7 +74,7 @@ function applyOperatorEvent(
   if (event.kind === 'consent.mode_changed') {
     handlers.updateFlowUi(key, (state) => ({
       ...state,
-      consentRequests: event.mode === 'full-access' ? {} : state.consentRequests,
+      consentRequests: event.mode === CONSENT_MODE.FULL_ACCESS ? {} : state.consentRequests,
     }));
     return;
   }

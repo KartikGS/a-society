@@ -1,3 +1,14 @@
+import {
+  CONSENT_MODE,
+  CONSENT_MODES,
+} from './protocol-constants.js';
+import type {
+  ProtocolConsentMode,
+  ProtocolConsentResponseDecision,
+  FeedbackConsentStatus,
+  ProtocolImprovementChoiceMode,
+} from './protocol-constants.js';
+
 export type FlowStatus =
   | 'running'
   | 'awaiting_improvement_choice'
@@ -6,9 +17,9 @@ export type FlowStatus =
 
 export const CURRENT_FLOW_STATE_VERSION = '11';
 
-export type ConsentMode = 'no-access' | 'partial-access' | 'full-access';
+export type ConsentMode = ProtocolConsentMode;
 export type ConsentRequestKind = 'file-write' | 'bash-command';
-export type ConsentResponseDecision = 'allow_once' | 'allow_flow' | 'deny';
+export type ConsentResponseDecision = ProtocolConsentResponseDecision;
 export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent' | 'consent-denied';
 
 export type ConsentRequest =
@@ -21,6 +32,13 @@ export interface ConsentCheckRequest {
   nodeId: string;
   role: string;
 }
+
+export const CONSENT_CHECK_RESULT = {
+  PROCEED: 'proceed',
+  DENY: 'deny',
+} as const;
+
+export type ConsentCheckResult = typeof CONSENT_CHECK_RESULT[keyof typeof CONSENT_CHECK_RESULT];
 
 export interface ConsentState {
   mode: ConsentMode;
@@ -39,11 +57,15 @@ export interface FeedbackContext {
 
 export function defaultConsentState(): ConsentState {
   return {
-    mode: 'no-access',
+    mode: CONSENT_MODE.NO_ACCESS,
     bash: {
       allowedCommands: {},
     },
   };
+}
+
+function isConsentMode(value: unknown): value is ConsentMode {
+  return typeof value === 'string' && (CONSENT_MODES as readonly string[]).includes(value);
 }
 
 export function normalizeConsentState(raw: unknown): ConsentState {
@@ -51,12 +73,7 @@ export function normalizeConsentState(raw: unknown): ConsentState {
   if (!raw || typeof raw !== 'object') return fallback;
 
   const source = raw as Record<string, any>;
-  const mode: ConsentMode =
-    source.mode === 'partial-access' || source.mode === 'full-access' || source.mode === 'no-access'
-      ? source.mode
-      : source.mode === 'ask'
-        ? 'no-access'
-        : fallback.mode;
+  const mode: ConsentMode = isConsentMode(source.mode) ? source.mode : fallback.mode;
 
   const allowedCommandsSource = source.bash?.allowedCommands;
   const allowedCommands: Record<string, { command: string; grantedAt: string }> = {};
@@ -77,7 +94,7 @@ export function normalizeConsentState(raw: unknown): ConsentState {
 }
 
 export interface ConsentGate {
-  check(request: ConsentCheckRequest, signal?: AbortSignal): Promise<'proceed' | 'deny'>;
+  check(request: ConsentCheckRequest, signal?: AbortSignal): Promise<ConsentCheckResult>;
   respond(decision: ConsentResponseDecision, role: string): void;
   setMode(mode: ConsentMode): void;
   getState(): ConsentState;
@@ -99,7 +116,7 @@ export type HandoffResult =
 
 export interface ImprovementPhaseState {
   status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
-  mode?: 'graph-based' | 'parallel' | 'none';
+  mode?: ProtocolImprovementChoiceMode;
   currentStep: number;                         // index into BackwardPassPlan outer array
   completedRoles: string[];                    // role names that have produced findings or been attempted
   findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
@@ -107,7 +124,7 @@ export interface ImprovementPhaseState {
   activeNodeIds?: string[];                    // improvement graph node ids currently running
   completedNodeIds?: string[];                 // improvement graph node ids that completed
   feedbackArtifactPath?: string;               // repo-relative path assigned for optional upstream feedback
-  feedbackConsent?: 'pending' | 'granted' | 'denied';
+  feedbackConsent?: FeedbackConsentStatus;
   singleRole?: boolean;                        // true when the workflow has only one unique base role
 }
 

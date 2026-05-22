@@ -14,6 +14,11 @@ import type {
   ImprovementPhaseState,
   OperatorEvent,
 } from '../../src/common/types.js';
+import type {
+  CLIENT_MESSAGE_TYPE,
+  ProtocolFeedbackConsentDecision,
+  ProtocolImprovementChoiceMode,
+} from '../../src/common/protocol-constants.js';
 
 export type {
   AwaitingHumanReason,
@@ -73,18 +78,18 @@ export interface ProjectDiscovery {
 }
 
 export type ClientMessage =
-  | { type: 'open_flow'; flowRef: FlowRef }
-  | { type: 'resume_flow'; flowRef: FlowRef }
-  | { type: 'start_initialized_flow'; projectNamespace: string }
-  | { type: 'start_takeover_initialization'; projectNamespace: string }
-  | { type: 'start_greenfield_initialization'; projectName: string }
-  | { type: 'stop_active_turn'; flowRef: FlowRef; nodeId?: string; role?: string }
-  | { type: 'compact_context'; flowRef: FlowRef; role: string }
-  | { type: 'human_input'; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
-  | { type: 'improvement_choice'; flowRef: FlowRef; mode: 'graph-based' | 'parallel' | 'none' }
-  | { type: 'feedback_consent_choice'; flowRef: FlowRef; decision: 'granted' | 'denied' }
-  | { type: 'consent_response'; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: 'consent_mode'; flowRef: FlowRef; mode: ConsentMode };
+  | { type: typeof CLIENT_MESSAGE_TYPE.OPEN_FLOW; flowRef: FlowRef }
+  | { type: typeof CLIENT_MESSAGE_TYPE.RESUME_FLOW; flowRef: FlowRef }
+  | { type: typeof CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW; projectNamespace: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION; projectNamespace: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION; projectNamespace: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN; flowRef: FlowRef; nodeId?: string; role?: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT; flowRef: FlowRef; role: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.HUMAN_INPUT; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE; flowRef: FlowRef; mode: ProtocolImprovementChoiceMode }
+  | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode };
 
 export type ServerMessage =
   | { type: 'init'; projects: ProjectDiscovery }

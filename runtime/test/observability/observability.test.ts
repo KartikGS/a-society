@@ -3,6 +3,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { Writable } from 'node:stream';
+import {
+  FEEDBACK_CONSENT_STATUS,
+  IMPROVEMENT_CHOICE_MODE,
+} from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import {
   setupTestTelemetry,
@@ -452,7 +456,7 @@ async function run() {
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.improvementPhase.status, 'skipped');
-    assert.strictEqual(flowRun.improvementPhase.mode, 'none');
+    assert.strictEqual(flowRun.improvementPhase.mode, IMPROVEMENT_CHOICE_MODE.NONE);
   });
 
   await test('Scenario: ImprovementOrchestrator repairs feedback until terminal handoff (REAL CODE)', async () => {
@@ -587,7 +591,7 @@ async function run() {
       ImprovementOrchestrator.markAwaitingChoice(flowRun);
       await ImprovementOrchestrator.runImprovement(
         flowRun,
-        'graph-based',
+        IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
         output,
         renderer
       );
@@ -615,7 +619,7 @@ async function run() {
       'a-society-feedback-feedback'
     ]);
     assert.strictEqual(flowRun.improvementPhase?.feedbackArtifactPath, feedbackArtifactPath);
-    assert.strictEqual(flowRun.improvementPhase?.feedbackConsent, 'granted');
+    assert.strictEqual(flowRun.improvementPhase?.feedbackConsent, FEEDBACK_CONSENT_STATUS.GRANTED);
     const metaUserMessage = observedHistories[0][0];
     const metaAssistantMessage = observedHistories[0][1];
     const metaImprovementMessage = observedHistories[0][2];

@@ -1,10 +1,16 @@
 import {
+  CONSENT_CHECK_RESULT,
   defaultConsentState,
   normalizeConsentState,
 } from '../common/types.js';
+import {
+  CONSENT_MODE,
+  CONSENT_RESPONSE_DECISION,
+} from '../common/protocol-constants.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import type {
   ConsentCheckRequest,
+  ConsentCheckResult,
   ConsentMode,
   ConsentRequest,
   ConsentResponseDecision,
@@ -17,7 +23,7 @@ const GLOBAL_CONSENT_ROLE_KEY = '__global__';
 
 interface InFlightEntry {
   request: ConsentRequest;
-  resolve: (result: 'proceed' | 'deny') => void;
+  resolve: (result: ConsentCheckResult) => void;
 }
 
 function normalizeCommand(command: string): string {
@@ -104,15 +110,15 @@ export class ConsentGateImpl {
     this.operatorRenderer = renderer;
   }
 
-  async check(rawRequest: ConsentCheckRequest, signal?: AbortSignal): Promise<'proceed' | 'deny'> {
+  async check(rawRequest: ConsentCheckRequest, signal?: AbortSignal): Promise<ConsentCheckResult> {
     const request = buildConsentRequest(rawRequest);
-    if (!request) return 'proceed';
+    if (!request) return CONSENT_CHECK_RESULT.PROCEED;
 
-    if (this.isGranted(request)) return 'proceed';
+    if (this.isGranted(request)) return CONSENT_CHECK_RESULT.PROCEED;
 
-    return new Promise<'proceed' | 'deny'>((resolve) => {
+    return new Promise<ConsentCheckResult>((resolve) => {
       if (signal?.aborted) {
-        resolve('deny');
+        resolve(CONSENT_CHECK_RESULT.DENY);
         return;
       }
 
@@ -131,8 +137,8 @@ export class ConsentGateImpl {
     const entry = this.resolveInFlightEntry(role);
     if (!entry) return;
 
-    if (decision === 'allow_flow') {
-      this.state.mode = 'partial-access';
+    if (decision === CONSENT_RESPONSE_DECISION.ALLOW_FLOW) {
+      this.state.mode = CONSENT_MODE.PARTIAL_ACCESS;
       this.grantForFlow(entry.request);
     }
 
@@ -142,9 +148,11 @@ export class ConsentGateImpl {
       decision,
     });
 
-    entry.resolve(decision === 'deny' ? 'deny' : 'proceed');
+    entry.resolve(decision === CONSENT_RESPONSE_DECISION.DENY
+      ? CONSENT_CHECK_RESULT.DENY
+      : CONSENT_CHECK_RESULT.PROCEED);
 
-    if (decision === 'allow_flow') {
+    if (decision === CONSENT_RESPONSE_DECISION.ALLOW_FLOW) {
       this.resolveGrantedInFlight(decision);
     }
   }
@@ -153,11 +161,11 @@ export class ConsentGateImpl {
     if (this.state.mode === mode) return;
     this.state.mode = mode;
 
-    if (mode === 'full-access') {
+    if (mode === CONSENT_MODE.FULL_ACCESS) {
       const inFlight = Array.from(this.inFlightByRole.values());
       this.inFlightByRole.clear();
       for (const entry of inFlight) {
-        entry.resolve('proceed');
+        entry.resolve(CONSENT_CHECK_RESULT.PROCEED);
       }
     }
 
@@ -169,8 +177,8 @@ export class ConsentGateImpl {
       return true;
     }
 
-    if (this.state.mode === 'full-access') return true;
-    if (this.state.mode === 'no-access') return false;
+    if (this.state.mode === CONSENT_MODE.FULL_ACCESS) return true;
+    if (this.state.mode === CONSENT_MODE.NO_ACCESS) return false;
 
     // partial-access: file writes always allowed; bash only if previously approved
     if (request.kind === 'file-write') return true;
@@ -199,7 +207,7 @@ export class ConsentGateImpl {
         request: entry.request,
         decision,
       });
-      entry.resolve('proceed');
+      entry.resolve(CONSENT_CHECK_RESULT.PROCEED);
     }
   }
 
@@ -210,9 +218,9 @@ export class ConsentGateImpl {
       this.operatorRenderer?.emit({
         kind: 'consent.resolved',
         request: entry.request,
-        decision: 'deny',
+        decision: CONSENT_RESPONSE_DECISION.DENY,
       });
-      entry.resolve('deny');
+      entry.resolve(CONSENT_CHECK_RESULT.DENY);
     }
   }
 
@@ -232,9 +240,9 @@ export class ConsentGateImpl {
       this.operatorRenderer?.emit({
         kind: 'consent.resolved',
         request: entry.request,
-        decision: 'deny',
+        decision: CONSENT_RESPONSE_DECISION.DENY,
       });
-      entry.resolve('deny');
+      entry.resolve(CONSENT_CHECK_RESULT.DENY);
     }
   }
 }
