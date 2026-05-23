@@ -203,6 +203,6 @@ export async function startServer(workspaceRoot: string, port: number): Promise<
 
     httpServer.once('error', onError);
     httpServer.once('listening', onListening);
-    httpServer.listen(port, '0.0.0.0');
+    httpServer.listen(port, '127.0.0.1');
   });
 }
