@@ -50,14 +50,8 @@ export function createRuntimeSessionEvents(deps: RuntimeSessionEventsDeps) {
   function handleRuntimeMessage(session: ActiveSession, message: RuntimeServerMessage): void {
     switch (message.type) {
       case 'request_sent':
-        emitTransientMessage(session, message);
-        return;
       case 'receiving_response':
-        emitTransientMessage(session, message);
-        return;
       case 'response_end':
-        emitTransientMessage(session, message);
-        return;
       case 'error':
         emitTransientMessage(session, message);
         return;

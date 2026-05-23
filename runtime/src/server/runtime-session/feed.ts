@@ -11,10 +11,6 @@ import type { ActiveSession } from './types.js';
 
 const HISTORY_LIMIT = 400;
 
-function isPromptLine(text: string): boolean {
-  return text === '\n> ' || text === '> ' || text === '\r\n> ';
-}
-
 function nextFeedItemId(session: ActiveSession, roleKey: string): string {
   const seq = session.roleFeedSequence.get(roleKey) ?? 0;
   session.roleFeedSequence.set(roleKey, seq + 1);
@@ -105,7 +101,7 @@ export function createRoleOutputStream(
   return new Writable({
     write(chunk, _encoding, callback) {
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-      if (text && !isPromptLine(text)) {
+      if (text) {
         emitHistoricalMessage(session, { type: 'output_text', role, text });
       }
       callback();
