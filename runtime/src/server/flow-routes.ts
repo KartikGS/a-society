@@ -110,22 +110,4 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
     res.status(200).json({ ok: true });
   });
 
-  app.get('/api/flows/:projectNamespace/:flowId/transcripts/:nodeId', (req: Request, res: Response) => {
-    const ref = flowRefFromParams(req);
-    const flowRun = readFlowRunForHttp(flowReadModel, ref, res);
-    if (flowRun === undefined) return;
-    if (!flowRun) {
-      res.status(404).json({ message: 'No flow state found.' });
-      return;
-    }
-
-    const nodeId = routeParam(req.params.nodeId);
-    const payload = flowReadModel.buildTranscriptPayload(flowRun, nodeId);
-    if (!payload) {
-      res.status(404).json({ message: `No transcript found for node "${nodeId}".` });
-      return;
-    }
-
-    res.json(payload);
-  });
 }

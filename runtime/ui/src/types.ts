@@ -112,8 +112,3 @@ export interface WorkflowGraph {
   edges: Array<{ from: string; to: string }>;
 }
 
-export interface TranscriptPayload {
-  nodeId: string;
-  role: string;
-  transcript: unknown[];
-}

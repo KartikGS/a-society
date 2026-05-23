@@ -1,16 +1,8 @@
-import { flowRefFromRun } from '../common/flow-ref.js';
 import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
-import { parseRoleIdentity } from '../common/role-id.js';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
 import { SessionStore } from '../orchestration/store.js';
-
-export type TranscriptPayload = {
-  nodeId: string;
-  role: string;
-  transcript: unknown[];
-};
 
 export function createFlowReadModel(workspaceRoot: string) {
   function readFlowRun(ref: FlowRef): FlowRun | null {
@@ -40,32 +32,10 @@ export function createFlowReadModel(workspaceRoot: string) {
     return readImprovementWorkflow(flowRun.recordFolderPath);
   }
 
-  function buildTranscriptPayload(flowRun: FlowRun, nodeId: string) {
-    const workflow = resolveWorkflow(flowRun);
-    const node = workflow?.nodes?.find((candidate: any) => candidate.id === nodeId);
-    if (!node) {
-      return null;
-    }
-
-    const flowRef = flowRefFromRun(flowRun);
-    const roleKey = parseRoleIdentity(node.role).instanceRoleId;
-    const session = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
-    if (!session) {
-      return null;
-    }
-
-    return {
-      nodeId,
-      role: node.role,
-      transcript: session.transcriptHistory
-    };
-  }
-
   return {
     readFlowRun,
     resolveWorkflow,
     resolveImprovementWorkflow,
-    buildTranscriptPayload,
   };
 }
 

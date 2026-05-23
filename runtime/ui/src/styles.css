@@ -113,8 +113,7 @@ textarea {
 }
 
 .selector-panel,
-.chat-panel,
-.transcript-panel {
+.chat-panel {
   padding: 18px;
 }
 
@@ -658,8 +657,7 @@ textarea {
   line-height: 1.4;
 }
 
-.feed,
-.transcript-list {
+.feed {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -962,15 +960,6 @@ textarea {
   cursor: pointer;
 }
 
-.transcript-panel button {
-  justify-self: flex-start;
-  padding: 12px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
-  color: white;
-  cursor: pointer;
-}
 
 .composer-action {
   position: absolute;
@@ -1470,9 +1459,6 @@ textarea {
   opacity: 0.65;
 }
 
-.transcript-panel {
-  min-height: 280px;
-}
 
 /* Settings FAB */
 /* Settings modal */
@@ -2097,7 +2083,6 @@ textarea {
 
   .selector-panel,
   .chat-panel,
-  .transcript-panel,
   .graph-panel {
     padding: 18px;
     border-radius: 22px;
