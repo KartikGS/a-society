@@ -25,13 +25,11 @@ import {
 export class OpenAICompatibleProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
-  private baseURL: string;
   private maxOutputTokens: number;
   private supportsThinking: boolean;
 
   constructor(config: { baseURL: string; apiKey: string; model: string } & ProviderRuntimeConfig) {
     this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey });
-    this.baseURL = config.baseURL;
     this.model = config.model;
     this.maxOutputTokens = resolveMaxOutputTokens(
       config.maxOutputTokens,
@@ -48,7 +46,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       ? ` Request ID: ${err.request_id}.`
       : '';
     const nextStep = suggestion ? ` ${suggestion}` : '';
-    return `${summary} Model: ${this.model}. Endpoint: ${this.baseURL}.${requestId}${detail}${nextStep}`;
+    return `${summary} Model: ${this.model}.${requestId}${detail}${nextStep}`;
   }
 
   async executeTurn(

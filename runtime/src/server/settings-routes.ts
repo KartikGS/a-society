@@ -1,6 +1,16 @@
 import express, { type Express, type Request, type Response } from 'express';
 import * as SettingsStore from '../settings/settings-store.js';
 
+function isValidProviderBaseUrl(value: unknown): value is string {
+  if (typeof value !== 'string' || value.trim() === '') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export function registerSettingsRoutes(app: Express): void {
   app.use(express.json());
 
@@ -30,9 +40,11 @@ export function registerSettingsRoutes(app: Express): void {
       res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
       return;
     }
-    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
-      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
-      return;
+    if (params.providerType === 'openai-compatible') {
+      if (!isValidProviderBaseUrl(params.providerBaseUrl)) {
+        res.status(400).json({ message: 'providerBaseUrl must be a valid http:// or https:// URL.' });
+        return;
+      }
     }
     const model = SettingsStore.createModel({
       displayName: String(params.displayName),
@@ -58,9 +70,11 @@ export function registerSettingsRoutes(app: Express): void {
       res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
       return;
     }
-    if (params.providerType === 'openai-compatible' && !params.providerBaseUrl) {
-      res.status(400).json({ message: 'providerBaseUrl is required for openai-compatible provider.' });
-      return;
+    if (params.providerType === 'openai-compatible') {
+      if (!isValidProviderBaseUrl(params.providerBaseUrl)) {
+        res.status(400).json({ message: 'providerBaseUrl must be a valid http:// or https:// URL.' });
+        return;
+      }
     }
 
     try {
