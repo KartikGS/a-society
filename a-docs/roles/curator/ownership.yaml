@@ -8,6 +8,9 @@ surfaces:
     scope: "Curator role truth, support-doc truth, startup-context file, and ownership file"
   - path: a-docs/indexes/
     scope: "Internal index stewardship"
+  - path: a-docs/a-society-version.md
+    shared_with: [owner]
+    scope: "A-Society initialized-project version record stewardship"
   - path: a-docs/improvement/
     scope: "Improvement-protocol stewardship"
   - path: a-docs/communication/conversation/
