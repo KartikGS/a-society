@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findWorkflowFilePath, parseWorkflowFile } from '../context/workflow-file.js';
-import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
+import { IMPROVEMENT_CHOICE_MODE, OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
-import { toKebabCaseRoleId } from '../common/role-id.js';
+import { parseRoleIdentity, toKebabCaseRoleId } from '../common/role-id.js';
 
 export interface WorkflowNode {
   id: string;
@@ -175,12 +175,14 @@ export function buildBackwardPassPlan(
 
   if (mode === IMPROVEMENT_CHOICE_MODE.PARALLEL) {
     const roles = Array.from(new Set(nodes.map(n => n.role)));
-    const metaAnalysisGroup: BackwardPassEntry[] = roles.map(role => ({
+    const toMetaAnalysisEntry = (role: string): BackwardPassEntry => ({
       role,
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: [],
-    }));
+    });
+    const nonOwnerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId !== OWNER_BASE_ROLE_ID);
+    const ownerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId === OWNER_BASE_ROLE_ID);
 
     const feedbackGroup: BackwardPassEntry[] = [{
       role: feedbackRole,
@@ -189,7 +191,11 @@ export function buildBackwardPassPlan(
       findingsRolesToInject: [],
     }];
 
-    return [metaAnalysisGroup, feedbackGroup];
+    const plan: BackwardPassPlan = [];
+    if (nonOwnerRoles.length > 0) plan.push(nonOwnerRoles.map(toMetaAnalysisEntry));
+    plan.push(ownerRoles.map(toMetaAnalysisEntry));
+    plan.push(feedbackGroup);
+    return plan;
   }
 
   // mode === graph-based

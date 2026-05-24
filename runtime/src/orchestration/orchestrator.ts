@@ -12,10 +12,11 @@ import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
-import { WorkflowGraph } from './workflow-graph.js';
+import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing } from './workflow-graph.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
 
@@ -550,7 +551,7 @@ export class FlowOrchestrator {
         saveRoleSession();
 
         if (humanInput !== undefined) {
-          await SessionStore.updateFlowRun((latest) => {
+          flowRun = await SessionStore.updateFlowRun((latest) => {
             const pending = latest.pendingHumanInputs[nodeId];
             if (pending?.text === humanInput) {
               delete latest.pendingHumanInputs[nodeId];
@@ -629,6 +630,39 @@ export class FlowOrchestrator {
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
+                const emitterInstanceRole = parseRoleIdentity(currentNodeDef.role).instanceRoleId;
+                const fpcOutgoing = wf.getOutgoingEdges(nodeId);
+                const latestForFpc = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+                const outstandingInbound = getOutstandingInboundSources(wf, latestForFpc.completedHandoffs, nodeId);
+                const completedInbound = getCompletedInboundSources(wf, latestForFpc.completedHandoffs, nodeId);
+                const isLastOwner = emitterInstanceRole === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
+                const hasBlockers =
+                  latestForFpc.runningNodes.some(id => id !== nodeId) ||
+                  Object.keys(latestForFpc.awaitingHumanNodes).length > 0 ||
+                  Object.keys(latestForFpc.pendingHumanInputs).length > 0 ||
+                  !allEdgesCovered(wf, latestForFpc.completedHandoffs) ||
+                  Object.keys(latestForFpc.receivingHandoff).length > 0 ||
+                  latestForFpc.awaitingHandoff.length > 0;
+
+                if (!isLastOwner || hasBlockers) {
+                  const lines: string[] = ['Only the last owner node may emit forward-pass-closed.'];
+                  if (outstandingInbound.length > 0) {
+                    lines.push(`You are yet to receive a handoff from: ${outstandingInbound.join(', ')}. You can emit await-handoff to suspend and wait.`);
+                  }
+                  if (fpcOutgoing.length > 0) {
+                    lines.push(`You can forward handoff to: ${fpcOutgoing.map(e => e.to).join(', ')}.`);
+                  }
+                  if (completedInbound.length > 0) {
+                    lines.push(`In case of doubts, you can backward handoff to: ${completedInbound.join(', ')}.`);
+                  }
+                  lines.push('If you need human guidance, emit prompt-human.');
+                  throw new HandoffParseError({
+                    code: 'invalid_transition',
+                    operatorSummary: 'Invalid forward-pass-closed signal',
+                    modelRepairMessage: lines.join(' '),
+                  });
+                }
+
                 const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
                 if (!healthCheck.ok) {
                   span.addEvent('runtime.health_check_failed', {
@@ -682,7 +716,7 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'await-handoff') {
                 const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
-                const isPendingTarget = wf.getIncomingEdges(nodeId).some((e: any) => !latestForCheck.completedHandoffs.includes(wf.edgeKey(e.from, nodeId)));
+                const isPendingTarget = getOutstandingInboundSources(wf, latestForCheck.completedHandoffs, nodeId).length > 0;
                 const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
 
                 if (!isPendingTarget && !isReceivingTarget) {
@@ -842,9 +876,22 @@ export class FlowOrchestrator {
         if (!targetExists) {
           this.throwHandoffTransitionRepair(`Target node '${targetNodeId}' not found in workflow.`);
         }
-        this.throwHandoffTransitionRepair(
-          `Unauthorized transition: node '${nodeId}' may hand forward only to successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
-        );
+        const neighborLines: string[] = [
+          `Node '${nodeId}' attempted to handoff to '${targetNodeId}', which is not a direct neighbor. Nodes may only handoff to neighboring nodes. To reach a non-adjacent node, chain handoffs through each intermediate node in sequence.`
+        ];
+        if (outgoingEdges.length > 0) {
+          neighborLines.push(`You can forward handoff to: ${outgoingEdges.map(e => e.to).join(', ')}.`);
+        }
+        const validBackward = getCompletedInboundSources(wf, latest.completedHandoffs, nodeId);
+        if (validBackward.length > 0) {
+          neighborLines.push(`In case of doubts, you can backward handoff to: ${validBackward.join(', ')}.`);
+        }
+        neighborLines.push('If you need human guidance, emit prompt-human.');
+        throw new HandoffParseError({
+          code: 'invalid_transition',
+          operatorSummary: 'Handoff target mismatch',
+          modelRepairMessage: neighborLines.join(' '),
+        });
       }
 
       this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
@@ -1079,8 +1126,7 @@ export class FlowOrchestrator {
     for (const node of wf.nodes) {
       const nodeId = node.id;
       if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || activeNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
-      const hasPendingOutgoing = wf.getOutgoingEdges(nodeId).some((e: any) => !flowRun.completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
-      if (hasPendingOutgoing) {
+      if (hasPendingOutgoing(wf, flowRun.completedHandoffs, nodeId)) {
         result.push(nodeId);
         seen.add(nodeId);
       }
@@ -1464,9 +1510,7 @@ export class FlowOrchestrator {
     const outgoingEdges = wf.getOutgoingEdges(nodeId);
     if (outgoingEdges.length === 0) return;
 
-    const allSettled = outgoingEdges.every((edge: any) =>
-      flowRun.completedHandoffs.includes(wf.edgeKey(edge.from, edge.to))
-    );
+    const allSettled = !hasPendingOutgoing(wf, flowRun.completedHandoffs, nodeId);
 
     if (allSettled) {
       this.addCompletedNode(flowRun, nodeId);

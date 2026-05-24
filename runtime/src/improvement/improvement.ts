@@ -15,6 +15,7 @@ import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } 
 import {
   FEEDBACK_CONSENT_STATUS,
   IMPROVEMENT_CHOICE_MODE,
+  OWNER_BASE_ROLE_ID,
 } from '../common/protocol-constants.js';
 import { HandoffParseError } from '../orchestration/handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
@@ -194,15 +195,15 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       const result = sessionResult.handoff;
 
       if (result.kind === expectedKind) {
-        if (expectedKind === 'backward-pass-complete') {
+        if (expectedKind === 'meta-analysis-complete' && parseRoleIdentity(roleName).instanceRoleId === OWNER_BASE_ROLE_ID) {
           const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
           if (!healthCheck.ok) {
             const guidance = buildRuntimeHealthRepairGuidance(
               healthCheck.errors,
-              'backward-pass-complete'
+              'meta-analysis-complete'
             );
             outputStream.write(
-              `[improvement] ${role} completed backward pass but runtime health checks failed. Requesting repair.\n`
+              `[improvement] ${role} completed meta-analysis but runtime health checks failed. Requesting repair.\n`
             );
             renderer.emit({
               kind: 'repair.requested',

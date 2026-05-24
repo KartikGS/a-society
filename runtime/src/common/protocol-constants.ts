@@ -29,6 +29,8 @@ export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = [
   CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION,
 ] as const;
 
+export const OWNER_BASE_ROLE_ID = 'owner';
+
 export const IMPROVEMENT_CHOICE_MODE = {
   GRAPH_BASED: 'graph-based',
   PARALLEL: 'parallel',

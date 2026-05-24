@@ -20,7 +20,7 @@ export interface RuntimeHealthRepairGuidance {
   modelRepairMessage: string;
 }
 
-type CompletionSignalKind = 'forward-pass-closed' | 'backward-pass-complete';
+type CompletionSignalKind = 'forward-pass-closed' | 'meta-analysis-complete';
 
 interface IndexEntry {
   variable: string;
@@ -549,10 +549,10 @@ export function buildRuntimeHealthRepairGuidance(
 ): RuntimeHealthRepairGuidance {
   const completionInstruction = completionSignal === 'forward-pass-closed'
     ? 'Do not close the forward pass until these issues are repaired.'
-    : 'Do not mark the backward pass complete until these issues are repaired.';
+    : 'Do not complete meta-analysis until these issues are repaired.';
   const retryInstruction = completionSignal === 'forward-pass-closed'
     ? 'When the repairs are complete, emit a `type: forward-pass-closed` handoff block again.'
-    : 'When the repairs are complete, emit a `type: backward-pass-complete` handoff block again.';
+    : 'When the repairs are complete, emit a `type: meta-analysis-complete` handoff block again.';
 
   return {
     operatorSummary: 'A-docs runtime health checks failed',
