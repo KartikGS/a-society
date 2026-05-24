@@ -26,6 +26,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_AGENTS` | `a-society/a-docs/agents.md` | A-Society agent orientation — entry point for all agents working on this project |
 | `$A_SOCIETY_AGENT_DOCS_GUIDE` | `a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's internal docs and Curator-tracked operator references exists — required reading for the Curator |
 | `$A_SOCIETY_ADOCS_DESIGN` | `a-society/a-docs/a-docs-design.md` | A-Society a-docs design principles — structural rules for authoring and maintaining the a-docs layer |
+| `$A_SOCIETY_VERSION_RECORD` | `a-society/a-docs/a-society-version.md` | A-Society's own initialized-project version record — records the framework baseline for A-Society's `a-docs/` runtime-health surface |
 | `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner/main.md` | A-Society Owner Agent role — authority, boundaries, and workflow-linked support-doc routing |
 | `$A_SOCIETY_OWNER_REQUIRED_READINGS` | `a-society/a-docs/roles/owner/required-readings.yaml` | A-Society Owner startup-context authority — machine-readable required readings for the Owner role |
 | `$A_SOCIETY_OWNER_OWNERSHIP` | `a-society/a-docs/roles/owner/ownership.yaml` | A-Society Owner ownership file — surfaces the Owner is accountable for |
@@ -115,6 +116,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_UPDATES_DIR` | `a-society/updates/` | Published framework update reports — outbound notifications to adopting projects when framework changes require a-docs review |
 | `$A_SOCIETY_UPDATES_PROTOCOL` | `a-society/a-docs/updates/protocol.md` | Framework update report protocol — when to publish, impact classification, who produces and reviews |
 | `$A_SOCIETY_UPDATES_TEMPLATE` | `a-society/a-docs/updates/template.md` | Framework update report template — structure for outbound change notifications to adopting projects |
+| `$A_SOCIETY_COMMUNICATION` | `a-society/a-docs/communication/main.md` | A-Society communication layer entry point — routes agents to conversation templates or coordination protocols |
 | `$A_SOCIETY_COMM_CONVERSATION` | `a-society/a-docs/communication/conversation/main.md` | A-Society conversation templates — permanent format references for all inter-agent handoff artifacts |
 | `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | `a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator-brief.md` | Template: Owner → Curator briefing format |
 | `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER` | `a-society/a-docs/communication/conversation/TEMPLATE-curator-to-owner.md` | Template: Curator → Owner proposal / submission format |

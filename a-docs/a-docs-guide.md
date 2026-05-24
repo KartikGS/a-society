@@ -40,6 +40,16 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Do not consolidate with:** `project-information/principles.md` — that file governs how A-Society is extended as a framework; this file governs how the A-Society documentation layer itself is authored. Do not consolidate with `a-docs-guide.md` — the guide explains why files exist; this file defines how those files should be structured.
 
+### `a-society-version.md` — `$A_SOCIETY_VERSION_RECORD`
+
+**Why it exists:** Runtime health checks require every initialized project's `a-docs/` surface to include an A-Society version record. A-Society's own `a-docs/` participates in that same runtime-health baseline, but its framework-version source of truth remains `$A_SOCIETY_VERSION`.
+
+**What it owns:** The framework-version baseline recorded for A-Society's own `a-docs/` runtime-health surface and any applied-update rows that specifically concern this self-record.
+
+**What breaks without it:** Runtime health checks report A-Society's own `a-docs/` as missing a manifest-required initialized-project surface. Update-comparison tooling also lacks the project-version record shape it expects when treating A-Society as an initialized project.
+
+**Do not consolidate with:** `$A_SOCIETY_VERSION` — that file declares the current framework version and version history; this file records the initialized-project version ledger shape required under `a-docs/`.
+
 ---
 
 ## `indexes/`
@@ -419,6 +429,18 @@ This is not a directory listing. It is a rationale document. Read it before main
 ---
 
 ## `communication/`
+
+### `communication/main.md` — `$A_SOCIETY_COMMUNICATION`
+
+**Why it exists:** The communication folder needs a single entry point that explains when to use the conversation layer versus the coordination layer. Without it, agents must infer that relationship from the child folders.
+
+**What it owns:** Orientation for A-Society's communication layer: the distinction between handoff artifact templates, coordination protocols, workflow routing, and record storage.
+
+**What breaks without it:** Runtime health checks report the manifest-required communication entry point as missing, and agents lack the parent-level map that explains which communication sub-layer to consult.
+
+**Do not consolidate with:** `$A_SOCIETY_COMM_CONVERSATION` or `$A_SOCIETY_COMM_COORDINATION` — the parent entry point routes between the two; the child files own their specific template and protocol content.
+
+---
 
 ### `communication/conversation/` — `$A_SOCIETY_COMM_CONVERSATION`
 
