@@ -2012,6 +2012,24 @@ textarea {
 
 /* Dark mode adjustments */
 @media (prefers-color-scheme: dark) {
+  .modal-panel {
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-choice {
+    background: linear-gradient(180deg, rgba(45, 212, 191, 0.10), rgba(45, 212, 191, 0.05));
+    border-color: rgba(45, 212, 191, 0.22);
+  }
+
+  .modal-choice:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .modal-choice-neutral {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border);
+  }
+
   .settings-modal {
     box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5);
   }

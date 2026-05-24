@@ -11,7 +11,7 @@ import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import { SessionStore } from '../orchestration/store.js';
 import { runRoleTurn } from '../orchestration/orient.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
-import type { FlowRun, HandoffResult, OperatorRenderSink, RuntimeMessageParam } from '../common/types.js';
+import type { FlowRun, HandoffResult, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import {
   FEEDBACK_CONSENT_STATUS,
   IMPROVEMENT_CHOICE_MODE,
@@ -23,6 +23,7 @@ import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { improvementNodeId, writeImprovementWorkflow } from './improvement-workflow.js';
+import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode } from '../common/history.js';
 
 const FEEDBACK_ROLE = 'A-Society Feedback';
 const RUNTIME_FEEDBACK_SYSTEM_PROMPT = [
@@ -81,18 +82,6 @@ function describeExpectedStep(expectedKind: ExpectedImprovementSignalKind): stri
   return expectedKind === 'meta-analysis-complete' ? 'meta-analysis' : 'feedback';
 }
 
-function cloneRuntimeHistory(history: RuntimeMessageParam[]): RuntimeMessageParam[] {
-  return history.map(message => ({ ...message }));
-}
-
-function loadForwardPassRoleHistory(flowRun: FlowRun, roleName: string): RuntimeMessageParam[] {
-  const session = SessionStore.loadRoleSession(
-    parseRoleIdentity(roleName).instanceRoleId,
-    SessionStore.flowRef(flowRun),
-    flowRun.workspaceRoot
-  );
-  return session ? cloneRuntimeHistory(session.transcriptHistory as RuntimeMessageParam[]) : [];
-}
 
 function normalizeRepoRelativePath(filePath: string, workspaceRoot: string): string {
   const nativePath = filePath.replace(/\\/g, path.sep);
@@ -168,15 +157,18 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   flowRun: FlowRun,
   roleName: string,
   bundleContent: string,
-  initialHistory: RuntimeMessageParam[],
+  session: RoleSession,
   expectedKind: K,
   role: string,
   outputStream: NodeJS.WritableStream,
   renderer: OperatorRenderSink,
   validateExpectedSignal?: ExpectedSignalValidator<K>,
 ): Promise<ExpectedImprovementSignal<K>> {
-  const history = cloneRuntimeHistory(initialHistory);
+  const history = session.transcriptHistory as RuntimeMessageParam[];
   const stepLabel = describeExpectedStep(expectedKind);
+  const nodeId = `${parseRoleIdentity(roleName).instanceRoleId}-${stepLabel}`;
+  const flowRef = SessionStore.flowRef(flowRun);
+  const saveSession = () => SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
 
   while (true) {
     try {
@@ -186,7 +178,20 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         roleName,
         bundleContent,
         history,
-        outputStream
+        outputStream,
+        undefined,
+        renderer,
+        undefined,
+        async (messages) => {
+          removeAssistantDraftBeforeToolCalls(history, messages);
+          appendConversationMessagesToCurrentNode(session, nodeId, messages);
+          saveSession();
+        },
+        (text) => {
+          upsertAssistantDelta(history, text);
+          upsertCurrentNodeAssistantDelta(session, nodeId, text);
+          saveSession();
+        },
       );
 
       if (sessionResult === null) {
@@ -231,6 +236,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           continue;
         }
 
+        session.isActive = false;
+        saveSession();
         return result as ExpectedImprovementSignal<K>;
       }
 
@@ -470,13 +477,25 @@ export class ImprovementOrchestrator {
                       `When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set exactly to ${assignedFindingsRepoPath}.`
                     ].join(' ')
                   });
-                  const history = loadForwardPassRoleHistory(flowRun, roleName);
-                  history.push({ role: 'user', content: userMessage });
+                  const roleKey = parseRoleIdentity(roleName).instanceRoleId;
+                  const flowRef = SessionStore.flowRef(flowRun);
+                  let session = SessionStore.loadRoleSession(roleKey, flowRef, flowRun.workspaceRoot);
+                  if (!session) {
+                    session = {
+                      roleName,
+                      logicalSessionId: `${flowRun.flowId}__${roleKey}`,
+                      transcriptHistory: [],
+                      isActive: true,
+                    };
+                  }
+                  (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: userMessage });
+                  session.isActive = true;
+                  SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
                   await runBackwardPassSessionUntilExpectedSignal(
                     flowRun,
                     roleName,
                     bundleContent,
-                    history,
+                    session,
                     'meta-analysis-complete',
                     entry.role,
                     roleOutputStream,
@@ -642,12 +661,20 @@ export class ImprovementOrchestrator {
               `When the feedback artifact is saved, emit a backward-pass-complete handoff block with artifact_path set exactly to ${assignedFeedbackRepoPath}.`
             ].join(' ')
           });
-          const history: RuntimeMessageParam[] = [{ role: 'user', content: userMessage }];
+          const roleKey = parseRoleIdentity(roleName).instanceRoleId;
+          const flowRef = SessionStore.flowRef(flowRun);
+          const session: RoleSession = {
+            roleName,
+            logicalSessionId: `${flowRun.flowId}__${roleKey}`,
+            transcriptHistory: [{ role: 'user', content: userMessage }],
+            isActive: true,
+          };
+          SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
           await runBackwardPassSessionUntilExpectedSignal(
             flowRun,
             roleName,
             RUNTIME_FEEDBACK_SYSTEM_PROMPT,
-            history,
+            session,
             'backward-pass-complete',
             entry.role,
             roleOutputStream,
