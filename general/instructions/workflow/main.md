@@ -8,9 +8,9 @@ A workflow definition describes the repeatable process by which work moves throu
 
 It is not a role document. It is not a requirements template. It is the living map of the project's execution loop — the definition every agent consults when they ask "what do I do next?"
 
-It is also the policy surface for node-linked support docs. If a role needs a companion document at proposal time, review time, implementation, or closure, the workflow is the place that says "read this now." Runtime-managed projects should follow `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for the executable YAML and injection semantics.
+It is also the policy surface for node-linked support docs. If a role needs a companion document at proposal time, review time, implementation, or closure, the workflow is the place that says "read this now." The workflow's YAML definition is the executable source for node contracts, support-doc injection cues, role-instance syntax, and handoff routing semantics.
 
-A workflow definition is read at workflow entry and referenced during execution. In many projects it will be encoded as YAML. It must be specific enough to prevent guessing and stable enough to survive many CRs without requiring constant updates.
+A workflow definition is read at workflow entry and referenced during execution. It is encoded as YAML so the runtime can execute, inject, and verify the process. It must be specific enough to prevent guessing and stable enough to survive many CRs without requiring constant updates.
 
 ---
 
@@ -75,7 +75,7 @@ A workflow is a **graph**: a named set of nodes connected by transitions.
 
 **Parallel fork** — a node may have multiple outgoing transitions that fire simultaneously, producing parallel execution branches. Use when work can proceed concurrently across different roles or instances before converging downstream.
 
-**Role instance** — a distinct execution session for a role that shares the same base role authority as another node. Use role instances when two nodes with the same base role may be active at the same time and need separate histories. Runtime-managed projects must use the role-instance syntax defined in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`; descriptive node notes do not create separate executable sessions.
+**Role instance** — a distinct execution session for a role that shares the same base role authority as another node. Use role instances when two nodes with the same base role may be active at the same time and need separate histories. The workflow YAML must encode role instances with explicit instance identifiers; descriptive node notes do not create separate executable sessions.
 
 **Join** — a node that requires inputs from multiple incoming transitions before it can proceed. The node waits until all required inputs have arrived. Partial arrival is a waiting state, not a transition. Join nodes are the downstream convergence point for parallel forks.
 

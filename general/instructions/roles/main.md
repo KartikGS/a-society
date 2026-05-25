@@ -98,7 +98,7 @@ Roles that are always active (e.g., the Owner) do not need this section — they
 ### 8. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
 What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per the runtime-injected handoff contract. The block declares the receiving role and the artifact path the runtime uses to route the next session.
 
-Do not place the runtime handoff contract in any role's `required-readings.yaml`. The runtime injects it separately into runtime-managed sessions.
+Do not place the runtime handoff contract in any role's `required-readings.yaml`. The runtime injects it separately into sessions.
 
 Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 

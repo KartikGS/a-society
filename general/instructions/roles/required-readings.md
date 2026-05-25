@@ -101,7 +101,7 @@ If a role's `required-readings.yaml` drifts from the files that role actually ne
 
 ## Context-Read Timing Rules
 
-**Runtime-managed sessions:** Files injected from the active role's `required-readings.yaml` count as already loaded. Role documents and bootstrap prompts must not instruct default rereads of those files.
+**Runtime-injected context:** Files injected from the active role's `required-readings.yaml` count as already loaded. Role documents and bootstrap prompts must not instruct default rereads of those files.
 
 **Manual orientation:** Humans or agents orienting manually may still follow the role's `required_readings` list as a startup sequence.
 
