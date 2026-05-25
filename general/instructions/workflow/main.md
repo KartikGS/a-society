@@ -8,9 +8,9 @@ A workflow definition describes the repeatable process by which work moves throu
 
 It is not a role document. It is not a requirements template. It is the living map of the project's execution loop — the definition every agent consults when they ask "what do I do next?"
 
-It is also the policy surface for node-linked support docs. If a role needs a companion document at proposal time, review time, implementation, or closure, the workflow is the place that says "read this now." The workflow's YAML definition is the executable source for node contracts, support-doc injection cues, role-instance syntax, and handoff routing semantics.
+It is also the policy surface for node-linked support docs. If a role needs a companion document at proposal time, review time, implementation, or closure, the workflow is the place that says "read this now." The workflow's YAML definition is the executable source for node contracts, support-doc injection cues, role-session identity syntax, and handoff routing semantics.
 
-A workflow definition is read at workflow entry and referenced during execution. It is encoded as YAML so the runtime can execute, inject, and verify the process. It must be specific enough to prevent guessing and stable enough to survive many CRs without requiring constant updates.
+A workflow definition is read at workflow entry and referenced during execution. It is encoded as YAML so the runtime can execute, inject, and verify the process. It must be specific enough to prevent guessing and stable enough to survive many flows without requiring constant updates.
 
 ---
 
@@ -73,19 +73,19 @@ A workflow is a **graph**: a named set of nodes connected by transitions.
 - **Unidirectional** (default) — work passes in one direction only. The downstream node completes its work and the transition fires onward.
 - **Bidirectional** — the downstream node may send a message upstream and receive a response without exiting the current node. The downstream node enters a waiting state (not complete) until the response arrives, then resumes. Designate a transition as bidirectional when the downstream node may need clarification from the upstream node during execution — information it cannot resolve independently and that the upstream node must provide.
 
-**Parallel fork** — a node may have multiple outgoing transitions that fire simultaneously, producing parallel execution branches. Use when work can proceed concurrently across different roles or instances before converging downstream.
+**Parallel fork** — a node may have multiple outgoing transitions that fire simultaneously, producing parallel execution branches. Use when work can proceed concurrently across different roles or role-session identities before converging downstream.
 
-**Role instance** — a distinct execution session for a role that shares the same base role authority as another node. Use role instances when two nodes with the same base role may be active at the same time and need separate histories. The workflow YAML must encode role instances with explicit instance identifiers; descriptive node notes do not create separate executable sessions.
+**Role-session identity** — a distinct execution session for a role that shares the same base role authority as another node. Use separate role-session identities when two nodes with the same base role may be active at the same time and need separate histories. The workflow YAML must encode them with explicit role-session identifiers; descriptive node notes do not create separate executable sessions.
 
-**Join** — a node that requires inputs from multiple incoming transitions before it can proceed. The node waits until all required inputs have arrived. Partial arrival is a waiting state, not a transition. Join nodes are the downstream convergence point for parallel forks.
+**Join** — a node that converges multiple incoming transitions. A join node may activate as soon as any incoming handoff arrives, even when other expected inputs are still pending. The role evaluates the currently received inputs against the node contract and each outgoing transition's requirements. It may wait for more inputs, request corrections, or hand off to one or more next nodes when the current inputs are sufficient for those targets. The workflow should make expected inputs and outgoing requirements explicit; the assigned role makes the sufficiency decision from that contract.
 
 **Graph** — the complete workflow definition: the named set of nodes and transitions describing how work moves from entry to completion.
 
-**Instance** — one traversal of a graph. When the same workflow runs multiple times simultaneously — parallel client engagements, concurrent assignments, simultaneous studies — each run is a separate instance. Each instance is identified by a **unit-of-work ID**.
+**Flow** — one traversal of a workflow graph. When the same workflow runs multiple times simultaneously — parallel client engagements, concurrent assignments, simultaneous studies — each run is a separate flow. Each flow is identified by a **flow ID**.
 
-**Unit-of-work ID format:** `[short-slug]-[sequential-number]` (e.g., `acme-001`, `rebrand-003`). The slug is a human-readable label for the unit of work; the number disambiguates across time. The project defines its own slug vocabulary. In single-instance workflows, the unit-of-work ID is optional.
+**Flow ID format:** `[short-slug]-[sequential-number]` (e.g., `acme-001`, `rebrand-003`). The slug is a human-readable label for the flow; the number disambiguates across time. The project defines its own slug vocabulary.
 
-The simplest workflow — a linear sequence of nodes, running once at a time — is a linear graph with a single active instance. It is the default case. Most of what follows describes how to build that case. Extended patterns (concurrent instances and branching) are described at the end of this document.
+The simplest workflow — a linear sequence of nodes, running once at a time — is a linear graph with a single active flow. It is the default case. Most of what follows describes how to build that case. Extended patterns (concurrent flows and branching) are described at the end of this document.
 
 ---
 
@@ -172,7 +172,7 @@ Transition rules prevent work from disappearing between roles. A node without a 
 
 ### 3. Invariants (mandatory)
 
-What rules are true for every unit of work, regardless of node? Invariants are non-negotiable — they do not bend for speed, convenience, or unusual CRs. Examples:
+What rules are true for every unit of work, regardless of node? Invariants are non-negotiable — they do not bend for speed, convenience, or unusual flows. Examples:
 - Every closed artifact must have a corresponding open artifact.
 - Historical artifacts are immutable once closed.
 - Scope extensions require explicit approval before implementation resumes.
@@ -231,8 +231,8 @@ workflow/
 
 Not all projects need all sub-folders. Create a sub-folder when:
 - The artifact type has its own naming convention, status model, or governance rules.
-- Agents need a reference template to create new instances of that artifact.
-- The artifact type has historical instances that agents must navigate.
+- Agents need a reference template to create new artifacts of that type.
+- Historical artifacts of that type accumulate and agents must navigate them.
 
 Do not create sub-folders preemptively. If a project has no requirements artifacts, there is no `requirements/` folder.
 
@@ -240,8 +240,8 @@ Do not create sub-folders preemptively. If a project has no requirements artifac
 
 ## How to Write One
 
-**Step 1 — Name the graph and determine instance behavior.**
-Give the workflow a name. Decide whether it runs once at a time (single-instance) or may have multiple traversals running simultaneously (multi-instance). If multi-instance, define the unit-of-work ID slug vocabulary the project will use.
+**Step 1 — Name the graph and determine concurrent-flow behavior.**
+Give the workflow a name. Decide whether it runs once at a time or may have multiple flows running simultaneously. If concurrent flows are allowed, define the flow ID slug vocabulary the project will use.
 
 **Step 2 — Define the nodes.**
 List every node that a unit of work passes through. Derive this list from the touched permanent surfaces and the gates the work actually needs. For each node: name it, assign an owner role, list required readings, define its inputs and outputs, define the work performed there, note whether the node requires human collaboration (see the Human-Collaborative Node Pattern in Section 1), and record any node-specific notes. The entry node always carries the `Human-collaborative` field as a structural rule. If a node has no owner, it is not a node — it is a gap.
@@ -291,7 +291,7 @@ For the complete modification procedure, the single-graph model, evaluative prin
 - **One-line summary at the top.** Every workflow definition should carry a one-line summary — typically in the YAML `summary` field — stating what kind of work it processes. Without a summary, the Owner must read and synthesize the full workflow to describe it, which wastes context.
 - **Node-first structure.** Organize the workflow around named node contracts with explicit outgoing transitions. Number nodes only when order itself carries meaning; do not rely on phase numbering as the primary model.
 - **Named invariants.** Each invariant should have a short name (e.g., "Traceability Invariant") so agents can reference it precisely in transitions and reports.
-- **Instance-scoped references.** In multi-instance workflows only: every artifact reference (transition artifacts, status tokens, pre-replacement checks) must include the unit-of-work ID so that artifacts from concurrent instances do not collide. Single-instance workflows do not need unit-of-work IDs.
+- **Flow-scoped references.** In workflows that allow concurrent flows, every artifact reference (transition artifacts, status tokens, pre-replacement checks) must include the flow ID so artifacts from concurrent flows do not collide. Workflows that run only one flow at a time do not need this extra disambiguation.
 - **Stable by design.** A workflow document that changes every week is a sign the process has not been decided — not a sign it is being maintained. Decide the process, then write it down.
 
 ---
@@ -317,23 +317,23 @@ For the complete modification procedure, the single-graph model, evaluative prin
 
 ## Extended Workflow Patterns
 
-The linear, single-instance workflow is the default case. When your project's needs grow beyond it:
+The linear workflow with one active flow at a time is the default case. When your project's needs grow beyond it:
 
-### Multiple instances of the same workflow
+### Multiple concurrent flows
 
-When the same workflow runs N times simultaneously — parallel client engagements, concurrent assignments, simultaneous studies — each run is a separate instance of the same graph. Define the unit-of-work ID slug vocabulary in the workflow document. Scope all transition artifacts, status tokens, and pre-replacement checks to the instance via the unit-of-work ID. See `$INSTRUCTION_COMMUNICATION_CONVERSATION` for concurrent artifact naming.
+When the same workflow runs N times simultaneously — parallel client engagements, concurrent assignments, simultaneous studies — each run is a separate flow through the same graph. Define the flow ID slug vocabulary in the workflow document. Scope all transition artifacts, status tokens, and pre-replacement checks to the flow via the flow ID. See `$INSTRUCTION_COMMUNICATION_CONVERSATION` for concurrent artifact naming.
 
 ### Branching
 
 **Conditional branching:** when a node has multiple possible outgoing transitions, define the transition condition for each. At runtime, the condition determines which transition fires — one transition fires per decision. Converging branches — multiple incoming transitions leading to the same downstream node — use the same mechanics: each transition has its own condition; the downstream node defines what input it accepts from any arriving transition.
 
-**Parallel fork and join:** a parallel fork fires multiple outgoing transitions simultaneously — work continues in parallel branches without waiting for the other branches to complete. A join node waits for all required incoming transitions before proceeding — partial arrival is a waiting state, not a transition condition. Use parallel forks when independent work can run concurrently and must be synchronized before the workflow continues. Define at the join node exactly what constitutes "all required inputs."
+**Parallel fork and join:** a parallel fork fires multiple outgoing transitions simultaneously — work continues in parallel branches without waiting for the other branches to complete. A join node may wake on partial incoming handoffs and decide whether the received inputs are enough to proceed to one or more outgoing nodes, whether to wait for additional inputs, or whether to request corrections. Use parallel forks when independent work can run concurrently and later coordinate at a shared node. Define at the join node which inputs are expected, what each outgoing transition requires, and who has authority to judge sufficiency.
 
 ### Multi-domain parallel-track flows (single workflow)
 
 When **one unit of work** spans **multiple domains or role types** (e.g., documentation, implementation track A, implementation track B) that can proceed **in parallel until a synchronization point**, model it as **a single workflow graph** with **parallel forks and at least one join** — not as separate workflows chosen because the work "touches more than one area."
 
-**What this is:** One instance, one workflow name, one record of the work. Branches run concurrently where transitions are independent; a join node waits for all required inputs before the workflow continues toward closure.
+**What this is:** One flow, one workflow name, one record of the work. Branches run concurrently where transitions are independent; a join node coordinates incoming branch work and may proceed when the assigned role judges the received inputs sufficient for the relevant outgoing transition.
 
 **What this is not:** It is not a justification for introducing multiple permanent workflow files. If the work is truly one feature or one decision thread, splitting it into multiple workflows fragments accountability and obscures transitions.
 
@@ -359,4 +359,4 @@ These patterns are not separate complexity tiers. They are all graph traversal w
 
 **No invariants.** Without explicit invariants, every edge case becomes a negotiation. The first time a constraint is challenged, the team discovers they never actually agreed on it.
 
-**Updated reactively.** Workflow documents should be updated when the process is deliberately changed — not after every CR that exposed a gap. Reactive updates produce a patchwork of special cases rather than a coherent process.
+**Updated reactively.** Workflow documents should be updated when the process is deliberately changed — not after every flow that exposed a gap. Reactive updates produce a patchwork of special cases rather than a coherent process.
