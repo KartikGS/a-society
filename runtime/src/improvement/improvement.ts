@@ -307,6 +307,7 @@ async function runMetaAnalysisEntry(
   }
 
   const roleKey = parseRoleIdentity(roleName).instanceRoleId;
+  const nodeId = `${roleKey}-meta-analysis`;
   const flowRef = SessionStore.flowRef(flowRun);
   const startedRoles = flowRun.improvementPhase!.startedRoles ?? [];
   const isStarted = startedRoles.includes(roleName);
@@ -321,6 +322,7 @@ async function runMetaAnalysisEntry(
     const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
     if (lastMsg?.role === 'assistant') {
       (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
     }
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
   } else {
@@ -331,6 +333,7 @@ async function runMetaAnalysisEntry(
     if (existing && lastMsg?.role === 'user') {
       session = existing;
       session.isActive = true;
+      appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
     } else {
       const findingsFilePaths = locateFindingsFiles(recordFolderPath, findingsRoles);
       const metaAnalysisInstructionPath = path.join(
@@ -363,6 +366,7 @@ async function runMetaAnalysisEntry(
         };
       }
       (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: userMessage });
+      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
     }
 
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
@@ -430,6 +434,7 @@ async function runFeedbackEntry(
   renderer.emit({ kind: 'role.active', nodeId: improvementGraphNodeId, role: roleName });
 
   const roleKey = parseRoleIdentity(roleName).instanceRoleId;
+  const nodeId = `${roleKey}-feedback`;
   const flowRef = SessionStore.flowRef(flowRun);
   const startedRoles = flowRun.improvementPhase!.startedRoles ?? [];
   const isStarted = startedRoles.includes(roleName);
@@ -444,6 +449,7 @@ async function runFeedbackEntry(
     const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
     if (lastMsg?.role === 'assistant') {
       (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
     }
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
   } else {
@@ -454,6 +460,7 @@ async function runFeedbackEntry(
     if (existing && lastMsg?.role === 'user') {
       session = existing;
       session.isActive = true;
+      appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
     } else {
       const allFindingsFiles = locateAllFindingsFiles(recordFolderPath);
       const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
@@ -477,6 +484,7 @@ async function runFeedbackEntry(
         transcriptHistory: [{ role: 'user', content: userMessage }],
         isActive: true,
       };
+      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
     }
 
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
