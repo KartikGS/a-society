@@ -93,18 +93,14 @@ The simplest workflow — a linear sequence of nodes, running once at a time —
 
 The **Owner** is both the universal entry point and the terminal node for every workflow.
 
-**Entry:** users always begin by assigning the Owner role and pointing the agent at `agents.md`. After loading context (which includes the canonical workflow definition and related routing guidance), the Owner identifies the touched surfaces, scopes the active path, and routes work into the correct entry node.
+**Entry:** a flow begins at the Owner entry node. The runtime loads the active flow context for the Owner, and the user's request arrives as chat input to the Owner session. The Owner identifies touched surfaces, refines the active path as needed, and routes work to the correct next node.
 
 **Terminal:** every workflow surfaces back to the Owner on completion. The closing role in a workflow does not silently close — it hands the result to the Owner. The Owner acknowledges completion, logs it, and determines whether any follow-up is needed. This closed loop ensures the Owner is always aware of what has been finished.
 
-**Backward pass ordering:** the Owner, having received terminal confirmation, directs the backward pass. For traversal order, see `$INSTRUCTION_IMPROVEMENT` — ordering is defined there and is not restated here.
-
 This means:
 - **Only the Owner reads the full workflow map.** Other agents receive well-formed input artifacts at their nodes — they see their node contract (input, work, output), not the entire graph.
-- **The Owner routes work into workflows.** When the user picks a workflow or describes a need, the Owner creates the trigger input and identifies the next node or role to act.
+- **The Owner routes work inside the active flow.** The Owner turns the user's request into the trigger input, scopes the active path, and identifies the next node or role to act.
 - **Freeform work is valid.** The Owner can engage in discussion, direction-setting, or exploratory thinking without entering any workflow. Not every interaction needs a workflow.
-
-**Exception: delegated-authority flows.** A project may designate certain flow types as delegated-authority — where a specific role has standing authority to close without Owner terminal confirmation. For these flows, that role serves as the terminal node. The scope of delegated-authority flows must be explicitly bounded in the workflow document itself: direction decisions, library-level additions, and structural changes may not fall within them. The Owner-as-terminal principle applies to all other flows.
 
 Every workflow definition should include a **one-line summary** suitable for the Owner to present during routing. This summary lets the Owner explain the workflow quickly without re-reading the full graph.
 
@@ -196,7 +192,7 @@ The workflow definition itself should carry the project's forward-pass closure r
 
 What is the improvement loop after a flow closes? A backward pass is a structured reflection run after a flow completes — each participating role reviews its own node work for what worked, what failed, and what should change.
 
-A backward pass entry in the workflow definition names the roles involved and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT` — do not specify ordering locally. The improvement file is the authoritative source for the backward pass algorithm.
+A backward pass entry in the workflow definition names the roles involved and where findings go. Do not specify traversal ordering locally; the runtime derives backward-pass ordering from the active flow graph and the project's improvement contracts.
 
 ---
 
@@ -259,7 +255,7 @@ Define what causes an agent to stop and ask. The escalation definition should be
 Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Keep the closure rules in the workflow definition itself rather than splitting them into a separate routing surface.
 
 **Step 7 — Define the backward pass.**
-Describe the backward pass — which roles participate and where findings go. For traversal order, reference `$INSTRUCTION_IMPROVEMENT`. Do not specify ordering locally.
+Describe the backward pass — which roles participate and where findings go. Do not specify traversal ordering locally; the runtime derives ordering from the active flow graph and the project's improvement contracts.
 
 **Step 8 — Identify sub-documents.**
 What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the canonical workflow definition or the surrounding project indexes as appropriate.
@@ -343,7 +339,7 @@ When **one unit of work** spans **multiple domains or role types** (e.g., docume
 
 **Checkpoints and approvals:** When a parallel track includes work that **must not proceed without a governance or approval step** (e.g., a shared library change that requires Owner or steward approval before implementation continues), model that step explicitly in the graph: either a **node** whose output is approval, or a **bidirectional transition** for clarification/approval, so the track does not silently bypass the approval obligation. The exact mechanics follow the same transition and bidirectional-transition rules defined earlier in this document.
 
-**Owner routing:** The Owner still routes the unit of work **into** this workflow once and receives **terminal** confirmation once; parallel tracks do not remove Owner-as-terminal unless the workflow document declares a delegated-authority exception that explicitly covers the work class.
+**Owner routing:** The Owner still routes the unit of work **into** this workflow once and receives **terminal** confirmation once; parallel tracks do not remove the Owner terminal node.
 
 **Parallel-track declaration:** State explicitly which tracks may run in parallel and where joins force ordering. Parallelism is a graph property, not a separate coordination model.
 
