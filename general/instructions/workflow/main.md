@@ -135,64 +135,47 @@ Keep transition summaries lightweight. Artifact formats, status models, and deta
 - **Role definitions** — who the agents are and what they own belongs in role documents
 - **Tool declarations** — what software to use belongs in a tooling document
 - **Project vision** — why the project exists belongs in a vision document
-- **Specific artifact templates** — how to format a plan or requirement belongs in sub-documents (`workflow/plans/`, `workflow/reports/`, `workflow/requirements/`)
-- **Historical records** — completed work artifacts live alongside the workflow, not inside it
+- **Specific artifact templates** — how to format a plan, report, requirement, or handoff belongs in the project's template surface; produced artifacts belong in the active record folder
+- **Historical records** — completed flow artifacts live under `records/`, not inside `workflow/`
 
-If the workflow definition grows sections that describe specific artifact formats or role-specific behaviors in depth, those sections belong in sub-documents. The workflow definition describes the process; sub-documents describe the artifacts produced by that process.
+If the workflow definition grows sections that describe specific artifact formats or role-specific behaviors in depth, those sections belong in template, artifact-guidance, or role surfaces outside `workflow/`. The workflow definition describes the process; other surfaces describe the artifacts produced by that process.
 
 ---
 
 ## Folder Structure
 
-A workflow area is usually a folder. The canonical structure is:
+A workflow area is a small standing folder. The canonical structure is:
 
 ```
 workflow/
-├── main.yaml            ← canonical workflow definition
-├── plans/
-│   └── main.md          ← how plans are structured and templated
-├── reports/
-│   └── main.md          ← how investigation/analysis reports work
-└── requirements/
-    └── main.md          ← how requirements are captured and managed
+└── main.yaml            ← canonical workflow definition
 ```
 
-Not all projects need all sub-folders. Create a sub-folder when:
-- The artifact type has its own naming convention, status model, or governance rules.
-- Agents need a reference template to create new artifacts of that type.
-- Historical artifacts of that type accumulate and agents must navigate them.
-
-Do not create sub-folders preemptively. If a project has no requirements artifacts, there is no `requirements/` folder.
+If an artifact type needs a reusable template or formatting reference, store that standing reference in the project's template surface and have the relevant workflow node point to it as node-specific guidance.
 
 ---
 
 ## How to Write One
 
-**Step 1 — Name the graph and determine concurrent-flow behavior.**
-Give the workflow a name. Decide whether it runs once at a time or may have multiple flows running simultaneously. If concurrent flows are allowed, define the flow ID slug vocabulary the project will use.
-
-**Step 2 — Define the nodes.**
+**Step 1 — Define the nodes.**
 List every node that a unit of work passes through. Derive this list from the touched permanent surfaces and the gates the work actually needs. For each node: name it, assign an owner role, list required readings, define its inputs and outputs, define the work performed there, note whether the node requires human collaboration, and record any node-specific notes. The entry node always carries `human-collaborative: direction`. If a node has no owner, it is not a node — it is a gap.
 
-**Step 3 — Define transitions.**
+**Step 2 — Define transitions.**
 For each outgoing transition from each node, define: the transition condition (when does the transition fire), the artifact that carries it, what that artifact must contain, and what the receiving role checks before acting.
 
-**Step 4 — Write the invariants.**
+**Step 3 — Write the invariants.**
 What rules apply to all work in this project, regardless of node? Write them as a numbered list with names. Invariants should be few, clear, and non-negotiable.
 
-**Step 5 — Define escalation.**
+**Step 4 — Define escalation.**
 Define what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note." Add node-specific escalation notes only when a node truly needs special handling.
 
-**Step 6 — Define the forward pass closure step.**
+**Step 5 — Define the forward pass closure step.**
 Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Keep the closure rules in the workflow definition itself rather than splitting them into a separate routing surface.
 
-**Step 7 — Define the backward pass.**
-Describe the backward pass — which roles participate and where findings go. Do not specify traversal ordering locally; the runtime derives ordering from the active flow graph and the project's improvement contracts.
+**Step 6 — Identify artifact references.**
+What artifact types does this project produce? For each type that needs a template or governance rules, identify the standing template or guidance surface and link it from the relevant workflow node.
 
-**Step 8 — Identify sub-documents.**
-What artifact types does this project produce? For each type that needs a template or governance rules, create a sub-folder with a `main.md`. Link each sub-folder from the canonical workflow definition or the surrounding project indexes as appropriate.
-
-**Step 9 — Cut what does not belong.**
+**Step 7 — Cut what does not belong.**
 A workflow definition that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files. A role document that enumerates node-triggered "before X, read Y" cues has drifted in the other direction; move those cues back into the workflow.
 
 ---
@@ -219,7 +202,7 @@ For the complete modification procedure, the single-graph model, evaluative prin
 - **One-line summary at the top.** Every workflow definition should carry a one-line summary — typically in the YAML `summary` field — stating what kind of work it processes. The runtime and record surfaces can use this summary as a durable label for the flow.
 - **Node-first structure.** Organize the workflow around named node contracts with explicit outgoing transitions. Number nodes only when order itself carries meaning; do not rely on phase numbering as the primary model.
 - **Named invariants.** Each invariant should have a short name (e.g., "Traceability Invariant") so agents can reference it precisely in transitions and reports.
-- **Flow-scoped references.** In workflows that allow concurrent flows, every artifact reference (transition artifacts, status tokens, pre-replacement checks) must include the flow ID so artifacts from concurrent flows do not collide. Workflows that run only one flow at a time do not need this extra disambiguation.
+- **One canonical graph.** Prefer one canonical workflow definition whose record snapshots activate only the relevant nodes and edges for each flow.
 - **Stable by design.** A workflow document that changes every week is a sign the process has not been decided — not a sign it is being maintained. Decide the process, then write it down.
 
 ---
@@ -240,42 +223,6 @@ For the complete modification procedure, the single-graph model, evaluative prin
 - **Nodes**: Brief → Draft → Review → Revision → Final
 - **Key invariant**: Reviewer comments are tracked as discrete items, each accepted or rejected explicitly.
 - **Key transition**: Draft → Review requires a complete draft; Review → Revision requires a marked-up artifact with classified comments.
-
----
-
-## Extended Workflow Patterns
-
-The linear workflow with one active flow at a time is the default case. When your project's needs grow beyond it:
-
-### Multiple concurrent flows
-
-When the same workflow runs N times simultaneously — parallel client engagements, concurrent assignments, simultaneous studies — each run is a separate flow through the same graph. Define the flow ID slug vocabulary in the workflow document. Scope all transition artifacts, status tokens, and pre-replacement checks to the flow via the flow ID. See `$INSTRUCTION_COMMUNICATION_CONVERSATION` for concurrent artifact naming.
-
-### Branching
-
-**Conditional branching:** when a node has multiple possible outgoing transitions, define the transition condition for each. At runtime, the condition determines which transition fires — one transition fires per decision. Converging branches — multiple incoming transitions leading to the same downstream node — use the same mechanics: each transition has its own condition; the downstream node defines what input it accepts from any arriving transition.
-
-**Parallel fork and join:** a parallel fork fires multiple outgoing transitions simultaneously — work continues in parallel branches without waiting for the other branches to complete. A join node may wake on partial incoming handoffs and decide whether the received inputs are enough to proceed to one or more outgoing nodes, whether to wait for additional inputs, or whether to request corrections. Use parallel forks when independent work can run concurrently and later coordinate at a shared node. Define at the join node which inputs are expected, what each outgoing transition requires, and who has authority to judge sufficiency.
-
-### Multi-domain parallel-track flows (single workflow)
-
-When **one unit of work** spans **multiple domains or role types** (e.g., documentation, implementation track A, implementation track B) that can proceed **in parallel until a synchronization point**, model it as **a single workflow graph** with **parallel forks and at least one join** — not as separate workflows chosen because the work "touches more than one area."
-
-**What this is:** One flow, one workflow name, one record of the work. Branches run concurrently where transitions are independent; a join node coordinates incoming branch work and may proceed when the assigned role judges the received inputs sufficient for the relevant outgoing transition.
-
-**What this is not:** It is not a justification for introducing multiple permanent workflow files. If the work is truly one feature or one decision thread, splitting it into multiple workflows fragments accountability and obscures transitions.
-
-**When to use:** Independent implementation or review tracks exist; a single planning or architecture node can feed all tracks; convergence is required before verification, acceptance, or publication.
-
-**Graph pattern (abstract):** Planning or architecture node → **parallel fork** to two or more domain tracks → **join** → downstream verification or closure nodes. Role names are project-specific; the structure is generic.
-
-**Checkpoints and approvals:** When a parallel track includes work that **must not proceed without a governance or approval step** (e.g., a shared library change that requires Owner or steward approval before implementation continues), model that step explicitly in the graph: either a **node** whose output is approval, or a **bidirectional transition** for clarification/approval, so the track does not silently bypass the approval obligation. The exact mechanics follow the same transition and bidirectional-transition rules defined earlier in this document.
-
-**Owner routing:** The Owner still routes the unit of work **into** this workflow once and receives **terminal** confirmation once; parallel tracks do not remove the Owner terminal node.
-
-**Parallel-track declaration:** State explicitly which tracks may run in parallel and where joins force ordering. Parallelism is a graph property, not a separate coordination model.
-
-These patterns are not separate complexity tiers. They are all graph traversal with decision points at transitions. A project should strongly prefer one canonical workflow definition whose record snapshots activate only the relevant nodes and edges for each flow.
 
 ---
 
