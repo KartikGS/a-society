@@ -1,5 +1,8 @@
 import type { RoleSession, RuntimeMessageParam } from './types.js';
 
+export const INTERRUPTED_TURN_CONTINUATION_MESSAGE =
+  'The previous assistant response was interrupted during streaming. Continue from where you left off. Do not repeat completed content unless needed for coherence.';
+
 export function upsertAssistantDelta(history: RuntimeMessageParam[], text: string): void {
   if (!text) return;
   const previous = history[history.length - 1];

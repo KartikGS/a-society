@@ -8,6 +8,7 @@ import type {
   FlowRun,
 } from '../../common/types.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
+import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import { SessionStore } from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
@@ -304,7 +305,24 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
 
     const session = createSession(ref);
     sendFlowState(socket, ref);
-    startFlowRunner(session, flowRun.projectNamespace);
+
+    if (flowRun.improvementPhase?.status === 'running') {
+      void attachSessionTask(session, async () => {
+        const latest = readFlowRun(ref);
+        if (!latest) throw new Error('[improvement] Flow state disappeared before improvement could be resumed.');
+        await ImprovementOrchestrator.resumeImprovement(
+          latest,
+          session.outputBridge,
+          session.sink,
+          (role) => createRoleOutputStream(session, role, emitHistoricalMessage)
+        );
+        if (readFlowRun(ref)?.status === 'completed') {
+          session.sink.emit({ kind: 'flow.completed' });
+        }
+      }).catch(() => {});
+    } else {
+      startFlowRunner(session, flowRun.projectNamespace);
+    }
   }
 
   const commands = createRuntimeSessionCommands({

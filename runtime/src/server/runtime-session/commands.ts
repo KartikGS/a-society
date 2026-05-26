@@ -121,7 +121,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     return createSession(ref);
   }
 
-  function handleImprovementChoice(ref: FlowRef, mode: ProtocolImprovementChoiceMode): void {
+  async function handleImprovementChoice(ref: FlowRef, mode: ProtocolImprovementChoiceMode): Promise<void> {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_improvement_choice') {
       broadcastToFlow(ref, {
@@ -145,7 +145,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (mode === IMPROVEMENT_CHOICE_MODE.NONE) {
       try {
-        ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
+        await ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
         session.sink.emit({ kind: 'flow.completed' });
       } catch (error: any) {
         emitHistoricalMessage(session, {
@@ -184,7 +184,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     setImmediate(() => emitFlowState(session));
   }
 
-  function handleFeedbackConsentChoice(ref: FlowRef, decision: ProtocolFeedbackConsentDecision): void {
+  async function handleFeedbackConsentChoice(ref: FlowRef, decision: ProtocolFeedbackConsentDecision): Promise<void> {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_feedback_consent') {
       broadcastToFlow(ref, {
@@ -204,7 +204,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (decision === FEEDBACK_CONSENT_DECISION.DENIED) {
       try {
-        ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
+        await ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
         session.sink.emit({ kind: 'flow.completed' });
       } catch (error: any) {
         emitHistoricalMessage(session, {
