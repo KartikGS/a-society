@@ -8,7 +8,7 @@ Each declared role keeps its own file at:
 
 `a-docs/roles/<role-id>/required-readings.yaml`
 
-The runtime uses the active role's file to inject exactly the startup context that role needs. This replaces the older shared authority model and avoids hidden "universal" context that may bloat every session whether it is needed or not.
+The runtime uses the active role's file to inject exactly the startup context that role needs.
 
 ---
 
@@ -99,10 +99,6 @@ If a role's `required-readings.yaml` drifts from the files that role actually ne
 
 ---
 
-## Context-Read Timing Rules
+## Runtime Context Rule
 
-**Runtime-injected context:** Files injected from the active role's `required-readings.yaml` count as already loaded. Role documents and bootstrap prompts must not instruct default rereads of those files.
-
-**Manual orientation:** Humans or agents orienting manually may still follow the role's `required_readings` list as a startup sequence.
-
-Do not duplicate the list as prose in `agents.md` or in role files. That creates a second authority that will drift.
+Files injected from the active role's `required-readings.yaml` count as already loaded. Role documents, bootstrap prompts, and `agents.md` must not instruct default rereads of those files or duplicate the list as prose.
