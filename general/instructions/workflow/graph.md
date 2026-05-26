@@ -64,20 +64,6 @@ Use the runtime workflow contract's record-snapshot rules, and scope the snapsho
 
 ---
 
-## How to Fill It In
-
-**Step 1 — Define the workflow shape.** List the nodes and edges in forward-pass order.
-
-**Step 2 — Add node contracts to the permanent definition.** For each node, include the node-specific readings and short node contract data that the executable contract allows.
-
-**Step 3 — Add workflow-level fields.** Include summary, use-when guidance, invariants, escalation rules, and session model details where they belong.
-
-**Step 4 — Validate.** Run the workflow validator if your project has one.
-
-**Step 5 — Create the record snapshot.** At intake, the workflow-authority role creates `workflow.yaml` in the active record folder by scoping the permanent definition to the active path and following the runtime workflow contract.
-
----
-
 ## Maintenance Rules
 
 Update the permanent YAML definition when:

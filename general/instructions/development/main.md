@@ -55,7 +55,7 @@ Sub-folders are created when a topic has two or more closely related documents t
 ## What Does Not Belong Here
 
 - Project vision, architecture, or principles — those belong in `project-information/`
-- Workflow artifacts (plans, reports, requirements) — those belong in `workflow/`
+- Flow-local artifacts such as plans, reports, and requirements — those belong in the active record folder
 - API contracts or architectural decisions — those belong in `governance/`
 - Role-specific behavioral contracts — those belong in `roles/`
 

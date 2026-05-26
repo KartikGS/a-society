@@ -56,5 +56,5 @@ The governance folder requires a `main.md` that acts as a router: it names the s
 
 - Development standards or coding conventions — those belong in `development/`
 - Project vision, structure, or principles — those belong in `project-information/`
-- Workflow artifacts (plans, reports, requirements) — those belong in `workflow/`
+- Flow-local artifacts such as plans, reports, and requirements — those belong in the active record folder
 - Role-specific behavioral contracts — those belong in `roles/`
