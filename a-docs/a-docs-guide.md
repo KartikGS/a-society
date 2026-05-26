@@ -638,9 +638,9 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 **Why it exists:** The workflow creation and modification instructions define the static structure of a workflow graph. Neither covers the intake-time decision of which path through that graph a given task requires. Without this document, agents either apply the full pipeline uniformly to every task (overhead that erodes trust) or bypass structure informally (no principled basis). This document establishes the dynamic complexity model: five axes for intake analysis, three tiers for proportional routing, and the mechanism by which the workflow plan satisfies Hard Rule 2 at every tier.
 
-**What it owns:** The five complexity axes, the three workflow tiers with their signals and record artifact expectations, the workflow plan format, the Hard Rule 2 resolution for single-agent flows, the project-specific invariants note, the incremental pipeline definition principle, and the backward graph tracking mechanism.
+**What it owns:** The structural readiness assessment, the five complexity axes, the three workflow tiers with their signals, the workflow plan format, the gate triggers, and the incremental pipeline definition principle.
 
-**What breaks without it:** The Owner has no principled framework for sizing a flow at intake. Uniform pipeline application continues. Hard Rule 2's applicability to single-agent flows remains undefined. Backward graph tracking is ad-hoc or absent for lightweight flows.
+**What breaks without it:** The Owner has no principled framework for sizing a flow at intake. Uniform pipeline application continues. Structural gaps are handled inconsistently, and lightweight work either bypasses useful gates or inherits unnecessary overhead.
 
 **Do not consolidate with:** `$INSTRUCTION_WORKFLOW_MODIFY` — that document governs design-time structural change to the graph itself; this document governs intake-time path selection through a defined graph. These are categorically distinct operations. Do not consolidate with `$A_SOCIETY_WORKFLOW` — that document describes A-Society's own workflow structure; this is a general instruction applicable to any project. Do not consolidate with `$A_SOCIETY_WORKFLOW_COMPLEXITY` — that document is A-Society's internal instantiation of this reusable model.
 
