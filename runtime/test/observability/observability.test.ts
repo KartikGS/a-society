@@ -589,7 +589,8 @@ async function run() {
 
     try {
       ImprovementOrchestrator.markAwaitingChoice(flowRun);
-      await ImprovementOrchestrator.runImprovement(
+      const improvementOrchestrator = new ImprovementOrchestrator();
+      await improvementOrchestrator.runImprovement(
         flowRun,
         IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
         output,
@@ -600,7 +601,7 @@ async function run() {
       assert.deepStrictEqual(flowRun.improvementPhase?.completedNodeIds, [
         'curator-meta-analysis'
       ]);
-      await ImprovementOrchestrator.runFeedback(
+      await improvementOrchestrator.runFeedback(
         flowRun,
         output,
         renderer

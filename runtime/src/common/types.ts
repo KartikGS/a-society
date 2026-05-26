@@ -118,8 +118,10 @@ export interface ImprovementPhaseState {
   status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
   mode?: ProtocolImprovementChoiceMode;
   currentStep: number;                         // index into BackwardPassPlan outer array
-  completedRoles: string[];                    // role names that have produced findings or been attempted
-  startedRoles?: string[];                     // role names whose improvement session has been created and context injected
+  completedRoles: string[];                    // role names that have finished their improvement session
+  runningRoles: string[];                      // role names in the current step that have context injected but not yet completed
+  awaitingHumanRoles?: Record<string, { reason: AwaitingHumanReason }>; // role names blocked on human input
+  pendingHumanInputs?: Record<string, { text: string; receivedAt: string }>; // human replies queued per role
   findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
   improvementWorkflowPath?: string;            // repo-relative path to runtime-generated improvement.yaml
   activeNodeIds?: string[];                    // improvement graph node ids currently running

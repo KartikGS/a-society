@@ -123,6 +123,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
 
     const sink = new WebSocketOperatorSink((message) => events.handleRuntimeMessage(session, message));
     const orchestrator = new FlowOrchestrator(sink);
+    const improvementOrchestrator = new ImprovementOrchestrator();
     const initialConsentState = normalizeConsentState(readFlowRun(flowRef)?.consentState ?? defaultConsentState());
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
@@ -137,6 +138,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       outputBridge,
       sink,
       orchestrator,
+      improvementOrchestrator,
       consentGate,
       roleFeedHistory,
       roleFeedSequence,
@@ -310,11 +312,12 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       void attachSessionTask(session, async () => {
         const latest = readFlowRun(ref);
         if (!latest) throw new Error('[improvement] Flow state disappeared before improvement could be resumed.');
-        await ImprovementOrchestrator.resumeImprovement(
+        await session.improvementOrchestrator.resumeImprovement(
           latest,
           session.outputBridge,
           session.sink,
-          (role) => createRoleOutputStream(session, role, emitHistoricalMessage)
+          (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
+          session.consentGate,
         );
         if (readFlowRun(ref)?.status === 'completed') {
           session.sink.emit({ kind: 'flow.completed' });
@@ -350,6 +353,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     handleHumanInput: commands.handleHumanInput,
     handleImprovementChoice: commands.handleImprovementChoice,
     handleFeedbackConsentChoice: commands.handleFeedbackConsentChoice,
+    handleImprovementHumanInput: commands.handleImprovementHumanInput,
     handleConsentResponse: commands.handleConsentResponse,
     handleConsentMode: commands.handleConsentMode,
     handleStopActiveTurn: commands.handleStopActiveTurn,

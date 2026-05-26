@@ -64,6 +64,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     activeTab,
     activeUi,
     inputTargetRole,
+    improvementInputTargetRole,
     viewedRole,
     visibleConsentRequest,
   } = input.activeView;
@@ -173,13 +174,22 @@ export function useAppCommands(input: UseAppCommandsInput) {
       ...state,
       composerValue: '',
     }));
-    sendMessage({
-      type: CLIENT_MESSAGE_TYPE.HUMAN_INPUT,
-      flowRef: activeTab.ref,
-      text,
-      role: inputTargetRole === SYSTEM_ROLE_KEY ? undefined : inputTargetRole
-    });
-  }, [activeTab, activeUi, ensureConfiguredModel, inputTargetRole, sendMessage, updateFlowUi]);
+    if (improvementInputTargetRole) {
+      sendMessage({
+        type: CLIENT_MESSAGE_TYPE.IMPROVEMENT_HUMAN_INPUT,
+        flowRef: activeTab.ref,
+        role: improvementInputTargetRole,
+        text,
+      });
+    } else {
+      sendMessage({
+        type: CLIENT_MESSAGE_TYPE.HUMAN_INPUT,
+        flowRef: activeTab.ref,
+        text,
+        role: inputTargetRole === SYSTEM_ROLE_KEY ? undefined : inputTargetRole
+      });
+    }
+  }, [activeTab, activeUi, ensureConfiguredModel, improvementInputTargetRole, inputTargetRole, sendMessage, updateFlowUi]);
 
   const handleImprovementChoice = useCallback((mode: ProtocolImprovementChoiceMode): void => {
     if (!activeTab) return;

@@ -137,12 +137,17 @@ function buildServer(workspaceRoot: string) {
       }
 
       if (message.type === CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE) {
-        runtimeSessions.handleImprovementChoice(message.flowRef, message.mode);
+        void runtimeSessions.handleImprovementChoice(message.flowRef, message.mode);
+        return;
+      }
+
+      if (message.type === CLIENT_MESSAGE_TYPE.IMPROVEMENT_HUMAN_INPUT) {
+        void runtimeSessions.handleImprovementHumanInput(message.flowRef, message.role, message.text);
         return;
       }
 
       if (message.type === CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE) {
-        runtimeSessions.handleFeedbackConsentChoice(message.flowRef, message.decision);
+        void runtimeSessions.handleFeedbackConsentChoice(message.flowRef, message.decision);
         return;
       }
 

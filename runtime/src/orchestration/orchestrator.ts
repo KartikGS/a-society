@@ -12,6 +12,7 @@ import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { WakeController } from '../common/wake-controller.js';
 import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
@@ -89,11 +90,14 @@ export class FlowOrchestrator {
   private flowRef: FlowRef | null = null;
   private workspaceRoot: string | null = null;
   private boundSigintHandler: (() => void) | null = null;
-  private wakeGeneration = 0;
-  private wakeWaiters = new Set<() => void>();
+  private wakeController = new WakeController();
 
   constructor(renderer: OperatorRenderSink) {
     this.renderer = renderer;
+  }
+
+  private waitForWakeAfter(observed: number) {
+    return this.wakeController.waitForWakeAfter(observed);
   }
 
   public abortActiveTurn(target?: { nodeId?: string; role?: string }): boolean {
@@ -118,11 +122,7 @@ export class FlowOrchestrator {
   }
 
   public wake(): void {
-    this.wakeGeneration += 1;
-    for (const wakeWaiter of this.wakeWaiters) {
-      wakeWaiter();
-    }
-    this.wakeWaiters.clear();
+    this.wakeController.wake();
   }
 
   public async compactRoleContext(
@@ -233,7 +233,7 @@ export class FlowOrchestrator {
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
         while (true) {
-          const observedWakeGeneration = this.wakeGeneration;
+          const observedWakeGeneration = this.wakeController.observe();
           await this.runReadyNodesUntilBlocked(
             outputStream,
             outputStreamFactory,
@@ -993,7 +993,7 @@ export class FlowOrchestrator {
     let pendingInitialNodeIds = this.mergeNodeIds(initialNodeIds);
 
     while (true) {
-      const observedWakeGeneration = this.wakeGeneration;
+      const observedWakeGeneration = this.wakeController.observe();
       const claimedWorkItems = await this.claimRunnableWorkForParallelRun(pendingInitialNodeIds);
       const claimedNodeIds = claimedWorkItems.map((item) => item.nodeId);
       pendingInitialNodeIds = pendingInitialNodeIds.filter((nodeId) => !claimedNodeIds.includes(nodeId));
@@ -1428,30 +1428,6 @@ export class FlowOrchestrator {
       }
     }
     return merged;
-  }
-
-  private waitForWakeAfter(observedWakeGeneration: number): { promise: Promise<void>; cancel: () => void } {
-    if (this.wakeGeneration !== observedWakeGeneration) {
-      return {
-        promise: Promise.resolve(),
-        cancel: () => {},
-      };
-    }
-
-    let resolver: (() => void) | null = null;
-    const promise = new Promise<void>((resolve) => {
-      resolver = resolve;
-      this.wakeWaiters.add(resolve);
-    });
-
-    return {
-      promise,
-      cancel: () => {
-        if (resolver) {
-          this.wakeWaiters.delete(resolver);
-        }
-      },
-    };
   }
 
   private markNodeCompletedIfSettled(flowRun: FlowRun, wf: WorkflowGraph, nodeId: string): void {
