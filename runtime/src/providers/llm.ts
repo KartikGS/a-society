@@ -13,6 +13,14 @@ import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKe
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
 
+function projectWriteRoots(workspaceRoot: string, projectNamespace: string): string[] {
+  return [
+    path.join(workspaceRoot, projectNamespace),
+    path.join(workspaceRoot, '.a-society', 'a-docs', projectNamespace),
+    path.join(workspaceRoot, 'a-society', 'feedback'),
+  ];
+}
+
 function createProvider(): LLMProvider {
   const active = getActiveModelWithKey();
   if (!active || active.modelId.trim() === '' || active.apiKey.trim() === '') {
@@ -67,10 +75,7 @@ export class LLMGateway {
     }
 
     if (workspaceRoot) {
-      const writeRoots = projectNamespace ? [
-        path.join(workspaceRoot, projectNamespace),
-        path.join(workspaceRoot, '.a-society', 'a-docs', projectNamespace),
-      ] : undefined;
+      const writeRoots = projectNamespace ? projectWriteRoots(workspaceRoot, projectNamespace) : undefined;
       this.fileExecutor = new FileToolExecutor(workspaceRoot, writeRoots);
       this.bashExecutor = new BashToolExecutor(workspaceRoot);
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];

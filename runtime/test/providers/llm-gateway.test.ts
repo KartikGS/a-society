@@ -76,6 +76,11 @@ class ToolCallThenTextProvider implements LLMProvider {
   public secondCallMessages: RuntimeMessageParam[] = [];
   private callCount = 0;
 
+  constructor(
+    private readonly writePath = 'plan.md',
+    private readonly writeContent = 'draft'
+  ) {}
+
   async executeTurn(
     _systemPrompt: string,
     messages: RuntimeMessageParam[],
@@ -86,10 +91,10 @@ class ToolCallThenTextProvider implements LLMProvider {
       this.callCount++;
       return {
         type: 'tool_calls',
-        calls: [{ id: 'call_1', name: 'write_file', input: { path: 'plan.md', content: 'draft' } }],
+        calls: [{ id: 'call_1', name: 'write_file', input: { path: this.writePath, content: this.writeContent } }],
       continuationMessages: [{
         role: 'assistant_tool_calls',
-        calls: [{ id: 'call_1', name: 'write_file', input: { path: 'plan.md', content: 'draft' } }],
+        calls: [{ id: 'call_1', name: 'write_file', input: { path: this.writePath, content: this.writeContent } }],
         text: 'I will write the plan now.',
         }]
       };
@@ -219,6 +224,37 @@ await test('late abort after streamed tool-call text keeps the attempted tool ca
   assert.strictEqual(history.length, 2);
   assert.strictEqual(history[1].role, 'assistant_tool_calls');
   assert.strictEqual(history[1].text, 'I will write the plan now.');
+});
+
+await test('project-scoped gateway allows feedback writes outside the active project directory', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
+  const provider = new ToolCallThenTextProvider('a-society/feedback/demo-flow.md', '# Feedback\n');
+  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write feedback.' }];
+
+  await gateway.executeTurn('System prompt', history);
+
+  assert.strictEqual(
+    fs.readFileSync(path.join(tmpDir, 'a-society', 'feedback', 'demo-flow.md'), 'utf8'),
+    '# Feedback\n'
+  );
+  assert.strictEqual(history.at(-1)?.role, 'tool_result');
+  assert.match((history.at(-1) as any).content, /OK: wrote/);
+});
+
+await test('project-scoped gateway still blocks writes to sibling projects', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
+  const provider = new ToolCallThenTextProvider('other-project/file.md', 'nope');
+  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write elsewhere.' }];
+
+  await gateway.executeTurn('System prompt', history);
+
+  assert.strictEqual(fs.existsSync(path.join(tmpDir, 'other-project', 'file.md')), false);
+  assert.strictEqual(history.at(-1)?.role, 'tool_result');
+  assert.match((history.at(-1) as any).content, /outside the permitted write area/);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

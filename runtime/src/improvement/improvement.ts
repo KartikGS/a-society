@@ -180,7 +180,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   session: RoleSession,
   expectedKind: K,
   role: string,
-  outputStream: NodeJS.WritableStream,
+  roleOutputStream: NodeJS.WritableStream,
+  statusOutputStream: NodeJS.WritableStream,
   renderer: OperatorRenderSink,
   signal: AbortSignal,
   consentGate?: ConsentGate,
@@ -200,7 +201,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         roleName,
         bundleContent,
         history,
-        outputStream,
+        roleOutputStream,
         signal,
         renderer,
         consentGate,
@@ -249,7 +250,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
               healthCheck.errors,
               'meta-analysis-complete'
             );
-            outputStream.write(
+            statusOutputStream.write(
               `[improvement] ${role} completed meta-analysis but runtime health checks failed. Requesting repair.\n`
             );
             renderer.emit({
@@ -266,7 +267,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 
         const repair = validateExpectedSignal?.(result as ExpectedImprovementSignal<K>);
         if (repair) {
-          outputStream.write(`[improvement] ${repair.operatorSummary}. Requesting repair.\n`);
+          statusOutputStream.write(`[improvement] ${repair.operatorSummary}. Requesting repair.\n`);
           renderer.emit({
             kind: 'repair.requested',
             scope: 'improvement',
@@ -283,7 +284,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         return result as ExpectedImprovementSignal<K>;
       }
 
-      outputStream.write(
+      statusOutputStream.write(
         `[improvement] ${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}. Requesting repair.\n`
       );
       renderer.emit({
@@ -299,7 +300,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       });
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
-        outputStream.write(
+        statusOutputStream.write(
           `[improvement] ${role} emitted an invalid handoff block during backward pass ${stepLabel}. Requesting repair.\n`
         );
         renderer.emit({
@@ -449,7 +450,7 @@ async function runMetaAnalysisEntry(
   try {
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleName, session.systemPrompt, session, 'meta-analysis-complete', entry.role,
-      roleOutputStream, renderer,
+      roleOutputStream, outputStream, renderer,
       signal, consentGate,
       (r) => {
         const actualFindingsPath = normalizeRepoRelativePath(r.findingsPath, flowRun.workspaceRoot);
@@ -502,6 +503,7 @@ async function runFeedbackEntry(
   entry: BackwardPassEntry,
   assignedFeedbackRepoPath: string,
   assignedFeedbackFilePath: string,
+  outputStream: NodeJS.WritableStream,
   roleOutputStream: NodeJS.WritableStream,
   renderer: OperatorRenderSink,
   scheduler: ImprovementScheduler,
@@ -603,7 +605,7 @@ async function runFeedbackEntry(
   try {
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleName, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete', entry.role,
-      roleOutputStream, renderer,
+      roleOutputStream, outputStream, renderer,
       signal, consentGate,
       (r) => {
         const actualArtifactPath = normalizeRepoRelativePath(r.artifactPath, flowRun.workspaceRoot);
@@ -961,7 +963,7 @@ export class ImprovementOrchestrator {
 
           const feedbackEntry = runnable[0];
           const feedbackRoleOutputStream = roleOutputStreamFactory?.(feedbackEntry.role) ?? outputStream;
-          await runFeedbackEntry(freshFlow, feedbackEntry, assignedFeedbackRepoPath, assignedFeedbackFilePath, feedbackRoleOutputStream, renderer, scheduler, consentGate);
+          await runFeedbackEntry(freshFlow, feedbackEntry, assignedFeedbackRepoPath, assignedFeedbackFilePath, outputStream, feedbackRoleOutputStream, renderer, scheduler, consentGate);
         }
 
         const feedbackFinalNodeIds = plan.flatMap(g => g.map(improvementNodeId));
