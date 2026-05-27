@@ -22,7 +22,7 @@ This document records the standing governance rules for A-Society's unified exec
 
 - Framework Services Developer owns deterministic executable framework services
 - Orchestration Developer owns orchestration behavior and `$A_SOCIETY_RUNTIME_INVOCATION`
-- Curator owns standing executable docs, indexes, update-report publication, and operator-surface verification
+- Curator owns standing executable docs, indexes, and operator-surface verification
 - Technical Architect owns executable design proposals and boundary decisions
 - Owner holds executable approval gates and forward-pass closure
 
@@ -37,8 +37,6 @@ When an executable flow changes a standing executable surface, registration must
 3. `$A_SOCIETY_AGENT_DOCS_GUIDE`
 4. `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`
 5. `$A_SOCIETY_RUNTIME_INVOCATION`, when the operator-facing executable surface changed
-6. `$A_SOCIETY_UPDATES_PROTOCOL` and `$A_SOCIETY_VERSION`, when the flow qualifies for a framework update report
-
 `$A_SOCIETY_LOG` lifecycle sections remain Owner-owned at closure.
 
 ---

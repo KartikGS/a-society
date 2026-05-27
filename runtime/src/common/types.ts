@@ -47,12 +47,11 @@ export interface ConsentState {
   };
 }
 
-export type FeedbackContextKind = 'standard' | 'initialization' | 'update-application';
+export type FeedbackContextKind = 'standard' | 'initialization';
 
 export interface FeedbackContext {
   kind: FeedbackContextKind;
   initializationMode?: 'takeover' | 'greenfield';
-  updateReportPaths?: string[];
 }
 
 export function defaultConsentState(): ConsentState {

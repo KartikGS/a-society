@@ -198,7 +198,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What it owns:** The preserved `## Forward Pass Closure Discipline` guidance extracted from `roles/owner/main.md`.
 
-**What breaks without it:** Closure-time verification, log/archive discipline, and update-report path naming either remain inline in `roles/owner/main.md` or drift into artifacts that are not the canonical Owner closure reference.
+**What breaks without it:** Closure-time verification and log/archive discipline either remain inline in `roles/owner/main.md` or drift into artifacts that are not the canonical Owner closure reference.
 
 **Do not consolidate with:** `roles/owner/main.md` — this is closure-phase guidance, not general role contract. Do not consolidate with `$A_SOCIETY_WORKFLOW` — the workflow defines phase structure; this file defines how the Owner executes one specific phase.
 
@@ -455,32 +455,6 @@ This is not a directory listing. It is a rationale document. Read it before main
 **What breaks without it:** Agents creating flow artifacts have no canonical convention for naming or locating them. The record folder identifier is undefined. Flow artifacts scatter or overwrite between flows.
 
 **Do not consolidate with:** `$A_SOCIETY_WORKFLOW` — the workflow describes phase sequencing; records describes artifact storage within a flow. Do not consolidate with `communication/conversation/main.md` — the conversation folder holds templates; records holds the artifacts produced from those templates.
-
----
-
-## `updates/`
-
-### `updates/protocol.md` — `$A_SOCIETY_UPDATES_PROTOCOL`
-
-**Why it exists:** When A-Society changes `general/` or `agents/` in ways that affect adopting projects, those projects need to know what changed, why, and what to do. Without a protocol, the decision of when to publish and what to include is made ad-hoc each time — producing inconsistent reports that adopting project Curators cannot reliably act on.
-
-**What it owns:** The trigger conditions for publishing a framework update report, the impact classification model (Breaking / Recommended / Optional), the production and approval process, the naming convention for report files, and the delivery problem statement.
-
-**What breaks without it:** The Curator has no principled basis for deciding when to publish. Reports vary in structure and completeness. Adopting project Curators cannot triage changes reliably.
-
-**Do not consolidate with:** `improvement/protocol.md` — the improvement protocol governs internal A-Society reflection; the update report protocol governs outbound communication to the ecosystem. Different audiences, different purposes.
-
----
-
-### `updates/template.md` — `$A_SOCIETY_UPDATES_TEMPLATE`
-
-**Why it exists:** Adopting project Curators read update reports to decide what to change in their own `a-docs/`. A consistent template ensures every report contains what a Curator needs: a summary, an impact classification table, per-change entries with migration guidance, and a delivery note.
-
-**What it owns:** The canonical structure for a framework update report — sections, fields, and format expectations.
-
-**What breaks without it:** Reports are written free-form. Consuming Curators must infer structure. Migration guidance is inconsistently provided. The impact classification model is applied inconsistently.
-
-**Do not consolidate with:** `updates/protocol.md` — the protocol governs when and how to produce reports; the template is the artifact the report fills. Process document vs. format document.
 
 ---
 

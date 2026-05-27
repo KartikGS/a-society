@@ -45,7 +45,7 @@ Then add nodes only when they contribute unique value that this minimal path can
 
 - **Design or advisory node** — when standing design does not already govern the work, when boundaries or contracts are changing, or when multiple implementers need a shared design before execution
 - **Independent approval or review node** — when the work changes shared promises, shared-library surfaces, another role's owned truth surfaces, or any other high-impact area where the same role should not both authorize and verify its own change
-- **Registration or stewardship node** — when a separate role owns indexes, guides, update reports, version records, or similar stewardship surfaces that must be updated in-band with the work
+- **Registration or stewardship node** — when a separate role owns indexes, guides, or similar stewardship surfaces that must be updated in-band with the work
 - **Parallel tracks and joins** — when multiple touched-surface tracks are independent enough to run concurrently and later converge
 
 A workflow node that adds no unique decision value, execution value, or closure value should not exist.
