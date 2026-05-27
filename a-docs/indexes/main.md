@@ -105,9 +105,6 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_IMPROVEMENT` | `a-society/a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
 | `$A_SOCIETY_RECORDS` | `a-society/a-docs/records/main.md` | A-Society records convention — record ID and metadata model, artifact sequence, and placement rules for flow-level artifact tracking |
 | `$A_SOCIETY_FEEDBACK_DIR` | `a-society/feedback/` | All inbound feedback signal from adopting projects — new runtime-generated reports land directly here |
-| `$A_SOCIETY_FEEDBACK_ONBOARDING` | `a-society/feedback/onboarding/` | Legacy initialization-feedback collection retained for historical artifacts |
-| `$A_SOCIETY_FEEDBACK_MIGRATION` | `a-society/feedback/migration/` | Legacy migration-feedback collection retained for historical artifacts |
-| `$A_SOCIETY_FEEDBACK_CURATOR_SIGNAL` | `a-society/feedback/curator-signal/` | Legacy project-feedback collection retained for historical artifacts |
 | `$A_SOCIETY_COMM_CONVERSATION` | `a-society/a-docs/communication/conversation/main.md` | A-Society conversation templates — permanent format references for all inter-agent handoff artifacts |
 | `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | `a-society/a-docs/communication/conversation/TEMPLATE-owner-to-curator-brief.md` | Template: Owner → Curator briefing format |
 | `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER` | `a-society/a-docs/communication/conversation/TEMPLATE-curator-to-owner.md` | Template: Curator → Owner proposal / submission format |

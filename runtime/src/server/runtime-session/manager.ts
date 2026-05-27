@@ -1,4 +1,3 @@
-import { PassThrough } from 'node:stream';
 import type { WebSocket } from 'ws';
 import { flowKey, flowRefFromRun } from '../../common/flow-ref.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
@@ -117,10 +116,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     // eslint-disable-next-line prefer-const
     let session!: ActiveSession;
 
-    const inputBridge = new PassThrough();
-    const outputBridge = new PassThrough();
-    outputBridge.setEncoding('utf8');
-
     const sink = new WebSocketOperatorSink((message) => events.handleRuntimeMessage(session, message));
     const orchestrator = new FlowOrchestrator(sink);
     const improvementOrchestrator = new ImprovementOrchestrator();
@@ -134,8 +129,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     session = {
       flowRef,
       projectNamespace: flowRef.projectNamespace,
-      inputBridge,
-      outputBridge,
       sink,
       orchestrator,
       improvementOrchestrator,
@@ -158,7 +151,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       session.orchestrator.runStoredFlow(
         workspaceRoot,
         projectNamespace,
-        session.outputBridge,
         session.flowRef.flowId,
         (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
         session.consentGate
@@ -314,7 +306,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         if (!latest) throw new Error('[improvement] Flow state disappeared before improvement could be resumed.');
         await session.improvementOrchestrator.resumeImprovement(
           latest,
-          session.outputBridge,
           session.sink,
           (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
           session.consentGate,

@@ -2,7 +2,6 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { PassThrough } from 'node:stream';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -23,21 +22,17 @@ async function runTest() {
 
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
-  const outputStream = new PassThrough();
-
   try {
     SessionStore.init();
 
     await assert.rejects(
       () => orchestrator.runStoredFlow(
         workspaceRoot,
-        projectNamespace,
-        outputStream
+        projectNamespace
       ),
       /No active flow state found\. Create and persist a draft flow before starting orchestration\./
     );
   } finally {
-    outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;
   }

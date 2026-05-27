@@ -73,7 +73,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
     }, async (span) => {
       const renderer = options?.operatorRenderer;
       let fullText = '';
-      const outputStream = options?.outputStream ?? process.stdout;
+      const outputStream = options?.outputStream;
       let contextUsage: number | undefined;
       let inputTokens: number | undefined;
       let outputTokens: number | undefined;
@@ -148,7 +148,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           const delta = choice.delta;
           if (!delta) continue;
           if (delta.content) {
-            outputStream.write(delta.content);
+            outputStream?.write(delta.content);
             options?.onAssistantTextDelta?.(delta.content);
             fullText += delta.content;
           }

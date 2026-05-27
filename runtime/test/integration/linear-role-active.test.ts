@@ -6,7 +6,6 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -104,8 +103,6 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const outputStream = new PassThrough();
-
   let serverTurn = 0;
   server.removeAllListeners('request');
   server.on('request', (req, res) => {
@@ -138,14 +135,14 @@ async function runTest() {
     if (!flowRun) throw new Error("flowRun not loaded");
 
     console.log("\n--- Advancing 'start' node ---");
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start');
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
     assert.deepStrictEqual(flowAfterStart.receivingHandoff['start=>next'], ['start-output.md'], "Expected 'next' to receive the handoff.");
 
     console.log("\n--- Advancing 'next' node ---");
-    await orchestrator.advanceFlow(flowAfterStart, 'next', undefined, outputStream);
+    await orchestrator.advanceFlow(flowAfterStart, 'next');
 
     const nextRoleActiveCount = sink.events.filter(
       e => e.kind === 'role.active' && e.nodeId === 'next'
@@ -169,7 +166,6 @@ async function runTest() {
     process.exitCode = 1;
   } finally {
     server.close();
-    outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;
     delete process.env.A_SOCIETY_SETTINGS_DIR;

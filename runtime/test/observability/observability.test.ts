@@ -324,8 +324,6 @@ async function run() {
       }
     ]);
     const renderer = new CaptureRenderer();
-    const output = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
-
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
       return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
@@ -338,7 +336,7 @@ async function run() {
         'curator',
         'System prompt',
         [{ role: 'user', content: 'Produce a handoff.' }],
-        output,
+        undefined,
         undefined,
         renderer
       );
@@ -389,7 +387,6 @@ async function run() {
       }
     ]);
     const renderer = new CaptureRenderer();
-    const output = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
@@ -398,7 +395,7 @@ async function run() {
 
     try {
       const orchestrator = new FlowOrchestrator(renderer as any);
-      await orchestrator.advanceFlow(flowRun, 'start', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'start');
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }
@@ -462,12 +459,9 @@ async function run() {
 
     fs.mkdirSync(flowRun.recordFolderPath, { recursive: true });
 
-    const { Writable } = await import('node:stream');
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     ImprovementOrchestrator.markAwaitingChoice(flowRun);
     SessionStore.saveFlowRun(flowRun, SessionStore.flowRef(flowRun), tmpDir);
-    await ImprovementOrchestrator.skipImprovement(flowRun, output);
+    await ImprovementOrchestrator.skipImprovement(flowRun);
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.improvementPhase.status, 'skipped');
@@ -579,14 +573,7 @@ async function run() {
       return result;
     };
 
-    let capturedOutput = '';
     const repairSummaries: string[] = [];
-    const output = new Writable({
-      write(chunk, _encoding, callback) {
-        capturedOutput += chunk.toString();
-        callback();
-      }
-    });
     const renderer = {
       emit(event: any) {
         if (event?.kind === 'repair.requested') {
@@ -610,7 +597,6 @@ async function run() {
       await improvementOrchestrator.runImprovement(
         flowRun,
         IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
-        output,
         renderer
       );
       const afterMetaAnalysis = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), tmpDir)!;
@@ -621,7 +607,6 @@ async function run() {
       ]);
       await improvementOrchestrator.runFeedback(
         afterMetaAnalysis,
-        output,
         renderer
       );
       finalFlowRun = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), tmpDir)!;
@@ -652,15 +637,13 @@ async function run() {
     assert.strictEqual(metaAssistantMessage.content, 'Forward-pass curator output.');
     assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes('Backward pass meta-analysis.'));
     assert.ok(metaImprovementMessage.role === 'user' && metaImprovementMessage.content.includes(`runtime-assigned path: ${findingsPath}`));
-    assert.ok(capturedOutput.includes(`[improvement] Meta-analysis complete. Awaiting feedback consent before writing ${feedbackArtifactPath}.`));
     assert.ok(feedbackMessage.content.includes('[FILE: a-society/runtime/contracts/feedback.md]'));
     assert.ok(feedbackMessage.content.includes(`[FILE: ${findingsPath}]`));
     assert.ok(feedbackMessage.content.includes('Runtime feedback instructions'));
     assert.ok(feedbackMessage.content.includes(`Source flow ID: repair-flow`));
     assert.ok(feedbackMessage.content.includes(`Flow kind: standard`));
     assert.ok(feedbackMessage.content.includes(`runtime-assigned path: ${feedbackArtifactPath}`));
-    assert.ok(capturedOutput.includes('A-Society Feedback emitted prompt-human during backward pass feedback. Requesting repair.'));
-    assert.ok(capturedOutput.includes('[improvement] Improvement phase complete. Flow closed.'));
+    assert.ok(repairSummaries.includes('A-Society Feedback emitted prompt-human during backward pass feedback'));
   });
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);

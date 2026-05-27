@@ -7,7 +7,6 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -89,8 +88,6 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const outputStream = new PassThrough();
-
   let serverTurn = 0;
   server.removeAllListeners('request');
   server.on('request', (req, res) => {
@@ -113,7 +110,7 @@ async function runTest() {
     const flowRun = SessionStore.loadFlowRun();
     if (!flowRun) throw new Error('flowRun not loaded');
 
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start');
 
     const updatedFlow = SessionStore.loadFlowRun()!;
     const repairNotice = sink.events.find(
@@ -126,7 +123,6 @@ async function runTest() {
     assert.strictEqual(repairNotice.nodeId, 'start');
   } finally {
     server.close();
-    outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
     delete process.env.A_SOCIETY_STATE_DIR;
     delete process.env.A_SOCIETY_SETTINGS_DIR;

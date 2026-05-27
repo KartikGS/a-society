@@ -114,7 +114,7 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  // outputStream captures assistant text and improvement orchestrator prompts
+  // Role output stream captures assistant text.
   const outputStream = new PassThrough();
   const outputChunks: string[] = [];
   outputStream.on('data', (chunk: Buffer) => {
@@ -139,7 +139,7 @@ async function runTest() {
     if (!flowRun) throw new Error("flowRun not loaded");
 
     console.log("\n--- Advancing 'start' node (expects forward-pass-closed) ---");
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, () => outputStream);
     console.log("\n--- Orchestration Complete ---\n");
 
     const assistantOut = outputChunks.join('');
