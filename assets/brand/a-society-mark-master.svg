@@ -2,25 +2,25 @@
   <title id="title">A-Society master mark</title>
   <desc id="desc">Four colored geometric shards arranged around an open central diamond.</desc>
   <defs>
-    <linearGradient id="green" x1="212" y1="456" x2="492" y2="72" gradientUnits="userSpaceOnUse">
+    <linearGradient id="green" x1="208" y1="484" x2="492" y2="100" gradientUnits="userSpaceOnUse">
       <stop stop-color="#64748B"/>
       <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
-    <linearGradient id="red" x1="532" y1="72" x2="816" y2="456" gradientUnits="userSpaceOnUse">
+    <linearGradient id="red" x1="816" y1="484" x2="532" y2="100" gradientUnits="userSpaceOnUse">
       <stop stop-color="#64748B"/>
       <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
-    <linearGradient id="yellow" x1="208" y1="496" x2="492" y2="896" gradientUnits="userSpaceOnUse">
+    <linearGradient id="yellow" x1="208" y1="540" x2="492" y2="924" gradientUnits="userSpaceOnUse">
       <stop stop-color="#64748B"/>
       <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
-    <linearGradient id="blue" x1="816" y1="496" x2="532" y2="896" gradientUnits="userSpaceOnUse">
+    <linearGradient id="blue" x1="816" y1="540" x2="532" y2="924" gradientUnits="userSpaceOnUse">
       <stop stop-color="#64748B"/>
       <stop offset="1" stop-color="#94A3B8"/>
     </linearGradient>
   </defs>
-  <path d="M212 456L492 72L488 136L344 456H212Z" fill="url(#green)"/>
-  <path d="M532 72L816 456H684L536 136L532 72Z" fill="url(#red)"/>
-  <path d="M208 496L352 512L488 840L492 896L208 496Z" fill="url(#yellow)"/>
-  <path d="M672 512L816 496L532 896L536 840L672 512Z" fill="url(#blue)"/>
+  <path d="M208 484L492 100L488 164L344 484H208Z" fill="url(#green)"/>
+  <path d="M532 100L816 484H680L536 164L532 100Z" fill="url(#red)"/>
+  <path d="M208 540L344 540L488 860L492 924L208 540Z" fill="url(#yellow)"/>
+  <path d="M680 540L816 540L532 924L536 860L680 540Z" fill="url(#blue)"/>
 </svg>

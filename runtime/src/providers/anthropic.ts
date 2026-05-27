@@ -68,7 +68,7 @@ export class AnthropicProvider implements LLMProvider {
       }
     }, async (span) => {
       const renderer = options?.operatorRenderer;
-      const outputStream = options?.outputStream ?? process.stdout;
+      const outputStream = options?.outputStream;
       let fullText = '';
 
       try {
@@ -132,7 +132,7 @@ export class AnthropicProvider implements LLMProvider {
             const chunk = event as any;
             const delta = chunk.delta as any;
             if (delta.type === 'text_delta') {
-              outputStream.write(delta.text);
+              outputStream?.write(delta.text);
               options?.onAssistantTextDelta?.(delta.text);
               fullText += delta.text;
             } else if (delta.type === 'input_json_delta') {

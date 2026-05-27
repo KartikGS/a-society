@@ -31,5 +31,11 @@ surfaces:
     scope: "Repository license and distribution promise"
   - path: README.md
     scope: "External project framing and promise"
+  - path: CHANGELOG.md
+    scope: "Public release history"
+  - path: CONTRIBUTING.md
+    scope: "Contributor guidance and project collaboration policy"
+  - path: THIRD-PARTY-NOTICES
+    scope: "Third-party notice and attribution surface"
   - path: assets/brand/
     scope: "Public brand assets used by outward-facing framing surfaces"

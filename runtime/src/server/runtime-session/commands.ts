@@ -145,7 +145,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (mode === IMPROVEMENT_CHOICE_MODE.NONE) {
       try {
-        await ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
+        await ImprovementOrchestrator.skipImprovement(flowRun);
         session.sink.emit({ kind: 'flow.completed' });
       } catch (error: any) {
         emitHistoricalMessage(session, {
@@ -170,7 +170,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       await session.improvementOrchestrator.runImprovement(
         currentFlow,
         mode,
-        session.outputBridge,
         session.sink,
         (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage),
         session.consentGate,
@@ -205,7 +204,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (decision === FEEDBACK_CONSENT_DECISION.DENIED) {
       try {
-        await ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
+        await ImprovementOrchestrator.skipFeedback(flowRun);
         session.sink.emit({ kind: 'flow.completed' });
       } catch (error: any) {
         emitHistoricalMessage(session, {
@@ -229,7 +228,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
       await session.improvementOrchestrator.runFeedback(
         currentFlow,
-        session.outputBridge,
         session.sink,
         (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage),
         session.consentGate,

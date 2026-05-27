@@ -15,7 +15,6 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { Writable } from 'node:stream';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -179,10 +178,9 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<v
 async function runStoredFlowUntil(
   orchestrator: FlowOrchestrator,
   flowId: string,
-  output: Writable,
   predicate: () => boolean
 ): Promise<void> {
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, output, flowId);
+  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
     await waitUntil(predicate);
   } finally {
@@ -383,10 +381,8 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake');
     } finally {
       unpatch();
     }
@@ -433,10 +429,8 @@ async function run() {
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
         const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
         return Boolean(
           updated &&
@@ -494,10 +488,8 @@ async function run() {
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake');
     } finally {
       unpatch();
     }
@@ -561,10 +553,8 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-gate', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-gate');
     } finally {
       unpatch();
     }
@@ -617,10 +607,8 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake');
     } finally {
       unpatch();
     }
@@ -674,10 +662,8 @@ async function run() {
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-intake');
     } finally {
       unpatch();
     }
@@ -711,14 +697,12 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-one', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'owner-one');
       const afterOwnerOne = SessionStore.loadFlowRun({ projectNamespace, flowId: 'instance-flow-id' }, workspaceRoot)!;
       afterOwnerOne.runningNodes = ['owner-two'];
       SessionStore.saveFlowRun(afterOwnerOne, flowRef('instance-flow-id'), workspaceRoot);
-      await orchestrator.advanceFlow(afterOwnerOne, 'owner-two', undefined, output);
+      await orchestrator.advanceFlow(afterOwnerOne, 'owner-two');
     } finally {
       unpatch();
     }
@@ -789,10 +773,8 @@ async function run() {
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
         const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot);
         return Boolean(
           updated &&
@@ -841,10 +823,8 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
         const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
         return Boolean(
           updated &&
@@ -886,10 +866,8 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
         const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
         return Boolean(updated && updated.awaitingHumanNodes['owner-intake']);
       });
@@ -923,10 +901,8 @@ async function run() {
     ]));
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await runStoredFlowUntil(orchestrator, flowRun.flowId, output, () => {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
         const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot);
         return Boolean(
           updated &&
@@ -962,10 +938,8 @@ async function run() {
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
-    const output = new Writable({ write(_c, _e, cb) { cb(); } });
-
     try {
-      await orchestrator.advanceFlow(flowRun, 'ta', undefined, output);
+      await orchestrator.advanceFlow(flowRun, 'ta');
     } finally {
       unpatch();
     }

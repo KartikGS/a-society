@@ -8,7 +8,6 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -106,12 +105,6 @@ async function runTest() {
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
 
-  const outputStream = new PassThrough();
-  const assistantChunks: string[] = [];
-  outputStream.on('data', (chunk: Buffer) => {
-    assistantChunks.push(chunk.toString());
-  });
-
   const originalCwd = process.cwd();
   try {
     const flowRun = SessionStore.loadFlowRun();
@@ -144,7 +137,7 @@ async function runTest() {
       }
     });
 
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, outputStream);
+    await orchestrator.advanceFlow(flowRun, 'start');
     console.log("\n--- Orchestration Complete ---\n");
 
     const updatedFlow = SessionStore.loadFlowRun()!;

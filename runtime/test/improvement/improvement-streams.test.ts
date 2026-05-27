@@ -38,7 +38,7 @@ async function test(name: string, fn: () => Promise<void> | void): Promise<void>
 
 console.log('\nimprovement-streams');
 
-await test('feedback repair status is written to status stream, not role output stream', async () => {
+await test('feedback repair status is emitted as an event, not role output stream text', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-improvement-streams-'));
   const previousSettingsDir = process.env.A_SOCIETY_SETTINGS_DIR;
   const settingsDir = path.join(workspaceRoot, '.settings');
@@ -123,22 +123,18 @@ await test('feedback repair status is written to status stream, not role output 
     return { text };
   };
 
-  let statusOutput = '';
   const roleOutput: Record<string, string> = {};
-  const statusStream = new Writable({
-    write(chunk, _encoding, callback) {
-      statusOutput += chunk.toString();
-      callback();
-    }
-  });
   const roleOutputFactory = (roleName: string) => new Writable({
     write(chunk, _encoding, callback) {
       roleOutput[roleName] = (roleOutput[roleName] ?? '') + chunk.toString();
       callback();
     }
   });
+  const repairEvents: OperatorEvent[] = [];
   const renderer = {
-    emit(_event: OperatorEvent) {},
+    emit(event: OperatorEvent) {
+      if (event.kind === 'repair.requested') repairEvents.push(event);
+    },
     requestSent() {},
     receivingResponse() {},
     responseEnd() {},
@@ -148,7 +144,6 @@ await test('feedback repair status is written to status stream, not role output 
   try {
     await new ImprovementOrchestrator().runFeedback(
       flowRun,
-      statusStream,
       renderer,
       roleOutputFactory
     );
@@ -162,7 +157,11 @@ await test('feedback repair status is written to status stream, not role output 
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 
-  assert.ok(statusOutput.includes('[improvement] A-Society Feedback emitted an invalid handoff block during backward pass feedback. Requesting repair.'));
+  assert.ok(repairEvents.some(
+    event => event.kind === 'repair.requested' &&
+      event.scope === 'improvement' &&
+      event.role === 'A-Society Feedback'
+  ));
   assert.ok(roleOutput['A-Society Feedback']?.includes('Feedback malformed.'));
   assert.ok(roleOutput['A-Society Feedback']?.includes('Feedback complete.'));
   assert.ok(!roleOutput['A-Society Feedback']?.includes('[improvement] A-Society Feedback emitted an invalid handoff block'));

@@ -15,7 +15,6 @@ surfaces:
     scope: "Improvement-protocol stewardship"
   - path: a-docs/communication/conversation/
     scope: "Conversation-template stewardship"
-    scope: "Framework update-protocol and template stewardship"
   - path: a-docs/records/main.md
     scope: "Records-convention truth"
   - path: a-docs/records/

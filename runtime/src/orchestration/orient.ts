@@ -38,7 +38,7 @@ async function executeSessionTurn(
   roleName: string,
   sessionId: string,
   turnIndex: number,
-  outputStream: NodeJS.WritableStream,
+  roleOutputStream: NodeJS.WritableStream | undefined,
   externalSignal: AbortSignal | undefined,
   operatorRenderer: OperatorRenderSink | undefined,
   consentGate: ConsentGate | undefined,
@@ -76,7 +76,7 @@ async function executeSessionTurn(
 
     const result = await llm.executeTurn(systemPrompt, history, {
       signal: externalSignal,
-      outputStream,
+      outputStream: roleOutputStream,
       operatorRenderer,
       consentGate,
       role: roleName,
@@ -184,7 +184,7 @@ export async function runRoleTurn(
   roleName: string,
   providedSystemPrompt?: string,
   providedHistory?: RuntimeMessageParam[],
-  outputStream: NodeJS.WritableStream = process.stdout,
+  roleOutputStream?: NodeJS.WritableStream,
   externalSignal?: AbortSignal,
   operatorRenderer?: OperatorRenderSink,
   consentGate?: ConsentGate,
@@ -198,7 +198,7 @@ export async function runRoleTurn(
   if (providedSystemPrompt === undefined) {
     const orientRoleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
     if (!orientRoleEntry) {
-      if (outputStream === process.stdout) {
+      if (roleOutputStream === process.stdout) {
         console.error(`Could not load role context for '${projectNamespace}/${roleName}'. Check that the role file exists and contains valid frontmatter.`);
       }
       return null;
@@ -236,7 +236,7 @@ export async function runRoleTurn(
     roleName,
     sessionId,
     turnIndex++,
-    outputStream,
+    roleOutputStream,
     externalSignal,
     operatorRenderer,
     consentGate,

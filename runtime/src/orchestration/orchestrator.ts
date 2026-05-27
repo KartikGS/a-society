@@ -184,7 +184,6 @@ export class FlowOrchestrator {
   public async runStoredFlow(
     workspaceRoot: string,
     projectNamespace: string,
-    outputStream: NodeJS.WritableStream = process.stdout,
     flowId?: string,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate
@@ -235,7 +234,6 @@ export class FlowOrchestrator {
         while (true) {
           const observedWakeGeneration = this.wakeController.observe();
           await this.runReadyNodesUntilBlocked(
-            outputStream,
             outputStreamFactory,
             consentGate,
             initialNodeIds
@@ -268,7 +266,6 @@ export class FlowOrchestrator {
     flowRun: FlowRun,
     nodeId: string,
     humanInput?: string,
-    outputStream: NodeJS.WritableStream = process.stdout,
     consentGate?: ConsentGate,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
@@ -352,7 +349,7 @@ export class FlowOrchestrator {
           })
           .map(([key, artifacts]) => ({ key, toNodeId: key.split('=>')[1], artifacts: [...artifacts] }));
 
-        const nodeOutputStream = outputStreamFactory ? outputStreamFactory(roleName) : outputStream;
+        const nodeOutputStream = outputStreamFactory?.(roleName);
 
         let session = SessionStore.loadRoleSession(this.roleKey(roleName), this.requireFlowRef(), this.requireWorkspaceRoot());
         span.setAttribute('node.session_resumed', session !== null);
@@ -983,7 +980,6 @@ export class FlowOrchestrator {
   }
 
   private async runReadyNodesUntilBlocked(
-    outputStream: NodeJS.WritableStream,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
     initialNodeIds: string[] = []
@@ -1003,7 +999,6 @@ export class FlowOrchestrator {
           SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!,
           claimedWork.nodeId,
           claimedWork.humanInput,
-          outputStream,
           consentGate,
           outputStreamFactory
         ).catch((error) => {

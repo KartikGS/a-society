@@ -1,4 +1,3 @@
-import type { PassThrough } from 'node:stream';
 import type {
   FeedItem,
   FlowRef,
@@ -14,8 +13,6 @@ import type { WebSocketOperatorSink } from '../ws-operator-sink.js';
 export interface ActiveSession {
   flowRef: FlowRef;
   projectNamespace: string;
-  inputBridge: PassThrough;
-  outputBridge: PassThrough;
   sink: WebSocketOperatorSink;
   orchestrator: FlowOrchestrator;
   improvementOrchestrator: ImprovementOrchestrator;

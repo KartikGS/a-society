@@ -168,8 +168,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   session: RoleSession,
   expectedKind: K,
   role: string,
-  roleOutputStream: NodeJS.WritableStream,
-  statusOutputStream: NodeJS.WritableStream,
+  roleOutputStream: NodeJS.WritableStream | undefined,
   renderer: OperatorRenderSink,
   signal: AbortSignal,
   consentGate?: ConsentGate,
@@ -238,9 +237,6 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
               healthCheck.errors,
               'meta-analysis-complete'
             );
-            statusOutputStream.write(
-              `[improvement] ${role} completed meta-analysis but runtime health checks failed. Requesting repair.\n`
-            );
             renderer.emit({
               kind: 'repair.requested',
               scope: 'improvement',
@@ -255,7 +251,6 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 
         const repair = validateExpectedSignal?.(result as ExpectedImprovementSignal<K>);
         if (repair) {
-          statusOutputStream.write(`[improvement] ${repair.operatorSummary}. Requesting repair.\n`);
           renderer.emit({
             kind: 'repair.requested',
             scope: 'improvement',
@@ -272,9 +267,6 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         return result as ExpectedImprovementSignal<K>;
       }
 
-      statusOutputStream.write(
-        `[improvement] ${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}. Requesting repair.\n`
-      );
       renderer.emit({
         kind: 'repair.requested',
         scope: 'improvement',
@@ -288,9 +280,6 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       });
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
-        statusOutputStream.write(
-          `[improvement] ${role} emitted an invalid handoff block during backward pass ${stepLabel}. Requesting repair.\n`
-        );
         renderer.emit({
           kind: 'repair.requested',
           scope: 'improvement',
@@ -309,8 +298,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 async function runMetaAnalysisEntry(
   flowRun: FlowRun,
   entry: BackwardPassEntry,
-  outputStream: NodeJS.WritableStream,
-  roleOutputStream: NodeJS.WritableStream,
+  roleOutputStream: NodeJS.WritableStream | undefined,
   renderer: OperatorRenderSink,
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
@@ -323,12 +311,6 @@ async function runMetaAnalysisEntry(
   const assignedFindingsFilePath = deterministicFindingsFilePath(recordFolderPath, roleName);
   fs.mkdirSync(path.dirname(assignedFindingsFilePath), { recursive: true });
   const assignedFindingsRepoPath = normalizeRepoRelativePath(assignedFindingsFilePath, flowRun.workspaceRoot);
-
-  for (const expectedRole of findingsRoles) {
-    if (locateFindingsFiles(recordFolderPath, [expectedRole]).length === 0) {
-      outputStream.write(`[improvement] Role ${entry.role}: expected findings from ${expectedRole} but no matching file found in ${recordFolderPath}. Proceeding without findings for this role.\n`);
-    }
-  }
 
   const roleKey = parseRoleIdentity(roleName).instanceRoleId;
   const nodeId = `${roleKey}-meta-analysis`;
@@ -438,7 +420,7 @@ async function runMetaAnalysisEntry(
   try {
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleName, session.systemPrompt, session, 'meta-analysis-complete', entry.role,
-      roleOutputStream, outputStream, renderer,
+      roleOutputStream, renderer,
       signal, consentGate,
       (r) => {
         const actualFindingsPath = normalizeRepoRelativePath(r.findingsPath, flowRun.workspaceRoot);
@@ -491,8 +473,7 @@ async function runFeedbackEntry(
   entry: BackwardPassEntry,
   assignedFeedbackRepoPath: string,
   assignedFeedbackFilePath: string,
-  outputStream: NodeJS.WritableStream,
-  roleOutputStream: NodeJS.WritableStream,
+  roleOutputStream: NodeJS.WritableStream | undefined,
   renderer: OperatorRenderSink,
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
@@ -593,7 +574,7 @@ async function runFeedbackEntry(
   try {
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleName, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete', entry.role,
-      roleOutputStream, outputStream, renderer,
+      roleOutputStream, renderer,
       signal, consentGate,
       (r) => {
         const actualArtifactPath = normalizeRepoRelativePath(r.artifactPath, flowRun.workspaceRoot);
@@ -649,7 +630,6 @@ async function runPlanSteps(
   flowRun: FlowRun,
   plan: ReturnType<typeof computeBackwardPassPlan>,
   startStep: number,
-  outputStream: NodeJS.WritableStream,
   renderer: OperatorRenderSink,
   roleOutputStreamFactory: ((role: string) => NodeJS.WritableStream) | undefined,
   scheduler: ImprovementScheduler,
@@ -670,9 +650,6 @@ async function runPlanSteps(
         phase.feedbackArtifactPath = phase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
         phase.feedbackConsent = FEEDBACK_CONSENT_STATUS.PENDING;
       });
-      outputStream.write(
-        `[improvement] Meta-analysis complete. Awaiting feedback consent before writing ${flowRun.improvementPhase!.feedbackArtifactPath}.\n`
-      );
       return false;
     }
 
@@ -702,8 +679,8 @@ async function runPlanSteps(
       }
 
       await Promise.all(runnable.map(async (entry) => {
-        const roleOutputStream = roleOutputStreamFactory?.(entry.role) ?? outputStream;
-        await runMetaAnalysisEntry(freshFlow, entry, outputStream, roleOutputStream, renderer, scheduler, consentGate);
+        const roleOutputStream = roleOutputStreamFactory?.(entry.role);
+        await runMetaAnalysisEntry(freshFlow, entry, roleOutputStream, renderer, scheduler, consentGate);
       }));
     }
   }
@@ -771,7 +748,7 @@ export class ImprovementOrchestrator {
     flowRun.stateVersion = CURRENT_FLOW_STATE_VERSION;
   }
 
-  static async skipImprovement(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): Promise<void> {
+  static async skipImprovement(flowRun: FlowRun): Promise<void> {
     if (!flowRun.improvementPhase) {
       throw new Error('[improvement] Cannot skip improvement: improvement phase state is missing.');
     }
@@ -783,10 +760,9 @@ export class ImprovementOrchestrator {
       phase.activeNodeIds = [];
       phase.feedbackArtifactPath = phase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
     });
-    outputStream?.write(`[improvement] No improvement selected. Record closed.\n`);
   }
 
-  static async skipFeedback(flowRun: FlowRun, outputStream?: NodeJS.WritableStream): Promise<void> {
+  static async skipFeedback(flowRun: FlowRun): Promise<void> {
     const improvementPhase = flowRun.improvementPhase;
     if (!improvementPhase) {
       throw new Error('[improvement] Cannot skip feedback: improvement phase state is missing.');
@@ -799,13 +775,11 @@ export class ImprovementOrchestrator {
       phase.feedbackArtifactPath = phase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
       phase.feedbackConsent = FEEDBACK_CONSENT_STATUS.DENIED;
     });
-    outputStream?.write('[improvement] Upstream feedback skipped. Flow closed.\n');
   }
 
   async runImprovement(
     flowRun: FlowRun,
     mode: ImprovementMode,
-    outputStream: NodeJS.WritableStream,
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
@@ -852,7 +826,7 @@ export class ImprovementOrchestrator {
         span.setAttribute('improvement.plan_step_count', plan.length);
 
         const allDone = await runPlanSteps(
-          flowRun, plan, 0, outputStream, renderer, roleOutputStreamFactory, scheduler, consentGate
+          flowRun, plan, 0, renderer, roleOutputStreamFactory, scheduler, consentGate
         );
 
         if (!allDone) return; // paused for feedback consent
@@ -865,7 +839,6 @@ export class ImprovementOrchestrator {
           phase.completedNodeIds = finalNodeIds;
         });
         span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
-        outputStream.write(`[improvement] Improvement phase complete. Flow closed.\n`);
       } catch (e: any) {
         span.recordException(e);
         span.setStatus({ code: SpanStatusCode.ERROR });
@@ -878,7 +851,6 @@ export class ImprovementOrchestrator {
 
   async runFeedback(
     flowRun: FlowRun,
-    outputStream: NodeJS.WritableStream,
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
@@ -950,8 +922,8 @@ export class ImprovementOrchestrator {
           }
 
           const feedbackEntry = runnable[0];
-          const feedbackRoleOutputStream = roleOutputStreamFactory?.(feedbackEntry.role) ?? outputStream;
-          await runFeedbackEntry(freshFlow, feedbackEntry, assignedFeedbackRepoPath, assignedFeedbackFilePath, outputStream, feedbackRoleOutputStream, renderer, scheduler, consentGate);
+          const feedbackRoleOutputStream = roleOutputStreamFactory?.(feedbackEntry.role);
+          await runFeedbackEntry(freshFlow, feedbackEntry, assignedFeedbackRepoPath, assignedFeedbackFilePath, feedbackRoleOutputStream, renderer, scheduler, consentGate);
         }
 
         const feedbackFinalNodeIds = plan.flatMap(g => g.map(improvementNodeId));
@@ -964,7 +936,6 @@ export class ImprovementOrchestrator {
           phase.feedbackConsent = FEEDBACK_CONSENT_STATUS.GRANTED;
         });
         span.addEvent('store.flow_saved', { stage: 'feedback_completed' });
-        outputStream.write('[improvement] Improvement phase complete. Flow closed.\n');
       } catch (e: any) {
         span.recordException(e);
         span.setStatus({ code: SpanStatusCode.ERROR });
@@ -977,7 +948,6 @@ export class ImprovementOrchestrator {
 
   async resumeImprovement(
     flowRun: FlowRun,
-    outputStream: NodeJS.WritableStream,
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
@@ -1013,7 +983,7 @@ export class ImprovementOrchestrator {
         const isFeedbackStep = currentGroup?.some(e => e.stepType === 'feedback');
         if (isFeedbackStep && improvementPhase.feedbackConsent === FEEDBACK_CONSENT_STATUS.GRANTED) {
           await this.runFeedback(
-            flowRun, outputStream, renderer, roleOutputStreamFactory, consentGate
+            flowRun, renderer, roleOutputStreamFactory, consentGate
           );
           span.addEvent('store.flow_saved', { stage: 'improvement_completed_via_feedback_resume' });
           return;
@@ -1023,7 +993,7 @@ export class ImprovementOrchestrator {
         await saveImprovementPhase(flowRun, (phase) => { phase.status = 'running'; });
 
         const allDone = await runPlanSteps(
-          flowRun, plan, startStep, outputStream, renderer, roleOutputStreamFactory, scheduler, consentGate
+          flowRun, plan, startStep, renderer, roleOutputStreamFactory, scheduler, consentGate
         );
 
         if (!allDone) return; // paused for feedback consent
@@ -1036,7 +1006,6 @@ export class ImprovementOrchestrator {
           phase.completedNodeIds = resumeFinalNodeIds;
         });
         span.addEvent('store.flow_saved', { stage: 'improvement_completed' });
-        outputStream.write('[improvement] Improvement phase complete. Flow closed.\n');
       } catch (e: any) {
         span.recordException(e);
         span.setStatus({ code: SpanStatusCode.ERROR });
