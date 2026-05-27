@@ -7,6 +7,15 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
+
+function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: string): void {
+  const roleDir = path.join(workspaceRoot, projectNamespace, 'a-docs', 'roles', roleId);
+  fs.mkdirSync(roleDir, { recursive: true });
+  fs.writeFileSync(path.join(roleDir, 'main.md'), `${roleId} role`);
+  fs.writeFileSync(path.join(roleDir, 'ownership.yaml'), `role: ${roleId}\nsurfaces: []\n`);
+  fs.writeFileSync(path.join(roleDir, 'required-readings.yaml'), `role: ${roleId}\nrequired_readings: []\n`);
+}
+
 async function runTest() {
   console.log('Starting edge-artifact-routing integration test...');
 
@@ -19,6 +28,10 @@ async function runTest() {
 
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
+  scaffoldRole(workspaceRoot, projectNamespace, 'owner');
+  scaffoldRole(workspaceRoot, projectNamespace, 'curator');
+  scaffoldRole(workspaceRoot, projectNamespace, 'technical-architect');
+  scaffoldRole(workspaceRoot, projectNamespace, 'framework-services-developer');
   process.env.A_SOCIETY_STATE_DIR = stateDir;
   const workspaceArtifactDir = path.join(workspaceRoot, 'records', 'test-flow');
   fs.mkdirSync(workspaceArtifactDir, { recursive: true });

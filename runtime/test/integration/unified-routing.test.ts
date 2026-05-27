@@ -58,6 +58,8 @@ async function runTest() {
 `);
   fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
   fs.writeFileSync(path.join(rolesDir, 'next', 'main.md'), "Next Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'start', 'ownership.yaml'), 'role: start\nsurfaces: []\n');
+  fs.writeFileSync(path.join(rolesDir, 'next', 'ownership.yaml'), 'role: next\nsurfaces: []\n');
   fs.writeFileSync(path.join(workflowDir, 'main.yaml'), `workflow:
   name: canonical-test-flow
   nodes:

@@ -6,10 +6,16 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { seedTestModelSettings } from './settings-test-utils.js';
+import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const frameworkRoot = path.resolve(__dirname, '../../..');
+
 /**
  * Correction 4 verification: a real forward-pass-closed signal drives through
  * the orchestrator, emits the approved operator notice, and persists an
@@ -40,6 +46,17 @@ async function runTest() {
   const testSettingsDir = path.join(tmpBase, '.settings');
   fs.mkdirSync(testDir);
   fs.mkdirSync(testStateDir);
+  const aSocietyRoot = path.join(workspaceRoot, 'a-society');
+  fs.symlinkSync(frameworkRoot, aSocietyRoot, 'dir');
+  const scaffoldResult = scaffoldFromManifestFile(
+    testDir,
+    projectNamespace,
+    aSocietyRoot,
+    path.join(aSocietyRoot, 'runtime', 'contracts', 'a-docs-manifest.yaml')
+  );
+  if (scaffoldResult.failed.length > 0) {
+    throw new Error(`Failed to scaffold fixture a-docs: ${scaffoldResult.failed.map((item) => `${item.path}: ${item.reason}`).join('; ')}`);
+  }
   process.env.A_SOCIETY_STATE_DIR = testStateDir;
   process.env.A_SOCIETY_SETTINGS_DIR = testSettingsDir;
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
@@ -52,22 +69,22 @@ async function runTest() {
   fs.mkdirSync(path.join(projectADocsPath, 'indexes'), { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'workflow'), { recursive: true });
   fs.mkdirSync(path.join(projectADocsPath, 'improvement'), { recursive: true });
-  fs.mkdirSync(path.join(rolesDir, 'start'), { recursive: true });
-  fs.writeFileSync(path.join(rolesDir, 'start', 'required-readings.yaml'), 'role: start\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_START_ROLE\n');
+  fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_OWNER_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
     `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
-    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/start/main.md\` |\n`
+    `| \`$TEST_PROJECT_OWNER_ROLE\` | \`test-project/a-docs/roles/owner/main.md\` |\n`
   );
   const workflowGraph = `workflow:
   name: test-flow
   nodes:
     - id: start
-      role: 'start'
+      role: 'Owner'
   edges: []
 `;
-  fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
-  fs.writeFileSync(path.join(rolesDir, 'start', 'ownership.yaml'), 'role: start\nsurfaces: []\n');
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), "Owner Role Doc");
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
   fs.writeFileSync(path.join(projectADocsPath, 'workflow', 'main.yaml'), workflowGraph);
   fs.writeFileSync(path.join(projectADocsPath, 'improvement', 'meta-analysis.md'), 'Meta-analysis instructions');
   fs.writeFileSync(path.join(projectADocsPath, 'improvement', 'feedback.md'), 'Feedback instructions');

@@ -39,7 +39,7 @@ fs.writeFileSync(path.join(projectDir, 'a-docs', 'agents.md'), 'Agent orientatio
 fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner', 'main.md'), 'Owner role doc');
 fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
 
-test('buildContextBundle: contains role announcement, date, handoff contract, and required-reading files', () => {
+test('buildContextBundle: contains role announcement, handoff contract, and required-reading files', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
     'Owner',
@@ -47,7 +47,6 @@ test('buildContextBundle: contains role announcement, date, handoff contract, an
   );
 
   assert.ok(bundle.bundleContent.includes('You are the Owner agent for a-society.'));
-  assert.ok(bundle.bundleContent.includes("Today's date is"));
   assert.ok(bundle.bundleContent.includes('A-Society Runtime Handoff Contract'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));

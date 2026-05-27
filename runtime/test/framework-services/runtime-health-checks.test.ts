@@ -138,7 +138,7 @@ test('fails when a role folder is missing ownership.yaml', () => {
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
     assert.strictEqual(result.ok, false);
     assert.ok(
-      result.errors.some((error) => error.includes('Role owner ownership file is missing')),
+      result.errors.some((error) => error.includes('Role owner ownership.yaml is missing')),
       `expected missing ownership error, got: ${result.errors.join('; ')}`
     );
   } finally {

@@ -100,22 +100,28 @@ test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace 
   assert.strictEqual(result[3][0].stepType, 'feedback');
 });
 
-test('buildBackwardPassPlan (Parallel Mode): all roles in one group, no injection', () => {
+test('buildBackwardPassPlan (Parallel Mode): non-Owner roles run together before Owner and feedback', () => {
   const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'Owner', IMPROVEMENT_CHOICE_MODE.PARALLEL);
   
-  // Roles: Owner, Curator, Technical Architect
-  assert.strictEqual(result.length, 2);
-  assert.strictEqual(result[0].length, 3);
+  assert.strictEqual(result.length, 3);
+  assert.strictEqual(result[0].length, 2);
   
   const roles = result[0].map(e => e.role);
-  assert.ok(roles.includes('Owner'));
   assert.ok(roles.includes('Curator'));
   assert.ok(roles.includes('Technical Architect'));
   
+  assert.ok(result[0].every(e => e.stepType === 'meta-analysis'));
   assert.ok(result[0].every(e => e.findingsRolesToInject.length === 0));
   
+  assert.strictEqual(result[1].length, 1);
   assert.strictEqual(result[1][0].role, 'Owner');
-  assert.strictEqual(result[1][0].stepType, 'feedback');
+  assert.strictEqual(result[1][0].stepType, 'meta-analysis');
+  assert.deepStrictEqual(result[1][0].findingsRolesToInject, []);
+  
+  assert.strictEqual(result[2].length, 1);
+  assert.strictEqual(result[2][0].role, 'Owner');
+  assert.strictEqual(result[2][0].stepType, 'feedback');
+  assert.deepStrictEqual(result[2][0].findingsRolesToInject, []);
 });
 
 test('locateFindingsFiles: finds correctly normalized and case-insensitive roles', () => {

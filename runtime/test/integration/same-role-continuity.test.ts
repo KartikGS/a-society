@@ -58,6 +58,8 @@ fs.writeFileSync(
 );
 fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), 'Owner role');
 fs.writeFileSync(path.join(rolesDir, 'ta', 'main.md'), 'TA role');
+fs.writeFileSync(path.join(rolesDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
+fs.writeFileSync(path.join(rolesDir, 'ta', 'ownership.yaml'), 'role: ta\nsurfaces: []\n');
 fs.writeFileSync(path.join(indexDir, 'main.md'), '');
 
 // workflow: owner-intake -> ta -> owner-gate
@@ -97,6 +99,9 @@ fs.writeFileSync(ownerArtifact1, 'Owner brief content.');
 fs.writeFileSync(taArtifact, 'TA design content.');
 fs.writeFileSync(reviewFeedbackArtifact, 'Reviewer requests revision to the Owner brief.');
 fs.writeFileSync(ownerInstanceArtifact, 'Role instance input.');
+const ownerArtifact1Rel = path.relative(workspaceRoot, ownerArtifact1);
+const taArtifactRel = path.relative(workspaceRoot, taArtifact);
+const reviewFeedbackArtifactRel = path.relative(workspaceRoot, reviewFeedbackArtifact);
 
 process.env.A_SOCIETY_STATE_DIR = stateDir;
 process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
@@ -540,7 +545,14 @@ async function run() {
       completedNodes: ['owner-intake', 'ta'],
       visitedNodeIds: ['owner-intake', 'ta'],
       completedHandoffs: ['owner-intake=>ta', 'ta=>owner-gate'],
-      receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
+      receivingHandoff: {
+        'ta=>owner-gate': [taArtifactRel]
+      },
+      historyHandoff: {
+        'owner-intake=>ta': [ownerArtifact1Rel],
+        'ta=>owner-gate': [taArtifactRel]
+      },
+      awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -589,7 +601,14 @@ async function run() {
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
       visitedNodeIds: ['owner-intake'],
-      receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
+      receivingHandoff: {
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      historyHandoff: {
+        'owner-intake=>ta': [ownerArtifact1Rel],
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 
@@ -638,7 +657,14 @@ async function run() {
       pendingHumanInputs: {},
       completedNodes: ['owner-gate'],
       visitedNodeIds: ['owner-intake', 'owner-gate'],
-      receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
+      receivingHandoff: {
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      historyHandoff: {
+        'owner-intake=>ta': [ownerArtifact1Rel],
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
 

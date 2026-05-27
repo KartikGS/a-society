@@ -54,6 +54,8 @@ async function runTest() {
 `);
   fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), 'Start Role Doc');
   fs.writeFileSync(path.join(rolesDir, 'next', 'main.md'), 'Next Role Doc');
+  fs.writeFileSync(path.join(rolesDir, 'start', 'ownership.yaml'), 'role: start\nsurfaces: []\n');
+  fs.writeFileSync(path.join(rolesDir, 'next', 'ownership.yaml'), 'role: next\nsurfaces: []\n');
 
   const workflowGraph = `workflow:
   name: missing-artifact-test-flow
