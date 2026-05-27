@@ -1,6 +1,6 @@
 # How to Create an Executable Workflow Definition
 
-*Read `$INSTRUCTION_WORKFLOW` for workflow-design guidance. Read this document when a project will represent that design as executable workflow YAML. The authoritative runtime schema, node-entry injection behavior, and role-instance syntax live in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`.*
+*Read `$INSTRUCTION_WORKFLOW` for workflow-design guidance. Read this document to encode that design as executable workflow YAML. The runtime workflow contract owns the authoritative schema, node-entry injection behavior, role-instance syntax, and handoff semantics.*
 
 ---
 
@@ -19,7 +19,7 @@ The permanent definition expresses the reusable workflow shape. The record snaps
 
 ## Why It Exists
 
-**1. Executable node context.** The permanent workflow definition is the standing source of node-specific guidance. Runtime-managed projects use `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` to determine exactly how that context is represented and delivered.
+**1. Executable node context.** The permanent workflow definition is the standing source of node-specific guidance. The workflow YAML represents that context for runtime delivery at node entry.
 
 **2. Deterministic active-path execution.** Backward-pass planning and active-flow routing derive role order from the same record snapshot the forward pass executes from.
 
@@ -38,7 +38,7 @@ Use these conventions:
 
 ## Runtime Contract
 
-For projects using the A-Society runtime, `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` is the single source for:
+The runtime workflow contract is the single source for:
 
 - YAML fields accepted by the runtime validator
 - canonical workflow vs. record-snapshot merge behavior
@@ -52,29 +52,15 @@ For projects using the A-Society runtime, `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`
 
 ### Permanent workflow definition
 
-Use the runtime contract's full schema as needed. This is the reusable source that explains the workflow's standing node contracts, invariants, escalation rules, and session model.
+Use the runtime workflow contract's full schema as needed. This is the reusable source that explains the workflow's standing node contracts, invariants, escalation rules, and session model.
 
 ### Record-folder `workflow.yaml`
 
-Use the runtime contract's record-snapshot rules, and scope the snapshot to the active flow instance:
+Use the runtime workflow contract's record-snapshot rules, and scope the snapshot to the active flow instance:
 
 - include only the nodes and edges the flow actually traverses or may still traverse
 - treat the record snapshot as authoritative for runtime topology and handoff routing in that instance
 - omit node-contract fields unless the active flow needs an explicit per-flow override beyond the permanent definition
-
----
-
-## How to Fill It In
-
-**Step 1 — Define the workflow shape.** List the nodes and edges in forward-pass order.
-
-**Step 2 — Add node contracts to the permanent definition.** For each node, include the node-specific readings and short node contract data that the executable contract allows.
-
-**Step 3 — Add workflow-level fields.** Include summary, use-when guidance, invariants, escalation rules, and session model details where they belong.
-
-**Step 4 — Validate.** Run the workflow validator if your project has one.
-
-**Step 5 — Create the record snapshot.** At intake, the workflow-authority role creates `workflow.yaml` in the active record folder by scoping the permanent definition to the active path and following `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`.
 
 ---
 
@@ -101,4 +87,4 @@ Do not edit already visited node overrides in the record snapshot unless the pro
 
 `$INSTRUCTION_WORKFLOW` owns the design guidance: what a workflow is, how to think about nodes and transitions, and what a project needs procedurally.
 
-This file owns the reusable instruction to encode a workflow as executable data. `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` owns the runtime-specific schema and interpretation rules.
+This file owns the reusable instruction to encode a workflow as executable data. The runtime workflow contract owns the runtime-specific schema and interpretation rules.

@@ -85,8 +85,4 @@ These checks remain the Owner's responsibility regardless of delegation:
 
 **Schema-code coupling check.** When a requirement changes a schema with a programmatic consumer, scope both the documentation domain and the executable domain in the same flow. Do not split documentation and code paths unless the workflow explicitly intends that separation.
 
-**`[LIB]` brief trigger for update report drafts.** When a `[LIB]` flow is likely to qualify for a framework update report, the directive must explicitly instruct the Curator to include the update report draft. When classification cannot yet be determined, instruct the Curator to include the draft with classification fields marked `TBD`.
-
-**Do not pre-specify update report classification.** Classification is determined by the Curator post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Stating a classification in the directive creates framing the Curator must override.
-
 **TA design directives require a constraint/preference partition.** When a directive asks the Technical Architect to produce a design, constraints must be genuinely non-negotiable — derived from framework invariants, explicit user direction, or immovable prior decisions. A design preference is not a constraint; presenting it as one closes off design space the TA is engaged to evaluate.

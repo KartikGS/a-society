@@ -28,8 +28,6 @@ Four principles govern the model:
 
 **3. Gates are conditional, not ceremonial.** Add a design, review, approval, or registration node only when it contributes unique decision value, unique review value, or unique stewardship value. Do not preserve a gate merely because a previous workflow version had one.
 
-**4. Backward graph tracking.** The backward pass structure is not pre-defined at intake. The executed workflow is tracked through the record folder's artifact sequence. At close, this sequence is the input to the backward graph builder. Simple forward graphs produce simple backward passes.
-
 ---
 
 ## Structural Readiness Assessment
@@ -70,10 +68,10 @@ When a structural gap is found and the user wants to proceed with addressing it:
 
 1. Tell the user what specifically is missing — a role with appropriate authority, a workflow node type, or both.
 2. Describe what setup would involve.
-3. Get explicit user permission before opening a setup flow.
-4. Add the deferred task to Next Priorities in the project log with a dependency note.
-5. Open a separate setup flow through standard intake.
-6. When the setup flow completes, the deferred task re-enters intake as a new flow.
+3. Get explicit user permission before changing the project structure.
+4. Handle the setup inside the current flow by updating the standing structure the task needs.
+5. If the structural change is small enough that the task can safely continue after setup, continue the task in the same flow.
+6. If the task cannot safely continue after setup, add the deferred task to Next Priorities in the project log with a dependency note. The task re-enters intake as a later flow after setup is complete.
 
 ---
 
@@ -117,7 +115,7 @@ Use these triggers when deciding whether the smallest legal path needs additiona
 
 - **Design node:** add when standing design does not already govern the work, when the change alters boundaries or contracts, or when multiple implementers need a shared design.
 - **Independent approval or review node:** add when the work changes shared promises, shared library surfaces, another role's owned truth surfaces, or any other high-impact area where the same role should not both authorize and verify its own change.
-- **Registration or stewardship node:** add when a separate role owns indexes, guides, update reports, version records, or other stewardship surfaces that must be updated in-band with the work.
+- **Registration or stewardship node:** add when a separate role owns indexes, guides, or other stewardship surfaces that must be updated in-band with the work.
 - **Parallel tracks and join:** add when multiple touched-surface tracks are independent enough to proceed concurrently and later converge. When a single role's scope within the flow spans genuinely independent sub-domains, split those sub-domains into separate parallel tracks rather than forcing a sequential single-role path. Ask: could two agents work on these simultaneously without producing a conflict or dependency? If yes, split the track and assign a dedicated lead per sub-domain.
 
 If none of these triggers apply, do not add the node.
@@ -169,29 +167,11 @@ Tier 3 is for flows that truly need parallel tracks, joins, multiple gate types,
 
 ---
 
-## Project-Specific Invariants
-
-Project-level invariants may further constrain tier selection. For example, a project may require explicit Owner review for additions to a shared library regardless of complexity, or require a dedicated registration node whenever public indexes change. The dynamic complexity model determines the default tier; project invariants narrow the available options within it. When a project invariant and a complexity-derived tier conflict, the invariant takes precedence.
-
----
-
 ## Incremental Pipeline Definition
 
 For Tier 2 and Tier 3 flows, the Owner defines the known path at intake and marks open decisions as known unknowns in the workflow plan. Engaged roles may define later segments only when they are the legitimate authority to do so and only before producing the next handoff.
 
 This is not permission to defer structure indefinitely. Each agent must define the next handoff before producing it. An undefined next step at a handoff point is a gap — it must be surfaced explicitly rather than improvised.
-
----
-
-## Backward Graph Tracking
-
-The backward pass is proportional to the flow. Simple flows produce simple backward passes.
-
-**Source:** The record folder's artifact sequence is the executed workflow log. Each artifact represents a completed step; the prefix ordering gives the sequence; the file names identify the role and action.
-
-**At close:** The Owner or the project's closure authority reads the record folder artifact sequence and derives the traversal order for the backward pass. This is the input for the project's executable backward-pass ordering capability if available; otherwise derive manually per `$INSTRUCTION_IMPROVEMENT`.
-
-**Planned vs. actual path:** The workflow plan records the intended path; the artifact sequence records the actual path. Any divergence between planned and actual path is itself a backward pass finding.
 
 ---
 
@@ -229,12 +209,3 @@ The inverse also applies: if a role's surface has shrunk or its sub-domains have
 The five complexity axes and three tiers represent the best current model for proportional workflow construction. They will be refined as flows reveal where the model fails — cases where an omitted gate produced rework, or where an extra gate added cost without adding value.
 
 Refinements are proposed and approved through the standard workflow. The model is a living instrument; it is not frozen.
-
----
-
-## Relationship to Other Instructions
-
-- **`$INSTRUCTION_WORKFLOW`** — defines what a workflow is and how to write one.
-- **`$INSTRUCTION_WORKFLOW_MODIFY`** — defines how to change a standing workflow safely.
-- **`$INSTRUCTION_WORKFLOW_GRAPH`** — defines the YAML encoding for permanent workflow definitions and record snapshots.
-- **`$INSTRUCTION_IMPROVEMENT`** — owns backward pass ordering and final feedback behavior.

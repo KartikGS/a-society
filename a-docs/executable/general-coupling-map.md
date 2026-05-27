@@ -12,8 +12,6 @@ This document is the standing reference for the coupling surface between A-Socie
 | Element | Dependency | Executable capability |
 |---|---|---|
 | Index table format | Yes | Path validation |
-| `VERSION.md` format | Yes | Update comparison |
-| `a-society-version.md` format | Yes | Update comparison |
 | Runtime workflow YAML contract (`$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`) | Yes | Workflow graph validation, node-entry injection, active-flow routing, backward-pass planning |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` file format and `copy` source paths | Yes | Scaffolding and runtime health checks |
 | `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |
@@ -27,7 +25,6 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 | Maintained guidance surface | Executable capability | Status |
 |---|---|---|
 | `$INSTRUCTION_INDEX` | Path validation | Closed — capability wording plus manual fallback |
-| `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | Update comparison | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Workflow graph validation / backward-pass planning | Closed — points to `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for runtime schema and interpretation |
 | `$INSTRUCTION_WORKFLOW_MODIFY` | Backward-pass planning | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Backward-pass planning | Closed — capability wording plus manual fallback |

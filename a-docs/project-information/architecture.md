@@ -37,9 +37,6 @@ The feedback prompt is flow-aware. Initialization flows should focus on what the
 **Collection model — local generation, human-reviewed sharing**
 The current collection model is intentionally simple: the feedback agent writes a markdown artifact into `$A_SOCIETY_FEEDBACK_DIR`, then the human reviews, redacts if needed, and may share it upstream in a manual GitHub PR. This keeps submission explicit, avoids automatic ingestion from personal machines, and leaves moderation at the PR-review layer. Privacy review is the immediate concern, so the runtime should always make clear that generated feedback may contain project-specific details and should be reviewed before sharing.
 
-**Outbound communication — Framework update reports**
-The inverse of inbound feedback: A-Society pushing change notifications out to adopting projects. When `general/` or runtime-owned initialization behavior changes in ways that require adopting projects to review their own `a-docs/`, the A-Society Curator produces a framework update report and publishes it to `a-society/updates/`. Each report classifies changes by impact (Breaking / Recommended / Optional) and includes migration guidance for the adopting project's Owner, who starts an update-application flow and routes work to the touched-surface truth owners. A `vMAJOR.MINOR` versioning scheme has been established so adopters can determine which reports they still need to apply by comparing their project's recorded version (in `a-docs/a-society-version.md`) against A-Society's current version (`$A_SOCIETY_VERSION`). The remaining open problem is *discovery* — how projects learn that new update reports exist in the first place. This is deferred until A-Society's distribution model is defined. See `$A_SOCIETY_UPDATES_PROTOCOL`.
-
 ---
 
 ## Architectural Invariants

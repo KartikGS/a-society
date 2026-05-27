@@ -21,8 +21,7 @@
 
 <p align="center">
   <a href="#getting-started">Getting Started</a> |
-  <a href="runtime/INVOCATION.md">Runtime Guide</a> |
-  <a href="general/">Reusable Library</a>
+  <a href="runtime/INVOCATION.md">Runtime Guide</a>
 </p>
 
 <p align="center">
@@ -116,81 +115,51 @@ my-project/         ← your project
 
 ## Getting Started
 
-### If you have an existing project
+**1. Set up your workspace**
 
-**1. Clone A-Society alongside your project**
-
-Both should live in the same parent directory:
+Clone A-Society into a workspace directory. Any projects you want to use with it live alongside it in the same parent folder:
 
 ```
 your-workspace/
-├── your-project/     ← your existing project
-└── a-society/        ← this repo
+├── a-society/        ← this repo
+└── my-project/       ← your project (or create one from the UI in step 4)
 ```
 
-**2. Install runtime dependencies**
+```bash
+git clone https://github.com/KartikGS/a-society.git
+```
 
-From the workspace root, run:
+**2. Install and start the runtime**
+
+From the workspace root:
 
 ```bash
 npm --prefix ./a-society/runtime install
-```
-
-**3. Start the runtime**
-
-From the workspace root, run:
-
-```bash
 npm --prefix ./a-society/runtime start
 ```
 
-The browser UI lists existing projects with `a-docs/`, existing projects without `a-docs/`, and a create-new-project path. On first use, configure and activate a model in Settings before starting project work.
+The runtime opens at `http://localhost:3000`.
 
-Choose your existing project. If it does not yet have `a-docs/`, the runtime scaffolds the compulsory files and then starts an Owner initialization flow that reads the project, asks only what it cannot infer, and fills the scaffolded files.
+**3. Configure a model**
 
-**4. Done**
+The Settings panel opens automatically and stays open until you activate a model. The runtime cannot start project work without one.
 
-Once approved, your project has a structured agent harness. Any agent you assign a role to can load context from `a-docs/`, follow the project's workflow, and preserve useful memory as work moves forward.
+Fill in:
+- **Provider** — Anthropic, OpenAI, or a compatible base URL
+- **API key** — from your provider's account dashboard ([Anthropic Console](https://console.anthropic.com) · [OpenAI Platform](https://platform.openai.com/api-keys))
+- **Model ID** — from your provider's model catalog ([Anthropic model cards](https://docs.anthropic.com/en/docs/about-claude/models/overview) · [OpenAI models](https://platform.openai.com/docs/models))
 
----
+Save and set the model as active. The project selector appears once a model is active.
 
-### If you are starting from scratch
+**4. Select or create a project**
 
-You do not need a finished project to use A-Society. A rough idea is enough to start.
+*New project:* Click **Create New Project**, enter a name, and the runtime creates the project folder and scaffolds the compulsory `a-docs/`. An Owner-led initialization flow starts immediately and fills the scaffolded files through a short Q&A.
 
-**1. Clone A-Society into your workspace**
+*Existing project:* Place your project folder in the workspace alongside `a-society/`. It will appear in the selector as uninitialized. Click it to run the same scaffold and initialization flow.
 
-```
-your-workspace/
-└── a-society/        ← this repo
-```
+Approve the result and your project has a structured agent harness.
 
-**2. Install runtime dependencies**
+**5. Start your first flow**
 
-From the workspace root, run:
+Click **New Record**. The runtime opens a draft flow and routes it to the Owner node. You're in.
 
-```bash
-npm --prefix ./a-society/runtime install
-```
-
-**3. Start the runtime**
-
-```bash
-npm --prefix ./a-society/runtime start
-```
-
-Configure and activate a model in Settings before starting project work.
-
-**4. Create the project in the UI**
-
-Choose `Create New Project`, enter the project name, and let the runtime create the project folder and scaffold the compulsory `a-docs/`.
-
-The runtime then starts an Owner initialization flow. The Owner asks the startup questions interactively, fills the scaffolded files with real project truth, and leaves you with a usable first-pass `a-docs/`.
-
-**5. Improve as you go**
-
-Your `a-docs/` reflects where your project is today. As your vision sharpens, your `a-docs/` sharpens with it. Backward-pass analysis and optional upstream feedback turn completed work into better project memory and better A-Society defaults. You do not need a complete project to get value from the framework — every session builds on the last.
-
----
-
-*Prefer to build manually? The instruction library is in [`general/instructions/`](general/instructions/).*

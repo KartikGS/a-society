@@ -15,18 +15,13 @@ surfaces:
     scope: "Improvement-protocol stewardship"
   - path: a-docs/communication/conversation/
     scope: "Conversation-template stewardship"
-  - path: a-docs/updates/
     scope: "Framework update-protocol and template stewardship"
   - path: a-docs/records/main.md
     scope: "Records-convention truth"
   - path: a-docs/records/
     shared_with: [owner, technical-architect, orchestration-developer, framework-services-developer, ui-developer]
     scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"
-  - path: VERSION.md
-    scope: "Framework version record"
   - path: index.md
     scope: "Public path registry"
   - path: feedback/
     scope: "Inbound framework feedback stewardship"
-  - path: updates/
-    scope: "Published framework update reports"

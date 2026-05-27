@@ -208,7 +208,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **What it owns:** The preserved `## Forward Pass Closure Discipline` guidance extracted from `roles/owner/main.md`.
 
-**What breaks without it:** Closure-time verification, log/archive discipline, and update-report path naming either remain inline in `roles/owner/main.md` or drift into artifacts that are not the canonical Owner closure reference.
+**What breaks without it:** Closure-time verification and log/archive discipline either remain inline in `roles/owner/main.md` or drift into artifacts that are not the canonical Owner closure reference.
 
 **Do not consolidate with:** `roles/owner/main.md` — this is closure-phase guidance, not general role contract. Do not consolidate with `$A_SOCIETY_WORKFLOW` — the workflow defines phase structure; this file defines how the Owner executes one specific phase.
 
@@ -480,32 +480,6 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-## `updates/`
-
-### `updates/protocol.md` — `$A_SOCIETY_UPDATES_PROTOCOL`
-
-**Why it exists:** When A-Society changes `general/` or `agents/` in ways that affect adopting projects, those projects need to know what changed, why, and what to do. Without a protocol, the decision of when to publish and what to include is made ad-hoc each time — producing inconsistent reports that adopting project Curators cannot reliably act on.
-
-**What it owns:** The trigger conditions for publishing a framework update report, the impact classification model (Breaking / Recommended / Optional), the production and approval process, the naming convention for report files, and the delivery problem statement.
-
-**What breaks without it:** The Curator has no principled basis for deciding when to publish. Reports vary in structure and completeness. Adopting project Curators cannot triage changes reliably.
-
-**Do not consolidate with:** `improvement/protocol.md` — the improvement protocol governs internal A-Society reflection; the update report protocol governs outbound communication to the ecosystem. Different audiences, different purposes.
-
----
-
-### `updates/template.md` — `$A_SOCIETY_UPDATES_TEMPLATE`
-
-**Why it exists:** Adopting project Curators read update reports to decide what to change in their own `a-docs/`. A consistent template ensures every report contains what a Curator needs: a summary, an impact classification table, per-change entries with migration guidance, and a delivery note.
-
-**What it owns:** The canonical structure for a framework update report — sections, fields, and format expectations.
-
-**What breaks without it:** Reports are written free-form. Consuming Curators must infer structure. Migration guidance is inconsistently provided. The impact classification model is applied inconsistently.
-
-**Do not consolidate with:** `updates/protocol.md` — the protocol governs when and how to produce reports; the template is the artifact the report fills. Process document vs. format document.
-
----
-
 ## `executable/`
 
 These files live in `a-docs/executable/`. They are the standing design, governance, historical-assessment, and coupling-reference artifacts for A-Society's unified executable layer.
@@ -660,9 +634,9 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 **Why it exists:** The workflow creation and modification instructions define the static structure of a workflow graph. Neither covers the intake-time decision of which path through that graph a given task requires. Without this document, agents either apply the full pipeline uniformly to every task (overhead that erodes trust) or bypass structure informally (no principled basis). This document establishes the dynamic complexity model: five axes for intake analysis, three tiers for proportional routing, and the mechanism by which the workflow plan satisfies Hard Rule 2 at every tier.
 
-**What it owns:** The five complexity axes, the three workflow tiers with their signals and record artifact expectations, the workflow plan format, the Hard Rule 2 resolution for single-agent flows, the project-specific invariants note, the incremental pipeline definition principle, and the backward graph tracking mechanism.
+**What it owns:** The structural readiness assessment, the five complexity axes, the three workflow tiers with their signals, the workflow plan format, the gate triggers, and the incremental pipeline definition principle.
 
-**What breaks without it:** The Owner has no principled framework for sizing a flow at intake. Uniform pipeline application continues. Hard Rule 2's applicability to single-agent flows remains undefined. Backward graph tracking is ad-hoc or absent for lightweight flows.
+**What breaks without it:** The Owner has no principled framework for sizing a flow at intake. Uniform pipeline application continues. Structural gaps are handled inconsistently, and lightweight work either bypasses useful gates or inherits unnecessary overhead.
 
 **Do not consolidate with:** `$INSTRUCTION_WORKFLOW_MODIFY` — that document governs design-time structural change to the graph itself; this document governs intake-time path selection through a defined graph. These are categorically distinct operations. Do not consolidate with `$A_SOCIETY_WORKFLOW` — that document describes A-Society's own workflow structure; this is a general instruction applicable to any project. Do not consolidate with `$A_SOCIETY_WORKFLOW_COMPLEXITY` — that document is A-Society's internal instantiation of this reusable model.
 

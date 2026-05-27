@@ -20,7 +20,7 @@ Records live under `a-docs/records/`:
         main.md                           ← this project's records convention
         [identifier]/                     ← one folder per flow
           record.yaml                     ← record metadata: id, name, summary
-          workflow.yaml                   ← optional flow snapshot for executable/runtime consumers
+          workflow.yaml                   ← flow snapshot for runtime execution
           01-[artifact-type].md           ← sequenced artifacts (chronological)
           02-[artifact-type].md
           ...
@@ -60,7 +60,7 @@ record:
 - `record.name` is the human-facing record title
 - `record.summary` is the one-line record description
 
-The record ID is the stable identity surface. The name and summary may be seeded by runtime-managed tooling, derived from intake artifacts, or written directly by the workflow-authority role, depending on the project's executable model.
+The record ID is the stable identity surface. The name and summary may be seeded by runtime tooling, derived from intake artifacts, or written directly by the workflow-authority role, depending on the project's executable model.
 
 ---
 
@@ -91,13 +91,13 @@ The first sequence position (`01-`) is reserved for the workflow plan — the Ph
 
 ## workflow.yaml — Forward Pass Path
 
-Some projects using this framework maintain a `workflow.yaml` file in each record folder alongside the sequenced artifacts. This is a structured YAML file representing the flow's forward-pass path and node contract snapshot for that flow instance. It is not a sequenced artifact — it has no `NN-` prefix.
+Each record folder includes a `workflow.yaml` file alongside the sequenced artifacts. This is a structured YAML file representing the flow's forward-pass path and node contract snapshot for that flow instance. It is not a sequenced artifact — it has no `NN-` prefix.
 
-**When to use `workflow.yaml`:** When the project has an executable backward-pass ordering capability or runtime-managed node-entry injection, `workflow.yaml` is the input that capability reads. Projects without such a capability do not need `workflow.yaml`.
+**Purpose:** `workflow.yaml` is the runtime-readable input for active-path execution, backward-pass ordering, node-entry injection, and handoff routing.
 
-**Runtime contract:** For projects using the A-Society runtime, `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` defines the YAML schema, canonical-vs-record snapshot behavior, node-entry injection behavior, role-instance syntax, and handoff target semantics. This records instruction owns placement and artifact-lifecycle rules, not the executable schema.
+**Runtime contract:** The runtime workflow contract defines the YAML schema, canonical-vs-record snapshot behavior, node-entry injection behavior, role-instance syntax, and handoff target semantics. This records instruction owns placement and artifact-lifecycle rules, not the executable schema.
 
-**Who creates it:** The workflow-authority role or runtime-managed intake system, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
+**Who creates it:** The workflow-authority role or runtime intake system, at the same time as the workflow plan artifact, before any sequenced artifacts are created.
 
 **Completeness obligation:** When populating `workflow.yaml` at intake, the workflow-authority role must list every role step they expect, including intermediate review and approval checkpoints between roles. If the workflow-authority role will review or approve work before the next non-workflow-authority role acts, that checkpoint must appear as its own node in `workflow.yaml`, with an incoming edge from the preceding node and an outgoing edge to the following node. No review checkpoint may be omitted because it was implied. Silent checkpoints produce `workflow.yaml` paths that do not match the flow that actually ran, which corrupt backward pass ordering.
 
@@ -105,11 +105,11 @@ Some projects using this framework maintain a `workflow.yaml` file in each recor
 
 **When it is appended:** When a workflow-authority role defines their portion of the path that the intake role could not specify at intake.
 
-**What the executable layer reads from it:** The runtime contract defines which fields are parsed and how they affect backward-pass ordering, node-entry delivery, and handoff routing.
+**What the executable layer reads from it:** The runtime workflow contract defines which fields are parsed and how they affect backward-pass ordering, node-entry delivery, and handoff routing.
 
-**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.yaml` is the executable record snapshot. The workflow-authority role derives the record snapshot from the planned path and the runtime contract. `workflow.yaml` is authoritative for executable ordering and node-entry delivery for that flow; the plan's `path` governs human-oriented planning only.
+**Relationship to the plan's `path` field:** If the project's workflow plan artifact contains a `path` field (a flat string list for human planning), both coexist. They serve different consumers: the plan's `path` is for human-oriented complexity assessment; `workflow.yaml` is the executable record snapshot. The workflow-authority role derives the record snapshot from the planned path and the runtime workflow contract. `workflow.yaml` is authoritative for executable ordering and node-entry delivery for that flow; the plan's `path` governs human-oriented planning only.
 
-**Pre-convention record folders:** Record folders created before the project established the `workflow.yaml` requirement are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. An executable backward-pass ordering capability, if the project uses one, cannot be invoked for these folders; use manual backward pass ordering instead. Projects should record the convention introduction date or version in their `records/main.md` so this determination is unambiguous.
+**Pre-convention record folders:** Record folders created before the project established the `workflow.yaml` requirement are exempt from that requirement. The absence of `workflow.yaml` in a pre-convention folder is not a convention violation — it is expected. The runtime cannot use those folders for automated backward-pass ordering; use manual backward pass ordering instead. Projects should record the convention introduction date or version in their `records/main.md` so this determination is unambiguous.
 
 **Bootstrapping exemption:** When a flow establishes a new record-folder requirement, such as the introduction of `workflow.yaml` itself, that flow's record folder is exempt-by-origin from the requirement it creates. The flow that introduces a requirement cannot retroactively conform to it. This exemption must be noted explicitly in the flow's artifacts; it must not be handled by silence. An agent encountering this case must either (a) acknowledge the exemption in the initiation artifact and proceed with manual ordering, or (b) create the required file manually for the current folder if conformance is achievable without contradiction.
 
@@ -159,7 +159,7 @@ For projects that do not use records, `improvement/reports/` remains the default
 Write `a-docs/records/main.md`. Declare the record-ID format and how uniqueness is guaranteed when two flows begin at nearly the same time.
 
 **Step 2 — Declare the record metadata and artifact sequence.**
-List which non-sequenced files (`record.yaml`, and optionally `workflow.yaml`) and which sequenced artifact types appear in each record folder. The first sequenced position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. If the project will use an executable backward-pass ordering capability or runtime-managed node-entry injection, also declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan. For A-Society runtime-managed projects, the schema is defined in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`. Document the workflow-authority role and the capability that reads the file in the project's `records/main.md`.
+List the non-sequenced files (`record.yaml` and `workflow.yaml`) and the sequenced artifact types that appear in each record folder. The first sequenced position in the declared sequence must be the Owner's workflow plan (Phase 0 gate artifact). Declare it as position `01-` with the label `owner-workflow-plan`. This artifact is the prerequisite for all others in the folder. Declare `workflow.yaml` as a non-sequenced artifact created at intake alongside the workflow plan, and document the workflow-authority role and the runtime capability that reads the file in the project's `records/main.md`.
 
 **Step 3 — Update the conversation layer.**
 Remove live artifact files from `communication/conversation/`. Update template header notes to say artifacts are created into the active record folder.

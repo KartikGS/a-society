@@ -14,8 +14,6 @@ Conflicts arise when the Owner and Curator reach different conclusions about wha
 | Placement within `a-docs/` | Owner | Governed by `$A_SOCIETY_STRUCTURE` |
 | Maintenance changes within existing scope | Curator | No escalation required unless direction is implied |
 | Whether a change implies a direction decision | Owner | If Curator is unsure, escalate — do not assume it is maintenance |
-| Framework update report: whether to publish | Owner | Owner approves before publication |
-| Framework update report: impact classification | Owner | Owner reviews classification; Curator drafts |
 | A-Society vision and scope | Human | Neither Owner nor Curator may change these unilaterally |
 | New top-level folder creation in `a-society/` | Human | Structural changes at this level require explicit human approval |
 

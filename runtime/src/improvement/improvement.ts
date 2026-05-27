@@ -130,9 +130,6 @@ function feedbackKindFileSegment(flowRun: FlowRun): string {
       ? 'initialization-greenfield'
       : 'initialization-takeover';
   }
-  if (feedbackContext.kind === 'update-application') {
-    return 'update-application';
-  }
   return 'flow';
 }
 
@@ -156,15 +153,6 @@ function feedbackContextLines(flowRun: FlowRun): string[] {
       `Flow kind: initialization (${feedbackContext.initializationMode === 'greenfield' ? 'greenfield' : 'takeover'})`
     );
     lines.push('Focus on what the runtime could infer, what required human input, and where initialization guidance caused friction.');
-    return lines;
-  }
-
-  if (feedbackContext.kind === 'update-application') {
-    lines.push('Flow kind: update application');
-    lines.push('Focus on which update guidance applied, where migration guidance was unclear, and what the runtime or framework should improve for future update flows.');
-    for (const reportPath of feedbackContext.updateReportPaths ?? []) {
-      lines.push(`Referenced update report: ${reportPath}`);
-    }
     return lines;
   }
 

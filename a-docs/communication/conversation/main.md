@@ -9,7 +9,7 @@ This folder contains the permanent templates for all A-Society inter-agent conve
 | File | Direction | Use When |
 |---|---|---|
 | `TEMPLATE-owner-to-curator-brief.md` | Owner → Curator | Creating the briefing artifact for a new flow |
-| `TEMPLATE-curator-to-owner.md` | Curator → Owner | Submitting a proposal, update report, or maintenance change |
+| `TEMPLATE-curator-to-owner.md` | Curator → Owner | Submitting a proposal or maintenance change |
 | `TEMPLATE-owner-to-curator.md` | Owner → Curator | Issuing a review decision (approved / revise / rejected) |
 
 Templates are never modified during use. Create from a template into the active record folder at the next sequenced position; the template stays unchanged.

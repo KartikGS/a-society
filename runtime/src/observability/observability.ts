@@ -21,15 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf-8'));
-const versionFilePath = path.join(__dirname, '../../../VERSION.md');
-let frameworkVersion = 'unknown';
-try {
-  const versionFile = fs.readFileSync(versionFilePath, 'utf-8');
-  const frameworkVersionMatch = versionFile.match(/v\d+\.\d+/);
-  if (frameworkVersionMatch) frameworkVersion = frameworkVersionMatch[0];
-} catch (_e) {
-  // VERSION.md might not be reachable from certain execution contexts
-}
+const frameworkVersion: string = packageJson.version ?? 'unknown';
 
 export class TelemetryManager {
   private static instance: NodeSDK | null = null;

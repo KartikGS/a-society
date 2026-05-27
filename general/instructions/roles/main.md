@@ -6,7 +6,7 @@ A role document is a behavioral contract for an agent. It defines what that agen
 
 It is not a job description. A job description lists tasks. A role document defines **decision authority** — who can say yes, who can say no, and who must be consulted. An agent that has read a role document should be able to operate within that role without asking "am I allowed to do this?" for every decision.
 
-Role documents are not phase playbooks. If a role needs phase-specific guidance, create separate support docs and have the workflow surface them at the relevant node or gate.
+Role documents are not workflow playbooks. Node-specific instructions belong in workflow node context, not in the standing role document.
 
 ---
 
@@ -28,9 +28,9 @@ Every project using the A-Society framework must declare an Owner at initializat
 
 **Owner** — mandatory from the first session. The Owner holds the project vision, governs structure, and is the quality gate for all contributions. A project with no declared Owner has no authority structure — nothing prevents scope drift and nothing resolves disputes.
 
-The Owner role must be registered in `agents.md` and indexed before the project is considered initialized. A ready-made template is available at `$GENERAL_OWNER_ROLE`.
+The Owner role folder must exist and be indexed before the project is considered initialized. A ready-made template is available at `$GENERAL_OWNER_ROLE`.
 
-A project may add roles beyond Owner when those roles have real delegated authority. Add a documentation-domain lead only when the project needs dedicated stewardship; otherwise, documentation stewardship remains with the Owner until a separate role is justified. Use the archetypes below as starting points.
+A project may add roles beyond Owner when those roles have real delegated authority. Use the archetypes below as starting points, and keep the actual role set as small as the project's authority structure allows.
 
 ---
 
@@ -44,7 +44,7 @@ Every role in the framework operates at one of three authority levels within a g
 
 **Specialist** — implements within a domain under a lead's direction. Receives specific direction from a lead. Has execution authority but not unbounded design authority.
 
-These are authority levels, not new role archetypes. The same role can operate at different authority levels depending on context — for example, a Curator is a *lead* for documentation surfaces and a *specialist* when executing Owner-approved changes to surfaces the Owner governs.
+These are authority levels, not new role archetypes. The same role can operate at different authority levels depending on context.
 
 Authority levels work together with the **distributed ownership registry** (see `$INSTRUCTION_OWNERSHIP`), which maps every project surface to the role(s) accountable for keeping its truth current through per-role ownership files. The registry tells coordinators *who* to delegate to; the authority levels define *how* delegation works.
 
@@ -54,14 +54,6 @@ Authority levels work together with the **distributed ownership registry** (see 
 
 ### 1. Primary Focus (mandatory)
 One paragraph. What does this role fundamentally do? Not a list — a statement. If you cannot summarize the role in a paragraph, the role may be too broad.
-
-If the role is part-time or active only during specific workflow phases, state both lifecycle boundaries in Primary Focus:
-- **Activation condition** — what event, handoff, or phase transition starts this role's authority for a unit of work. In a graph-based workflow, this corresponds to the incoming edge firing at the role's entry node.
-- **Closure condition** — what outcome marks this role as done for that unit. In a graph-based workflow, this corresponds to the outgoing edge being ready to fire from the role's exit node.
-
-When activation and closure map to graph edge conditions, an agent can determine from the handoff artifact alone whether it should act — the unit-of-work ID in the artifact's subject field confirms which instance it is responsible for.
-
-Without explicit activation and closure conditions, agents in phase-scoped roles cannot reliably determine when they should act or stand down.
 
 ### 2. Authority & Responsibilities (mandatory)
 Two lists:
@@ -73,38 +65,19 @@ Both lists matter equally. Stating what a role does not do is often more useful 
 ### 3. Hard Rules (mandatory if any exist)
 Non-negotiable constraints that cannot be overridden by any other instruction. If a role has behaviors that must never change regardless of context — state them as hard rules with explicit markers. An agent that treats a hard rule as a guideline is operating incorrectly.
 
-### 4. Workflow-Linked Support Docs (strongly recommended when phase-specific guidance exists)
-If the role has guidance that applies only at certain workflow phases — for example proposal drafting, design review, implementation handoff, or forward-pass closure — put that guidance in separate support docs and have the workflow surface those docs at the relevant nodes.
+### 4. Support Docs (optional)
+If the role has durable companion guidance that would make the main role document too large, keep it in separate support docs and reference those docs from the appropriate workflow node context.
 
-The role document may include a short section such as "Workflow-Linked Support Docs" that names the categories of moments covered by those support docs. It should not enumerate phase-triggered cues such as "Before X, read Y." Those cues belong in the workflow document, because the workflow is the delivery surface for phase-entry guidance.
-
-Projects often place these companion docs under `roles/[role-id]/`, with the startup role contract at `roles/[role-id]/main.md`, but the exact location is less important than the separation of concerns: the role doc stays small, and the workflow delivers the phase-specific guidance.
+The role document may include a short section such as "Support Docs" that names the companion surfaces the role owns. It should not enumerate node-entry cues or runtime delivery rules.
 
 Ready-made examples of these support docs are available in the general library — for example `$GENERAL_OWNER_BRIEF_WRITING`, `$GENERAL_OWNER_REVIEW_BEHAVIOR`, `$GENERAL_OWNER_LOG_MANAGEMENT`, and `$GENERAL_OWNER_CLOSURE`.
 
-### 5. Context Loading (deprecated)
-Guidance for agents to load context. This section is legacy as the runtime now handles session orientation programmatically via each role's `a-docs/roles/<role-id>/required-readings.yaml`. Role files should no longer carry `## Context Loading` prose or confirmation ritual requirements.
-
-### 6. Escalation Triggers (mandatory)
+### 5. Escalation Triggers (mandatory)
 When must this role escalate to a human or to another role? Be specific. "When uncertain" is not an escalation trigger — it is an invitation to guess. Name the categories of situation that require escalation.
-
-### 7. Input Validation (mandatory for workflow-participating roles)
-What input does this role expect to receive when activated? Define the expected format, source, and content of the handoff artifact that triggers this role's work. An agent that receives input not matching its expected format should **flag the discrepancy** rather than proceed silently — unexpected input is a signal that the workflow may have been bypassed or broken.
-
-This does not mean the agent refuses to work. It means the agent names the discrepancy explicitly before proceeding, so the human can decide whether the workflow bypass was intentional.
-
-Roles that are always active (e.g., the Owner) do not need this section — they are entry points, not downstream nodes.
-
-### 8. Handoff Output (mandatory for workflow-participating roles that hand work to another role)
-What does this role emit at a pause point to transfer control? At each pause point, the role must emit a machine-readable handoff block per the runtime-injected handoff contract. The block declares the receiving role and the artifact path the runtime uses to route the next session.
-
-Do not place the runtime handoff contract in any role's `required-readings.yaml`. The runtime injects it separately into runtime-managed sessions.
-
-Roles that are terminal nodes in the project's actual workflow may omit this section. Roles that are always-active entry points may omit Input Validation, but they still need Handoff Output if they pause and hand work to another role.
 
 ### Optional Sections
 - **Working style / character** — useful for roles where tone and approach matter (e.g., a reviewer who must be constructively critical)
-- **Review checklist** — useful only when the checklist applies across all uses of the role. If it applies only at certain workflow phases, move it to a workflow-linked support doc instead.
+- **Review checklist** — useful only when the checklist applies across all uses of the role. Node-specific checklists belong in workflow node context instead.
 - **Interfaces** — useful for roles that have structured handoffs with other roles
 
 ---
@@ -117,7 +90,7 @@ The following archetypes cover most project needs. Use the template for the arch
 
 ### Archetype 1: Owner (Coordinator)
 
-**When to use:** One role per project. The keeper of the vision, the cross-domain coordinator, and the **universal session entry point**.
+**When to use:** One role per project. The keeper of the vision, the cross-domain coordinator, and the **universal session entry and exit point**.
 
 **Authority level:** Coordinator — routes work via the distributed ownership registry, sets requirement-level directives, validates outcomes.
 
@@ -143,9 +116,6 @@ Does not: write implementation constraints for other domains, review domain-inte
 
 ## Post-Confirmation Protocol
 Ask what the user wants to work on. Route via workflow. Consult registry to identify affected domain leads. Write requirement-level directives.
-
-## Handoff Output
-At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate to Human When
 - A contribution would change direction or scope
@@ -180,9 +150,6 @@ Does not: propose implementation approaches, write deliverables, assign other ro
 - If scope is unclear, stop and clarify before proceeding. Never infer scope.
 - Acceptance criteria must be verifiable — if it cannot be checked, it is not an AC.
 
-## Handoff Output
-At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
-
 ## Escalate to Human When
 - The requirement contradicts the project vision
 - Scope cannot be determined without a direction decision
@@ -214,9 +181,6 @@ Does not: redefine scope, make design decisions, approve their own output for fi
 ## Hard Rules
 - If the specification is ambiguous, stop and request clarification. Do not infer.
 - If a blocker is encountered, report it immediately. Do not work around it silently.
-
-## Handoff Output
-At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
 
 ## Escalate When
 - The specification contains a contradiction
@@ -253,9 +217,6 @@ For each acceptance criterion:
 3. State the verdict: pass / fail / cannot verify.
 4. If fail: classify as blocking or non-blocking, with rationale.
 
-## Handoff Output
-At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
-
 ## Escalate When
 - An AC cannot be verified with available evidence
 - A blocking issue requires a scope or direction decision to resolve
@@ -263,96 +224,21 @@ At each pause point, emit a machine-readable handoff block per the runtime-injec
 
 ---
 
-### Archetype 5: Coordinator
+## Declaring a New Role
 
-**When to use:** When the project involves multiple roles that need sequencing — someone who manages handoffs, tracks state, and ensures the right role acts at the right time.
+Writing the role document is not the last step. A role is usable only when its role folder, startup-context file, ownership file, and index entry are in place.
 
-**Core responsibilities:** Handoff management, state tracking, blocker escalation, session sequencing.
+When a new role document is created, these declarations are required:
 
-**Key boundary:** Does not perform the work of any other role. Coordinates; does not execute.
+1. **Create the role folder.** Place the startup role contract at `a-docs/roles/<role-id>/main.md`.
 
-**Template:**
+2. **Add the role metadata files.** Create `required-readings.yaml` for startup context and `ownership.yaml` for the role's accountable surfaces.
 
-```markdown
-# Role: [Project] Coordinator Agent
+3. **Add a variable to the project index (`indexes/main.md`).** Register the role file as `$[PROJECT]_[ROLE]_ROLE` (e.g., `$A_SOCIETY_CURATOR_ROLE`). This allows other documents to reference the role by variable name — so if the file ever moves, only the index needs updating.
 
-## Primary Focus
-Manage handoffs between roles and ensure the right work happens in the right sequence.
+4. **Update workflow and ownership references.** If the role can receive work, update the workflow node definitions and any ownership surfaces that route work to that role.
 
-## Authority & Responsibilities
-Owns: handoff issuance, state tracking, blocker escalation, session sequencing.
-Does not: perform any role's substantive work, make design or scope decisions.
-
-## Coordination Protocol
-1. Read the current state document before any session.
-2. Identify which role should act next and what they need.
-3. Issue the handoff to that role with complete context.
-4. Enter wait state until the role reports back.
-5. Review the report and issue the next handoff.
-
-## Handoff Output
-At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
-
-## Escalate When
-- Two roles produce conflicting outputs that cannot be resolved by the coordinator
-- A role reports a blocker that requires a direction decision
-- The sequence cannot proceed without a decision the coordinator is not authorized to make
-```
-
----
-
-### Archetype 6: Documentation Steward (Lead — Documentation Domain)
-
-**When to use:** When the project needs a dedicated leader and steward for its agent-docs — someone who owns the documentation layer and keeps it accurate, navigable, and current.
-
-**Authority level:** Lead — has design authority for documentation organization, content structure, and registration practices. Receives requirement-level directives from the Owner. Reports outcomes for validation.
-
-**Core responsibilities:** Agent-docs design and maintenance, migration or update-application work, rationale coverage, index hygiene, and pattern observation.
-
-**Key boundary:** Does not set project direction — that is the Owner's authority. Has design authority for *how* to organize documentation within scope. Candidate upstream framework improvements should be routed through the project's normal feedback or approval path, not written directly into A-Society.
-
-```markdown
-# Role: [Project] Documentation Steward Agent
-
-## Authority Level: Lead (Documentation Domain)
-Owns design authority for documentation surfaces. Receives requirements. Reports outcomes.
-
-## Primary Focus
-Maintain the health of [PROJECT_NAME]'s agent-docs and surface reusable documentation patterns when they emerge from real project work.
-
-## Authority & Responsibilities
-Owns: documentation design authority within scope, agent-docs maintenance, migration tasks, rationale coverage, index hygiene, and pattern observation.
-Does not: set project direction, approve its own proposals, or write upstream framework changes directly.
-
-## Hard Rules
-- Design authority applies to how documentation is organized, not to what the project's direction is.
-- If a maintenance change implies a direction decision, stop and escalate.
-- Route candidate upstream framework improvements through the project's normal feedback or approval path.
-
-## Handoff Output
-At each pause point, emit a machine-readable handoff block per the runtime-injected handoff contract.
-
-## Escalate to Owner When
-- A maintenance change implies a direction or scope decision
-- A cross-domain dependency requires Owner-level coordination
-- A candidate upstream framework improvement needs approval or feedback routing
-```
-
----
-
-## Registering a New Role
-
-Writing the role document is not the last step. A role that exists as a file but is not registered is invisible to agents — `agents.md` explicitly instructs agents not to assume a role exists unless it appears in the roles table.
-
-When a new role document is created, three registrations are required:
-
-1. **Add a row to `agents.md` roles table.** Include the role name, a link to the role file, and a one-line primary focus summary. Without this entry, no agent will know the role exists.
-
-2. **Add a variable to the project index (`indexes/main.md`).** Register the role file as `$[PROJECT]_[ROLE]_ROLE` (e.g., `$A_SOCIETY_CURATOR_ROLE`). This allows other documents to reference the role by variable name — so if the file ever moves, only the index needs updating.
-
-3. **Update `agents.md` required reading if needed.** If the required reading step currently hardcodes a specific role file, generalize it to reference the assigned role (e.g., "your assigned role from the table above"). This ensures future roles are picked up without another edit.
-
-These three steps are not optional. A role document without registration is incomplete.
+These steps are not optional. A role document without the supporting role folder files and index entry is incomplete.
 
 ---
 
@@ -374,5 +260,3 @@ These three steps are not optional. A role document without registration is inco
 **No escalation triggers.** Without them, an agent either guesses or asks every time. Neither is good.
 
 **Conflates role with person.** A role document defines a behavioral contract, not a personality profile. Keep the focus on authority and decision rules.
-
-**Too broad.** A role that "owns everything" owns nothing. Authority without specificity cannot be enforced.
