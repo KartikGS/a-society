@@ -39,7 +39,7 @@ Before choosing a tier, map the touched permanent surfaces and their truth owner
 
 At A-Society intake, these two trigger checks matter most:
 
-- **Curator required:** when the flow touches Curator-owned stewardship surfaces such as indexes, `a-docs-guide`, update-report surfaces, version/reporting surfaces, feedback/update registries, or conversation-template surfaces
+- **Curator required:** when the flow touches Curator-owned stewardship surfaces such as indexes, `a-docs-guide`, feedback registries, or conversation-template surfaces
 - **Technical Architect required:** when the flow changes executable boundaries, standing executable capabilities, stable executable contracts, executable workflow topology, or otherwise needs shared executable design before implementation
 
 Owner review is required when the work changes project direction, modifies shared framework promises, adds to `general/`, or otherwise creates a high-impact case where the same role should not both authorize and verify its own change.

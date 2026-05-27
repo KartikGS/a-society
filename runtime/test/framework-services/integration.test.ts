@@ -7,7 +7,6 @@
  *   Scaffold  →  Path Validator    (path validator can be run against index files)
  *   Workflow Graph Validator        (validates live permanent workflow definitions)
  *   Backward Pass Orderer           (reads record-folder workflow.yaml input)
- *   Version Comparator              (standalone, fixture-based for hermeticity)
  *
  * Framework state failures (missing files in indexes, etc.) are printed as
  * informational warnings and do not fail the suite, consistent with prior phases.
@@ -26,7 +25,6 @@ import {
 import { validatePaths } from '../../src/framework-services/path-validator.js';
 import { validateWorkflowFile } from '../../src/framework-services/workflow-graph-validator.js';
 import { computeBackwardPassPlan } from '../../src/framework-services/backward-pass-orderer.js';
-import { compareVersions } from '../../src/framework-services/version-comparator.js';
 import type {
   BackwardPassEntry,
   BackwardPassPlan,
@@ -57,9 +55,6 @@ const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'runtime/contracts/a-docs-mani
 const PUBLIC_INDEX      = path.join(SOCIETY_ROOT, 'index.md');
 const INTERNAL_INDEX    = path.join(SOCIETY_ROOT, 'a-docs/indexes/main.md');
 const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/main.yaml');
-const FRAMEWORK_VERSION_FIXTURE = path.join(__dirname, 'fixtures', 'framework-version-sample.md');
-const VERSION_RECORD_FIXTURE = path.join(__dirname, 'fixtures', 'version-record-current.md');
-
 // Temp directory for the simulated project
 const TEMP_BASE     = fs.mkdtempSync(path.join(tmpdir(), 'a-society-integration-'));
 const REPO_ROOT     = path.join(TEMP_BASE, 'repo-root');
@@ -222,19 +217,6 @@ test('Scenario 5 — meta-analysis entries reuse the existing session', () => {
     assert.strictEqual(entry.stepType, 'meta-analysis');
     assert.strictEqual(entry.sessionInstruction, 'existing-session');
   });
-});
-
-// ── Scenario 6: Version Comparator ────────────────────────────────────────────
-
-test('Scenario 6 — version comparator runs against hermetic fixtures without throwing', () => {
-  assert.doesNotThrow(() => compareVersions(VERSION_RECORD_FIXTURE, FRAMEWORK_VERSION_FIXTURE));
-});
-
-test('Scenario 6 — fixture project at current version has no unapplied reports', () => {
-  const result = compareVersions(VERSION_RECORD_FIXTURE, FRAMEWORK_VERSION_FIXTURE);
-  assert.strictEqual(result.projectVersion, 'v27.1');
-  assert.strictEqual(result.currentVersion, 'v27.1');
-  assert.deepStrictEqual(result.unappliedReports, []);
 });
 
 // ── Cleanup and summary ───────────────────────────────────────────────────────

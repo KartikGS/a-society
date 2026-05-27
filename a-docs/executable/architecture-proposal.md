@@ -20,7 +20,7 @@ This document is the standing design reference for A-Society's unified executabl
 |---|---|
 | Framework Services Developer | Deterministic executable framework services and their internal implementation details |
 | Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration, browser/operator behavior, observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
-| Curator | Standing executable docs, coupling references, indexes, update reports, and verification of operator-facing references |
+| Curator | Standing executable docs, coupling references, indexes, and verification of operator-facing references |
 
 ---
 
@@ -32,7 +32,6 @@ This document is the standing design reference for A-Society's unified executabl
 | Workflow graph validation | Validate workflow graph structure and schema constraints |
 | Backward-pass planning | Compute backward-pass traversal order and findings-location data from `workflow.yaml` |
 | Path validation | Check that indexed paths resolve to existing files |
-| Update comparison | Determine which framework update reports an adopting project still needs to apply |
 
 These capabilities live under the executable layer rooted in `runtime/`.
 
@@ -70,7 +69,6 @@ The standing operator-surface rule is:
 The executable layer depends on stable contracts in both `general/` and `a-docs/`. Standing dependencies include:
 
 - index table format used by path validation
-- `VERSION.md` and `a-society-version.md` format used by update comparison
 - runtime workflow YAML contract used by workflow graph validation, node-entry injection, active-flow routing, and backward-pass planning
 - per-role `required-readings.yaml` schema used by runtime context injection
 
@@ -86,9 +84,8 @@ Runtime session behavior is a nested server subdomain under `runtime/src/server/
 
 ## Legacy Assessment Carry-Forward
 
-Two legacy framework-service deviation rulings remain load-bearing in the unified executable layer:
+One legacy framework-service deviation ruling remains load-bearing in the unified executable layer:
 
-- update comparison uses `VERSION.md` history as the authoritative published-report ledger
 - consent creation renders the consent-file structure programmatically rather than reading the template file at runtime
 
-The authoritative record for those rulings is `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2`.
+The authoritative record for that ruling is `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2`.

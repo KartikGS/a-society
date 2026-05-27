@@ -15,11 +15,10 @@ All agents use exactly these tokens to describe the state of a work item. Natura
 | `REVISE` | Owner requests revision; Curator must update and resubmit | `PENDING_REVIEW` | `PENDING_REVIEW` |
 | `REJECTED` | Owner declined; item is closed | `PENDING_REVIEW` | — (terminal) |
 | `IN_PROGRESS` | Curator is implementing the active change | `BRIEFED`, `APPROVED` | `REGISTERED` |
-| `REGISTERED` | Implementation complete; indexes updated | `IN_PROGRESS` | `PUBLISHED` (if update report triggered), or terminal |
-| `PUBLISHED` | Framework update report approved and published | `REGISTERED` | — (terminal) |
+| `REGISTERED` | Implementation complete; indexes updated | `IN_PROGRESS` | — (terminal) |
 | `NO_ACTIVE_ITEM` | No work item currently in this artifact | — | `DRAFT` |
 
-**Terminal states:** `REJECTED`, `REGISTERED` (when no update report triggered), `PUBLISHED`. A live artifact may only be replaced once the current item has reached a terminal state.
+**Terminal states:** `REJECTED`, `REGISTERED`. A live artifact may only be replaced once the current item has reached a terminal state.
 
 ---
 
@@ -96,7 +95,7 @@ Clarification rounds are permitted before the Owner issues a decision. Rules:
 
 ## Within-Flow Additional Submissions
 
-When a flow requires an additional Curator → Owner submission after the main decision artifact — for example, an update report draft submitted after implementation is complete — the additional submission takes the next available sequence slot in the record folder, **before** backward-pass findings.
+When a flow requires an additional Curator → Owner submission after the main decision artifact, the additional submission takes the next available sequence slot in the record folder, **before** backward-pass findings.
 
 Backward-pass findings always occupy the final positions in the sequence. The standard positions (`04-curator-findings.md`, `05-owner-findings.md`) shift forward to accommodate any additional submissions. This is a specific instance of the general rule in `$A_SOCIETY_RECORDS`: "the sequence continues as long as the flow requires."
 
@@ -111,7 +110,7 @@ Before overwriting a live artifact with a new unit of work:
 - The Curator has acknowledged closure of the prior item in the session
 
 **Before replacing `curator-to-owner.md`:**
-- The current item has reached `REJECTED` or `REGISTERED` (or `PUBLISHED` if an update report was triggered)
+- The current item has reached `REJECTED` or `REGISTERED`
 - `owner-to-curator.md` reflects a terminal decision for the prior item
 
 **Before replacing `owner-to-curator.md`:**

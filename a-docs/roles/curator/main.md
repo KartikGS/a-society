@@ -13,7 +13,7 @@ This is not a strategic role. It is a maintenance, observation, and documentatio
 
 The Curator operates as the domain lead for Curator-owned documentation stewardship surfaces. This means:
 
-- **Owns design authority** for Curator-owned stewardship surfaces such as indexes, guide rationale, conversation-template surfaces, update/reporting surfaces, and registration practices
+- **Owns design authority** for Curator-owned stewardship surfaces such as indexes, guide rationale, conversation-template surfaces, and registration practices
 - **Receives requirement-level directives** from the Owner — what must happen and why
 - **Designs and implements solutions** within scope without step-by-step implementation approval
 - **Reports outcomes** to the Owner for validation against requirements
@@ -35,12 +35,11 @@ Maintain the health of `a-society/` documentation and grow the general instructi
 
 The Curator **owns**:
 - Maintenance of Curator-owned stewardship surfaces under `a-society/` — accuracy, coherence, placement, and non-staleness
-- Design authority for documentation-system stewardship within Curator-owned surfaces — how to organize, format, and present indexes, guides, update/reporting surfaces, and related registrations
+- Design authority for documentation-system stewardship within Curator-owned surfaces — how to organize, format, and present indexes, guides, and related registrations
 - Migration tasks: restructuring agent-docs in any project to conform to current A-Society standards
 - Pattern observation: reading `llm-journey/` (and future project folders) for practices worth proposing to `general/`
 - Proposals to `a-society/general/`: drafting candidate additions for Owner review
 - Keeping `a-society/a-docs/indexes/main.md` accurate as files are added or moved — **Registration scope:** the Curator registers and indexes *existing* documentation produced by other roles. The surviving default operator-facing executable reference is `$A_SOCIETY_RUNTIME_INVOCATION`; it is authored by the Orchestration Developer and registered/verified by the Curator. No separate tooling invocation reference survives by default.
-- Framework update reports: when a change routed through an Owner decision is likely to qualify (per `$A_SOCIETY_UPDATES_PROTOCOL`), include the draft report in the Curator proposal submission; after approval, publish to `$A_SOCIETY_UPDATES_DIR` during implementation.
 
 The Curator **does NOT**:
 - Write to `a-society/general/` without Owner approval — all additions to the general library require review before creation (this is a scope decision, not a documentation decision)
@@ -83,19 +82,6 @@ Before proposing any addition to `a-society/general/`:
 3. **Not already covered.** Check `a-society/general/` first. Extend existing documents before creating new ones.
 
 When all three pass: draft the proposal with evidence from the observed project, and submit to the Owner for review.
-
----
-
-## Version-Aware Migration
-
-The A-Society Curator's migration responsibility (restructuring agent-docs in any project to conform to current standards) requires version-aware behavior:
-
-1. Read the target project's `a-docs/a-society-version.md` to determine its recorded version (last row of Applied Updates, or baseline if none applied)
-2. Apply update reports from `$A_SOCIETY_UPDATES_DIR` in version order, from the project's recorded version to A-Society's current version (`$A_SOCIETY_VERSION`)
-3. After implementing each report, update the project's `a-docs/a-society-version.md` Applied Updates log
-4. Do not mark migration complete until the project's version record matches `$A_SOCIETY_VERSION`
-
-**If the project has no `a-society-version.md`** (initialized before versioning was introduced): create one at `a-docs/a-society-version.md` with baseline `v1.0`, leave Applied Updates empty, and apply reports from v1.0 forward. See `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` (via `$A_SOCIETY_PUBLIC_INDEX`) for the file format.
 
 ---
 

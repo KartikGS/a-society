@@ -53,7 +53,7 @@ workflow:
         - Implement directly when the touched Curator-owned surfaces fall within Curator authority and no independent Owner decision is required.
         - When the requested change adds new scope or surface area to general/ — new instruction types, role templates, or structural categories — produce a proposal artifact instead of implementing directly.
         - When the requested change clarifies, refines, or extends existing general/ content without expanding its surface area — precision fixes, worked examples, vocabulary alignment — implement directly within Curator authority.
-        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide entries, update-report surfaces, version/reporting surfaces, and related registrations.
+        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide entries, and related registrations.
       outputs:
         - Curator proposal artifact when an independent Owner decision is required
         - Or Curator completion artifact when direct Curator implementation and stewardship are complete
@@ -76,7 +76,6 @@ workflow:
         - Update report draft, when one was included in the proposal
       work:
         - Validate the proposed change against vision, placement, touched-surface ownership, shared-library promises, and any executable coupling that the change implicates.
-        - Review any included framework update report draft as part of the same decision.
         - Decide whether the proposal is Approved, Revise, or Rejected.
       outputs:
         - Owner decision artifact
@@ -92,7 +91,6 @@ workflow:
         - Approved Owner decision artifact
       work:
         - Write the approved content at the correct location per $A_SOCIETY_STRUCTURE.
-        - Publish any approved framework update report during implementation and before registration.
         - Add or verify $A_SOCIETY_AGENT_DOCS_GUIDE rationale coverage for new or significantly modified Curator-stewarded files.
       outputs:
         - Curator completion artifact
@@ -176,9 +174,8 @@ workflow:
       inputs:
         - Approved executable result or TA-reviewed executable result, depending on the active path
       work:
-        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide coverage, update-report surfaces, version/reporting surfaces, and runtime-reference registrations.
+        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide coverage, and runtime-reference registrations.
         - Verify $A_SOCIETY_RUNTIME_INVOCATION directly against the implemented operator-facing executable surface when that file changed in-flow.
-        - Publish any approved framework update report and perform the paired $A_SOCIETY_VERSION update when required by $A_SOCIETY_UPDATES_PROTOCOL.
       outputs:
         - Registration artifact and updated standing references
       transitions:

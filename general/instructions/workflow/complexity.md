@@ -115,7 +115,7 @@ Use these triggers when deciding whether the smallest legal path needs additiona
 
 - **Design node:** add when standing design does not already govern the work, when the change alters boundaries or contracts, or when multiple implementers need a shared design.
 - **Independent approval or review node:** add when the work changes shared promises, shared library surfaces, another role's owned truth surfaces, or any other high-impact area where the same role should not both authorize and verify its own change.
-- **Registration or stewardship node:** add when a separate role owns indexes, guides, update reports, version records, or other stewardship surfaces that must be updated in-band with the work.
+- **Registration or stewardship node:** add when a separate role owns indexes, guides, or other stewardship surfaces that must be updated in-band with the work.
 - **Parallel tracks and join:** add when multiple touched-surface tracks are independent enough to proceed concurrently and later converge. When a single role's scope within the flow spans genuinely independent sub-domains, split those sub-domains into separate parallel tracks rather than forcing a sequential single-role path. Ask: could two agents work on these simultaneously without producing a conflict or dependency? If yes, split the track and assign a dedicated lead per sub-domain.
 
 If none of these triggers apply, do not add the node.

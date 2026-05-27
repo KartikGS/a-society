@@ -4,8 +4,6 @@
 
 > **Authorization scope:** A briefing establishes scope and direction alignment. It authorizes implementation only when the workflow plan or the brief itself explicitly marks the item as Curator direct authority. Otherwise it authorizes proposal drafting only, and the Curator must wait for an explicit Owner decision artifact before implementing.
 
-> **Update report classification:** If this change may trigger a framework update report, do not state an expected classification in this brief. Classification is Curator-determined post-implementation by consulting `$A_SOCIETY_UPDATES_PROTOCOL`. Pre-specifying it creates framing the Curator must override.
-
 > **Handoff language:** State gate conditions ("return to Owner when X is complete"), not next-role-session instructions ("switch to Session A and point it at Y"). The Owner provides session routing at the point of decision, not in the brief. A brief that routes sessions directly enables the Curator to bypass the Owner-as-waypoint.
 
 ---
