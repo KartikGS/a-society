@@ -109,8 +109,7 @@ function areFeedbackContextsEqual(
 
   return (
     left.kind === right.kind &&
-    left.initializationMode === right.initializationMode &&
-    areStringArraysEqual(left.updateReportPaths, right.updateReportPaths)
+    left.initializationMode === right.initializationMode
   );
 }
 
