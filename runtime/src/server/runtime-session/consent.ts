@@ -30,6 +30,12 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
 
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
     await SessionStore.updateFlowRun((flow) => {
+      if (flow.improvementPhase?.status === 'running') {
+        if (!flow.improvementPhase.awaitingHumanRoles) flow.improvementPhase.awaitingHumanRoles = {};
+        flow.improvementPhase.awaitingHumanRoles[request.role] = { reason: 'consent' };
+        flow.improvementPhase.activeNodeIds = (flow.improvementPhase.activeNodeIds ?? []).filter(id => id !== request.nodeId);
+        return;
+      }
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
       flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent' };
       flow.status = 'running';
@@ -44,6 +50,20 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
   ): Promise<void> {
     await SessionStore.updateFlowRun((flow) => {
       flow.consentState = session.consentGate.getState();
+
+      if (flow.improvementPhase?.status === 'running') {
+        if (flow.improvementPhase.awaitingHumanRoles?.[request.role]?.reason !== 'consent') return;
+        if (decision === CONSENT_RESPONSE_DECISION.DENY) {
+          flow.improvementPhase.awaitingHumanRoles[request.role] = { reason: 'consent-denied' };
+        } else {
+          delete flow.improvementPhase.awaitingHumanRoles[request.role];
+          if (!(flow.improvementPhase.activeNodeIds ?? []).includes(request.nodeId)) {
+            flow.improvementPhase.activeNodeIds = [...(flow.improvementPhase.activeNodeIds ?? []), request.nodeId];
+          }
+        }
+        return;
+      }
+
       if (flow.awaitingHumanNodes[request.nodeId]?.reason !== 'consent') return;
 
       if (decision === CONSENT_RESPONSE_DECISION.DENY) {

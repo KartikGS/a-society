@@ -64,6 +64,7 @@ test('buildForwardNodeEntryMessage: contains node header and first-node role-ses
   });
 
   assert.ok(msg.includes('Workflow node: owner-gate (role: Owner)'));
+  assert.ok(msg.includes('Node started at:'));
   assert.ok(msg.includes('This is the first workflow node for this role in the current flow session.'));
   assert.ok(msg.includes('already loaded startup authority'));
   assert.ok(msg.includes('Proceed from these current node inputs.'));

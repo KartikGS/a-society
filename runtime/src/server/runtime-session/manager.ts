@@ -8,6 +8,7 @@ import type {
   FlowRun,
 } from '../../common/types.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
+import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import { SessionStore } from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
@@ -122,6 +123,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
 
     const sink = new WebSocketOperatorSink((message) => events.handleRuntimeMessage(session, message));
     const orchestrator = new FlowOrchestrator(sink);
+    const improvementOrchestrator = new ImprovementOrchestrator();
     const initialConsentState = normalizeConsentState(readFlowRun(flowRef)?.consentState ?? defaultConsentState());
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
@@ -136,6 +138,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       outputBridge,
       sink,
       orchestrator,
+      improvementOrchestrator,
       consentGate,
       roleFeedHistory,
       roleFeedSequence,
@@ -304,7 +307,25 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
 
     const session = createSession(ref);
     sendFlowState(socket, ref);
-    startFlowRunner(session, flowRun.projectNamespace);
+
+    if (flowRun.improvementPhase?.status === 'running') {
+      void attachSessionTask(session, async () => {
+        const latest = readFlowRun(ref);
+        if (!latest) throw new Error('[improvement] Flow state disappeared before improvement could be resumed.');
+        await session.improvementOrchestrator.resumeImprovement(
+          latest,
+          session.outputBridge,
+          session.sink,
+          (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
+          session.consentGate,
+        );
+        if (readFlowRun(ref)?.status === 'completed') {
+          session.sink.emit({ kind: 'flow.completed' });
+        }
+      }).catch(() => {});
+    } else {
+      startFlowRunner(session, flowRun.projectNamespace);
+    }
   }
 
   const commands = createRuntimeSessionCommands({
@@ -332,6 +353,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     handleHumanInput: commands.handleHumanInput,
     handleImprovementChoice: commands.handleImprovementChoice,
     handleFeedbackConsentChoice: commands.handleFeedbackConsentChoice,
+    handleImprovementHumanInput: commands.handleImprovementHumanInput,
     handleConsentResponse: commands.handleConsentResponse,
     handleConsentMode: commands.handleConsentMode,
     handleStopActiveTurn: commands.handleStopActiveTurn,

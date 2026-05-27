@@ -2,8 +2,6 @@
 
 This file defines the machine-readable handoff block format used by the A-Society runtime.
 
-The runtime injects this contract into every runtime-managed session. It is runtime-owned context, not part of any role's `required-readings.yaml`.
-
 ---
 
 ## When to Emit It
@@ -16,14 +14,12 @@ Emit a machine-readable block at every session pause point:
 - when pausing for human input
 - when suspending to wait for an inbound handoff from another node
 
-Do not emit a block for:
-
-- in-session confirmations that do not pause or transfer control
-- intermediate output that does not conclude the current step
-
 **Form selection rule:**
 When exactly one target node must receive the handoff, emit a single-object form.
 When multiple target nodes must receive the handoff, emit one handoff entry per target using the array form.
+
+**Neighbor-only handoff rule:**
+A node may only handoff to its direct neighbors — forward to immediate successors, backward to immediate predecessors. Handoffs to non-adjacent nodes are not permitted. To route work to a node that is not a direct neighbor, chain handoffs through each intermediate node in sequence: each node receives the work and passes it to its own neighbor until the destination is reached.
 
 ---
 
@@ -68,6 +64,8 @@ Use typed signals when the output is not routing to another workflow node but tr
 type: forward-pass-closed
 ```
 
+Only the last owner node may emit `forward-pass-closed`. The last owner node is the owner node with no outgoing edges in the workflow graph. In a workflow with a single owner node, that node is the last owner node. No other role and no other owner node may emit this signal. If the forward pass is not yet complete, emit a handoff to the next node instead.
+
 **`meta-analysis-complete`**
 ```yaml
 type: meta-analysis-complete
@@ -85,7 +83,7 @@ artifact_path: <string>
 type: prompt-human
 ```
 
-Emit `type: prompt-human` only when the session cannot continue without a human reply.
+Emit `type: prompt-human` only when the session cannot continue without a human reply. If a handoff cannot be completed because the expected workflow path is blocked or unclear, emit `prompt-human` to surface the situation to the human rather than attempting an unauthorized transition.
 Do not use `prompt-human` as the terminal signal for backward-pass meta-analysis or feedback sessions; those sessions must end with `meta-analysis-complete` or `backward-pass-complete`.
 
 **`await-handoff`**
@@ -160,12 +158,8 @@ artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-feedback
 type: prompt-human
 ```
 
-When the final feedback step completes, emit `type: backward-pass-complete` with the feedback artifact path. This is a terminal signal, not a routing handoff.
-
 **Await inbound handoff**
 
 ```handoff
 type: await-handoff
 ```
-
-Emitted after the node has already sent a handoff to another node and is now suspending to wait for that node to send work back.

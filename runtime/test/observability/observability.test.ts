@@ -120,8 +120,13 @@ async function run() {
   const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
   fs.mkdirSync(rolesDir, { recursive: true });
   fs.mkdirSync(path.join(rolesDir, 'curator'), { recursive: true });
+  fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
   fs.writeFileSync(path.join(rolesDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
   fs.writeFileSync(path.join(rolesDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
+  fs.writeFileSync(path.join(rolesDir, 'curator', 'ownership.yaml'), 'role: curator\nsurfaces: []\n');
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), '---\nrole: Owner\n---\nHello');
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
 
   process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE = 'true';
   process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
@@ -155,7 +160,7 @@ async function run() {
 
     const providerSpans = getSpansByName('provider.execute_turn');
     assert.strictEqual(providerSpans.length, 2);
-    assert.strictEqual(providerSpans[0].attributes['gen_ai.usage.input_tokens'], 10);
+    assert.strictEqual(providerSpans[0].attributes['gen_ai.usage.input_tokens'], 30);
     assert.strictEqual(providerSpans[0].attributes['provider.result_type'], 'tool_calls');
   });
 
@@ -442,7 +447,16 @@ async function run() {
       workspaceRoot: tmpDir,
       projectNamespace: path.basename(tmpDir),
       recordFolderPath: path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'records', 'test-flow'),
+      runningNodes: [],
+      awaitingHumanNodes: {},
+      pendingHumanInputs: {},
+      completedNodes: [],
+      completedHandoffs: [],
+      receivingHandoff: {},
+      historyHandoff: {},
+      awaitingHandoff: [],
       status: 'running',
+      stateVersion: CURRENT_FLOW_STATE_VERSION,
       improvementPhase: null
     };
 
@@ -452,7 +466,8 @@ async function run() {
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
     ImprovementOrchestrator.markAwaitingChoice(flowRun);
-    ImprovementOrchestrator.skipImprovement(flowRun, output);
+    SessionStore.saveFlowRun(flowRun, SessionStore.flowRef(flowRun), tmpDir);
+    await ImprovementOrchestrator.skipImprovement(flowRun, output);
 
     assert.strictEqual(flowRun.status, 'completed');
     assert.strictEqual(flowRun.improvementPhase.status, 'skipped');
@@ -586,40 +601,45 @@ async function run() {
       responseEnd() {},
       sendError() {}
     };
+    let finalFlowRun: any;
 
     try {
       ImprovementOrchestrator.markAwaitingChoice(flowRun);
-      await ImprovementOrchestrator.runImprovement(
+      SessionStore.saveFlowRun(flowRun, SessionStore.flowRef(flowRun), tmpDir);
+      const improvementOrchestrator = new ImprovementOrchestrator();
+      await improvementOrchestrator.runImprovement(
         flowRun,
         IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
         output,
         renderer
       );
-      assert.strictEqual(flowRun.status, 'awaiting_feedback_consent');
-      assert.strictEqual(flowRun.improvementPhase?.status, 'awaiting_feedback_consent');
-      assert.deepStrictEqual(flowRun.improvementPhase?.completedNodeIds, [
+      const afterMetaAnalysis = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), tmpDir)!;
+      assert.strictEqual(afterMetaAnalysis.status, 'awaiting_feedback_consent');
+      assert.strictEqual(afterMetaAnalysis.improvementPhase?.status, 'awaiting_feedback_consent');
+      assert.deepStrictEqual(afterMetaAnalysis.improvementPhase?.completedNodeIds, [
         'curator-meta-analysis'
       ]);
-      await ImprovementOrchestrator.runFeedback(
-        flowRun,
+      await improvementOrchestrator.runFeedback(
+        afterMetaAnalysis,
         output,
         renderer
       );
+      finalFlowRun = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), tmpDir)!;
     } finally {
       LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }
 
-    assert.strictEqual(flowRun.status, 'completed');
-    assert.strictEqual(flowRun.stateVersion, CURRENT_FLOW_STATE_VERSION, 'improvement initialization must keep the latest state version');
+    assert.strictEqual(finalFlowRun.status, 'completed');
+    assert.strictEqual(finalFlowRun.stateVersion, CURRENT_FLOW_STATE_VERSION, 'improvement initialization must keep the latest state version');
     assert.ok(fs.existsSync(path.join(recordDir, 'improvement.yaml')), 'improvement run should persist improvement.yaml');
-    assert.strictEqual(flowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
-    assert.deepStrictEqual(flowRun.improvementPhase?.activeNodeIds, []);
-    assert.deepStrictEqual(flowRun.improvementPhase?.completedNodeIds, [
+    assert.strictEqual(finalFlowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
+    assert.deepStrictEqual(finalFlowRun.improvementPhase?.activeNodeIds, []);
+    assert.deepStrictEqual(finalFlowRun.improvementPhase?.completedNodeIds, [
       'curator-meta-analysis',
       'a-society-feedback-feedback'
     ]);
-    assert.strictEqual(flowRun.improvementPhase?.feedbackArtifactPath, feedbackArtifactPath);
-    assert.strictEqual(flowRun.improvementPhase?.feedbackConsent, FEEDBACK_CONSENT_STATUS.GRANTED);
+    assert.strictEqual(finalFlowRun.improvementPhase?.feedbackArtifactPath, feedbackArtifactPath);
+    assert.strictEqual(finalFlowRun.improvementPhase?.feedbackConsent, FEEDBACK_CONSENT_STATUS.GRANTED);
     const metaUserMessage = observedHistories[0][0];
     const metaAssistantMessage = observedHistories[0][1];
     const metaImprovementMessage = observedHistories[0][2];

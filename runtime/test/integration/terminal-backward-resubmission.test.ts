@@ -7,6 +7,15 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
+
+function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: string): void {
+  const roleDir = path.join(workspaceRoot, projectNamespace, 'a-docs', 'roles', roleId);
+  fs.mkdirSync(roleDir, { recursive: true });
+  fs.writeFileSync(path.join(roleDir, 'main.md'), `${roleId} role`);
+  fs.writeFileSync(path.join(roleDir, 'ownership.yaml'), `role: ${roleId}\nsurfaces: []\n`);
+  fs.writeFileSync(path.join(roleDir, 'required-readings.yaml'), `role: ${roleId}\nrequired_readings: []\n`);
+}
+
 async function runTest() {
   console.log('Starting terminal-backward-resubmission integration test...');
 
@@ -19,6 +28,8 @@ async function runTest() {
 
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
+  scaffoldRole(workspaceRoot, projectNamespace, 'curator');
+  scaffoldRole(workspaceRoot, projectNamespace, 'owner');
   process.env.A_SOCIETY_STATE_DIR = stateDir;
 
   const workflowGraph = `workflow:
@@ -39,12 +50,12 @@ async function runTest() {
   fs.writeFileSync(proposalToReviewPath, 'Original proposal artifact for final review.');
   fs.writeFileSync(reviewFeedbackPath, 'Final reviewer requests resubmission.');
 
-  const proposalToReviewRelPath = path.relative(workspaceRoot, proposalToReviewPath);
   const reviewFeedbackRelPath = path.relative(workspaceRoot, reviewFeedbackPath);
+  const flowRef = { projectNamespace, flowId: 'terminal-backward-flow' };
 
   SessionStore.init();
   SessionStore.saveFlowRun({
-    flowId: 'terminal-backward-flow',
+    flowId: flowRef.flowId,
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
@@ -56,30 +67,30 @@ async function runTest() {
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
-  });
+  }, flowRef, workspaceRoot);
 
   SessionStore.saveRoleSession({
     roleName: 'Curator',
-    logicalSessionId: 'terminal-backward-flow__curator',
+    logicalSessionId: `${flowRef.flowId}__curator`,
     transcriptHistory: [{ role: 'user', content: 'stale proposal session' }],
     isActive: false,
     currentNodeId: 'proposal',
-  });
+  }, flowRef, workspaceRoot);
 
-  const flowRun = SessionStore.loadFlowRun()!;
+  const flowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'Owner', [
     { target_node_id: 'proposal', artifact_path: reviewFeedbackRelPath },
   ]);
 
-  const updated = SessionStore.loadFlowRun()!;
+  const updated = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
 
   assert.deepStrictEqual(updated.receivingHandoff['review=>proposal'], [reviewFeedbackRelPath], 'proposal should receive the backward handoff');
   assert.ok(updated.awaitingHandoff.includes('review'), 'terminal review node should suspend after sending work back');
   assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'realized predecessor edge must be invalidated');
   assert.ok(!updated.completedNodes.includes('proposal'), 'reactivated predecessor should no longer be marked completed');
-  const reopenedSession = SessionStore.loadRoleSession('terminal-backward-flow__curator');
+  const reopenedSession = SessionStore.loadRoleSession('curator', flowRef, workspaceRoot);
   assert.ok(reopenedSession, 'role-scoped predecessor session should be preserved for re-entry');
   assert.strictEqual(reopenedSession!.currentNodeId, 'proposal');
   assert.strictEqual((reopenedSession!.transcriptHistory[0] as any).content, 'stale proposal session');

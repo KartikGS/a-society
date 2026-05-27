@@ -58,6 +58,7 @@ function buildReactFlowState(
   const awaitingHumanNodeIds = Object.keys(flowRun.awaitingHumanNodes);
   const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
   const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
+  const improvementAwaitingRoles = new Set(Object.keys(flowRun.improvementPhase?.awaitingHumanRoles ?? {}));
 
   const nodes: Node[] = workflow.nodes.map((node) => {
     const { x, y } = g.node(node.id);
@@ -67,7 +68,9 @@ function buildReactFlowState(
       : flowRun.completedNodes.includes(node.id);
     const isBackward = graphMode === 'flow' && backwardActive.includes(node.id);
     const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && activeNodeIds.includes(node.id);
-    const isAwaitingHuman = graphMode === 'flow' && awaitingHumanNodeIds.includes(node.id);
+    const isAwaitingHuman = graphMode === 'improvement'
+      ? improvementAwaitingRoles.has(node.role)
+      : awaitingHumanNodeIds.includes(node.id);
     const isActive = graphMode === 'improvement'
       ? improvementActiveNodeIds.includes(node.id)
       : activeNodeIds.includes(node.id);
@@ -131,7 +134,8 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
     left.improvementPhase?.currentStep === right.improvementPhase?.currentStep &&
     left.improvementPhase?.improvementWorkflowPath === right.improvementPhase?.improvementWorkflowPath &&
     areStringArraysEqual(left.improvementPhase?.activeNodeIds, right.improvementPhase?.activeNodeIds) &&
-    areStringArraysEqual(left.improvementPhase?.completedNodeIds, right.improvementPhase?.completedNodeIds)
+    areStringArraysEqual(left.improvementPhase?.completedNodeIds, right.improvementPhase?.completedNodeIds) &&
+    areStringArraysEqual(Object.keys(left.improvementPhase?.awaitingHumanRoles ?? {}), Object.keys(right.improvementPhase?.awaitingHumanRoles ?? {}))
   );
 }
 
@@ -265,7 +269,7 @@ function GraphViewComponent({
           </div>
           <div className="legend">
             <span><i className="legend-swatch legend-active" /> Active</span>
-            {graphMode === 'flow' ? <span><i className="legend-swatch legend-awaiting-human" /> Awaiting Human</span> : null}
+            <span><i className="legend-swatch legend-awaiting-human" /> Awaiting Human</span>
             {graphMode === 'flow' ? <span><i className="legend-swatch legend-backward" /> Backward</span> : null}
             <span><i className="legend-swatch legend-complete" /> Complete</span>
             <span><i className="legend-swatch legend-neutral" /> Pending</span>

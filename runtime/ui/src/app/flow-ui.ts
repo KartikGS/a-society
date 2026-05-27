@@ -63,6 +63,18 @@ export function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string |
   return match?.[0] ?? null;
 }
 
+export function getImprovementAwaitingRoleName(flowRun: FlowRun | null, role: string | null): string | null {
+  if (!flowRun || !role) return null;
+  const targetKey = toRoleKey(role);
+  if (!targetKey) return null;
+  const awaitingRoles = flowRun.improvementPhase?.awaitingHumanRoles;
+  if (!awaitingRoles) return null;
+  const match = Object.entries(awaitingRoles).find(
+    ([roleName, state]) => state.reason !== 'consent' && toRoleKey(roleName) === targetKey
+  );
+  return match?.[0] ?? null;
+}
+
 export function getConsentRequestRoleKey(request: ConsentRequest | null | undefined): string | null {
   return toRoleKey(request?.role);
 }

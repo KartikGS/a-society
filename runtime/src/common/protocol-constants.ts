@@ -7,6 +7,7 @@ export const CLIENT_MESSAGE_TYPE = {
   STOP_ACTIVE_TURN: 'stop_active_turn',
   COMPACT_CONTEXT: 'compact_context',
   HUMAN_INPUT: 'human_input',
+  IMPROVEMENT_HUMAN_INPUT: 'improvement_human_input',
   IMPROVEMENT_CHOICE: 'improvement_choice',
   FEEDBACK_CONSENT_CHOICE: 'feedback_consent_choice',
   CONSENT_RESPONSE: 'consent_response',
@@ -28,6 +29,8 @@ export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = [
   CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION,
   CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION,
 ] as const;
+
+export const OWNER_BASE_ROLE_ID = 'owner';
 
 export const IMPROVEMENT_CHOICE_MODE = {
   GRAPH_BASED: 'graph-based',

@@ -138,7 +138,7 @@ test('fails when a role folder is missing ownership.yaml', () => {
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
     assert.strictEqual(result.ok, false);
     assert.ok(
-      result.errors.some((error) => error.includes('Role owner ownership file is missing')),
+      result.errors.some((error) => error.includes('Role owner ownership.yaml is missing')),
       `expected missing ownership error, got: ${result.errors.join('; ')}`
     );
   } finally {
@@ -227,10 +227,10 @@ test('fails when a project file is not covered by any ownership surface', () => 
 test('repair guidance names the completion signal that must be retried', () => {
   const guidance = buildRuntimeHealthRepairGuidance(
     ['Required workflow definition is missing at test-project/a-docs/workflow/main.yaml'],
-    'backward-pass-complete'
+    'meta-analysis-complete'
   );
   assert.strictEqual(guidance.operatorSummary, 'A-docs runtime health checks failed');
-  assert.ok(guidance.modelRepairMessage.includes('type: backward-pass-complete'));
+  assert.ok(guidance.modelRepairMessage.includes('type: meta-analysis-complete'));
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

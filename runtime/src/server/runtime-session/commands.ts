@@ -121,7 +121,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     return createSession(ref);
   }
 
-  function handleImprovementChoice(ref: FlowRef, mode: ProtocolImprovementChoiceMode): void {
+  async function handleImprovementChoice(ref: FlowRef, mode: ProtocolImprovementChoiceMode): Promise<void> {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_improvement_choice') {
       broadcastToFlow(ref, {
@@ -145,7 +145,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (mode === IMPROVEMENT_CHOICE_MODE.NONE) {
       try {
-        ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
+        await ImprovementOrchestrator.skipImprovement(flowRun, session.outputBridge);
         session.sink.emit({ kind: 'flow.completed' });
       } catch (error: any) {
         emitHistoricalMessage(session, {
@@ -167,12 +167,13 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         throw new Error('Flow state disappeared before the improvement phase began.');
       }
 
-      await ImprovementOrchestrator.runImprovement(
+      await session.improvementOrchestrator.runImprovement(
         currentFlow,
         mode,
         session.outputBridge,
         session.sink,
-        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage)
+        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage),
+        session.consentGate,
       );
 
       const latestFlow = readFlowRun(ref);
@@ -184,7 +185,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     setImmediate(() => emitFlowState(session));
   }
 
-  function handleFeedbackConsentChoice(ref: FlowRef, decision: ProtocolFeedbackConsentDecision): void {
+  async function handleFeedbackConsentChoice(ref: FlowRef, decision: ProtocolFeedbackConsentDecision): Promise<void> {
     const flowRun = readFlowRun(ref);
     if (!flowRun || flowRun.status !== 'awaiting_feedback_consent') {
       broadcastToFlow(ref, {
@@ -204,7 +205,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (decision === FEEDBACK_CONSENT_DECISION.DENIED) {
       try {
-        ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
+        await ImprovementOrchestrator.skipFeedback(flowRun, session.outputBridge);
         session.sink.emit({ kind: 'flow.completed' });
       } catch (error: any) {
         emitHistoricalMessage(session, {
@@ -226,11 +227,12 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         throw new Error('Flow state disappeared before the feedback step began.');
       }
 
-      await ImprovementOrchestrator.runFeedback(
+      await session.improvementOrchestrator.runFeedback(
         currentFlow,
         session.outputBridge,
         session.sink,
-        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage)
+        (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage),
+        session.consentGate,
       );
 
       const latestFlow = readFlowRun(ref);
@@ -273,7 +275,8 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const stopped = activeSession.orchestrator.abortActiveTurn(target);
+    const stopped = activeSession.orchestrator.abortActiveTurn(target)
+      || (!target?.nodeId && activeSession.improvementOrchestrator.abortActiveTurn(target?.role));
     if (!stopped) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active turn is currently stoppable.' });
     }
@@ -287,6 +290,42 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       parseRoleIdentity(node.role).instanceRoleId === roleKey
     );
     return typeof match?.role === 'string' ? match.role : role;
+  }
+
+  async function handleImprovementHumanInput(ref: FlowRef, role: string, text: string): Promise<void> {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun?.improvementPhase) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active improvement phase for this flow.' });
+      return;
+    }
+
+    const roleKey = parseRoleIdentity(role).instanceRoleId;
+    const awaitingRoles = flowRun.improvementPhase.awaitingHumanRoles ?? {};
+    if (!awaitingRoles[role]) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Role "${roleKey}" is not currently awaiting human input in the improvement phase.` });
+      return;
+    }
+
+    try {
+      await SessionStore.updateFlowRun((latest) => {
+        if (!latest.improvementPhase) return;
+        if (latest.improvementPhase.pendingHumanInputs?.[role]) {
+          throw new Error(`Role "${roleKey}" already has queued human input.`);
+        }
+        if (!latest.improvementPhase.pendingHumanInputs) latest.improvementPhase.pendingHumanInputs = {};
+        latest.improvementPhase.pendingHumanInputs[role] = { text, receivedAt: new Date().toISOString() };
+      }, ref, workspaceRoot);
+    } catch (error: any) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+
+    const session = activeSessions.get(flowKey(ref));
+    if (session && !session.finished) {
+      emitHistoricalMessage(session, { type: 'input_text', role, text });
+      session.improvementOrchestrator.wake();
+      emitFlowState(session);
+    }
   }
 
   function handleCompactContext(ref: FlowRef, role: string): void {
@@ -370,6 +409,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     handleHumanInput,
     handleImprovementChoice,
     handleFeedbackConsentChoice,
+    handleImprovementHumanInput,
     handleConsentResponse,
     handleConsentMode,
     handleStopActiveTurn,

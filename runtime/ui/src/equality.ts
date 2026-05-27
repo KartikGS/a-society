@@ -95,7 +95,8 @@ function areImprovementPhasesEqual(
     areStringArraysEqual(left.completedRoles, right.completedRoles) &&
     areStringMapsEqual(left.findingsProduced, right.findingsProduced) &&
     areStringArraysEqual(left.activeNodeIds, right.activeNodeIds) &&
-    areStringArraysEqual(left.completedNodeIds, right.completedNodeIds)
+    areStringArraysEqual(left.completedNodeIds, right.completedNodeIds) &&
+    areStringArraysEqual(Object.keys(left.awaitingHumanRoles ?? {}), Object.keys(right.awaitingHumanRoles ?? {}))
   );
 }
 
@@ -108,8 +109,7 @@ function areFeedbackContextsEqual(
 
   return (
     left.kind === right.kind &&
-    left.initializationMode === right.initializationMode &&
-    areStringArraysEqual(left.updateReportPaths, right.updateReportPaths)
+    left.initializationMode === right.initializationMode
   );
 }
 

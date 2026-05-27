@@ -12,10 +12,13 @@ import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import { WakeController } from '../common/wake-controller.js';
+import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
-import { WorkflowGraph } from './workflow-graph.js';
+import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing } from './workflow-graph.js';
+import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
 
@@ -28,8 +31,6 @@ export class WorkflowError extends Error {
 
 type ClaimedRunnableWork = { nodeId: string; humanInput?: string };
 
-const INTERRUPTED_TURN_CONTINUATION_MESSAGE =
-  'The previous assistant response was interrupted during streaming. Continue from where you left off. Do not repeat completed content unless needed for coherence.';
 
 function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
   const fields = [
@@ -50,28 +51,6 @@ function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
   );
 }
 
-function upsertAssistantDelta(history: RuntimeMessageParam[], text: string): void {
-  if (!text) return;
-  const previous = history[history.length - 1];
-  if (previous?.role === 'assistant') {
-    previous.content += text;
-    return;
-  }
-  history.push({ role: 'assistant', content: text });
-}
-
-function removeAssistantDraftBeforeToolCalls(
-  history: RuntimeMessageParam[],
-  newMessages: RuntimeMessageParam[]
-): void {
-  if (newMessages[0]?.role !== 'assistant_tool_calls') return;
-  const firstNewMessageIndex = history.length - newMessages.length;
-  const previousIndex = firstNewMessageIndex - 1;
-  if (previousIndex < 0) return;
-  if (history[previousIndex]?.role === 'assistant') {
-    history.splice(previousIndex, 1);
-  }
-}
 
 function appendCurrentNodeExchange(session: RoleSession, nodeId: string, message: RuntimeMessageParam): void {
   if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
@@ -104,35 +83,6 @@ function appendRuntimeMessage(
   }
 }
 
-function upsertCurrentNodeAssistantDelta(session: RoleSession, nodeId: string, text: string): void {
-  if (!text) return;
-  if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
-    session.currentNodeContext = { nodeId, exchanges: [] };
-  }
-  const previous = session.currentNodeContext.exchanges[session.currentNodeContext.exchanges.length - 1];
-  if (previous?.role === 'assistant') {
-    previous.content += text;
-    return;
-  }
-  session.currentNodeContext.exchanges.push({ role: 'assistant', content: text });
-}
-
-function appendConversationMessagesToCurrentNode(
-  session: RoleSession,
-  nodeId: string,
-  messages: RuntimeMessageParam[]
-): void {
-  if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
-    session.currentNodeContext = { nodeId, exchanges: [] };
-  }
-  if (messages[0]?.role === 'assistant_tool_calls') {
-    const exchanges = session.currentNodeContext.exchanges;
-    if (exchanges[exchanges.length - 1]?.role === 'assistant') {
-      exchanges.splice(exchanges.length - 1, 1);
-    }
-  }
-  session.currentNodeContext.exchanges.push(...messages);
-}
 
 export class FlowOrchestrator {
   private renderer: OperatorRenderSink;
@@ -140,11 +90,14 @@ export class FlowOrchestrator {
   private flowRef: FlowRef | null = null;
   private workspaceRoot: string | null = null;
   private boundSigintHandler: (() => void) | null = null;
-  private wakeGeneration = 0;
-  private wakeWaiters = new Set<() => void>();
+  private wakeController = new WakeController();
 
   constructor(renderer: OperatorRenderSink) {
     this.renderer = renderer;
+  }
+
+  private waitForWakeAfter(observed: number) {
+    return this.wakeController.waitForWakeAfter(observed);
   }
 
   public abortActiveTurn(target?: { nodeId?: string; role?: string }): boolean {
@@ -169,11 +122,7 @@ export class FlowOrchestrator {
   }
 
   public wake(): void {
-    this.wakeGeneration += 1;
-    for (const wakeWaiter of this.wakeWaiters) {
-      wakeWaiter();
-    }
-    this.wakeWaiters.clear();
+    this.wakeController.wake();
   }
 
   public async compactRoleContext(
@@ -284,7 +233,7 @@ export class FlowOrchestrator {
         meter.createCounter('a_society.flow.started').add(1, { project_namespace: flowRun.projectNamespace });
 
         while (true) {
-          const observedWakeGeneration = this.wakeGeneration;
+          const observedWakeGeneration = this.wakeController.observe();
           await this.runReadyNodesUntilBlocked(
             outputStream,
             outputStreamFactory,
@@ -550,7 +499,7 @@ export class FlowOrchestrator {
         saveRoleSession();
 
         if (humanInput !== undefined) {
-          await SessionStore.updateFlowRun((latest) => {
+          flowRun = await SessionStore.updateFlowRun((latest) => {
             const pending = latest.pendingHumanInputs[nodeId];
             if (pending?.text === humanInput) {
               delete latest.pendingHumanInputs[nodeId];
@@ -629,6 +578,39 @@ export class FlowOrchestrator {
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
+                const emitterInstanceRole = parseRoleIdentity(currentNodeDef.role).instanceRoleId;
+                const fpcOutgoing = wf.getOutgoingEdges(nodeId);
+                const latestForFpc = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+                const outstandingInbound = getOutstandingInboundSources(wf, latestForFpc.completedHandoffs, nodeId);
+                const completedInbound = getCompletedInboundSources(wf, latestForFpc.completedHandoffs, nodeId);
+                const isLastOwner = emitterInstanceRole === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
+                const hasBlockers =
+                  latestForFpc.runningNodes.some(id => id !== nodeId) ||
+                  Object.keys(latestForFpc.awaitingHumanNodes).length > 0 ||
+                  Object.keys(latestForFpc.pendingHumanInputs).length > 0 ||
+                  !allEdgesCovered(wf, latestForFpc.completedHandoffs) ||
+                  Object.keys(latestForFpc.receivingHandoff).length > 0 ||
+                  latestForFpc.awaitingHandoff.length > 0;
+
+                if (!isLastOwner || hasBlockers) {
+                  const lines: string[] = ['Only the last owner node may emit forward-pass-closed.'];
+                  if (outstandingInbound.length > 0) {
+                    lines.push(`You are yet to receive a handoff from: ${outstandingInbound.join(', ')}. You can emit await-handoff to suspend and wait.`);
+                  }
+                  if (fpcOutgoing.length > 0) {
+                    lines.push(`You can forward handoff to: ${fpcOutgoing.map(e => e.to).join(', ')}.`);
+                  }
+                  if (completedInbound.length > 0) {
+                    lines.push(`In case of doubts, you can backward handoff to: ${completedInbound.join(', ')}.`);
+                  }
+                  lines.push('If you need human guidance, emit prompt-human.');
+                  throw new HandoffParseError({
+                    code: 'invalid_transition',
+                    operatorSummary: 'Invalid forward-pass-closed signal',
+                    modelRepairMessage: lines.join(' '),
+                  });
+                }
+
                 const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
                 if (!healthCheck.ok) {
                   span.addEvent('runtime.health_check_failed', {
@@ -682,7 +664,7 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'await-handoff') {
                 const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
-                const isPendingTarget = wf.getIncomingEdges(nodeId).some((e: any) => !latestForCheck.completedHandoffs.includes(wf.edgeKey(e.from, nodeId)));
+                const isPendingTarget = getOutstandingInboundSources(wf, latestForCheck.completedHandoffs, nodeId).length > 0;
                 const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
 
                 if (!isPendingTarget && !isReceivingTarget) {
@@ -842,9 +824,22 @@ export class FlowOrchestrator {
         if (!targetExists) {
           this.throwHandoffTransitionRepair(`Target node '${targetNodeId}' not found in workflow.`);
         }
-        this.throwHandoffTransitionRepair(
-          `Unauthorized transition: node '${nodeId}' may hand forward only to successors or backward only to direct predecessors, but proposed '${targetNodeId}'.`
-        );
+        const neighborLines: string[] = [
+          `Node '${nodeId}' attempted to handoff to '${targetNodeId}', which is not a direct neighbor. Nodes may only handoff to neighboring nodes. To reach a non-adjacent node, chain handoffs through each intermediate node in sequence.`
+        ];
+        if (outgoingEdges.length > 0) {
+          neighborLines.push(`You can forward handoff to: ${outgoingEdges.map(e => e.to).join(', ')}.`);
+        }
+        const validBackward = getCompletedInboundSources(wf, latest.completedHandoffs, nodeId);
+        if (validBackward.length > 0) {
+          neighborLines.push(`In case of doubts, you can backward handoff to: ${validBackward.join(', ')}.`);
+        }
+        neighborLines.push('If you need human guidance, emit prompt-human.');
+        throw new HandoffParseError({
+          code: 'invalid_transition',
+          operatorSummary: 'Handoff target mismatch',
+          modelRepairMessage: neighborLines.join(' '),
+        });
       }
 
       this.validateTargetArtifactsExist(flowRun.workspaceRoot, handoffs);
@@ -998,7 +993,7 @@ export class FlowOrchestrator {
     let pendingInitialNodeIds = this.mergeNodeIds(initialNodeIds);
 
     while (true) {
-      const observedWakeGeneration = this.wakeGeneration;
+      const observedWakeGeneration = this.wakeController.observe();
       const claimedWorkItems = await this.claimRunnableWorkForParallelRun(pendingInitialNodeIds);
       const claimedNodeIds = claimedWorkItems.map((item) => item.nodeId);
       pendingInitialNodeIds = pendingInitialNodeIds.filter((nodeId) => !claimedNodeIds.includes(nodeId));
@@ -1079,8 +1074,7 @@ export class FlowOrchestrator {
     for (const node of wf.nodes) {
       const nodeId = node.id;
       if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || activeNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
-      const hasPendingOutgoing = wf.getOutgoingEdges(nodeId).some((e: any) => !flowRun.completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
-      if (hasPendingOutgoing) {
+      if (hasPendingOutgoing(wf, flowRun.completedHandoffs, nodeId)) {
         result.push(nodeId);
         seen.add(nodeId);
       }
@@ -1436,37 +1430,11 @@ export class FlowOrchestrator {
     return merged;
   }
 
-  private waitForWakeAfter(observedWakeGeneration: number): { promise: Promise<void>; cancel: () => void } {
-    if (this.wakeGeneration !== observedWakeGeneration) {
-      return {
-        promise: Promise.resolve(),
-        cancel: () => {},
-      };
-    }
-
-    let resolver: (() => void) | null = null;
-    const promise = new Promise<void>((resolve) => {
-      resolver = resolve;
-      this.wakeWaiters.add(resolve);
-    });
-
-    return {
-      promise,
-      cancel: () => {
-        if (resolver) {
-          this.wakeWaiters.delete(resolver);
-        }
-      },
-    };
-  }
-
   private markNodeCompletedIfSettled(flowRun: FlowRun, wf: WorkflowGraph, nodeId: string): void {
     const outgoingEdges = wf.getOutgoingEdges(nodeId);
     if (outgoingEdges.length === 0) return;
 
-    const allSettled = outgoingEdges.every((edge: any) =>
-      flowRun.completedHandoffs.includes(wf.edgeKey(edge.from, edge.to))
-    );
+    const allSettled = !hasPendingOutgoing(wf, flowRun.completedHandoffs, nodeId);
 
     if (allSettled) {
       this.addCompletedNode(flowRun, nodeId);

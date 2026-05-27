@@ -42,3 +42,23 @@ export class WorkflowGraph {
     return `${from}=>${to}`;
   }
 }
+
+export function getOutstandingInboundSources(wf: WorkflowGraph, completedHandoffs: string[], nodeId: string): string[] {
+  return wf.getIncomingEdges(nodeId)
+    .filter(e => !completedHandoffs.includes(wf.edgeKey(e.from, nodeId)))
+    .map(e => e.from);
+}
+
+export function getCompletedInboundSources(wf: WorkflowGraph, completedHandoffs: string[], nodeId: string): string[] {
+  return wf.getIncomingEdges(nodeId)
+    .filter(e => completedHandoffs.includes(wf.edgeKey(e.from, nodeId)))
+    .map(e => e.from);
+}
+
+export function hasPendingOutgoing(wf: WorkflowGraph, completedHandoffs: string[], nodeId: string): boolean {
+  return wf.getOutgoingEdges(nodeId).some(e => !completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
+}
+
+export function allEdgesCovered(wf: WorkflowGraph, completedHandoffs: string[]): boolean {
+  return wf.edges.every(e => completedHandoffs.includes(wf.edgeKey(e.from, e.to)));
+}

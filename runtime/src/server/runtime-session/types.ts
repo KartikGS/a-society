@@ -5,6 +5,7 @@ import type {
 } from '../../common/types.js';
 import type { ConsentGateImpl } from '../../improvement/consent-gate.js';
 import type { FlowOrchestrator } from '../../orchestration/orchestrator.js';
+import type { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import type { FlowReadModel } from '../flow-read-model.js';
 import type { FlowStateMessage } from '../protocol.js';
 import type { SocketHub } from '../socket-hub.js';
@@ -17,6 +18,7 @@ export interface ActiveSession {
   outputBridge: PassThrough;
   sink: WebSocketOperatorSink;
   orchestrator: FlowOrchestrator;
+  improvementOrchestrator: ImprovementOrchestrator;
   roleFeedHistory: Map<string, FeedItem[]>;
   roleFeedSequence: Map<string, number>;
   lastFlowState: FlowStateMessage | null;
