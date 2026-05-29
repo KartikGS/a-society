@@ -49,11 +49,11 @@ await test('partial forward handoff is accepted and leaves remaining successors 
   name: test-flow
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
     - id: branch-a
-      role: Curator_1
+      role: curator_1
     - id: branch-b
-      role: Curator_2
+      role: curator_2
   edges:
     - from: owner-intake
       to: branch-a
@@ -81,7 +81,7 @@ await test('partial forward handoff is accepted and leaves remaining successors 
   SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
 
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
-  await orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'Owner', [
+  await orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'owner', [
     {
       target_node_id: 'branch-a',
       artifact_path: path.relative(workspaceRoot, artifactPath),
@@ -110,9 +110,9 @@ await test('invalid target is reported before missing artifact', async () => {
   name: test-flow
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
     - id: branch-a
-      role: Curator_1
+      role: curator_1
   edges:
     - from: owner-intake
       to: branch-a
@@ -139,7 +139,7 @@ await test('invalid target is reported before missing artifact', async () => {
 
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
   await assert.rejects(
-    () => orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'Owner', [
+    () => orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'owner', [
       {
         target_node_id: 'missing-target',
         artifact_path: 'missing-artifact.md',
@@ -170,13 +170,13 @@ await test('mixed forward and backward handoffs are applied edge-by-edge', async
   name: test-flow
   nodes:
     - id: source-a
-      role: Owner_1
+      role: owner_1
     - id: source-b
-      role: Owner_2
+      role: owner_2
     - id: current
-      role: Curator
+      role: curator
     - id: sink
-      role: Owner_3
+      role: owner_3
   edges:
     - from: source-a
       to: current
@@ -217,7 +217,7 @@ await test('mixed forward and backward handoffs are applied edge-by-edge', async
 
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
-  await orchestrator.applyHandoffAndAdvance(flowRun, 'current', 'Curator', [
+  await orchestrator.applyHandoffAndAdvance(flowRun, 'current', 'curator', [
     {
       target_node_id: 'sink',
       artifact_path: path.relative(workspaceRoot, forwardArtifact),

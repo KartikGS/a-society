@@ -60,7 +60,7 @@ test('INVOCATION.md: documents later same-role-instance return with role-instanc
 
 test('INVOCATION.md: documents role instance parallel behavior', () => {
   assert.ok(
-    doc.includes('Owner_1') && doc.includes('Owner_2'),
+    doc.includes('owner_1') && doc.includes('owner_2'),
     'Expected INVOCATION.md to document numbered role instances'
   );
   assert.ok(

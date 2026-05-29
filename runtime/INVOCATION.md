@@ -136,7 +136,7 @@ Permission state is stored on the active `FlowRun` as `consentState` in `flow.js
 
 When a session begins, the runtime resolves the active role instance to its base role and loads that base role's file from `a-docs/roles/<base-role-id>/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
 
-Role names ending in `_<number>` are separate role instances. For example, `Owner_1` and `Owner_2` both load `Owner` required readings, but they use separate runtime sessions.
+Role ids ending in `_<number>` are separate role instances. For example, `owner_1` and `owner_2` both load `owner` required readings, but they use separate runtime sessions.
 
 ### Stored-flow startup only
 
@@ -172,7 +172,7 @@ When a backward edge reopens a node for the same role instance, the runtime keep
 
 ### Same-role-instance scheduling
 
-Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple runnable nodes share a role instance, the runtime claims only the earliest runnable node for that role instance; later same-role-instance work remains derivable from flow state or the runner's initial-node list until that role instance is free. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
+Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple runnable nodes share a role instance, the runtime claims only the earliest runnable node for that role instance; later same-role-instance work remains derivable from flow state or the runner's initial-node list until that role instance is free. Distinct role instances may run in parallel, including instances that share the same base role such as `owner_1` and `owner_2`.
 
 ---
 

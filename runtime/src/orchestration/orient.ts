@@ -35,7 +35,7 @@ async function executeSessionTurn(
   systemPrompt: string,
   history: RuntimeMessageParam[],
   projectNamespace: string,
-  roleName: string,
+  roleInstanceId: string,
   sessionId: string,
   turnIndex: number,
   roleOutputStream: NodeJS.WritableStream | undefined,
@@ -51,12 +51,12 @@ async function executeSessionTurn(
 
   meter.createCounter('a_society.session.turn.started').add(1, {
     project_namespace: projectNamespace,
-    role_name: roleName
+    role_name: roleInstanceId
   });
 
   logger.info('session.turn.started', {
     project_namespace: projectNamespace,
-    role_name: roleName,
+    role_name: roleInstanceId,
     session_id: sessionId,
     turn_index: turnIndex,
   });
@@ -67,7 +67,7 @@ async function executeSessionTurn(
       if (latestUserMessage?.role === 'user') {
         logger.debug('session.user_turn', {
           project_namespace: projectNamespace,
-          role_name: roleName,
+          role_name: roleInstanceId,
           session_id: sessionId,
           content: latestUserMessage.content.slice(0, 2000),
         });
@@ -79,7 +79,7 @@ async function executeSessionTurn(
       outputStream: roleOutputStream,
       operatorRenderer,
       consentGate,
-      role: roleName,
+      roleInstanceId,
       nodeId,
       onConversationMessages,
       onAssistantTextDelta,
@@ -88,7 +88,7 @@ async function executeSessionTurn(
     if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
       logger.debug('session.assistant_turn', {
         project_namespace: projectNamespace,
-        role_name: roleName,
+        role_name: roleInstanceId,
         session_id: sessionId,
         content: result.text.slice(0, 2000),
       });
@@ -106,7 +106,7 @@ async function executeSessionTurn(
 
     logger.info('session.turn.completed', {
       project_namespace: projectNamespace,
-      role_name: roleName,
+      role_name: roleInstanceId,
       session_id: sessionId,
       turn_index: turnIndex,
       outcome: 'handoff',
@@ -122,11 +122,11 @@ async function executeSessionTurn(
     if (error instanceof HandoffParseError) {
       meter.createCounter('a_society.handoff.parse_failure').add(1, {
         project_namespace: projectNamespace,
-        role_name: roleName
+        role_name: roleInstanceId
       });
       logger.warn('session.turn.parse_failed', {
         project_namespace: projectNamespace,
-        role_name: roleName,
+        role_name: roleInstanceId,
         session_id: sessionId,
         turn_index: turnIndex,
         error_message: error.message.slice(0, 500),
@@ -138,7 +138,7 @@ async function executeSessionTurn(
     if (error instanceof LLMGatewayError && error.type === 'ABORTED') {
       logger.info('session.turn.aborted', {
         project_namespace: projectNamespace,
-        role_name: roleName,
+        role_name: roleInstanceId,
         session_id: sessionId,
         turn_index: turnIndex,
         partial_text_available: !!error.partialText,
@@ -150,7 +150,7 @@ async function executeSessionTurn(
     if (error instanceof LLMGatewayError && error.type === 'CONSENT_DENIED') {
       logger.info('session.turn.consent_denied', {
         project_namespace: projectNamespace,
-        role_name: roleName,
+        role_name: roleInstanceId,
         session_id: sessionId,
         turn_index: turnIndex,
         duration_ms: duration,
@@ -161,7 +161,7 @@ async function executeSessionTurn(
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('session.turn.error', {
       project_namespace: projectNamespace,
-      role_name: roleName,
+      role_name: roleInstanceId,
       session_id: sessionId,
       turn_index: turnIndex,
       error_message: errorMessage.slice(0, 500),
@@ -170,10 +170,10 @@ async function executeSessionTurn(
     return { error: true as const, errorMessage };
 
   } finally {
-    operatorRenderer?.responseEnd(roleName);
+    operatorRenderer?.responseEnd(roleInstanceId);
     meter.createHistogram('a_society.session.turn.duration').record(Date.now() - startTime, {
       project_namespace: projectNamespace,
-      role_name: roleName
+      role_name: roleInstanceId
     });
   }
 }
@@ -181,7 +181,7 @@ async function executeSessionTurn(
 export async function runRoleTurn(
   workspaceRoot: string,
   projectNamespace: string,
-  roleName: string,
+  roleInstanceId: string,
   providedSystemPrompt?: string,
   providedHistory?: RuntimeMessageParam[],
   roleOutputStream?: NodeJS.WritableStream,
@@ -196,10 +196,10 @@ export async function runRoleTurn(
   let turnIndex = 0;
 
   if (providedSystemPrompt === undefined) {
-    const orientRoleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
+    const orientRoleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
     if (!orientRoleEntry) {
       if (roleOutputStream === process.stdout) {
-        console.error(`Could not load role context for '${projectNamespace}/${roleName}'. Check that the role file exists and contains valid frontmatter.`);
+        console.error(`Could not load role context for '${projectNamespace}/${roleInstanceId}'. Check that the role file exists and contains valid frontmatter.`);
       }
       return null;
     }
@@ -213,7 +213,7 @@ export async function runRoleTurn(
   if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
     logger.debug('session.system_prompt', {
       project_namespace: projectNamespace,
-      role_name: roleName,
+      role_name: roleInstanceId,
       session_id: sessionId,
       context_files: extractFileRefs(systemPrompt).join('\n'),
     });
@@ -222,7 +222,7 @@ export async function runRoleTurn(
   if (history[history.length - 1]?.role !== 'user') {
     logger.warn('session.invalid_history', {
       project_namespace: projectNamespace,
-      role_name: roleName,
+      role_name: roleInstanceId,
       session_id: sessionId,
     });
     return null;
@@ -233,7 +233,7 @@ export async function runRoleTurn(
     systemPrompt,
     history,
     projectNamespace,
-    roleName,
+    roleInstanceId,
     sessionId,
     turnIndex++,
     roleOutputStream,

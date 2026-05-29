@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import { getActiveNodeIds } from '../../../src/common/flow-state.js';
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
+import { toRoleKey } from '../app/roles';
 import type { FlowRef, FlowRun, WorkflowGraph } from '../types';
 
 export type GraphMode = 'flow' | 'improvement';
@@ -58,7 +59,11 @@ function buildReactFlowState(
   const awaitingHumanNodeIds = Object.keys(flowRun.awaitingHumanNodes);
   const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
   const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
-  const improvementAwaitingRoles = new Set(Object.keys(flowRun.improvementPhase?.awaitingHumanRoles ?? {}));
+  const improvementAwaitingRoleKeys = new Set(
+    Object.keys(flowRun.improvementPhase?.awaitingHumanRoles ?? {})
+      .map(toRoleKey)
+      .filter((roleKey): roleKey is string => roleKey !== null)
+  );
 
   const nodes: Node[] = workflow.nodes.map((node) => {
     const { x, y } = g.node(node.id);
@@ -69,7 +74,7 @@ function buildReactFlowState(
     const isBackward = graphMode === 'flow' && backwardActive.includes(node.id);
     const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && activeNodeIds.includes(node.id);
     const isAwaitingHuman = graphMode === 'improvement'
-      ? improvementAwaitingRoles.has(node.role)
+      ? improvementAwaitingRoleKeys.has(toRoleKey(node.role) ?? '')
       : awaitingHumanNodeIds.includes(node.id);
     const isActive = graphMode === 'improvement'
       ? improvementActiveNodeIds.includes(node.id)

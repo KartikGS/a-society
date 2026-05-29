@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 import type { BackwardPassEntry, BackwardPassPlan } from '../framework-services/backward-pass-orderer.js';
 import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
 import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
-import { toKebabCaseRoleId } from '../common/role-id.js';
+import { parseRoleIdentity } from '../common/role-id.js';
 
 export const IMPROVEMENT_WORKFLOW_FILENAME = 'improvement.yaml';
 
@@ -34,7 +34,7 @@ export interface ImprovementWorkflowDocument {
 type ImprovementWorkflowMode = Exclude<ProtocolImprovementChoiceMode, typeof IMPROVEMENT_CHOICE_MODE.NONE>;
 
 export function improvementNodeId(entry: BackwardPassEntry): string {
-  return `${toKebabCaseRoleId(entry.role)}-${entry.stepType}`;
+  return `${parseRoleIdentity(entry.role).instanceRoleId}-${entry.stepType}`;
 }
 
 export function improvementWorkflowPath(recordFolderPath: string): string {

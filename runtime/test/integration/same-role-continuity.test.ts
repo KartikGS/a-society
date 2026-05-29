@@ -158,7 +158,7 @@ function ownerSessionId(flowId = 'test-flow-id') {
 }
 
 function ownerInstanceSessionId(instanceNumber: number, flowId = 'instance-flow-id') {
-  return `${flowId}__owner-${instanceNumber}`;
+  return `${flowId}__owner_${instanceNumber}`;
 }
 
 function flowRef(flowId = 'test-flow-id') {
@@ -708,12 +708,12 @@ async function run() {
     }
 
     const ownerOneSession = SessionStore.loadRoleSession(
-      'owner-1',
+      'owner_1',
       flowRef('instance-flow-id'),
       workspaceRoot
     );
     const ownerTwoSession = SessionStore.loadRoleSession(
-      'owner-2',
+      'owner_2',
       flowRef('instance-flow-id'),
       workspaceRoot
     );

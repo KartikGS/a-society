@@ -39,7 +39,7 @@ process.env.A_SOCIETY_STATE_DIR = stateDir;
 SessionStore.init();
 
 test('initializeDraftFlow creates an opaque-id record folder, record metadata, and single Owner node workflow', () => {
-  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
+  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
 
   assert.ok(flow.recordFolderPath.startsWith(path.join(projectRoot, 'a-docs', 'records')));
   assert.strictEqual(path.basename(flow.recordFolderPath), flow.flowId);
@@ -58,11 +58,11 @@ test('initializeDraftFlow creates an opaque-id record folder, record metadata, a
   const workflowDoc = parseWorkflowFile(workflowPath) as any;
   assert.strictEqual(workflowDoc.workflow.nodes.length, 1);
   assert.strictEqual(workflowDoc.workflow.nodes[0].id, 'owner-intake');
-  assert.strictEqual(workflowDoc.workflow.nodes[0].role, 'Owner');
+  assert.strictEqual(workflowDoc.workflow.nodes[0].role, 'owner');
 });
 
 test('syncRecordMetadataFromWorkflow seeds name and summary once from workflow.yaml', () => {
-  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
+  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
   const workflowPath = path.join(flow.recordFolderPath, 'workflow.yaml');
 
   fs.writeFileSync(workflowPath, `workflow:
@@ -70,7 +70,7 @@ test('syncRecordMetadataFromWorkflow seeds name and summary once from workflow.y
   summary: Capture a durable title and summary from workflow.yaml.
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
   edges: []
 `, 'utf8');
 
@@ -83,7 +83,7 @@ test('syncRecordMetadataFromWorkflow seeds name and summary once from workflow.y
   summary: Different summary.
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
   edges: []
 `, 'utf8');
 
@@ -104,7 +104,7 @@ test('resolveProjectRecordsRoot falls back to legacy records/ when present and a
 });
 
 test('repairMovedRecordFolder and SessionStore.loadFlowRun recover after the record folder is renamed', () => {
-  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
+  const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
   SessionStore.saveFlowRun(flow);
 
   const renamedPath = path.join(path.dirname(flow.recordFolderPath), `${path.basename(flow.recordFolderPath)}-renamed`);

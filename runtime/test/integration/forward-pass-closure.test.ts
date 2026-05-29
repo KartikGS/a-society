@@ -80,7 +80,7 @@ async function runTest() {
   name: test-flow
   nodes:
     - id: start
-      role: 'Owner'
+      role: 'owner'
   edges: []
 `;
   fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), "Owner Role Doc");

@@ -27,7 +27,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     recordFolderPath: './records/r1',
     runningNodes: [],
     awaitingHumanNodes: {
-      'owner-intake': { role: 'Owner', reason: 'prompt-human' },
+      'owner-intake': { role: 'owner', reason: 'prompt-human' },
     },
     pendingHumanInputs: {},
     completedNodes: [],

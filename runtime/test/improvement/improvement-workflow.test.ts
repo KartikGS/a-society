@@ -31,13 +31,13 @@ console.log('\nimprovement-workflow');
 const parallelPlan: BackwardPassPlan = [
   [
     {
-      role: 'Owner',
+      role: 'owner',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: []
     },
     {
-      role: 'Curator',
+      role: 'curator',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: []
@@ -45,7 +45,7 @@ const parallelPlan: BackwardPassPlan = [
   ],
   [
     {
-      role: 'A-Society Feedback',
+      role: 'a-society-feedback',
       stepType: 'feedback',
       sessionInstruction: 'new-session',
       findingsRolesToInject: []
@@ -56,7 +56,7 @@ const parallelPlan: BackwardPassPlan = [
 const graphPlan: BackwardPassPlan = [
   [
     {
-      role: 'Curator',
+      role: 'curator',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: []
@@ -64,15 +64,15 @@ const graphPlan: BackwardPassPlan = [
   ],
   [
     {
-      role: 'Owner',
+      role: 'owner',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
-      findingsRolesToInject: ['Curator']
+      findingsRolesToInject: ['curator']
     }
   ],
   [
     {
-      role: 'A-Society Feedback',
+      role: 'a-society-feedback',
       stepType: 'feedback',
       sessionInstruction: 'new-session',
       findingsRolesToInject: []
@@ -80,8 +80,14 @@ const graphPlan: BackwardPassPlan = [
   ]
 ];
 
-test('improvementNodeId uses role slug plus step type', () => {
+test('improvementNodeId uses role instance id plus step type', () => {
   assert.strictEqual(improvementNodeId(parallelPlan[1][0]), 'a-society-feedback-feedback');
+  assert.strictEqual(improvementNodeId({
+    role: 'owner_2',
+    stepType: 'meta-analysis',
+    sessionInstruction: 'existing-session',
+    findingsRolesToInject: []
+  }), 'owner_2-meta-analysis');
 });
 
 test('parallel improvement graph connects every role to feedback', () => {

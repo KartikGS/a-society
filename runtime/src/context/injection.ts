@@ -25,16 +25,16 @@ export class ContextInjectionService {
    */
   static buildContextBundle(
     projectNamespace: string,
-    roleName: string,
+    roleInstanceId: string,
     workspaceRoot: string
   ): ContextBundleResult {
-    const roleIdentity = parseRoleIdentity(roleName);
+    const roleIdentity = parseRoleIdentity(roleInstanceId);
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
 
     // 0a. Role announcement
-    bundle += `You are the ${roleIdentity.instanceRoleName} agent for ${projectNamespace}. Below is information that will help you play your role.\n`;
+    bundle += `You are the ${roleIdentity.instanceRoleId} agent for ${projectNamespace}. Below is information that will help you play your role.\n`;
     if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
-      bundle += `This session uses the ${roleIdentity.baseRoleName} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleName} session identity.\n`;
+      bundle += `This session uses the ${roleIdentity.baseRoleId} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleId} session identity.\n`;
     }
     bundle += '\n';
 
@@ -49,12 +49,12 @@ export class ContextInjectionService {
     }
 
     // 1. Resolve and inject required reading
-    const roleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
+    const roleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
 
     if (roleEntry) {
-      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleIdentity.instanceRoleName} IN ${projectNamespace} ---\n`;
+      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleIdentity.instanceRoleId} IN ${projectNamespace} ---\n`;
       if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
-        bundle += `Loaded from base role ${roleIdentity.baseRoleName}.\n`;
+        bundle += `Loaded from base role ${roleIdentity.baseRoleId}.\n`;
       }
       bundle += `These files are already loaded into this session by the runtime. Use them directly. Do not spend your first turn rereading or re-listing them unless the current task specifically requires close inspection of one file.\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
@@ -71,7 +71,7 @@ export class ContextInjectionService {
         }
       }
     } else {
-      bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleName} IN ${projectNamespace}. No required reading available. ---\n\n`;
+      bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleId} IN ${projectNamespace}. No required reading available. ---\n\n`;
     }
 
     // Compute hash

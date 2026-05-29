@@ -7,7 +7,7 @@ workflow:
     - $A_SOCIETY_RECORDS
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
       human-collaborative: direction
       required_readings:
         - $A_SOCIETY_WORKFLOW_COMPLEXITY
@@ -43,7 +43,7 @@ workflow:
         - 01-owner-workflow-plan.md and workflow.yaml must exist before any later artifact in the record folder.
         - Direct Owner-only flows are represented in the record snapshot by a sole Owner node rather than by an Owner-to-Owner edge in this permanent graph.
     - id: curator-work
-      role: Curator
+      role: curator
       required_readings:
         - $A_SOCIETY_CURATOR_IMPL_PRACTICES
       inputs:
@@ -64,7 +64,7 @@ workflow:
         - A proposal node is not required when the workflow plan or Owner handoff explicitly authorizes direct Curator execution within Curator-owned surfaces.
         - Additions to general/ always require an explicit Owner decision before implementation.
     - id: owner-framework-decision
-      role: Owner
+      role: owner
       human-collaborative: approval
       required_readings:
         - $A_SOCIETY_OWNER_REVIEW_BEHAVIOR
@@ -84,7 +84,7 @@ workflow:
         - Revise -> curator-work
         - Rejected -> terminate the forward pass with no further forward-pass node
     - id: curator-finalize
-      role: Curator
+      role: curator
       required_readings:
         - $A_SOCIETY_CURATOR_IMPL_PRACTICES
       inputs:
@@ -97,7 +97,7 @@ workflow:
       transitions:
         - Hand off to owner-closure when implementation and stewardship are complete.
     - id: ta-design
-      role: Technical Architect
+      role: technical-architect
       required_readings:
         - $A_SOCIETY_TA_ADVISORY_STANDARDS
       inputs:
@@ -110,7 +110,7 @@ workflow:
       transitions:
         - Hand off to the active developer track(s) when the executable design is complete.
     - id: framework-services-implementation
-      role: Framework Services Developer
+      role: framework-services-developer
       required_readings:
         - $A_SOCIETY_FRAMEWORK_SERVICES_DEV_IMPL_DISCIPLINE
       inputs:
@@ -124,7 +124,7 @@ workflow:
         - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
         - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
     - id: orchestration-implementation
-      role: Orchestration Developer
+      role: orchestration-developer
       required_readings:
         - $A_SOCIETY_ORCHESTRATION_DEV_IMPL_DISCIPLINE
       inputs:
@@ -138,7 +138,7 @@ workflow:
         - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
         - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
     - id: ui-implementation
-      role: UI Developer
+      role: ui-developer
       required_readings:
         - $A_SOCIETY_UI_DEV_IMPL_DISCIPLINE
         - $A_SOCIETY_UI_DEV_STYLE_GUIDE
@@ -153,7 +153,7 @@ workflow:
         - Hand off to curator-registration when Curator-owned stewardship surfaces are touched and no TA review is required.
         - Hand off to owner-closure when neither TA review nor Curator stewardship is required.
     - id: ta-review
-      role: Technical Architect
+      role: technical-architect
       required_readings:
         - $A_SOCIETY_TA_ADVISORY_STANDARDS
       inputs:
@@ -168,7 +168,7 @@ workflow:
         - Hand off to curator-registration when Curator-owned stewardship surfaces are also touched.
         - Hand off to owner-closure when TA review is complete and no Curator stewardship node is needed.
     - id: curator-registration
-      role: Curator
+      role: curator
       required_readings:
         - $A_SOCIETY_CURATOR_IMPL_PRACTICES
       inputs:
@@ -184,7 +184,7 @@ workflow:
         - Registration does not mutate $A_SOCIETY_LOG lifecycle sections.
         - Curator participation is required only when Curator-owned stewardship surfaces are touched.
     - id: owner-closure
-      role: Owner
+      role: owner
       human-collaborative: closure
       required_readings:
         - $A_SOCIETY_OWNER_LOG_MANAGEMENT

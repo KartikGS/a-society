@@ -224,7 +224,7 @@ function buildInitializationWorkflowDocument(
       nodes: [
         {
           id: 'owner-intake',
-          role: 'Owner',
+          role: 'owner',
           'human-collaborative': 'direction',
           guidance: [
             'This is a runtime-created initialization flow.',

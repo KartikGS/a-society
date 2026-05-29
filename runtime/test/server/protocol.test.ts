@@ -53,7 +53,7 @@ test('parseClientMessage accepts current consent decisions and modes', () => {
     type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,
     flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
     decision: CONSENT_RESPONSE_DECISION.ALLOW_ONCE,
-    role: 'Owner'
+    role: 'owner'
   }));
   const consentMode = parseClientMessage(JSON.stringify({
     type: CLIENT_MESSAGE_TYPE.CONSENT_MODE,
@@ -79,14 +79,14 @@ test('parseClientMessage rejects legacy consent values', () => {
     type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,
     flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
     decision: FEEDBACK_CONSENT_DECISION.GRANTED,
-    role: 'Owner'
+    role: 'owner'
   })), null);
 
   assert.strictEqual(parseClientMessage(JSON.stringify({
     type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,
     flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
     decision: FEEDBACK_CONSENT_DECISION.DENIED,
-    role: 'Owner'
+    role: 'owner'
   })), null);
 
   assert.strictEqual(parseClientMessage(JSON.stringify({

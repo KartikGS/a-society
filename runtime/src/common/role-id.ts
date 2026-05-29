@@ -1,5 +1,7 @@
 export const REQUIRED_ROLE_FILES = ['main.md', 'ownership.yaml', 'required-readings.yaml'] as const;
 
+const ROLE_INSTANCE_ID_PATTERN = /^([a-z0-9]+(?:-[a-z0-9]+)*)(?:_([1-9][0-9]*))?$/;
+
 export function toKebabCaseRoleId(roleName: string): string {
   return roleName
     .trim()
@@ -9,24 +11,23 @@ export function toKebabCaseRoleId(roleName: string): string {
 }
 
 export interface RoleIdentity {
-  instanceRoleName: string;
-  baseRoleName: string;
   instanceRoleId: string;
   baseRoleId: string;
   instanceNumber?: number;
 }
 
-export function parseRoleIdentity(roleName: string): RoleIdentity {
-  const instanceRoleName = roleName.trim();
-  const match = instanceRoleName.match(/^(.*)_(\d+)$/);
-  const baseRoleName = match?.[1]?.trim() || instanceRoleName;
-  const parsedInstanceNumber = match ? Number(match[2]) : undefined;
+export function parseRoleIdentity(roleId: string): RoleIdentity {
+  const instanceRoleId = roleId.trim();
+  const match = instanceRoleId.match(ROLE_INSTANCE_ID_PATTERN);
+  if (!match) {
+    throw new Error(
+      `Invalid role id "${roleId}". Role ids must be lowercase kebab-case with an optional numeric instance suffix, e.g. "owner" or "owner_2".`
+    );
+  }
 
   return {
-    instanceRoleName,
-    baseRoleName,
-    instanceRoleId: toKebabCaseRoleId(instanceRoleName),
-    baseRoleId: toKebabCaseRoleId(baseRoleName),
-    instanceNumber: parsedInstanceNumber,
+    instanceRoleId,
+    baseRoleId: match[1],
+    instanceNumber: match[2] ? Number(match[2]) : undefined,
   };
 }

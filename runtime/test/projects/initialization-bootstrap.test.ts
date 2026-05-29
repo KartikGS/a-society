@@ -49,7 +49,7 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
   const workflowDoc = parseWorkflowFile(workflowPath) as any;
   assert.strictEqual(workflowDoc.workflow.nodes.length, 1);
   assert.strictEqual(workflowDoc.workflow.nodes[0].id, 'owner-intake');
-  assert.strictEqual(workflowDoc.workflow.nodes[0].role, 'Owner');
+  assert.strictEqual(workflowDoc.workflow.nodes[0].role, 'owner');
   assert.ok(
     workflowDoc.workflow.nodes[0].guidance.some((entry: string) => entry.includes('# Runtime Project Initialization')),
     'initialization guide should be embedded in the node guidance'

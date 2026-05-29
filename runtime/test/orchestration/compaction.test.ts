@@ -58,7 +58,7 @@ await test('compactRoleSession archives raw history and replaces active history 
   ];
 
   const session: RoleSession = {
-    roleName: 'Owner',
+    roleName: 'owner',
     logicalSessionId: 'flow__owner',
     transcriptHistory: [...history],
     currentNodeContext: {
@@ -88,7 +88,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     const result = await compactRoleSession({
       session,
       flowRun,
-      roleName: 'Owner',
+      roleName: 'owner',
       trigger: 'manual'
     });
 
@@ -115,7 +115,7 @@ await test('compactRoleSession archives raw history and replaces active history 
 
 await test('compactRoleSession reports no-op when there is no current node', async () => {
   const session: RoleSession = {
-    roleName: 'Owner',
+    roleName: 'owner',
     logicalSessionId: 'flow__owner',
     transcriptHistory: [{ role: 'user', content: 'No node yet' }],
     isActive: false
@@ -138,7 +138,7 @@ await test('compactRoleSession reports no-op when there is no current node', asy
   const result = await compactRoleSession({
     session,
     flowRun,
-    roleName: 'Owner',
+    roleName: 'owner',
     trigger: 'manual'
   });
 

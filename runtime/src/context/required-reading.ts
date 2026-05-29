@@ -7,13 +7,13 @@ export const RUNTIME_MANAGED_REQUIRED_READING_VARIABLES = new Set([
 
 export function collectStartupInjectedRequiredReadingVariables(
   projectNamespace: string,
-  roleName: string,
+  roleInstanceId: string,
   workspaceRoot: string
 ): Set<string> {
   const variables = new Set<string>(RUNTIME_MANAGED_REQUIRED_READING_VARIABLES);
 
   try {
-    const roleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
+    const roleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
     if (!roleEntry) {
       return variables;
     }

@@ -164,7 +164,7 @@ await test('tool-call continuation and denial result are recorded before consent
 
   const pendingTurn = gateway.executeTurn('System prompt', history, {
     consentGate: gate,
-    role: 'Curator',
+    roleInstanceId: 'curator',
     nodeId: 'curator-registration',
     onConversationMessages: (messages) => {
       persistedBatches.push([...messages]);
@@ -176,7 +176,7 @@ await test('tool-call continuation and denial result are recorded before consent
   assert.deepStrictEqual(gate.requests[0], {
     toolName: 'write_file',
     input: { path: 'plan.md', content: 'draft' },
-    role: 'Curator',
+    role: 'curator',
     nodeId: 'curator-registration',
   });
   assert.strictEqual(history.length, 2);

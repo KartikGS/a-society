@@ -42,11 +42,11 @@ fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
 test('buildContextBundle: contains role announcement, handoff contract, and required-reading files', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('You are the Owner agent for a-society.'));
+  assert.ok(bundle.bundleContent.includes('You are the owner agent for a-society.'));
   assert.ok(bundle.bundleContent.includes('A-Society Runtime Handoff Contract'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));
@@ -55,11 +55,11 @@ test('buildContextBundle: contains role announcement, handoff contract, and requ
 test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and already-loaded statement', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR Owner IN a-society ---'));
+  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR owner IN a-society ---'));
   assert.ok(bundle.bundleContent.includes('These files are already loaded into this session by the runtime.'));
   assert.ok(!bundle.bundleContent.includes('--- MANDATORY CONTEXT LOADING FOR'));
 });
@@ -67,13 +67,13 @@ test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and alrea
 test('buildContextBundle: role instances load base role required readings', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner_1',
+    'owner_1',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('You are the Owner_1 agent for a-society.'));
-  assert.ok(bundle.bundleContent.includes('uses the Owner role authority and required readings'));
-  assert.ok(bundle.bundleContent.includes('Loaded from base role Owner.'));
+  assert.ok(bundle.bundleContent.includes('You are the owner_1 agent for a-society.'));
+  assert.ok(bundle.bundleContent.includes('uses the owner role authority and required readings'));
+  assert.ok(bundle.bundleContent.includes('Loaded from base role owner.'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));
   assert.ok(!bundle.bundleContent.includes('FILE ERROR'));
@@ -82,7 +82,7 @@ test('buildContextBundle: role instances load base role required readings', () =
 test('buildContextBundle: does not include active artifact content', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
@@ -94,7 +94,7 @@ test('buildContextBundle: does not include active artifact content', () => {
 test('buildContextBundle: runtime handoff contract is injected once even if runtime variable appears in required readings', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
@@ -106,7 +106,7 @@ test('buildContextBundle: runtime handoff contract is injected once even if runt
 test('buildContextBundle: does not inject runtime directives', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
@@ -117,8 +117,8 @@ test('buildContextBundle: does not inject runtime directives', () => {
 });
 
 test('buildContextBundle: produces a deterministic hash', () => {
-  const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'Owner', tmpDir);
-  const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'Owner', tmpDir);
+  const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir);
+  const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir);
 
   assert.strictEqual(bundle1.contextHash, bundle2.contextHash);
   assert.ok(bundle1.contextHash.length > 0);

@@ -117,11 +117,11 @@ export interface ImprovementPhaseState {
   status: 'awaiting_choice' | 'running' | 'awaiting_feedback_consent' | 'completed' | 'skipped';
   mode?: ProtocolImprovementChoiceMode;
   currentStep: number;                         // index into BackwardPassPlan outer array
-  completedRoles: string[];                    // role names that have finished their improvement session
-  runningRoles: string[];                      // role names in the current step that have context injected but not yet completed
-  awaitingHumanRoles?: Record<string, { reason: AwaitingHumanReason }>; // role names blocked on human input
-  pendingHumanInputs?: Record<string, { text: string; receivedAt: string }>; // human replies queued per role
-  findingsProduced: Record<string, string>;    // roleName → findings file path (repo-relative)
+  completedRoles: string[];                    // role-instance ids that have finished their improvement session
+  runningRoles: string[];                      // role-instance ids in the current step that have context injected but not yet completed
+  awaitingHumanRoles?: Record<string, { reason: AwaitingHumanReason }>; // role-instance ids blocked on human input
+  pendingHumanInputs?: Record<string, { text: string; receivedAt: string }>; // human replies queued per role-instance id
+  findingsProduced: Record<string, string>;    // role-instance id -> findings file path (repo-relative)
   improvementWorkflowPath?: string;            // repo-relative path to runtime-generated improvement.yaml
   activeNodeIds?: string[];                    // improvement graph node ids currently running
   completedNodeIds?: string[];                 // improvement graph node ids that completed
@@ -278,7 +278,7 @@ export interface TurnOptions {
   outputStream?: NodeJS.WritableStream;
   operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
-  role?: string;
+  roleInstanceId?: string;
   nodeId?: string;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;

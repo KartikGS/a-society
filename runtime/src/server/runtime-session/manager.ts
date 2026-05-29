@@ -237,7 +237,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const flowRun = initializeDraftFlow(workspaceRoot, projectNamespace, 'Owner');
+    const flowRun = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
 

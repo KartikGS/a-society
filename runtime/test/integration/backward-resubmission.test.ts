@@ -38,13 +38,13 @@ async function runTest() {
   name: backward-resubmission
   nodes:
     - id: proposal
-      role: Curator
+      role: curator
     - id: review
-      role: Owner
+      role: owner
     - id: implementation
-      role: Developer
+      role: developer
     - id: audit
-      role: Archivist
+      role: archivist
   edges:
     - from: proposal
       to: review
@@ -82,7 +82,7 @@ async function runTest() {
   }, flowRef, workspaceRoot);
 
   SessionStore.saveRoleSession({
-    roleName: 'Curator',
+    roleName: 'curator',
     logicalSessionId: `${flowRef.flowId}__curator`,
     transcriptHistory: [{ role: 'user', content: 'stale proposal session' }],
     isActive: false,
@@ -92,7 +92,7 @@ async function runTest() {
   const flowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
-  await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'Owner', [
+  await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'owner', [
     { target_node_id: 'proposal', artifact_path: reviewFeedbackRel },
   ]);
 

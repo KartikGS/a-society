@@ -43,13 +43,13 @@ async function runTest() {
   name: edge-artifact-routing
   nodes:
     - id: producer
-      role: Owner
+      role: owner
     - id: branch-a
-      role: Curator
+      role: curator
     - id: branch-c
-      role: Technical Architect
+      role: technical-architect
     - id: branch-b
-      role: Framework Services Developer
+      role: framework-services-developer
   edges:
     - from: producer
       to: branch-a
@@ -80,11 +80,11 @@ async function runTest() {
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   await Promise.all([
-    orchestrator.applyHandoffAndAdvance(flowRun, 'producer', 'Owner', [
+    orchestrator.applyHandoffAndAdvance(flowRun, 'producer', 'owner', [
       { target_node_id: 'branch-a', artifact_path: 'records/test-flow/02-producer-to-a.md' },
       { target_node_id: 'branch-b', artifact_path: 'records/test-flow/02-producer-to-b.md' },
     ]),
-    orchestrator.applyHandoffAndAdvance(flowRun, 'branch-c', 'Technical Architect', [
+    orchestrator.applyHandoffAndAdvance(flowRun, 'branch-c', 'technical-architect', [
       { target_node_id: 'branch-b', artifact_path: 'records/test-flow/03-c-to-b.md' },
     ])
   ]);

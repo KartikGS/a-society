@@ -3,7 +3,7 @@ import path from 'node:path';
 import { findWorkflowFilePath, parseWorkflowFile } from '../context/workflow-file.js';
 import { IMPROVEMENT_CHOICE_MODE, OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
-import { parseRoleIdentity, toKebabCaseRoleId } from '../common/role-id.js';
+import { parseRoleIdentity } from '../common/role-id.js';
 
 export interface WorkflowNode {
   id: string;
@@ -48,7 +48,7 @@ export function deterministicFindingsFilePath(
   return path.join(
     recordFolderPath,
     FINDINGS_DIRECTORY_NAME,
-    `${toKebabCaseRoleId(roleName)}-findings.md`,
+    `${parseRoleIdentity(roleName).instanceRoleId}-findings.md`,
   );
 }
 
@@ -356,7 +356,7 @@ export function locateAllFindingsFiles(
   return (() => {
     try {
       return fs.readdirSync(findingsFolderPath)
-        .filter(filename => /^[a-z0-9-]+-findings\.md$/i.test(filename))
+        .filter(filename => /^[a-z0-9_-]+-findings\.md$/i.test(filename))
         .map(filename => path.join(findingsFolderPath, filename))
         .sort();
     } catch {

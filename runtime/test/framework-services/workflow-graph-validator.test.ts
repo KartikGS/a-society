@@ -38,8 +38,8 @@ test('valid graph passes validation', () => {
     workflow: {
       name: 'Test',
       nodes: [
-        { id: 'n1', role: 'Owner' },
-        { id: 'n2', role: 'Curator' },
+        { id: 'n1', role: 'owner' },
+        { id: 'n2', role: 'curator' },
       ],
       edges: [{ from: 'n1', to: 'n2', artifact: 'handoff' }],
     },
@@ -58,8 +58,8 @@ test('duplicate node id produces error', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'R' },
-        { id: 'n1', role: 'S' },
+        { id: 'n1', role: 'role-r' },
+        { id: 'n1', role: 'role-s' },
       ],
       edges: [],
     },
@@ -72,7 +72,7 @@ test('edge referencing non-existent node produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'R' }],
+      nodes: [{ id: 'n1', role: 'role-r' }],
       edges: [{ from: 'n1', to: 'nonexistent' }],
     },
   };
@@ -84,7 +84,7 @@ test('extra keys on node produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'R', invalid: 'key' }],
+      nodes: [{ id: 'n1', role: 'role-r', invalid: 'key' }],
       edges: [],
     },
   };
@@ -97,7 +97,7 @@ test('extra keys on workflow produce error', () => {
     workflow: {
       name: 'T',
       graph: 'single-instance',
-      nodes: [{ id: 'n1', role: 'Owner' }],
+      nodes: [{ id: 'n1', role: 'owner' }],
       edges: [],
     },
   };
@@ -109,12 +109,24 @@ test('valid node with human-collaborative passes', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': 'direction' }],
+      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': 'direction' }],
       edges: [],
     },
   };
   const errors = validateGraph(graph);
   assert.deepStrictEqual(errors, []);
+});
+
+test('role display names are rejected', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'Owner' }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.ok(errors.some((e: string) => e.includes('Invalid role id "Owner"')));
 });
 
 test('node-level workflow guidance fields pass when well-formed', () => {
@@ -124,7 +136,7 @@ test('node-level workflow guidance fields pass when well-formed', () => {
       summary: 'Test workflow',
       nodes: [{
         id: 'n1',
-        role: 'Owner',
+        role: 'owner',
         required_readings: ['$DOC_A'],
         guidance: ['Use the snapshot.'],
         inputs: ['Prior artifact'],
@@ -144,7 +156,7 @@ test('non-string human-collaborative value is rejected', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': 42 }],
+      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': 42 }],
       edges: [],
     },
   };
@@ -160,14 +172,14 @@ test('empty or whitespace human-collaborative value is rejected', () => {
   const emptyValueGraph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': '' }],
+      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': '' }],
       edges: [],
     },
   };
   const whitespaceValueGraph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'R', 'human-collaborative': '   ' }],
+      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': '   ' }],
       edges: [],
     },
   };
@@ -194,7 +206,7 @@ test('unknown node keys still fail after allowing human-collaborative', () => {
       nodes: [
         {
           id: 'n1',
-          role: 'R',
+          role: 'role-r',
           'human-collaborative': 'decision',
           invalid: 'key',
         },
@@ -226,8 +238,8 @@ test('neighboring same-role-instance nodes pass', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Owner' },
-        { id: 'n2', role: 'Owner' },
+        { id: 'n1', role: 'owner' },
+        { id: 'n2', role: 'owner' },
       ],
       edges: [{ from: 'n1', to: 'n2' }],
     },
@@ -241,8 +253,8 @@ test('neighboring numbered role instances with the same base role pass', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Owner_1' },
-        { id: 'n2', role: 'Owner_2' },
+        { id: 'n1', role: 'owner_1' },
+        { id: 'n2', role: 'owner_2' },
       ],
       edges: [{ from: 'n1', to: 'n2' }],
     },
@@ -256,14 +268,14 @@ test('strict mode: non-Owner start node produces error', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Curator' },
-        { id: 'n2', role: 'Owner' },
+        { id: 'n1', role: 'curator' },
+        { id: 'n2', role: 'owner' },
       ],
       edges: [{ from: 'n1', to: 'n2' }],
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role exactly "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role exactly "owner"')));
 });
 
 test('strict mode: multiple start nodes produce error', () => {
@@ -271,9 +283,9 @@ test('strict mode: multiple start nodes produce error', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Owner' },
-        { id: 'n2', role: 'Owner' },
-        { id: 'n3', role: 'Curator' },
+        { id: 'n1', role: 'owner' },
+        { id: 'n2', role: 'owner' },
+        { id: 'n3', role: 'curator' },
       ],
       edges: [{ from: 'n1', to: 'n3' }],
     },
@@ -287,26 +299,26 @@ test('strict mode: non-Owner end node produces error', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Owner' },
-        { id: 'n2', role: 'Curator' },
+        { id: 'n1', role: 'owner' },
+        { id: 'n2', role: 'curator' },
       ],
       edges: [{ from: 'n1', to: 'n2' }],
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('end node "n2" must have role exactly "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('end node "n2" must have role exactly "owner"')));
 });
 
-test('strict mode: sole node must be Owner', () => {
+test('strict mode: sole node must be owner', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'Curator' }],
+      nodes: [{ id: 'n1', role: 'curator' }],
       edges: [],
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('sole node role must be exactly "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('sole node role must be exactly "owner"')));
 });
 
 test('strict mode: valid graph passes', () => {
@@ -314,9 +326,9 @@ test('strict mode: valid graph passes', () => {
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Owner' },
-        { id: 'n2', role: 'Curator' },
-        { id: 'n3', role: 'Owner' },
+        { id: 'n1', role: 'owner' },
+        { id: 'n2', role: 'curator' },
+        { id: 'n3', role: 'owner' },
       ],
       edges: [
         { from: 'n1', to: 'n2' },
@@ -333,9 +345,9 @@ test('strict mode: numbered Owner instances at start/end produce errors', () => 
     workflow: {
       name: 'T',
       nodes: [
-        { id: 'n1', role: 'Owner_1' },
-        { id: 'n2', role: 'Curator' },
-        { id: 'n3', role: 'Owner_2' },
+        { id: 'n1', role: 'owner_1' },
+        { id: 'n2', role: 'curator' },
+        { id: 'n3', role: 'owner_2' },
       ],
       edges: [
         { from: 'n1', to: 'n2' },
@@ -344,8 +356,8 @@ test('strict mode: numbered Owner instances at start/end produce errors', () => 
     },
   };
   const errors = validateGraph(graph, true);
-  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role exactly "Owner"')));
-  assert.ok(errors.some((e: string) => e.includes('end node "n3" must have role exactly "Owner"')));
+  assert.ok(errors.some((e: string) => e.includes('start node "n1" must have role exactly "owner"')));
+  assert.ok(errors.some((e: string) => e.includes('end node "n3" must have role exactly "owner"')));
 });
 
 test('live A-Society workflows pass validation (strict)', () => {

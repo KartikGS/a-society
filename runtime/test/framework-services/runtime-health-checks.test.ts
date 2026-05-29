@@ -76,7 +76,7 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
       '    - $TEST_PROJECT_AGENTS',
       '  nodes:',
       '    - id: owner-intake',
-      '      role: Owner',
+      '      role: owner',
       '  edges: []',
       ''
     ].join('\n'),
@@ -114,7 +114,7 @@ test('passes when workflow uses a numbered role instance backed by the base role
         '  name: Test Workflow',
         '  nodes:',
         '    - id: owner-one',
-        '      role: Owner_1',
+        '      role: owner_1',
         '  edges: []',
         ''
       ].join('\n'),
@@ -190,7 +190,7 @@ test('fails when a workflow node required reading duplicates startup role readin
         '  name: Test Workflow',
         '  nodes:',
         '    - id: owner-intake',
-        '      role: Owner',
+        '      role: owner',
         '      required_readings:',
         '        - $TEST_PROJECT_AGENTS',
         '  edges: []',

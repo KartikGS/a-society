@@ -41,7 +41,7 @@ function request(overrides: Partial<ConsentCheckRequest>): ConsentCheckRequest {
     toolName: 'write_file',
     input: { path: 'a.txt' },
     nodeId: 'test-node',
-    role: 'Tester',
+    role: 'tester',
     ...overrides,
   };
 }
@@ -54,19 +54,19 @@ await test('file write allow_once is one-shot and next write still prompts', asy
   const first = gate.check(request({ toolName: 'write_file', input: { path: 'a.txt' } }));
   assert.deepStrictEqual(events[0], {
     kind: 'consent.requested',
-    request: { kind: 'file-write', toolName: 'write_file', path: 'a.txt', nodeId: 'test-node', role: 'Tester' },
+    request: { kind: 'file-write', toolName: 'write_file', path: 'a.txt', nodeId: 'test-node', role: 'tester' },
   });
 
-  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_ONCE, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_ONCE, 'tester');
   assert.strictEqual(await first, CONSENT_CHECK_RESULT.PROCEED);
   assert.strictEqual(gate.getState().mode, CONSENT_MODE.NO_ACCESS);
 
   void gate.check(request({ toolName: 'write_file', input: { path: 'b.txt' } }));
   assert.deepStrictEqual(events[2], {
     kind: 'consent.requested',
-    request: { kind: 'file-write', toolName: 'write_file', path: 'b.txt', nodeId: 'test-node', role: 'Tester' },
+    request: { kind: 'file-write', toolName: 'write_file', path: 'b.txt', nodeId: 'test-node', role: 'tester' },
   });
-  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'tester');
 });
 
 await test('partial-access mode allows all file writes without prompting', async () => {
@@ -83,7 +83,7 @@ await test('allow_flow on file write switches mode to partial-access', async () 
   const { gate } = createGate();
 
   const first = gate.check(request({ toolName: 'edit_file', input: { path: 'a.txt' } }));
-  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'tester');
   assert.strictEqual(await first, CONSENT_CHECK_RESULT.PROCEED);
   assert.strictEqual(gate.getState().mode, CONSENT_MODE.PARTIAL_ACCESS);
 
@@ -97,7 +97,7 @@ await test('consent requests preserve node and role metadata', async () => {
     toolName: 'edit_file',
     input: { path: 'a-society/index.md' },
     nodeId: 'curator-public-registration',
-    role: 'Curator',
+    role: 'curator',
   });
 
   assert.deepStrictEqual(events[0], {
@@ -107,11 +107,11 @@ await test('consent requests preserve node and role metadata', async () => {
       toolName: 'edit_file',
       path: 'a-society/index.md',
       nodeId: 'curator-public-registration',
-      role: 'Curator',
+      role: 'curator',
     },
   });
 
-  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'Curator');
+  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'curator');
 });
 
 await test('one consent request can be in-flight per role', async () => {
@@ -122,7 +122,7 @@ await test('one consent request can be in-flight per role', async () => {
     toolName: 'edit_file',
     input: { path: 'public.md' },
     nodeId: 'curator-public',
-    role: 'Curator_1',
+    role: 'curator_1',
   }).then((result) => {
     curatorResolved = true;
     return result;
@@ -131,19 +131,19 @@ await test('one consent request can be in-flight per role', async () => {
     toolName: 'write_file',
     input: { path: 'internal.md' },
     nodeId: 'reviewer-internal',
-    role: 'Reviewer',
+    role: 'reviewer',
   });
 
   assert.deepStrictEqual(events.slice(0, 2).map((event) => (
     event.kind === 'consent.requested' ? event.request.role : null
-  )), ['Curator_1', 'Reviewer']);
+  )), ['curator_1', 'reviewer']);
   assert.strictEqual(gate.getInFlightRequests().length, 2);
 
   gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_ONCE, 'reviewer');
   assert.strictEqual(await reviewer, CONSENT_CHECK_RESULT.PROCEED);
   assert.strictEqual(curatorResolved, false);
 
-  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'Curator_1');
+  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'curator_1');
   assert.strictEqual(await curator, CONSENT_CHECK_RESULT.DENY);
 });
 
@@ -151,12 +151,12 @@ await test('one consent request can be in-flight per role', async () => {
 await test('Allow all edits this flow resolves other visible file-write requests', async () => {
   const { gate, events } = createGate();
 
-  const curator = gate.check(request({ toolName: 'edit_file', input: { path: 'a.txt' }, nodeId: 'curator-node', role: 'Curator_1' }));
-  const reviewer = gate.check(request({ toolName: 'write_file', input: { path: 'b.txt' }, nodeId: 'reviewer-node', role: 'Reviewer' }));
+  const curator = gate.check(request({ toolName: 'edit_file', input: { path: 'a.txt' }, nodeId: 'curator-node', role: 'curator_1' }));
+  const reviewer = gate.check(request({ toolName: 'write_file', input: { path: 'b.txt' }, nodeId: 'reviewer-node', role: 'reviewer' }));
 
   assert.strictEqual(gate.getInFlightRequests().length, 2);
 
-  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'curator-1');
+  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'curator_1');
 
   assert.strictEqual(await curator, CONSENT_CHECK_RESULT.PROCEED);
   assert.strictEqual(await reviewer, CONSENT_CHECK_RESULT.PROCEED);
@@ -165,7 +165,7 @@ await test('Allow all edits this flow resolves other visible file-write requests
     events
       .filter((event) => event.kind === 'consent.resolved')
       .map((event) => event.kind === 'consent.resolved' ? event.request.role : null),
-    ['Curator_1', 'Reviewer']
+    ['curator_1', 'reviewer']
   );
 });
 
@@ -186,7 +186,7 @@ await test('Allow command this flow persists only the exact bash command', async
   const { gate, events } = createGate();
 
   const first = gate.check(request({ toolName: 'run_command', input: { command: 'npm test -- operator-feed' } }));
-  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'tester');
   assert.strictEqual(await first, CONSENT_CHECK_RESULT.PROCEED);
   assert.strictEqual(gate.getState().mode, CONSENT_MODE.PARTIAL_ACCESS);
   assert.ok(gate.getState().bash.allowedCommands['npm test -- operator-feed']);
@@ -201,15 +201,15 @@ await test('Allow command this flow persists only the exact bash command', async
   void gate.check(request({ toolName: 'run_command', input: { command: 'npm test -- unified-routing' } }));
   assert.deepStrictEqual(events[eventCount], {
     kind: 'consent.requested',
-    request: { kind: 'bash-command', toolName: 'run_command', command: 'npm test -- unified-routing', nodeId: 'test-node', role: 'Tester' },
+    request: { kind: 'bash-command', toolName: 'run_command', command: 'npm test -- unified-routing', nodeId: 'test-node', role: 'tester' },
   });
-  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'tester');
 });
 
 await test('no-access ignores stored partial grants', async () => {
   const { gate, events } = createGate();
   const first = gate.check(request({ toolName: 'run_command', input: { command: 'npm test -- operator-feed' } }));
-  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'tester');
   assert.strictEqual(await first, CONSENT_CHECK_RESULT.PROCEED);
 
   gate.setMode(CONSENT_MODE.NO_ACCESS);
@@ -217,9 +217,9 @@ await test('no-access ignores stored partial grants', async () => {
   void gate.check(request({ toolName: 'run_command', input: { command: 'npm test -- operator-feed' } }));
   assert.deepStrictEqual(events[eventCount], {
     kind: 'consent.requested',
-    request: { kind: 'bash-command', toolName: 'run_command', command: 'npm test -- operator-feed', nodeId: 'test-node', role: 'Tester' },
+    request: { kind: 'bash-command', toolName: 'run_command', command: 'npm test -- operator-feed', nodeId: 'test-node', role: 'tester' },
   });
-  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'Tester');
+  gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'tester');
 });
 
 await test('full-access bypasses all consent prompts', async () => {
