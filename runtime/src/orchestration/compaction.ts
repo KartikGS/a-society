@@ -145,7 +145,10 @@ export async function compactRoleSession(options: {
     return { compacted: false, reason: 'Session has no transcript messages to compact.' };
   }
 
-  const llm = new LLMGateway();
+  const llm = new LLMGateway({
+    mode: 'system',
+    workspaceRoot: options.flowRun.workspaceRoot,
+  });
   const result = await llm.executeTurn(
     [
       'You are the A-Society runtime context compactor.',

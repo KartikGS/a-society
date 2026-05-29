@@ -153,7 +153,13 @@ class MockProvider implements LLMProvider {
 function patchLLM(provider: MockProvider): () => void {
   const original = LLMGateway.prototype.executeTurn;
   LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-    return original.call(new LLMGateway(tmpDir, provider), sys, hist, opts);
+    return original.call(new LLMGateway({
+      mode: 'project',
+      workspaceRoot: tmpDir,
+      projectNamespace,
+      recordFolderPath: recordDir,
+      provider,
+    }), sys, hist, opts);
   };
   return () => { LLMGateway.prototype.executeTurn = original; };
 }

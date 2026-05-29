@@ -43,7 +43,6 @@ async function executeSessionTurn(
   operatorRenderer: OperatorRenderSink | undefined,
   consentGate: ConsentGate | undefined,
   nodeId: string | undefined,
-  recordFolderPath: string | undefined,
   onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined,
   onAssistantTextDelta: ((text: string) => void) | undefined
 ): Promise<SessionTurnResult> {
@@ -81,7 +80,6 @@ async function executeSessionTurn(
       operatorRenderer,
       consentGate,
       roleInstanceId,
-      recordFolderPath,
       nodeId,
       onConversationMessages,
       onAssistantTextDelta,
@@ -210,7 +208,15 @@ export async function runRoleTurn(
 
   const sessionId = crypto.randomUUID();
   const systemPrompt = providedSystemPrompt ?? '';
-  const llm = new LLMGateway(workspaceRoot, undefined, projectNamespace);
+  if (!recordFolderPath) {
+    throw new Error('runRoleTurn requires recordFolderPath for project-scoped LLM gateway turns.');
+  }
+  const llm = new LLMGateway({
+    mode: 'project',
+    workspaceRoot,
+    projectNamespace,
+    recordFolderPath,
+  });
   const history: RuntimeMessageParam[] = providedHistory ?? [];
 
   if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
@@ -244,7 +250,6 @@ export async function runRoleTurn(
     operatorRenderer,
     consentGate,
     nodeId,
-    recordFolderPath,
     onConversationMessages,
     onAssistantTextDelta
   );

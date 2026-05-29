@@ -279,7 +279,6 @@ export interface TurnOptions {
   operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
   roleInstanceId?: string;
-  recordFolderPath?: string;
   nodeId?: string;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;

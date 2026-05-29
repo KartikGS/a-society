@@ -112,6 +112,14 @@ async function run() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
   const stateDir = path.join(tmpDir, '.state');
   const settingsDir = path.join(tmpDir, '.settings');
+  const directRunRecordFolderPath = getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'direct-run-role-turn' });
+  const projectGateway = (provider: MockProvider): LLMGateway => new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    projectNamespace: 'a-society',
+    recordFolderPath: getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'observability-gateway' }),
+    provider,
+  });
   
   // registry.ts buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot)
   // For projectNamespace "a-society" and roleInstanceId "curator", it looks for:
@@ -152,7 +160,7 @@ async function run() {
       }
     ]);
 
-    const gateway = new LLMGateway(tmpDir, mockProvider);
+    const gateway = projectGateway(mockProvider);
     await gateway.executeTurn('You are a tester.', [{ role: 'user', content: 'test tool calls' }]);
 
     const gatewaySpan = getSpan('llm.gateway.execute_turn');
@@ -177,7 +185,14 @@ async function run() {
       'curator',
       'System prompt',
       [],
-      output
+      output,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      directRunRecordFolderPath
     );
 
     // With no user message in history, orient.ts must return null rather than injecting a prompt.
@@ -201,7 +216,7 @@ async function run() {
     // Patch LLMGateway constructor to return a gateway with our mock provider
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-        return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+        return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
@@ -211,7 +226,14 @@ async function run() {
             'curator',
             'System prompt', 
             [{ role: 'user', content: 'Who are you?' }], 
-            output
+            output,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            directRunRecordFolderPath
         );
     } finally {
         LLMGateway.prototype.executeTurn = originalExecuteTurn;
@@ -241,7 +263,7 @@ async function run() {
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     const originalEmit = renderer.emit.bind(renderer);
@@ -259,7 +281,12 @@ async function run() {
         [{ role: 'user', content: 'Who are you?' }],
         output,
         undefined,
-        renderer
+        renderer,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        directRunRecordFolderPath
       );
       assert.deepStrictEqual(result, {
         handoff: { kind: 'awaiting_human' },
@@ -284,7 +311,7 @@ async function run() {
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
@@ -294,7 +321,14 @@ async function run() {
         'curator',
         'System prompt',
         [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        directRunRecordFolderPath
       );
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
@@ -327,7 +361,7 @@ async function run() {
     const renderer = new CaptureRenderer();
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
@@ -339,7 +373,12 @@ async function run() {
         [{ role: 'user', content: 'Produce a handoff.' }],
         undefined,
         undefined,
-        renderer
+        renderer,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        directRunRecordFolderPath
       );
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
@@ -391,7 +430,7 @@ async function run() {
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
@@ -563,7 +602,7 @@ async function run() {
     const observedHistories: RuntimeMessageParam[][] = [];
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
       observedHistories.push((hist as RuntimeMessageParam[]).map(message => ({ ...message })));
-      const result = await originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      const result = await originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
       if (result.text.includes('type: meta-analysis-complete')) {
         fs.mkdirSync(path.dirname(assignedFindingsPath), { recursive: true });
         fs.writeFileSync(assignedFindingsPath, 'Generated findings', 'utf8');

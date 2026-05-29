@@ -13,19 +13,30 @@ import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKe
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
 
+export type LLMGatewayOptions =
+  | {
+      mode: 'project';
+      workspaceRoot: string;
+      projectNamespace: string;
+      recordFolderPath: string;
+      provider?: LLMProvider;
+    }
+  | {
+      mode: 'system';
+      workspaceRoot: string;
+      provider?: LLMProvider;
+    };
+
 function projectWriteRoots(
   workspaceRoot: string,
   projectNamespace: string,
-  recordFolderPath?: string,
+  recordFolderPath: string,
 ): string[] {
-  const roots = [
+  return [
     path.join(workspaceRoot, projectNamespace),
     path.join(workspaceRoot, 'a-society', 'feedback'),
+    recordFolderPath,
   ];
-  if (recordFolderPath) {
-    roots.push(recordFolderPath);
-  }
-  return roots;
 }
 
 function createProvider(): LLMProvider {
@@ -65,28 +76,23 @@ function throwIfAborted(signal: AbortSignal | undefined, partialText?: string): 
 
 export class LLMGateway {
   private provider: LLMProvider;
-  private workspaceRoot?: string;
-  private projectNamespace?: string;
   private fileExecutor?: FileToolExecutor;
   private bashExecutor?: BashToolExecutor;
   private webSearchExecutor?: WebSearchExecutor;
   private tools?: ToolDefinition[];
 
-  constructor(workspaceRoot?: string, provider?: LLMProvider, projectNamespace?: string) {
-    if (workspaceRoot) {
-      configureSettingsStore(workspaceRoot);
-      this.workspaceRoot = path.resolve(workspaceRoot);
-      this.projectNamespace = projectNamespace;
-    }
+  constructor(options: LLMGatewayOptions) {
+    const workspaceRoot = path.resolve(options.workspaceRoot);
+    configureSettingsStore(workspaceRoot);
 
-    if (provider) {
-      this.provider = provider;
+    if (options.provider) {
+      this.provider = options.provider;
     } else {
       this.provider = createProvider();
     }
 
-    if (workspaceRoot) {
-      const writeRoots = projectNamespace ? projectWriteRoots(workspaceRoot, projectNamespace) : undefined;
+    if (options.mode === 'project') {
+      const writeRoots = projectWriteRoots(workspaceRoot, options.projectNamespace, options.recordFolderPath);
       this.fileExecutor = new FileToolExecutor(workspaceRoot, writeRoots);
       this.bashExecutor = new BashToolExecutor(workspaceRoot);
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
@@ -103,13 +109,6 @@ export class LLMGateway {
     messageHistory: RuntimeMessageParam[],
     options?: TurnOptions
   ): Promise<GatewayTurnResult> {
-    if (this.workspaceRoot && this.projectNamespace) {
-      this.fileExecutor = new FileToolExecutor(
-        this.workspaceRoot,
-        projectWriteRoots(this.workspaceRoot, this.projectNamespace, options?.recordFolderPath)
-      );
-    }
-
     const tracer = TelemetryManager.getTracer();
     const toolsEnabled = !!(this.tools && this.fileExecutor);
     return tracer.startActiveSpan('llm.gateway.execute_turn', {
