@@ -22,12 +22,11 @@ import { HandoffParseError } from '../orchestration/handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
-import { parseRoleIdentity } from '../common/role-id.js';
 import { improvementNodeId, writeImprovementWorkflow } from './improvement-workflow.js';
 import { WakeController } from '../common/wake-controller.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 
-const FEEDBACK_ROLE = 'A-Society Feedback';
+const FEEDBACK_ROLE = 'a-society-feedback';
 const RUNTIME_FEEDBACK_SYSTEM_PROMPT = [
   'You are the A-Society runtime feedback phase.',
   'Follow the runtime feedback instructions supplied in the latest user message.',
@@ -54,8 +53,8 @@ type ExpectedSignalValidator<K extends ExpectedImprovementSignalKind> =
  * stop button can target individual roles while others keep running concurrently.
  */
 export interface ImprovementScheduler {
-  registerRoleTurn(roleKey: string): AbortSignal;
-  unregisterRoleTurn(roleKey: string): void;
+  registerRoleTurn(roleInstanceId: string): AbortSignal;
+  unregisterRoleTurn(roleInstanceId: string): void;
   observeWakeGeneration(): number;
   waitForWakeAfter(generation: number): { promise: Promise<void>; cancel: () => void };
 }
@@ -74,19 +73,19 @@ async function saveImprovementPhase(
 }
 
 function buildUnexpectedSignalRepairMessage(
-  role: string,
+  roleInstanceId: string,
   expectedKind: ExpectedImprovementSignalKind
 ): string {
   if (expectedKind === 'meta-analysis-complete') {
     return [
-      `Error: This backward pass meta-analysis session for ${role} must end with a \`type: meta-analysis-complete\` handoff block.`,
+      `Error: This backward pass meta-analysis session for ${roleInstanceId} must end with a \`type: meta-analysis-complete\` handoff block.`,
       'Set `findings_path` to the repo-relative path of the findings artifact you produced in this session.',
       'Do not emit `prompt-human`, `forward-pass-closed`, `backward-pass-complete`, or a routing handoff for this step.'
     ].join(' ');
   }
 
   return [
-    `Error: This backward pass feedback session for ${role} must end with a \`type: backward-pass-complete\` handoff block.`,
+    `Error: This backward pass feedback session for ${roleInstanceId} must end with a \`type: backward-pass-complete\` handoff block.`,
     'Set `artifact_path` to the repo-relative path of the feedback artifact you produced in this session.',
     'Do not emit `prompt-human`, `forward-pass-closed`, `meta-analysis-complete`, or a routing handoff for this step.'
   ].join(' ');
@@ -163,11 +162,10 @@ function feedbackContextLines(flowRun: FlowRun): string[] {
 
 async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImprovementSignalKind>(
   flowRun: FlowRun,
-  roleName: string,
+  roleInstanceId: string,
   bundleContent: string,
   session: RoleSession,
   expectedKind: K,
-  role: string,
   roleOutputStream: NodeJS.WritableStream | undefined,
   renderer: OperatorRenderSink,
   signal: AbortSignal,
@@ -176,7 +174,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 ): Promise<ExpectedImprovementSignal<K> | null> {
   const history = session.transcriptHistory as RuntimeMessageParam[];
   const stepLabel = describeExpectedStep(expectedKind);
-  const nodeId = `${parseRoleIdentity(roleName).instanceRoleId}-${stepLabel}`;
+  const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
   const saveSession = () => SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
 
@@ -185,7 +183,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       const sessionResult = await runRoleTurn(
         flowRun.workspaceRoot,
         flowRun.projectNamespace,
-        roleName,
+        roleInstanceId,
         bundleContent,
         history,
         roleOutputStream,
@@ -203,6 +201,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           saveSession();
         },
         nodeId,
+        flowRun.recordFolderPath,
       );
 
       if (sessionResult === null) {
@@ -211,11 +210,11 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           saveSession();
           await saveImprovementPhase(flowRun, (p) => {
             if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-            p.awaitingHumanRoles[roleName] = { reason: 'autonomous-abort' };
+            p.awaitingHumanRoles[roleInstanceId] = { reason: 'autonomous-abort' };
           });
           return null;
         }
-        throw new Error(`[improvement] ${expectedKind} session for ${role} ended unexpectedly without a handoff result.`);
+        throw new Error(`[improvement] ${expectedKind} session for ${roleInstanceId} ended unexpectedly without a handoff result.`);
       }
       const result = sessionResult.handoff;
 
@@ -224,13 +223,13 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         saveSession();
         await saveImprovementPhase(flowRun, (p) => {
           if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-          p.awaitingHumanRoles[roleName] = { reason: sessionResult.awaitingHumanReason ?? 'prompt-human' };
+          p.awaitingHumanRoles[roleInstanceId] = { reason: sessionResult.awaitingHumanReason ?? 'prompt-human' };
         });
         return null;
       }
 
       if (result.kind === expectedKind) {
-        if (expectedKind === 'meta-analysis-complete' && parseRoleIdentity(roleName).instanceRoleId === OWNER_BASE_ROLE_ID) {
+        if (expectedKind === 'meta-analysis-complete' && roleInstanceId === OWNER_BASE_ROLE_ID) {
           const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
           if (!healthCheck.ok) {
             const guidance = buildRuntimeHealthRepairGuidance(
@@ -242,7 +241,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
               scope: 'improvement',
               code: 'runtime_health',
               summary: guidance.operatorSummary,
-              role
+              role: roleInstanceId
             });
             history.push({ role: 'user', content: guidance.modelRepairMessage });
             continue;
@@ -256,7 +255,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
             scope: 'improvement',
             code: repair.code,
             summary: repair.operatorSummary,
-            role
+            role: roleInstanceId
           });
           history.push({ role: 'user', content: repair.modelRepairMessage });
           continue;
@@ -271,12 +270,12 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         kind: 'repair.requested',
         scope: 'improvement',
         code: 'unexpected_signal',
-        summary: `${role} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}`,
-        role
+        summary: `${roleInstanceId} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}`,
+        role: roleInstanceId
       });
       history.push({
         role: 'user',
-        content: buildUnexpectedSignalRepairMessage(role, expectedKind)
+        content: buildUnexpectedSignalRepairMessage(roleInstanceId, expectedKind)
       });
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
@@ -285,7 +284,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           scope: 'improvement',
           code: error.details.code,
           summary: error.details.operatorSummary,
-          role
+          role: roleInstanceId
         });
         history.push({ role: 'user', content: error.details.modelRepairMessage });
         continue;
@@ -303,40 +302,39 @@ async function runMetaAnalysisEntry(
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
 ): Promise<void> {
-  const roleName = entry.role;
+  const roleInstanceId = entry.role;
   const improvementGraphNodeId = improvementNodeId(entry);
   const recordFolderPath = flowRun.recordFolderPath;
 
   const findingsRoles = entry.findingsRolesToInject;
-  const assignedFindingsFilePath = deterministicFindingsFilePath(recordFolderPath, roleName);
+  const assignedFindingsFilePath = deterministicFindingsFilePath(recordFolderPath, roleInstanceId);
   fs.mkdirSync(path.dirname(assignedFindingsFilePath), { recursive: true });
   const assignedFindingsRepoPath = normalizeRepoRelativePath(assignedFindingsFilePath, flowRun.workspaceRoot);
 
-  const roleKey = parseRoleIdentity(roleName).instanceRoleId;
-  const nodeId = `${roleKey}-meta-analysis`;
+  const nodeId = `${roleInstanceId}-meta-analysis`;
   const flowRef = SessionStore.flowRef(flowRun);
   const phase = flowRun.improvementPhase!;
-  const isRunning = phase.runningRoles.includes(roleName);
+  const isRunning = phase.runningRoles.includes(roleInstanceId);
 
-  const hasPendingInput = !!phase.pendingHumanInputs?.[roleName];
-  const isAwaitingHuman = !!phase.awaitingHumanRoles?.[roleName];
+  const hasPendingInput = !!phase.pendingHumanInputs?.[roleInstanceId];
+  const isAwaitingHuman = !!phase.awaitingHumanRoles?.[roleInstanceId];
 
   if (!isRunning) {
-    renderer.emit({ kind: 'role.active', nodeId: improvementGraphNodeId, role: roleName });
+    renderer.emit({ kind: 'role.active', nodeId: improvementGraphNodeId, role: roleInstanceId });
   } else if (!hasPendingInput) {
-    renderer.emit({ kind: 'role.resumed', nodeId: improvementGraphNodeId, role: roleName, reason: 'interrupted-turn' });
+    renderer.emit({ kind: 'role.resumed', nodeId: improvementGraphNodeId, role: roleInstanceId, reason: 'interrupted-turn' });
   }
 
   let session: RoleSession;
 
   if (isRunning) {
-    const loaded = SessionStore.loadRoleSession(roleKey, flowRef, flowRun.workspaceRoot);
-    if (!loaded) throw new Error(`[improvement] ${roleName} is in runningRoles but no session found on disk.`);
+    const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+    if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
     session = loaded;
     session.isActive = true;
 
     if (hasPendingInput && isAwaitingHuman) {
-      const inputText = phase.pendingHumanInputs![roleName].text;
+      const inputText = phase.pendingHumanInputs![roleInstanceId].text;
       const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
       if (lastMsg?.role === 'user') {
         lastMsg.content += '\n\n' + inputText;
@@ -346,8 +344,8 @@ async function runMetaAnalysisEntry(
         appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
       }
       await saveImprovementPhase(flowRun, (p) => {
-        delete p.pendingHumanInputs?.[roleName];
-        delete p.awaitingHumanRoles?.[roleName];
+        delete p.pendingHumanInputs?.[roleInstanceId];
+        delete p.awaitingHumanRoles?.[roleInstanceId];
       });
     } else {
       // Crash resume: if turn was interrupted mid-stream, append continuation prompt
@@ -360,7 +358,7 @@ async function runMetaAnalysisEntry(
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
   } else {
     // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
-    const existing = SessionStore.loadRoleSession(roleKey, flowRef, flowRun.workspaceRoot);
+    const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
     const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
 
     if (existing && lastMsg?.role === 'user') {
@@ -392,8 +390,8 @@ async function runMetaAnalysisEntry(
         session.isActive = true;
       } else {
         session = {
-          roleName,
-          logicalSessionId: `${flowRun.flowId}__${roleKey}`,
+          roleName: roleInstanceId,
+          logicalSessionId: `${flowRun.flowId}__${roleInstanceId}`,
           transcriptHistory: [],
           isActive: true,
         };
@@ -404,22 +402,22 @@ async function runMetaAnalysisEntry(
 
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
     await saveImprovementPhase(flowRun, (p) => {
-      if (!p.runningRoles.includes(roleName)) {
-        p.runningRoles = [...p.runningRoles, roleName];
+      if (!p.runningRoles.includes(roleInstanceId)) {
+        p.runningRoles = [...p.runningRoles, roleInstanceId];
       }
     });
   }
 
   if (!session.systemPrompt) {
     session.systemPrompt = ContextInjectionService.buildContextBundle(
-      flowRun.projectNamespace, roleName, flowRun.workspaceRoot
+      flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot
     ).bundleContent;
   }
 
-  const signal = scheduler.registerRoleTurn(roleKey);
+  const signal = scheduler.registerRoleTurn(roleInstanceId);
   try {
     const completed = await runBackwardPassSessionUntilExpectedSignal(
-      flowRun, roleName, session.systemPrompt, session, 'meta-analysis-complete', entry.role,
+      flowRun, roleInstanceId, session.systemPrompt, session, 'meta-analysis-complete',
       roleOutputStream, renderer,
       signal, consentGate,
       (r) => {
@@ -427,7 +425,7 @@ async function runMetaAnalysisEntry(
         if (actualFindingsPath !== assignedFindingsRepoPath) {
           return {
             code: 'assigned_findings_path',
-            operatorSummary: `${entry.role} used findings_path ${actualFindingsPath}; expected ${assignedFindingsRepoPath}`,
+            operatorSummary: `${roleInstanceId} used findings_path ${actualFindingsPath}; expected ${assignedFindingsRepoPath}`,
             modelRepairMessage: [
               'Error: This backward pass meta-analysis step has a runtime-assigned findings path.',
               `Write or move your findings artifact to ${assignedFindingsRepoPath}.`,
@@ -438,7 +436,7 @@ async function runMetaAnalysisEntry(
         if (!fs.existsSync(assignedFindingsFilePath)) {
           return {
             code: 'missing_findings_artifact',
-            operatorSummary: `${entry.role} emitted meta-analysis-complete before creating ${assignedFindingsRepoPath}`,
+            operatorSummary: `${roleInstanceId} emitted meta-analysis-complete before creating ${assignedFindingsRepoPath}`,
             modelRepairMessage: [
               'Error: The runtime-assigned findings artifact does not exist yet.',
               `Create ${assignedFindingsRepoPath}.`,
@@ -453,18 +451,18 @@ async function runMetaAnalysisEntry(
     if (!completed) return; // role is now awaiting human input; awaitingHumanRoles already saved
 
     await saveImprovementPhase(flowRun, (p) => {
-      p.findingsProduced = { ...p.findingsProduced, [roleName]: assignedFindingsRepoPath };
-      if (!p.completedRoles.includes(roleName)) {
-        p.completedRoles = [...p.completedRoles, roleName];
+      p.findingsProduced = { ...p.findingsProduced, [roleInstanceId]: assignedFindingsRepoPath };
+      if (!p.completedRoles.includes(roleInstanceId)) {
+        p.completedRoles = [...p.completedRoles, roleInstanceId];
       }
-      p.runningRoles = p.runningRoles.filter(r => r !== roleName);
+      p.runningRoles = p.runningRoles.filter(r => r !== roleInstanceId);
       p.activeNodeIds = (p.activeNodeIds ?? []).filter(id => id !== improvementGraphNodeId);
       if (!(p.completedNodeIds ?? []).includes(improvementGraphNodeId)) {
         p.completedNodeIds = [...(p.completedNodeIds ?? []), improvementGraphNodeId];
       }
     });
   } finally {
-    scheduler.unregisterRoleTurn(roleKey);
+    scheduler.unregisterRoleTurn(roleInstanceId);
   }
 }
 
@@ -478,35 +476,34 @@ async function runFeedbackEntry(
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
 ): Promise<void> {
-  const roleName = entry.role;
+  const roleInstanceId = entry.role;
   const improvementGraphNodeId = improvementNodeId(entry);
   const recordFolderPath = flowRun.recordFolderPath;
 
-  const roleKey = parseRoleIdentity(roleName).instanceRoleId;
-  const nodeId = `${roleKey}-feedback`;
+  const nodeId = `${roleInstanceId}-feedback`;
   const flowRef = SessionStore.flowRef(flowRun);
   const phase = flowRun.improvementPhase!;
-  const isRunning = phase.runningRoles.includes(roleName);
+  const isRunning = phase.runningRoles.includes(roleInstanceId);
 
-  const hasPendingInput = !!phase.pendingHumanInputs?.[roleName];
-  const isAwaitingHuman = !!phase.awaitingHumanRoles?.[roleName];
+  const hasPendingInput = !!phase.pendingHumanInputs?.[roleInstanceId];
+  const isAwaitingHuman = !!phase.awaitingHumanRoles?.[roleInstanceId];
 
   if (!isRunning) {
-    renderer.emit({ kind: 'role.active', nodeId: improvementGraphNodeId, role: roleName });
+    renderer.emit({ kind: 'role.active', nodeId: improvementGraphNodeId, role: roleInstanceId });
   } else if (!hasPendingInput) {
-    renderer.emit({ kind: 'role.resumed', nodeId: improvementGraphNodeId, role: roleName, reason: 'interrupted-turn' });
+    renderer.emit({ kind: 'role.resumed', nodeId: improvementGraphNodeId, role: roleInstanceId, reason: 'interrupted-turn' });
   }
 
   let session: RoleSession;
 
   if (isRunning) {
-    const loaded = SessionStore.loadRoleSession(roleKey, flowRef, flowRun.workspaceRoot);
-    if (!loaded) throw new Error(`[improvement] ${roleName} is in runningRoles but no session found on disk.`);
+    const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+    if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
     session = loaded;
     session.isActive = true;
 
     if (hasPendingInput && isAwaitingHuman) {
-      const inputText = phase.pendingHumanInputs![roleName].text;
+      const inputText = phase.pendingHumanInputs![roleInstanceId].text;
       const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
       if (lastMsg?.role === 'user') {
         lastMsg.content += '\n\n' + inputText;
@@ -516,8 +513,8 @@ async function runFeedbackEntry(
         appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
       }
       await saveImprovementPhase(flowRun, (p) => {
-        delete p.pendingHumanInputs?.[roleName];
-        delete p.awaitingHumanRoles?.[roleName];
+        delete p.pendingHumanInputs?.[roleInstanceId];
+        delete p.awaitingHumanRoles?.[roleInstanceId];
       });
     } else {
       const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
@@ -529,7 +526,7 @@ async function runFeedbackEntry(
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
   } else {
     // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
-    const existing = SessionStore.loadRoleSession(roleKey, flowRef, flowRun.workspaceRoot);
+    const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
     const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
 
     if (existing && lastMsg?.role === 'user') {
@@ -554,8 +551,8 @@ async function runFeedbackEntry(
         ].join(' ')
       });
       session = {
-        roleName,
-        logicalSessionId: `${flowRun.flowId}__${roleKey}`,
+        roleName: roleInstanceId,
+        logicalSessionId: `${flowRun.flowId}__${roleInstanceId}`,
         transcriptHistory: [{ role: 'user', content: userMessage }],
         isActive: true,
       };
@@ -564,16 +561,16 @@ async function runFeedbackEntry(
 
     SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
     await saveImprovementPhase(flowRun, (p) => {
-      if (!p.runningRoles.includes(roleName)) {
-        p.runningRoles = [...p.runningRoles, roleName];
+      if (!p.runningRoles.includes(roleInstanceId)) {
+        p.runningRoles = [...p.runningRoles, roleInstanceId];
       }
     });
   }
 
-  const signal = scheduler.registerRoleTurn(roleKey);
+  const signal = scheduler.registerRoleTurn(roleInstanceId);
   try {
     const completed = await runBackwardPassSessionUntilExpectedSignal(
-      flowRun, roleName, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete', entry.role,
+      flowRun, roleInstanceId, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete',
       roleOutputStream, renderer,
       signal, consentGate,
       (r) => {
@@ -581,7 +578,7 @@ async function runFeedbackEntry(
         if (actualArtifactPath !== assignedFeedbackRepoPath) {
           return {
             code: 'assigned_feedback_path',
-            operatorSummary: `${entry.role} used artifact_path ${actualArtifactPath}; expected ${assignedFeedbackRepoPath}`,
+            operatorSummary: `${roleInstanceId} used artifact_path ${actualArtifactPath}; expected ${assignedFeedbackRepoPath}`,
             modelRepairMessage: [
               'Error: This backward pass feedback step has a runtime-assigned artifact path.',
               `Write or move the feedback artifact to ${assignedFeedbackRepoPath}.`,
@@ -592,7 +589,7 @@ async function runFeedbackEntry(
         if (!fs.existsSync(assignedFeedbackFilePath)) {
           return {
             code: 'missing_feedback_artifact',
-            operatorSummary: `${entry.role} emitted backward-pass-complete before creating ${assignedFeedbackRepoPath}`,
+            operatorSummary: `${roleInstanceId} emitted backward-pass-complete before creating ${assignedFeedbackRepoPath}`,
             modelRepairMessage: [
               'Error: The runtime-assigned feedback artifact does not exist yet.',
               `Create ${assignedFeedbackRepoPath}.`,
@@ -607,17 +604,17 @@ async function runFeedbackEntry(
     if (!completed) return; // role is now awaiting human input; awaitingHumanRoles already saved
 
     await saveImprovementPhase(flowRun, (p) => {
-      if (!p.completedRoles.includes(roleName)) {
-        p.completedRoles = [...p.completedRoles, roleName];
+      if (!p.completedRoles.includes(roleInstanceId)) {
+        p.completedRoles = [...p.completedRoles, roleInstanceId];
       }
-      p.runningRoles = p.runningRoles.filter(r => r !== roleName);
+      p.runningRoles = p.runningRoles.filter(r => r !== roleInstanceId);
       p.activeNodeIds = [];
       if (!(p.completedNodeIds ?? []).includes(improvementGraphNodeId)) {
         p.completedNodeIds = [...(p.completedNodeIds ?? []), improvementGraphNodeId];
       }
     });
   } finally {
-    scheduler.unregisterRoleTurn(roleKey);
+    scheduler.unregisterRoleTurn(roleInstanceId);
   }
 }
 
@@ -631,7 +628,7 @@ async function runPlanSteps(
   plan: ReturnType<typeof computeBackwardPassPlan>,
   startStep: number,
   renderer: OperatorRenderSink,
-  roleOutputStreamFactory: ((role: string) => NodeJS.WritableStream) | undefined,
+  roleOutputStreamFactory: ((roleInstanceId: string) => NodeJS.WritableStream) | undefined,
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
 ): Promise<boolean> {
@@ -666,9 +663,10 @@ async function runPlanSteps(
       if (group.every(e => phase.completedRoles.includes(e.role))) break;
 
       const runnable = group.filter(e => {
-        if (phase.completedRoles.includes(e.role)) return false;
-        const isAwaiting = !!phase.awaitingHumanRoles?.[e.role];
-        const hasPendingInput = !!phase.pendingHumanInputs?.[e.role];
+        const entryRoleInstanceId = e.role;
+        if (phase.completedRoles.includes(entryRoleInstanceId)) return false;
+        const isAwaiting = !!phase.awaitingHumanRoles?.[entryRoleInstanceId];
+        const hasPendingInput = !!phase.pendingHumanInputs?.[entryRoleInstanceId];
         return !isAwaiting || hasPendingInput;
       });
 
@@ -696,10 +694,10 @@ export class ImprovementOrchestrator {
     this.wakeController.wake();
   }
 
-  public abortActiveTurn(role?: string): boolean {
+  public abortActiveTurn(roleInstanceId?: string): boolean {
     let stopped = false;
-    for (const [roleKey, controller] of this.turnControllers) {
-      if (role && parseRoleIdentity(role).instanceRoleId !== roleKey) continue;
+    for (const [activeRoleInstanceId, controller] of this.turnControllers) {
+      if (roleInstanceId && roleInstanceId !== activeRoleInstanceId) continue;
       if (controller.signal.aborted) continue;
       controller.abort();
       stopped = true;
@@ -707,22 +705,22 @@ export class ImprovementOrchestrator {
     return stopped;
   }
 
-  public hasActiveTurn(role?: string): boolean {
-    for (const [roleKey, controller] of this.turnControllers) {
-      if (role && parseRoleIdentity(role).instanceRoleId !== roleKey) continue;
+  public hasActiveTurn(roleInstanceId?: string): boolean {
+    for (const [activeRoleInstanceId, controller] of this.turnControllers) {
+      if (roleInstanceId && roleInstanceId !== activeRoleInstanceId) continue;
       if (!controller.signal.aborted) return true;
     }
     return false;
   }
 
   public readonly improvementScheduler: ImprovementScheduler = {
-    registerRoleTurn: (roleKey: string): AbortSignal => {
+    registerRoleTurn: (roleInstanceId: string): AbortSignal => {
       const controller = new AbortController();
-      this.turnControllers.set(roleKey, controller);
+      this.turnControllers.set(roleInstanceId, controller);
       return controller.signal;
     },
-    unregisterRoleTurn: (roleKey: string): void => {
-      this.turnControllers.delete(roleKey);
+    unregisterRoleTurn: (roleInstanceId: string): void => {
+      this.turnControllers.delete(roleInstanceId);
     },
     observeWakeGeneration: () => this.wakeController.observe(),
     waitForWakeAfter: (observed: number) => this.wakeController.waitForWakeAfter(observed),
@@ -781,7 +779,7 @@ export class ImprovementOrchestrator {
     flowRun: FlowRun,
     mode: ImprovementMode,
     renderer: OperatorRenderSink,
-    roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
+    roleOutputStreamFactory?: (roleInstanceId: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
   ): Promise<void> {
     const scheduler = this.improvementScheduler;
@@ -852,7 +850,7 @@ export class ImprovementOrchestrator {
   async runFeedback(
     flowRun: FlowRun,
     renderer: OperatorRenderSink,
-    roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
+    roleOutputStreamFactory?: (roleInstanceId: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
   ): Promise<void> {
     const scheduler = this.improvementScheduler;
@@ -909,9 +907,10 @@ export class ImprovementOrchestrator {
           if (group.every(e => phase.completedRoles.includes(e.role))) break;
 
           const runnable = group.filter(e => {
-            if (phase.completedRoles.includes(e.role)) return false;
-            const isAwaiting = !!phase.awaitingHumanRoles?.[e.role];
-            const hasPendingInput = !!phase.pendingHumanInputs?.[e.role];
+            const entryRoleInstanceId = e.role;
+            if (phase.completedRoles.includes(entryRoleInstanceId)) return false;
+            const isAwaiting = !!phase.awaitingHumanRoles?.[entryRoleInstanceId];
+            const hasPendingInput = !!phase.pendingHumanInputs?.[entryRoleInstanceId];
             return !isAwaiting || hasPendingInput;
           });
 
@@ -949,7 +948,7 @@ export class ImprovementOrchestrator {
   async resumeImprovement(
     flowRun: FlowRun,
     renderer: OperatorRenderSink,
-    roleOutputStreamFactory?: (roleName: string) => NodeJS.WritableStream,
+    roleOutputStreamFactory?: (roleInstanceId: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
   ): Promise<void> {
     const scheduler = this.improvementScheduler;

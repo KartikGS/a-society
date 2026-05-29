@@ -14,47 +14,55 @@ export interface ContextBundleResult {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_HANDOFF_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/handoff.md');
+const RUNTIME_RECORDS_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/records.md');
+
+const RUNTIME_SESSION_CONTRACTS = [
+  { label: 'runtime/contracts/handoff.md', filePath: RUNTIME_HANDOFF_CONTRACT_PATH },
+  { label: 'runtime/contracts/records.md', filePath: RUNTIME_RECORDS_CONTRACT_PATH }
+];
 
 
 export class ContextInjectionService {
   /**
    * Assembles the stable runtime-owned context into a single system-prompt string.
-   * Scope: role announcement, date, runtime handoff contract, required-reading files.
+   * Scope: role announcement, runtime session contracts, required-reading files.
    * Does NOT include active artifacts or task-scoped inputs — those are delivered
    * as node-entry user-message content by the orchestrator and session-entry helpers.
    */
   static buildContextBundle(
     projectNamespace: string,
-    roleName: string,
+    roleInstanceId: string,
     workspaceRoot: string
   ): ContextBundleResult {
-    const roleIdentity = parseRoleIdentity(roleName);
+    const roleIdentity = parseRoleIdentity(roleInstanceId);
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
 
     // 0a. Role announcement
-    bundle += `You are the ${roleIdentity.instanceRoleName} agent for ${projectNamespace}. Below is information that will help you play your role.\n`;
+    bundle += `You are the ${roleIdentity.instanceRoleId} agent for ${projectNamespace}. Below is information that will help you play your role.\n`;
     if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
-      bundle += `This session uses the ${roleIdentity.baseRoleName} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleName} session identity.\n`;
+      bundle += `This session uses the ${roleIdentity.baseRoleId} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleId} session identity.\n`;
     }
     bundle += '\n';
 
     // 0b. Runtime-owned session contracts
     bundle += `--- RUNTIME-MANAGED SESSION CONTRACTS ---\n`;
-    if (fs.existsSync(RUNTIME_HANDOFF_CONTRACT_PATH)) {
-      const content = fs.readFileSync(RUNTIME_HANDOFF_CONTRACT_PATH, 'utf8');
-      bundle += `\n[FILE: runtime/contracts/handoff.md]\n`;
-      bundle += `${content}\n\n`;
-    } else {
-      bundle += `\n[FILE ERROR: Could not read runtime/contracts/handoff.md]\n\n`;
+    for (const contract of RUNTIME_SESSION_CONTRACTS) {
+      if (fs.existsSync(contract.filePath)) {
+        const content = fs.readFileSync(contract.filePath, 'utf8');
+        bundle += `\n[FILE: ${contract.label}]\n`;
+        bundle += `${content}\n\n`;
+      } else {
+        bundle += `\n[FILE ERROR: Could not read ${contract.label}]\n\n`;
+      }
     }
 
     // 1. Resolve and inject required reading
-    const roleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
+    const roleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
 
     if (roleEntry) {
-      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleIdentity.instanceRoleName} IN ${projectNamespace} ---\n`;
+      bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleIdentity.instanceRoleId} IN ${projectNamespace} ---\n`;
       if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
-        bundle += `Loaded from base role ${roleIdentity.baseRoleName}.\n`;
+        bundle += `Loaded from base role ${roleIdentity.baseRoleId}.\n`;
       }
       bundle += `These files are already loaded into this session by the runtime. Use them directly. Do not spend your first turn rereading or re-listing them unless the current task specifically requires close inspection of one file.\n`;
       for (const varName of roleEntry.requiredReadingVariables) {
@@ -71,7 +79,7 @@ export class ContextInjectionService {
         }
       }
     } else {
-      bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleName} IN ${projectNamespace}. No required reading available. ---\n\n`;
+      bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleId} IN ${projectNamespace}. No required reading available. ---\n\n`;
     }
 
     // Compute hash

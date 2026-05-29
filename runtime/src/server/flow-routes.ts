@@ -1,5 +1,4 @@
 import { type Express, type Request, type Response } from 'express';
-import fs from 'node:fs';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import { SessionStore } from '../orchestration/store.js';
 import { discoverProjects } from '../projects/project-discovery.js';
@@ -100,11 +99,7 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
   app.delete('/api/flows/:projectNamespace/:flowId', (req: Request, res: Response) => {
     const ref = flowRefFromParams(req);
 
-    const { recordFolderPath } = SessionStore.deleteFlow(ref, workspaceRoot);
-    if (recordFolderPath && fs.existsSync(recordFolderPath)) {
-      fs.rmSync(recordFolderPath, { recursive: true, force: true });
-    }
-
+    SessionStore.deleteFlow(ref, workspaceRoot);
     onFlowDeleted(ref.projectNamespace);
 
     res.status(200).json({ ok: true });

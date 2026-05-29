@@ -66,7 +66,9 @@ Fresh starts open in the project selector. The selector now has three startup pa
 
 Selecting a project with `a-docs/` starts the normal stored Owner draft flow.
 
-Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder and single-node Owner workflow, injects initialization guidance as active artifacts, and then runs that stored flow.
+Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder under `.a-society/state/<project>/<flow-id>/record/` with a single-node Owner workflow, injects initialization guidance as active artifacts, and then runs that stored flow.
+
+The runtime injects `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` with the handoff contract in every managed session. It defines flow record placement, metadata, and writable scope.
 
 - The runtime streams assistant text into the chat panel
 - Runtime notices appear inline in the same operator feed
@@ -83,7 +85,7 @@ The UI switches to graph mode on the first `role.active` operator event. `role.a
 - The live operator feed remains available beside the graph
 - Human replies are routed to the role/node chat that requested input
 
-When a project has existing flow state, the client lists the project's saved records in the left pane. Selecting a record opens it as an in-app tab and scopes the URL to that active tab.
+When a project has existing flow state, the client lists the project's saved flows in the left pane. Selecting a flow opens it as an in-app tab and scopes the URL to that active tab.
 
 The active tab is mirrored in the URL as `/projects/:projectNamespace/flows/:flowId`. Switching tabs updates that route; loading the route reopens that flow. The UI also accepts the older `?project=...&flow=...` form for compatibility and rewrites it to the route form after a flow is selected.
 
@@ -136,7 +138,7 @@ Permission state is stored on the active `FlowRun` as `consentState` in `flow.js
 
 When a session begins, the runtime resolves the active role instance to its base role and loads that base role's file from `a-docs/roles/<base-role-id>/required-readings.yaml` into the system prompt. These files are already loaded into the session at first turn. Role docs and bootstrap prompts must not instruct the model to reread those files by default.
 
-Role names ending in `_<number>` are separate role instances. For example, `Owner_1` and `Owner_2` both load `Owner` required readings, but they use separate runtime sessions.
+Role ids ending in `_<number>` are separate role instances. For example, `owner_1` and `owner_2` both load `owner` required readings, but they use separate runtime sessions.
 
 ### Stored-flow startup only
 
@@ -172,7 +174,7 @@ When a backward edge reopens a node for the same role instance, the runtime keep
 
 ### Same-role-instance scheduling
 
-Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple runnable nodes share a role instance, the runtime claims only the earliest runnable node for that role instance; later same-role-instance work remains derivable from flow state or the runner's initial-node list until that role instance is free. Distinct role instances may run in parallel, including instances that share the same base role such as `Owner_1` and `Owner_2`.
+Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple runnable nodes share a role instance, the runtime claims only the earliest runnable node for that role instance; later same-role-instance work remains derivable from flow state or the runner's initial-node list until that role instance is free. Distinct role instances may run in parallel, including instances that share the same base role such as `owner_1` and `owner_2`.
 
 ---
 

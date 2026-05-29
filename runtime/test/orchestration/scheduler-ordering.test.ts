@@ -26,7 +26,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     flowId: 'test-flow',
     workspaceRoot: '/tmp/a-society-test',
     projectNamespace: 'test-project',
-    recordFolderPath: '/tmp/a-society-test/test-project/a-docs/records/test-flow',
+    recordFolderPath: '/tmp/a-society-test/.a-society/state/test-project/test-flow/record',
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},

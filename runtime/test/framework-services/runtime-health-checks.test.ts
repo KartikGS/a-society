@@ -37,7 +37,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   const rolesRoot = path.join(aDocsRoot, 'roles', 'owner');
   const workflowRoot = path.join(aDocsRoot, 'workflow');
   const improvementRoot = path.join(aDocsRoot, 'improvement');
-  const recordsRoot = path.join(aDocsRoot, 'records');
   const indexesRoot = path.join(aDocsRoot, 'indexes');
 
   fs.symlinkSync(frameworkRoot, aSocietyRoot, 'dir');
@@ -47,7 +46,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   fs.mkdirSync(rolesRoot, { recursive: true });
   fs.mkdirSync(workflowRoot, { recursive: true });
   fs.mkdirSync(improvementRoot, { recursive: true });
-  fs.mkdirSync(recordsRoot, { recursive: true });
   fs.mkdirSync(indexesRoot, { recursive: true });
 
   fs.writeFileSync(path.join(aDocsRoot, 'agents.md'), '# Agents\n', 'utf8');
@@ -76,7 +74,7 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
       '    - $TEST_PROJECT_AGENTS',
       '  nodes:',
       '    - id: owner-intake',
-      '      role: Owner',
+      '      role: owner',
       '  edges: []',
       ''
     ].join('\n'),
@@ -114,7 +112,7 @@ test('passes when workflow uses a numbered role instance backed by the base role
         '  name: Test Workflow',
         '  nodes:',
         '    - id: owner-one',
-        '      role: Owner_1',
+        '      role: owner_1',
         '  edges: []',
         ''
       ].join('\n'),
@@ -190,7 +188,7 @@ test('fails when a workflow node required reading duplicates startup role readin
         '  name: Test Workflow',
         '  nodes:',
         '    - id: owner-intake',
-        '      role: Owner',
+        '      role: owner',
         '      required_readings:',
         '        - $TEST_PROJECT_AGENTS',
         '  edges: []',

@@ -4,33 +4,8 @@ import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
 import { CURRENT_FLOW_STATE_VERSION, normalizeConsentState } from '../common/types.js';
 import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../common/types.js';
 import { parseRoleIdentity } from '../common/role-id.js';
-import { repairMovedRecordFolder } from '../projects/draft-flow.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
-
-function getStateRoot(workspaceRoot = process.cwd()): string {
-  if (process.env.A_SOCIETY_STATE_DIR) {
-    return path.resolve(process.env.A_SOCIETY_STATE_DIR);
-  }
-  return path.join(path.resolve(workspaceRoot), '.a-society', 'state');
-}
-
-function assertSafeSegment(label: string, value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed === '.' || trimmed === '..' || trimmed.includes('/') || trimmed.includes('\\')) {
-    throw new Error(`Invalid ${label} "${value}".`);
-  }
-  return trimmed;
-}
-
-function getProjectStateDir(workspaceRoot: string, projectNamespace: string): string {
-  const safeProject = assertSafeSegment('project namespace', projectNamespace);
-  return path.join(getStateRoot(workspaceRoot), safeProject);
-}
-
-function getFlowDir(workspaceRoot: string, ref: FlowRef): string {
-  const safeFlowId = assertSafeSegment('flow id', ref.flowId);
-  return path.join(getProjectStateDir(workspaceRoot, ref.projectNamespace), safeFlowId);
-}
+import { getFlowDir, getProjectStateDir, getStateRoot } from './state-paths.js';
 
 function getFlowPath(workspaceRoot: string, ref: FlowRef): string {
   return path.join(getFlowDir(workspaceRoot, ref), 'flow.json');
@@ -71,14 +46,8 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
     );
   }
 
-  const repairedRecordFolderPath = repairMovedRecordFolder(flow);
-  if (repairedRecordFolderPath && repairedRecordFolderPath !== flow.recordFolderPath) {
-    flow.recordFolderPath = repairedRecordFolderPath;
-    SessionStore.saveFlowRun(flow, ref ?? flowRefFromRun(flow), workspaceRoot);
-  }
-
   if (fs.existsSync(flow.recordFolderPath)) {
-    const metadata = syncRecordMetadataFromWorkflow(flow.recordFolderPath, flow.flowId);
+    const metadata = syncRecordMetadataFromWorkflow(flow.recordFolderPath);
     if (metadata.name) {
       flow.recordName = metadata.name;
     } else {
@@ -298,19 +267,8 @@ export class SessionStore {
     return result;
   }
 
-  static deleteFlow(ref: FlowRef, workspaceRoot = SessionStore.defaultWorkspaceRoot): { recordFolderPath: string | null } {
+  static deleteFlow(ref: FlowRef, workspaceRoot = SessionStore.defaultWorkspaceRoot): void {
     SessionStore.init(workspaceRoot);
-
-    let recordFolderPath: string | null = null;
-    const flowPath = getFlowPath(workspaceRoot, ref);
-    if (fs.existsSync(flowPath)) {
-      try {
-        const raw = JSON.parse(fs.readFileSync(flowPath, 'utf8')) as FlowRun;
-        recordFolderPath = raw.recordFolderPath ?? null;
-      } catch {
-        // best-effort; still delete state dir
-      }
-    }
 
     const flowDir = getFlowDir(workspaceRoot, ref);
     if (fs.existsSync(flowDir)) {
@@ -323,8 +281,6 @@ export class SessionStore {
     ) {
       SessionStore.currentFlowRef = null;
     }
-
-    return { recordFolderPath };
   }
 
   static listFlowSummaries(workspaceRoot: string, projectNamespace: string): FlowSummary[] {

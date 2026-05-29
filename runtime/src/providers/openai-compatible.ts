@@ -79,7 +79,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       let outputTokens: number | undefined;
 
       try {
-        renderer?.requestSent(options?.role ?? '', 'openai-compatible', this.model);
+        renderer?.requestSent(options?.roleInstanceId ?? '', 'openai-compatible', this.model);
 
         const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
           {
@@ -127,7 +127,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           ...(nativeTools ? { tools: nativeTools } : {})
         }, { signal: options?.signal });
 
-        renderer?.receivingResponse(options?.role ?? '');
+        renderer?.receivingResponse(options?.roleInstanceId ?? '');
 
         let finishReason: string | null = null;
         const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();

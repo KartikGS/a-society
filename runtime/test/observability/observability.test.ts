@@ -27,6 +27,7 @@ import { deterministicFindingsFilePath } from '../../src/framework-services/back
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
 import { runRoleTurn } from '../../src/orchestration/orient.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 
 import type { 
@@ -112,8 +113,8 @@ async function run() {
   const stateDir = path.join(tmpDir, '.state');
   const settingsDir = path.join(tmpDir, '.settings');
   
-  // registry.ts buildRoleContext(projectNamespace, roleName, workspaceRoot)
-  // For projectNamespace "a-society" and roleName "curator", it looks for:
+  // registry.ts buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot)
+  // For projectNamespace "a-society" and roleInstanceId "curator", it looks for:
   // [workspaceRoot]/a-society/a-docs/roles/curator/required-readings.yaml
   // This is because the namespace selects the project folder under the workspace.
   const namespaceDir = path.join(tmpDir, 'a-society');
@@ -122,10 +123,10 @@ async function run() {
   fs.mkdirSync(path.join(rolesDir, 'curator'), { recursive: true });
   fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
   fs.writeFileSync(path.join(rolesDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
-  fs.writeFileSync(path.join(rolesDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
+  fs.writeFileSync(path.join(rolesDir, 'curator', 'main.md'), '---\nrole: curator\n---\nHello');
   fs.writeFileSync(path.join(rolesDir, 'curator', 'ownership.yaml'), 'role: curator\nsurfaces: []\n');
   fs.writeFileSync(path.join(rolesDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
-  fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), '---\nrole: Owner\n---\nHello');
+  fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), '---\nrole: owner\n---\nHello');
   fs.writeFileSync(path.join(rolesDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
 
   process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE = 'true';
@@ -356,7 +357,7 @@ async function run() {
     process.env.A_SOCIETY_STATE_DIR = stateDir;
     SessionStore.init();
 
-    const recordDir = path.join(tmpDir, 'accepted-handoff-record');
+    const recordDir = getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'accepted-handoff-flow' });
     fs.mkdirSync(recordDir, { recursive: true });
     fs.writeFileSync(
       path.join(recordDir, 'workflow.yaml'),
@@ -427,7 +428,7 @@ async function run() {
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
     const workflowPath = path.join(workflowsDir, 'workflow.yaml');
-    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: Owner\n  edges: []\n');
+    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: owner\n  edges: []\n');
 
     const result = validateWorkflowFile(workflowPath, true);
     assert.ok(result.valid);
@@ -443,7 +444,7 @@ async function run() {
       flowId: 'test-flow',
       workspaceRoot: tmpDir,
       projectNamespace: path.basename(tmpDir),
-      recordFolderPath: path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'records', 'test-flow'),
+      recordFolderPath: getFlowRecordDir(tmpDir, { projectNamespace: path.basename(tmpDir), flowId: 'test-flow' }),
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
@@ -481,16 +482,16 @@ async function run() {
     fs.mkdirSync(path.join(derivedNamespaceDir, 'owner'), { recursive: true });
     fs.mkdirSync(path.join(derivedNamespaceDir, 'curator'), { recursive: true });
     fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
-    fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'main.md'), '---\nrole: Owner\n---\nHello');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'main.md'), '---\nrole: owner\n---\nHello');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'required-readings.yaml'), 'role: curator\nrequired_readings: []\n');
-    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'main.md'), '---\nrole: Curator\n---\nHello');
+    fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'main.md'), '---\nrole: curator\n---\nHello');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'ownership.yaml'), 'role: curator\nsurfaces: []\n');
 
-    const recordDir = path.join(aDocsRoot, 'records', 'repair-record');
     // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:
     // workspaceRoot = workspace root, projectNamespace = project folder name.
     const improvementNamespace = path.basename(tmpDir);
+    const recordDir = getFlowRecordDir(tmpDir, { projectNamespace: improvementNamespace, flowId: 'repair-flow' });
     const runtimeContractsRoot = path.join(tmpDir, 'a-society', 'runtime', 'contracts');
     fs.mkdirSync(recordDir, { recursive: true });
     fs.mkdirSync(runtimeContractsRoot, { recursive: true });
@@ -503,13 +504,13 @@ async function run() {
     fs.writeFileSync(path.join(aDocsRoot, 'indexes', 'main.md'), '');
     fs.writeFileSync(
       path.join(aDocsRoot, 'workflow', 'main.yaml'),
-      'workflow:\n  name: Canonical Improvement Workflow\n  nodes:\n    - id: owner-feedback\n      role: Owner\n  edges: []\n'
+      'workflow:\n  name: Canonical Improvement Workflow\n  nodes:\n    - id: owner-feedback\n      role: owner\n  edges: []\n'
     );
     fs.writeFileSync(
       path.join(recordDir, 'workflow.yaml'),
-      'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n'
+      'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: curator\n  edges: []\n'
     );
-    const assignedFindingsPath = deterministicFindingsFilePath(recordDir, 'Curator');
+    const assignedFindingsPath = deterministicFindingsFilePath(recordDir, 'curator');
     fs.mkdirSync(path.dirname(assignedFindingsPath), { recursive: true });
     fs.writeFileSync(assignedFindingsPath, 'Existing findings');
 
@@ -542,7 +543,7 @@ async function run() {
     };
 
     SessionStore.saveRoleSession({
-      roleName: 'Curator',
+      roleName: 'curator',
       logicalSessionId: 'repair-flow__curator',
       transcriptHistory: [
         { role: 'user', content: 'Forward-pass curator assignment.' },
@@ -643,7 +644,7 @@ async function run() {
     assert.ok(feedbackMessage.content.includes(`Source flow ID: repair-flow`));
     assert.ok(feedbackMessage.content.includes(`Flow kind: standard`));
     assert.ok(feedbackMessage.content.includes(`runtime-assigned path: ${feedbackArtifactPath}`));
-    assert.ok(repairSummaries.includes('A-Society Feedback emitted prompt-human during backward pass feedback'));
+    assert.ok(repairSummaries.includes('a-society-feedback emitted prompt-human during backward pass feedback'));
   });
 
   console.log(`\n  ${passed} passed, ${failed} failed\n`);

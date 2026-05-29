@@ -5,6 +5,7 @@ import path from 'node:path';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 
@@ -22,9 +23,10 @@ async function runTest() {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'backward-resubmission-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
-  const testDir = path.join(workspaceRoot, projectNamespace);
-  const recordPath = path.join(testDir, 'records', 'test-flow');
   const stateDir = path.join(tmpBase, '.state');
+  process.env.A_SOCIETY_STATE_DIR = stateDir;
+  const flowId = 'backward-flow';
+  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
 
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
@@ -32,19 +34,18 @@ async function runTest() {
   scaffoldRole(workspaceRoot, projectNamespace, 'owner');
   scaffoldRole(workspaceRoot, projectNamespace, 'developer');
   scaffoldRole(workspaceRoot, projectNamespace, 'archivist');
-  process.env.A_SOCIETY_STATE_DIR = stateDir;
 
   const workflowGraph = `workflow:
   name: backward-resubmission
   nodes:
     - id: proposal
-      role: Curator
+      role: curator
     - id: review
-      role: Owner
+      role: owner
     - id: implementation
-      role: Developer
+      role: developer
     - id: audit
-      role: Archivist
+      role: archivist
   edges:
     - from: proposal
       to: review
@@ -63,7 +64,7 @@ async function runTest() {
   fs.writeFileSync(reviewFeedbackPath, 'Please revise the proposal with these changes.');
 
   const reviewFeedbackRel = path.relative(workspaceRoot, reviewFeedbackPath);
-  const flowRef = { projectNamespace, flowId: 'backward-flow' };
+  const flowRef = { projectNamespace, flowId };
 
   SessionStore.init();
   SessionStore.saveFlowRun({
@@ -82,7 +83,7 @@ async function runTest() {
   }, flowRef, workspaceRoot);
 
   SessionStore.saveRoleSession({
-    roleName: 'Curator',
+    roleName: 'curator',
     logicalSessionId: `${flowRef.flowId}__curator`,
     transcriptHistory: [{ role: 'user', content: 'stale proposal session' }],
     isActive: false,
@@ -92,7 +93,7 @@ async function runTest() {
   const flowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
-  await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'Owner', [
+  await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'owner', [
     { target_node_id: 'proposal', artifact_path: reviewFeedbackRel },
   ]);
 

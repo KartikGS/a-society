@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
@@ -28,7 +29,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-operator-feed-')
 const projectNamespace = 'test-project';
 const flowId = 'test-flow';
 const ref = { projectNamespace, flowId };
-const recordFolderPath = path.join(tmpDir, projectNamespace, 'a-docs', 'records', flowId);
+const recordFolderPath = getFlowRecordDir(tmpDir, { projectNamespace, flowId });
 fs.mkdirSync(recordFolderPath, { recursive: true });
 
 const flowRun: FlowRun = {
@@ -55,7 +56,7 @@ test('role feed persists FeedItem entries separately from role transcript histor
     { id: 'owner_1', type: 'user', label: 'You', text: 'Visible operator reply.' },
   ];
   const roleSession: RoleSession = {
-    roleName: 'Owner',
+    roleName: 'owner',
     logicalSessionId: `${flowId}__owner`,
     transcriptHistory: [{ role: 'user', content: 'Model-only node packet.' }],
     isActive: true,
@@ -93,7 +94,7 @@ test('repair requested events are role-feed historical events when role is prese
     scope: 'node',
     code: 'missing_block',
     summary: 'Malformed handoff block',
-    role: 'Owner',
+    role: 'owner',
     nodeId: 'owner-intake',
   };
 
@@ -103,7 +104,7 @@ test('repair requested events are role-feed historical events when role is prese
 
 test('projectMessageToFeedItem produces the expected FeedItem shape for output_text', () => {
   const item = projectMessageToFeedItem(
-    { type: 'output_text', role: 'Owner', text: 'hi' },
+    { type: 'output_text', role: 'owner', text: 'hi' },
     'owner_0'
   );
   assert.deepStrictEqual(item, { id: 'owner_0', type: 'assistant', label: 'Assistant', text: 'hi' });
@@ -113,7 +114,7 @@ test('projectMessageToFeedItem returns a tool FeedItem for activity.tool_call wi
   const item = projectMessageToFeedItem(
     {
       type: 'operator_event',
-      event: { kind: 'activity.tool_call', role: 'Owner', toolName: 'write_file', path: 'a.md' },
+      event: { kind: 'activity.tool_call', role: 'owner', toolName: 'write_file', path: 'a.md' },
     },
     'owner_3'
   );
@@ -121,7 +122,7 @@ test('projectMessageToFeedItem returns a tool FeedItem for activity.tool_call wi
 });
 
 test('activity.tool_call is no longer in the transient set so it reaches historical persistence', () => {
-  const event: OperatorEvent = { kind: 'activity.tool_call', role: 'Owner', toolName: 'read' };
+  const event: OperatorEvent = { kind: 'activity.tool_call', role: 'owner', toolName: 'read' };
   assert.strictEqual(isTransientOperatorEvent(event), false);
   assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
 });
@@ -130,7 +131,7 @@ test('role.active becomes a role feed activation item', () => {
   const event: OperatorEvent = {
     kind: 'role.active',
     nodeId: 'owner-gate',
-    role: 'Owner',
+    role: 'owner',
   };
 
   assert.strictEqual(isTransientOperatorEvent(event), false);
@@ -139,7 +140,7 @@ test('role.active becomes a role feed activation item', () => {
     id: 'owner_4',
     type: 'activation',
     label: 'Activation',
-    text: 'owner-gate (Owner) is active.',
+    text: 'owner-gate (owner) is active.',
   });
 });
 
@@ -147,7 +148,7 @@ test('role.resumed becomes a visible role feed boundary', () => {
   const event: OperatorEvent = {
     kind: 'role.resumed',
     nodeId: 'owner-intake',
-    role: 'Owner',
+    role: 'owner',
     reason: 'interrupted-turn',
   };
 
@@ -157,7 +158,7 @@ test('role.resumed becomes a visible role feed boundary', () => {
     id: 'owner_5',
     type: 'resume',
     label: 'Resume',
-    text: 'owner-intake (Owner) resumed after an interrupted response.',
+    text: 'owner-intake (owner) resumed after an interrupted response.',
   });
 });
 

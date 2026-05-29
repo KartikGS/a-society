@@ -51,7 +51,7 @@ The Owner **owns**:
 - The A-Society vision — its interpretation, application, and protection from scope creep
 - The `agents.md` and role-ownership governance — deciding which role owns which surface
 - **Workflow routing** — routing work into the appropriate workflow by default. When the user makes a request, route it per `$A_SOCIETY_WORKFLOW`.
-- **Flow-local intake artifacts** — in the runtime-provided active record folder, create `01-owner-workflow-plan.md`, create or update the flow-local `workflow.yaml`, and author any Owner-scoped sequenced record artifacts required by the active path
+- **Flow-local intake artifacts** — in the runtime-provided active record folder, create `owner-workflow-plan.md`, set the flow title and summary in `workflow.yaml` during intake, create or update the flow-local `workflow.yaml`, and author any Owner-scoped record artifacts required by the active path
 - **Requirement-level delegation** — sending directives to domain leads that state what must happen, not how to implement it
 - **Outcome validation** — confirming that domain lead output meets the stated requirements
 - **Cross-domain coherence** — ensuring that parallel domain work is consistent when it converges
@@ -60,7 +60,7 @@ The Owner **owns**:
 The Owner **does NOT**:
 - Write implementation-level constraints for domains other roles lead — the Owner sets requirements, domain leads design solutions
 - Review domain-internal implementation quality — if the Curator organizes an index entry or the TA designs an executable contract, the Owner trusts that domain expertise
-- Create, name, or rename the record folder itself — the runtime creates the active record folder and its `record.yaml`; the Owner works inside that folder
+- Create, name, or rename the record folder itself — the runtime creates the active record folder and manages `record.yaml`; the Owner works inside that folder
 - Write content for specific projects using the framework (e.g., `llm-journey/` content)
 - Make unilateral decisions that change the direction of the framework — those require the human's explicit agreement
 - Execute implementation tasks for other projects in the repository
@@ -119,7 +119,7 @@ type: prompt-human
 
 Then route per `$A_SOCIETY_WORKFLOW`. If the human explicitly asks to discuss or stay outside the workflow, the Owner may do so.
 
-When a flow is active, work inside the runtime-provided record folder under `$A_SOCIETY_RECORDS`. Do not create or rename the folder during intake; create and maintain the required flow-local artifacts inside it.
+When a flow is active, work inside the runtime-provided record folder at `.a-society/state/<project>/<flow-id>/record/`. Do not create or rename the folder during intake; create and maintain the required flow-local artifacts inside it.
 
 When routing multi-domain work:
 1. Consult the loaded role ownership files to identify which domain leads are affected.

@@ -2,27 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
-import { buildRecordId, readRecordMetadata, syncRecordMetadataFromWorkflow } from './record-metadata.js';
-
-const LEGACY_FLOW_MARKER_FILENAME = '.a-society-flow.json';
+import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
+import { getFlowRecordDir } from '../orchestration/state-paths.js';
 
 export function resolveProjectRoot(workspaceRoot: string, projectNamespace: string): string {
   return path.join(workspaceRoot, projectNamespace);
-}
-
-export function resolveProjectRecordsRoot(workspaceRoot: string, projectNamespace: string): string {
-  const projectRoot = resolveProjectRoot(workspaceRoot, projectNamespace);
-  const preferred = path.join(projectRoot, 'a-docs', 'records');
-  if (fs.existsSync(preferred)) {
-    return preferred;
-  }
-
-  const legacy = path.join(projectRoot, 'records');
-  if (fs.existsSync(legacy)) {
-    return legacy;
-  }
-
-  return preferred;
 }
 
 export function buildDraftWorkflowDocument(roleName: string): string {
@@ -38,8 +22,8 @@ export function buildDraftWorkflowDocument(roleName: string): string {
           guidance: [
             'This draft flow exists so the initial Owner conversation is durable from the first turn.',
             'Use the already loaded startup authority to understand the current project state before routing work.',
-            'The runtime assigned this flow a stable record ID and maintains record.yaml for this folder.',
-            'Once the human intent is clear, replace the runtime draft workflow name and summary with flow-specific values.',
+            'The runtime assigned this flow a stable flow id and created record.yaml for this folder.',
+            'Once the human intent is clear, set the flow-specific name and summary in workflow.yaml during Owner intake.',
             'If the real path needs additional nodes, update workflow.yaml before emitting any downstream handoff.',
             'If the work remains Owner-only or purely conversational, write a summary artifact in this record folder and close the forward pass from this node.'
           ],
@@ -60,7 +44,7 @@ export function buildDraftWorkflowDocument(roleName: string): string {
           ],
           notes: [
             'The runtime already created this record folder so the initial conversation is not lost.',
-            'Do not edit record.yaml directly unless the runtime or a standing instruction explicitly requires it.'
+            'Do not edit record.yaml directly.'
           ]
         }
       ],
@@ -74,11 +58,8 @@ export function initializeDraftFlow(
   projectNamespace: string,
   roleName: string
 ): FlowRun {
-  const flowId = buildRecordId();
-  const recordsRoot = resolveProjectRecordsRoot(workspaceRoot, projectNamespace);
-  fs.mkdirSync(recordsRoot, { recursive: true });
-
-  const recordFolderPath = path.join(recordsRoot, flowId);
+  const flowId = buildFlowId();
+  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   fs.writeFileSync(
@@ -86,7 +67,7 @@ export function initializeDraftFlow(
     buildDraftWorkflowDocument(roleName),
     'utf8'
   );
-  syncRecordMetadataFromWorkflow(recordFolderPath, flowId);
+  syncRecordMetadataFromWorkflow(recordFolderPath);
 
   return {
     flowId,
@@ -108,43 +89,4 @@ export function initializeDraftFlow(
       kind: 'standard',
     }
   };
-}
-
-export function repairMovedRecordFolder(flow: FlowRun): string | null {
-  if (fs.existsSync(flow.recordFolderPath)) {
-    return flow.recordFolderPath;
-  }
-
-  const recordsRoot = resolveProjectRecordsRoot(flow.workspaceRoot, flow.projectNamespace);
-  if (!fs.existsSync(recordsRoot)) {
-    return null;
-  }
-
-  const candidates = fs.readdirSync(recordsRoot, { withFileTypes: true });
-  for (const entry of candidates) {
-    if (!entry.isDirectory()) continue;
-    const candidatePath = path.join(recordsRoot, entry.name);
-    if (entry.name === flow.flowId) {
-      return candidatePath;
-    }
-
-    const metadata = readRecordMetadata(candidatePath);
-    if (metadata?.id === flow.flowId) {
-      return candidatePath;
-    }
-
-    const markerPath = path.join(candidatePath, LEGACY_FLOW_MARKER_FILENAME);
-    if (!fs.existsSync(markerPath)) continue;
-
-    try {
-      const marker = JSON.parse(fs.readFileSync(markerPath, 'utf8')) as { flowId?: string };
-      if (marker.flowId === flow.flowId) {
-        return candidatePath;
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  return null;
 }

@@ -4,6 +4,3 @@ surfaces:
     scope: "Technical Architect role truth, support-doc truth, startup-context file, and ownership file"
   - path: a-docs/executable/
     scope: "Executable design truth"
-  - path: a-docs/records/
-    shared_with: [owner, curator, orchestration-developer, framework-services-developer, ui-developer]
-    scope: "Flow artifact contribution surface; each role is accountable for artifacts it produces"

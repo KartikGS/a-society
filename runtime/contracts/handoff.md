@@ -113,23 +113,23 @@ Emit `type: await-handoff` to suspend the current node and wait for an inbound h
 
 ```handoff
 target_node_id: owner-review
-artifact_path: [project-name]/a-docs/records/[record-folder]/03-curator-to-owner.md
+artifact_path: .a-society/state/[project-name]/[flow-id]/record/curator-to-owner.md
 ```
 
 **Fork**
 
 ```handoff
 - target_node_id: framework-services-implementation
-  artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
+  artifact_path: .a-society/state/[project-name]/[flow-id]/record/owner-approval.md
 - target_node_id: orchestration-implementation
-  artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-approval.md
+  artifact_path: .a-society/state/[project-name]/[flow-id]/record/owner-approval.md
 ```
 
 **Backward revise / resubmission**
 
 ```handoff
 target_node_id: curator-proposal
-artifact_path: [project-name]/a-docs/records/[record-folder]/04-owner-to-curator.md
+artifact_path: .a-society/state/[project-name]/[flow-id]/record/owner-to-curator.md
 ```
 
 **Forward-pass closure**
@@ -142,14 +142,14 @@ type: forward-pass-closed
 
 ```handoff
 type: meta-analysis-complete
-findings_path: [project-name]/a-docs/records/[record-folder]/findings/[role]-findings.md
+findings_path: .a-society/state/[project-name]/[flow-id]/record/findings/[role]-findings.md
 ```
 
 **Backward-pass completion**
 
 ```handoff
 type: backward-pass-complete
-artifact_path: [project-name]/a-docs/records/[record-folder]/[NN]-owner-feedback.md
+artifact_path: .a-society/state/[project-name]/[flow-id]/record/[NN]-owner-feedback.md
 ```
 
 **Human interaction**

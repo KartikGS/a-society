@@ -2,7 +2,7 @@
 
 This document is the A-Society-specific intake sizing reference for Owner-led workflow routing. It instantiates the reusable model from `$INSTRUCTION_WORKFLOW_COMPLEXITY` for work inside this repository.
 
-Read this at Owner intake, before creating `01-owner-workflow-plan.md`.
+Read this at Owner intake, before creating `owner-workflow-plan.md`.
 
 ---
 
@@ -13,7 +13,7 @@ This document owns:
 - the five intake axes as they are applied inside A-Society
 - the tier-selection rules for direct, targeted, and coordinated paths through A-Society's single canonical workflow
 - the A-Society-specific gate triggers that determine when Curator and Technical Architect nodes are required
-- the relationship between workflow sizing, `$A_SOCIETY_RECORDS`, and `$A_SOCIETY_COMM_TEMPLATE_PLAN`
+- the relationship between workflow sizing, `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`, and `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 
 It does not replace `$INSTRUCTION_WORKFLOW_COMPLEXITY`. The general instruction remains the reusable library source; this file is the internal project instantiation.
 
@@ -106,7 +106,7 @@ These constraints narrow the tier options inside this project:
 - **Curator is not the default documentation hop:** Engage the Curator only when Curator-owned stewardship surfaces are touched or when the flow explicitly routes a proposal/registration node through Curator authority.
 - **Executable scope is not framework-only scope:** If the work changes executable design, implementation, operator-facing executable behavior, or stable executable contracts, activate the TA and/or executable developer nodes inside `$A_SOCIETY_WORKFLOW` as appropriate.
 - **`general/` additions still require Owner decision:** Work that adds to `general/` cannot go straight from Curator proposal to implementation without an explicit Owner decision node.
-- **Record artifacts are mandatory at intake:** `01-owner-workflow-plan.md` and `workflow.yaml` are always required at A-Society intake. Tier changes alter the downstream path; they do not waive the intake artifacts.
+- **Record artifacts are mandatory at intake:** `owner-workflow-plan.md` and `workflow.yaml` are always required at A-Society intake. Tier changes alter the downstream path; they do not waive the intake artifacts.
 - **Parallel same-base-role tracks require runtime role instances:** If two nodes with the same base role may be active at the same time, follow `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for role-instance naming in `workflow.yaml`. Descriptive node notes do not create separate runtime sessions.
 - **OD and UI Developer have separate runtime sub-domains:** The Orchestration Developer owns the orchestration core and server/WebSocket layer (`src/orchestrator.ts`, `src/server.ts`, `src/ws-operator-sink.ts`, providers, observability); the UI Developer owns `runtime/ui/`. At intake, when a flow touches both sub-domains, activate them as independent parallel tracks with a join at ta-review or owner-closure. When a flow touches only one sub-domain, activate only that developer track. Server/WebSocket contract changes that affect both roles require TA design resolution before either track begins implementation.
 
@@ -116,12 +116,12 @@ These constraints narrow the tier options inside this project:
 
 At Owner intake:
 
-1. Work inside the active record folder under `$A_SOCIETY_RECORDS`
-2. Produce `01-owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN`
+1. Work inside the runtime-provided active record folder under `.a-society/state/<project>/<flow-id>/record/`
+2. Produce `owner-workflow-plan.md` from `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 3. Create or update `workflow.yaml` for the active path
 4. Verify all plan fields are non-null before issuing any downstream brief or handoff artifact
 
-`$A_SOCIETY_RECORDS` governs record-folder structure and artifact sequencing. `$A_SOCIETY_COMM_TEMPLATE_PLAN` governs the workflow plan schema and prose fields.
+`$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` governs record-folder placement and writable scope. `$A_SOCIETY_COMM_TEMPLATE_PLAN` governs the workflow plan schema and prose fields.
 
 ---
 

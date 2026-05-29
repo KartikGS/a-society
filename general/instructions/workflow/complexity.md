@@ -93,7 +93,7 @@ Each axis is a signal, not a binary threshold. The Owner reads the combination t
 
 ## Producing a Workflow Plan
 
-The workflow plan is the Owner's intake artifact. Use `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` as the base; place the instantiated plan in the record folder as `01-owner-workflow-plan.md`.
+The workflow plan is the Owner's intake artifact. Use `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` as the base; place the instantiated plan in the record folder as `owner-workflow-plan.md`.
 
 A workflow plan must specify:
 
@@ -105,7 +105,7 @@ A workflow plan must specify:
 
 The workflow plan is always the first authorization point for the flow. Additional approval or review nodes are required only when the touched surfaces and risk profile call for them.
 
-**Plan artifact validation:** After the plan is drafted and before writing any downstream brief, the Owner must confirm that `01-owner-workflow-plan.md` exists in the record folder and that its YAML frontmatter satisfies all required fields per `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE`.
+**Plan artifact validation:** After the plan is drafted and before writing any downstream brief, the Owner must confirm that `owner-workflow-plan.md` exists in the record folder and that its YAML frontmatter satisfies all required fields per `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE`.
 
 ---
 

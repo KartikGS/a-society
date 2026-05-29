@@ -32,7 +32,7 @@ The permanent definition expresses the reusable workflow shape. The record snaps
 Use these conventions:
 
 - **Permanent workflow definition:** `workflow/main.yaml`
-- **Record snapshot:** `records/[flow-id]/workflow.yaml`
+- **Record snapshot:** `.a-society/state/<project>/<flow-id>/record/workflow.yaml`
 
 ---
 

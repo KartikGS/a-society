@@ -58,7 +58,7 @@ await test('compactRoleSession archives raw history and replaces active history 
   ];
 
   const session: RoleSession = {
-    roleName: 'Owner',
+    roleName: 'owner',
     logicalSessionId: 'flow__owner',
     transcriptHistory: [...history],
     currentNodeContext: {
@@ -73,7 +73,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     flowId: 'flow',
     workspaceRoot: tmpDir,
     projectNamespace: 'project',
-    recordFolderPath: path.join(tmpDir, 'project', 'a-docs', 'records', 'flow'),
+    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'project', 'flow', 'record'),
     runningNodes: ['owner-review'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -88,7 +88,7 @@ await test('compactRoleSession archives raw history and replaces active history 
     const result = await compactRoleSession({
       session,
       flowRun,
-      roleName: 'Owner',
+      roleName: 'owner',
       trigger: 'manual'
     });
 
@@ -115,7 +115,7 @@ await test('compactRoleSession archives raw history and replaces active history 
 
 await test('compactRoleSession reports no-op when there is no current node', async () => {
   const session: RoleSession = {
-    roleName: 'Owner',
+    roleName: 'owner',
     logicalSessionId: 'flow__owner',
     transcriptHistory: [{ role: 'user', content: 'No node yet' }],
     isActive: false
@@ -124,7 +124,7 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     flowId: 'flow',
     workspaceRoot: '.',
     projectNamespace: 'project',
-    recordFolderPath: 'project/a-docs/records/flow',
+    recordFolderPath: '.a-society/state/project/flow/record',
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -138,7 +138,7 @@ await test('compactRoleSession reports no-op when there is no current node', asy
   const result = await compactRoleSession({
     session,
     flowRun,
-    roleName: 'Owner',
+    roleName: 'owner',
     trigger: 'manual'
   });
 

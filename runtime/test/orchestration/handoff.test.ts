@@ -53,17 +53,17 @@ test('parse (forward-pass-closed): returns closure signal', () => {
 });
 
 test('parse (meta-analysis-complete): returns findings signal', () => {
-  const text = "```handoff\ntype: meta-analysis-complete\nfindings_path: a-society/a-docs/records/example-flow/findings/owner-findings.md\n```";
+  const text = "```handoff\ntype: meta-analysis-complete\nfindings_path: .a-society/state/a-society/example-flow/record/findings/owner-findings.md\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual(result.kind, 'meta-analysis-complete');
-  assert.strictEqual((result as any).findingsPath, 'a-society/a-docs/records/example-flow/findings/owner-findings.md');
+  assert.strictEqual((result as any).findingsPath, '.a-society/state/a-society/example-flow/record/findings/owner-findings.md');
 });
 
 test('parse (backward-pass-complete): returns backward pass closure signal', () => {
-  const text = "```handoff\ntype: backward-pass-complete\nartifact_path: a-society/a-docs/records/example-flow/12-owner-feedback.md\n```";
+  const text = "```handoff\ntype: backward-pass-complete\nartifact_path: .a-society/state/a-society/example-flow/record/12-owner-feedback.md\n```";
   const result = HandoffInterpreter.parse(text);
   assert.strictEqual(result.kind, 'backward-pass-complete');
-  assert.strictEqual((result as any).artifactPath, 'a-society/a-docs/records/example-flow/12-owner-feedback.md');
+  assert.strictEqual((result as any).artifactPath, '.a-society/state/a-society/example-flow/record/12-owner-feedback.md');
 });
 
 test('parse (prompt-human): returns awaiting_human signal', () => {

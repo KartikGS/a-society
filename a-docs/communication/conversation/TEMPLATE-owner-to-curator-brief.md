@@ -1,6 +1,6 @@
 # Owner → Curator: Briefing
 
-> **Template** — do not modify this file. When instantiating, omit all header blocks above the first `---`. Create from this template into the active record folder as `01-owner-to-curator-brief.md` (or the next available sequence position if `01-` is taken).
+> **Template** — do not modify this file. When instantiating, omit all header blocks above the first `---`. Create from this template into the active record folder as `owner-to-curator-brief.md`.
 
 > **Authorization scope:** A briefing establishes scope and direction alignment. It authorizes implementation only when the workflow plan or the brief itself explicitly marks the item as Curator direct authority. Otherwise it authorizes proposal drafting only, and the Curator must wait for an explicit Owner decision artifact before implementing.
 

@@ -72,7 +72,7 @@ export class AnthropicProvider implements LLMProvider {
       let fullText = '';
 
       try {
-        renderer?.requestSent(options?.role ?? '', 'anthropic', this.model);
+        renderer?.requestSent(options?.roleInstanceId ?? '', 'anthropic', this.model);
 
         const anthropicMessages: any[] = messages.map(msg => {
           if (msg.role === 'user') return { role: 'user', content: msg.content };
@@ -118,7 +118,7 @@ export class AnthropicProvider implements LLMProvider {
 
         const toolUseBlocks = new Map<number, { id: string, name: string, inputJson: string }>();
 
-        renderer?.receivingResponse(options?.role ?? '');
+        renderer?.receivingResponse(options?.roleInstanceId ?? '');
 
         stream.on('streamEvent', (event) => {
           if (event.type === 'content_block_start') {

@@ -17,6 +17,7 @@ import type {
 } from '../../src/common/types.js';
 import { deterministicFindingsFilePath } from '../../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
@@ -46,8 +47,7 @@ await test('feedback repair status is emitted as an event, not role output strea
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
   const projectNamespace = 'demo-project';
   const flowId = 'repair-flow';
-  const projectRoot = path.join(workspaceRoot, projectNamespace);
-  const recordFolderPath = path.join(projectRoot, 'a-docs', 'records', flowId);
+  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
   const feedbackArtifactPath = 'a-society/feedback/demo-project-flow-repair-flow.md';
   const feedbackArtifactFilePath = path.join(workspaceRoot, feedbackArtifactPath);
 
@@ -59,9 +59,9 @@ await test('feedback repair status is emitted as an event, not role output strea
   fs.mkdirSync(recordFolderPath, { recursive: true });
   fs.writeFileSync(
     path.join(recordFolderPath, 'workflow.yaml'),
-    'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: Curator\n  edges: []\n'
+    'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: curator\n  edges: []\n'
   );
-  const findingsPath = deterministicFindingsFilePath(recordFolderPath, 'Curator');
+  const findingsPath = deterministicFindingsFilePath(recordFolderPath, 'curator');
   fs.mkdirSync(path.dirname(findingsPath), { recursive: true });
   fs.writeFileSync(findingsPath, 'Curator findings');
 
@@ -85,12 +85,12 @@ await test('feedback repair status is emitted as an event, not role output strea
       status: 'awaiting_feedback_consent',
       mode: IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
       currentStep: 1,
-      completedRoles: ['Curator'],
+      completedRoles: ['curator'],
       runningRoles: [],
       awaitingHumanRoles: {},
       pendingHumanInputs: {},
       findingsProduced: {
-        Curator: path.relative(workspaceRoot, findingsPath),
+        curator: path.relative(workspaceRoot, findingsPath),
       },
       activeNodeIds: [],
       completedNodeIds: ['curator-meta-analysis'],
@@ -124,9 +124,10 @@ await test('feedback repair status is emitted as an event, not role output strea
   };
 
   const roleOutput: Record<string, string> = {};
-  const roleOutputFactory = (roleName: string) => new Writable({
+  let finalFlowRun: FlowRun | null = null;
+  const roleOutputFactory = (roleInstanceId: string) => new Writable({
     write(chunk, _encoding, callback) {
-      roleOutput[roleName] = (roleOutput[roleName] ?? '') + chunk.toString();
+      roleOutput[roleInstanceId] = (roleOutput[roleInstanceId] ?? '') + chunk.toString();
       callback();
     }
   });
@@ -147,6 +148,7 @@ await test('feedback repair status is emitted as an event, not role output strea
       renderer,
       roleOutputFactory
     );
+    finalFlowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot);
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
     if (previousSettingsDir === undefined) {
@@ -160,11 +162,15 @@ await test('feedback repair status is emitted as an event, not role output strea
   assert.ok(repairEvents.some(
     event => event.kind === 'repair.requested' &&
       event.scope === 'improvement' &&
-      event.role === 'A-Society Feedback'
+      event.role === 'a-society-feedback'
   ));
-  assert.ok(roleOutput['A-Society Feedback']?.includes('Feedback malformed.'));
-  assert.ok(roleOutput['A-Society Feedback']?.includes('Feedback complete.'));
-  assert.ok(!roleOutput['A-Society Feedback']?.includes('[improvement] A-Society Feedback emitted an invalid handoff block'));
+  assert.ok(roleOutput['a-society-feedback']?.includes('Feedback malformed.'));
+  assert.ok(roleOutput['a-society-feedback']?.includes('Feedback complete.'));
+  assert.ok(!roleOutput['a-society-feedback']?.includes('[improvement] a-society-feedback emitted an invalid handoff block'));
+  assert.deepStrictEqual(finalFlowRun?.improvementPhase?.completedRoles, ['curator', 'a-society-feedback']);
+  assert.deepStrictEqual(finalFlowRun?.improvementPhase?.findingsProduced, {
+    curator: path.relative(workspaceRoot, findingsPath),
+  });
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

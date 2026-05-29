@@ -95,9 +95,9 @@ Clarification rounds are permitted before the Owner issues a decision. Rules:
 
 ## Within-Flow Additional Submissions
 
-When a flow requires an additional Curator → Owner submission after the main decision artifact, the additional submission takes the next available sequence slot in the record folder, **before** backward-pass findings.
+When a flow requires an additional Curator → Owner submission after the main decision artifact, create a distinct submission artifact in the active record folder with a descriptive filename and reference that exact path in the handoff.
 
-Backward-pass findings always occupy the final positions in the sequence. The standard positions (`04-curator-findings.md`, `05-owner-findings.md`) shift forward to accommodate any additional submissions. This is a specific instance of the general rule in `$A_SOCIETY_RECORDS`: "the sequence continues as long as the flow requires."
+Backward-pass findings are written to the runtime-assigned findings path during the backward pass. Do not reserve record-folder positions for findings during forward-pass handoffs.
 
 ---
 

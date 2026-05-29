@@ -24,10 +24,10 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     flowId: 'f1',
     workspaceRoot: '.',
     projectNamespace: 'test-project',
-    recordFolderPath: './records/r1',
+    recordFolderPath: './.a-society/state/test-project/f1/record',
     runningNodes: [],
     awaitingHumanNodes: {
-      'owner-intake': { role: 'Owner', reason: 'prompt-human' },
+      'owner-intake': { role: 'owner', reason: 'prompt-human' },
     },
     pendingHumanInputs: {},
     completedNodes: [],

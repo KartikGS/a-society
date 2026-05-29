@@ -290,7 +290,7 @@ export class FlowOrchestrator {
         }
 
         if (fs.existsSync(flowRun.recordFolderPath)) {
-          const metadata = syncRecordMetadataFromWorkflow(flowRun.recordFolderPath, flowRun.flowId);
+          const metadata = syncRecordMetadataFromWorkflow(flowRun.recordFolderPath);
           if (metadata.name) {
             flowRun.recordName = metadata.name;
           } else {
@@ -547,7 +547,8 @@ export class FlowOrchestrator {
                   upsertCurrentNodeAssistantDelta(session, nodeId, text);
                   saveRoleSession();
                 },
-                nodeId
+                nodeId,
+                flowRun.recordFolderPath
               );
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);

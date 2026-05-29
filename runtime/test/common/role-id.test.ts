@@ -23,9 +23,7 @@ test('toKebabCaseRoleId normalizes role names', () => {
 });
 
 test('parseRoleIdentity keeps unsuffixed roles as their own base role', () => {
-  assert.deepStrictEqual(parseRoleIdentity('Owner'), {
-    instanceRoleName: 'Owner',
-    baseRoleName: 'Owner',
+  assert.deepStrictEqual(parseRoleIdentity('owner'), {
     instanceRoleId: 'owner',
     baseRoleId: 'owner',
     instanceNumber: undefined,
@@ -33,13 +31,22 @@ test('parseRoleIdentity keeps unsuffixed roles as their own base role', () => {
 });
 
 test('parseRoleIdentity splits numeric role instances from base role authority', () => {
-  assert.deepStrictEqual(parseRoleIdentity('Owner_2'), {
-    instanceRoleName: 'Owner_2',
-    baseRoleName: 'Owner',
-    instanceRoleId: 'owner-2',
+  assert.deepStrictEqual(parseRoleIdentity('owner_2'), {
+    instanceRoleId: 'owner_2',
     baseRoleId: 'owner',
     instanceNumber: 2,
   });
+  assert.deepStrictEqual(parseRoleIdentity('technical-architect_3'), {
+    instanceRoleId: 'technical-architect_3',
+    baseRoleId: 'technical-architect',
+    instanceNumber: 3,
+  });
+});
+
+test('parseRoleIdentity rejects display names and malformed ids', () => {
+  assert.throws(() => parseRoleIdentity('Owner'), /Invalid role id/);
+  assert.throws(() => parseRoleIdentity('Technical Architect'), /Invalid role id/);
+  assert.throws(() => parseRoleIdentity('owner_0'), /Invalid role id/);
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

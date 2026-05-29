@@ -33,14 +33,14 @@ test('requestSent, receivingResponse, responseEnd map to protocol messages', () 
   const messages: unknown[] = [];
   const sink = new WebSocketOperatorSink((message) => messages.push(message));
 
-  sink.requestSent('Owner', 'anthropic', 'claude-3-7-sonnet');
-  sink.receivingResponse('Owner');
-  sink.responseEnd('Owner');
+  sink.requestSent('owner', 'anthropic', 'claude-3-7-sonnet');
+  sink.receivingResponse('owner');
+  sink.responseEnd('owner');
 
   assert.deepStrictEqual(messages, [
-    { type: 'request_sent', role: 'Owner', provider: 'anthropic', model: 'claude-3-7-sonnet' },
-    { type: 'receiving_response', role: 'Owner' },
-    { type: 'response_end', role: 'Owner' }
+    { type: 'request_sent', role: 'owner', provider: 'anthropic', model: 'claude-3-7-sonnet' },
+    { type: 'receiving_response', role: 'owner' },
+    { type: 'response_end', role: 'owner' }
   ]);
 });
 

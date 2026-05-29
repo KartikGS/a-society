@@ -2,18 +2,19 @@ import { buildRoleContext } from './registry.js';
 
 export const RUNTIME_MANAGED_REQUIRED_READING_VARIABLES = new Set([
   '$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT',
+  '$A_SOCIETY_RUNTIME_RECORDS_CONTRACT',
   '$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT'
 ]);
 
 export function collectStartupInjectedRequiredReadingVariables(
   projectNamespace: string,
-  roleName: string,
+  roleInstanceId: string,
   workspaceRoot: string
 ): Set<string> {
   const variables = new Set<string>(RUNTIME_MANAGED_REQUIRED_READING_VARIABLES);
 
   try {
-    const roleEntry = buildRoleContext(projectNamespace, roleName, workspaceRoot);
+    const roleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
     if (!roleEntry) {
       return variables;
     }

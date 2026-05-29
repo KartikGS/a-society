@@ -13,7 +13,7 @@ This is runtime-owned context, not a role startup reading. Do not copy this file
 The runtime reads two workflow YAML surfaces:
 
 - **Canonical workflow definition:** `[project]/a-docs/workflow/main.yaml`
-- **Record workflow snapshot:** `[project]/a-docs/records/[record-id]/workflow.yaml`
+- **Record workflow snapshot:** `.a-society/state/[project]/[flow-id]/record/workflow.yaml`
 
 The canonical definition is the standing workflow map and node-contract source. The record snapshot is the active flow's topology: the nodes and edges this flow traverses or may still traverse.
 
@@ -70,6 +70,7 @@ Validation rules:
 - `workflow.name` is required and must be a non-empty string.
 - `workflow.nodes` is required and must be a non-empty array.
 - Every node requires non-empty string `id` and `role`.
+- `role` is a role instance id: lowercase kebab-case with an optional numeric `_N` suffix, such as `owner`, `technical-architect`, or `owner_2`.
 - Node ids must be unique.
 - `workflow.edges` is required and must be an array.
 - Every edge requires `from` and `to`, and both must match node ids.
@@ -77,7 +78,7 @@ Validation rules:
 - Optional object-list fields must contain the fields shown above.
 - Unknown keys fail validation.
 
-Strict validation additionally requires a single Owner start node and an Owner terminal node. A single-node workflow is valid only when that node's base role is Owner.
+Strict validation additionally requires a single `owner` start node and an `owner` terminal node. A single-node workflow is valid only when that node's role id is `owner`.
 
 ---
 
@@ -91,7 +92,7 @@ Use record `workflow.yaml` as the active-path snapshot.
 - List every real review, approval, registration, or closure checkpoint as its own node. Do not rely on implied checkpoints.
 - Update the snapshot before emitting a handoff to any node that depends on the changed topology.
 
-Artifact names in edge `artifact` fields are descriptors for handoff type. They are not frozen sequence-number reservations.
+Artifact names in edge `artifact` fields are descriptors for handoff type. They are not filename reservations.
 
 ---
 
@@ -117,14 +118,14 @@ Do not use node-specific `required_readings` for files already loaded at role st
 
 The runtime uses the node `role` field as the role-session identity.
 
-Use numbered role names when two nodes share the same base role but must have separate runtime histories:
+Use numbered role instance ids when two nodes share the same base role but must have separate runtime histories:
 
-- `Curator_1`
-- `Curator_2`
-- `Owner_1`
-- `Owner_2`
+- `curator_1`
+- `curator_2`
+- `owner_1`
+- `owner_2`
 
-The suffix pattern is `Role_N`, where `N` is a numeric suffix. The runtime loads the base role authority and base role required readings, while preserving a separate session identity and transcript for the numbered role instance.
+The suffix pattern is `role-id_N`, where `N` is a positive numeric suffix. The runtime loads the base role authority and base role required readings, while preserving a separate session identity and transcript for the numbered role instance.
 
 Node notes such as "Curator A" or "Curator B" are descriptive only. They do not create separate runtime sessions.
 

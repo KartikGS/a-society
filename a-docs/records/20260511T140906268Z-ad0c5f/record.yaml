@@ -1,4 +1,0 @@
-record:
-  id: 20260511T140906268Z-ad0c5f
-  name: Runtime a-docs manifest relocation
-  summary: Move the a-docs scaffold manifest from general/ into runtime/contracts/ and make runtime health checks consume the same contract.

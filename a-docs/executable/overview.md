@@ -43,4 +43,5 @@ The browser backend lives under `runtime/src/server/`.
 - `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` — maintained executable/documentation coupling surface
 - `$A_SOCIETY_RUNTIME_INVOCATION` — operator-facing runtime behavior reference
 - `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` — runtime-owned workflow YAML schema and node-entry injection contract
+- `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` — runtime-owned flow record placement, metadata, and writable scope contract
 - `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` — runtime-owned a-docs scaffold and health-check contract

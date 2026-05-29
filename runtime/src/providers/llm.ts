@@ -13,12 +13,19 @@ import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKe
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
 
-function projectWriteRoots(workspaceRoot: string, projectNamespace: string): string[] {
-  return [
+function projectWriteRoots(
+  workspaceRoot: string,
+  projectNamespace: string,
+  recordFolderPath?: string,
+): string[] {
+  const roots = [
     path.join(workspaceRoot, projectNamespace),
-    path.join(workspaceRoot, '.a-society', 'a-docs', projectNamespace),
     path.join(workspaceRoot, 'a-society', 'feedback'),
   ];
+  if (recordFolderPath) {
+    roots.push(recordFolderPath);
+  }
+  return roots;
 }
 
 function createProvider(): LLMProvider {
@@ -58,6 +65,8 @@ function throwIfAborted(signal: AbortSignal | undefined, partialText?: string): 
 
 export class LLMGateway {
   private provider: LLMProvider;
+  private workspaceRoot?: string;
+  private projectNamespace?: string;
   private fileExecutor?: FileToolExecutor;
   private bashExecutor?: BashToolExecutor;
   private webSearchExecutor?: WebSearchExecutor;
@@ -66,6 +75,8 @@ export class LLMGateway {
   constructor(workspaceRoot?: string, provider?: LLMProvider, projectNamespace?: string) {
     if (workspaceRoot) {
       configureSettingsStore(workspaceRoot);
+      this.workspaceRoot = path.resolve(workspaceRoot);
+      this.projectNamespace = projectNamespace;
     }
 
     if (provider) {
@@ -92,6 +103,13 @@ export class LLMGateway {
     messageHistory: RuntimeMessageParam[],
     options?: TurnOptions
   ): Promise<GatewayTurnResult> {
+    if (this.workspaceRoot && this.projectNamespace) {
+      this.fileExecutor = new FileToolExecutor(
+        this.workspaceRoot,
+        projectWriteRoots(this.workspaceRoot, this.projectNamespace, options?.recordFolderPath)
+      );
+    }
+
     const tracer = TelemetryManager.getTracer();
     const toolsEnabled = !!(this.tools && this.fileExecutor);
     return tracer.startActiveSpan('llm.gateway.execute_turn', {
@@ -163,7 +181,7 @@ export class LLMGateway {
               if (this.bashExecutor?.canHandle(call.name)) {
                 const denylistResult = this.bashExecutor.validate(call);
                 if (denylistResult) {
-                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, command: call.input?.command as string | undefined });
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.roleInstanceId ?? '__system__', toolName: call.name, command: call.input?.command as string | undefined });
                   await appendConversationMessages([{
                     role: 'tool_result' as const,
                     callId: call.id,
@@ -171,14 +189,14 @@ export class LLMGateway {
                     content: denylistResult.content,
                     isError: true,
                   }]);
-                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: true });
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.roleInstanceId ?? '__system__', toolName: call.name, isError: true });
                   continue;
                 }
               }
               if (this.fileExecutor) {
                 const pathResult = this.fileExecutor.validate(call);
                 if (pathResult) {
-                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: call.input?.path as string | undefined });
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.roleInstanceId ?? '__system__', toolName: call.name, path: call.input?.path as string | undefined });
                   await appendConversationMessages([{
                     role: 'tool_result' as const,
                     callId: call.id,
@@ -186,27 +204,27 @@ export class LLMGateway {
                     content: pathResult.content,
                     isError: true,
                   }]);
-                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: true });
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.roleInstanceId ?? '__system__', toolName: call.name, isError: true });
                   continue;
                 }
               }
               if (options?.consentGate) {
-                if (!options.role || !options.nodeId) {
+                if (!options.roleInstanceId || !options.nodeId) {
                   throw new LLMGatewayError(
                     'UNKNOWN',
-                    'Consent-gated tool calls require role and node ownership metadata.'
+                    'Consent-gated tool calls require role instance id and node ownership metadata.'
                   );
                 }
                 const decision = await options.consentGate.check({
                   toolName: call.name,
                   input: call.input,
-                  role: options.role,
+                  role: options.roleInstanceId,
                   nodeId: options.nodeId,
                 }, options.signal);
                 if (decision === CONSENT_CHECK_RESULT.DENY) {
                   const pathArg = call.input?.path as string | undefined;
                   const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
-                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.roleInstanceId ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
                   await appendConversationMessages([{
                     role: 'tool_result' as const,
                     callId: call.id,
@@ -214,7 +232,7 @@ export class LLMGateway {
                     content: 'Tool call denied: the user did not grant permission for this operation. The node is paused for operator guidance.',
                     isError: true,
                   }]);
-                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: true });
+                  options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.roleInstanceId ?? '__system__', toolName: call.name, isError: true });
                   throw new LLMGatewayError(
                     'CONSENT_DENIED',
                     'Tool call denied by operator; awaiting human guidance.'
@@ -223,7 +241,7 @@ export class LLMGateway {
               }
               const pathArg = call.input?.path as string | undefined;
               const commandArg = call.name === 'run_command' ? call.input?.command as string | undefined : undefined;
-              options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.role ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
+              options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.roleInstanceId ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
               const res = await (this.bashExecutor!.canHandle(call.name)
                 ? this.bashExecutor!.execute(call, options?.signal)
                 : this.webSearchExecutor?.canHandle(call.name)
@@ -231,7 +249,7 @@ export class LLMGateway {
                 : this.fileExecutor!.execute(call, options?.signal));
               content = res.content;
               isError = res.isError;
-              options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.role ?? '__system__', toolName: call.name, isError: res.isError });
+              options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.roleInstanceId ?? '__system__', toolName: call.name, isError: res.isError });
             }
             throwIfAborted(options?.signal);
             await appendConversationMessages([{ role: 'tool_result' as const, callId: call.id, toolName: call.name, content, isError }]);

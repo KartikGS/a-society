@@ -281,11 +281,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
   }
 
   function resolveWorkflowRoleName(flowRun: FlowRun, role: string): string {
-    const roleKey = role.trim();
+    const roleInstanceId = role.trim();
     const workflow = resolveWorkflow(flowRun);
     const match = workflow?.nodes?.find((node: any) =>
       typeof node.role === 'string' &&
-      parseRoleIdentity(node.role).instanceRoleId === roleKey
+      parseRoleIdentity(node.role).instanceRoleId === roleInstanceId
     );
     return typeof match?.role === 'string' ? match.role : role;
   }
@@ -297,21 +297,28 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const roleKey = parseRoleIdentity(role).instanceRoleId;
+    let roleInstanceId: string;
+    try {
+      roleInstanceId = parseRoleIdentity(role).instanceRoleId;
+    } catch (error: any) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+
     const awaitingRoles = flowRun.improvementPhase.awaitingHumanRoles ?? {};
-    if (!awaitingRoles[role]) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Role "${roleKey}" is not currently awaiting human input in the improvement phase.` });
+    if (!awaitingRoles[roleInstanceId]) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Role "${roleInstanceId}" is not currently awaiting human input in the improvement phase.` });
       return;
     }
 
     try {
       await SessionStore.updateFlowRun((latest) => {
         if (!latest.improvementPhase) return;
-        if (latest.improvementPhase.pendingHumanInputs?.[role]) {
-          throw new Error(`Role "${roleKey}" already has queued human input.`);
+        if (latest.improvementPhase.pendingHumanInputs?.[roleInstanceId]) {
+          throw new Error(`Role "${roleInstanceId}" already has queued human input.`);
         }
         if (!latest.improvementPhase.pendingHumanInputs) latest.improvementPhase.pendingHumanInputs = {};
-        latest.improvementPhase.pendingHumanInputs[role] = { text, receivedAt: new Date().toISOString() };
+        latest.improvementPhase.pendingHumanInputs[roleInstanceId] = { text, receivedAt: new Date().toISOString() };
       }, ref, workspaceRoot);
     } catch (error: any) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
@@ -320,7 +327,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     const session = activeSessions.get(flowKey(ref));
     if (session && !session.finished) {
-      emitHistoricalMessage(session, { type: 'input_text', role, text });
+      emitHistoricalMessage(session, { type: 'input_text', role: roleInstanceId, text });
       session.improvementOrchestrator.wake();
       emitFlowState(session);
     }
@@ -334,7 +341,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const roleName = resolveWorkflowRoleName(flowRun, role);
-    const roleKey = parseRoleIdentity(roleName).instanceRoleId;
+    const roleInstanceId = parseRoleIdentity(roleName).instanceRoleId;
     if (!SettingsStore.hasUsableConfiguredModel()) {
       broadcastToFlow(ref, {
         type: 'operator_event',
@@ -385,7 +392,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           });
           return;
         }
-        session.latestContextUsageByRole[roleKey] = 0;
+        session.latestContextUsageByRole[roleInstanceId] = 0;
         if (createdForCompaction) {
           session.finished = true;
         }

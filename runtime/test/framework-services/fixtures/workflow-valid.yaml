@@ -2,17 +2,17 @@ workflow:
   name: Test Workflow
   nodes:
     - id: owner-phase-1
-      role: Owner
+      role: owner
     - id: curator-phase-1
-      role: Curator
+      role: curator
     - id: owner-phase-2
-      role: Owner
+      role: owner
     - id: curator-phase-3-findings
-      role: Curator
+      role: curator
     - id: owner-phase-3-findings
-      role: Owner
+      role: owner
     - id: curator-phase-3-synthesis
-      role: Curator
+      role: curator
   edges:
     - from: owner-phase-1
       to: curator-phase-1

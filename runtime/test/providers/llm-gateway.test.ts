@@ -164,7 +164,7 @@ await test('tool-call continuation and denial result are recorded before consent
 
   const pendingTurn = gateway.executeTurn('System prompt', history, {
     consentGate: gate,
-    role: 'Curator',
+    roleInstanceId: 'curator',
     nodeId: 'curator-registration',
     onConversationMessages: (messages) => {
       persistedBatches.push([...messages]);
@@ -176,7 +176,7 @@ await test('tool-call continuation and denial result are recorded before consent
   assert.deepStrictEqual(gate.requests[0], {
     toolName: 'write_file',
     input: { path: 'plan.md', content: 'draft' },
-    role: 'Curator',
+    role: 'curator',
     nodeId: 'curator-registration',
   });
   assert.strictEqual(history.length, 2);
@@ -241,6 +241,39 @@ await test('project-scoped gateway allows feedback writes outside the active pro
   );
   assert.strictEqual(history.at(-1)?.role, 'tool_result');
   assert.match((history.at(-1) as any).content, /OK: wrote/);
+});
+
+await test('project-scoped gateway allows writes to the active state record folder only', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
+  const recordFolderPath = path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record');
+  const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/record/01-note.md', '# Note\n');
+  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write a record artifact.' }];
+
+  await gateway.executeTurn('System prompt', history, { recordFolderPath });
+
+  assert.strictEqual(
+    fs.readFileSync(path.join(recordFolderPath, '01-note.md'), 'utf8'),
+    '# Note\n'
+  );
+  assert.strictEqual(history.at(-1)?.role, 'tool_result');
+  assert.match((history.at(-1) as any).content, /OK: wrote/);
+});
+
+await test('project-scoped gateway blocks writes to flow state outside the active record folder', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
+  const recordFolderPath = path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record');
+  const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/flow.json', '{}');
+  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write flow state.' }];
+
+  await gateway.executeTurn('System prompt', history, { recordFolderPath });
+
+  assert.strictEqual(fs.existsSync(path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'flow.json')), false);
+  assert.strictEqual(history.at(-1)?.role, 'tool_result');
+  assert.match((history.at(-1) as any).content, /outside the permitted write area/);
 });
 
 await test('project-scoped gateway still blocks writes to sibling projects', async () => {

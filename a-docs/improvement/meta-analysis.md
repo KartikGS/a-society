@@ -93,7 +93,7 @@ When the reviewed artifact lives in `a-docs/` or affects the agent-documentation
 
 ### Output Format
 
-File findings as a sequenced artifact in the active record folder: `a-society/a-docs/records/[identifier]/NN-<role>-findings.md`
+File findings at the exact runtime-assigned findings path provided in the meta-analysis session.
 
 ---
 

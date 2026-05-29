@@ -198,15 +198,23 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
       // role
       if (typeof node.role !== 'string' || node.role.trim() === '') {
         errors.push(`workflow.nodes[${i}].role must be a non-empty string`);
-      } else if (rolesDir) {
-        const { baseRoleId } = parseRoleIdentity(node.role);
-        const rolePath = path.join(rolesDir, baseRoleId);
-        if (!fs.existsSync(rolePath) || !fs.statSync(rolePath).isDirectory()) {
-          errors.push(`workflow.nodes[${i}].role "${node.role}" (base role: "${baseRoleId}") has no matching role folder at ${rolePath}`);
-        } else {
-          for (const required of REQUIRED_ROLE_FILES) {
-            if (!fs.existsSync(path.join(rolePath, required))) {
-              errors.push(`workflow.nodes[${i}].role "${node.role}" role folder is missing required file: ${required}`);
+      } else {
+        let baseRoleId: string | null = null;
+        try {
+          baseRoleId = parseRoleIdentity(node.role).baseRoleId;
+        } catch (error) {
+          errors.push(`workflow.nodes[${i}].role ${String((error as Error).message)}`);
+        }
+
+        if (baseRoleId && rolesDir) {
+          const rolePath = path.join(rolesDir, baseRoleId);
+          if (!fs.existsSync(rolePath) || !fs.statSync(rolePath).isDirectory()) {
+            errors.push(`workflow.nodes[${i}].role "${node.role}" (base role: "${baseRoleId}") has no matching role folder at ${rolePath}`);
+          } else {
+            for (const required of REQUIRED_ROLE_FILES) {
+              if (!fs.existsSync(path.join(rolePath, required))) {
+                errors.push(`workflow.nodes[${i}].role "${node.role}" role folder is missing required file: ${required}`);
+              }
             }
           }
         }
@@ -279,10 +287,10 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
     if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
       // Sole node case
       if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-        errors.push(`Strict mode violation: sole node role must be exactly "Owner" (found "${workflow.nodes[0].role}")`);
+        errors.push(`Strict mode violation: sole node role must be exactly "owner" (found "${workflow.nodes[0].role}")`);
       }
     } else {
-      // General case: workflow must have exactly one start node, and it must be Owner.
+      // General case: workflow must have exactly one start node, and it must be owner.
       const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
       const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
 
@@ -295,7 +303,7 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
       for (const node of startNodes) {
         if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
           errors.push(
-            `Strict mode violation: start node "${node.id}" must have role exactly "Owner", not an instance like "${node.role}"`
+            `Strict mode violation: start node "${node.id}" must have role exactly "owner", not an instance like "${node.role}"`
           );
         }
       }
@@ -303,7 +311,7 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
       for (const node of endNodes) {
         if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
           errors.push(
-            `Strict mode violation: end node "${node.id}" must have role exactly "Owner", not an instance like "${node.role}"`
+            `Strict mode violation: end node "${node.id}" must have role exactly "owner", not an instance like "${node.role}"`
           );
         }
       }
@@ -340,7 +348,7 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `    - $VARIABLE_NAME               # optional\n` +
     `  nodes:\n` +
     `    - id: <string>\n` +
-    `      role: <string>\n` +
+    `      role: <role-instance-id>        # lowercase kebab-case, optional _N suffix\n` +
     `      human-collaborative: <string>  # optional\n` +
     `      required_readings:\n` +
     `        - $VARIABLE_NAME             # optional\n` +

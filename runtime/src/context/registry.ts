@@ -8,7 +8,7 @@ export interface RoleContextEntry {
 }
 
 /**
- * Dynamically builds the RoleContextEntry for a given role by reading
+ * Dynamically builds the RoleContextEntry for a given role instance id by reading
  * a-docs/roles/<base-role-id>/required-readings.yaml.
  *
  * Preferred schema:
@@ -21,16 +21,16 @@ export interface RoleContextEntry {
  */
 export function buildRoleContext(
   projectNamespace: string,
-  roleName: string,
+  roleInstanceId: string,
   workspaceRoot: string
 ): RoleContextEntry | null {
-  const roleId = parseRoleIdentity(roleName).baseRoleId;
+  const baseRoleId = parseRoleIdentity(roleInstanceId).baseRoleId;
   const roleYamlPath = path.join(
     workspaceRoot,
     projectNamespace,
     'a-docs',
     'roles',
-    roleId,
+    baseRoleId,
     'required-readings.yaml'
   );
   const legacyYamlPath = path.join(
@@ -76,8 +76,8 @@ export function buildRoleContext(
   const universalReading = Array.isArray(config.universal)
     ? config.universal.filter((value: unknown): value is string => typeof value === 'string')
     : [];
-  const roleReading = config.roles && Array.isArray(config.roles[roleId])
-    ? config.roles[roleId].filter((value: unknown): value is string => typeof value === 'string')
+  const roleReading = config.roles && Array.isArray(config.roles[baseRoleId])
+    ? config.roles[baseRoleId].filter((value: unknown): value is string => typeof value === 'string')
     : [];
 
   return {

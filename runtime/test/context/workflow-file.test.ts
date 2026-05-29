@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { resolveFlowWorkflow } from '../../src/context/workflow-file.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 let passed = 0;
 let failed = 0;
@@ -24,7 +25,7 @@ console.log('\nworkflow-file');
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-workflow-file-'));
 const projectNamespace = 'test-project';
 const projectDir = path.join(tmpDir, projectNamespace);
-const recordDir = path.join(projectDir, 'records', 'test-flow');
+const recordDir = getFlowRecordDir(tmpDir, { projectNamespace, flowId: 'test-flow' });
 const workflowDir = path.join(projectDir, 'a-docs', 'workflow');
 
 fs.mkdirSync(recordDir, { recursive: true });
@@ -35,11 +36,11 @@ test('resolveFlowWorkflow: merges canonical node contracts into a minimal record
   name: canonical-flow
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
       guidance:
         - Use the canonical guidance.
     - id: owner-closure
-      role: Owner
+      role: owner
   edges:
     - from: owner-intake
       to: owner-closure
@@ -49,9 +50,9 @@ test('resolveFlowWorkflow: merges canonical node contracts into a minimal record
   name: record-flow
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
     - id: owner-closure
-      role: Owner
+      role: owner
   edges:
     - from: owner-intake
       to: owner-closure
@@ -72,7 +73,7 @@ test('resolveFlowWorkflow: falls back to the record snapshot when no canonical w
   name: record-only-flow
   nodes:
     - id: owner-intake
-      role: Owner
+      role: owner
       guidance:
         - Use the record guidance.
   edges: []

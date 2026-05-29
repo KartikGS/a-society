@@ -1,5 +1,6 @@
 import { flowKey } from '../../common/flow-ref.js';
 import { CONSENT_RESPONSE_DECISION } from '../../common/protocol-constants.js';
+import { parseRoleIdentity } from '../../common/role-id.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   ConsentMode,
@@ -31,8 +32,9 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
   async function markNodeAwaitingConsent(session: ActiveSession, request: ConsentRequest): Promise<void> {
     await SessionStore.updateFlowRun((flow) => {
       if (flow.improvementPhase?.status === 'running') {
+        const roleInstanceId = parseRoleIdentity(request.role).instanceRoleId;
         if (!flow.improvementPhase.awaitingHumanRoles) flow.improvementPhase.awaitingHumanRoles = {};
-        flow.improvementPhase.awaitingHumanRoles[request.role] = { reason: 'consent' };
+        flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: 'consent' };
         flow.improvementPhase.activeNodeIds = (flow.improvementPhase.activeNodeIds ?? []).filter(id => id !== request.nodeId);
         return;
       }
@@ -52,11 +54,12 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
       flow.consentState = session.consentGate.getState();
 
       if (flow.improvementPhase?.status === 'running') {
-        if (flow.improvementPhase.awaitingHumanRoles?.[request.role]?.reason !== 'consent') return;
+        const roleInstanceId = parseRoleIdentity(request.role).instanceRoleId;
+        if (flow.improvementPhase.awaitingHumanRoles?.[roleInstanceId]?.reason !== 'consent') return;
         if (decision === CONSENT_RESPONSE_DECISION.DENY) {
-          flow.improvementPhase.awaitingHumanRoles[request.role] = { reason: 'consent-denied' };
+          flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: 'consent-denied' };
         } else {
-          delete flow.improvementPhase.awaitingHumanRoles[request.role];
+          delete flow.improvementPhase.awaitingHumanRoles[roleInstanceId];
           if (!(flow.improvementPhase.activeNodeIds ?? []).includes(request.nodeId)) {
             flow.improvementPhase.activeNodeIds = [...(flow.improvementPhase.activeNodeIds ?? []), request.nodeId];
           }

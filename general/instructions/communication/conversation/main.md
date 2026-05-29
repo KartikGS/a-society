@@ -20,20 +20,20 @@ Templates convert handoffs into contracts. When both the sender and receiver kno
 
 ### 1. Record Artifacts
 
-A record artifact carries a handoff or report for one unit of work and lives in that unit's record folder (see `$INSTRUCTION_RECORDS`). It is:
+A record artifact carries a handoff or report for one unit of work and lives in that unit's record folder (see `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`). It is:
 - Created at a defined trigger point in the workflow
-- Named with a sequenced prefix within the record folder (e.g., `02-proposal.md`)
+- Named clearly for its sender, receiver, and purpose within the record folder
 - Never replaced — each unit of work produces a distinct set of artifacts in a distinct folder
 
-**Example:** `02-domain-lead-to-owner.md` in the active record folder — carries a domain lead's proposal for this flow.
+**Example:** `domain-lead-to-owner.md` in the active record folder — carries a domain lead's proposal for this flow.
 
-Projects that use a records structure create all conversation artifacts as record artifacts. Projects without a records structure may use the live artifact pattern: a stable file path replaced between units of work after a pre-replacement check confirms the prior unit is closed.
+Projects that use A-Society runtime-managed records create all conversation artifacts as record artifacts. Projects without runtime-managed records may use the live artifact pattern: a stable file path replaced between units of work after a pre-replacement check confirms the prior unit is closed.
 
 ### 2. Permanent Templates
 
 A template defines the required structure for a conversation type. It is never replaced — it is the authoritative format reference. Agents create a new artifact from the template into the active record folder; the template itself remains unchanged.
 
-Template header notes should say: *"Create from this template into the active record folder as NN-[type].md."*
+Template header notes should say: *"Create from this template inside the active record folder as [descriptive-name].md."*
 
 **Example:** `TEMPLATE-domain-lead-to-owner.md` — the canonical format for a project's domain-lead proposal handoffs.
 
@@ -58,7 +58,7 @@ Projects add fields as their workflow requires. Projects do not remove the five 
 ```
 Trigger fires
     ↓
-Sender creates artifact in active record folder from template (as NN-[type].md)
+Sender creates artifact in active record folder from template
     ↓
 Receiver reads and acknowledges
     ↓
@@ -75,7 +75,7 @@ There is no pre-replacement check for record artifacts. Nothing is overwritten.
 
 ---
 
-## Lifecycle of a Live Artifact (for projects without records)
+## Lifecycle of a Live Artifact (for projects without runtime-managed records)
 
 ```
 Trigger fires
@@ -101,9 +101,9 @@ Artifact replaced for next unit of work
 
 Consistent naming makes it possible to locate conversation artifacts without reading every file:
 
-- **Record artifacts:** `NN-[type].md` within the record folder (e.g., `02-proposal.md`, `03-decision.md`). The `NN-` prefix is zero-padded and two-digit. See `$INSTRUCTION_RECORDS` for the sequencing convention.
+- **Record artifacts:** descriptive Markdown filenames within the record folder (e.g., `proposal.md`, `decision.md`, `domain-lead-to-owner.md`). Use names that make sender, receiver, and purpose clear.
 - **Templates:** `TEMPLATE-[sender-role]-to-[receiver-role].md`
-- **Live artifacts (for projects without records):** `[sender-role]-to-[receiver-role].md` (e.g., `tech-lead-to-backend.md`)
+- **Live artifacts (for projects without runtime-managed records):** `[sender-role]-to-[receiver-role].md` (e.g., `tech-lead-to-backend.md`)
 - **Clarification artifacts (if separate):** `TEMPLATE-[role-a]-[role-b]-clarification.md`
 
 Use role names as they appear in the project's role documents. Do not abbreviate differently from the role document names — inconsistent abbreviation creates lookup friction.

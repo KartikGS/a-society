@@ -29,7 +29,7 @@ fs.mkdirSync(path.join(projectDir, 'a-docs', 'roles', 'owner'), { recursive: tru
 
 fs.writeFileSync(
   path.join(projectDir, 'a-docs', 'roles', 'owner', 'required-readings.yaml'),
-  `role: owner\nrequired_readings:\n  - $TEST_AGENTS\n  - $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT\n  - $TEST_OWNER_ROLE\n`
+  `role: owner\nrequired_readings:\n  - $TEST_AGENTS\n  - $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT\n  - $A_SOCIETY_RUNTIME_RECORDS_CONTRACT\n  - $TEST_OWNER_ROLE\n`
 );
 fs.writeFileSync(
   path.join(projectDir, 'a-docs', 'indexes', 'main.md'),
@@ -39,15 +39,16 @@ fs.writeFileSync(path.join(projectDir, 'a-docs', 'agents.md'), 'Agent orientatio
 fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner', 'main.md'), 'Owner role doc');
 fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
 
-test('buildContextBundle: contains role announcement, handoff contract, and required-reading files', () => {
+test('buildContextBundle: contains role announcement, runtime contracts, and required-reading files', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('You are the Owner agent for a-society.'));
+  assert.ok(bundle.bundleContent.includes('You are the owner agent for a-society.'));
   assert.ok(bundle.bundleContent.includes('A-Society Runtime Handoff Contract'));
+  assert.ok(bundle.bundleContent.includes('A-Society Runtime Records Contract'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));
 });
@@ -55,11 +56,11 @@ test('buildContextBundle: contains role announcement, handoff contract, and requ
 test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and already-loaded statement', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR Owner IN a-society ---'));
+  assert.ok(bundle.bundleContent.includes('--- RUNTIME-LOADED REQUIRED READING FOR owner IN a-society ---'));
   assert.ok(bundle.bundleContent.includes('These files are already loaded into this session by the runtime.'));
   assert.ok(!bundle.bundleContent.includes('--- MANDATORY CONTEXT LOADING FOR'));
 });
@@ -67,13 +68,13 @@ test('buildContextBundle: uses RUNTIME-LOADED REQUIRED READING heading and alrea
 test('buildContextBundle: role instances load base role required readings', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner_1',
+    'owner_1',
     tmpDir
   );
 
-  assert.ok(bundle.bundleContent.includes('You are the Owner_1 agent for a-society.'));
-  assert.ok(bundle.bundleContent.includes('uses the Owner role authority and required readings'));
-  assert.ok(bundle.bundleContent.includes('Loaded from base role Owner.'));
+  assert.ok(bundle.bundleContent.includes('You are the owner_1 agent for a-society.'));
+  assert.ok(bundle.bundleContent.includes('uses the owner role authority and required readings'));
+  assert.ok(bundle.bundleContent.includes('Loaded from base role owner.'));
   assert.ok(bundle.bundleContent.includes('Agent orientation'));
   assert.ok(bundle.bundleContent.includes('Owner role doc'));
   assert.ok(!bundle.bundleContent.includes('FILE ERROR'));
@@ -82,7 +83,7 @@ test('buildContextBundle: role instances load base role required readings', () =
 test('buildContextBundle: does not include active artifact content', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
@@ -91,22 +92,25 @@ test('buildContextBundle: does not include active artifact content', () => {
   assert.ok(!bundle.bundleContent.includes('ACTIVE WORKSPACE ARTIFACT'));
 });
 
-test('buildContextBundle: runtime handoff contract is injected once even if runtime variable appears in required readings', () => {
+test('buildContextBundle: runtime session contracts are injected once even if runtime variables appear in required readings', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
-  const matches = bundle.bundleContent.match(/A-Society Runtime Handoff Contract/g) || [];
-  assert.strictEqual(matches.length, 1);
+  const handoffMatches = bundle.bundleContent.match(/A-Society Runtime Handoff Contract/g) || [];
+  const recordsMatches = bundle.bundleContent.match(/A-Society Runtime Records Contract/g) || [];
+  assert.strictEqual(handoffMatches.length, 1);
+  assert.strictEqual(recordsMatches.length, 1);
   assert.ok(!bundle.bundleContent.includes('FILE ERROR: Could not resolve or read $A_SOCIETY_RUNTIME_HANDOFF_CONTRACT'));
+  assert.ok(!bundle.bundleContent.includes('FILE ERROR: Could not resolve or read $A_SOCIETY_RUNTIME_RECORDS_CONTRACT'));
 });
 
 test('buildContextBundle: does not inject runtime directives', () => {
   const bundle = ContextInjectionService.buildContextBundle(
     'a-society',
-    'Owner',
+    'owner',
     tmpDir
   );
 
@@ -117,8 +121,8 @@ test('buildContextBundle: does not inject runtime directives', () => {
 });
 
 test('buildContextBundle: produces a deterministic hash', () => {
-  const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'Owner', tmpDir);
-  const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'Owner', tmpDir);
+  const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir);
+  const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir);
 
   assert.strictEqual(bundle1.contextHash, bundle2.contextHash);
   assert.ok(bundle1.contextHash.length > 0);

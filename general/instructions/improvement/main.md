@@ -111,8 +111,7 @@ When a project uses a programmatic runtime that orchestrates backward pass sessi
 Base the file on the corresponding general framework template:
 - `meta-analysis.md` → start from `$GENERAL_IMPROVEMENT_META_ANALYSIS`; resolve all `[PROJECT_*]` placeholders with values from the project's index
 
-`[PROJECT_*]` placeholders to resolve for `meta-analysis.md` at minimum:
-- `[PROJECT_RECORDS]` — the path to the project's records folder (e.g., `my-project/a-docs/records`)
+Runtime-managed projects do not need a standing `[PROJECT_RECORDS]` path. The runtime injects the active record folder path for each flow.
 
 **Registering these files:**
 

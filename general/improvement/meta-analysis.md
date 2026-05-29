@@ -78,7 +78,7 @@ When the reviewed artifact lives in the project's `a-docs/` or affects the agent
 
 ### Output Format
 
-File findings as a sequenced artifact in the active record folder: `NN-<role>-findings.md`
+File findings at the exact runtime-assigned findings path provided in the meta-analysis session.
 
 **Template:** `[PROJECT_IMPROVEMENT_TEMPLATE_FINDINGS]`
 
