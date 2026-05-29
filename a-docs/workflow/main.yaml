@@ -53,7 +53,7 @@ workflow:
         - Implement directly when the touched Curator-owned surfaces fall within Curator authority and no independent Owner decision is required.
         - When the requested change adds new scope or surface area to general/ — new instruction types, role templates, or structural categories — produce a proposal artifact instead of implementing directly.
         - When the requested change clarifies, refines, or extends existing general/ content without expanding its surface area — precision fixes, worked examples, vocabulary alignment — implement directly within Curator authority.
-        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide entries, and related registrations.
+        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, ownership files, and related registrations.
       outputs:
         - Curator proposal artifact when an independent Owner decision is required
         - Or Curator completion artifact when direct Curator implementation and stewardship are complete
@@ -91,7 +91,7 @@ workflow:
         - Approved Owner decision artifact
       work:
         - Write the approved content at the correct location per $A_SOCIETY_STRUCTURE.
-        - Add or verify $A_SOCIETY_AGENT_DOCS_GUIDE rationale coverage for new or significantly modified Curator-stewarded files.
+        - Add or verify index and ownership coverage for new or significantly modified Curator-stewarded files.
       outputs:
         - Curator completion artifact
       transitions:
@@ -174,7 +174,7 @@ workflow:
       inputs:
         - Approved executable result or TA-reviewed executable result, depending on the active path
       work:
-        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, guide coverage, and runtime-reference registrations.
+        - Update Curator-owned stewardship surfaces touched by the flow, including indexes, ownership files, and runtime-reference registrations.
         - Verify $A_SOCIETY_RUNTIME_INVOCATION directly against the implemented operator-facing executable surface when that file changed in-flow.
       outputs:
         - Registration artifact and updated standing references

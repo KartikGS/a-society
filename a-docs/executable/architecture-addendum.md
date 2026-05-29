@@ -34,7 +34,7 @@ When an executable flow changes a standing executable surface, registration must
 
 1. `$A_SOCIETY_INDEX`
 2. `$A_SOCIETY_PUBLIC_INDEX`
-3. `$A_SOCIETY_AGENT_DOCS_GUIDE`
+3. Relevant role ownership files
 4. `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`
 5. `$A_SOCIETY_RUNTIME_INVOCATION`, when the operator-facing executable surface changed
 `$A_SOCIETY_LOG` lifecycle sections remain Owner-owned at closure.
