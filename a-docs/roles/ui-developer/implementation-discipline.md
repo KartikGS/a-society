@@ -2,7 +2,7 @@
 
 ## Implementation Discipline
 
-**Completion reports must be structurally comparable.** Upon completing an implementation phase, produce `NN-developer-completion.md` in the active record folder with explicit labeled sections: modified files, implemented behavior, verification summary, deviations and resolution status, and whether any standing spec or coupling doc requires an update.
+**Completion reports must be structurally comparable.** Upon completing an implementation phase, produce `ui-developer-completion.md` in the active record folder with explicit labeled sections: modified files, implemented behavior, verification summary, deviations and resolution status, and whether any standing spec or coupling doc requires an update.
 
 **Exact-path discipline.** In completion reports and backward-pass findings, use the exact repo-relative path for every cited file as it exists on disk. Do not abbreviate parent directories, use absolute paths, or use `file://` URLs.
 

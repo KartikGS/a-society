@@ -27,6 +27,7 @@ import { deterministicFindingsFilePath } from '../../src/framework-services/back
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
 import { runRoleTurn } from '../../src/orchestration/orient.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 
 import type { 
@@ -356,7 +357,7 @@ async function run() {
     process.env.A_SOCIETY_STATE_DIR = stateDir;
     SessionStore.init();
 
-    const recordDir = path.join(tmpDir, 'accepted-handoff-record');
+    const recordDir = getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'accepted-handoff-flow' });
     fs.mkdirSync(recordDir, { recursive: true });
     fs.writeFileSync(
       path.join(recordDir, 'workflow.yaml'),
@@ -443,7 +444,7 @@ async function run() {
       flowId: 'test-flow',
       workspaceRoot: tmpDir,
       projectNamespace: path.basename(tmpDir),
-      recordFolderPath: path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'records', 'test-flow'),
+      recordFolderPath: getFlowRecordDir(tmpDir, { projectNamespace: path.basename(tmpDir), flowId: 'test-flow' }),
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
@@ -487,10 +488,10 @@ async function run() {
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'main.md'), '---\nrole: curator\n---\nHello');
     fs.writeFileSync(path.join(derivedNamespaceDir, 'curator', 'ownership.yaml'), 'role: curator\nsurfaces: []\n');
 
-    const recordDir = path.join(aDocsRoot, 'records', 'repair-record');
     // Use the same namespace as derivedNamespaceDir so the fixture matches the live FlowRun contract:
     // workspaceRoot = workspace root, projectNamespace = project folder name.
     const improvementNamespace = path.basename(tmpDir);
+    const recordDir = getFlowRecordDir(tmpDir, { projectNamespace: improvementNamespace, flowId: 'repair-flow' });
     const runtimeContractsRoot = path.join(tmpDir, 'a-society', 'runtime', 'contracts');
     fs.mkdirSync(recordDir, { recursive: true });
     fs.mkdirSync(runtimeContractsRoot, { recursive: true });

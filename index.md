@@ -16,6 +16,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `a-society/runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `a-society/runtime/contracts/handoff.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
 | `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` | `a-society/runtime/contracts/workflow.md` | Runtime-owned workflow YAML contract — schema, role-instance behavior, node-entry injection, and active-path routing semantics |
+| `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` | `a-society/runtime/contracts/records.md` | Runtime-owned flow records contract — injected by the runtime into every managed session; governs active record placement, writable scope, and runtime-managed metadata |
 | `$A_SOCIETY_RUNTIME_INITIALIZATION` | `a-society/runtime/contracts/initialization.md` | Runtime-owned initialization contract — used by the browser runtime when taking over an existing project without `a-docs/` or starting a greenfield project |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` | `a-society/runtime/contracts/a-docs-manifest.yaml` | Runtime-owned a-docs manifest — machine-readable scaffold and health-check contract for default project `a-docs/` surfaces |
 | `$A_SOCIETY_RUNTIME_FEEDBACK` | `a-society/runtime/contracts/feedback.md` | Runtime-owned final backward-pass feedback contract — used by the runtime's A-Society feedback phase |
@@ -58,7 +59,6 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols |
 | `$INSTRUCTION_IMPROVEMENT` | `a-society/general/instructions/improvement/main.md` | How to create an improvement/ folder for any project |
-| `$INSTRUCTION_RECORDS` | `a-society/general/instructions/records/main.md` | How to create a records structure for any project |
 | **a-docs Templates** | | |
 | `$GENERAL_ADOCS_DESIGN` | `a-society/general/a-docs-design.md` | Ready-made a-docs design principles template — adopt in any project to govern how the a-docs layer is authored |
 | **Role Templates** | | |
@@ -69,7 +69,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
 | `$GENERAL_TA_ROLE` | `a-society/general/project-types/executable/roles/technical-architect/main.md` | Ready-made Technical Architect (advisory-producing) role template for projects with an executable layer — authority, boundaries, and workflow-linked support-doc routing |
 | **Communication Templates** | | |
-| `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `01-owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
+| `$GENERAL_OWNER_WORKFLOW_PLAN_TEMPLATE` | `a-society/general/communication/conversation/TEMPLATE-owner-workflow-plan.md` | Ready-made workflow plan template — instantiated at intake as `owner-workflow-plan.md` in the record folder; five complexity axes, tier, path, known unknowns |
 | **Improvement Templates** | | |
 | `$GENERAL_IMPROVEMENT` | `a-society/general/improvement/main.md` | Ready-made improvement philosophy template |
 | `$GENERAL_IMPROVEMENT_META_ANALYSIS` | `a-society/general/improvement/meta-analysis.md` | Meta-analysis phase instructions — injected into backward pass agent sessions by the runtime; contains reflection categories, analysis quality guidance, and `meta-analysis-complete` signal schema |

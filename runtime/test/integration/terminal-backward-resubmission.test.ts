@@ -5,6 +5,7 @@ import path from 'node:path';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 
@@ -22,15 +23,15 @@ async function runTest() {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'terminal-backward-resubmission-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
-  const testDir = path.join(workspaceRoot, projectNamespace);
-  const recordPath = path.join(testDir, 'records', 'test-flow');
   const stateDir = path.join(tmpBase, '.state');
+  process.env.A_SOCIETY_STATE_DIR = stateDir;
+  const flowId = 'terminal-backward-flow';
+  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
 
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
   scaffoldRole(workspaceRoot, projectNamespace, 'curator');
   scaffoldRole(workspaceRoot, projectNamespace, 'owner');
-  process.env.A_SOCIETY_STATE_DIR = stateDir;
 
   const workflowGraph = `workflow:
   name: terminal-backward-resubmission
@@ -51,7 +52,7 @@ async function runTest() {
   fs.writeFileSync(reviewFeedbackPath, 'Final reviewer requests resubmission.');
 
   const reviewFeedbackRelPath = path.relative(workspaceRoot, reviewFeedbackPath);
-  const flowRef = { projectNamespace, flowId: 'terminal-backward-flow' };
+  const flowRef = { projectNamespace, flowId };
 
   SessionStore.init();
   SessionStore.saveFlowRun({

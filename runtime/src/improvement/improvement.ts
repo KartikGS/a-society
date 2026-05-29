@@ -201,6 +201,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           saveSession();
         },
         nodeId,
+        flowRun.recordFolderPath,
       );
 
       if (sessionResult === null) {

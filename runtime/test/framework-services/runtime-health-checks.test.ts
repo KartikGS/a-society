@@ -37,7 +37,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   const rolesRoot = path.join(aDocsRoot, 'roles', 'owner');
   const workflowRoot = path.join(aDocsRoot, 'workflow');
   const improvementRoot = path.join(aDocsRoot, 'improvement');
-  const recordsRoot = path.join(aDocsRoot, 'records');
   const indexesRoot = path.join(aDocsRoot, 'indexes');
 
   fs.symlinkSync(frameworkRoot, aSocietyRoot, 'dir');
@@ -47,7 +46,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   fs.mkdirSync(rolesRoot, { recursive: true });
   fs.mkdirSync(workflowRoot, { recursive: true });
   fs.mkdirSync(improvementRoot, { recursive: true });
-  fs.mkdirSync(recordsRoot, { recursive: true });
   fs.mkdirSync(indexesRoot, { recursive: true });
 
   fs.writeFileSync(path.join(aDocsRoot, 'agents.md'), '# Agents\n', 'utf8');

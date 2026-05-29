@@ -24,7 +24,7 @@ test('FlowRun: conforms to new multi-node structure', () => {
     flowId: 'f1',
     workspaceRoot: '.',
     projectNamespace: 'test-project',
-    recordFolderPath: './records/r1',
+    recordFolderPath: './.a-society/state/test-project/f1/record',
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},

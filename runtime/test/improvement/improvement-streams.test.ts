@@ -17,6 +17,7 @@ import type {
 } from '../../src/common/types.js';
 import { deterministicFindingsFilePath } from '../../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
@@ -46,8 +47,7 @@ await test('feedback repair status is emitted as an event, not role output strea
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
   const projectNamespace = 'demo-project';
   const flowId = 'repair-flow';
-  const projectRoot = path.join(workspaceRoot, projectNamespace);
-  const recordFolderPath = path.join(projectRoot, 'a-docs', 'records', flowId);
+  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
   const feedbackArtifactPath = 'a-society/feedback/demo-project-flow-repair-flow.md';
   const feedbackArtifactFilePath = path.join(workspaceRoot, feedbackArtifactPath);
 

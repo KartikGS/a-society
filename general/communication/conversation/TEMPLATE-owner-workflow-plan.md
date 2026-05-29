@@ -15,9 +15,9 @@ path: []          # Ordered list of role names; must be non-empty
 known_unknowns: [] # List of strings; empty list [] is valid if none
 ---
 
-> **Template** — do not modify this file. When instantiating, omit this header block. Create from this template into the active record folder as `01-owner-workflow-plan.md`. All five `complexity` axis fields, `tier`, and `path` must be filled in — a plan with any `null` or missing required value is incomplete and does not satisfy the Phase 0 gate.
+> **Template** — do not modify this file. When instantiating, omit this header block. Create from this template into the active record folder as `owner-workflow-plan.md`. All five `complexity` axis fields, `tier`, and `path` must be filled in — a plan with any `null` or missing required value is incomplete and does not satisfy the Phase 0 gate.
 
-> **Completion gate:** This plan must exist before any other artifact in the record folder. Implementation does not begin until it exists.
+> **Completion gate:** This plan must exist before any downstream handoff artifact is written. Implementation does not begin until it exists.
 
 ---
 

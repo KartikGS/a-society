@@ -136,7 +136,7 @@ Keep transition summaries lightweight. Artifact formats, status models, and deta
 - **Tool declarations** — what software to use belongs in a tooling document
 - **Project vision** — why the project exists belongs in a vision document
 - **Specific artifact templates** — how to format a plan, report, requirement, or handoff belongs in the project's template surface; produced artifacts belong in the active record folder
-- **Historical records** — completed flow artifacts live under `records/`, not inside `workflow/`
+- **Historical records** — completed flow artifacts live in runtime-managed record folders, not inside `workflow/`
 
 If the workflow definition grows sections that describe specific artifact formats or role-specific behaviors in depth, those sections belong in template, artifact-guidance, or role surfaces outside `workflow/`. The workflow definition describes the process; other surfaces describe the artifacts produced by that process.
 

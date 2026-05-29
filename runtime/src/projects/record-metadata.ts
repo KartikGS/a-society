@@ -17,14 +17,12 @@ const RESERVED_WORKFLOW_SUMMARIES = new Set([
 ]);
 
 export interface RecordMetadata {
-  id: string;
   name?: string;
   summary?: string;
 }
 
 interface RecordMetadataDocument {
   record?: {
-    id?: unknown;
     name?: unknown;
     summary?: unknown;
   };
@@ -70,16 +68,11 @@ function readWorkflowIdentity(recordFolderPath: string): { name?: string; summar
   }
 }
 
-function normalizeRecordMetadata(
-  doc: RecordMetadataDocument | null,
-  fallbackId: string,
-): RecordMetadata {
-  const id = trimNonEmptyString(doc?.record?.id) ?? fallbackId;
+function normalizeRecordMetadata(doc: RecordMetadataDocument | null): RecordMetadata {
   const name = trimNonEmptyString(doc?.record?.name);
   const summary = trimNonEmptyString(doc?.record?.summary);
 
   return {
-    id,
     ...(name ? { name } : {}),
     ...(summary ? { summary } : {}),
   };
@@ -89,7 +82,7 @@ export function recordMetadataFilename(): string {
   return RECORD_METADATA_FILENAME;
 }
 
-export function buildRecordId(now = new Date()): string {
+export function buildFlowId(now = new Date()): string {
   return `${formatTimestamp(now)}-${crypto.randomBytes(3).toString('hex')}`;
 }
 
@@ -99,7 +92,7 @@ export function readRecordMetadata(recordFolderPath: string): RecordMetadata | n
 
   try {
     const doc = yaml.load(fs.readFileSync(filePath, 'utf8')) as RecordMetadataDocument | null;
-    return normalizeRecordMetadata(doc, path.basename(recordFolderPath));
+    return normalizeRecordMetadata(doc);
   } catch {
     return null;
   }
@@ -108,7 +101,6 @@ export function readRecordMetadata(recordFolderPath: string): RecordMetadata | n
 export function writeRecordMetadata(recordFolderPath: string, metadata: RecordMetadata): void {
   const doc = {
     record: {
-      id: metadata.id,
       name: metadata.name ?? null,
       summary: metadata.summary ?? null,
     },
@@ -121,13 +113,9 @@ export function writeRecordMetadata(recordFolderPath: string, metadata: RecordMe
   );
 }
 
-export function syncRecordMetadataFromWorkflow(
-  recordFolderPath: string,
-  recordId: string,
-): RecordMetadata {
+export function syncRecordMetadataFromWorkflow(recordFolderPath: string): RecordMetadata {
   const existing = readRecordMetadata(recordFolderPath);
   const next: RecordMetadata = {
-    id: existing?.id ?? recordId,
     ...(existing?.name ? { name: existing.name } : {}),
     ...(existing?.summary ? { summary: existing.summary } : {}),
   };
@@ -142,7 +130,6 @@ export function syncRecordMetadataFromWorkflow(
 
   const changed =
     !existing ||
-    existing.id !== next.id ||
     existing.name !== next.name ||
     existing.summary !== next.summary;
 

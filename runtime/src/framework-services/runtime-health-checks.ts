@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import yaml from 'js-yaml';
-import { resolveProjectRecordsRoot, resolveProjectRoot } from '../projects/draft-flow.js';
+import { resolveProjectRoot } from '../projects/draft-flow.js';
 import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../common/role-id.js';
 import { validatePaths } from './path-validator.js';
 import { validateWorkflowFile } from './workflow-graph-validator.js';
@@ -326,7 +326,10 @@ function readGitTrackedFiles(projectRoot: string): string[] | null {
     return null;
   }
 
-  return listResult.stdout.split('\0').filter((entry) => entry.trim() !== '');
+  return listResult.stdout
+    .split('\0')
+    .filter((entry) => entry.trim() !== '')
+    .filter((entry) => fs.existsSync(path.join(projectRoot, entry)));
 }
 
 function shouldIgnoreOwnershipCoverageEntry(entryPath: string): boolean {
@@ -371,8 +374,6 @@ export function runRuntimeHealthChecks(
   const workflowRoot = path.join(aDocsRoot, 'workflow');
   const workflowPath = canonicalWorkflowDefinitionPath(workspaceRoot, projectNamespace);
   const indexPath = path.join(aDocsRoot, 'indexes', 'main.md');
-  const preferredRecordsRoot = path.join(projectRoot, 'a-docs', 'records');
-  const legacyRecordsRoot = path.join(projectRoot, 'records');
 
   if (!isDirectory(aDocsRoot)) {
     errors.push(`Required a-docs root is missing at ${path.relative(workspaceRoot, aDocsRoot)}`);
@@ -404,13 +405,6 @@ export function runRuntimeHealthChecks(
 
   if (!isFile(workflowPath)) {
     addMissingFileError(errors, 'Required workflow definition', workflowPath, workspaceRoot);
-  }
-
-  const recordsRoot = resolveProjectRecordsRoot(workspaceRoot, projectNamespace);
-  if (!isDirectory(recordsRoot)) {
-    errors.push(
-      `Required records root is missing; expected ${path.relative(workspaceRoot, preferredRecordsRoot)} or legacy ${path.relative(workspaceRoot, legacyRecordsRoot)}`
-    );
   }
 
   let registeredVariables: Set<string> | null = null;
@@ -565,7 +559,6 @@ export function buildRuntimeHealthRepairGuidance(
       '- a-docs/indexes/main.md with valid registered paths',
       '- a-docs/roles/<base-role-id>/{main.md, ownership.yaml, required-readings.yaml}',
       '- a-docs/workflow/main.yaml',
-      '- a records root at a-docs/records/ or legacy records/',
       completionInstruction,
       retryInstruction
     ].join('\n')

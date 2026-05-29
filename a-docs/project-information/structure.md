@@ -67,7 +67,7 @@ When you are unsure whether something belongs in `general/` vs another project's
 **Internal placement standard:** New runtime work is grouped by runtime capability, not left flat at the root or directly under `src/`.
 
 - `runtime/INVOCATION.md` remains the root operator-facing entry point. Package, build, environment, and installation files may also remain at the runtime root.
-- Runtime-injected contracts, runtime-owned agent/session contracts, and runtime-owned scaffold/health contracts belong under `runtime/contracts/`, not as additional root files.
+- Runtime-injected contracts, runtime-owned agent/session contracts, runtime-owned flow-record contracts, and runtime-owned scaffold/health contracts belong under `runtime/contracts/`, not as additional root files.
 - `runtime/src/` should contain capability folders rather than a large flat set of peer files. Standard capability folders are:
   - `orchestration/` — flow lifecycle, handoff routing, role-turn coordination, and runtime state transitions
   - `context/` — required-reading resolution, node-entry assembly, index/path resolution, and workflow-file context loading
@@ -114,7 +114,7 @@ When someone adopts this framework, they are using `general/`. When A-Society ag
 - **Category layer** — `general/project-types/<type>/`. Content here must apply without modification to any project of that category, but is not required to apply universally.
 
 **What belongs at the universal layer:**
-- Instruction documents that describe artifacts every project produces (vision, structure, agents.md, indexes, workflow definitions, records)
+- Instruction documents that describe artifacts every project produces (vision, structure, agents.md, indexes, workflow definitions)
 - Role templates that are reusable across project types, whether default-scaffolded or opt-in
 - Standards and patterns projects can use verbatim when they need that layer
 

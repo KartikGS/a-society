@@ -119,7 +119,7 @@ export class FileToolExecutor {
     if (WRITE_TOOLS.has(call.name) && this.writeRoots) {
       const allowed = this.writeRoots.some(root => resolved === root || resolved.startsWith(root + path.sep));
       if (!allowed) {
-        return { content: `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory and its associated a-docs.`, isError: true };
+        return { content: `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and A-Society feedback.`, isError: true };
       }
     }
 

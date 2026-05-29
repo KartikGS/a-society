@@ -2,10 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
-import { resolveProjectRecordsRoot, resolveProjectRoot } from './draft-flow.js';
+import { resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from '../framework-services/scaffolding-system.js';
-import { buildRecordId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
+import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH } from '../common/runtime-contracts.js';
+import { getFlowRecordDir } from '../orchestration/state-paths.js';
 
 export type InitializationMode = 'takeover' | 'greenfield';
 
@@ -314,11 +315,8 @@ export function bootstrapInitializationFlow(
 
   seedBootstrapContextFiles(projectRoot, namespace);
 
-  const flowId = buildRecordId();
-  const recordsRoot = resolveProjectRecordsRoot(workspaceRoot, namespace);
-  fs.mkdirSync(recordsRoot, { recursive: true });
-
-  const recordFolderPath = path.join(recordsRoot, flowId);
+  const flowId = buildFlowId();
+  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace: namespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   const initializationGuideContent = fs.readFileSync(runtimeInitializationPath, 'utf8');
@@ -336,7 +334,7 @@ export function bootstrapInitializationFlow(
     buildInitializationWorkflowDocument(initializationGuideContent, initializationBriefContent),
     'utf8'
   );
-  syncRecordMetadataFromWorkflow(recordFolderPath, flowId);
+  syncRecordMetadataFromWorkflow(recordFolderPath);
 
   return {
     flowRun: {

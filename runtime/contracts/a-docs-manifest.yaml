@@ -119,7 +119,7 @@ files:
     source_path: general/instructions/communication/conversation/main.md
 
   - path: communication/conversation/TEMPLATE-owner-workflow-plan.md
-    description: "Workflow plan template - instantiated by the Owner at intake as 01-owner-workflow-plan.md"
+    description: "Workflow plan template - instantiated by the Owner at intake as owner-workflow-plan.md"
     scaffold: copy
     source_path: general/communication/conversation/TEMPLATE-owner-workflow-plan.md
 
@@ -127,13 +127,6 @@ files:
     description: "Coordination protocols - status vocabulary, handoff requirements, feedback protocol, and conflict resolution"
     scaffold: stub
     source_path: general/instructions/communication/coordination/main.md
-
-  # Records
-
-  - path: records/main.md
-    description: "Records convention - record ID and metadata model, artifact sequence, and placement rules for flow-level artifact tracking"
-    scaffold: stub
-    source_path: general/instructions/records/main.md
 
   # Version record
 

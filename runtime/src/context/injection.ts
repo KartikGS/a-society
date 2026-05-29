@@ -14,12 +14,18 @@ export interface ContextBundleResult {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_HANDOFF_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/handoff.md');
+const RUNTIME_RECORDS_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/records.md');
+
+const RUNTIME_SESSION_CONTRACTS = [
+  { label: 'runtime/contracts/handoff.md', filePath: RUNTIME_HANDOFF_CONTRACT_PATH },
+  { label: 'runtime/contracts/records.md', filePath: RUNTIME_RECORDS_CONTRACT_PATH }
+];
 
 
 export class ContextInjectionService {
   /**
    * Assembles the stable runtime-owned context into a single system-prompt string.
-   * Scope: role announcement, date, runtime handoff contract, required-reading files.
+   * Scope: role announcement, runtime session contracts, required-reading files.
    * Does NOT include active artifacts or task-scoped inputs — those are delivered
    * as node-entry user-message content by the orchestrator and session-entry helpers.
    */
@@ -40,12 +46,14 @@ export class ContextInjectionService {
 
     // 0b. Runtime-owned session contracts
     bundle += `--- RUNTIME-MANAGED SESSION CONTRACTS ---\n`;
-    if (fs.existsSync(RUNTIME_HANDOFF_CONTRACT_PATH)) {
-      const content = fs.readFileSync(RUNTIME_HANDOFF_CONTRACT_PATH, 'utf8');
-      bundle += `\n[FILE: runtime/contracts/handoff.md]\n`;
-      bundle += `${content}\n\n`;
-    } else {
-      bundle += `\n[FILE ERROR: Could not read runtime/contracts/handoff.md]\n\n`;
+    for (const contract of RUNTIME_SESSION_CONTRACTS) {
+      if (fs.existsSync(contract.filePath)) {
+        const content = fs.readFileSync(contract.filePath, 'utf8');
+        bundle += `\n[FILE: ${contract.label}]\n`;
+        bundle += `${content}\n\n`;
+      } else {
+        bundle += `\n[FILE ERROR: Could not read ${contract.label}]\n\n`;
+      }
     }
 
     // 1. Resolve and inject required reading

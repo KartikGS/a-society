@@ -4,7 +4,7 @@ workflow:
   use_when: The work changes A-Society framework documentation, executable implementation, shared library surfaces, operator-facing references, or any coordinated combination of those surfaces.
   companion_docs:
     - $A_SOCIETY_WORKFLOW_COMPLEXITY
-    - $A_SOCIETY_RECORDS
+    - $A_SOCIETY_RUNTIME_RECORDS_CONTRACT
   nodes:
     - id: owner-intake
       role: owner
@@ -25,13 +25,13 @@ workflow:
         - Assess the triggered work against the five axes from $A_SOCIETY_WORKFLOW_COMPLEXITY.
         - Identify the touched permanent surfaces and their truth owners from the relevant role ownership files.
         - Select the tier, define the known path, and surface known unknowns.
-        - Work inside the active record folder per $A_SOCIETY_RECORDS, including the required intake artifacts.
-        - Produce 01-owner-workflow-plan.md using $A_SOCIETY_COMM_TEMPLATE_PLAN.
+        - Work inside the active record folder per $A_SOCIETY_RUNTIME_RECORDS_CONTRACT, including the required intake artifacts.
+        - Produce owner-workflow-plan.md using $A_SOCIETY_COMM_TEMPLATE_PLAN.
         - Create workflow.yaml for the active path.
         - Perform direct Owner work at permanent file locations when all touched surfaces remain within Owner authority and no downstream gate adds unique value.
         - Issue the scoped handoff artifacts for any Curator, TA, or executable developer tracks activated by the touched-surface map.
       outputs:
-        - 01-owner-workflow-plan.md
+        - owner-workflow-plan.md
         - workflow.yaml
         - Scoped handoff artifact(s) for any downstream role that is activated
         - Direct implementation at permanent file locations when the record snapshot collapses to an Owner-only path
@@ -40,7 +40,7 @@ workflow:
         - Route to ta-design when executable design is required before implementation.
         - Route directly to the relevant developer track(s) when standing executable design already governs the work.
       notes:
-        - 01-owner-workflow-plan.md and workflow.yaml must exist before any later artifact in the record folder.
+        - owner-workflow-plan.md and workflow.yaml must exist before downstream handoff artifacts are written.
         - Direct Owner-only flows are represented in the record snapshot by a sole Owner node rather than by an Owner-to-Owner edge in this permanent graph.
     - id: curator-work
       role: curator

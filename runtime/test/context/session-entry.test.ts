@@ -238,13 +238,14 @@ test('buildForwardNodeEntryMessage: omits human input section when not provided'
 
 const instructionFile = path.join(tmpDir, 'meta-analysis.md');
 const findingsFile = path.join(tmpDir, 'findings.md');
+const activeRecordFolderPath = '/project/.a-society/state/project/flow/record';
 fs.writeFileSync(instructionFile, 'Meta-analysis instructions content.');
 fs.writeFileSync(findingsFile, 'Findings content here.');
 
 test('buildImprovementEntryMessage: contains step label, record folder, and files', () => {
   const msg = buildImprovementEntryMessage({
     stepLabel: 'meta-analysis',
-    recordFolderPath: '/project/records/flow',
+    recordFolderPath: activeRecordFolderPath,
     workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,
     findingsFilePaths: [findingsFile],
@@ -252,7 +253,7 @@ test('buildImprovementEntryMessage: contains step label, record folder, and file
   });
 
   assert.ok(msg.includes('Backward pass meta-analysis.'));
-  assert.ok(msg.includes('Record folder: /project/records/flow'));
+  assert.ok(msg.includes(`Record folder: ${activeRecordFolderPath}`));
   assert.ok(msg.includes('Meta-analysis instructions content.'));
   assert.ok(msg.includes('Findings content here.'));
   assert.ok(msg.includes('Emit a meta-analysis-complete handoff block.'));
@@ -261,7 +262,7 @@ test('buildImprovementEntryMessage: contains step label, record folder, and file
 test('buildImprovementEntryMessage: renders instruction file as [FILE: relpath] block', () => {
   const msg = buildImprovementEntryMessage({
     stepLabel: 'meta-analysis',
-    recordFolderPath: '/project/records/flow',
+    recordFolderPath: activeRecordFolderPath,
     workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,
     findingsFilePaths: [],
@@ -275,7 +276,7 @@ test('buildImprovementEntryMessage: renders instruction file as [FILE: relpath] 
 test('buildImprovementEntryMessage: renders findings files as [FILE: relpath] blocks', () => {
   const msg = buildImprovementEntryMessage({
     stepLabel: 'feedback',
-    recordFolderPath: '/project/records/flow',
+    recordFolderPath: activeRecordFolderPath,
     workspaceRoot: tmpDir,
     instructionFilePath: instructionFile,
     findingsFilePaths: [findingsFile],
@@ -290,7 +291,7 @@ test('buildImprovementEntryMessage: renders findings files as [FILE: relpath] bl
 test('buildImprovementEntryMessage: renders (File does not exist yet) for missing files', () => {
   const msg = buildImprovementEntryMessage({
     stepLabel: 'meta-analysis',
-    recordFolderPath: '/project/records/flow',
+    recordFolderPath: activeRecordFolderPath,
     workspaceRoot: tmpDir,
     instructionFilePath: path.join(tmpDir, 'missing-instruction.md'),
     findingsFilePaths: [path.join(tmpDir, 'missing-findings.md')],

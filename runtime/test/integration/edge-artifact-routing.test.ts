@@ -5,6 +5,7 @@ import path from 'node:path';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 
@@ -22,9 +23,10 @@ async function runTest() {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'edge-artifact-routing-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
-  const testDir = path.join(workspaceRoot, projectNamespace);
-  const recordPath = path.join(testDir, 'records', 'test-flow');
   const stateDir = path.join(tmpBase, '.state');
+  process.env.A_SOCIETY_STATE_DIR = stateDir;
+  const flowId = 'edge-artifact-flow';
+  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
 
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });
@@ -32,12 +34,12 @@ async function runTest() {
   scaffoldRole(workspaceRoot, projectNamespace, 'curator');
   scaffoldRole(workspaceRoot, projectNamespace, 'technical-architect');
   scaffoldRole(workspaceRoot, projectNamespace, 'framework-services-developer');
-  process.env.A_SOCIETY_STATE_DIR = stateDir;
-  const workspaceArtifactDir = path.join(workspaceRoot, 'records', 'test-flow');
-  fs.mkdirSync(workspaceArtifactDir, { recursive: true });
-  fs.writeFileSync(path.join(workspaceArtifactDir, '02-producer-to-a.md'), 'Producer artifact for A');
-  fs.writeFileSync(path.join(workspaceArtifactDir, '02-producer-to-b.md'), 'Producer artifact for B');
-  fs.writeFileSync(path.join(workspaceArtifactDir, '03-c-to-b.md'), 'Branch C artifact for B');
+  const producerToARel = path.relative(workspaceRoot, path.join(recordPath, '02-producer-to-a.md'));
+  const producerToBRel = path.relative(workspaceRoot, path.join(recordPath, '02-producer-to-b.md'));
+  const cToBRel = path.relative(workspaceRoot, path.join(recordPath, '03-c-to-b.md'));
+  fs.writeFileSync(path.join(recordPath, '02-producer-to-a.md'), 'Producer artifact for A');
+  fs.writeFileSync(path.join(recordPath, '02-producer-to-b.md'), 'Producer artifact for B');
+  fs.writeFileSync(path.join(recordPath, '03-c-to-b.md'), 'Branch C artifact for B');
 
   const workflowGraph = `workflow:
   name: edge-artifact-routing
@@ -62,7 +64,7 @@ async function runTest() {
 
   SessionStore.init();
   const flowRun = {
-    flowId: 'edge-artifact-flow',
+    flowId,
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
@@ -81,11 +83,11 @@ async function runTest() {
 
   await Promise.all([
     orchestrator.applyHandoffAndAdvance(flowRun, 'producer', 'owner', [
-      { target_node_id: 'branch-a', artifact_path: 'records/test-flow/02-producer-to-a.md' },
-      { target_node_id: 'branch-b', artifact_path: 'records/test-flow/02-producer-to-b.md' },
+      { target_node_id: 'branch-a', artifact_path: producerToARel },
+      { target_node_id: 'branch-b', artifact_path: producerToBRel },
     ]),
     orchestrator.applyHandoffAndAdvance(flowRun, 'branch-c', 'technical-architect', [
-      { target_node_id: 'branch-b', artifact_path: 'records/test-flow/03-c-to-b.md' },
+      { target_node_id: 'branch-b', artifact_path: cToBRel },
     ])
   ]);
 
@@ -94,7 +96,7 @@ async function runTest() {
     ['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k)),
     'concurrent handoffs should record all edge keys'
   );
-  assert.deepStrictEqual(updated.receivingHandoff['producer=>branch-a'], ['records/test-flow/02-producer-to-a.md']);
+  assert.deepStrictEqual(updated.receivingHandoff['producer=>branch-a'], [producerToARel]);
   assert.ok(
     updated.receivingHandoff['producer=>branch-b'] && updated.receivingHandoff['branch-c=>branch-b'],
     'branch-b should receive both concurrent predecessor handoffs'

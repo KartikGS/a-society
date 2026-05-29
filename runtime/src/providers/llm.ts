@@ -13,12 +13,19 @@ import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKe
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
 
-function projectWriteRoots(workspaceRoot: string, projectNamespace: string): string[] {
-  return [
+function projectWriteRoots(
+  workspaceRoot: string,
+  projectNamespace: string,
+  recordFolderPath?: string,
+): string[] {
+  const roots = [
     path.join(workspaceRoot, projectNamespace),
-    path.join(workspaceRoot, '.a-society', 'a-docs', projectNamespace),
     path.join(workspaceRoot, 'a-society', 'feedback'),
   ];
+  if (recordFolderPath) {
+    roots.push(recordFolderPath);
+  }
+  return roots;
 }
 
 function createProvider(): LLMProvider {
@@ -58,6 +65,8 @@ function throwIfAborted(signal: AbortSignal | undefined, partialText?: string): 
 
 export class LLMGateway {
   private provider: LLMProvider;
+  private workspaceRoot?: string;
+  private projectNamespace?: string;
   private fileExecutor?: FileToolExecutor;
   private bashExecutor?: BashToolExecutor;
   private webSearchExecutor?: WebSearchExecutor;
@@ -66,6 +75,8 @@ export class LLMGateway {
   constructor(workspaceRoot?: string, provider?: LLMProvider, projectNamespace?: string) {
     if (workspaceRoot) {
       configureSettingsStore(workspaceRoot);
+      this.workspaceRoot = path.resolve(workspaceRoot);
+      this.projectNamespace = projectNamespace;
     }
 
     if (provider) {
@@ -92,6 +103,13 @@ export class LLMGateway {
     messageHistory: RuntimeMessageParam[],
     options?: TurnOptions
   ): Promise<GatewayTurnResult> {
+    if (this.workspaceRoot && this.projectNamespace) {
+      this.fileExecutor = new FileToolExecutor(
+        this.workspaceRoot,
+        projectWriteRoots(this.workspaceRoot, this.projectNamespace, options?.recordFolderPath)
+      );
+    }
+
     const tracer = TelemetryManager.getTracer();
     const toolsEnabled = !!(this.tools && this.fileExecutor);
     return tracer.startActiveSpan('llm.gateway.execute_turn', {

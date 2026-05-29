@@ -24,6 +24,7 @@ import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 // ---- Harness setup ----
@@ -33,16 +34,16 @@ const stateDir = path.join(tmpDir, '.state');
 const settingsDir = path.join(tmpDir, '.settings');
 const projectNamespace = 'test-proj';
 const workspaceRoot = tmpDir;
+process.env.A_SOCIETY_STATE_DIR = stateDir;
+process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
 const namespaceDir = path.join(workspaceRoot, projectNamespace);
 const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
 const indexDir = path.join(namespaceDir, 'a-docs', 'indexes');
-const recordDir = path.join(namespaceDir, 'records', 'test-flow');
-const instanceRecordDir = path.join(namespaceDir, 'records', 'instance-flow');
+const recordDir = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: 'test-flow-id' });
+const instanceRecordDir = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: 'instance-flow-id' });
 
 fs.mkdirSync(rolesDir, { recursive: true });
 fs.mkdirSync(indexDir, { recursive: true });
-fs.mkdirSync(recordDir, { recursive: true });
-fs.mkdirSync(instanceRecordDir, { recursive: true });
 fs.mkdirSync(stateDir, { recursive: true });
 fs.mkdirSync(path.join(rolesDir, 'owner'), { recursive: true });
 fs.mkdirSync(path.join(rolesDir, 'ta'), { recursive: true });
@@ -77,8 +78,6 @@ const workflow = `workflow:
     - from: ta
       to: owner-gate
 `;
-fs.writeFileSync(path.join(recordDir, 'workflow.yaml'), workflow);
-
 const instanceWorkflow = `workflow:
   name: instance-flow
   nodes:
@@ -88,27 +87,33 @@ const instanceWorkflow = `workflow:
       role: owner_2
   edges: []
 `;
-fs.writeFileSync(path.join(instanceRecordDir, 'workflow.yaml'), instanceWorkflow);
 
 const ownerArtifact1 = path.join(recordDir, '01-owner-brief.md');
 const taArtifact = path.join(recordDir, '02-ta-design.md');
 const reviewFeedbackArtifact = path.join(recordDir, '03-review-feedback.md');
 const ownerInstanceArtifact = path.join(instanceRecordDir, '01-owner-instance-input.md');
-fs.writeFileSync(ownerArtifact1, 'Owner brief content.');
-fs.writeFileSync(taArtifact, 'TA design content.');
-fs.writeFileSync(reviewFeedbackArtifact, 'Reviewer requests revision to the Owner brief.');
-fs.writeFileSync(ownerInstanceArtifact, 'Role instance input.');
 const ownerArtifact1Rel = path.relative(workspaceRoot, ownerArtifact1);
 const taArtifactRel = path.relative(workspaceRoot, taArtifact);
 const reviewFeedbackArtifactRel = path.relative(workspaceRoot, reviewFeedbackArtifact);
 
-process.env.A_SOCIETY_STATE_DIR = stateDir;
-process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+function seedRecordFixtures() {
+  fs.mkdirSync(recordDir, { recursive: true });
+  fs.mkdirSync(instanceRecordDir, { recursive: true });
+  fs.writeFileSync(path.join(recordDir, 'workflow.yaml'), workflow);
+  fs.writeFileSync(path.join(instanceRecordDir, 'workflow.yaml'), instanceWorkflow);
+  fs.writeFileSync(ownerArtifact1, 'Owner brief content.');
+  fs.writeFileSync(taArtifact, 'TA design content.');
+  fs.writeFileSync(reviewFeedbackArtifact, 'Reviewer requests revision to the Owner brief.');
+  fs.writeFileSync(ownerInstanceArtifact, 'Role instance input.');
+}
+
+seedRecordFixtures();
 seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
 function resetState() {
   fs.rmSync(stateDir, { recursive: true, force: true });
   fs.mkdirSync(stateDir, { recursive: true });
+  seedRecordFixtures();
   SessionStore.init();
 }
 

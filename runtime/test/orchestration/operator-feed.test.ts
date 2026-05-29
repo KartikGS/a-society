@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
@@ -28,7 +29,7 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-operator-feed-')
 const projectNamespace = 'test-project';
 const flowId = 'test-flow';
 const ref = { projectNamespace, flowId };
-const recordFolderPath = path.join(tmpDir, projectNamespace, 'a-docs', 'records', flowId);
+const recordFolderPath = getFlowRecordDir(tmpDir, { projectNamespace, flowId });
 fs.mkdirSync(recordFolderPath, { recursive: true });
 
 const flowRun: FlowRun = {

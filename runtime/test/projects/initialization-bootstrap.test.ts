@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { bootstrapInitializationFlow } from '../../src/projects/initialization-bootstrap.js';
 import { readRecordMetadata } from '../../src/projects/record-metadata.js';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 let passed = 0;
 let failed = 0;
@@ -43,7 +44,8 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
   assert.strictEqual(result.flowRun.projectNamespace, projectName);
   assert.deepStrictEqual(result.flowRun.runningNodes, ['owner-intake']);
   assert.strictEqual(result.flowRun.status, 'running');
-  assert.strictEqual(path.basename(result.flowRun.recordFolderPath), result.flowRun.flowId);
+  assert.strictEqual(result.flowRun.recordFolderPath, getFlowRecordDir(tmpDir, { projectNamespace: projectName, flowId: result.flowRun.flowId }));
+  assert.strictEqual(path.basename(result.flowRun.recordFolderPath), 'record');
 
   const workflowPath = path.join(result.flowRun.recordFolderPath, 'workflow.yaml');
   const workflowDoc = parseWorkflowFile(workflowPath) as any;
@@ -61,9 +63,10 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
 
   const metadata = readRecordMetadata(result.flowRun.recordFolderPath);
   assert.ok(metadata, 'record metadata should exist');
-  assert.strictEqual(metadata?.id, result.flowRun.flowId);
   assert.strictEqual(metadata?.name, undefined);
   assert.strictEqual(metadata?.summary, undefined);
+  const metadataContent = fs.readFileSync(path.join(result.flowRun.recordFolderPath, 'record.yaml'), 'utf8');
+  assert.ok(!metadataContent.includes('id:'), 'record metadata should not duplicate the flow id');
 
   const indexContent = fs.readFileSync(path.join(projectRoot, 'a-docs', 'indexes', 'main.md'), 'utf8');
   assert.ok(indexContent.includes('$GREENFIELD_PROJECT_INDEX'));

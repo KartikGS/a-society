@@ -43,6 +43,7 @@ async function executeSessionTurn(
   operatorRenderer: OperatorRenderSink | undefined,
   consentGate: ConsentGate | undefined,
   nodeId: string | undefined,
+  recordFolderPath: string | undefined,
   onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined,
   onAssistantTextDelta: ((text: string) => void) | undefined
 ): Promise<SessionTurnResult> {
@@ -80,6 +81,7 @@ async function executeSessionTurn(
       operatorRenderer,
       consentGate,
       roleInstanceId,
+      recordFolderPath,
       nodeId,
       onConversationMessages,
       onAssistantTextDelta,
@@ -190,7 +192,8 @@ export async function runRoleTurn(
   consentGate?: ConsentGate,
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>,
   onAssistantTextDelta?: (text: string) => void,
-  nodeId?: string
+  nodeId?: string,
+  recordFolderPath?: string
 ): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
@@ -241,6 +244,7 @@ export async function runRoleTurn(
     operatorRenderer,
     consentGate,
     nodeId,
+    recordFolderPath,
     onConversationMessages,
     onAssistantTextDelta
   );

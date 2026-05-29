@@ -13,7 +13,7 @@ This is runtime-owned context, not a role startup reading. Do not copy this file
 The runtime reads two workflow YAML surfaces:
 
 - **Canonical workflow definition:** `[project]/a-docs/workflow/main.yaml`
-- **Record workflow snapshot:** `[project]/a-docs/records/[record-id]/workflow.yaml`
+- **Record workflow snapshot:** `.a-society/state/[project]/[flow-id]/record/workflow.yaml`
 
 The canonical definition is the standing workflow map and node-contract source. The record snapshot is the active flow's topology: the nodes and edges this flow traverses or may still traverse.
 
@@ -92,7 +92,7 @@ Use record `workflow.yaml` as the active-path snapshot.
 - List every real review, approval, registration, or closure checkpoint as its own node. Do not rely on implied checkpoints.
 - Update the snapshot before emitting a handoff to any node that depends on the changed topology.
 
-Artifact names in edge `artifact` fields are descriptors for handoff type. They are not frozen sequence-number reservations.
+Artifact names in edge `artifact` fields are descriptors for handoff type. They are not filename reservations.
 
 ---
 

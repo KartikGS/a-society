@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { seedTestModelSettings } from './settings-test-utils.js';
+import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
@@ -37,7 +38,8 @@ async function runTest() {
   process.env.A_SOCIETY_SETTINGS_DIR = testSettingsDir;
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
-  const recordPath = path.join(testDir, 'records', 'test-flow');
+  const flowId = 'test-flow-id';
+  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
   const rolesDir = path.join(projectADocsPath, 'roles');
@@ -88,7 +90,7 @@ async function runTest() {
 
   SessionStore.init();
   SessionStore.saveFlowRun({
-    flowId: 'test-flow-id',
+    flowId,
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,

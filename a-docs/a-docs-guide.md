@@ -114,7 +114,7 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Who reads it:** The Owner loads it at every session start. The Curator loads it at the start of maintenance sessions. Not universal required reading for all roles.
 
-**Do not consolidate with:** `project-information/vision.md` — the vision describes what A-Society is and its strategic direction; the log describes current execution state and next concrete steps. Do not consolidate with `a-docs/records/` — records contain the full artifact history of completed flows; the log is a current-state summary for orientation.
+**Do not consolidate with:** `project-information/vision.md` — the vision describes what A-Society is and its strategic direction; the log describes current execution state and next concrete steps. Do not consolidate with runtime flow records — records contain the artifact history of completed flows; the log is a current-state summary for orientation.
 
 ### `project-information/architecture.md` — `$A_SOCIETY_ARCHITECTURE`
 
@@ -446,11 +446,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 **Why it exists:** Every proposal the Curator submits and every decision the Owner issues follows a defined format. Without templates, handoff formats vary by session. The conversation folder is the stable home for those templates.
 
-**What it owns:** The permanent templates for each artifact type (workflow plan, briefing, proposal, decision). Artifacts themselves are created in the active record folder (see `$A_SOCIETY_RECORDS`), not here.
+**What it owns:** The permanent templates for each artifact type (workflow plan, briefing, proposal, decision). Artifacts themselves are created in the active record folder (see `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`), not here.
 
 **What breaks without it:** Agents writing handoffs have no canonical format reference. Templates become scattered or are recreated inconsistently.
 
-**Do not consolidate with:** `communication/coordination/` — conversation is about artifact formats; coordination is about the rules governing those artifacts. Do not consolidate with `records/` — records hold the produced artifacts; this folder holds the templates they are produced from.
+**Do not consolidate with:** `communication/coordination/` — conversation is about artifact formats; coordination is about the rules governing those artifacts. Do not consolidate with `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` — records hold the produced artifacts; this folder holds the templates they are produced from.
 
 ---
 
@@ -466,17 +466,11 @@ This is not a directory listing. It is a rationale document. Read it before main
 
 ---
 
-## `records/`
+## Runtime Flow Records
 
-### `records/main.md` — `$A_SOCIETY_RECORDS`
+Active flow records are runtime state, not standing `a-docs/` surfaces. The runtime creates them under `.a-society/state/<project>/<flow-id>/record/` and injects the active path into flow sessions.
 
-**Why it exists:** Every workflow traversal produces multiple artifacts: a briefing, a proposal, a decision, and backward pass findings. Without a dedicated structure, these artifacts either scatter across folders or overwrite each other between flows. The records structure ties all artifacts for one flow into one folder, in chronological sequence. The record ID lives in `record.yaml`, and the folder basename carries that ID without needing to double as a human-readable title.
-
-**What it owns:** A-Society's records convention: the record-ID format, the `record.yaml` metadata model, the canonical artifact sequence within a record folder, the sequencing prefix convention (`01-`, `02-`, ...), and the rule for what belongs in a record versus what does not.
-
-**What breaks without it:** Agents creating flow artifacts have no canonical convention for naming or locating them. The record folder identifier is undefined. Flow artifacts scatter or overwrite between flows.
-
-**Do not consolidate with:** `$A_SOCIETY_WORKFLOW` — the workflow describes phase sequencing; records describes artifact storage within a flow. Do not consolidate with `communication/conversation/main.md` — the conversation folder holds templates; records holds the artifacts produced from those templates.
+Record placement and writable-scope guidance now lives in `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`; executable schema details live in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` and `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
 
 ---
 
@@ -582,15 +576,27 @@ These files live in the executable layers rather than in `a-docs/`, but they sti
 
 ---
 
+### `runtime/contracts/records.md` — `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`
+
+**Why it exists:** Every managed agent needs operational record instructions before it creates or references flow artifacts. The runtime owns flow record placement, record metadata, writable scope, and the boundary between agent-writable record artifacts and runtime-owned flow state.
+
+**What it owns:** The agent-facing instructions injected into every managed session for `.a-society/state/<project>/<flow-id>/record/` placement, `record.yaml`, and record-folder writable scope.
+
+**What breaks without it:** Record-placement rules drift between docs and implementation; agents may invent record locations or mutate runtime state outside the active record folder.
+
+**Do not consolidate with:** `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` — workflow owns topology/schema; records contract owns placement/lifecycle. Do not consolidate with `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` — handoff owns signal syntax, not artifact storage.
+
+---
+
 ### `runtime/contracts/workflow.md` — `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`
 
-**Why it exists:** The runtime parses, validates, merges, and injects workflow YAML. Those executable semantics need one runtime-owned source instead of being repeated across general workflow instructions and A-Society records conventions.
+**Why it exists:** The runtime parses, validates, merges, and injects workflow YAML. Those executable semantics need one runtime-owned source instead of being repeated across general workflow instructions and record-placement guidance.
 
 **What it owns:** The accepted `workflow.yaml` schema, canonical-vs-record snapshot merge behavior, node-entry injection behavior, role-instance syntax, and handoff target semantics.
 
 **What breaks without it:** Workflow-authority agents infer executable behavior from scattered documentation or stale examples, producing invalid snapshots, duplicated node-reading instructions, or same-role parallel tracks that share history accidentally.
 
-**Do not consolidate with:** `$INSTRUCTION_WORKFLOW` or `$INSTRUCTION_WORKFLOW_GRAPH` — those are reusable design/encoding instructions for projects; this file is the runtime's executable contract. Do not consolidate with `$A_SOCIETY_RECORDS` — records owns artifact placement and sequencing, not runtime parsing semantics.
+**Do not consolidate with:** `$INSTRUCTION_WORKFLOW` or `$INSTRUCTION_WORKFLOW_GRAPH` — those are reusable design/encoding instructions for projects; this file is the runtime's executable contract. Do not consolidate with `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` — the records contract owns artifact placement and writable scope, not runtime parsing semantics.
 
 ---
 

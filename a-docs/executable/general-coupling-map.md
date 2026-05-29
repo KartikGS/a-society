@@ -13,6 +13,7 @@ This document is the standing reference for the coupling surface between A-Socie
 |---|---|---|
 | Index table format | Yes | Path validation |
 | Runtime workflow YAML contract (`$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`) | Yes | Workflow graph validation, node-entry injection, active-flow routing, backward-pass planning |
+| Runtime records contract (`$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`) | Yes | Draft flow creation, initialization flow creation, file-tool write scoping, backward-pass artifact placement |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` file format and `copy` source paths | Yes | Scaffolding and runtime health checks |
 | `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |
 
@@ -28,7 +29,7 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 | `$INSTRUCTION_WORKFLOW_GRAPH` | Workflow graph validation / backward-pass planning | Closed — points to `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for runtime schema and interpretation |
 | `$INSTRUCTION_WORKFLOW_MODIFY` | Backward-pass planning | Closed — capability wording plus manual fallback |
 | `$INSTRUCTION_WORKFLOW_COMPLEXITY` | Backward-pass planning | Closed — capability wording plus manual fallback |
-| `$INSTRUCTION_RECORDS` | Backward-pass planning | Closed — points to `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for runtime schema and interpretation |
+| `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` | Flow record placement / backward-pass artifact placement | Closed — authoritative runtime contract for active record placement, writable scope, and metadata |
 | `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` | Workflow graph validation / node-entry injection / backward-pass planning | Closed — authoritative runtime contract |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` | Scaffolding / runtime health checks | Closed — authoritative runtime contract for the default scaffolded a-docs file set and health baseline |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | Operator-facing executable behavior | Closed — sole surviving default operator-facing reference |
