@@ -410,7 +410,7 @@ async function runMetaAnalysisEntry(
 
   if (!session.systemPrompt) {
     session.systemPrompt = ContextInjectionService.buildContextBundle(
-      flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot
+      flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath
     ).bundleContent;
   }
 

@@ -368,7 +368,7 @@ export class FlowOrchestrator {
 
         if (!session.systemPrompt) {
           session.systemPrompt = ContextInjectionService.buildContextBundle(
-            flowRun.projectNamespace, roleName, flowRun.workspaceRoot
+            flowRun.projectNamespace, roleName, flowRun.workspaceRoot, flowRun.recordFolderPath
           ).bundleContent;
         }
         const bundleContent = session.systemPrompt;
@@ -409,61 +409,17 @@ export class FlowOrchestrator {
         ) ? rawNodeContext : undefined;
         const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
 
-        const forwardHandoffTargets = firstNodeVisit
-          ? wf.getOutgoingEdges(nodeId)
-              .map((edge: any) => {
-                const node = wf.findNodeByIdOrNull(edge.to);
-                return node ? { nodeId: node.id as string, role: node.role as string } : null;
-              })
-              .filter((t): t is { nodeId: string; role: string } => t !== null)
-          : undefined;
-        const backwardHandoffTargets = firstNodeVisit
-          ? wf.getIncomingEdges(nodeId)
-              .map((edge: any) => {
-                const node = wf.findNodeByIdOrNull(edge.from);
-                return node ? { nodeId: node.id as string, role: node.role as string } : null;
-              })
-              .filter((t): t is { nodeId: string; role: string } => t !== null)
-          : undefined;
-
         const staleForwardArtifacts = staleForwardSnapshot.map(({ toNodeId, artifacts }) => ({ toNodeId, artifacts }));
 
-        if (injectedHistory.length === 0) {
+        if (!sameNodeResume) {
           const nodeEntryMessage = buildForwardNodeEntryMessage({
             nodeId,
-            role: roleName,
             workspaceRoot: flowRun.workspaceRoot,
             projectNamespace: flowRun.projectNamespace,
-            recordFolderPath: flowRun.recordFolderPath,
-            wf,
-            completedHandoffs: flowRun.completedHandoffs,
-            receivingHandoffSnapshot,
-            staleForwardArtifacts,
-            humanInput,
+            isResume: !firstNodeVisit,
+            handoffContext: { wf, completedHandoffs: flowRun.completedHandoffs, receivingHandoffSnapshot, staleForwardArtifacts },
             includeWorkflowContract,
             nodeContext,
-            forwardHandoffTargets,
-            backwardHandoffTargets
-          });
-          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
-        } else if (!sameNodeResume) {
-          const nodeEntryMessage = buildForwardNodeEntryMessage({
-            nodeId,
-            role: roleName,
-            workspaceRoot: flowRun.workspaceRoot,
-            projectNamespace: flowRun.projectNamespace,
-            recordFolderPath: flowRun.recordFolderPath,
-            wf,
-            completedHandoffs: flowRun.completedHandoffs,
-            receivingHandoffSnapshot,
-            staleForwardArtifacts,
-            entryMode: firstNodeVisit ? 'role-transition' : 'reopened-node',
-            previousNodeId: session.currentNodeId,
-            humanInput,
-            includeWorkflowContract,
-            nodeContext,
-            forwardHandoffTargets,
-            backwardHandoffTargets
           });
           appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
         } else if (humanInput) {
@@ -577,16 +533,17 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'forward-pass-closed') {
                 const emitterInstanceRole = parseRoleIdentity(currentNodeDef.role).instanceRoleId;
-                const fpcOutgoing = wf.getOutgoingEdges(nodeId);
                 const latestForFpc = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
-                const outstandingInbound = getOutstandingInboundSources(wf, latestForFpc.completedHandoffs, nodeId);
-                const completedInbound = getCompletedInboundSources(wf, latestForFpc.completedHandoffs, nodeId);
+                const fpcWf = this.loadWorkflowDocument(latestForFpc);
+                const fpcOutgoing = fpcWf.getOutgoingEdges(nodeId);
+                const outstandingInbound = getOutstandingInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
+                const completedInbound = getCompletedInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
                 const isLastOwner = emitterInstanceRole === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
                 const hasBlockers =
                   latestForFpc.runningNodes.some(id => id !== nodeId) ||
                   Object.keys(latestForFpc.awaitingHumanNodes).length > 0 ||
                   Object.keys(latestForFpc.pendingHumanInputs).length > 0 ||
-                  !allEdgesCovered(wf, latestForFpc.completedHandoffs) ||
+                  !allEdgesCovered(fpcWf, latestForFpc.completedHandoffs) ||
                   Object.keys(latestForFpc.receivingHandoff).length > 0 ||
                   latestForFpc.awaitingHandoff.length > 0;
 
@@ -637,7 +594,7 @@ export class FlowOrchestrator {
 
                 span.setAttribute('node.outcome', 'forward_pass_closed');
                 const uniqueBaseRoles = new Set(
-                  (wf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
+                  (fpcWf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
                 );
                 const singleRole = uniqueBaseRoles.size <= 1;
                 flowRun = await SessionStore.updateFlowRun((latest) => {

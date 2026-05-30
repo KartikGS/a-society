@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
 import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
 import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
-import { buildRoleContext } from '../context/registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
@@ -182,7 +181,7 @@ export async function runRoleTurn(
   workspaceRoot: string,
   projectNamespace: string,
   roleInstanceId: string,
-  providedSystemPrompt?: string,
+  providedSystemPrompt: string,
   providedHistory?: RuntimeMessageParam[],
   roleOutputStream?: NodeJS.WritableStream,
   externalSignal?: AbortSignal,
@@ -196,18 +195,8 @@ export async function runRoleTurn(
 
   let turnIndex = 0;
 
-  if (providedSystemPrompt === undefined) {
-    const orientRoleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
-    if (!orientRoleEntry) {
-      if (roleOutputStream === process.stdout) {
-        console.error(`Could not load role context for '${projectNamespace}/${roleInstanceId}'. Check that the role file exists and contains valid frontmatter.`);
-      }
-      return null;
-    }
-  }
-
   const sessionId = crypto.randomUUID();
-  const systemPrompt = providedSystemPrompt ?? '';
+  const systemPrompt = providedSystemPrompt;
   if (!recordFolderPath) {
     throw new Error('runRoleTurn requires recordFolderPath for project-scoped LLM gateway turns.');
   }

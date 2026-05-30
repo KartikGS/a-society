@@ -258,7 +258,8 @@ async function run() {
     const { bundleContent } = ContextInjectionService.buildContextBundle(
       projectNamespace,
       'owner',
-      workspaceRoot
+      workspaceRoot,
+      recordDir
     );
 
     assert.ok(bundleContent.includes('RUNTIME-LOADED REQUIRED READING'));
@@ -288,45 +289,6 @@ async function run() {
     assert.strictEqual(loadedSession!.transcriptHistory.length, 2);
     assert.strictEqual((loadedSession!.transcriptHistory[0] as any).content, 'original node entry message');
     assert.strictEqual(loadedSession!.currentNodeId, 'owner-intake');
-  });
-
-  await test('buildForwardNodeEntryMessage: later same-role entry includes transition framing and artifact', async () => {
-    const msg = buildForwardNodeEntryMessage({
-      nodeId: 'owner-gate',
-      role: 'owner',
-      workspaceRoot,
-      projectNamespace,
-      wf: new WorkflowGraph({ nodes: [{ id: 'owner-intake', role: 'owner' }, { id: 'owner-gate', role: 'owner' }], edges: [{ from: 'owner-intake', to: 'owner-gate' }] }),
-      completedHandoffs: [],
-      receivingHandoffSnapshot: [{ fromNodeId: 'owner-intake', artifacts: [path.relative(workspaceRoot, taArtifact)] }],
-      entryMode: 'role-transition',
-      previousNodeId: 'owner-intake'
-    });
-
-    assert.ok(msg.includes('continuing the same role-scoped flow session from workflow node owner-intake to owner-gate'));
-    assert.ok(msg.includes('TA design content.'));
-    assert.ok(!msg.includes('Role continuity from earlier nodes in this flow:'));
-  });
-
-  await test('buildForwardNodeEntryMessage: reopened node entry includes reopened framing and artifact', async () => {
-    const msg = buildForwardNodeEntryMessage({
-      nodeId: 'owner-intake',
-      role: 'owner',
-      workspaceRoot,
-      projectNamespace,
-      wf: new WorkflowGraph({ nodes: [{ id: 'owner-intake', role: 'owner' }], edges: [] }),
-      completedHandoffs: [],
-      receivingHandoffSnapshot: [{ fromNodeId: 'reviewer', artifacts: [
-        path.relative(workspaceRoot, ownerArtifact1),
-        path.relative(workspaceRoot, reviewFeedbackArtifact)
-      ] }],
-      entryMode: 'reopened-node',
-      previousNodeId: 'owner-intake'
-    });
-
-    assert.ok(msg.includes('workflow node has been reopened in the same role-scoped flow session'));
-    assert.ok(msg.includes('Owner brief content.'));
-    assert.ok(msg.includes('Reviewer requests revision to the Owner brief.'));
   });
 
   await test('Store: loading an incompatible flow is rejected but it remains listable for deletion', async () => {
