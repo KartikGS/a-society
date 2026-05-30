@@ -1,6 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import yaml from 'js-yaml';
 import type { ToolDefinition, ToolCall } from '../common/types.js';
+import { validateGraph } from '../framework-services/workflow-graph-validator.js';
 
 export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -99,11 +101,23 @@ const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
 
 export class FileToolExecutor {
   private readonly workspaceRoot: string;
-  private readonly writeRoots: string[] | null;
+  private readonly writeRoots: string[];
+  private readonly workflowFilePaths: Set<string>;
 
-  constructor(workspaceRoot: string, writeRoots?: string[]) {
+  constructor(workspaceRoot: string, writeRoots: string[], workflowFilePaths: string[]) {
     this.workspaceRoot = path.resolve(workspaceRoot);
-    this.writeRoots = writeRoots ? writeRoots.map(r => path.resolve(r)) : null;
+    this.writeRoots = writeRoots.map(r => path.resolve(r));
+    this.workflowFilePaths = new Set(workflowFilePaths.map(p => path.resolve(p)));
+  }
+
+  private validateWorkflowContent(content: string): string[] {
+    let doc: unknown;
+    try {
+      doc = yaml.load(content);
+    } catch (err) {
+      return [`YAML parse error: ${(err as Error).message}`];
+    }
+    return validateGraph(doc);
   }
 
   validate(call: ToolCall): { content: string; isError: boolean } | null {
@@ -116,10 +130,49 @@ export class FileToolExecutor {
       return { content: `Error: path '${reqPath}' is outside the workspace root and cannot be accessed.`, isError: true };
     }
 
-    if (WRITE_TOOLS.has(call.name) && this.writeRoots) {
+    if (WRITE_TOOLS.has(call.name)) {
       const allowed = this.writeRoots.some(root => resolved === root || resolved.startsWith(root + path.sep));
       if (!allowed) {
         return { content: `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and A-Society feedback.`, isError: true };
+      }
+
+      // Pre-compute the resulting file content before consent is requested so that
+      // doomed writes are rejected immediately rather than after operator approval.
+      // edit_file old_string errors are also checked here and in execute() as a
+      // TOCTOU safety net — another agent may modify the file between validate and execute.
+      let newContent: string | null = null;
+      if (call.name === 'write_file') {
+        newContent = call.input?.content as string ?? null;
+      } else if (call.name === 'edit_file') {
+        const oldString = call.input?.old_string as string | undefined;
+        const newString = call.input?.new_string as string | undefined;
+        if (oldString !== undefined && newString !== undefined) {
+          try {
+            const original = fs.readFileSync(resolved, 'utf8');
+            const firstIdx = original.indexOf(oldString);
+            if (firstIdx === -1) {
+              return { content: `Error: old_string not found in file. Read the relevant section again to get the current content before retrying.`, isError: true };
+            }
+            const secondIdx = original.indexOf(oldString, firstIdx + 1);
+            if (secondIdx !== -1) {
+              return { content: `Error: old_string appears more than once in the file — read the relevant section again and include more surrounding context to make it unique.`, isError: true };
+            }
+            newContent = original.slice(0, firstIdx) + newString + original.slice(firstIdx + oldString.length);
+          } catch (err: any) {
+            if (err.code === 'ENOENT') {
+              return { content: `Error: no such file: ${resolved}`, isError: true };
+            }
+            throw err;
+          }
+        }
+      }
+      // Workflow graph validation only applies to the workflow file. It is not
+      // repeated in execute() because it checks content correctness, not staleness.
+      if (newContent !== null && this.workflowFilePaths.has(resolved)) {
+        const errors = this.validateWorkflowContent(newContent);
+        if (errors.length > 0) {
+          return { content: `Error: workflow validation failed — this write would produce an invalid workflow.yaml:\n${errors.join('\n')}\nFix the errors before retrying.`, isError: true };
+        }
       }
     }
 

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 
-const CANONICAL_WORKFLOW_FILENAME = 'workflow.yaml';
+export const CANONICAL_WORKFLOW_FILENAME = 'workflow.yaml';
 const PROJECT_WORKFLOW_RELATIVE_PATH = path.join('a-docs', 'workflow', 'main.yaml');
 
 export interface WorkflowNode {
@@ -35,10 +35,6 @@ export interface WorkflowDefinition {
   forward_pass_closure?: string[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
-}
-
-export function canonicalWorkflowFilename(): string {
-  return CANONICAL_WORKFLOW_FILENAME;
 }
 
 export function findWorkflowFilePath(recordFolderPath: string): string | null {

@@ -5,7 +5,6 @@ import yaml from 'js-yaml';
 import { resolveProjectRoot } from '../projects/draft-flow.js';
 import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../common/role-id.js';
 import { validatePaths } from './path-validator.js';
-import { validateWorkflowFile } from './workflow-graph-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../context/required-reading.js';
 import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH } from '../common/runtime-contracts.js';
@@ -485,13 +484,6 @@ export function runRuntimeHealthChecks(
   }
 
   if (isFile(workflowPath)) {
-    const validation = validateWorkflowFile(workflowPath, undefined, rolesRoot);
-    if (!validation.valid) {
-      for (const validationError of validation.errors) {
-        errors.push(`a-docs/workflow/main.yaml: ${validationError}`);
-      }
-    }
-
     try {
       const workflowDoc = parseWorkflowFile(workflowPath);
       if (registeredVariables) {

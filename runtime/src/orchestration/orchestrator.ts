@@ -8,7 +8,7 @@ import { emitUsage, runRoleTurn } from './orient.js';
 import { compactRoleSession, shouldAutoCompact } from './compaction.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
-import { buildWorkflowRepairGuidance, validateWorkflowFile } from '../framework-services/workflow-graph-validator.js';
+import { buildWorkflowRepairGuidance } from '../framework-services/workflow-graph-validator.js';
 import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../framework-services/runtime-health-checks.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
@@ -16,7 +16,7 @@ import { WakeController } from '../common/wake-controller.js';
 import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { canonicalWorkflowFilename, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
+import { CANONICAL_WORKFLOW_FILENAME, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing } from './workflow-graph.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
@@ -741,13 +741,13 @@ export class FlowOrchestrator {
       throw new WorkflowError(
         `Error: No record folder found at ${flowRun.recordFolderPath}. ` +
         `A record folder must be created before emitting a handoff. ` +
-        `Please create the record folder, create ${canonicalWorkflowFilename()} inside it, and restate your handoff.`
+        `Please create the record folder, create ${CANONICAL_WORKFLOW_FILENAME} inside it, and restate your handoff.`
       );
     }
     let eventTargets: Array<{ nodeId: string; role: string }> = [];
 
     await SessionStore.updateFlowRun((latest) => {
-      const wf = this.resolveActiveWorkflow(latest);
+      const wf = this.loadWorkflowDocument(latest);
 
       wf.findNodeById(nodeId);
       const outgoingEdges = wf.getOutgoingEdges(nodeId);
@@ -1338,25 +1338,6 @@ export class FlowOrchestrator {
     }
   }
 
-  private resolveActiveWorkflow(flowRun: FlowRun): WorkflowGraph {
-    const rolesDir = path.join(flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'roles');
-    const workflowFilePath = findWorkflowFilePath(flowRun.recordFolderPath);
-    if (workflowFilePath) {
-      const validation = validateWorkflowFile(workflowFilePath, undefined, rolesDir);
-      if (!validation.valid) {
-        throw new WorkflowError(validation.errors.join('; '));
-      }
-    }
-    try {
-      return new WorkflowGraph(resolveFlowWorkflow(
-        flowRun.recordFolderPath,
-        flowRun.workspaceRoot,
-        flowRun.projectNamespace
-      ));
-    } catch (error) {
-      throw new WorkflowError((error as Error).message);
-    }
-  }
 
   private roleSessionId(flowRun: FlowRun, roleName: string): string {
     return `${flowRun.flowId}__${this.roleKey(roleName)}`;

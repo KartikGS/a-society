@@ -50,7 +50,7 @@ export interface ValidationResult {
  *
  * Uses runtime type checks; accepts unknown input and reports all violations.
  */
-export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string): string[] {
+export function validateGraph(doc: unknown, rolesDir?: string): string[] {
   const errors: string[] = [];
   const validateOptionalStringArray = (value: unknown, fieldPath: string) => {
     if (value === undefined) return;
@@ -275,45 +275,34 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
 
   const workflow = wf as WorkflowGraph;
 
-  // Strict checks: unique Owner start node; Owner at end
-  if (strict) {
-    const toIds = new Set<string>();
-    const fromIds = new Set<string>();
-    for (const edge of workflow.edges) {
-      toIds.add(edge.to);
-      fromIds.add(edge.from);
+  const toIds = new Set<string>();
+  const fromIds = new Set<string>();
+  for (const edge of workflow.edges) {
+    toIds.add(edge.to);
+    fromIds.add(edge.from);
+  }
+
+  if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
+    if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+      errors.push(`Sole node role must be exactly "owner" (found "${workflow.nodes[0].role}")`);
+    }
+  } else {
+    const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
+    const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
+
+    if (startNodes.length !== 1) {
+      errors.push(`Workflow must have exactly one start node (found ${startNodes.length})`);
     }
 
-    if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
-      // Sole node case
-      if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-        errors.push(`Strict mode violation: sole node role must be exactly "owner" (found "${workflow.nodes[0].role}")`);
+    for (const node of startNodes) {
+      if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+        errors.push(`Start node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
-    } else {
-      // General case: workflow must have exactly one start node, and it must be owner.
-      const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
-      const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
+    }
 
-      if (startNodes.length !== 1) {
-        errors.push(
-          `Strict mode violation: workflow must have exactly one start node (found ${startNodes.length})`
-        );
-      }
-
-      for (const node of startNodes) {
-        if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-          errors.push(
-            `Strict mode violation: start node "${node.id}" must have role exactly "owner", not an instance like "${node.role}"`
-          );
-        }
-      }
-
-      for (const node of endNodes) {
-        if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-          errors.push(
-            `Strict mode violation: end node "${node.id}" must have role exactly "owner", not an instance like "${node.role}"`
-          );
-        }
+    for (const node of endNodes) {
+      if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+        errors.push(`End node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
     }
   }
@@ -392,7 +381,7 @@ export class WorkflowValidationError extends Error {
  *
  * Parses the YAML file and runs all schema checks.
  */
-export function validateWorkflowFile(filePath: string, strict?: boolean, rolesDir?: string): ValidationResult {
+export function validateWorkflowFile(filePath: string, rolesDir?: string): ValidationResult {
   let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -407,6 +396,6 @@ export function validateWorkflowFile(filePath: string, strict?: boolean, rolesDi
     return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }
 
-  const errors = validateGraph(doc, strict, rolesDir);
+  const errors = validateGraph(doc, rolesDir);
   return { valid: errors.length === 0, errors };
 }

@@ -29,7 +29,7 @@ function cleanup(dir: string): void {
 console.log('\nfile-executor › read_file');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
 
   await test('reads an existing file', async () => {
     fs.writeFileSync(path.join(ws, 'hello.txt'), 'hello world');
@@ -66,7 +66,7 @@ console.log('\nfile-executor › read_file');
 console.log('\nfile-executor › read_file_lines');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
   const lines = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'];
   fs.writeFileSync(path.join(ws, 'lines.txt'), lines.join('\n'));
 
@@ -114,7 +114,7 @@ console.log('\nfile-executor › read_file_lines');
 console.log('\nfile-executor › edit_file');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
 
   await test('replaces a unique string in the file', async () => {
     fs.writeFileSync(path.join(ws, 'edit.txt'), 'foo bar baz');
@@ -158,7 +158,7 @@ console.log('\nfile-executor › edit_file');
 console.log('\nfile-executor › write_file');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
 
   await test('creates a new file with content', async () => {
     const r = await ex.execute({ id: '1', name: 'write_file', input: { path: 'new.txt', content: 'created' } });
@@ -193,7 +193,7 @@ console.log('\nfile-executor › write_file');
 console.log('\nfile-executor › list_directory');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
   fs.writeFileSync(path.join(ws, 'b.txt'), '');
   fs.writeFileSync(path.join(ws, 'a.txt'), '');
   fs.mkdirSync(path.join(ws, 'subdir'));
@@ -232,7 +232,7 @@ console.log('\nfile-executor › list_directory');
 console.log('\nfile-executor › sandbox');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
 
   for (const [toolName, input] of [
     ['read_file', { path: '../../etc/passwd' }],
@@ -263,7 +263,7 @@ console.log('\nfile-executor › write restrictions');
   fs.mkdirSync(aDocsDir, { recursive: true });
 
   const writeRoots = [projectDir, aDocsDir];
-  const ex = new FileToolExecutor(ws, writeRoots);
+  const ex = new FileToolExecutor(ws, writeRoots, [path.join(ws, 'workflow.yaml')]);
 
   await test('write_file allowed inside project directory', async () => {
     const r = await ex.execute({ id: '1', name: 'write_file', input: { path: 'my-project/notes.md', content: 'ok' } });
@@ -311,12 +311,6 @@ console.log('\nfile-executor › write restrictions');
     assert.strictEqual(r.isError, false);
   });
 
-  await test('write roots with no restriction allows writes anywhere', async () => {
-    const unrestrictedEx = new FileToolExecutor(ws);
-    const r = await unrestrictedEx.execute({ id: '8', name: 'write_file', input: { path: 'anywhere.md', content: 'ok' } });
-    assert.strictEqual(r.isError, false);
-  });
-
   cleanup(ws);
 }
 
@@ -326,7 +320,7 @@ console.log('\nfile-executor › write restrictions');
 console.log('\nfile-executor › unknown tool');
 {
   const ws = makeTempWorkspace();
-  const ex = new FileToolExecutor(ws);
+  const ex = new FileToolExecutor(ws, [ws], [path.join(ws, 'workflow.yaml')]);
 
   await test('returns error for unknown tool name', async () => {
     const r = await ex.execute({ id: '1', name: 'nonexistent_tool', input: {} });

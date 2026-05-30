@@ -4,6 +4,7 @@ import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
 import { CONSENT_CHECK_RESULT, LLMGatewayError } from '../common/types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from '../tools/file-executor.js';
+import { CANONICAL_WORKFLOW_FILENAME, canonicalWorkflowDefinitionPath } from '../context/workflow-file.js';
 import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.js';
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-search-executor.js';
 import { TelemetryManager } from '../observability/observability.js';
@@ -93,7 +94,10 @@ export class LLMGateway {
 
     if (options.mode === 'project') {
       const writeRoots = projectWriteRoots(workspaceRoot, options.projectNamespace, options.recordFolderPath);
-      this.fileExecutor = new FileToolExecutor(workspaceRoot, writeRoots);
+      this.fileExecutor = new FileToolExecutor(workspaceRoot, writeRoots, [
+        path.join(options.recordFolderPath, CANONICAL_WORKFLOW_FILENAME),
+        canonicalWorkflowDefinitionPath(workspaceRoot, options.projectNamespace),
+      ]);
       this.bashExecutor = new BashToolExecutor(workspaceRoot);
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();

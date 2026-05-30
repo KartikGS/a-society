@@ -469,7 +469,7 @@ async function run() {
     const workflowPath = path.join(workflowsDir, 'workflow.yaml');
     fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: owner\n  edges: []\n');
 
-    const result = validateWorkflowFile(workflowPath, true);
+    const result = validateWorkflowFile(workflowPath);
     assert.ok(result.valid);
   });
 
