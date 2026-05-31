@@ -1,10 +1,6 @@
 workflow:
   name: A-Society Development
   summary: Canonical surface-driven workflow for A-Society — Owner intake, optional Curator and TA gates, optional executable tracks, optional stewardship, and Owner closure.
-  use_when: The work changes A-Society framework documentation, executable implementation, shared library surfaces, operator-facing references, or any coordinated combination of those surfaces.
-  companion_docs:
-    - $A_SOCIETY_WORKFLOW_COMPLEXITY
-    - $A_SOCIETY_RUNTIME_RECORDS_CONTRACT
   nodes:
     - id: owner-intake
       role: owner
@@ -303,13 +299,3 @@ workflow:
     - situation: A conflict between touched-surface ownership and standing workflow routing cannot be resolved by reference.
       escalated_by: Owner
       to: Human
-  session_model:
-    - Owner
-    - Curator when Curator-owned framework or stewardship surfaces are touched
-    - Technical Architect when executable design or review is required
-    - Framework Services Developer when that track is in scope
-    - Orchestration Developer when that track is in scope
-    - UI Developer when that track is in scope
-  forward_pass_closure:
-    - The Owner is the terminal node of the forward pass.
-    - Backward-pass findings are required from each participating non-Owner role unless the Owner grants an explicit waiver.
