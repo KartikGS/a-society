@@ -1,7 +1,7 @@
 workflow:
   name: Test Workflow
   nodes:
-    - id: owner-phase-1
+    - id: owner-intake
       role: owner
     - id: curator-phase-1
       role: curator
@@ -13,8 +13,10 @@ workflow:
       role: owner
     - id: curator-phase-3-synthesis
       role: curator
+    - id: owner-close
+      role: owner
   edges:
-    - from: owner-phase-1
+    - from: owner-intake
       to: curator-phase-1
       artifact: brief
     - from: curator-phase-1
@@ -23,3 +25,15 @@ workflow:
     - from: owner-phase-2
       to: curator-phase-3-findings
       artifact: decision
+    - from: owner-phase-2
+      to: owner-phase-3-findings
+      artifact: decision
+    - from: curator-phase-3-findings
+      to: curator-phase-3-synthesis
+      artifact: findings
+    - from: curator-phase-3-synthesis
+      to: owner-close
+      artifact: synthesis
+    - from: owner-phase-3-findings
+      to: owner-close
+      artifact: review

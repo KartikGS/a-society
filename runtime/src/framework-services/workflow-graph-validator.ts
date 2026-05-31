@@ -3,6 +3,21 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../common/role-id.js';
 import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
+import type { FlowRun } from '../common/types.js';
+import { WorkflowGraph as RuntimeWorkflowGraph, parseHandoffKey } from '../orchestration/workflow-graph.js';
+
+const REQUIRED_START_NODE_ID = 'owner-intake';
+
+export type WorkflowStateValidationInput = Pick<
+  FlowRun,
+  | 'runningNodes'
+  | 'awaitingHumanNodes'
+  | 'pendingHumanInputs'
+  | 'visitedNodeIds'
+  | 'completedHandoffs'
+  | 'receivingHandoff'
+  | 'awaitingHandoff'
+>;
 
 export interface WorkflowNode {
   id: string;
@@ -45,12 +60,108 @@ export interface ValidationResult {
   errors: string[];
 }
 
+function pushMissingStateNodeErrors(
+  errors: string[],
+  nodeIds: Set<string>,
+  nodeReferences: Map<string, Set<string>>
+): void {
+  for (const [nodeId, sources] of nodeReferences) {
+    if (nodeIds.has(nodeId)) continue;
+    errors.push(
+      `workflow state references node "${nodeId}" from ${Array.from(sources).sort().join(', ')}, but workflow.nodes does not include it`
+    );
+  }
+}
+
+function validateGraphAgainstFlowState(
+  workflow: WorkflowGraph,
+  flowState: WorkflowStateValidationInput,
+  errors: string[]
+): void {
+  const wf = new RuntimeWorkflowGraph(workflow);
+  const nodeIds = new Set(workflow.nodes.map((node) => node.id));
+  const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
+  const edgeKeys = new Set(wf.edges.map((edge) => wf.edgeKey(edge.from, edge.to)));
+  const nodeReferences = new Map<string, Set<string>>();
+
+  const addNodeReference = (nodeId: string, source: string): void => {
+    const sources = nodeReferences.get(nodeId) ?? new Set<string>();
+    sources.add(source);
+    nodeReferences.set(nodeId, sources);
+  };
+
+  for (const nodeId of flowState.runningNodes ?? []) addNodeReference(nodeId, 'runningNodes');
+  for (const nodeId of Object.keys(flowState.awaitingHumanNodes ?? {})) addNodeReference(nodeId, 'awaitingHumanNodes');
+  for (const nodeId of Object.keys(flowState.pendingHumanInputs ?? {})) addNodeReference(nodeId, 'pendingHumanInputs');
+  for (const nodeId of flowState.visitedNodeIds ?? []) addNodeReference(nodeId, 'visitedNodeIds');
+  for (const nodeId of flowState.awaitingHandoff ?? []) addNodeReference(nodeId, 'awaitingHandoff');
+
+  const validateHandoffKeys = (
+    source: 'completedHandoffs' | 'receivingHandoff',
+    keys: string[]
+  ): void => {
+    for (const key of keys) {
+      const parsed = parseHandoffKey(key);
+      if (!parsed) {
+        errors.push(`workflow state ${source} contains invalid handoff key "${key}"`);
+        continue;
+      }
+
+      addNodeReference(parsed.from, source);
+      addNodeReference(parsed.to, source);
+
+      if (source === 'completedHandoffs') {
+        if (!edgeKeys.has(key)) {
+          errors.push(`workflow state completedHandoffs contains "${key}", but workflow.edges does not include that edge`);
+        }
+        continue;
+      }
+
+      const reverseKey = wf.edgeKey(parsed.to, parsed.from);
+      if (!edgeKeys.has(key) && !edgeKeys.has(reverseKey)) {
+        errors.push(
+          `workflow state ${source} contains "${key}", but workflow.edges does not include either "${key}" or "${reverseKey}"`
+        );
+      }
+    }
+  };
+
+  validateHandoffKeys('completedHandoffs', flowState.completedHandoffs ?? []);
+  validateHandoffKeys('receivingHandoff', Object.keys(flowState.receivingHandoff ?? {}));
+
+  pushMissingStateNodeErrors(errors, nodeIds, nodeReferences);
+
+  for (const [nodeId, state] of Object.entries(flowState.awaitingHumanNodes ?? {})) {
+    const node = nodeById.get(nodeId);
+    if (node && node.role !== state.role) {
+      errors.push(
+        `workflow state awaitingHumanNodes references node "${nodeId}" with role "${state.role}", but workflow.nodes defines role "${node.role}"`
+      );
+    }
+  }
+
+  const receivingTargets = new Set(
+    Object.keys(flowState.receivingHandoff ?? {})
+      .map((key) => parseHandoffKey(key)?.to)
+      .filter((nodeId): nodeId is string => Boolean(nodeId))
+  );
+  for (const awaitingNodeId of flowState.awaitingHandoff ?? []) {
+    if (!nodeIds.has(awaitingNodeId)) continue;
+    const hasIncomingEdge = workflow.edges.some((edge) => edge.to === awaitingNodeId);
+    if (!hasIncomingEdge && !receivingTargets.has(awaitingNodeId)) {
+      errors.push(
+        `workflow state awaitingHandoff contains "${awaitingNodeId}", but workflow.edges has no inbound edge and receivingHandoff has no queued handoff for it`
+      );
+    }
+  }
+}
+
 /**
  * Validates a parsed workflow graph object against the approved schema.
  *
  * Uses runtime type checks; accepts unknown input and reports all violations.
  */
-export function validateGraph(doc: unknown, rolesDir?: string): string[] {
+export function validateGraph(doc: unknown, rolesDir?: string, flowState: WorkflowStateValidationInput | null = null): string[] {
   const errors: string[] = [];
   const validateOptionalStringArray = (value: unknown, fieldPath: string) => {
     if (value === undefined) return;
@@ -238,6 +349,10 @@ export function validateGraph(doc: unknown, rolesDir?: string): string[] {
       validateOptionalStringArray(node.notes, `workflow.nodes[${i}].notes`);
     });
 
+    if (typeof wf.nodes[0]?.id === 'string' && wf.nodes[0].id !== REQUIRED_START_NODE_ID) {
+      errors.push(`workflow.nodes[0].id must be exactly "${REQUIRED_START_NODE_ID}" (found "${wf.nodes[0].id}")`);
+    }
+
     // workflow.edges
     if (!Array.isArray(wf.edges)) {
       errors.push('workflow.edges must be an array');
@@ -295,6 +410,9 @@ export function validateGraph(doc: unknown, rolesDir?: string): string[] {
     }
 
     for (const node of startNodes) {
+      if (node.id !== REQUIRED_START_NODE_ID) {
+        errors.push(`Start node "${node.id}" must be exactly "${REQUIRED_START_NODE_ID}"`);
+      }
       if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
         errors.push(`Start node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
@@ -305,6 +423,10 @@ export function validateGraph(doc: unknown, rolesDir?: string): string[] {
         errors.push(`End node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
     }
+  }
+
+  if (flowState !== null) {
+    validateGraphAgainstFlowState(workflow, flowState, errors);
   }
 
   return errors;
@@ -336,8 +458,10 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `  companion_docs:\n` +
     `    - $VARIABLE_NAME               # optional\n` +
     `  nodes:\n` +
+    `    - id: owner-intake              # first node id is required\n` +
+    `      role: owner                   # first node role is required\n` +
     `    - id: <string>\n` +
-    `      role: <role-instance-id>        # lowercase kebab-case, optional _N suffix\n` +
+    `      role: <role-instance-id>      # lowercase kebab-case, optional _N suffix\n` +
     `      human-collaborative: <string>  # optional\n` +
     `      required_readings:\n` +
     `        - $VARIABLE_NAME             # optional\n` +
@@ -381,7 +505,7 @@ export class WorkflowValidationError extends Error {
  *
  * Parses the YAML file and runs all schema checks.
  */
-export function validateWorkflowFile(filePath: string, rolesDir?: string): ValidationResult {
+export function validateWorkflowFile(filePath: string, rolesDir?: string, flowState: WorkflowStateValidationInput | null = null): ValidationResult {
   let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -396,6 +520,6 @@ export function validateWorkflowFile(filePath: string, rolesDir?: string): Valid
     return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }
 
-  const errors = validateGraph(doc, rolesDir);
+  const errors = validateGraph(doc, rolesDir, flowState);
   return { valid: errors.length === 0, errors };
 }

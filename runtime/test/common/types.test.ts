@@ -28,7 +28,6 @@ test('FlowRun: conforms to new multi-node structure', () => {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -36,7 +35,6 @@ test('FlowRun: conforms to new multi-node structure', () => {
   };
 
   assert.strictEqual(flowRun.runningNodes.length, 0);
-  assert.strictEqual(flowRun.completedNodes.length, 0);
   assert.deepStrictEqual(flowRun.receivingHandoff, {});
 });
 

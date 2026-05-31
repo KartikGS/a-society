@@ -340,7 +340,6 @@ export function bootstrapInitializationFlow(
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       visitedNodeIds: [],
       completedHandoffs: [],
       receivingHandoff: {},

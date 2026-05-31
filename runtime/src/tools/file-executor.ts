@@ -1,8 +1,11 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import yaml from 'js-yaml';
-import type { ToolDefinition, ToolCall } from '../common/types.js';
+import type { FlowRef, FlowRun, ToolDefinition, ToolCall } from '../common/types.js';
 import { validateGraph } from '../framework-services/workflow-graph-validator.js';
+import { SessionStore } from '../orchestration/store.js';
+import { getFlowRecordDir } from '../orchestration/state-paths.js';
+import { CANONICAL_WORKFLOW_FILENAME, canonicalWorkflowDefinitionPath } from '../context/workflow-file.js';
 
 export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -101,23 +104,46 @@ const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
 
 export class FileToolExecutor {
   private readonly workspaceRoot: string;
+  private readonly flowRef: FlowRef;
   private readonly writeRoots: string[];
   private readonly workflowFilePaths: Set<string>;
+  private readonly recordWorkflowPath: string;
 
-  constructor(workspaceRoot: string, writeRoots: string[], workflowFilePaths: string[]) {
+  constructor(workspaceRoot: string, flowRef: FlowRef) {
     this.workspaceRoot = path.resolve(workspaceRoot);
-    this.writeRoots = writeRoots.map(r => path.resolve(r));
-    this.workflowFilePaths = new Set(workflowFilePaths.map(p => path.resolve(p)));
+    this.flowRef = flowRef;
+    const recordFolderPath = getFlowRecordDir(this.workspaceRoot, flowRef);
+    this.recordWorkflowPath = path.resolve(recordFolderPath, CANONICAL_WORKFLOW_FILENAME);
+    this.writeRoots = [
+      path.join(this.workspaceRoot, flowRef.projectNamespace),
+      path.join(this.workspaceRoot, 'a-society', 'feedback'),
+      recordFolderPath,
+    ].map(r => path.resolve(r));
+    this.workflowFilePaths = new Set([
+      this.recordWorkflowPath,
+      canonicalWorkflowDefinitionPath(this.workspaceRoot, flowRef.projectNamespace),
+    ].map(p => path.resolve(p)));
   }
 
-  private validateWorkflowContent(content: string): string[] {
+  private validateWorkflowContent(content: string, resolvedPath: string): string[] {
     let doc: unknown;
     try {
       doc = yaml.load(content);
     } catch (err) {
       return [`YAML parse error: ${(err as Error).message}`];
     }
-    return validateGraph(doc);
+    let flowState: FlowRun | null = null;
+    if (this.recordWorkflowPath === resolvedPath) {
+      try {
+        flowState = SessionStore.loadFlowRun(this.flowRef, this.workspaceRoot);
+      } catch (err) {
+        return [`Cannot load latest flow state for workflow validation: ${(err as Error).message}`];
+      }
+      if (!flowState) {
+        return ['Cannot load latest flow state for workflow validation: flow state was not found'];
+      }
+    }
+    return validateGraph(doc, undefined, flowState);
   }
 
   validate(call: ToolCall): { content: string; isError: boolean } | null {
@@ -169,7 +195,7 @@ export class FileToolExecutor {
       // Workflow graph validation only applies to the workflow file. It is not
       // repeated in execute() because it checks content correctness, not staleness.
       if (newContent !== null && this.workflowFilePaths.has(resolved)) {
-        const errors = this.validateWorkflowContent(newContent);
+        const errors = this.validateWorkflowContent(newContent, resolved);
         if (errors.length > 0) {
           return { content: `Error: workflow validation failed — this write would produce an invalid workflow.yaml:\n${errors.join('\n')}\nFix the errors before retrying.`, isError: true };
         }

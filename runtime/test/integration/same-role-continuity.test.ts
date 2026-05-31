@@ -156,8 +156,7 @@ function patchLLM(provider: MockProvider): () => void {
     return original.call(new LLMGateway({
       mode: 'project',
       workspaceRoot: tmpDir,
-      projectNamespace,
-      recordFolderPath: recordDir,
+      flowRef: { projectNamespace, flowId: 'test-flow-id' },
       provider,
     }), sys, hist, opts);
   };
@@ -212,7 +211,6 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -230,7 +228,6 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -302,7 +299,6 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
       status: 'completed',
       stateVersion: '5',
@@ -507,7 +503,6 @@ async function run() {
       runningNodes: ['owner-gate'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: ['owner-intake', 'ta'],
       visitedNodeIds: ['owner-intake', 'ta'],
       completedHandoffs: ['owner-intake=>ta', 'ta=>owner-gate'],
       receivingHandoff: {
@@ -616,7 +611,6 @@ async function run() {
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: ['owner-gate'],
       visitedNodeIds: ['owner-intake', 'owner-gate'],
       receivingHandoff: {
         'ta=>owner-intake': [reviewFeedbackArtifactRel]
@@ -898,7 +892,6 @@ async function run() {
       runningNodes: ['owner-intake', 'ta'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: ['owner-intake=>ta'],
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });

@@ -95,7 +95,6 @@ async function runTest() {
     runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -140,7 +139,7 @@ async function runTest() {
     await orchestrator.advanceFlow(flowRun, 'start');
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
-    assert.ok(flowAfterStart.completedNodes.includes('start'), "Expected 'start' to be completed.");
+    assert.ok(flowAfterStart.completedHandoffs.includes('start=>next'), "Expected 'start' handoff to be completed.");
     assert.deepStrictEqual(flowAfterStart.receivingHandoff['start=>next'], ['start-output.md'], "Expected 'next' to receive the handoff.");
 
     console.log("\n--- Advancing 'next' node ---");
@@ -159,7 +158,7 @@ async function runTest() {
       `Expected exactly one role.active event for successor node 'next', got ${nextRoleActiveCount}`
     );
     const flowAfterNext = SessionStore.loadFlowRun()!;
-    assert.ok(flowAfterNext.completedNodes.includes('next'), "Expected node 'next' to be completed.");
+    assert.ok(flowAfterNext.completedHandoffs.includes('next=>end'), "Expected node 'next' handoff to be completed.");
     assert.deepStrictEqual(flowAfterNext.receivingHandoff['next=>end'], ['next-output.md'], "Expected successor node 'end' to receive the handoff.");
 
     console.log("Linear-role-active test PASSED.");

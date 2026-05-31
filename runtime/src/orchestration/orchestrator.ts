@@ -17,7 +17,7 @@ import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { CANONICAL_WORKFLOW_FILENAME, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
-import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing } from './workflow-graph.js';
+import { WorkflowGraph, allEdgesCovered, allIncidentEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing, parseHandoffKey, type HandoffKeyParts } from './workflow-graph.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
@@ -321,10 +321,10 @@ export class FlowOrchestrator {
 
         const inboundHandoffSnapshot = Object.entries(flowRun.receivingHandoff)
           .map(([key, artifacts]) => {
-            const handoff = this.parseHandoffKey(key);
+            const handoff = parseHandoffKey(key);
             return handoff ? { ...handoff, key, artifacts: [...artifacts] } : null;
           })
-          .filter((handoff): handoff is { fromNodeId: string; targetId: string; key: string; artifacts: string[] } =>
+          .filter((handoff): handoff is HandoffKeyParts & { key: string; artifacts: string[] } =>
             handoff !== null &&
             handoff.targetId === nodeId &&
             this.isDeliverableInboundHandoff(flowRun, wf, nodeId, handoff.fromNodeId)
@@ -486,26 +486,28 @@ export class FlowOrchestrator {
 
             let sessionResult: RoleTurnResult | null = null;
             try {
-              sessionResult = await runRoleTurn(
-                flowRun.workspaceRoot, flowRun.projectNamespace, roleName, bundleContent,
-                injectedHistory,
-                nodeOutputStream,
-                controller.signal,
-                this.renderer,
+              sessionResult = await runRoleTurn({
+                workspaceRoot: flowRun.workspaceRoot,
+                roleInstanceId: roleName,
+                providedSystemPrompt: bundleContent,
+                flowRef: this.requireFlowRef(),
+                providedHistory: injectedHistory,
+                roleOutputStream: nodeOutputStream,
+                externalSignal: controller.signal,
+                operatorRenderer: this.renderer,
                 consentGate,
-                async (messages) => {
+                onConversationMessages: async (messages) => {
                   removeAssistantDraftBeforeToolCalls(injectedHistory, messages);
                   appendConversationMessagesToCurrentNode(session, nodeId, messages);
                   saveRoleSession();
                 },
-                (text) => {
+                onAssistantTextDelta: (text) => {
                   upsertAssistantDelta(injectedHistory, text);
                   upsertCurrentNodeAssistantDelta(session, nodeId, text);
                   saveRoleSession();
                 },
                 nodeId,
-                flowRun.recordFolderPath
-              );
+              });
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);
               if (activeController?.controller === controller) {
@@ -599,7 +601,6 @@ export class FlowOrchestrator {
                 const singleRole = uniqueBaseRoles.size <= 1;
                 flowRun = await SessionStore.updateFlowRun((latest) => {
                   this.removeOpenNode(latest, nodeId);
-                  this.addCompletedNode(latest, nodeId);
                   ImprovementOrchestrator.markAwaitingChoice(latest, singleRole);
                 }, this.requireFlowRef(), this.requireWorkspaceRoot());
                 session.transcriptHistory = injectedHistory;
@@ -804,7 +805,6 @@ export class FlowOrchestrator {
           this.throwHandoffTransitionRepair(`Node '${nodeId}' emitted no valid handoff targets.`);
         }
         this.removeOpenNode(latest, nodeId);
-        this.addCompletedNode(latest, nodeId);
         eventTargets = [];
         if (!this.hasUnsettledOrRunnableWork(latest, wf)) {
           latest.status = 'completed';
@@ -894,10 +894,7 @@ export class FlowOrchestrator {
       }
 
       if (reactivationPlans.length > 0) {
-        this.removeCompletedNode(latest, nodeId);
         if (!latest.awaitingHandoff.includes(nodeId)) latest.awaitingHandoff.push(nodeId);
-      } else {
-        this.markNodeCompletedIfSettled(latest, wf, nodeId);
       }
 
       const reactivatedTargets: Array<{ targetId: string; role: string }> = [];
@@ -911,7 +908,6 @@ export class FlowOrchestrator {
           latest.historyHandoff[plan.backwardHandoffKey].push(plan.artifact);
         }
         latest.completedHandoffs = latest.completedHandoffs.filter(k => k !== plan.rejectedEdgeKey);
-        this.removeCompletedNode(latest, plan.targetId);
         reactivatedTargets.push({ targetId: plan.targetId, role: plan.role });
       }
 
@@ -1003,8 +999,8 @@ export class FlowOrchestrator {
 
   private deriveRunnableNodeIds(flowRun: FlowRun, wf: WorkflowGraph): string[] {
     const receivingHandoffs = Object.keys(flowRun.receivingHandoff)
-      .map((key) => this.parseHandoffKey(key))
-      .filter((handoff): handoff is { fromNodeId: string; targetId: string } => handoff !== null);
+      .map((key) => parseHandoffKey(key))
+      .filter((handoff): handoff is HandoffKeyParts => handoff !== null);
     const hasWakeableInboundHandoff = (nodeId: string): boolean =>
       receivingHandoffs.some(({ fromNodeId, targetId }) =>
         targetId === nodeId && this.isDeliverableInboundHandoff(flowRun, wf, nodeId, fromNodeId)
@@ -1017,7 +1013,6 @@ export class FlowOrchestrator {
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
     const awaitingHandoffSet = new Set(flowRun.awaitingHandoff);
     const activeNodes = new Set(getActiveNodeIds(flowRun));
-    const completedNodes = new Set(flowRun.completedNodes);
 
     const result: string[] = [];
     const seen = new Set<string>();
@@ -1026,7 +1021,7 @@ export class FlowOrchestrator {
     // persisted ready queue. This covers partial fan-out and reopened backward-pass sources.
     for (const node of wf.nodes) {
       const nodeId = node.id;
-      if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || activeNodes.has(nodeId) || completedNodes.has(nodeId)) continue;
+      if (seen.has(nodeId) || !visitedSet.has(nodeId) || awaitingHandoffSet.has(nodeId) || activeNodes.has(nodeId)) continue;
       if (hasPendingOutgoing(wf, flowRun.completedHandoffs, nodeId)) {
         result.push(nodeId);
         seen.add(nodeId);
@@ -1058,7 +1053,6 @@ export class FlowOrchestrator {
   private pruneInitialNodeIds(flowRun: FlowRun, wf: WorkflowGraph, initialNodeIds: string[]): string[] {
     return this.mergeNodeIds(initialNodeIds).filter((nodeId) => {
       if (!wf.findNodeByIdOrNull(nodeId)) return false;
-      if (flowRun.completedNodes.includes(nodeId)) return false;
       if (flowRun.runningNodes.includes(nodeId)) return false;
       if (flowRun.awaitingHandoff.includes(nodeId)) return false;
       if (flowRun.awaitingHumanNodes[nodeId]) return false;
@@ -1186,16 +1180,6 @@ export class FlowOrchestrator {
     delete flowRun.awaitingHumanNodes[nodeId];
   }
 
-  private addCompletedNode(flowRun: FlowRun, nodeId: string) {
-    if (!flowRun.completedNodes.includes(nodeId)) {
-      flowRun.completedNodes.push(nodeId);
-    }
-  }
-
-  private removeCompletedNode(flowRun: FlowRun, nodeId: string) {
-    flowRun.completedNodes = flowRun.completedNodes.filter(id => id !== nodeId);
-  }
-
   private setFlowContext(flowRun: FlowRun): void {
     this.flowRef = {
       projectNamespace: flowRun.projectNamespace,
@@ -1234,13 +1218,8 @@ export class FlowOrchestrator {
       node?.id !== currentNodeId &&
       typeof node?.role === 'string' &&
       this.roleKey(node.role) === roleKey &&
-      !flowRun.completedNodes.includes(node.id)
+      !((flowRun.visitedNodeIds ?? []).includes(node.id) && allIncidentEdgesCovered(wf, flowRun.completedHandoffs, node.id))
     );
-  }
-
-  private parseHandoffKey(key: string): { fromNodeId: string; targetId: string } | null {
-    const [fromNodeId, targetId] = key.split('=>');
-    return fromNodeId && targetId ? { fromNodeId, targetId } : null;
   }
 
   private isPredecessor(wf: WorkflowGraph, nodeId: string, possiblePredecessorId: string): boolean {
@@ -1362,19 +1341,6 @@ export class FlowOrchestrator {
       }
     }
     return merged;
-  }
-
-  private markNodeCompletedIfSettled(flowRun: FlowRun, wf: WorkflowGraph, nodeId: string): void {
-    const outgoingEdges = wf.getOutgoingEdges(nodeId);
-    if (outgoingEdges.length === 0) return;
-
-    const allSettled = !hasPendingOutgoing(wf, flowRun.completedHandoffs, nodeId);
-
-    if (allSettled) {
-      this.addCompletedNode(flowRun, nodeId);
-    } else {
-      this.removeCompletedNode(flowRun, nodeId);
-    }
   }
 
   private validateTargetArtifactsExist(workspaceRoot: string, handoffs: HandoffTarget[]): void {

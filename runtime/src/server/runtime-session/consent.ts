@@ -77,10 +77,7 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
       }
 
       delete flow.awaitingHumanNodes[request.nodeId];
-      if (
-        !flow.completedNodes.includes(request.nodeId) &&
-        !flow.runningNodes.includes(request.nodeId)
-      ) {
+      if (!flow.runningNodes.includes(request.nodeId)) {
         flow.runningNodes.push(request.nodeId);
       }
       flow.status = 'running';

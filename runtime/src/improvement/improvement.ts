@@ -180,29 +180,28 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
 
   while (true) {
     try {
-      const sessionResult = await runRoleTurn(
-        flowRun.workspaceRoot,
-        flowRun.projectNamespace,
+      const sessionResult = await runRoleTurn({
+        workspaceRoot: flowRun.workspaceRoot,
         roleInstanceId,
-        bundleContent,
-        history,
+        providedSystemPrompt: bundleContent,
+        flowRef,
+        providedHistory: history,
         roleOutputStream,
-        signal,
-        renderer,
+        externalSignal: signal,
+        operatorRenderer: renderer,
         consentGate,
-        async (messages) => {
+        onConversationMessages: async (messages) => {
           removeAssistantDraftBeforeToolCalls(history, messages);
           appendConversationMessagesToCurrentNode(session, nodeId, messages);
           saveSession();
         },
-        (text) => {
+        onAssistantTextDelta: (text) => {
           upsertAssistantDelta(history, text);
           upsertCurrentNodeAssistantDelta(session, nodeId, text);
           saveSession();
         },
         nodeId,
-        flowRun.recordFolderPath,
-      );
+      });
 
       if (sessionResult === null) {
         if (signal?.aborted) {

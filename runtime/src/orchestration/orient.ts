@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
+import type { FlowRef, RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
 import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
@@ -177,34 +177,45 @@ async function executeSessionTurn(
   }
 }
 
-export async function runRoleTurn(
-  workspaceRoot: string,
-  projectNamespace: string,
-  roleInstanceId: string,
-  providedSystemPrompt: string,
-  providedHistory?: RuntimeMessageParam[],
-  roleOutputStream?: NodeJS.WritableStream,
-  externalSignal?: AbortSignal,
-  operatorRenderer?: OperatorRenderSink,
-  consentGate?: ConsentGate,
-  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>,
-  onAssistantTextDelta?: (text: string) => void,
-  nodeId?: string,
-  recordFolderPath?: string
-): Promise<RoleTurnResult | null> {
+export interface RunRoleTurnInput {
+  workspaceRoot: string;
+  roleInstanceId: string;
+  providedSystemPrompt: string;
+  flowRef: FlowRef;
+  providedHistory?: RuntimeMessageParam[];
+  roleOutputStream?: NodeJS.WritableStream;
+  externalSignal?: AbortSignal;
+  operatorRenderer?: OperatorRenderSink;
+  consentGate?: ConsentGate;
+  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
+  onAssistantTextDelta?: (text: string) => void;
+  nodeId?: string;
+}
+
+export async function runRoleTurn({
+  workspaceRoot,
+  roleInstanceId,
+  providedSystemPrompt,
+  flowRef,
+  providedHistory,
+  roleOutputStream,
+  externalSignal,
+  operatorRenderer,
+  consentGate,
+  onConversationMessages,
+  onAssistantTextDelta,
+  nodeId,
+}: RunRoleTurnInput): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
 
+  const projectNamespace = flowRef.projectNamespace;
   const sessionId = crypto.randomUUID();
   const systemPrompt = providedSystemPrompt;
-  if (!recordFolderPath) {
-    throw new Error('runRoleTurn requires recordFolderPath for project-scoped LLM gateway turns.');
-  }
   const llm = new LLMGateway({
     mode: 'project',
     workspaceRoot,
-    projectNamespace,
-    recordFolderPath,
+    flowRef,
   });
   const history: RuntimeMessageParam[] = providedHistory ?? [];
 

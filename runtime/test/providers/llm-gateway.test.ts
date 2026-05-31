@@ -164,8 +164,7 @@ await test('tool-call continuation and denial result are recorded before consent
   const gateway = new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'demo-project',
-    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record'),
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
     provider,
   });
   const gate = new BlockingConsentGate();
@@ -218,8 +217,7 @@ await test('late abort after streamed tool-call text keeps the attempted tool ca
   const gateway = new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'demo-project',
-    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record'),
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
     provider: new LateAbortToolCallProvider(() => controller.abort()),
   });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please create the plan.' }];
@@ -249,8 +247,7 @@ await test('project-scoped gateway allows feedback writes outside the active pro
   const gateway = new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'demo-project',
-    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record'),
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
     provider,
   });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write feedback.' }];
@@ -273,8 +270,7 @@ await test('project-scoped gateway allows writes to the active state record fold
   const gateway = new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'demo-project',
-    recordFolderPath,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
     provider,
   });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write a record artifact.' }];
@@ -297,8 +293,7 @@ await test('project-scoped gateway blocks writes to flow state outside the activ
   const gateway = new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'demo-project',
-    recordFolderPath,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
     provider,
   });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write flow state.' }];
@@ -317,8 +312,7 @@ await test('project-scoped gateway still blocks writes to sibling projects', asy
   const gateway = new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'demo-project',
-    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record'),
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
     provider,
   });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write elsewhere.' }];

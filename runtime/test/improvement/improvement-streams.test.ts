@@ -73,7 +73,6 @@ await test('feedback repair status is emitted as an event, not role output strea
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},

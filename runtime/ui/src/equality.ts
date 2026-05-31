@@ -151,7 +151,6 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
     arePendingHumanInputMapsEqual(left.pendingHumanInputs, right.pendingHumanInputs) &&
-    areStringArraysEqual(left.completedNodes, right.completedNodes) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     areStringArrayMapsEqual(left.receivingHandoff, right.receivingHandoff) &&

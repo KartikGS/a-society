@@ -112,12 +112,12 @@ async function run() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
   const stateDir = path.join(tmpDir, '.state');
   const settingsDir = path.join(tmpDir, '.settings');
-  const directRunRecordFolderPath = getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'direct-run-role-turn' });
+  const directRunFlowRef = { projectNamespace: 'a-society', flowId: 'direct-run-role-turn' };
+  const observabilityGatewayFlowRef = { projectNamespace: 'a-society', flowId: 'observability-gateway' };
   const projectGateway = (provider: MockProvider): LLMGateway => new LLMGateway({
     mode: 'project',
     workspaceRoot: tmpDir,
-    projectNamespace: 'a-society',
-    recordFolderPath: getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'observability-gateway' }),
+    flowRef: observabilityGatewayFlowRef,
     provider,
   });
   
@@ -179,21 +179,14 @@ async function run() {
 
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    const result = await runRoleTurn(
-      tmpDir,
-      'a-society',
-      'curator',
-      'System prompt',
-      [],
-      output,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      directRunRecordFolderPath
-    );
+    const result = await runRoleTurn({
+      workspaceRoot: tmpDir,
+      roleInstanceId: 'curator',
+      providedSystemPrompt: 'System prompt',
+      flowRef: directRunFlowRef,
+      providedHistory: [],
+      roleOutputStream: output,
+    });
 
     // With no user message in history, orient.ts must return null rather than injecting a prompt.
     assert.strictEqual(result, null);
@@ -220,21 +213,14 @@ async function run() {
     };
 
     try {
-        await runRoleTurn(
-            tmpDir,
-            'a-society',
-            'curator',
-            'System prompt', 
-            [{ role: 'user', content: 'Who are you?' }], 
-            output,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            directRunRecordFolderPath
-        );
+        await runRoleTurn({
+            workspaceRoot: tmpDir,
+            roleInstanceId: 'curator',
+            providedSystemPrompt: 'System prompt',
+            flowRef: directRunFlowRef,
+            providedHistory: [{ role: 'user', content: 'Who are you?' }],
+            roleOutputStream: output,
+        });
     } finally {
         LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }
@@ -273,21 +259,15 @@ async function run() {
     };
 
     try {
-      const result = await runRoleTurn(
-        tmpDir,
-        'a-society',
-        'curator',
-        'System prompt',
-        [{ role: 'user', content: 'Who are you?' }],
-        output,
-        undefined,
-        renderer,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        directRunRecordFolderPath
-      );
+      const result = await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Who are you?' }],
+        roleOutputStream: output,
+        operatorRenderer: renderer,
+      });
       assert.deepStrictEqual(result, {
         handoff: { kind: 'awaiting_human' },
         contextUsage: 46
@@ -315,21 +295,13 @@ async function run() {
     };
 
     try {
-      await runRoleTurn(
-        tmpDir,
-        'a-society',
-        'curator',
-        'System prompt',
-        [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        directRunRecordFolderPath
-      );
+      await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Produce a handoff.' }],
+      });
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
       assert.ok(error instanceof HandoffParseError);
@@ -365,21 +337,14 @@ async function run() {
     };
 
     try {
-      await runRoleTurn(
-        tmpDir,
-        'a-society',
-        'curator',
-        'System prompt',
-        [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined,
-        undefined,
-        renderer,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        directRunRecordFolderPath
-      );
+      await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Produce a handoff.' }],
+        operatorRenderer: renderer,
+      });
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
       assert.ok(error instanceof HandoffParseError);
@@ -412,7 +377,6 @@ async function run() {
       runningNodes: ['start'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
       status: 'running',
       stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -467,7 +431,7 @@ async function run() {
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
     const workflowPath = path.join(workflowsDir, 'workflow.yaml');
-    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: owner\n  edges: []\n');
+    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: owner-intake\n      role: owner\n  edges: []\n');
 
     const result = validateWorkflowFile(workflowPath);
     assert.ok(result.valid);
@@ -487,7 +451,6 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
       receivingHandoff: {},
       historyHandoff: {},
@@ -569,7 +532,6 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
