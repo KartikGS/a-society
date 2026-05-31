@@ -178,10 +178,6 @@ function collectWorkflowVariables(workflowDoc: unknown): string[] {
   const vars = new Set<string>();
   const workflowRecord = workflow as Record<string, unknown>;
 
-  for (const entry of collectStringArray(workflowRecord.companion_docs)) {
-    vars.add(entry);
-  }
-
   if (Array.isArray(workflowRecord.nodes)) {
     for (const node of workflowRecord.nodes) {
       if (!node || typeof node !== 'object') continue;

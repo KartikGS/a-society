@@ -41,12 +41,8 @@ export interface WorkflowEdge {
 export interface WorkflowGraph {
   name: string;
   summary?: string;
-  use_when?: string;
-  companion_docs?: string[];
   invariants?: Array<{ name: string; rule: string }>;
   escalation?: Array<{ situation: string; escalated_by: string; to: string }>;
-  session_model?: string[];
-  forward_pass_closure?: string[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 }
@@ -200,12 +196,8 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
   const invalidWorkflowKeys = workflowKeys.filter((key) =>
     key !== 'name' &&
     key !== 'summary' &&
-    key !== 'use_when' &&
-    key !== 'companion_docs' &&
     key !== 'invariants' &&
     key !== 'escalation' &&
-    key !== 'session_model' &&
-    key !== 'forward_pass_closure' &&
     key !== 'nodes' &&
     key !== 'edges'
   );
@@ -216,12 +208,6 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
   if ('summary' in wf && (typeof wf.summary !== 'string' || wf.summary.trim() === '')) {
     errors.push('workflow.summary must be a non-empty string if present');
   }
-  if ('use_when' in wf && (typeof wf.use_when !== 'string' || wf.use_when.trim() === '')) {
-    errors.push('workflow.use_when must be a non-empty string if present');
-  }
-  validateOptionalStringArray(wf.companion_docs, 'workflow.companion_docs');
-  validateOptionalStringArray(wf.session_model, 'workflow.session_model');
-  validateOptionalStringArray(wf.forward_pass_closure, 'workflow.forward_pass_closure');
 
   if ('invariants' in wf) {
     if (!Array.isArray(wf.invariants)) {
@@ -454,9 +440,6 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `workflow:\n` +
     `  name: <string>\n` +
     `  summary: <string>                # optional\n` +
-    `  use_when: <string>               # optional\n` +
-    `  companion_docs:\n` +
-    `    - $VARIABLE_NAME               # optional\n` +
     `  nodes:\n` +
     `    - id: owner-intake              # first node id is required\n` +
     `      role: owner                   # first node role is required\n` +
@@ -483,8 +466,6 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `    - situation: <string>          # optional\n` +
     `      escalated_by: <string>\n` +
     `      to: <string>\n` +
-    `  session_model: [<string>]        # optional\n` +
-    `  forward_pass_closure: [<string>] # optional\n` +
     `Please fix workflow.yaml with this schema and restate your handoff.`;
   return { operatorSummary, modelRepairMessage };
 }

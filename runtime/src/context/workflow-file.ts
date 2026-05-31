@@ -27,12 +27,8 @@ export interface WorkflowEdge {
 export interface WorkflowDefinition {
   name?: string;
   summary?: string;
-  use_when?: string;
-  companion_docs?: string[];
   invariants?: Array<{ name: string; rule: string }>;
   escalation?: Array<{ situation: string; escalated_by: string; to: string }>;
-  session_model?: string[];
-  forward_pass_closure?: string[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 }
