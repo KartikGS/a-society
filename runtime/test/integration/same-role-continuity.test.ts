@@ -19,8 +19,6 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { ContextInjectionService } from '../../src/context/injection.js';
-import { buildForwardNodeEntryMessage } from '../../src/context/session-entry.js';
-import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
@@ -533,9 +531,11 @@ async function run() {
 
     const transitionMessage = (session!.transcriptHistory as any[])
       .find(message => message.role === 'user' && typeof message.content === 'string' &&
-        message.content.includes('continuing the same role-scoped flow session from workflow node owner-intake to owner-gate'));
+        message.content.includes('Node owner-gate started at:'));
 
-    assert.ok(transitionMessage, 'expected a role-transition packet in the reused Owner session');
+    assert.ok(transitionMessage, 'expected a node-entry packet in the reused Owner session');
+    assert.ok(transitionMessage.content.includes('Handoffs received:'));
+    assert.ok(transitionMessage.content.includes('From predecessor ta:'));
     assert.ok(transitionMessage.content.includes('TA design content.'));
     assert.strictEqual(session!.currentNodeId, 'owner-gate');
   });
@@ -586,9 +586,11 @@ async function run() {
 
     const reopenedMessage = (session!.transcriptHistory as any[])
       .find(message => message.role === 'user' && typeof message.content === 'string' &&
-        message.content.includes('workflow node has been reopened in the same role-scoped flow session'));
+        message.content.includes('Node owner-intake resumed at:'));
 
-    assert.ok(reopenedMessage, 'expected a reopened-node packet in the reused Owner session');
+    assert.ok(reopenedMessage, 'expected a resumed node-entry packet in the reused Owner session');
+    assert.ok(reopenedMessage.content.includes('Handoffs received:'));
+    assert.ok(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):'));
     assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
     assert.strictEqual(session!.currentNodeId, 'owner-intake');
   });
@@ -640,10 +642,12 @@ async function run() {
 
     const reopenedMessage = (session!.transcriptHistory as any[])
       .find(message => message.role === 'user' && typeof message.content === 'string' &&
-        message.content.includes('workflow node has been reopened in the same role-scoped flow session'));
+        message.content.includes('Node owner-intake resumed at:'));
 
-    assert.ok(reopenedMessage, 'expected backward re-entry to use reopened-node framing');
-    assert.ok(!reopenedMessage.content.includes('continuing the same role-scoped flow session from workflow node owner-gate to owner-intake'));
+    assert.ok(reopenedMessage, 'expected backward re-entry to use resumed node-entry framing');
+    assert.ok(!reopenedMessage.content.includes('Node owner-gate started at:'));
+    assert.ok(reopenedMessage.content.includes('Handoffs received:'));
+    assert.ok(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):'));
     assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
     assert.strictEqual(session!.currentNodeId, 'owner-intake');
     assert.ok(
