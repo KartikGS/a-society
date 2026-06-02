@@ -3,6 +3,21 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../common/role-id.js';
 import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
+import type { FlowRun } from '../common/types.js';
+import { WorkflowGraph as RuntimeWorkflowGraph, parseHandoffKey } from '../orchestration/workflow-graph.js';
+
+const REQUIRED_START_NODE_ID = 'owner-intake';
+
+export type WorkflowStateValidationInput = Pick<
+  FlowRun,
+  | 'runningNodes'
+  | 'awaitingHumanNodes'
+  | 'pendingHumanInputs'
+  | 'visitedNodeIds'
+  | 'completedHandoffs'
+  | 'receivingHandoff'
+  | 'awaitingHandoff'
+>;
 
 export interface WorkflowNode {
   id: string;
@@ -26,12 +41,8 @@ export interface WorkflowEdge {
 export interface WorkflowGraph {
   name: string;
   summary?: string;
-  use_when?: string;
-  companion_docs?: string[];
   invariants?: Array<{ name: string; rule: string }>;
   escalation?: Array<{ situation: string; escalated_by: string; to: string }>;
-  session_model?: string[];
-  forward_pass_closure?: string[];
   nodes: WorkflowNode[];
   edges: WorkflowEdge[];
 }
@@ -45,12 +56,146 @@ export interface ValidationResult {
   errors: string[];
 }
 
+function pushMissingStateNodeErrors(
+  errors: string[],
+  nodeIds: Set<string>,
+  nodeReferences: Map<string, Set<string>>
+): void {
+  for (const [nodeId, sources] of nodeReferences) {
+    if (nodeIds.has(nodeId)) continue;
+    errors.push(
+      `workflow state references node "${nodeId}" from ${Array.from(sources).sort().join(', ')}, but workflow.nodes does not include it`
+    );
+  }
+}
+
+function validateGraphAgainstFlowState(
+  workflow: WorkflowGraph,
+  flowState: WorkflowStateValidationInput,
+  errors: string[]
+): void {
+  const wf = new RuntimeWorkflowGraph(workflow);
+  const nodeIds = new Set(workflow.nodes.map((node) => node.id));
+  const nodeById = new Map(workflow.nodes.map((node) => [node.id, node]));
+  const edgeKeys = new Set(wf.edges.map((edge) => wf.edgeKey(edge.from, edge.to)));
+  const nodeReferences = new Map<string, Set<string>>();
+
+  const addNodeReference = (nodeId: string, source: string): void => {
+    const sources = nodeReferences.get(nodeId) ?? new Set<string>();
+    sources.add(source);
+    nodeReferences.set(nodeId, sources);
+  };
+
+  for (const nodeId of flowState.runningNodes ?? []) addNodeReference(nodeId, 'runningNodes');
+  for (const nodeId of Object.keys(flowState.awaitingHumanNodes ?? {})) addNodeReference(nodeId, 'awaitingHumanNodes');
+  for (const nodeId of Object.keys(flowState.pendingHumanInputs ?? {})) addNodeReference(nodeId, 'pendingHumanInputs');
+  for (const nodeId of flowState.visitedNodeIds ?? []) addNodeReference(nodeId, 'visitedNodeIds');
+  for (const nodeId of flowState.awaitingHandoff ?? []) addNodeReference(nodeId, 'awaitingHandoff');
+
+  const validateHandoffKeys = (
+    source: 'completedHandoffs' | 'receivingHandoff',
+    keys: string[]
+  ): void => {
+    for (const key of keys) {
+      const parsed = parseHandoffKey(key);
+      if (!parsed) {
+        errors.push(`workflow state ${source} contains invalid handoff key "${key}"`);
+        continue;
+      }
+
+      addNodeReference(parsed.from, source);
+      addNodeReference(parsed.to, source);
+
+      if (source === 'completedHandoffs') {
+        if (!edgeKeys.has(key)) {
+          errors.push(`workflow state completedHandoffs contains "${key}", but workflow.edges does not include that edge`);
+        }
+        continue;
+      }
+
+      const reverseKey = wf.edgeKey(parsed.to, parsed.from);
+      if (!edgeKeys.has(key) && !edgeKeys.has(reverseKey)) {
+        errors.push(
+          `workflow state ${source} contains "${key}", but workflow.edges does not include either "${key}" or "${reverseKey}"`
+        );
+      }
+    }
+  };
+
+  validateHandoffKeys('completedHandoffs', flowState.completedHandoffs ?? []);
+  validateHandoffKeys('receivingHandoff', Object.keys(flowState.receivingHandoff ?? {}));
+
+  pushMissingStateNodeErrors(errors, nodeIds, nodeReferences);
+
+  for (const [nodeId, state] of Object.entries(flowState.awaitingHumanNodes ?? {})) {
+    const node = nodeById.get(nodeId);
+    if (node && node.role !== state.role) {
+      errors.push(
+        `workflow state awaitingHumanNodes references node "${nodeId}" with role "${state.role}", but workflow.nodes defines role "${node.role}"`
+      );
+    }
+  }
+
+  const receivingTargets = new Set(
+    Object.keys(flowState.receivingHandoff ?? {})
+      .map((key) => parseHandoffKey(key)?.to)
+      .filter((nodeId): nodeId is string => Boolean(nodeId))
+  );
+  for (const awaitingNodeId of flowState.awaitingHandoff ?? []) {
+    if (!nodeIds.has(awaitingNodeId)) continue;
+    const hasIncomingEdge = workflow.edges.some((edge) => edge.to === awaitingNodeId);
+    if (!hasIncomingEdge && !receivingTargets.has(awaitingNodeId)) {
+      errors.push(
+        `workflow state awaitingHandoff contains "${awaitingNodeId}", but workflow.edges has no inbound edge and receivingHandoff has no queued handoff for it`
+      );
+    }
+  }
+}
+
+function findDirectedCycle(workflow: WorkflowGraph): string[] | null {
+  const outgoing = new Map(workflow.nodes.map((node) => [node.id, [] as string[]]));
+  for (const edge of workflow.edges) {
+    outgoing.get(edge.from)?.push(edge.to);
+  }
+
+  const state = new Map<string, 'visiting' | 'visited'>();
+  const stack: string[] = [];
+
+  const visit = (nodeId: string): string[] | null => {
+    const existingState = state.get(nodeId);
+    if (existingState === 'visiting') {
+      const cycleStart = stack.indexOf(nodeId);
+      return [...stack.slice(cycleStart), nodeId];
+    }
+    if (existingState === 'visited') return null;
+
+    state.set(nodeId, 'visiting');
+    stack.push(nodeId);
+
+    for (const childId of outgoing.get(nodeId) ?? []) {
+      const cycle = visit(childId);
+      if (cycle) return cycle;
+    }
+
+    stack.pop();
+    state.set(nodeId, 'visited');
+    return null;
+  };
+
+  for (const node of workflow.nodes) {
+    const cycle = visit(node.id);
+    if (cycle) return cycle;
+  }
+
+  return null;
+}
+
 /**
  * Validates a parsed workflow graph object against the approved schema.
  *
  * Uses runtime type checks; accepts unknown input and reports all violations.
  */
-export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string): string[] {
+export function validateGraph(doc: unknown, rolesDir?: string, flowState: WorkflowStateValidationInput | null = null): string[] {
   const errors: string[] = [];
   const validateOptionalStringArray = (value: unknown, fieldPath: string) => {
     if (value === undefined) return;
@@ -89,12 +234,8 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
   const invalidWorkflowKeys = workflowKeys.filter((key) =>
     key !== 'name' &&
     key !== 'summary' &&
-    key !== 'use_when' &&
-    key !== 'companion_docs' &&
     key !== 'invariants' &&
     key !== 'escalation' &&
-    key !== 'session_model' &&
-    key !== 'forward_pass_closure' &&
     key !== 'nodes' &&
     key !== 'edges'
   );
@@ -105,12 +246,6 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
   if ('summary' in wf && (typeof wf.summary !== 'string' || wf.summary.trim() === '')) {
     errors.push('workflow.summary must be a non-empty string if present');
   }
-  if ('use_when' in wf && (typeof wf.use_when !== 'string' || wf.use_when.trim() === '')) {
-    errors.push('workflow.use_when must be a non-empty string if present');
-  }
-  validateOptionalStringArray(wf.companion_docs, 'workflow.companion_docs');
-  validateOptionalStringArray(wf.session_model, 'workflow.session_model');
-  validateOptionalStringArray(wf.forward_pass_closure, 'workflow.forward_pass_closure');
 
   if ('invariants' in wf) {
     if (!Array.isArray(wf.invariants)) {
@@ -238,6 +373,10 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
       validateOptionalStringArray(node.notes, `workflow.nodes[${i}].notes`);
     });
 
+    if (typeof wf.nodes[0]?.id === 'string' && wf.nodes[0].id !== REQUIRED_START_NODE_ID) {
+      errors.push(`workflow.nodes[0].id must be exactly "${REQUIRED_START_NODE_ID}" (found "${wf.nodes[0].id}")`);
+    }
+
     // workflow.edges
     if (!Array.isArray(wf.edges)) {
       errors.push('workflow.edges must be an array');
@@ -275,47 +414,48 @@ export function validateGraph(doc: unknown, strict?: boolean, rolesDir?: string)
 
   const workflow = wf as WorkflowGraph;
 
-  // Strict checks: unique Owner start node; Owner at end
-  if (strict) {
-    const toIds = new Set<string>();
-    const fromIds = new Set<string>();
-    for (const edge of workflow.edges) {
-      toIds.add(edge.to);
-      fromIds.add(edge.from);
+  const toIds = new Set<string>();
+  const fromIds = new Set<string>();
+  for (const edge of workflow.edges) {
+    toIds.add(edge.to);
+    fromIds.add(edge.from);
+  }
+
+  if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
+    if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+      errors.push(`Sole node role must be exactly "owner" (found "${workflow.nodes[0].role}")`);
+    }
+  } else {
+    const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
+    const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
+
+    if (startNodes.length !== 1) {
+      errors.push(`Workflow must have exactly one start node (found ${startNodes.length})`);
     }
 
-    if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
-      // Sole node case
-      if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-        errors.push(`Strict mode violation: sole node role must be exactly "owner" (found "${workflow.nodes[0].role}")`);
+    for (const node of startNodes) {
+      if (node.id !== REQUIRED_START_NODE_ID) {
+        errors.push(`Start node "${node.id}" must be exactly "${REQUIRED_START_NODE_ID}"`);
       }
-    } else {
-      // General case: workflow must have exactly one start node, and it must be owner.
-      const startNodes = workflow.nodes.filter((node: WorkflowNode) => !toIds.has(node.id));
-      const endNodes = workflow.nodes.filter((node: WorkflowNode) => !fromIds.has(node.id));
-
-      if (startNodes.length !== 1) {
-        errors.push(
-          `Strict mode violation: workflow must have exactly one start node (found ${startNodes.length})`
-        );
-      }
-
-      for (const node of startNodes) {
-        if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-          errors.push(
-            `Strict mode violation: start node "${node.id}" must have role exactly "owner", not an instance like "${node.role}"`
-          );
-        }
-      }
-
-      for (const node of endNodes) {
-        if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
-          errors.push(
-            `Strict mode violation: end node "${node.id}" must have role exactly "owner", not an instance like "${node.role}"`
-          );
-        }
+      if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+        errors.push(`Start node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
     }
+
+    for (const node of endNodes) {
+      if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+        errors.push(`End node "${node.id}" must have role "owner" (found "${node.role}")`);
+      }
+    }
+  }
+
+  const cycle = findDirectedCycle(workflow);
+  if (cycle) {
+    errors.push(`Workflow graph must be acyclic; cycle detected: ${cycle.join(' -> ')}`);
+  }
+
+  if (flowState !== null) {
+    validateGraphAgainstFlowState(workflow, flowState, errors);
   }
 
   return errors;
@@ -343,12 +483,11 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `workflow:\n` +
     `  name: <string>\n` +
     `  summary: <string>                # optional\n` +
-    `  use_when: <string>               # optional\n` +
-    `  companion_docs:\n` +
-    `    - $VARIABLE_NAME               # optional\n` +
     `  nodes:\n` +
+    `    - id: owner-intake              # first node id is required\n` +
+    `      role: owner                   # first node role is required\n` +
     `    - id: <string>\n` +
-    `      role: <role-instance-id>        # lowercase kebab-case, optional _N suffix\n` +
+    `      role: <role-instance-id>      # lowercase kebab-case, optional _N suffix\n` +
     `      human-collaborative: <string>  # optional\n` +
     `      required_readings:\n` +
     `        - $VARIABLE_NAME             # optional\n` +
@@ -370,8 +509,6 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `    - situation: <string>          # optional\n` +
     `      escalated_by: <string>\n` +
     `      to: <string>\n` +
-    `  session_model: [<string>]        # optional\n` +
-    `  forward_pass_closure: [<string>] # optional\n` +
     `Please fix workflow.yaml with this schema and restate your handoff.`;
   return { operatorSummary, modelRepairMessage };
 }
@@ -392,7 +529,7 @@ export class WorkflowValidationError extends Error {
  *
  * Parses the YAML file and runs all schema checks.
  */
-export function validateWorkflowFile(filePath: string, strict?: boolean, rolesDir?: string): ValidationResult {
+export function validateWorkflowFile(filePath: string, rolesDir?: string, flowState: WorkflowStateValidationInput | null = null): ValidationResult {
   let content: string;
   try {
     content = fs.readFileSync(filePath, 'utf8');
@@ -407,6 +544,6 @@ export function validateWorkflowFile(filePath: string, strict?: boolean, rolesDi
     return { valid: false, errors: [`YAML parse error: ${(err as Error).message}`] };
   }
 
-  const errors = validateGraph(doc, strict, rolesDir);
+  const errors = validateGraph(doc, rolesDir, flowState);
   return { valid: errors.length === 0, errors };
 }

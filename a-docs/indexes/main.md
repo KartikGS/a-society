@@ -23,7 +23,6 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_STRUCTURE` | `a-society/general/instructions/project-information/structure.md` | How to create a structure document for any project |
 | `$INSTRUCTION_INDEX` | `a-society/general/instructions/indexes/main.md` | How to create a file path index for any project |
 | `$A_SOCIETY_AGENTS` | `a-society/a-docs/agents.md` | A-Society agent orientation — entry point for all agents working on this project |
-| `$A_SOCIETY_AGENT_DOCS_GUIDE` | `a-society/a-docs/a-docs-guide.md` | Why each file in A-Society's internal docs and Curator-tracked operator references exists — required reading for the Curator |
 | `$A_SOCIETY_ADOCS_DESIGN` | `a-society/a-docs/a-docs-design.md` | A-Society a-docs design principles — structural rules for authoring and maintaining the a-docs layer |
 | `$A_SOCIETY_VERSION_RECORD` | `a-society/a-docs/a-society-version.md` | A-Society's own initialized-project version record — records the framework baseline for A-Society's `a-docs/` runtime-health surface |
 | `$A_SOCIETY_OWNER_ROLE` | `a-society/a-docs/roles/owner/main.md` | A-Society Owner Agent role — authority, boundaries, and workflow-linked support-doc routing |
@@ -74,7 +73,6 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$GENERAL_OWNER_LOG_MANAGEMENT` | `a-society/general/roles/owner/log-management.md` | Ready-made Owner intake and log-management support doc template |
 | `$GENERAL_OWNER_CLOSURE` | `a-society/general/roles/owner/forward-pass-closure.md` | Ready-made Owner forward-pass closure support doc template |
 | `$GENERAL_TA_ROLE` | `a-society/general/project-types/executable/roles/technical-architect/main.md` | Ready-made Technical Architect (advisory-producing) role template for projects with an executable layer — authority, boundaries, and workflow-linked support-doc routing |
-| `$INSTRUCTION_AGENT_DOCS_GUIDE` | `a-society/general/instructions/a-docs-guide.md` | How to create an agent-docs guide for any project |
 | `$INSTRUCTION_ADOCS_DESIGN` | `a-society/general/instructions/a-docs-design.md` | How to create and maintain an a-docs design-principles file for any project |
 | `$INSTRUCTION_AGENTS` | `a-society/general/instructions/agents.md` | How to create an agents.md for any project |
 | `$INSTRUCTION_ROLES` | `a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |

@@ -40,7 +40,6 @@ const flowRun: FlowRun = {
   runningNodes: [],
   awaitingHumanNodes: {},
   pendingHumanInputs: {},
-  completedNodes: [],
   visitedNodeIds: [],
   completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],

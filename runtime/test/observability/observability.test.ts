@@ -112,6 +112,14 @@ async function run() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
   const stateDir = path.join(tmpDir, '.state');
   const settingsDir = path.join(tmpDir, '.settings');
+  const directRunFlowRef = { projectNamespace: 'a-society', flowId: 'direct-run-role-turn' };
+  const observabilityGatewayFlowRef = { projectNamespace: 'a-society', flowId: 'observability-gateway' };
+  const projectGateway = (provider: MockProvider): LLMGateway => new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: observabilityGatewayFlowRef,
+    provider,
+  });
   
   // registry.ts buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot)
   // For projectNamespace "a-society" and roleInstanceId "curator", it looks for:
@@ -152,7 +160,7 @@ async function run() {
       }
     ]);
 
-    const gateway = new LLMGateway(tmpDir, mockProvider);
+    const gateway = projectGateway(mockProvider);
     await gateway.executeTurn('You are a tester.', [{ role: 'user', content: 'test tool calls' }]);
 
     const gatewaySpan = getSpan('llm.gateway.execute_turn');
@@ -171,14 +179,14 @@ async function run() {
 
     const output = new Writable({ write(_c, _e, cb) { cb(); } });
 
-    const result = await runRoleTurn(
-      tmpDir,
-      'a-society',
-      'curator',
-      'System prompt',
-      [],
-      output
-    );
+    const result = await runRoleTurn({
+      workspaceRoot: tmpDir,
+      roleInstanceId: 'curator',
+      providedSystemPrompt: 'System prompt',
+      flowRef: directRunFlowRef,
+      providedHistory: [],
+      roleOutputStream: output,
+    });
 
     // With no user message in history, orient.ts must return null rather than injecting a prompt.
     assert.strictEqual(result, null);
@@ -201,18 +209,18 @@ async function run() {
     // Patch LLMGateway constructor to return a gateway with our mock provider
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-        return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+        return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
-        await runRoleTurn(
-            tmpDir,
-            'a-society',
-            'curator',
-            'System prompt', 
-            [{ role: 'user', content: 'Who are you?' }], 
-            output
-        );
+        await runRoleTurn({
+            workspaceRoot: tmpDir,
+            roleInstanceId: 'curator',
+            providedSystemPrompt: 'System prompt',
+            flowRef: directRunFlowRef,
+            providedHistory: [{ role: 'user', content: 'Who are you?' }],
+            roleOutputStream: output,
+        });
     } finally {
         LLMGateway.prototype.executeTurn = originalExecuteTurn;
     }
@@ -241,7 +249,7 @@ async function run() {
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     const originalEmit = renderer.emit.bind(renderer);
@@ -251,16 +259,15 @@ async function run() {
     };
 
     try {
-      const result = await runRoleTurn(
-        tmpDir,
-        'a-society',
-        'curator',
-        'System prompt',
-        [{ role: 'user', content: 'Who are you?' }],
-        output,
-        undefined,
-        renderer
-      );
+      const result = await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Who are you?' }],
+        roleOutputStream: output,
+        operatorRenderer: renderer,
+      });
       assert.deepStrictEqual(result, {
         handoff: { kind: 'awaiting_human' },
         contextUsage: 46
@@ -284,18 +291,17 @@ async function run() {
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
-      await runRoleTurn(
-        tmpDir,
-        'a-society',
-        'curator',
-        'System prompt',
-        [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined
-      );
+      await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Produce a handoff.' }],
+      });
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
       assert.ok(error instanceof HandoffParseError);
@@ -327,20 +333,18 @@ async function run() {
     const renderer = new CaptureRenderer();
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
-      await runRoleTurn(
-        tmpDir,
-        'a-society',
-        'curator',
-        'System prompt',
-        [{ role: 'user', content: 'Produce a handoff.' }],
-        undefined,
-        undefined,
-        renderer
-      );
+      await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Produce a handoff.' }],
+        operatorRenderer: renderer,
+      });
       assert.fail('Expected parse failure to propagate as HandoffParseError.');
     } catch (error: any) {
       assert.ok(error instanceof HandoffParseError);
@@ -373,7 +377,6 @@ async function run() {
       runningNodes: ['start'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
       status: 'running',
       stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -391,7 +394,7 @@ async function run() {
 
     const originalExecuteTurn = LLMGateway.prototype.executeTurn;
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
-      return originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
     };
 
     try {
@@ -428,9 +431,9 @@ async function run() {
     const workflowsDir = path.join(tmpDir, 'record');
     fs.mkdirSync(workflowsDir, { recursive: true });
     const workflowPath = path.join(workflowsDir, 'workflow.yaml');
-    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: node_1\n      role: owner\n  edges: []\n');
+    fs.writeFileSync(workflowPath, 'workflow:\n  name: Test Workflow\n  nodes:\n    - id: owner-intake\n      role: owner\n  edges: []\n');
 
-    const result = validateWorkflowFile(workflowPath, true);
+    const result = validateWorkflowFile(workflowPath);
     assert.ok(result.valid);
   });
 
@@ -448,7 +451,6 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
       receivingHandoff: {},
       historyHandoff: {},
@@ -530,7 +532,6 @@ async function run() {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
       status: 'running',
@@ -563,7 +564,7 @@ async function run() {
     const observedHistories: RuntimeMessageParam[][] = [];
     LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
       observedHistories.push((hist as RuntimeMessageParam[]).map(message => ({ ...message })));
-      const result = await originalExecuteTurn.call(new LLMGateway(tmpDir, mockProvider), sys, hist, opts);
+      const result = await originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
       if (result.text.includes('type: meta-analysis-complete')) {
         fs.mkdirSync(path.dirname(assignedFindingsPath), { recursive: true });
         fs.writeFileSync(assignedFindingsPath, 'Generated findings', 'utf8');
@@ -603,8 +604,8 @@ async function run() {
       const afterMetaAnalysis = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), tmpDir)!;
       assert.strictEqual(afterMetaAnalysis.status, 'awaiting_feedback_consent');
       assert.strictEqual(afterMetaAnalysis.improvementPhase?.status, 'awaiting_feedback_consent');
-      assert.deepStrictEqual(afterMetaAnalysis.improvementPhase?.completedNodeIds, [
-        'curator-meta-analysis'
+      assert.deepStrictEqual(afterMetaAnalysis.improvementPhase?.completedRoles, [
+        'curator'
       ]);
       await improvementOrchestrator.runFeedback(
         afterMetaAnalysis,
@@ -619,10 +620,10 @@ async function run() {
     assert.strictEqual(finalFlowRun.stateVersion, CURRENT_FLOW_STATE_VERSION, 'improvement initialization must keep the latest state version');
     assert.ok(fs.existsSync(path.join(recordDir, 'improvement.yaml')), 'improvement run should persist improvement.yaml');
     assert.strictEqual(finalFlowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
-    assert.deepStrictEqual(finalFlowRun.improvementPhase?.activeNodeIds, []);
-    assert.deepStrictEqual(finalFlowRun.improvementPhase?.completedNodeIds, [
-      'curator-meta-analysis',
-      'a-society-feedback-feedback'
+    assert.deepStrictEqual(finalFlowRun.improvementPhase?.runningRoles, []);
+    assert.deepStrictEqual(finalFlowRun.improvementPhase?.completedRoles, [
+      'curator',
+      'a-society-feedback'
     ]);
     assert.strictEqual(finalFlowRun.improvementPhase?.feedbackArtifactPath, feedbackArtifactPath);
     assert.strictEqual(finalFlowRun.improvementPhase?.feedbackConsent, FEEDBACK_CONSENT_STATUS.GRANTED);

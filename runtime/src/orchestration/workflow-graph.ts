@@ -1,7 +1,6 @@
 export interface WfNode {
   id: string;
   role: string;
-  step_index?: number;
   step_type?: 'meta-analysis' | 'feedback';
   [key: string]: unknown;
 }
@@ -9,6 +8,13 @@ export interface WfNode {
 export interface WfEdge {
   from: string;
   to: string;
+}
+
+export interface HandoffKeyParts {
+  from: string;
+  to: string;
+  fromNodeId: string;
+  targetId: string;
 }
 
 export class WorkflowGraph {
@@ -43,6 +49,17 @@ export class WorkflowGraph {
   }
 }
 
+export function parseHandoffKey(key: string): HandoffKeyParts | null {
+  const [from, to, extra] = key.split('=>');
+  if (!from || !to || extra !== undefined) return null;
+  return {
+    from,
+    to,
+    fromNodeId: from,
+    targetId: to,
+  };
+}
+
 export function getOutstandingInboundSources(wf: WorkflowGraph, completedHandoffs: string[], nodeId: string): string[] {
   return wf.getIncomingEdges(nodeId)
     .filter(e => !completedHandoffs.includes(wf.edgeKey(e.from, nodeId)))
@@ -57,6 +74,12 @@ export function getCompletedInboundSources(wf: WorkflowGraph, completedHandoffs:
 
 export function hasPendingOutgoing(wf: WorkflowGraph, completedHandoffs: string[], nodeId: string): boolean {
   return wf.getOutgoingEdges(nodeId).some(e => !completedHandoffs.includes(wf.edgeKey(nodeId, e.to)));
+}
+
+export function allIncidentEdgesCovered(wf: WorkflowGraph, completedHandoffs: string[], nodeId: string): boolean {
+  const completed = new Set(completedHandoffs);
+  return [...wf.getIncomingEdges(nodeId), ...wf.getOutgoingEdges(nodeId)]
+    .every(e => completed.has(wf.edgeKey(e.from, e.to)));
 }
 
 export function allEdgesCovered(wf: WorkflowGraph, completedHandoffs: string[]): boolean {

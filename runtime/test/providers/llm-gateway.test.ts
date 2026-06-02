@@ -137,7 +137,11 @@ console.log('\nllm-gateway');
 await test('late abort after streamed text returns is still treated as aborted', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
   const controller = new AbortController();
-  const gateway = new LLMGateway(tmpDir, new LateAbortTextProvider(() => controller.abort()));
+  const gateway = new LLMGateway({
+    mode: 'system',
+    workspaceRoot: tmpDir,
+    provider: new LateAbortTextProvider(() => controller.abort()),
+  });
 
   await assert.rejects(
     () => gateway.executeTurn(
@@ -156,8 +160,13 @@ await test('late abort after streamed text returns is still treated as aborted',
 
 await test('tool-call continuation and denial result are recorded before consent-denied suspension', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
-  const provider = new ToolCallThenTextProvider();
-  const gateway = new LLMGateway(tmpDir, provider);
+  const provider = new ToolCallThenTextProvider('demo-project/plan.md');
+  const gateway = new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+    provider,
+  });
   const gate = new BlockingConsentGate();
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please create the plan.' }];
   const persistedBatches: RuntimeMessageParam[][] = [];
@@ -175,7 +184,7 @@ await test('tool-call continuation and denial result are recorded before consent
 
   assert.deepStrictEqual(gate.requests[0], {
     toolName: 'write_file',
-    input: { path: 'plan.md', content: 'draft' },
+    input: { path: 'demo-project/plan.md', content: 'draft' },
     role: 'curator',
     nodeId: 'curator-registration',
   });
@@ -205,7 +214,12 @@ await test('tool-call continuation and denial result are recorded before consent
 await test('late abort after streamed tool-call text keeps the attempted tool call in history', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
   const controller = new AbortController();
-  const gateway = new LLMGateway(tmpDir, new LateAbortToolCallProvider(() => controller.abort()));
+  const gateway = new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+    provider: new LateAbortToolCallProvider(() => controller.abort()),
+  });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please create the plan.' }];
 
   await assert.rejects(
@@ -230,7 +244,12 @@ await test('project-scoped gateway allows feedback writes outside the active pro
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
   fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
   const provider = new ToolCallThenTextProvider('a-society/feedback/demo-flow.md', '# Feedback\n');
-  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const gateway = new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+    provider,
+  });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write feedback.' }];
 
   await gateway.executeTurn('System prompt', history);
@@ -248,10 +267,15 @@ await test('project-scoped gateway allows writes to the active state record fold
   fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
   const recordFolderPath = path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record');
   const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/record/01-note.md', '# Note\n');
-  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const gateway = new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+    provider,
+  });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write a record artifact.' }];
 
-  await gateway.executeTurn('System prompt', history, { recordFolderPath });
+  await gateway.executeTurn('System prompt', history);
 
   assert.strictEqual(
     fs.readFileSync(path.join(recordFolderPath, '01-note.md'), 'utf8'),
@@ -266,10 +290,15 @@ await test('project-scoped gateway blocks writes to flow state outside the activ
   fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
   const recordFolderPath = path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record');
   const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/flow.json', '{}');
-  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const gateway = new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+    provider,
+  });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write flow state.' }];
 
-  await gateway.executeTurn('System prompt', history, { recordFolderPath });
+  await gateway.executeTurn('System prompt', history);
 
   assert.strictEqual(fs.existsSync(path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'flow.json')), false);
   assert.strictEqual(history.at(-1)?.role, 'tool_result');
@@ -280,7 +309,12 @@ await test('project-scoped gateway still blocks writes to sibling projects', asy
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
   fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
   const provider = new ToolCallThenTextProvider('other-project/file.md', 'nope');
-  const gateway = new LLMGateway(tmpDir, provider, 'demo-project');
+  const gateway = new LLMGateway({
+    mode: 'project',
+    workspaceRoot: tmpDir,
+    flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+    provider,
+  });
   const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write elsewhere.' }];
 
   await gateway.executeTurn('System prompt', history);

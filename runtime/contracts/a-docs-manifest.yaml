@@ -36,11 +36,6 @@ files:
     scaffold: stub
     source_path: general/instructions/agents.md
 
-  - path: a-docs-guide.md
-    description: "a-docs guide - why each scaffolded agent-docs file exists and where future project-specific docs should be registered"
-    scaffold: stub
-    source_path: general/instructions/a-docs-guide.md
-
   - path: a-docs-design.md
     description: "a-docs design principles - cross-cutting rules for authoring and maintaining project agent-docs"
     scaffold: copy

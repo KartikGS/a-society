@@ -192,9 +192,8 @@ test('Scenario 4 — workflow graph validator runs on live workflow and reports 
 
 test('Scenario 4 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
   assert.doesNotThrow(() => {
-    backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'owner', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
-    // Flatten 2D plan to flat array for downstream assertions
-    backwardOrder = backwardPlan.flat();
+    backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'a-society-feedback', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
+    backwardOrder = backwardPlan.entries;
   });
 });
 
@@ -208,7 +207,7 @@ test('Scenario 4 — backward pass last entry is feedback role', () => {
   const last = backwardOrder[backwardOrder.length - 1];
   assert.strictEqual(last.stepType, 'feedback', 'Last entry should be the feedback role');
   assert.strictEqual(last.sessionInstruction, 'new-session', 'Feedback step should open a new session');
-  assert.strictEqual(last.role, 'owner', 'feedback entry role should equal feedbackRole argument');
+  assert.strictEqual(last.role, 'a-society-feedback', 'feedback entry role should equal feedbackRole argument');
 });
 
 test('Scenario 5 — meta-analysis entries reuse the existing session', () => {

@@ -57,11 +57,6 @@ function buildBootstrapIndex(projectNamespace: string): string {
       description: 'Agent entry point — scaffolded during initialization'
     },
     {
-      variable: `$${prefix}_A_DOCS_GUIDE`,
-      currentPath: projectPath('a-docs/a-docs-guide.md'),
-      description: 'a-docs rationale guide — scaffolded during initialization'
-    },
-    {
       variable: `$${prefix}_VISION`,
       currentPath: projectPath('a-docs/project-information/vision.md'),
       description: 'Project vision — scaffolded during initialization'
@@ -345,7 +340,6 @@ export function bootstrapInitializationFlow(
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
-      completedNodes: [],
       visitedNodeIds: [],
       completedHandoffs: [],
       receivingHandoff: {},

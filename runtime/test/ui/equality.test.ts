@@ -30,7 +30,6 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
       'owner-intake': { role: 'owner', reason: 'prompt-human' },
     },
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',

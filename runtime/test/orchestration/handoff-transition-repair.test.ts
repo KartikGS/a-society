@@ -70,7 +70,6 @@ await test('partial forward handoff is accepted and leaves remaining successors 
     runningNodes: ['owner-intake'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     visitedNodeIds: ['owner-intake'],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
@@ -93,7 +92,6 @@ await test('partial forward handoff is accepted and leaves remaining successors 
   assert.deepStrictEqual(updated.receivingHandoff['owner-intake=>branch-a'], [path.relative(workspaceRoot, artifactPath)]);
   assert.ok(updated.completedHandoffs.includes('owner-intake=>branch-a'));
   assert.ok(!updated.completedHandoffs.includes('owner-intake=>branch-b'));
-  assert.ok(!updated.completedNodes.includes('owner-intake'), 'node should remain incomplete until all outgoing handoffs are settled');
 
   fs.rmSync(workspaceRoot, { recursive: true, force: true });
 });
@@ -127,7 +125,6 @@ await test('invalid target is reported before missing artifact', async () => {
     runningNodes: ['owner-intake'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     visitedNodeIds: ['owner-intake'],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
@@ -200,7 +197,6 @@ await test('mixed forward and backward handoffs are applied edge-by-edge', async
     runningNodes: ['current'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: ['source-a', 'source-b'],
     visitedNodeIds: ['source-a', 'source-b', 'current'],
     completedHandoffs: ['source-a=>current', 'source-b=>current'],
     receivingHandoff: {},
@@ -236,8 +232,6 @@ await test('mixed forward and backward handoffs are applied edge-by-edge', async
   assert.ok(updated.completedHandoffs.includes('source-a=>current'), 'unrejected input edge should remain realized');
   assert.ok(!updated.completedHandoffs.includes('source-b=>current'), 'rejected input edge should be invalidated');
   assert.ok(updated.awaitingHandoff.includes('current'), 'current node should wait for corrected input');
-  assert.ok(!updated.completedNodes.includes('current'), 'mixed handoff must not complete current node');
-  assert.ok(!updated.completedNodes.includes('source-b'), 'rejected predecessor should be reopened');
   assert.ok(
     sink.events.some((event) =>
       event.kind === 'handoff.applied' &&

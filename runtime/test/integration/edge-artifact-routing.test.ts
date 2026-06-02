@@ -71,7 +71,6 @@ async function runTest() {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,

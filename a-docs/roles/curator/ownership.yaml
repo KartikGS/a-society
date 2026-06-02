@@ -2,8 +2,6 @@ role: curator
 surfaces:
   - path: general/
     scope: "Reusable library stewardship and truth ownership for all general/ surfaces"
-  - path: a-docs/a-docs-guide.md
-    scope: "Guide and rationale stewardship for internal docs"
   - path: a-docs/roles/curator/
     scope: "Curator role truth, support-doc truth, startup-context file, and ownership file"
   - path: a-docs/indexes/

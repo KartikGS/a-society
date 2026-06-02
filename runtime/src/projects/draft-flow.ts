@@ -77,7 +77,6 @@ export function initializeDraftFlow(
     runningNodes: ['owner-intake'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},

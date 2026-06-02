@@ -9,16 +9,15 @@ const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/
 
 export interface ForwardNodeEntryOptions {
   nodeId: string;
-  role: string;
   workspaceRoot: string;
   projectNamespace: string;
-  recordFolderPath?: string;
-  wf?: WorkflowGraph;
-  completedHandoffs?: string[];
-  receivingHandoffSnapshot?: Array<{ fromNodeId: string; artifacts: string[] }>;
-  entryMode?: 'first-node' | 'role-transition' | 'reopened-node';
-  previousNodeId?: string;
-  humanInput?: string;
+  isResume?: boolean;
+  handoffContext?: {
+    wf: WorkflowGraph;
+    completedHandoffs: string[];
+    receivingHandoffSnapshot?: Array<{ fromNodeId: string; artifacts: string[] }>;
+    staleForwardArtifacts?: Array<{ toNodeId: string; artifacts: string[] }>;
+  };
   includeWorkflowContract?: boolean;
   nodeContext?: {
     required_readings?: string[];
@@ -29,9 +28,6 @@ export interface ForwardNodeEntryOptions {
     transitions?: string[];
     notes?: string[];
   };
-  forwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
-  backwardHandoffTargets?: Array<{ nodeId: string; role: string }>;
-  staleForwardArtifacts?: Array<{ toNodeId: string; artifacts: string[] }>;
 }
 
 /**
@@ -42,49 +38,72 @@ export interface ForwardNodeEntryOptions {
 export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): string {
   const {
     nodeId,
-    role,
     workspaceRoot,
     projectNamespace,
-    recordFolderPath,
-    wf,
-    completedHandoffs,
-    receivingHandoffSnapshot,
-    entryMode = 'first-node',
-    previousNodeId,
-    humanInput,
+    isResume,
+    handoffContext,
     includeWorkflowContract,
     nodeContext,
-    forwardHandoffTargets,
-    backwardHandoffTargets,
-    staleForwardArtifacts
   } = opts;
   const lines: string[] = [];
 
-  lines.push(`Workflow node: ${nodeId} (role: ${role})`);
-  lines.push(`Node started at: ${new Date().toISOString()}`);
-  if (recordFolderPath) {
-    lines.push(`Record folder: ${recordFolderPath}`);
-  }
-  if (entryMode === 'role-transition' && previousNodeId) {
-    lines.push(
-      `You are continuing the same role-scoped flow session from workflow node ${previousNodeId} to ${nodeId}. ` +
-      'Prior role discussion remains available in this session, but the current task inputs below are authoritative for this node.'
-    );
-  } else if (entryMode === 'reopened-node') {
-    lines.push(
-      'This workflow node has been reopened in the same role-scoped flow session. ' +
-      'Prior discussion for this node remains available, but the current task inputs below are authoritative and may supersede earlier assumptions.'
-    );
-  } else {
-    lines.push(
-      'This is the first workflow node for this role in the current flow session. ' +
-      'Use the current node inputs and the already loaded startup authority to do this node\'s work.'
-    );
-  }
-
+  lines.push(`Node ${nodeId} ${isResume ? 'resumed' : 'started'} at: ${new Date().toISOString()}`);
   lines.push('');
 
-  if (wf && completedHandoffs !== undefined) {
+  // Injected only on first node visit when the node contract references workflow authority.
+  if (includeWorkflowContract) {
+    lines.push('Runtime workflow contract:');
+    lines.push('Use this contract when creating, updating, or repairing workflow.yaml for this active flow.');
+    if (fs.existsSync(RUNTIME_WORKFLOW_CONTRACT_PATH)) {
+      lines.push('[FILE: a-society/runtime/contracts/workflow.md]');
+      lines.push(fs.readFileSync(RUNTIME_WORKFLOW_CONTRACT_PATH, 'utf8'));
+    } else {
+      lines.push('[FILE ERROR: Could not read a-society/runtime/contracts/workflow.md]');
+    }
+    lines.push('');
+  }
+
+  // Injected only on first node visit when the node definition has at least one populated contract field.
+  if (nodeContext) {
+    const appendStringList = (heading: string, items?: string[]) => {
+      if (!items || items.length === 0) return;
+      lines.push(heading);
+      for (const item of items) {
+        lines.push(`- ${item}`);
+      }
+      lines.push('');
+    };
+
+    lines.push('Workflow node contract (first entry to this node only):');
+    lines.push('Use this snapshot as the authoritative node contract for this node in the active flow.');
+    lines.push('');
+
+    appendStringList('Guidance:', nodeContext.guidance);
+    appendStringList('Declared inputs:', nodeContext.inputs);
+    appendStringList('Declared work:', nodeContext.work);
+    appendStringList('Declared outputs:', nodeContext.outputs);
+    appendStringList('Transition notes:', nodeContext.transitions);
+    appendStringList('Node notes:', nodeContext.notes);
+
+    if (nodeContext.required_readings && nodeContext.required_readings.length > 0) {
+      lines.push('Node-specific required reading (first entry to this node only):');
+      for (const varName of nodeContext.required_readings) {
+        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
+        if (resolvedPath && fs.existsSync(resolvedPath)) {
+          lines.push(`[FILE: ${varName} (resolved to ${resolvedPath})]`);
+          lines.push(fs.readFileSync(resolvedPath, 'utf8'));
+        } else {
+          lines.push(`[FILE ERROR: Could not resolve or read ${varName}]`);
+        }
+        lines.push('');
+      }
+    }
+  }
+
+  // Handoff state: received artifacts, pending inbound, and sent/unsent outbound edges.
+  if (handoffContext) {
+    const { wf, completedHandoffs, receivingHandoffSnapshot, staleForwardArtifacts } = handoffContext;
+
     const inboundHandoffs = (receivingHandoffSnapshot ?? []).map(({ fromNodeId, artifacts }) => ({
       fromNodeId,
       artifacts,
@@ -150,75 +169,6 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
       for (const id of notSentToNodeIds) lines.push(`- ${id}`);
       lines.push('');
     }
-  }
-
-  if (humanInput) {
-    lines.push('Human input:');
-    lines.push(humanInput);
-    lines.push('');
-  }
-
-  if (includeWorkflowContract) {
-    lines.push('Runtime workflow contract:');
-    lines.push('Use this contract when creating, updating, or repairing workflow.yaml for this active flow.');
-    if (fs.existsSync(RUNTIME_WORKFLOW_CONTRACT_PATH)) {
-      lines.push('[FILE: a-society/runtime/contracts/workflow.md]');
-      lines.push(fs.readFileSync(RUNTIME_WORKFLOW_CONTRACT_PATH, 'utf8'));
-    } else {
-      lines.push('[FILE ERROR: Could not read a-society/runtime/contracts/workflow.md]');
-    }
-    lines.push('');
-  }
-
-  if (nodeContext) {
-    const appendStringList = (heading: string, items?: string[]) => {
-      if (!items || items.length === 0) return;
-      lines.push(heading);
-      for (const item of items) {
-        lines.push(`- ${item}`);
-      }
-      lines.push('');
-    };
-
-    lines.push('Workflow node contract (first entry to this node only):');
-    lines.push('Use this snapshot as the authoritative node contract for this node in the active flow.');
-    lines.push('');
-
-    appendStringList('Guidance:', nodeContext.guidance);
-    appendStringList('Declared inputs:', nodeContext.inputs);
-    appendStringList('Declared work:', nodeContext.work);
-    appendStringList('Declared outputs:', nodeContext.outputs);
-    appendStringList('Transition notes:', nodeContext.transitions);
-    appendStringList('Node notes:', nodeContext.notes);
-
-    if (nodeContext.required_readings && nodeContext.required_readings.length > 0) {
-      lines.push('Node-specific required reading (first entry to this node only):');
-      for (const varName of nodeContext.required_readings) {
-        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
-        if (resolvedPath && fs.existsSync(resolvedPath)) {
-          lines.push(`[FILE: ${varName} (resolved to ${resolvedPath})]`);
-          lines.push(fs.readFileSync(resolvedPath, 'utf8'));
-        } else {
-          lines.push(`[FILE ERROR: Could not resolve or read ${varName}]`);
-        }
-        lines.push('');
-      }
-    }
-  }
-
-  const hasForward = forwardHandoffTargets && forwardHandoffTargets.length > 0;
-  const hasBackward = backwardHandoffTargets && backwardHandoffTargets.length > 0;
-  if (hasForward || hasBackward) {
-    lines.push('Handoff routing (first entry to this node only):');
-    if (hasForward) {
-      const forwardList = forwardHandoffTargets!.map(t => `${t.nodeId} (${t.role})`).join(', ');
-      lines.push(`You must hand off to: ${forwardList}`);
-    }
-    if (hasBackward) {
-      const backwardList = backwardHandoffTargets!.map(t => `${t.nodeId} (${t.role})`).join(', ');
-      lines.push(`If you encounter an issue, you can hand off back to: ${backwardList}`);
-    }
-    lines.push('');
   }
 
   lines.push('Proceed from these current node inputs.');

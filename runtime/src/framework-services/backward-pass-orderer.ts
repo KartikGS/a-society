@@ -39,6 +39,11 @@ export interface BackwardPassEntry {
   findingsRolesToInject: string[];
 }
 
+export interface BackwardPassEdge {
+  from: string;
+  to: string;
+}
+
 export const FINDINGS_DIRECTORY_NAME = 'findings';
 
 export function deterministicFindingsFilePath(
@@ -53,10 +58,13 @@ export function deterministicFindingsFilePath(
 }
 
 /**
- * Sequential steps (outer array) containing concurrent groups (inner array).
- * Linear flows have exactly one entry in each inner array.
+ * Backward-pass execution graph. Edges point from a produced findings artifact
+ * to the later meta-analysis/feedback role instance that should consume it.
  */
-export type BackwardPassPlan = BackwardPassEntry[][];
+export interface BackwardPassPlan {
+  entries: BackwardPassEntry[];
+  edges: BackwardPassEdge[];
+}
 type BackwardPassMode = Exclude<ProtocolImprovementChoiceMode, typeof IMPROVEMENT_CHOICE_MODE.NONE>;
 
 export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFrontmatter {
@@ -166,152 +174,167 @@ export function buildBackwardPassPlan(
   mode: BackwardPassMode,
 ): BackwardPassPlan {
   const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
-  const hasOutgoing = new Set(edges.map(e => e.from));
-  const terminalIds = nodes.map(n => n.id).filter(id => !hasOutgoing.has(id));
-
-  if (terminalIds.length === 0) {
-    throw new Error('workflow.nodes must produce at least one terminal node');
-  }
+  const feedbackRoleId = parseRoleIdentity(feedbackRole).instanceRoleId;
 
   if (mode === IMPROVEMENT_CHOICE_MODE.PARALLEL) {
-    const roles = Array.from(new Set(nodes.map(n => n.role)));
-    const toMetaAnalysisEntry = (role: string): BackwardPassEntry => ({
+    const roles = Array.from(new Set(nodes.map(n => parseRoleIdentity(n.role).instanceRoleId)));
+    const nonOwnerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId !== OWNER_BASE_ROLE_ID);
+    const ownerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId === OWNER_BASE_ROLE_ID);
+    if (ownerRoles.length !== 1) {
+      throw new Error('parallel improvement mode requires exactly one owner role');
+    }
+    if (roles.includes(feedbackRoleId)) {
+      throw new Error('improvement feedback role must be distinct from workflow meta-analysis roles');
+    }
+
+    const toMetaAnalysisEntry = (role: string, findingsRolesToInject: string[] = []): BackwardPassEntry => ({
       role,
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
-      findingsRolesToInject: [],
+      findingsRolesToInject,
     });
-    const nonOwnerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId !== OWNER_BASE_ROLE_ID);
-    const ownerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId === OWNER_BASE_ROLE_ID);
+    const nonOwnerEntries = nonOwnerRoles.map(role => toMetaAnalysisEntry(role));
+    const ownerEntry = toMetaAnalysisEntry(ownerRoles[0], nonOwnerRoles);
 
-    const feedbackGroup: BackwardPassEntry[] = [{
-      role: feedbackRole,
+    const feedbackEntry: BackwardPassEntry = {
+      role: feedbackRoleId,
       stepType: 'feedback',
       sessionInstruction: 'new-session',
       findingsRolesToInject: [],
-    }];
+    };
 
-    const plan: BackwardPassPlan = [];
-    if (nonOwnerRoles.length > 0) plan.push(nonOwnerRoles.map(toMetaAnalysisEntry));
-    plan.push(ownerRoles.map(toMetaAnalysisEntry));
-    plan.push(feedbackGroup);
-    return plan;
+    const edges: BackwardPassEdge[] = [
+      ...nonOwnerEntries.map(entry => ({ from: entry.role, to: ownerEntry.role })),
+      { from: ownerEntry.role, to: feedbackEntry.role },
+    ];
+
+    return {
+      entries: [...nonOwnerEntries, ownerEntry, feedbackEntry],
+      edges,
+    };
   }
 
   // mode === graph-based
-
-  // Step 1: Compute topological order position (BFS from sources)
-  const incomingCount: Record<string, number> = {};
-  const children: Record<string, string[]> = {};
+  const incomingCount = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  const children: Record<string, string[]> = Object.fromEntries(nodes.map(n => [n.id, []]));
   for (const node of nodes) {
-    incomingCount[node.id] = 0;
-    children[node.id] = [];
+    parseRoleIdentity(node.role);
   }
   for (const edge of edges) {
+    if (!nodeById[edge.from] || !nodeById[edge.to]) continue;
     incomingCount[edge.to] = (incomingCount[edge.to] ?? 0) + 1;
     children[edge.from].push(edge.to);
   }
 
+  // Step 1: Find the first workflow node for each role instance by minimum depth
+  // from the workflow source. Repeated later nodes for the same role are collapsed.
   const sources = nodes.filter(n => incomingCount[n.id] === 0).map(n => n.id);
-  const topologicalOrder: string[] = [];
-  const queue = [...sources];
-  const processedIncoming = { ...incomingCount };
-
+  if (sources.length !== 1) {
+    throw new Error('workflow.nodes must produce exactly one source node');
+  }
+  const minDepth: Record<string, number> = {};
+  const queue = sources.map(id => {
+    minDepth[id] = 0;
+    return id;
+  });
   while (queue.length > 0) {
     const currentId = queue.shift()!;
-    topologicalOrder.push(currentId);
-    for (const childId of children[currentId]) {
-      processedIncoming[childId]--;
-      if (processedIncoming[childId] === 0) {
+    const nextDepth = minDepth[currentId] + 1;
+    for (const childId of children[currentId] ?? []) {
+      if (minDepth[childId] === undefined || nextDepth < minDepth[childId]) {
+        minDepth[childId] = nextDepth;
         queue.push(childId);
       }
     }
   }
 
-  const nodePosition = Object.fromEntries(topologicalOrder.map((id, index) => [id, index]));
-
-  // Step 2: First occurrence position per role
-  const firstOccurrencePosition: Record<string, number> = {};
+  const keptNodeByRole = new Map<string, WorkflowNode>();
   for (const node of nodes) {
-    const pos = nodePosition[node.id];
-    if (pos !== undefined) {
-      if (firstOccurrencePosition[node.role] === undefined || pos < firstOccurrencePosition[node.role]) {
-        firstOccurrencePosition[node.role] = pos;
-      }
+    const role = parseRoleIdentity(node.role).instanceRoleId;
+    const current = keptNodeByRole.get(role);
+    const depth = minDepth[node.id] ?? Number.POSITIVE_INFINITY;
+    const currentDepth = current ? (minDepth[current.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
+    if (!current || depth < currentDepth) {
+      keptNodeByRole.set(role, node);
     }
   }
 
-  // Step 3: Direct successor roles per role
-  const directSuccessorRoles: Record<string, Set<string>> = {};
-  for (const edge of edges) {
-    const fromRole = nodeById[edge.from].role;
-    const toRole = nodeById[edge.to].role;
-    if (!directSuccessorRoles[fromRole]) directSuccessorRoles[fromRole] = new Set();
-    directSuccessorRoles[fromRole].add(toRole);
-  }
+  const keptNodeIds = new Set(Array.from(keptNodeByRole.values()).map(node => node.id));
+  const roleByKeptNodeId = new Map(
+    Array.from(keptNodeByRole.entries()).map(([role, node]) => [node.id, role])
+  );
 
-  // Step 4: Backward pass grouping (BFS from terminals through predecessors)
-  const predecessors: Record<string, string[]> = {};
-  for (const edge of edges) {
-    predecessors[edge.to] = [...(predecessors[edge.to] ?? []), edge.from];
-  }
+  // Step 2: Remove non-canonical repeated-role nodes by shortcutting through
+  // them. A kept node connects to the first kept descendants reachable through
+  // zero or more removed nodes.
+  const forwardRoleEdges: BackwardPassEdge[] = [];
+  const forwardRoleEdgeKeys = new Set<string>();
+  for (const keptNode of keptNodeByRole.values()) {
+    const fromRole = roleByKeptNodeId.get(keptNode.id)!;
+    const seen = new Set<string>();
+    const searchQueue = [...(children[keptNode.id] ?? [])];
+    while (searchQueue.length > 0) {
+      const candidateId = searchQueue.shift()!;
+      if (seen.has(candidateId)) continue;
+      seen.add(candidateId);
+      if (candidateId === keptNode.id) continue;
 
-  const nodeDistance: Record<string, number> = {};
-  const backQueue = [...terminalIds];
-  terminalIds.forEach(id => { nodeDistance[id] = 0; });
-
-  while (backQueue.length > 0) {
-    const current = backQueue.shift()!;
-    const dist = nodeDistance[current];
-    for (const pred of (predecessors[current] ?? [])) {
-      if (nodeDistance[pred] === undefined) {
-        nodeDistance[pred] = dist + 1;
-        backQueue.push(pred);
+      if (keptNodeIds.has(candidateId)) {
+        const toRole = roleByKeptNodeId.get(candidateId)!;
+        const key = `${fromRole}=>${toRole}`;
+        if (fromRole !== toRole && !forwardRoleEdgeKeys.has(key)) {
+          forwardRoleEdges.push({ from: fromRole, to: toRole });
+          forwardRoleEdgeKeys.add(key);
+        }
+        continue;
       }
+
+      searchQueue.push(...(children[candidateId] ?? []));
     }
   }
 
-  const roleMaxDistance: Record<string, number> = {};
-  for (const [id, dist] of Object.entries(nodeDistance)) {
-    const role = nodeById[id].role;
-    roleMaxDistance[role] = Math.max(roleMaxDistance[role] ?? 0, dist);
-  }
-
-  const roleGroupsByDist: Record<number, string[]> = {};
-  for (const [role, dist] of Object.entries(roleMaxDistance)) {
-    roleGroupsByDist[dist] = [...(roleGroupsByDist[dist] ?? []), role];
-  }
-
-  const sortedRoleDistances = Object.keys(roleGroupsByDist).map(Number).sort((a, b) => a - b);
-  const plan: BackwardPassPlan = [];
-
-  for (const dist of sortedRoleDistances) {
-    const roles = roleGroupsByDist[dist];
-    const groupEntries: BackwardPassEntry[] = roles.map(role => {
-      const successors = directSuccessorRoles[role] ?? new Set();
-      const findingsRolesToInject = Array.from(successors).filter(s =>
-        firstOccurrencePosition[s] > firstOccurrencePosition[role]
-      );
-
-      return {
-        role,
-        stepType: 'meta-analysis',
-        sessionInstruction: 'existing-session',
-        findingsRolesToInject,
-      };
+  // Step 3: Reverse the pruned role graph. Backward edges now mean "findings
+  // from this downstream role should be injected into that upstream role."
+  const metaEntriesByRole = new Map<string, BackwardPassEntry>();
+  for (const [role] of keptNodeByRole) {
+    metaEntriesByRole.set(role, {
+      role,
+      stepType: 'meta-analysis',
+      sessionInstruction: 'existing-session',
+      findingsRolesToInject: [],
     });
-    plan.push(groupEntries);
+  }
+  if (metaEntriesByRole.has(feedbackRoleId)) {
+    throw new Error('improvement feedback role must be distinct from workflow meta-analysis roles');
   }
 
-  // Final Feedback Step
-  plan.push([{
-    role: feedbackRole,
+  const metaEdges: BackwardPassEdge[] = forwardRoleEdges.map(edge => ({
+    from: edge.to,
+    to: edge.from,
+  }));
+
+  const incomingByRole = new Map(Array.from(metaEntriesByRole.keys()).map(role => [role, [] as string[]]));
+  for (const edge of metaEdges) {
+    incomingByRole.get(edge.to)?.push(edge.from);
+  }
+
+  for (const entry of metaEntriesByRole.values()) {
+    entry.findingsRolesToInject = incomingByRole.get(entry.role) ?? [];
+  }
+
+  const feedbackEntry: BackwardPassEntry = {
+    role: feedbackRoleId,
     stepType: 'feedback',
     sessionInstruction: 'new-session',
     findingsRolesToInject: [],
-  }]);
+  };
+  const sourceRole = parseRoleIdentity(nodeById[sources[0]].role).instanceRoleId;
+  const feedbackEdge = { from: sourceRole, to: feedbackEntry.role };
 
-  return plan;
+  return {
+    entries: [...metaEntriesByRole.values(), feedbackEntry],
+    edges: [...metaEdges, feedbackEdge],
+  };
 }
 
 export function computeBackwardPassPlan(

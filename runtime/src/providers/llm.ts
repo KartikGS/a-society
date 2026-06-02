@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
+import type { FlowRef, LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
 import { CONSENT_CHECK_RESULT, LLMGatewayError } from '../common/types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from '../tools/file-executor.js';
 import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.js';
@@ -13,20 +13,18 @@ import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKe
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
 
-function projectWriteRoots(
-  workspaceRoot: string,
-  projectNamespace: string,
-  recordFolderPath?: string,
-): string[] {
-  const roots = [
-    path.join(workspaceRoot, projectNamespace),
-    path.join(workspaceRoot, 'a-society', 'feedback'),
-  ];
-  if (recordFolderPath) {
-    roots.push(recordFolderPath);
-  }
-  return roots;
-}
+export type LLMGatewayOptions =
+  | {
+      mode: 'project';
+      workspaceRoot: string;
+      flowRef: FlowRef;
+      provider?: LLMProvider;
+    }
+  | {
+      mode: 'system';
+      workspaceRoot: string;
+      provider?: LLMProvider;
+    };
 
 function createProvider(): LLMProvider {
   const active = getActiveModelWithKey();
@@ -65,29 +63,23 @@ function throwIfAborted(signal: AbortSignal | undefined, partialText?: string): 
 
 export class LLMGateway {
   private provider: LLMProvider;
-  private workspaceRoot?: string;
-  private projectNamespace?: string;
   private fileExecutor?: FileToolExecutor;
   private bashExecutor?: BashToolExecutor;
   private webSearchExecutor?: WebSearchExecutor;
   private tools?: ToolDefinition[];
 
-  constructor(workspaceRoot?: string, provider?: LLMProvider, projectNamespace?: string) {
-    if (workspaceRoot) {
-      configureSettingsStore(workspaceRoot);
-      this.workspaceRoot = path.resolve(workspaceRoot);
-      this.projectNamespace = projectNamespace;
-    }
+  constructor(options: LLMGatewayOptions) {
+    const workspaceRoot = path.resolve(options.workspaceRoot);
+    configureSettingsStore(workspaceRoot);
 
-    if (provider) {
-      this.provider = provider;
+    if (options.provider) {
+      this.provider = options.provider;
     } else {
       this.provider = createProvider();
     }
 
-    if (workspaceRoot) {
-      const writeRoots = projectNamespace ? projectWriteRoots(workspaceRoot, projectNamespace) : undefined;
-      this.fileExecutor = new FileToolExecutor(workspaceRoot, writeRoots);
+    if (options.mode === 'project') {
+      this.fileExecutor = new FileToolExecutor(workspaceRoot, options.flowRef);
       this.bashExecutor = new BashToolExecutor(workspaceRoot);
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();
@@ -103,13 +95,6 @@ export class LLMGateway {
     messageHistory: RuntimeMessageParam[],
     options?: TurnOptions
   ): Promise<GatewayTurnResult> {
-    if (this.workspaceRoot && this.projectNamespace) {
-      this.fileExecutor = new FileToolExecutor(
-        this.workspaceRoot,
-        projectWriteRoots(this.workspaceRoot, this.projectNamespace, options?.recordFolderPath)
-      );
-    }
-
     const tracer = TelemetryManager.getTracer();
     const toolsEnabled = !!(this.tools && this.fileExecutor);
     return tracer.startActiveSpan('llm.gateway.execute_turn', {

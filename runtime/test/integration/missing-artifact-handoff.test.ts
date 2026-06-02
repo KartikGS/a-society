@@ -80,7 +80,6 @@ async function runTest() {
     runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -118,7 +117,7 @@ async function runTest() {
     const repairNotice = sink.events.find(
       (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
     );
-    assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed after repaired handoff.");
+    assert.ok(updatedFlow.completedHandoffs.includes('start=>next'), "Expected handoff 'start=>next' to be completed after repair.");
     assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['valid-output.md'], "Expected node 'next' to receive the repaired handoff.");
     assert.ok(repairNotice, 'Expected sink to contain a repair.requested event with scope "node".');
     assert.strictEqual(repairNotice.role, 'start');

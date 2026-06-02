@@ -72,13 +72,14 @@ Validation rules:
 - Every node requires non-empty string `id` and `role`.
 - `role` is a role instance id: lowercase kebab-case with an optional numeric `_N` suffix, such as `owner`, `technical-architect`, or `owner_2`.
 - Node ids must be unique.
+- The first declared node must have `id: owner-intake`.
 - `workflow.edges` is required and must be an array.
 - Every edge requires `from` and `to`, and both must match node ids.
 - Optional string-list fields must be arrays of non-empty strings when present.
 - Optional object-list fields must contain the fields shown above.
 - Unknown keys fail validation.
 
-Strict validation additionally requires a single `owner` start node and an `owner` terminal node. A single-node workflow is valid only when that node's role id is `owner`.
+Strict validation additionally requires a single `owner` start node whose id is `owner-intake`, and an `owner` terminal node. A single-node workflow is valid only when that node's id is `owner-intake` and its role id is `owner`.
 
 ---
 
@@ -144,3 +145,5 @@ The handoff block's `target_node_id` must match a node id in the active record s
 When exactly one node should receive control, emit a single handoff object. When parallel branches should start, emit one handoff entry per target node. The handoff syntax itself is defined in `runtime/contracts/handoff.md`; this file defines how those target node ids relate to `workflow.yaml`.
 
 When the workflow snapshot changes mid-flow, the workflow-authority node must update `workflow.yaml` before emitting handoffs that depend on the new path.
+
+When updating `workflow.yaml` after a flow has already started, preserve every node and active handoff edge that runtime state still references. The new snapshot must include nodes referenced by `runningNodes`, `awaitingHumanNodes`, `pendingHumanInputs`, `visitedNodeIds`, `awaitingHandoff`, `completedHandoffs`, and `receivingHandoff`. Completed handoff keys must still exist as forward edges. Active receiving handoff keys must still connect adjacent nodes in either direction, so backward correction handoffs remain valid. Nodes waiting for human input must keep the same role instance id.

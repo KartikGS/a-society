@@ -30,7 +30,6 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},

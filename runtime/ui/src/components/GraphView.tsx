@@ -10,6 +10,7 @@ import {
   type Node
 } from '@xyflow/react';
 import { getActiveNodeIds } from '../../../src/common/flow-state.js';
+import { WorkflowGraph as RuntimeWorkflowGraph, allIncidentEdgesCovered } from '../../../src/orchestration/workflow-graph.js';
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
 import { toRoleKey } from '../app/roles';
 import type { FlowRef, FlowRun, WorkflowGraph } from '../types';
@@ -57,20 +58,22 @@ function buildReactFlowState(
 
   const activeNodeIds = getActiveNodeIds(flowRun);
   const awaitingHumanNodeIds = Object.keys(flowRun.awaitingHumanNodes);
-  const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
-  const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
+  const improvementActiveNodeIds = flowRun.improvementPhase?.runningRoles ?? EMPTY_STRINGS;
+  const improvementCompletedNodeIds = flowRun.improvementPhase?.completedRoles ?? EMPTY_STRINGS;
+  const visitedNodeIds = flowRun.visitedNodeIds ?? EMPTY_STRINGS;
   const improvementAwaitingRoleKeys = new Set(
     Object.keys(flowRun.improvementPhase?.awaitingHumanRoles ?? {})
       .map(toRoleKey)
       .filter((roleKey): roleKey is string => roleKey !== null)
   );
+  const runtimeWorkflow = new RuntimeWorkflowGraph(workflow);
 
   const nodes: Node[] = workflow.nodes.map((node) => {
     const { x, y } = g.node(node.id);
 
     const isCompleted = graphMode === 'improvement'
       ? improvementCompletedNodeIds.includes(node.id)
-      : flowRun.completedNodes.includes(node.id);
+      : visitedNodeIds.includes(node.id) && allIncidentEdgesCovered(runtimeWorkflow, flowRun.completedHandoffs, node.id);
     const isBackward = graphMode === 'flow' && backwardActive.includes(node.id);
     const isBackwardSource = graphMode === 'flow' && backwardSources.includes(node.id) && activeNodeIds.includes(node.id);
     const isAwaitingHuman = graphMode === 'improvement'
@@ -81,11 +84,11 @@ function buildReactFlowState(
       : activeNodeIds.includes(node.id);
 
     let tone = 'node-neutral';
-    if (isCompleted) tone = 'node-completed';
-    else if (isAwaitingHuman) tone = 'node-awaiting-human';
+    if (isAwaitingHuman) tone = 'node-awaiting-human';
     else if (isBackward) tone = 'node-backward';
     else if (isBackwardSource) tone = 'node-backward-source';
     else if (isActive) tone = 'node-active';
+    else if (isCompleted) tone = 'node-completed';
 
     return {
       id: node.id,
@@ -133,13 +136,13 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areStringArraysEqual(Object.keys(left.awaitingHumanNodes), Object.keys(right.awaitingHumanNodes)) &&
     areStringArraysEqual(left.awaitingHandoff, right.awaitingHandoff) &&
-    areStringArraysEqual(left.completedNodes, right.completedNodes) &&
+    areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
+    areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     left.improvementPhase?.status === right.improvementPhase?.status &&
     left.improvementPhase?.mode === right.improvementPhase?.mode &&
-    left.improvementPhase?.currentStep === right.improvementPhase?.currentStep &&
     left.improvementPhase?.improvementWorkflowPath === right.improvementPhase?.improvementWorkflowPath &&
-    areStringArraysEqual(left.improvementPhase?.activeNodeIds, right.improvementPhase?.activeNodeIds) &&
-    areStringArraysEqual(left.improvementPhase?.completedNodeIds, right.improvementPhase?.completedNodeIds) &&
+    areStringArraysEqual(left.improvementPhase?.runningRoles, right.improvementPhase?.runningRoles) &&
+    areStringArraysEqual(left.improvementPhase?.completedRoles, right.improvementPhase?.completedRoles) &&
     areStringArraysEqual(Object.keys(left.improvementPhase?.awaitingHumanRoles ?? {}), Object.keys(right.improvementPhase?.awaitingHumanRoles ?? {}))
   );
 }

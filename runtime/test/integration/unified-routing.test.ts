@@ -97,7 +97,6 @@ async function runTest() {
     runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     completedHandoffs: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
@@ -167,7 +166,7 @@ async function runTest() {
     const hasRepairNotice = repairNotice !== undefined;
 
     console.log("Validation:");
-    console.log(`- Node 'start' completed: ${updatedFlow.completedNodes.includes('start') ? "Yes" : "No"}`);
+    console.log(`- Handoff 'start=>next' completed: ${updatedFlow.completedHandoffs.includes('start=>next') ? "Yes" : "No"}`);
     console.log(`- Node 'next' received handoff: ${updatedFlow.receivingHandoff['start=>next'] ? "Yes" : "No"}`);
     console.log(`- Repair message injected into history: ${repairInjected ? "Yes" : "No"}`);
     console.log(`- Canonical node guidance injected from main workflow: ${canonicalGuidanceInjected ? "Yes" : "No"}`);
@@ -175,7 +174,7 @@ async function runTest() {
     console.log(`- Sink has role.active event: ${hasRoleActiveNotice ? "Yes" : "No"}`);
     console.log(`- Sink has repair event: ${hasRepairNotice ? "Yes" : "No"}`);
 
-    assert.ok(updatedFlow.completedNodes.includes('start'), "Expected node 'start' to be completed.");
+    assert.ok(updatedFlow.completedHandoffs.includes('start=>next'), "Expected handoff 'start=>next' to be completed.");
     assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['mock.md'], "Expected node 'next' to receive a handoff.");
     assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
     assert.ok(canonicalGuidanceInjected, "Expected node contract guidance to be resolved from a-docs/workflow/main.yaml.");

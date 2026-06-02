@@ -73,7 +73,6 @@ await test('feedback repair status is emitted as an event, not role output strea
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
-    completedNodes: [],
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},
@@ -84,7 +83,6 @@ await test('feedback repair status is emitted as an event, not role output strea
     improvementPhase: {
       status: 'awaiting_feedback_consent',
       mode: IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
-      currentStep: 1,
       completedRoles: ['curator'],
       runningRoles: [],
       awaitingHumanRoles: {},
@@ -92,8 +90,6 @@ await test('feedback repair status is emitted as an event, not role output strea
       findingsProduced: {
         curator: path.relative(workspaceRoot, findingsPath),
       },
-      activeNodeIds: [],
-      completedNodeIds: ['curator-meta-analysis'],
       feedbackArtifactPath,
       feedbackConsent: FEEDBACK_CONSENT_STATUS.PENDING,
     },

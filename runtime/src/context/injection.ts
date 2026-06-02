@@ -32,13 +32,15 @@ export class ContextInjectionService {
   static buildContextBundle(
     projectNamespace: string,
     roleInstanceId: string,
-    workspaceRoot: string
+    workspaceRoot: string,
+    recordFolderPath: string
   ): ContextBundleResult {
     const roleIdentity = parseRoleIdentity(roleInstanceId);
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
 
     // 0a. Role announcement
     bundle += `You are the ${roleIdentity.instanceRoleId} agent for ${projectNamespace}. Below is information that will help you play your role.\n`;
+    bundle += `Record folder: ${recordFolderPath}\n`;
     if (roleIdentity.instanceRoleId !== roleIdentity.baseRoleId) {
       bundle += `This session uses the ${roleIdentity.baseRoleId} role authority and required readings while keeping a separate ${roleIdentity.instanceRoleId} session identity.\n`;
     }

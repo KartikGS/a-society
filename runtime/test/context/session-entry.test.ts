@@ -55,19 +55,26 @@ fs.writeFileSync(
   'Startup reading content that should not be re-injected.'
 );
 
-test('buildForwardNodeEntryMessage: contains node header and first-node role-session framing', () => {
+test('buildForwardNodeEntryMessage: contains node header', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
   });
 
-  assert.ok(msg.includes('Workflow node: owner-gate (role: owner)'));
-  assert.ok(msg.includes('Node started at:'));
-  assert.ok(msg.includes('This is the first workflow node for this role in the current flow session.'));
-  assert.ok(msg.includes('already loaded startup authority'));
+  assert.ok(msg.includes('Node owner-gate started at:'));
   assert.ok(msg.includes('Proceed from these current node inputs.'));
+});
+
+test('buildForwardNodeEntryMessage: uses resumed label when isResume is true', () => {
+  const msg = buildForwardNodeEntryMessage({
+    nodeId: 'owner-gate',
+    workspaceRoot: tmpDir,
+    projectNamespace,
+    isResume: true,
+  });
+
+  assert.ok(msg.includes('Node owner-gate resumed at:'));
 });
 
 test('buildForwardNodeEntryMessage: renders active artifact file block with content', () => {
@@ -75,12 +82,9 @@ test('buildForwardNodeEntryMessage: renders active artifact file block with cont
   const wf = new WorkflowGraph({ nodes: [{ id: 'source-node', role: 'source' }, { id: 'owner-gate', role: 'owner' }], edges: [{ from: 'source-node', to: 'owner-gate' }] });
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    wf,
-    completedHandoffs: [],
-    receivingHandoffSnapshot: [{ fromNodeId: 'source-node', artifacts: [relPath] }]
+    handoffContext: { wf, completedHandoffs: [], receivingHandoffSnapshot: [{ fromNodeId: 'source-node', artifacts: [relPath] }] }
   });
 
   assert.ok(msg.includes('From predecessor source-node:'));
@@ -92,12 +96,9 @@ test('buildForwardNodeEntryMessage: renders (File does not exist yet) for missin
   const wf = new WorkflowGraph({ nodes: [{ id: 'source-node', role: 'source' }, { id: 'owner-gate', role: 'owner' }], edges: [{ from: 'source-node', to: 'owner-gate' }] });
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    wf,
-    completedHandoffs: [],
-    receivingHandoffSnapshot: [{ fromNodeId: 'source-node', artifacts: ['nonexistent/path.md'] }]
+    handoffContext: { wf, completedHandoffs: [], receivingHandoffSnapshot: [{ fromNodeId: 'source-node', artifacts: ['nonexistent/path.md'] }] }
   });
 
   assert.ok(msg.includes('(File does not exist yet)'));
@@ -112,13 +113,9 @@ test('buildForwardNodeEntryMessage: renders superseded forward artifact paths fo
   });
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-intake',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
-    wf,
-    completedHandoffs: [],
-    receivingHandoffSnapshot: [{ fromNodeId: 'review', artifacts: [backwardRelPath] }],
-    staleForwardArtifacts: [{ toNodeId: 'review', artifacts: [forwardRelPath] }]
+    handoffContext: { wf, completedHandoffs: [], receivingHandoffSnapshot: [{ fromNodeId: 'review', artifacts: [backwardRelPath] }], staleForwardArtifacts: [{ toNodeId: 'review', artifacts: [forwardRelPath] }] }
   });
 
   assert.ok(msg.includes('From successor review'));
@@ -130,51 +127,9 @@ test('buildForwardNodeEntryMessage: renders superseded forward artifact paths fo
   assert.ok(!msg.includes('Artifact content here.'));
 });
 
-test('buildForwardNodeEntryMessage: includes role-transition framing when previous node provided', () => {
-  const msg = buildForwardNodeEntryMessage({
-    nodeId: 'owner-gate',
-    role: 'owner',
-    workspaceRoot: tmpDir,
-    projectNamespace,
-    entryMode: 'role-transition',
-    previousNodeId: 'owner-intake'
-  });
-
-  assert.ok(msg.includes('continuing the same role-scoped flow session from workflow node owner-intake to owner-gate'));
-  assert.ok(msg.includes('current task inputs below are authoritative for this node'));
-});
-
-test('buildForwardNodeEntryMessage: includes reopened-node framing when node re-enters', () => {
-  const msg = buildForwardNodeEntryMessage({
-    nodeId: 'owner-gate',
-    role: 'owner',
-    workspaceRoot: tmpDir,
-    projectNamespace,
-    entryMode: 'reopened-node',
-    previousNodeId: 'owner-gate'
-  });
-
-  assert.ok(msg.includes('workflow node has been reopened in the same role-scoped flow session'));
-  assert.ok(msg.includes('may supersede earlier assumptions'));
-});
-
-test('buildForwardNodeEntryMessage: includes human input section when provided', () => {
-  const msg = buildForwardNodeEntryMessage({
-    nodeId: 'owner-gate',
-    role: 'owner',
-    workspaceRoot: tmpDir,
-    projectNamespace,
-    humanInput: 'Please focus on the security section.'
-  });
-
-  assert.ok(msg.includes('Human input:'));
-  assert.ok(msg.includes('Please focus on the security section.'));
-});
-
 test('buildForwardNodeEntryMessage: renders node contract fields and node-specific required reading on first entry', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
     nodeContext: {
@@ -200,7 +155,6 @@ test('buildForwardNodeEntryMessage: renders node contract fields and node-specif
 test('buildForwardNodeEntryMessage: injects workflow contract when requested', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-intake',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
     includeWorkflowContract: true
@@ -214,24 +168,12 @@ test('buildForwardNodeEntryMessage: injects workflow contract when requested', (
 test('buildForwardNodeEntryMessage: omits workflow contract by default', () => {
   const msg = buildForwardNodeEntryMessage({
     nodeId: 'owner-gate',
-    role: 'owner',
     workspaceRoot: tmpDir,
     projectNamespace,
   });
 
   assert.ok(!msg.includes('Runtime workflow contract:'));
   assert.ok(!msg.includes('A-Society Runtime Workflow Contract'));
-});
-
-test('buildForwardNodeEntryMessage: omits human input section when not provided', () => {
-  const msg = buildForwardNodeEntryMessage({
-    nodeId: 'owner-gate',
-    role: 'owner',
-    workspaceRoot: tmpDir,
-    projectNamespace,
-  });
-
-  assert.ok(!msg.includes('Human input:'));
 });
 
 // --- buildImprovementEntryMessage ---

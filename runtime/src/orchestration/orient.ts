@@ -1,7 +1,6 @@
 import crypto from 'node:crypto';
-import type { RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
+import type { FlowRef, RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
 import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
-import { buildRoleContext } from '../context/registry.js';
 import { HandoffInterpreter, HandoffParseError } from './handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
@@ -43,7 +42,6 @@ async function executeSessionTurn(
   operatorRenderer: OperatorRenderSink | undefined,
   consentGate: ConsentGate | undefined,
   nodeId: string | undefined,
-  recordFolderPath: string | undefined,
   onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined,
   onAssistantTextDelta: ((text: string) => void) | undefined
 ): Promise<SessionTurnResult> {
@@ -81,7 +79,6 @@ async function executeSessionTurn(
       operatorRenderer,
       consentGate,
       roleInstanceId,
-      recordFolderPath,
       nodeId,
       onConversationMessages,
       onAssistantTextDelta,
@@ -180,37 +177,46 @@ async function executeSessionTurn(
   }
 }
 
-export async function runRoleTurn(
-  workspaceRoot: string,
-  projectNamespace: string,
-  roleInstanceId: string,
-  providedSystemPrompt?: string,
-  providedHistory?: RuntimeMessageParam[],
-  roleOutputStream?: NodeJS.WritableStream,
-  externalSignal?: AbortSignal,
-  operatorRenderer?: OperatorRenderSink,
-  consentGate?: ConsentGate,
-  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>,
-  onAssistantTextDelta?: (text: string) => void,
-  nodeId?: string,
-  recordFolderPath?: string
-): Promise<RoleTurnResult | null> {
+export interface RunRoleTurnInput {
+  workspaceRoot: string;
+  roleInstanceId: string;
+  providedSystemPrompt: string;
+  flowRef: FlowRef;
+  providedHistory?: RuntimeMessageParam[];
+  roleOutputStream?: NodeJS.WritableStream;
+  externalSignal?: AbortSignal;
+  operatorRenderer?: OperatorRenderSink;
+  consentGate?: ConsentGate;
+  onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
+  onAssistantTextDelta?: (text: string) => void;
+  nodeId?: string;
+}
+
+export async function runRoleTurn({
+  workspaceRoot,
+  roleInstanceId,
+  providedSystemPrompt,
+  flowRef,
+  providedHistory,
+  roleOutputStream,
+  externalSignal,
+  operatorRenderer,
+  consentGate,
+  onConversationMessages,
+  onAssistantTextDelta,
+  nodeId,
+}: RunRoleTurnInput): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
 
-  if (providedSystemPrompt === undefined) {
-    const orientRoleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
-    if (!orientRoleEntry) {
-      if (roleOutputStream === process.stdout) {
-        console.error(`Could not load role context for '${projectNamespace}/${roleInstanceId}'. Check that the role file exists and contains valid frontmatter.`);
-      }
-      return null;
-    }
-  }
-
+  const projectNamespace = flowRef.projectNamespace;
   const sessionId = crypto.randomUUID();
-  const systemPrompt = providedSystemPrompt ?? '';
-  const llm = new LLMGateway(workspaceRoot, undefined, projectNamespace);
+  const systemPrompt = providedSystemPrompt;
+  const llm = new LLMGateway({
+    mode: 'project',
+    workspaceRoot,
+    flowRef,
+  });
   const history: RuntimeMessageParam[] = providedHistory ?? [];
 
   if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
@@ -244,7 +250,6 @@ export async function runRoleTurn(
     operatorRenderer,
     consentGate,
     nodeId,
-    recordFolderPath,
     onConversationMessages,
     onAssistantTextDelta
   );

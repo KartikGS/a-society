@@ -6,7 +6,6 @@ import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js'
 import type { BackwardPassPlan } from '../../src/framework-services/backward-pass-orderer.js';
 import {
   buildImprovementWorkflowDocument,
-  improvementNodeId,
   readImprovementWorkflow,
   writeImprovementWorkflow
 } from '../../src/improvement/improvement-workflow.js';
@@ -28,80 +27,72 @@ function test(name: string, fn: () => void): void {
 
 console.log('\nimprovement-workflow');
 
-const parallelPlan: BackwardPassPlan = [
-  [
+const parallelPlan: BackwardPassPlan = {
+  entries: [
     {
-      role: 'owner',
+      role: 'curator',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: []
     },
     {
-      role: 'curator',
+      role: 'owner',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
-      findingsRolesToInject: []
-    }
-  ],
-  [
+      findingsRolesToInject: ['curator']
+    },
     {
       role: 'a-society-feedback',
       stepType: 'feedback',
       sessionInstruction: 'new-session',
       findingsRolesToInject: []
     }
+  ],
+  edges: [
+    { from: 'curator', to: 'owner' },
+    { from: 'owner', to: 'a-society-feedback' }
   ]
-];
+};
 
-const graphPlan: BackwardPassPlan = [
-  [
+const graphPlan: BackwardPassPlan = {
+  entries: [
     {
       role: 'curator',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: []
-    }
-  ],
-  [
+    },
     {
       role: 'owner',
       stepType: 'meta-analysis',
       sessionInstruction: 'existing-session',
       findingsRolesToInject: ['curator']
-    }
-  ],
-  [
+    },
     {
       role: 'a-society-feedback',
       stepType: 'feedback',
       sessionInstruction: 'new-session',
       findingsRolesToInject: []
     }
+  ],
+  edges: [
+    { from: 'curator', to: 'owner' },
+    { from: 'owner', to: 'a-society-feedback' }
   ]
-];
+};
 
-test('improvementNodeId uses role instance id plus step type', () => {
-  assert.strictEqual(improvementNodeId(parallelPlan[1][0]), 'a-society-feedback-feedback');
-  assert.strictEqual(improvementNodeId({
-    role: 'owner_2',
-    stepType: 'meta-analysis',
-    sessionInstruction: 'existing-session',
-    findingsRolesToInject: []
-  }), 'owner_2-meta-analysis');
-});
-
-test('parallel improvement graph connects every role to feedback', () => {
+test('parallel improvement graph connects non-Owner roles to Owner before feedback', () => {
   const doc = buildImprovementWorkflowDocument(parallelPlan, IMPROVEMENT_CHOICE_MODE.PARALLEL);
 
   assert.strictEqual(doc.workflow.name, 'Parallel Improvement');
   assert.deepStrictEqual(doc.workflow.nodes.map(node => node.id), [
-    'owner-meta-analysis',
-    'curator-meta-analysis',
-    'a-society-feedback-feedback'
+    'curator',
+    'owner',
+    'a-society-feedback'
   ]);
   assert.deepStrictEqual(doc.workflow.edges, [
-    { from: 'owner-meta-analysis', to: 'a-society-feedback-feedback' },
-    { from: 'curator-meta-analysis', to: 'a-society-feedback-feedback' }
+    { from: 'curator', to: 'owner' },
+    { from: 'owner', to: 'a-society-feedback' }
   ]);
 });
 
@@ -110,8 +101,8 @@ test('graph-based improvement graph follows backward-pass execution steps', () =
 
   assert.strictEqual(doc.workflow.name, 'Graph-Based Improvement');
   assert.deepStrictEqual(doc.workflow.edges, [
-    { from: 'curator-meta-analysis', to: 'owner-meta-analysis' },
-    { from: 'owner-meta-analysis', to: 'a-society-feedback-feedback' }
+    { from: 'curator', to: 'owner' },
+    { from: 'owner', to: 'a-society-feedback' }
   ]);
 });
 
@@ -124,7 +115,6 @@ test('writeImprovementWorkflow persists improvement.yaml and readImprovementWork
 
     const workflow = readImprovementWorkflow(tmpDir);
     assert.ok(workflow, 'expected workflow to be readable');
-    assert.strictEqual(workflow?.nodes[0].step_index, 0);
     assert.strictEqual(workflow?.nodes[0].step_type, 'meta-analysis');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
