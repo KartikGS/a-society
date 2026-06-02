@@ -288,7 +288,6 @@ await test('project-scoped gateway allows writes to the active state record fold
 await test('project-scoped gateway blocks writes to flow state outside the active record folder', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
   fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
-  const recordFolderPath = path.join(tmpDir, '.a-society', 'state', 'demo-project', 'flow-1', 'record');
   const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/flow.json', '{}');
   const gateway = new LLMGateway({
     mode: 'project',
