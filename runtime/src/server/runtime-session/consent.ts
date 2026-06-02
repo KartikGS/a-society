@@ -35,7 +35,6 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
         const roleInstanceId = parseRoleIdentity(request.role).instanceRoleId;
         if (!flow.improvementPhase.awaitingHumanRoles) flow.improvementPhase.awaitingHumanRoles = {};
         flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: 'consent' };
-        flow.improvementPhase.activeNodeIds = (flow.improvementPhase.activeNodeIds ?? []).filter(id => id !== request.nodeId);
         return;
       }
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
@@ -60,9 +59,6 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
           flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: 'consent-denied' };
         } else {
           delete flow.improvementPhase.awaitingHumanRoles[roleInstanceId];
-          if (!(flow.improvementPhase.activeNodeIds ?? []).includes(request.nodeId)) {
-            flow.improvementPhase.activeNodeIds = [...(flow.improvementPhase.activeNodeIds ?? []), request.nodeId];
-          }
         }
         return;
       }

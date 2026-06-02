@@ -152,6 +152,44 @@ function validateGraphAgainstFlowState(
   }
 }
 
+function findDirectedCycle(workflow: WorkflowGraph): string[] | null {
+  const outgoing = new Map(workflow.nodes.map((node) => [node.id, [] as string[]]));
+  for (const edge of workflow.edges) {
+    outgoing.get(edge.from)?.push(edge.to);
+  }
+
+  const state = new Map<string, 'visiting' | 'visited'>();
+  const stack: string[] = [];
+
+  const visit = (nodeId: string): string[] | null => {
+    const existingState = state.get(nodeId);
+    if (existingState === 'visiting') {
+      const cycleStart = stack.indexOf(nodeId);
+      return [...stack.slice(cycleStart), nodeId];
+    }
+    if (existingState === 'visited') return null;
+
+    state.set(nodeId, 'visiting');
+    stack.push(nodeId);
+
+    for (const childId of outgoing.get(nodeId) ?? []) {
+      const cycle = visit(childId);
+      if (cycle) return cycle;
+    }
+
+    stack.pop();
+    state.set(nodeId, 'visited');
+    return null;
+  };
+
+  for (const node of workflow.nodes) {
+    const cycle = visit(node.id);
+    if (cycle) return cycle;
+  }
+
+  return null;
+}
+
 /**
  * Validates a parsed workflow graph object against the approved schema.
  *
@@ -409,6 +447,11 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
         errors.push(`End node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
     }
+  }
+
+  const cycle = findDirectedCycle(workflow);
+  if (cycle) {
+    errors.push(`Workflow graph must be acyclic; cycle detected: ${cycle.join(' -> ')}`);
   }
 
   if (flowState !== null) {

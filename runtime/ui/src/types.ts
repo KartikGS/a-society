@@ -109,7 +109,6 @@ export type ServerMessage =
 export interface WorkflowGraph {
   name?: string;
   summary?: string;
-  nodes: Array<{ id: string; role: string; step_index?: number; step_type?: 'meta-analysis' | 'feedback' }>;
+  nodes: Array<{ id: string; role: string; step_type?: 'meta-analysis' | 'feedback' }>;
   edges: Array<{ from: string; to: string }>;
 }
-

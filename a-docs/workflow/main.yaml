@@ -211,9 +211,6 @@ workflow:
     - from: owner-framework-decision
       to: curator-finalize
       artifact: owner-to-curator
-    - from: owner-framework-decision
-      to: curator-work
-      artifact: owner-to-curator
     - from: curator-work
       to: owner-closure
       artifact: curator-to-owner

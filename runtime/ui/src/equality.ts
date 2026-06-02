@@ -90,12 +90,10 @@ function areImprovementPhasesEqual(
   return (
     left.status === right.status &&
     left.mode === right.mode &&
-    left.currentStep === right.currentStep &&
     left.improvementWorkflowPath === right.improvementWorkflowPath &&
     areStringArraysEqual(left.completedRoles, right.completedRoles) &&
+    areStringArraysEqual(left.runningRoles, right.runningRoles) &&
     areStringMapsEqual(left.findingsProduced, right.findingsProduced) &&
-    areStringArraysEqual(left.activeNodeIds, right.activeNodeIds) &&
-    areStringArraysEqual(left.completedNodeIds, right.completedNodeIds) &&
     areStringArraysEqual(Object.keys(left.awaitingHumanRoles ?? {}), Object.keys(right.awaitingHumanRoles ?? {}))
   );
 }
@@ -179,7 +177,6 @@ export function areWorkflowGraphsEqual(
   for (let index = 0; index < left.nodes.length; index += 1) {
     if (left.nodes[index].id !== right.nodes[index].id) return false;
     if (left.nodes[index].role !== right.nodes[index].role) return false;
-    if (left.nodes[index].step_index !== right.nodes[index].step_index) return false;
     if (left.nodes[index].step_type !== right.nodes[index].step_type) return false;
   }
 

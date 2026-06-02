@@ -1,7 +1,6 @@
 export interface WfNode {
   id: string;
   role: string;
-  step_index?: number;
   step_type?: 'meta-analysis' | 'feedback';
   [key: string]: unknown;
 }

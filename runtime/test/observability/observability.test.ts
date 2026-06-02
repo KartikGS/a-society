@@ -604,8 +604,8 @@ async function run() {
       const afterMetaAnalysis = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), tmpDir)!;
       assert.strictEqual(afterMetaAnalysis.status, 'awaiting_feedback_consent');
       assert.strictEqual(afterMetaAnalysis.improvementPhase?.status, 'awaiting_feedback_consent');
-      assert.deepStrictEqual(afterMetaAnalysis.improvementPhase?.completedNodeIds, [
-        'curator-meta-analysis'
+      assert.deepStrictEqual(afterMetaAnalysis.improvementPhase?.completedRoles, [
+        'curator'
       ]);
       await improvementOrchestrator.runFeedback(
         afterMetaAnalysis,
@@ -620,10 +620,10 @@ async function run() {
     assert.strictEqual(finalFlowRun.stateVersion, CURRENT_FLOW_STATE_VERSION, 'improvement initialization must keep the latest state version');
     assert.ok(fs.existsSync(path.join(recordDir, 'improvement.yaml')), 'improvement run should persist improvement.yaml');
     assert.strictEqual(finalFlowRun.improvementPhase?.improvementWorkflowPath, path.relative(tmpDir, path.join(recordDir, 'improvement.yaml')));
-    assert.deepStrictEqual(finalFlowRun.improvementPhase?.activeNodeIds, []);
-    assert.deepStrictEqual(finalFlowRun.improvementPhase?.completedNodeIds, [
-      'curator-meta-analysis',
-      'a-society-feedback-feedback'
+    assert.deepStrictEqual(finalFlowRun.improvementPhase?.runningRoles, []);
+    assert.deepStrictEqual(finalFlowRun.improvementPhase?.completedRoles, [
+      'curator',
+      'a-society-feedback'
     ]);
     assert.strictEqual(finalFlowRun.improvementPhase?.feedbackArtifactPath, feedbackArtifactPath);
     assert.strictEqual(finalFlowRun.improvementPhase?.feedbackConsent, FEEDBACK_CONSENT_STATUS.GRANTED);

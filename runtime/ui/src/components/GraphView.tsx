@@ -58,8 +58,8 @@ function buildReactFlowState(
 
   const activeNodeIds = getActiveNodeIds(flowRun);
   const awaitingHumanNodeIds = Object.keys(flowRun.awaitingHumanNodes);
-  const improvementActiveNodeIds = flowRun.improvementPhase?.activeNodeIds ?? EMPTY_STRINGS;
-  const improvementCompletedNodeIds = flowRun.improvementPhase?.completedNodeIds ?? EMPTY_STRINGS;
+  const improvementActiveNodeIds = flowRun.improvementPhase?.runningRoles ?? EMPTY_STRINGS;
+  const improvementCompletedNodeIds = flowRun.improvementPhase?.completedRoles ?? EMPTY_STRINGS;
   const visitedNodeIds = flowRun.visitedNodeIds ?? EMPTY_STRINGS;
   const improvementAwaitingRoleKeys = new Set(
     Object.keys(flowRun.improvementPhase?.awaitingHumanRoles ?? {})
@@ -140,10 +140,9 @@ function areGraphFlowRunsEqual(left: FlowRun, right: FlowRun): boolean {
     areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     left.improvementPhase?.status === right.improvementPhase?.status &&
     left.improvementPhase?.mode === right.improvementPhase?.mode &&
-    left.improvementPhase?.currentStep === right.improvementPhase?.currentStep &&
     left.improvementPhase?.improvementWorkflowPath === right.improvementPhase?.improvementWorkflowPath &&
-    areStringArraysEqual(left.improvementPhase?.activeNodeIds, right.improvementPhase?.activeNodeIds) &&
-    areStringArraysEqual(left.improvementPhase?.completedNodeIds, right.improvementPhase?.completedNodeIds) &&
+    areStringArraysEqual(left.improvementPhase?.runningRoles, right.improvementPhase?.runningRoles) &&
+    areStringArraysEqual(left.improvementPhase?.completedRoles, right.improvementPhase?.completedRoles) &&
     areStringArraysEqual(Object.keys(left.improvementPhase?.awaitingHumanRoles ?? {}), Object.keys(right.improvementPhase?.awaitingHumanRoles ?? {}))
   );
 }

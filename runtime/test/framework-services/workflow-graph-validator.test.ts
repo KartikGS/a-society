@@ -381,6 +381,33 @@ test('valid owner-bounded graph passes', () => {
   assert.deepStrictEqual(errors, []);
 });
 
+test('cyclic graph produces acyclic validation error', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'owner-intake', role: 'owner' },
+        { id: 'curator-a', role: 'curator' },
+        { id: 'curator-b', role: 'curator_2' },
+        { id: 'owner-close', role: 'owner' },
+      ],
+      edges: [
+        { from: 'owner-intake', to: 'curator-a' },
+        { from: 'curator-a', to: 'curator-b' },
+        { from: 'curator-b', to: 'curator-a' },
+        { from: 'curator-b', to: 'owner-close' },
+      ],
+    },
+  };
+  const errors = validateGraph(graph);
+  assert.ok(
+    errors.some((e: string) =>
+      e.includes('Workflow graph must be acyclic') &&
+      e.includes('curator-a -> curator-b -> curator-a')
+    )
+  );
+});
+
 test('numbered Owner instances at start/end produce errors', () => {
   const graph = {
     workflow: {
