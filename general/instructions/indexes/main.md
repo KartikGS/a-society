@@ -50,8 +50,6 @@ Variables use `$SCREAMING_SNAKE_CASE` — all uppercase, words separated by unde
 
 **Naming rules:**
 - Name the variable after what the file *is*, not where it currently *lives*. A file at `docs/tooling/standard.md` is `$TOOLING_STANDARD`, not `$DOCS_TOOLING_STANDARD`. When the file moves, the name still makes sense.
-- Use the project name as a prefix for project-level documents when the index covers multiple projects or layers: `$LLM_JOURNEY_VISION`, `$A_SOCIETY_STRUCTURE`.
-- Use a category prefix for instruction-type documents: `$INSTRUCTION_TOOLING`, `$INSTRUCTION_VISION`.
 - Keep names short enough to be readable inline: `$TOOLING_STANDARD` is better than `$PROJECT_CANONICAL_TOOLING_REQUIREMENTS_STANDARD`.
 
 ---
@@ -73,8 +71,8 @@ For each registered file, find all references to its path in active documents an
 **Step 5 — Register the index itself.**
 Add the index file as an entry in its own table. An agent looking for the index should be able to find it through the same mechanism as everything else.
 
-**Step 6 — Point to it from the project's primary orientation document.**
-Agents need to know the index exists. Add a one-line reference to it in the document agents read first (e.g., the project's AGENTS.md equivalent, or the project vision). The reference should state: where the index lives, and what the `$VAR` convention means.
+**Step 6 — Register it in the appropriate required readings.**
+The index is surfaced to agents via required readings. Add it to the required readings list for any role that needs to resolve file paths.
 
 ---
 
@@ -102,9 +100,6 @@ Look up the variable in the index to get the current path, then open the file. D
 2. Grep for the variable name across all active documents to confirm no hardcoded paths remain.
 3. No other updates are needed.
 
-**When validating the index:**
-Use the project's executable path-validation capability, if one exists, to confirm every path in the index resolves to an existing file. Pass the index file path as the argument. A zero-failure result confirms all registered paths are accessible. Run after any index update: adding entries, updating paths after a file move, or retiring rows. If no such capability exists, verify the paths manually. A failing result should name the specific entries to fix.
-
 **When referencing a file not in the index:**
 For files that do not belong in the index — per-flow artifacts, active working files, or any file only referenced once — use the repo-relative path directly in handoffs and artifacts. Do not invent an unregistered `$VARIABLE_NAME` to anchor it. An invented variable that is not registered in the index resolves to nothing: it gives the appearance of indirection without the benefit. If an unregistered variable appears in a handoff, it is a signal that a plain repo-relative path should have been used instead.
 
@@ -120,41 +115,13 @@ Grep all active documents for the `$VARIABLE_NAME` before touching anything. Thi
 **Step 2 — Update or remove each reference.**
 For each consuming document: if the content was relocated rather than removed, replace the variable reference with the new variable name. If the content was removed entirely, remove the reference from the document. Do not leave dangling variable names in active documents.
 
-**Step 3 — Check guide-type documents.**
-If the project maintains a document that catalogs the purpose or rationale of its files (e.g., an agent-docs guide), check it for entries that reference the retired content. Remove or update those entries. These documents are not always caught by a variable-name grep because they may describe the file by purpose rather than by variable.
-
-**Step 4 — Remove the variable row from the index.**
+**Step 3 — Remove the variable row from the index.**
 Only after all consumer references are resolved. Removing the row before updating consumers leaves documents with unresolvable variable names.
 
-**Step 5 — Post-removal scan.**
+**Step 4 — Post-removal scan.**
 Grep all active documents for both the `$VARIABLE` form *and* the prose concept name of the retired content (e.g., if `$TODO_FOLDER` pointed to a to-do folder, also grep for "to-do folder" and "todo folder"). A section removal and an index-row deletion are not a sufficient retirement — stale prose references survive both.
 
 This sequence is the inverse of Index-Before-Reference: where creation requires registration before reference, retirement requires reference cleanup before removal.
-
----
-
-## Examples Across Project Types
-
-### Software project
-| Variable | Current Path | Description |
-|---|---|---|
-| `$TOOLING_STANDARD` | `project/docs/tooling/standard.md` | Package manager, runtime version, lint and test commands |
-| `$API_CONTRACTS` | `project/docs/api/contracts.md` | Route definitions, request/response shapes, versioning policy |
-| `$TESTING_STRATEGY` | `project/docs/testing/strategy.md` | Test classification, coverage requirements, mock policy |
-
-### Editorial / writing project
-| Variable | Current Path | Description |
-|---|---|---|
-| `$STYLE_GUIDE` | `project/docs/style/guide.md` | Voice, tone, formatting, and citation standards |
-| `$EDITORIAL_WORKFLOW` | `project/docs/process/workflow.md` | Stages from draft to publication, roles at each stage |
-| `$GLOSSARY` | `project/docs/reference/glossary.md` | Defined terms used consistently throughout the project |
-
-### Research project
-| Variable | Current Path | Description |
-|---|---|---|
-| `$RESEARCH_PROTOCOL` | `project/docs/protocol.md` | Data collection method, inclusion criteria, analysis approach |
-| `$DATA_DICTIONARY` | `project/docs/reference/data-dictionary.md` | Variable definitions, units, and coding conventions |
-| `$FINDINGS_SUMMARY` | `project/docs/findings/summary.md` | Current state of conclusions — updated as analysis progresses |
 
 ---
 
@@ -166,4 +133,4 @@ This sequence is the inverse of Index-Before-Reference: where creation requires 
 
 **Not replacing hardcoded paths.** Creating the index but leaving direct paths scattered through documents gives the impression of indirection without the benefit. The index only works if it is the single place paths live.
 
-**Not pointing to it from the orientation document.** An index no one knows about is not used. It must be surfaced in the document agents read first.
+**Not adding it to required readings.** An index that is not in any role's required readings will not be loaded, and agents will resolve file paths incorrectly or not at all.

@@ -45,7 +45,7 @@ When a new unit of work completes, its entry replaces the previous `Recent Focus
 
 The Owner performs a validity sweep of Next Priorities at two points in every flow:
 
-1. **Intake Sweep:** Triggered by the Owner's scope assessment of a new request. Overlapping entries are checked for invalidation (Addressed, Contradicted, Restructured, or Partially Addressed) before the workflow plan is produced.
+1. **Intake Sweep:** Triggered by the Owner's scope assessment of a new request. Overlapping entries are checked for invalidation (Addressed, Contradicted, Restructured, or Partially Addressed) before the workflow plan is produced. Where an overlapping entry would be a natural complement to the current request rather than fully invalidated, the Owner may propose including it in the same flow — pending user approval — before producing the workflow plan.
 2. **Closure Sweep:** Triggered by the completed flow's scope at forward pass closure. Overlapping entries are checked for invalidation and resolved before the flow is marked closed.
 
 ### 3. Next Priorities
@@ -58,13 +58,23 @@ Next priorities are not a backlog — they are the concrete next steps. Items th
 
 **Merge Assessment**
 
-Before adding any Next Priorities item — whether at intake or while resolving backward-pass findings — scan existing Next Priorities items for merge opportunities. Two items are mergeable when all three conditions are true:
+Before adding any Next Priorities item — whether at intake or while resolving backward-pass findings — scan existing Next Priorities items for merge opportunities. Two merge patterns apply:
+
+**Pattern A — Deep merge** (items are combined into one task). All three conditions must be true:
 
 1. **Same target files or same design area** — they touch the same document(s) or the same conceptual area.
-2. **Compatible authority level** — both are same-role authority (both the same implementing role, or both requiring the same approval path).
-3. **Same workflow type and role path, or routable as parallel tracks in a single multi-domain flow** — both items would run through the same workflow type with the same role sequence, or are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict.
+2. **Compatible authority level** — both require the same implementing role or the same approval path.
+3. **Same workflow type and role path** — both items would run through the same workflow type with the same role sequence.
 
-When a merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
+**Pattern B — Bundled flow** (items run as parallel tracks within one flow). All three conditions must be true:
+
+1. **Adjacent but distinct areas** — they address different files or design areas but belong to a cohesive initiative.
+2. **Compatible authority level** — both require the same implementing role or the same approval path.
+3. **No sequencing conflict** — the two tracks can proceed concurrently without one depending on the other's output.
+
+When a Pattern A merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
+
+When a Pattern B merge is identified, replace the existing items with a single bundled item that names both tracks. The bundled item retains the source citations of all constituent items.
 
 ---
 
@@ -114,7 +124,7 @@ Write the most important items first. For each item, include enough context that
 - **Current state is current.** The log must reflect the actual present state of the project. An outdated log is worse than no log — it misdirects agents confidently.
 - **One `Recent Focus`.** Never allow two entries to claim `Recent Focus`. When a flow closes, replace the previous `Recent Focus` entry. Historical traceability lives in the records folder.
 - **Next priorities are actionable.** Each item should be specific enough that an agent could pick it up and start. Vague items like "improve performance" are not next priorities — they are topics for a planning session.
-- **Maintained at the end of each unit of work.** The log is updated when work closes, not periodically. The agent responsible for closure (the BA, the owner, whoever closes work in your project) owns the update.
+- **Maintained at the end of each unit of work.** The log is updated when work closes, not periodically. The Owner is responsible for the update at closure.
 
 ---
 

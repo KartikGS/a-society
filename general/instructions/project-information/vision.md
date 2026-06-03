@@ -2,7 +2,7 @@
 
 ## What Is a Vision Document?
 
-A vision document answers three questions for any collaborator — human or agent — before they begin work:
+A vision document answers three questions for any agent before they begin work:
 
 > "What is this project? Why does it matter? What direction do we move in?"
 

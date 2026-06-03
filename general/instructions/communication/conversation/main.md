@@ -27,7 +27,6 @@ A record artifact carries a handoff or report for one unit of work and lives in 
 
 **Example:** `domain-lead-to-owner.md` in the active record folder — carries a domain lead's proposal for this flow.
 
-Projects that use A-Society runtime-managed records create all conversation artifacts as record artifacts. Projects without runtime-managed records may use the live artifact pattern: a stable file path replaced between units of work after a pre-replacement check confirms the prior unit is closed.
 
 ### 2. Permanent Templates
 
@@ -71,30 +70,6 @@ No replacement — artifact is permanent in its record folder
 
 **Terminal statuses** are defined by the project's coordination layer.
 
-There is no pre-replacement check for record artifacts. Nothing is overwritten.
-
----
-
-## Lifecycle of a Live Artifact (for projects without runtime-managed records)
-
-```
-Trigger fires
-    ↓
-Sender creates artifact from template
-    ↓
-Receiver reads and acknowledges
-    ↓
-[Optional: clarification rounds — both agents update the same file]
-    ↓
-Artifact reaches terminal status
-    ↓
-Pre-replacement check (prior unit closed, evidence present)
-    ↓
-Artifact replaced for next unit of work
-```
-
-**Pre-replacement checks** are mandatory for any artifact that is replaced rather than archived. The check must confirm that the prior unit of work is closed before the artifact is overwritten.
-
 ---
 
 ## Naming Conventions
@@ -103,7 +78,6 @@ Consistent naming makes it possible to locate conversation artifacts without rea
 
 - **Record artifacts:** descriptive Markdown filenames within the record folder (e.g., `proposal.md`, `decision.md`, `domain-lead-to-owner.md`). Use names that make sender, receiver, and purpose clear.
 - **Templates:** `TEMPLATE-[sender-role]-to-[receiver-role].md`
-- **Live artifacts (for projects without runtime-managed records):** `[sender-role]-to-[receiver-role].md` (e.g., `tech-lead-to-backend.md`)
 - **Clarification artifacts (if separate):** `TEMPLATE-[role-a]-[role-b]-clarification.md`
 
 Use role names as they appear in the project's role documents. Do not abbreviate differently from the role document names — inconsistent abbreviation creates lookup friction.
@@ -119,12 +93,10 @@ For every role-pair transition in the workflow, name the handoff. Identify the t
 For each handoff, write a template with every required field. Mark fields that are mandatory (must be present for the receiver to act) versus advisory (useful context, but work can proceed without them). Annotate field semantics — what "scope" means in this project, what constitutes a valid "verification mapping," etc.
 
 **Step 3 — Place templates in the conversation folder.**
-Templates belong in `conversation/`. If the project uses records, artifacts are created in record folders — only templates live in `conversation/`. Naming convention (the `TEMPLATE-` prefix) distinguishes templates from other files.
+Templates belong in `conversation/`. Artifacts are created in record folders — only templates live in `conversation/`. The `TEMPLATE-` prefix distinguishes templates from other files.
 
 **Step 4 — Write the folder index (`main.md`).**
-List every template, with its trigger and its purpose. An agent that reads `main.md` should be able to find any template in the folder without scanning filenames.
-
-*For projects not using records:* also list every live artifact file in `main.md`, and define the pre-replacement check procedure for each.
+List every template, with its trigger and its purpose. Templates are surfaced to agents through the workflow — `main.md` serves as the canonical reference for what exists and when each template applies.
 
 ---
 
@@ -132,7 +104,7 @@ List every template, with its trigger and its purpose. An agent that reads `main
 
 **Formats are implied, not specified.** Each handoff looks different. Receivers spend time parsing rather than acting.
 
-**Artifacts created in the wrong location.** Artifacts created at stable overwriting paths when the project uses records (or vice versa). The model chosen should be consistent across all artifact types in the project.
+**Artifacts created in the wrong location.** Artifacts belong in the record folder for the active flow, not at stable paths in the conversation folder.
 
 **Templates are modified per-task.** Once a template is treated as editable, it stops being a template. Each instance diverges. The format contract dissolves.
 
