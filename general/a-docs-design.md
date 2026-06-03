@@ -62,3 +62,12 @@ What `agents.md` does not contain:
 - Explanation of the index or the required-readings mechanism when those are already handled by the project's session-start mechanism
 - A roles table - role assignment happens outside `agents.md`
 - Any section whose information is available through another channel already in scope
+
+---
+
+## Maintenance Rules
+
+- **Update when the authoring model changes materially.** Triggers: restructuring role files around workflow-linked support docs, changing how workflows surface node-linked support docs, changing the scope of `agents.md`, adding or retiring a standing anti-pattern check in meta-analysis.
+- **Do not update to reflect individual backward-pass findings.** If meta-analysis surfaces a specific violation, fix the violated document. Only update this file when the underlying design rule needs to change.
+- **Meta-analysis should treat this file as a standing evaluation standard.** Findings about context bloat, redundant content, or misplaced instructions should be framed against these principles, not as isolated stylistic preferences.
+- **Keep principles ahead of the current state.** This file governs how `a-docs/` should be authored. It should describe the intended model, not document what currently exists.

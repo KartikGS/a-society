@@ -2,7 +2,7 @@
 
 ## What Is a Tooling Document?
 
-A tooling document declares the canonical tools, formats, and standards for a project. It answers one question for every collaborator — human or agent — before they start work:
+A tooling document declares the canonical tools, formats, and standards for a project. It answers one question for every agent before they start work:
 
 > "What do we use here, and what do we never use?"
 
@@ -12,7 +12,7 @@ It is not a tutorial. It is not a list of features. It is a set of explicit, enf
 
 ## Why Every Project Needs One
 
-Collaborators — including AI agents — make tool choices constantly. Without a declared standard, each one independently decides which tool to use, which format to produce, or which version to target. The result is:
+Agents make tool choices constantly. Without a declared standard, each one independently decides which tool to use, which format to produce, or which version to target. The result is:
 
 - Inconsistent outputs that don't integrate cleanly
 - Rework when someone used the "wrong" tool
@@ -73,15 +73,6 @@ Once the document exists, add it to the project's file index with a variable nam
 
 ---
 
-## Format Rules
-
-- **Declarations, not explanations.** State the rule first. Brief rationale is permitted in parentheses — not a paragraph.
-- **Explicit over implicit.** "NEVER use X" is better than "prefer Y."
-- **Short over complete.** A short document that is actually read beats a comprehensive one that is skipped. If a section grows long, extract it into its own file and cross-reference.
-- **Checkable constraints only.** If a constraint cannot be verified by the collaborator, it is not a constraint — it is a preference. Either make it checkable or remove it.
-
----
-
 ## Examples Across Project Types
 
 These examples show the same structure applied to different domains. The format is the same; only the content changes.
@@ -131,3 +122,16 @@ Once your tooling document exists, it should be registered in the project's inde
 The benefit: if the tooling document is ever relocated, only the index needs updating. All references resolve correctly through the variable.
 
 See your project's index file for the registration format.
+
+---
+
+## Maintenance Rules
+
+Copy these rules into the project's tooling document at initialization. They govern how the document is updated over its lifetime.
+
+- **Update when a tool changes.** When the project adopts a new canonical tool, changes a version requirement, or formally bans a previously-permitted tool, update the document before the next session. Stale tool declarations cause agents to produce non-integrating work.
+- **The forbidden list is the most important section to keep current.** A tool that was permitted and is now banned must be explicitly added to the forbidden list — removal from the canonical list is not enough.
+- **Constraints must remain checkable.** If a version requirement is updated, ensure the verification step still works. A constraint an agent cannot verify is a preference.
+- **Do not add rationale or tutorials.** If a tool section is growing explanatory content, extract it to a separate onboarding document. The tooling document is a declaration, not a guide.
+- **Be explicit over implicit.** "NEVER use X" is better than "prefer Y." Preferences are not enforced; explicit bans are.
+- **Keep it short.** A short document that is actually read beats a comprehensive one that is skipped. If a section grows long, extract it into its own file and cross-reference.

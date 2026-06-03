@@ -65,3 +65,12 @@ When evaluating a proposed fix during backward-pass work:
 2. **Before deciding "add a new protocol"** — ask whether user consultation adequately handles the edge case. Reject the protocol if the informal path is sufficient.
 3. **Before deciding "add a cross-reference"** — ensure the cross-reference uses a `$VARIABLE_NAME`. The implementing agent must be able to follow it without interpretation.
 
+---
+
+## Maintenance Rules
+
+- **Add a principle when backward-pass findings repeatedly reveal the same class of improvement mistake.** One occurrence is not enough. A principle earns its place when the same failure mode has recurred across multiple flows.
+- **Remove a principle when it no longer reflects how the project actually approaches improvement.** A principle the team does not follow is worse than no principle — it creates the appearance of a standard without the substance.
+- **Update the "How to Apply" section when new decision patterns emerge.** If agents are consistently making the wrong call at a particular step, add guidance there.
+- **Never rewrite this document to retroactively justify a past improvement decision.** If a past decision was wrong under these principles, update the principles going forward. Do not revise them to make the past look consistent.
+

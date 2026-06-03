@@ -71,15 +71,6 @@ Structure documents age well when they describe rules. They age poorly when they
 
 ---
 
-## Format Rules
-
-- **Principle over inventory.** Every folder entry should end with a principle statement — a rule applicable to cases not yet encountered, not just a description of current contents.
-- **"What does not belong" is mandatory.** The inclusion/exclusion boundary is where placement errors happen. Leaving it implicit is a documentation failure.
-- **Short entries.** Each folder entry should be readable in under thirty seconds. If an entry requires more, the folder's purpose may be unclear.
-- **Stable by design.** Folder structure should change rarely. A structure document that requires frequent updates signals that the structure itself is unstable — which is the real problem to address.
-
----
-
 ## Examples Across Project Types
 
 ### Software project
@@ -118,12 +109,13 @@ Growth rule: add a new top-level folder only when a new stage of certainty is in
 
 ---
 
-## What Makes a Structure Document Fail
+## Maintenance Rules
 
-**Describes current state instead of governing rules.** A document full of "this folder currently contains X" becomes wrong as soon as the first file moves. Write rules, not inventories.
+Copy these rules into the project's structure document at initialization. They govern how the document is updated over its lifetime.
 
-**Missing the "what does not belong" section.** The boundary between folders is where confusion lives. Leaving it undocumented guarantees that agents will cross it.
-
-**No growth rule.** A structure document without a growth rule gets ignored the first time a new artifact type does not fit neatly. The growth rule is what makes the document useful beyond the initial structure.
-
-**Too granular.** Documenting every sub-folder and every file type produces a document no one reads. Document the levels at which placement decisions are actually made — usually the top one or two levels.
+- **Update when structure changes — not before.** Add a folder entry when the folder is created. Remove or merge entries when folders are removed or merged. Do not pre-document planned folders.
+- **Never update to describe current contents.** If you find yourself writing "this folder currently contains X," stop. Rewrite as the rule: "the kind of content that belongs here is X."
+- **A new folder requires justification by the growth rule.** If the project's growth rule says "three or more files of a coherent type," do not create the folder until that threshold is met.
+- **Keep "what does not belong" entries current.** When a new artifact type causes a placement question, resolve it in the structure document so the same question does not recur.
+- **Check that every folder still has a placement rule.** If a folder entry no longer has a clear "what does not belong" boundary, placement decisions for that folder will drift.
+- **Stay at the level of placement decisions.** If entries are describing every sub-folder and file type, the document has become too granular to be useful. Document only the levels at which placement decisions are actually made.

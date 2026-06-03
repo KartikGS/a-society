@@ -26,24 +26,6 @@ With an index, a file move is a one-row change. The sweep becomes a grep for the
 
 ---
 
-## What Belongs in an Index
-
-Not every file in a project belongs in the index. Register a file when:
-
-- It is referenced by more than one other document
-- It is a canonical source that many agents or collaborators need to find
-- It is likely to move as the project evolves (e.g., it lives in a folder that may be reorganized)
-- It is part of a required reading list or orientation sequence
-
-Do not register:
-- Files that are only referenced from one other document (update that one document directly)
-- Files that are implementation artifacts unlikely to be linked to by name (e.g., individual data files, generated outputs)
-- Every file in the project — the index is a registry of key files, not a directory listing
-
-**The index should be short enough to scan in a single read. If it grows long, it has drifted from its purpose.**
-
----
-
 ## Variable Naming Convention
 
 Variables use `$SCREAMING_SNAKE_CASE` — all uppercase, words separated by underscores, prefixed with `$`.
@@ -76,61 +58,34 @@ The index is surfaced to agents via required readings. Add it to the required re
 
 ---
 
-## Format Rules
+## Maintenance Rules
 
-- **Three columns only:** Variable, Current Path, Description. Do not add columns for owner, status, or last-updated — those belong elsewhere.
-- **One row per file.** Do not group or nest entries. The table is a flat registry.
-- **Description is one clause.** Enough to identify the file's purpose without opening it. Not a full sentence, not a paragraph.
-- **Paths must be repo-relative, not machine-specific.** Use paths relative to the repository root (e.g., `project-name/a-docs/agents.md`). Machine-specific absolute paths (e.g., `/home/user/...`, `/Users/...`) are prohibited — they break when the project moves to a different machine or account. When populating an index from file operations that return absolute paths, strip the machine-specific prefix and write only the repo-relative portion.
-- **Paths must omit the leading slash.** Repo-relative paths should never begin with `/`. Write `a-society/a-docs/agents.md`, not `/a-society/a-docs/agents.md`. A leading slash makes the path absolute (rooted at filesystem root), which breaks executable-layer consumers that construct paths relative to the repository root. This rule ensures consistency and prevents silent path-resolution failures.
-- **The index is a declaration, not documentation.** It does not explain why files exist or how they relate to each other. Those explanations belong in the structure document or the files themselves.
+Copy these rules into the project's index at initialization. They govern how the index is used and updated over its lifetime.
 
----
+**Registration:**
+- **Register before referencing.** Never use a `$VARIABLE_NAME` in a document unless it is registered in the index. An unregistered variable resolves to nothing.
+- **Register a file when:** it is referenced by more than one document, it is a canonical source agents need to find, it is likely to move as the project evolves, or it is part of a required reading sequence.
+- **Do not register:** files referenced only once (update that document directly), implementation artifacts unlikely to be linked by name, or every file in the project. The index is a registry of key files, not a directory listing.
+- **Keep the index short enough to scan in one read.** Cross-reference frequency, not file count, determines registration.
 
-## How to Use the Index
+**Table format:**
+- **Three columns only:** Variable, Current Path, Description. Do not add columns.
+- **One row per file.** Flat registry — no grouping or nesting.
+- **Description is one clause.** Enough to identify the file's purpose without opening it.
+- **Paths must be repo-relative and must not begin with `/`.** Write `project/a-docs/agents.md`, not `/project/a-docs/agents.md` and not a machine-specific absolute path. Strip any machine-specific prefix from file operation outputs before writing.
+- **Variable names must reflect what the file is, not where it lives.** A name tied to a path breaks when the file moves.
 
-**When referencing a file in a document:**
-Use the variable name inline: "See `$TOOLING_STANDARD` for package manager requirements." Do not write the path. The path lives in one place: the index.
+**Usage:**
+- **Always reference by variable name, never by path.** Write `$TOOLING_STANDARD`, not `project/docs/tooling/standard.md`. The path lives in one place: the index.
+- **Always resolve through the index.** Do not assume a path from a prior session is still correct — look it up.
+- **For files not in the index,** use the repo-relative path directly. Do not invent an unregistered `$VARIABLE_NAME` — an invented variable resolves to nothing and gives the appearance of indirection without the benefit.
 
-**When following a reference as an agent:**
-Look up the variable in the index to get the current path, then open the file. Do not assume a path you remember from a prior session is still correct — always resolve through the index.
+**Moving a file:**
+- Update only the **Path** cell. Variable names must not change — a renamed variable breaks every document that references it.
+- Grep for the variable name across all active documents to confirm no hardcoded paths remain.
 
-**When moving a file:**
-1. Update the **Path** cell in the index.
-2. Grep for the variable name across all active documents to confirm no hardcoded paths remain.
-3. No other updates are needed.
-
-**When referencing a file not in the index:**
-For files that do not belong in the index — per-flow artifacts, active working files, or any file only referenced once — use the repo-relative path directly in handoffs and artifacts. Do not invent an unregistered `$VARIABLE_NAME` to anchor it. An invented variable that is not registered in the index resolves to nothing: it gives the appearance of indirection without the benefit. If an unregistered variable appears in a handoff, it is a signal that a plain repo-relative path should have been used instead.
-
----
-
-## Variable Retirement
-
-When a registered variable is removed — because the file it pointed to has been deleted, merged into another document, or is otherwise no longer referenced — retire the variable using this sequence, in order:
-
-**Step 1 — Identify all consumers.**
-Grep all active documents for the `$VARIABLE_NAME` before touching anything. This produces the definitive list of references that must be resolved. Do not skip this step on the assumption that you know all the references.
-
-**Step 2 — Update or remove each reference.**
-For each consuming document: if the content was relocated rather than removed, replace the variable reference with the new variable name. If the content was removed entirely, remove the reference from the document. Do not leave dangling variable names in active documents.
-
-**Step 3 — Remove the variable row from the index.**
-Only after all consumer references are resolved. Removing the row before updating consumers leaves documents with unresolvable variable names.
-
-**Step 4 — Post-removal scan.**
-Grep all active documents for both the `$VARIABLE` form *and* the prose concept name of the retired content (e.g., if `$TODO_FOLDER` pointed to a to-do folder, also grep for "to-do folder" and "todo folder"). A section removal and an index-row deletion are not a sufficient retirement — stale prose references survive both.
-
-This sequence is the inverse of Index-Before-Reference: where creation requires registration before reference, retirement requires reference cleanup before removal.
-
----
-
-## What Makes an Index Fail
-
-**Registering too many files.** An index with fifty entries is not navigable. If everything is registered, nothing is prioritized. Register key files only.
-
-**Naming variables after locations.** `$DOCS_TOOLING_STANDARD` breaks as a name the moment the file moves out of `docs/`. Name for what the file is.
-
-**Not replacing hardcoded paths.** Creating the index but leaving direct paths scattered through documents gives the impression of indirection without the benefit. The index only works if it is the single place paths live.
-
-**Not adding it to required readings.** An index that is not in any role's required readings will not be loaded, and agents will resolve file paths incorrectly or not at all.
+**Retiring a variable:**
+1. Grep all active documents for the `$VARIABLE_NAME` before touching anything.
+2. For each consumer: replace with the new variable name if relocated, or remove the reference if the file is gone.
+3. Remove the variable row from the index only after all consumer references are resolved.
+4. Post-removal scan: grep for both the `$VARIABLE` form and the prose concept name — stale prose references survive row deletion.

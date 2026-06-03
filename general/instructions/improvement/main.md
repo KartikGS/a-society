@@ -4,16 +4,6 @@ This document explains how to create an `improvement/` folder for a project's a-
 
 ---
 
-## Local Correction Path
-
-After a role identifies framework friction during meta-analysis:
-
-- **Owned local standing surfaces** — fix them directly during meta-analysis.
-- **Owner-owned local governance surfaces** — the Owner fixes them during Owner meta-analysis.
-- **Historical records** — never rewrite them.
-
----
-
 ## What Is an `improvement/` Folder?
 
 An `improvement/` folder contains two required components:
@@ -101,3 +91,19 @@ Add all key files to the project's file path index. At minimum:
 The `improvement/` folder is a required initialization artifact for projects initialized by the runtime. Create it when the project's a-docs are first set up.
 
 **Why:** The backward pass is the mechanism for collecting friction observations. Without it in place from the first execution cycle, friction goes untracked and cannot be analyzed. A project that defers the improvement folder loses signal from its earliest — often most instructive — cycles.
+
+---
+
+## Maintenance Rules
+
+Copy these rules into the project's `improvement/main.md` at initialization. They govern how the improvement folder is updated over its lifetime.
+
+- **Update `main.md` when the improvement philosophy changes.** If the project changes how it decides to split, consolidate, or scope improvement work, update the philosophy. Do not update it to reflect individual backward-pass outcomes — those belong in flow records.
+- **Update `meta-analysis.md` when reflection categories change.** If backward-pass findings consistently fall outside the existing categories, add a category. If a category produces no findings over multiple flows, consider whether it is still earning its place.
+- **Never rewrite historical records to match updated standards.** Improvement in a-docs applies forward. Closed flow records are immutable.
+- **Scope boundary is a hard rule.** The backward pass is for framework surfaces only. Product issues, feature ideas, and performance observations discovered during meta-analysis belong in the project's change request system, not in improvement findings.
+
+**Correction path — applied during every backward pass:**
+- **Owned local standing surfaces** — fix them directly during meta-analysis.
+- **Owner-owned local governance surfaces** — the Owner fixes them during Owner meta-analysis.
+- **Historical records** — never rewrite them.

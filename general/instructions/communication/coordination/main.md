@@ -84,21 +84,16 @@ Check that the handoff protocol, correction protocol, and conflict-resolution do
 
 ---
 
-## Format Rules
+## Maintenance Rules
 
-- **Coordination protocols are mandatory and invariant.** Write rules as requirements, not suggestions. Use "must" and "must not," not "should" and "may."
-- **Name every rule.** Short names allow precise reference in handoffs and reports ("per the Halt Requirement in the Correction Protocol"). Unnamed rules cannot be cited.
-- **Keep the documents stable.** Coordination protocols that change frequently are a sign the process has not been decided. Decide the process, then write it down. Refine deliberately, not reactively.
-- **Do not merge the three documents.** Each answers a distinct question. A single combined document grows unwieldy and makes it hard to locate the relevant rule under pressure.
+Copy these rules into the project's `coordination/main.md` at initialization. They govern how the coordination layer is updated over its lifetime.
 
----
-
-## What Makes a Coordination Layer Fail
-
-**No shared status vocabulary.** Agents describe state differently. One agent's "done" is another's "pending verification." The workflow stalls at every handoff while roles negotiate what the status means.
-
-**Protocols embedded in role documents.** Each role follows its own half of the protocol. When a conflict arises between two roles, there is no shared document either can cite.
-
-**Correction protocol absent.** When an agent discovers a problem, it has two options: silently work around it (losing traceability and potentially compounding the problem) or stop without knowing what to do (blocking the workflow). Both are worse than a protocol.
-
-**Conflict resolution undefined.** Agents either escalate everything to the human (friction, bottleneck) or resolve everything themselves (authority overreach, invisible decisions). Neither is sustainable across a long-running project.
+- **Update when the process changes — not when individual flows deviate.** Coordination protocols reflect the standing process. If one flow ran differently, that is a record-level observation, not a protocol update.
+- **When a status token proves ambiguous in practice, refine its definition.** A token that agents apply inconsistently is wrong. Fix the definition rather than tolerating the inconsistency.
+- **When a new role is added, update the authority matrix and correction protocol.** New roles create new authority boundaries and new correction paths. Protocols that do not account for a role will be applied inconsistently by that role.
+- **Keep protocols stable.** Protocols that change frequently signal that the process has not been decided. Decide the process, then write it down. Deliberate revision is acceptable; reactive churn is not.
+- **Check that protocol rules are not duplicated in role documents.** Each role should know only its own behavior; the shared rules belong here. If a role document has grown to include protocol detail, move it.
+- **Check that the correction protocol is still complete.** If new discovery conditions have emerged that are not covered, add them. A gap in the correction protocol means agents will either silently work around problems or block without knowing what to do.
+- **Write rules as requirements, not suggestions.** Use "must" and "must not," not "should" and "may." A protocol stated as a preference will not be followed consistently.
+- **Name every rule.** Short names allow precise reference in handoffs ("per the Halt Requirement in the Correction Protocol"). Unnamed rules cannot be cited.
+- **Do not merge the handoff protocol, correction protocol, and conflict-resolution document.** Each answers a distinct question. A merged document becomes unwieldy and makes it hard to locate the relevant rule under pressure.

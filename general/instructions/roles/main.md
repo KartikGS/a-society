@@ -245,18 +245,18 @@ These steps are not optional. A role document without the supporting role folder
 ## Format Rules
 
 - **Primary Focus first, always.** An agent skimming the document should understand the role from the first paragraph.
-- **Both ownership lists are mandatory.** What the role does AND what it does not do. Omitting the "does not" list is a documentation failure.
 - **Hard rules get a distinct visual marker.** Agents must recognize them as non-overridable. Use bold, a horizontal rule, or a callout block — be consistent within your project.
-- **Escalation triggers are specific.** Name the categories of situation, not just "when uncertain."
 
 ---
 
-## What Makes a Role Document Fail
+## Maintenance Rules
 
-**Too broad.** A role that "owns everything" owns nothing. Authority without specificity cannot be enforced.
+Copy these rules into each project role document at initialization. They govern how role documents are updated over their lifetime.
 
-**Missing the "does not" list.** The boundary disputes that actually arise are at the edges — where two roles might both claim authority. The "does not" list resolves those edges in advance.
-
-**No escalation triggers.** Without them, an agent either guesses or asks every time. Neither is good.
-
-**Conflates role with person.** A role document defines a behavioral contract, not a personality profile. Keep the focus on authority and decision rules.
+- **Update when authority or boundaries change — not when tasks change.** Role documents define decision authority, not task lists. If what the role *does* changes but its authority and ownership boundaries have not, the role document may not need updating.
+- **Update the "does not" list when new boundary disputes arise.** When two roles' boundaries are ambiguous in practice, resolve it in both role documents. Unresolved boundaries recur every session.
+- **Never add phase-specific instructions.** Those belong in workflow node context. A role document that accumulates phase instructions becomes a procedural manual — which is the opposite of a behavioral contract.
+- **Hard rules are non-negotiable.** If a hard rule is being routinely softened in practice, that is a signal to update the rule deliberately — not to let it erode silently.
+- **Keep the role set small.** Only add a role when it has real, distinct delegated authority. Roles added for organizational tidiness without authority differentiation create ambiguity rather than resolving it.
+- **Check that every role has a scoped "owns" list.** A role that owns everything owns nothing — authority without specificity cannot be enforced.
+- **Check that escalation triggers are specific.** If the escalation section only says "when uncertain," it provides no guidance. Name the actual categories of situation.

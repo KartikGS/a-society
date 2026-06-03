@@ -39,42 +39,13 @@ A brief summary of where the project stands right now. Include:
 
 When a new unit of work completes, its entry replaces the previous `Recent Focus`. Historical flow records live in the project's records folder, not in the log.
 
-### 2. Entry Lifecycle
-
-**Validity Sweeps**
-
-The Owner performs a validity sweep of Next Priorities at two points in every flow:
-
-1. **Intake Sweep:** Triggered by the Owner's scope assessment of a new request. Overlapping entries are checked for invalidation (Addressed, Contradicted, Restructured, or Partially Addressed) before the workflow plan is produced. Where an overlapping entry would be a natural complement to the current request rather than fully invalidated, the Owner may propose including it in the same flow — pending user approval — before producing the workflow plan.
-2. **Closure Sweep:** Triggered by the completed flow's scope at forward pass closure. Overlapping entries are checked for invalidation and resolved before the flow is marked closed.
-
-### 3. Next Priorities
+### 2. Next Priorities
 A flat, ordered list of pending work items. Each item includes:
 - A scope tag (see below) indicating expected effort
 - A short title and description
 - A status note if the item is blocked, deferred, or context-dependent
 
 Next priorities are not a backlog — they are the concrete next steps. Items that are long-deferred or require a future policy decision should be marked clearly so agents can skip them without asking.
-
-**Merge Assessment**
-
-Before adding any Next Priorities item — whether at intake or while resolving backward-pass findings — scan existing Next Priorities items for merge opportunities. Two merge patterns apply:
-
-**Pattern A — Deep merge** (items are combined into one task). All three conditions must be true:
-
-1. **Same target files or same design area** — they touch the same document(s) or the same conceptual area.
-2. **Compatible authority level** — both require the same implementing role or the same approval path.
-3. **Same workflow type and role path** — both items would run through the same workflow type with the same role sequence.
-
-**Pattern B — Bundled flow** (items run as parallel tracks within one flow). All three conditions must be true:
-
-1. **Adjacent but distinct areas** — they address different files or design areas but belong to a cohesive initiative.
-2. **Compatible authority level** — both require the same implementing role or the same approval path.
-3. **No sequencing conflict** — the two tracks can proceed concurrently without one depending on the other's output.
-
-When a Pattern A merge is identified, replace the existing item(s) with a single merged item covering all consolidated work. The merged item retains the source citations of all constituent items.
-
-When a Pattern B merge is identified, replace the existing items with a single bundled item that names both tracks. The bundled item retains the source citations of all constituent items.
 
 ---
 
@@ -119,15 +90,6 @@ Write the most important items first. For each item, include enough context that
 
 ---
 
-## Format Rules
-
-- **Current state is current.** The log must reflect the actual present state of the project. An outdated log is worse than no log — it misdirects agents confidently.
-- **One `Recent Focus`.** Never allow two entries to claim `Recent Focus`. When a flow closes, replace the previous `Recent Focus` entry. Historical traceability lives in the records folder.
-- **Next priorities are actionable.** Each item should be specific enough that an agent could pick it up and start. Vague items like "improve performance" are not next priorities — they are topics for a planning session.
-- **Maintained at the end of each unit of work.** The log is updated when work closes, not periodically. The Owner is responsible for the update at closure.
-
----
-
 ## Examples Across Project Types
 
 ### Software project
@@ -141,10 +103,20 @@ A log tracking experimental runs, analysis phases, and findings reviews. `Recent
 
 ---
 
-## What Makes a Project Log Fail
+## Maintenance Rules
 
-**Updated too infrequently.** A log that is three CRs behind is not a log — it is a stale artifact. The log must be updated at the close of every unit of work, without exception.
+Copy these rules into the project's log at initialization. They govern how the log is updated over its lifetime.
 
-**Aspirational entries.** Writing "In Progress: feature X" when feature X has not actually started is aspirational, not descriptive. Agents who read this will act on incorrect state. Write only what is actually true.
+- **Update at the close of every unit of work — no exceptions.** The Owner is responsible for this update. A log that lags behind is worse than no log: it misdirects agents confidently.
+- **Write only what is actually true.** No aspirational state, no in-progress items that have not started.
+- **One `Recent Focus` entry only.** When a flow closes, replace the previous entry. History belongs in flow records, not in the log.
+- **Keep Next Priorities short.** If the list cannot be attempted in the next few sessions, it has become a backlog. Trim it.
+**Validity sweeps — run at every flow:**
+- **Intake sweep:** Before producing the workflow plan, check existing Next Priorities for invalidation (Addressed, Contradicted, Restructured, or Partially Addressed). Where an overlapping entry is a natural complement to the current request rather than fully invalidated, propose including it in the same flow — pending user approval.
+- **Closure sweep:** At forward pass closure, check again. Resolve any entries the completed flow has addressed or made obsolete before marking the flow closed.
 
-**Next priorities that aren't priorities.** A list of fifty items is not a priorities list. It is a backlog. Keep the next priorities list to what would realistically be attempted in the next few sessions.
+**Merge assessment — run before adding any Next Priorities item:**
+- **Pattern A (deep merge):** Combine into one task when all three are true: same target files or design area; same implementing role or approval path; same workflow type and role sequence.
+- **Pattern B (bundled flow):** Bundle as parallel tracks when all three are true: adjacent but distinct areas belonging to a cohesive initiative; same implementing role or approval path; no sequencing conflict between tracks.
+- When a Pattern A merge is identified, replace the existing item(s) with one merged item retaining source citations.
+- When a Pattern B merge is identified, replace the existing items with one bundled item naming both tracks and retaining source citations.

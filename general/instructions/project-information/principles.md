@@ -58,28 +58,22 @@ A principle should be specific to this project and this domain. Ask: "Would this
 
 ## How to Write One
 
-**Step 1 — List the recurring decisions where values matter.**
-Think about the decisions that agents have gotten wrong (or made inconsistently) in the past. What values were unclear? What policy was absent? Each of these is a candidate principle.
+At initialization, the principles document is likely a stub — the project has no operational history to draw on yet. Create it with whatever domain-specific values are already known. It grows as the project accumulates real decision patterns.
 
-**Step 2 — Name each principle.**
+**Step 1 — Name each principle.**
 Give each one a short, specific name that captures its purpose. The name should make its domain clear: "Educational Clarity First" signals it is about learning. "Honest Model Framing" signals it is about representation.
 
-**Step 3 — Write the rule.**
+**Step 2 — Write the rule.**
 State what the principle requires. Be specific enough that an agent making a decision can apply it. Avoid vague language — "be clear" is not actionable; "do not introduce specialized terms without a short explanation or a direct reference link" is.
 
-**Step 4 — Add policy clarifications for recurring tensions.**
-If a principle has generated repeated ambiguity, resolve it inline. Write the resolution as a declared policy: "Rule: [specific resolution]." This prevents the same tension from recurring in every session.
-
-**Step 5 — Cut principles that are not specific to this project.**
-After writing, read each principle and ask: "Is this true only of this project, or of any project?" Cut any that are true of any project. What remains is the document.
+**Step 3 — Cut principles that are not specific to this project.**
+Read each principle and ask: "Is this true only of this project, or of any project?" Cut any that are true of any project. What remains is the document.
 
 ---
 
 ## Format Rules
 
 - **Named principles, not numbered ones.** Numbers suggest an ordering that usually does not exist. Names are memorable and searchable.
-- **Actionable over aspirational.** Each principle should answer: "When facing decision X, what does this principle tell me to do?" If it does not, rewrite it.
-- **Policy over vagueness.** When a principle is invoked often enough to generate recurring decisions, turn the recurring decision into a policy and write it into the principle. The goal is to reduce future judgment calls, not to describe the kinds of judgment calls that exist.
 - **Short over comprehensive.** A principles document is read at orientation. If it is longer than what an agent can absorb in a single read, cut it. The most important principles are the ones that are remembered, not the longest list.
 
 ---
@@ -102,12 +96,14 @@ After writing, read each principle and ask: "Is this true only of this project, 
 
 ---
 
-## What Makes a Principles Document Fail
+## Maintenance Rules
 
-**Too generic.** A principles document full of "write clean, maintainable code" and "follow accessibility guidelines" is not a principles document — it is a code of conduct. Remove anything that is true of any well-run project.
+Copy these rules into the project's principles document at initialization. They govern how the document is updated over its lifetime.
 
-**No policy, only values.** A principle that states "prefer clarity" without defining what clarity means in practice provides no decision guidance. The value of a principle is in its policy implications — write those explicitly.
-
-**Principles that contradict each other without resolution.** When two principles are in tension (e.g., "minimize page weight" and "resource-rich learning"), the document should either rank them or define when each takes precedence. Unresolved tension becomes recurring confusion.
-
-**Updated too frequently.** Principles should evolve slowly, in response to real patterns observed across multiple sessions. A principle that changes every sprint was not a principle — it was a local decision that was over-promoted.
+- **Add a principle when a recurring decision pattern has produced clear signal.** One ambiguous session is not enough. Identify the recurring decision, name it, write the rule, and cut it if it turns out to be generic.
+- **Add policy clarifications when recurring tensions emerge.** When a principle generates an edge case that keeps coming up, resolve it inline as a declared policy rather than leaving it to per-session judgment.
+- **Remove principles that have become generic.** If a principle no longer feels specific to this project — if any well-run project would follow it — remove it.
+- **Update policy clarifications when new recurring tensions emerge.** When a principle generates a new edge case that keeps coming up, resolve it inline rather than leaving it to per-session judgment.
+- **Update rarely and deliberately.** A principle that changes frequently was a local decision, not a principle. Treat each update as significant.
+- **Check that every principle has actionable policy.** A principle stating only a value ("prefer clarity") without a concrete policy implication provides no decision guidance. If the policy cannot be stated, the principle is not ready.
+- **Check for unresolved contradictions.** If two principles are in tension and neither ranks the other nor defines when each applies, agents will resolve the tension inconsistently across sessions. Resolve it explicitly.

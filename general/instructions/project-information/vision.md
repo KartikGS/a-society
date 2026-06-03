@@ -94,17 +94,10 @@ Think about the decisions that are most likely to be ambiguous — additions tha
 **Step 5 — Add the optional inventory if the project is new.**
 List what already exists. Keep it as a table: artifact name and one-line purpose. This section should be updated or removed as the project matures and other indexes take over.
 
-**Step 5 — Cut everything that is not one of the above.**
-A vision document that is three pages long is not a vision document. It is an encyclopaedia that agents will skim. Ruthless cutting is part of writing a good one.
+**Step 6 — Cut everything that is not one of the above.**
+A vision document that is three pages long is not a vision document. It is an encyclopaedia that agents will skim. Ruthless cutting is part of writing a good one. First person is permitted — vision documents are often the most human voice in a project's documentation.
 
 ---
-
-## Format Rules
-
-- **Short over complete.** The goal is retention, not comprehensiveness. If an agent can recall the core bet after closing the document, the vision document succeeded.
-- **Declarative, not aspirational.** "We believe that..." is weaker than "The bottleneck is not capability — it is context." State things as true, not as hoped-for.
-- **Stable by design.** A vision document that changes every month is not a vision document. It is a status update. Write it to last. If the core bet changes, the project has changed direction — which is a significant event, not a routine update.
-- **First person is permitted.** Vision documents are often the most human voice in a project's documentation. That is intentional.
 
 ---
 
@@ -132,12 +125,12 @@ A vision document that is three pages long is not a vision document. It is an en
 
 ---
 
-## What Makes a Vision Document Fail
+## Maintenance Rules
 
-**Too long.** Agents will not re-read a long document mid-session. The vision is only useful if it is in active memory.
+Copy these rules into the project's vision document at initialization. They govern how the document is updated over its lifetime.
 
-**No core bet.** A vision document without a falsifiable claim gives agents nothing to align to. "We want to build something great" is not a bet.
-
-**Too specific.** If the vision document describes implementation details, it will become stale within weeks. Stay at the level of direction, not prescription.
-
-**Updated too frequently.** Each update implies the previous version was wrong. Frequent updates erode trust in the document as a stable anchor. Distinguish between refining the wording (acceptable) and changing the direction (significant, requires deliberate decision).
+- **Update only when direction changes.** Wording refinements are acceptable. If the core bet needs to change, the project has changed direction — treat it as a significant event requiring deliberate decision, not a routine edit.
+- **Resist adding length.** If a new section seems necessary, the content likely belongs in the structure document, a workflow document, or requirements. The vision document's value is proportional to how quickly it can be absorbed in one read.
+- **Stay declarative.** Rewrite any "we believe that..." phrasing as a statement of fact.
+- **No implementation detail.** Anything that could become stale as features change does not belong here.
+- **Check for a core bet.** If the core bet has become vague or been removed, the document has lost its primary function. Every agent decision should be checkable against a specific, falsifiable claim.
