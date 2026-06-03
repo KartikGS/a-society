@@ -21,6 +21,23 @@ export function resolveToolFeedItem(feeds: Record<string, FeedItem[]>, role: str
   return { ...feeds, [role]: updated };
 }
 
+export function resolveCompactionFeedItem(feeds: Record<string, FeedItem[]>, role: string, event: OperatorEvent): Record<string, FeedItem[]> {
+  const resolved = formatOperatorEvent(event);
+  if (!resolved) return feeds;
+
+  const existing = feeds[role] ?? [];
+  const idx = [...existing].reverse().findIndex(item => item.type === 'tool' && item.label === 'Compaction');
+  if (idx === -1) return feeds;
+
+  const realIdx = existing.length - 1 - idx;
+  const updated = existing.map((item, i) =>
+    i === realIdx
+      ? { ...item, type: resolved.type, label: resolved.label, text: resolved.text }
+      : item
+  );
+  return { ...feeds, [role]: updated };
+}
+
 export function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
   const existing = feeds[role] ?? [];
   const previous = existing[existing.length - 1];

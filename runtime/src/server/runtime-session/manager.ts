@@ -140,6 +140,8 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       finished: false,
       task: Promise.resolve(),
       latestContextUsageByRole,
+      manualCompactionControllers: new Map<string, AbortController>(),
+      manualCompactionSigintHandler: null,
     };
 
     activeSessions.set(flowKey(flowRef), session);

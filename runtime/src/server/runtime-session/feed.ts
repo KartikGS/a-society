@@ -52,6 +52,29 @@ export function loadLatestContextUsageByRole(
   );
 }
 
+function isPendingCompactionItem(item: FeedItem): boolean {
+  return item.type === 'tool' && item.label === 'Compaction';
+}
+
+function appendProjectedFeedItem(
+  session: ActiveSession,
+  history: FeedItem[],
+  roleKey: string,
+  message: HistoricalMessage,
+  workspaceRoot: string
+): void {
+  const id = nextFeedItemId(session, roleKey);
+  const item = projectMessageToFeedItem(message, id);
+  if (!item) return;
+
+  history.push(item);
+  if (history.length > HISTORY_LIMIT) {
+    history.splice(0, history.length - HISTORY_LIMIT);
+  }
+  session.roleFeedHistory.set(roleKey, history);
+  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+}
+
 export function rememberMessage(
   session: ActiveSession,
   message: HistoricalMessage,
@@ -73,6 +96,28 @@ export function rememberMessage(
     return;
   }
 
+  if (
+    message.type === 'operator_event' &&
+    (message.event.kind === 'session.compacted' || message.event.kind === 'session.compaction_failed')
+  ) {
+    const projected = projectMessageToFeedItem(message, 'compaction-resolution');
+    const idx = [...history].reverse().findIndex(isPendingCompactionItem);
+    if (idx !== -1 && projected) {
+      const realIdx = history.length - 1 - idx;
+      history[realIdx] = {
+        ...history[realIdx],
+        type: projected.type,
+        label: projected.label,
+        text: projected.text,
+      };
+      session.roleFeedHistory.set(roleKey, history);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      return;
+    }
+
+    return;
+  }
+
   const previous = history[history.length - 1];
   if (previous?.type === 'assistant' && message.type === 'output_text') {
     history[history.length - 1] = { ...previous, text: previous.text + message.text };
@@ -81,16 +126,7 @@ export function rememberMessage(
     return;
   }
 
-  const id = nextFeedItemId(session, roleKey);
-  const item = projectMessageToFeedItem(message, id);
-  if (!item) return;
-
-  history.push(item);
-  if (history.length > HISTORY_LIMIT) {
-    history.splice(0, history.length - HISTORY_LIMIT);
-  }
-  session.roleFeedHistory.set(roleKey, history);
-  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+  appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
 }
 
 export function createRoleOutputStream(

@@ -28,6 +28,7 @@ import {
   isAwaitingHumanReply,
   resolveAwaitingHumanNode,
 } from './human-input.js';
+import { compactPersistedRoleContext } from './manual-compaction.js';
 import type { ActiveSession } from './types.js';
 
 type RuntimeSessionCommandsDeps = {
@@ -119,6 +120,45 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return existing;
     }
     return createSession(ref);
+  }
+
+  function hasActiveManualCompaction(session: ActiveSession, role?: string): boolean {
+    if (session.manualCompactionControllers.size === 0) return false;
+    const targetRole = role ? parseRoleIdentity(role).instanceRoleId : null;
+    for (const [roleInstanceId, controller] of session.manualCompactionControllers.entries()) {
+      if (targetRole && targetRole !== roleInstanceId) continue;
+      if (!controller.signal.aborted) return true;
+    }
+    return false;
+  }
+
+  function abortManualCompaction(session: ActiveSession, role?: string): boolean {
+    if (session.manualCompactionControllers.size === 0) return false;
+    const targetRole = role ? parseRoleIdentity(role).instanceRoleId : null;
+    let stopped = false;
+    for (const [roleInstanceId, controller] of session.manualCompactionControllers.entries()) {
+      if (targetRole && targetRole !== roleInstanceId) continue;
+      if (controller.signal.aborted) continue;
+      controller.abort();
+      stopped = true;
+    }
+    return stopped;
+  }
+
+  function ensureManualCompactionSigintHandler(session: ActiveSession): void {
+    if (session.manualCompactionSigintHandler) return;
+    session.manualCompactionSigintHandler = () => {
+      for (const controller of session.manualCompactionControllers.values()) {
+        if (!controller.signal.aborted) controller.abort();
+      }
+    };
+    process.on('SIGINT', session.manualCompactionSigintHandler);
+  }
+
+  function releaseManualCompactionSigintHandlerIfIdle(session: ActiveSession): void {
+    if (session.manualCompactionControllers.size > 0 || !session.manualCompactionSigintHandler) return;
+    process.removeListener('SIGINT', session.manualCompactionSigintHandler);
+    session.manualCompactionSigintHandler = null;
   }
 
   async function handleImprovementChoice(ref: FlowRef, mode: ProtocolImprovementChoiceMode): Promise<void> {
@@ -274,7 +314,8 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const stopped = activeSession.orchestrator.abortActiveTurn(target)
-      || (!target?.nodeId && activeSession.improvementOrchestrator.abortActiveTurn(target?.role));
+      || (!target?.nodeId && activeSession.improvementOrchestrator.abortActiveTurn(target?.role))
+      || (!target?.nodeId && abortManualCompaction(activeSession, target?.role));
     if (!stopped) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active turn is currently stoppable.' });
     }
@@ -358,7 +399,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const activeSession = activeSessions.get(flowKey(ref));
-    if (activeSession?.orchestrator.hasActiveTurn({ role: roleName })) {
+    if (
+      activeSession?.orchestrator.hasActiveTurn({ roleInstanceId }) ||
+      activeSession?.improvementOrchestrator.hasActiveTurn(roleInstanceId) ||
+      (activeSession ? hasActiveManualCompaction(activeSession, roleInstanceId) : false)
+    ) {
       broadcastToFlow(ref, {
         type: 'operator_event',
         flowRef: ref,
@@ -379,11 +424,28 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     const createdForCompaction = !activeSession || activeSession.finished;
     const session = getOrCreateChoiceSession(ref);
-    void session.orchestrator.compactRoleContext(flowRun, roleName, 'manual')
+    const controller = new AbortController();
+    session.manualCompactionControllers.set(roleInstanceId, controller);
+    ensureManualCompactionSigintHandler(session);
+
+    void compactPersistedRoleContext({
+      flowRun,
+      flowRef: ref,
+      workspaceRoot,
+      roleName,
+      roleInstanceId,
+      trigger: 'manual',
+      signal: controller.signal,
+      operatorRenderer: session.sink,
+    })
       .then((result) => {
         if (!result.compacted) {
           if (createdForCompaction) {
             session.finished = true;
+          }
+          if (result.aborted) {
+            emitFlowState(session);
+            return;
           }
           broadcastToFlow(ref, {
             type: 'error',
@@ -407,6 +469,13 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           flowRef: ref,
           message: error instanceof Error ? error.message : String(error)
         });
+      })
+      .finally(() => {
+        const activeController = session.manualCompactionControllers.get(roleInstanceId);
+        if (activeController === controller) {
+          session.manualCompactionControllers.delete(roleInstanceId);
+        }
+        releaseManualCompactionSigintHandlerIfIdle(session);
       });
   }
 

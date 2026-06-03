@@ -159,13 +159,13 @@ export function App() {
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
-    isViewedRoleCompacting,
     visibleWaitLabel,
     hasActiveSession,
     inputDisabled,
     inputPlaceholder,
     canStopViewedRole,
     stopRequestedForViewedRole,
+    isViewedRoleCompacting,
     composerValue,
     latestContextUsage,
   } = activeView;
@@ -416,9 +416,9 @@ export function App() {
                   onConsentResponse={handleConsentResponse}
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
+                  isCompactingContext={isViewedRoleCompacting}
                   contextWindow={contextWindow}
                   latestContextUsage={latestContextUsage}
-                  isCompactingContext={isViewedRoleCompacting}
                 />
               </Panel>
             </PanelGroup>

@@ -3,7 +3,7 @@ import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
 import type { FlowRef, FlowSummary, OperatorEvent, ProjectDiscovery, ServerMessage } from '../types';
 import { SYSTEM_ROLE_KEY } from './constants';
-import { appendFeedItem, formatOperatorEvent, nextFeedId, resolveToolFeedItem } from './feed';
+import { appendFeedItem, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveToolFeedItem } from './feed';
 import {
   getConsentRequestRoleKey,
   hasImprovementGraph,
@@ -26,7 +26,12 @@ export interface ServerMessageHandlers {
 }
 
 function feedRoleForEvent(event: OperatorEvent): string | null {
-  if (event.kind === 'human.resumed' || event.kind === 'role.resumed' || event.kind === 'activity.tool_call') {
+  if (
+    event.kind === 'human.resumed' ||
+    event.kind === 'role.resumed' ||
+    event.kind === 'activity.tool_call' ||
+    event.kind === 'session.compaction_started'
+  ) {
     return toRoleKey(event.role);
   }
 
@@ -93,26 +98,6 @@ function applyOperatorEvent(
     return;
   }
 
-  if (event.kind === 'session.compaction_started') {
-    const roleKey = toRoleKey(event.role);
-    if (!roleKey) return;
-    handlers.updateFlowUi(key, (state) => ({
-      ...state,
-      compactingRoles: { ...state.compactingRoles, [roleKey]: true },
-    }));
-    return;
-  }
-
-  if (event.kind === 'session.compaction_failed') {
-    const roleKey = toRoleKey(event.role);
-    if (!roleKey) return;
-    handlers.updateFlowUi(key, (state) => ({
-      ...state,
-      compactingRoles: { ...state.compactingRoles, [roleKey]: false },
-    }));
-    return;
-  }
-
   if (event.kind === 'role.active' || event.kind === 'human.awaiting_input') {
     handlers.updateFlowUi(key, (state) => {
       const item = formatOperatorEvent(event);
@@ -142,10 +127,39 @@ function applyOperatorEvent(
     return;
   }
 
+  if (event.kind === 'session.compaction_started') {
+    const roleKey = toRoleKey(event.role);
+    if (roleKey) {
+      handlers.updateFlowUi(key, (state) => {
+        const item = formatOperatorEvent(event);
+        return {
+          ...state,
+          compactingRoles: { ...state.compactingRoles, [roleKey]: true },
+          roleFeeds: item ? appendFeedItem(state.roleFeeds, roleKey, item) : state.roleFeeds,
+        };
+      });
+    }
+    return;
+  }
+
+  if (event.kind === 'session.compacted' || event.kind === 'session.compaction_failed') {
+    const roleKey = toRoleKey(event.role);
+    if (roleKey) {
+      handlers.updateFlowUi(key, (state) => ({
+        ...state,
+        compactingRoles: { ...state.compactingRoles, [roleKey]: false },
+        latestContextUsageByRole: event.kind === 'session.compacted'
+          ? { ...state.latestContextUsageByRole, [roleKey]: 0 }
+          : state.latestContextUsageByRole,
+        roleFeeds: resolveCompactionFeedItem(state.roleFeeds, roleKey, event),
+      }));
+    }
+    return;
+  }
+
   handlers.updateFlowUi(key, (state) => {
     const item = formatOperatorEvent(event);
     const feedRole = feedRoleForEvent(event);
-    const compactedRole = event.kind === 'session.compacted' ? toRoleKey(event.role) : null;
     const resumedRole = event.kind === 'human.resumed' || event.kind === 'role.resumed' ? toRoleKey(event.role) : null;
     return {
       ...state,
@@ -154,13 +168,8 @@ function applyOperatorEvent(
         : resumedRole
           ? { ...state.stopRequestedRoles, [resumedRole]: false }
           : state.stopRequestedRoles,
+      compactingRoles: event.kind === 'flow.completed' ? {} : state.compactingRoles,
       lastHandoff: event.kind === 'handoff.applied' ? event : state.lastHandoff,
-      latestContextUsageByRole: compactedRole
-        ? { ...state.latestContextUsageByRole, [compactedRole]: 0 }
-        : state.latestContextUsageByRole,
-      compactingRoles: compactedRole
-        ? { ...state.compactingRoles, [compactedRole]: false }
-        : state.compactingRoles,
       roleFeeds: item && feedRole ? appendFeedItem(state.roleFeeds, feedRole, item) : state.roleFeeds,
     };
   });
@@ -189,8 +198,8 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
         lastHandoff: null,
         waitLabels: {},
         stopRequestedRoles: {},
-        latestContextUsageByRole: {},
         compactingRoles: {},
+        latestContextUsageByRole: {},
         consentRequests: {},
       }));
       return;
@@ -271,14 +280,15 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
               ? 'flow'
               : state.selectedGraph,
           stopRequestedRoles: message.flowRun.status !== 'running' ? {} : state.stopRequestedRoles,
+          compactingRoles: message.flowRun.status !== 'running' ? {} : state.compactingRoles,
           hasActiveSession: message.hasActiveSession,
-          latestContextUsageByRole: { ...message.contextUsageByRole, ...state.latestContextUsageByRole },
+          latestContextUsageByRole: { ...state.latestContextUsageByRole, ...message.contextUsageByRole },
         };
       });
       handlers.refreshProjectFlows(message.flowRef.projectNamespace);
       return;
     case 'error':
-      handlers.updateFlowUi(key, (state) => ({ ...state, stopRequestedRoles: {} }));
+      handlers.updateFlowUi(key, (state) => ({ ...state, stopRequestedRoles: {}, compactingRoles: {} }));
       handlers.showToast(message.message);
       if (message.flowRef.flowId === '__new__' || message.flowRef.flowId === '__system__') {
         handlers.setSelectorError(message.message);

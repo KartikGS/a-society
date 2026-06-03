@@ -66,14 +66,24 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
     case 'usage.turn_summary':
       return null;
     case 'session.compaction_started':
-      return null;
-    case 'session.compaction_failed':
-      return null;
-    case 'session.compacted':
       return {
         id,
         type: 'tool',
-        label: 'Context',
+        label: 'Compaction',
+        text: `Compacting context (${event.trigger}).`
+      };
+    case 'session.compaction_failed':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'Compaction',
+        text: `Context compaction failed (${event.trigger}): ${event.reason}`
+      };
+    case 'session.compacted':
+      return {
+        id,
+        type: 'tool-success',
+        label: 'Compaction',
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
     case 'flow.forward_pass_closed':

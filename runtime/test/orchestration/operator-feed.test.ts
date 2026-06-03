@@ -5,6 +5,7 @@ import path from 'node:path';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
+import { rememberMessage } from '../../src/server/runtime-session/feed.js';
 import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -124,6 +125,86 @@ test('activity.tool_call is no longer in the transient set so it reaches histori
   const event: OperatorEvent = { kind: 'activity.tool_call', role: 'owner', toolName: 'read' };
   assert.strictEqual(isTransientOperatorEvent(event), false);
   assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
+});
+
+test('compaction started becomes a pending role feed item', () => {
+  const event: OperatorEvent = { kind: 'session.compaction_started', role: 'owner', trigger: 'manual' };
+
+  assert.strictEqual(isTransientOperatorEvent(event), false);
+  assert.strictEqual(getOperatorFeedRoleKey({ type: 'operator_event', event }), 'owner');
+  assert.deepStrictEqual(projectMessageToFeedItem({ type: 'operator_event', event }, 'owner_4'), {
+    id: 'owner_4',
+    type: 'tool',
+    label: 'Compaction',
+    text: 'Compacting context (manual).',
+  });
+});
+
+test('compaction completion resolves the persisted pending feed item', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: { kind: 'session.compaction_started', role: 'owner', trigger: 'manual' },
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: { kind: 'session.compacted', role: 'owner', nodeId: 'owner-intake', trigger: 'manual', archiveId: 'archive-1' },
+  }, tmpDir);
+
+  const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+  assert.strictEqual(feed.length, 1);
+  assert.strictEqual(feed[0].type, 'tool-success');
+  assert.strictEqual(feed[0].label, 'Compaction');
+  assert.strictEqual(feed[0].text, 'owner-intake context compacted (manual).');
+  assert.deepStrictEqual(SessionStore.loadRoleFeed(ref, 'owner', tmpDir), feed);
+});
+
+test('compaction failure resolves the persisted pending feed item as an error', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: { kind: 'session.compaction_started', role: 'owner', trigger: 'auto' },
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: { kind: 'session.compaction_failed', role: 'owner', trigger: 'auto', reason: 'Context compaction aborted by operator.' },
+  }, tmpDir);
+
+  const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+  assert.strictEqual(feed.length, 1);
+  assert.strictEqual(feed[0].type, 'tool-error');
+  assert.strictEqual(feed[0].label, 'Compaction');
+  assert.strictEqual(feed[0].text, 'Context compaction failed (auto): Context compaction aborted by operator.');
+});
+
+test('compaction failure without a pending item is not stored in the feed', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: {
+      kind: 'session.compaction_failed',
+      role: 'reviewer',
+      trigger: 'manual',
+      reason: 'Context cannot be compacted while that role is actively receiving a model response.',
+    },
+  }, tmpDir);
+
+  assert.strictEqual(activeSession.roleFeedHistory.has('reviewer'), false);
 });
 
 test('role.active becomes a role feed activation item', () => {

@@ -41,7 +41,6 @@ export interface ActiveFlowView {
   isAwaitingImprovementChoice: boolean;
   isAwaitingFeedbackConsent: boolean;
   feedbackPrompt: ReturnType<typeof feedbackConsentCopy>;
-  isViewedRoleCompacting: boolean;
   visibleWaitLabel: string | null;
   hasActiveSession: boolean;
   inputDisabled: boolean;
@@ -49,6 +48,7 @@ export interface ActiveFlowView {
   improvementInputTargetRole: string | null;
   canStopViewedRole: boolean;
   stopRequestedForViewedRole: boolean;
+  isViewedRoleCompacting: boolean;
   inputTargetRole: string;
   composerValue: string;
   latestContextUsage: number | null;
@@ -133,29 +133,25 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
   const feedbackPrompt = feedbackConsentCopy(flowRun);
-  const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
-  const visibleWaitLabel = isViewedRoleCompacting
-    ? 'Compacting...'
-    : isViewedRoleActive && viewedRole
-      ? (activeUi?.waitLabels[viewedRole] ?? null)
-      : null;
+  const visibleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
   const hasActiveSession = activeUi?.hasActiveSession ?? false;
-  const inputDisabled = isViewedRoleCompacting || !hasActiveSession || (!viewedRoleAwaitingNodeId && !improvementInputTargetRole);
+  const inputDisabled = !hasActiveSession || (!viewedRoleAwaitingNodeId && !improvementInputTargetRole);
   const inputPlaceholder = !hasActiveSession
     ? 'Resume the flow to reply.'
-    : isViewedRoleCompacting
-      ? 'Compacting context...'
-      : !inputDisabled
-        ? 'Reply to the selected role.'
-        : 'Select a role that is awaiting input.';
+    : !inputDisabled
+      ? 'Reply to the selected role.'
+      : 'Select a role that is awaiting input.';
   const canStop =
     !!flowRun &&
     hasActiveSession &&
-    !viewedRoleAwaitingNodeId &&
     input.socketOpen;
   const viewedRoleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
-  const canStopViewedRole = canStop && (!!viewedRoleWaitLabel || isViewedRoleActive) && !improvementInputTargetRole;
+  const canStopViewedRole = canStop && (
+    !!viewedRoleWaitLabel ||
+    (isViewedRoleActive && !viewedRoleAwaitingNodeId && !improvementInputTargetRole)
+  );
   const stopRequestedForViewedRole = viewedRole ? Boolean(activeUi?.stopRequestedRoles[viewedRole]) : false;
+  const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
   const latestContextUsage = viewedRole ? (activeUi?.latestContextUsageByRole[viewedRole] ?? null) : null;
 
   return {
@@ -177,7 +173,6 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
-    isViewedRoleCompacting,
     visibleWaitLabel,
     hasActiveSession,
     inputDisabled,
@@ -185,6 +180,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     improvementInputTargetRole,
     canStopViewedRole,
     stopRequestedForViewedRole,
+    isViewedRoleCompacting,
     inputTargetRole: resolveInputTargetRole(flowRun, workflow, selectedRole),
     composerValue: activeUi?.composerValue ?? '',
     latestContextUsage,

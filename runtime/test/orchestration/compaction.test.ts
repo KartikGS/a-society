@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { compactRoleSession, shouldAutoCompact } from '../../src/orchestration/compaction.js';
+import { runRoleTurn } from '../../src/common/role-turn.js';
 import { LLMGateway } from '../../src/providers/llm.js';
-import type { FlowRun, GatewayTurnResult, RoleSession, RuntimeMessageParam } from '../../src/common/types.js';
+import type { FlowRun, GatewayTurnResult, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../../src/common/types.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -24,6 +25,16 @@ async function test(name: string, fn: () => Promise<void> | void): Promise<void>
 }
 
 console.log('\ncontext-compaction');
+
+function createSilentRenderer(): OperatorRenderSink {
+  return {
+    emit() {},
+    requestSent() {},
+    receivingResponse() {},
+    responseEnd() {},
+    sendError() {},
+  };
+}
 
 await test('shouldAutoCompact uses 80 percent of the raw context window', () => {
   assert.strictEqual(shouldAutoCompact(79, 100), false);
@@ -88,7 +99,11 @@ await test('compactRoleSession archives raw history and replaces active history 
       session,
       flowRun,
       roleName: 'owner',
-      trigger: 'manual'
+      trigger: 'manual',
+      signal: new AbortController().signal,
+      operatorRenderer: createSilentRenderer(),
+      nodeId: 'owner-review',
+      exchanges: history
     });
 
     assert.strictEqual(result.compacted, true);
@@ -105,6 +120,182 @@ await test('compactRoleSession archives raw history and replaces active history 
     assert.ok(replacement.content.includes('owner-intake=>owner-review'));
     assert.ok(replacement.content.includes('Runtime repair prompt'));
     assert.strictEqual(session.latestContextUsage, 0);
+  } finally {
+    LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    delete process.env.A_SOCIETY_SETTINGS_DIR;
+  }
+});
+
+await test('compactRoleSession passes abort and renderer metadata through the compaction turn', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-compaction-'));
+  const settingsDir = path.join(tmpDir, '.settings');
+  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+
+  const controller = new AbortController();
+  const responseEnds: string[] = [];
+  const renderer: OperatorRenderSink = {
+    emit() {},
+    requestSent() {},
+    receivingResponse() {},
+    responseEnd(role: string) {
+      responseEnds.push(role);
+    },
+    sendError() {},
+  };
+
+  const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+  LLMGateway.prototype.executeTurn = async function(
+    _systemPrompt: string,
+    _messages: RuntimeMessageParam[],
+    options?: Parameters<LLMGateway['executeTurn']>[2]
+  ): Promise<GatewayTurnResult> {
+    assert.strictEqual(options?.signal, controller.signal);
+    assert.strictEqual(options?.operatorRenderer, renderer);
+    assert.strictEqual(options?.roleInstanceId, 'owner');
+    assert.strictEqual(options?.nodeId, 'owner-review');
+    return { text: 'Summary with lifecycle metadata.' };
+  };
+
+  const session: RoleSession = {
+    roleName: 'owner',
+    logicalSessionId: 'flow__owner',
+    transcriptHistory: [{ role: 'user', content: 'Node entry' }],
+    currentNodeContext: {
+      nodeId: 'owner-review',
+      exchanges: [{ role: 'user', content: 'Node entry' }]
+    },
+    isActive: true,
+    currentNodeId: 'owner-review'
+  };
+
+  const flowRun: FlowRun = {
+    flowId: 'flow',
+    workspaceRoot: tmpDir,
+    projectNamespace: 'project',
+    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'project', 'flow', 'record'),
+    runningNodes: ['owner-review'],
+    awaitingHumanNodes: {},
+    pendingHumanInputs: {},
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    status: 'running',
+    stateVersion: CURRENT_FLOW_STATE_VERSION
+  };
+
+  try {
+    const result = await compactRoleSession({
+      session,
+      flowRun,
+      roleName: 'owner',
+      trigger: 'manual',
+      signal: controller.signal,
+      operatorRenderer: renderer,
+      nodeId: 'owner-review',
+      exchanges: session.currentNodeContext!.exchanges as RuntimeMessageParam[]
+    });
+
+    assert.strictEqual(result.compacted, true);
+    assert.deepStrictEqual(responseEnds, ['owner']);
+  } finally {
+    LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    delete process.env.A_SOCIETY_SETTINGS_DIR;
+  }
+});
+
+await test('runRoleTurn auto-compacts role history before the model turn', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-compaction-'));
+  const settingsDir = path.join(tmpDir, '.settings');
+  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1', contextWindow: 100 });
+
+  const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+  const callKinds: string[] = [];
+  LLMGateway.prototype.executeTurn = async function(
+    systemPrompt: string,
+    messages: RuntimeMessageParam[]
+  ): Promise<GatewayTurnResult> {
+    if (systemPrompt.includes('runtime context compactor')) {
+      callKinds.push('compaction');
+      assert.strictEqual(messages.length, 1);
+      assert.strictEqual(messages[0].role, 'user');
+      assert.ok(messages[0].content.includes('Earlier role context'));
+      return { text: 'Compacted role context summary.' };
+    }
+
+    callKinds.push('role-turn');
+    assert.strictEqual(messages.length, 1);
+    assert.strictEqual(messages[0].role, 'user');
+    assert.ok(messages[0].content.includes('Runtime Context Restoration'));
+    assert.ok(messages[0].content.includes('Compacted role context summary.'));
+    return { text: '```handoff\ntype: prompt-human\n```', contextUsage: 12 };
+  };
+
+  const history: RuntimeMessageParam[] = [
+    { role: 'user', content: 'Earlier role context' },
+    { role: 'assistant', content: 'Prior response' },
+    { role: 'user', content: 'Current role turn input' }
+  ];
+  const session: RoleSession = {
+    roleName: 'owner',
+    logicalSessionId: 'flow__owner',
+    transcriptHistory: [...history],
+    currentNodeContext: {
+      nodeId: 'owner-review',
+      exchanges: [...history]
+    },
+    isActive: true,
+    currentNodeId: 'owner-review',
+    latestContextUsage: 80,
+  };
+  const flowRun: FlowRun = {
+    flowId: 'flow',
+    workspaceRoot: tmpDir,
+    projectNamespace: 'project',
+    recordFolderPath: path.join(tmpDir, '.a-society', 'state', 'project', 'flow', 'record'),
+    runningNodes: ['owner-review'],
+    awaitingHumanNodes: {},
+    pendingHumanInputs: {},
+    completedHandoffs: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    status: 'running',
+    stateVersion: CURRENT_FLOW_STATE_VERSION
+  };
+  let saveCount = 0;
+
+  try {
+    const result = await runRoleTurn({
+      workspaceRoot: tmpDir,
+      roleInstanceId: 'owner',
+      providedSystemPrompt: 'Role system prompt',
+      flowRef: { projectNamespace: 'project', flowId: 'flow' },
+      providedHistory: history,
+      externalSignal: new AbortController().signal,
+      operatorRenderer: {
+        emit() {},
+        requestSent() {},
+        receivingResponse() {},
+        responseEnd() {},
+        sendError() {},
+      },
+      nodeId: 'owner-review',
+      compaction: {
+        session,
+        flowRun,
+        saveSession: () => {
+          saveCount++;
+        },
+        nodeId: 'owner-review',
+      },
+    });
+
+    assert.strictEqual(result?.handoff.kind, 'awaiting_human');
+    assert.deepStrictEqual(callKinds, ['compaction', 'role-turn']);
+    assert.strictEqual(saveCount, 1);
+    assert.strictEqual(history.length, 1);
+    assert.strictEqual(session.transcriptHistory, history);
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
     fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -137,7 +328,11 @@ await test('compactRoleSession reports no-op when there is no current node', asy
     session,
     flowRun,
     roleName: 'owner',
-    trigger: 'manual'
+    trigger: 'manual',
+    signal: new AbortController().signal,
+    operatorRenderer: createSilentRenderer(),
+    nodeId: '',
+    exchanges: session.transcriptHistory as RuntimeMessageParam[]
   });
 
   assert.strictEqual(result.compacted, false);

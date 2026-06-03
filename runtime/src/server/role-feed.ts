@@ -16,9 +16,7 @@ export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | n
     if (
       event.kind === 'human.awaiting_input' ||
       event.kind === 'human.resumed' ||
-      event.kind === 'usage.turn_summary' ||
-      event.kind === 'session.compaction_started' ||
-      event.kind === 'session.compaction_failed'
+      event.kind === 'usage.turn_summary'
     ) {
       return null;
     }

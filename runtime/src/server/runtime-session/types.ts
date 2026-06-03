@@ -24,6 +24,8 @@ export interface ActiveSession {
   task: Promise<void>;
   consentGate: ConsentGateImpl;
   latestContextUsageByRole: Record<string, number>;
+  manualCompactionControllers: Map<string, AbortController>;
+  manualCompactionSigintHandler: (() => void) | null;
 }
 
 export type RuntimeSessionManagerOptions = {

@@ -25,7 +25,7 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { validateWorkflowFile } from '../../src/framework-services/workflow-graph-validator.js';
 import { deterministicFindingsFilePath } from '../../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
-import { runRoleTurn } from '../../src/orchestration/orient.js';
+import { runRoleTurn } from '../../src/common/role-turn.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
@@ -188,11 +188,11 @@ async function run() {
       roleOutputStream: output,
     });
 
-    // With no user message in history, orient.ts must return null rather than injecting a prompt.
+    // With no user message in history, role-turn must return null rather than injecting a prompt.
     assert.strictEqual(result, null);
   });
 
-  await test('Scenario: Prompt-human suspension in orient.ts (REAL CODE)', async () => {
+  await test('Scenario: Prompt-human suspension in role-turn (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
     const mockProvider = new MockProvider([
@@ -228,7 +228,7 @@ async function run() {
     assert.ok(capturedOutput.includes('I need clarification.'));
   });
 
-  await test('Scenario: successful handoff returns usage but does not emit it from orient.ts', async () => {
+  await test('Scenario: successful handoff returns usage but does not emit it from role-turn', async () => {
     clearTestSpans();
     clearTestMetrics();
     const mockProvider = new MockProvider([
@@ -282,7 +282,7 @@ async function run() {
     assert.deepStrictEqual(renderer.events, []);
   });
 
-  await test('Scenario: Handoff parse failure in orient.ts requests repair (REAL CODE)', async () => {
+  await test('Scenario: Handoff parse failure in role-turn requests repair (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
     const mockProvider = new MockProvider([
@@ -320,7 +320,7 @@ async function run() {
     assert.strictEqual(parseFailurePoint?.value, 1);
   });
 
-  await test('Scenario: parse failure in orient.ts does not emit usage summary', async () => {
+  await test('Scenario: parse failure in role-turn does not emit usage summary', async () => {
     clearTestSpans();
     clearTestMetrics();
     const mockProvider = new MockProvider([
