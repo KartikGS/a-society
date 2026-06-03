@@ -50,8 +50,12 @@ Three to seven short rules. Non-negotiable constraints that apply to every agent
 
 ---
 
-## Format Rules
+## Maintenance Rules
 
-- **Short.** Agents read this at the start of every session. Length is a friction cost paid repeatedly.
-- **Stable.** Invariants should change rarely. If agents.md changes frequently, something upstream is unstable — fix the upstream problem.
-- **No redundancy.** Do not repeat content from role files, the vision, or injected runtime context. Every piece of information has one home.
+Copy these rules into the project's agents.md at initialization. They govern how it is updated over its lifetime.
+
+- **Update only when the project description changes or invariants genuinely change.** agents.md should be stable across sessions. Frequent edits are a signal that content has drifted into here from its correct home.
+- **Never add role-specific content.** If a rule applies only to one role, it belongs in that role's document.
+- **Never add phase-specific instructions.** Those belong in workflow or phase documents.
+- **If invariants exceed seven, trim.** Anything beyond a short list either belongs in role documents or is a project-wide rule that should live in the vision or principles document.
+- **If a section is growing, extract it.** Length in agents.md is always a symptom of content that belongs elsewhere.

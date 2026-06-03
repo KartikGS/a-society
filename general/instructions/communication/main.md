@@ -35,7 +35,7 @@ See the sub-instruction: `conversation/main.md`.
 
 ### `coordination/`
 
-Covers the standing rules that govern all agent communication: status models, handoff protocols, feedback paths for reporting discrepancies, and conflict resolution. These are not per-task artifacts — they are durable documents that change only when the process changes.
+Covers the standing rules that govern all agent communication: status models, handoff protocols, correction paths for reporting discrepancies, and conflict resolution. These are not per-task artifacts — they are durable documents that change only when the process changes.
 
 See the sub-instruction: `coordination/main.md`.
 
@@ -71,8 +71,8 @@ For each role-pair handoff: what artifact carries it, what fields it must includ
 **Step 3 — Define the coordination layer.**
 Write a handoff protocol document: the canonical status model (every project needs one), the bidirectional clarification rules (can agents exchange rounds, or is the handoff one-way?), and the pre-replacement check for artifacts that are replaced per unit of work.
 
-**Step 4 — Define the feedback path.**
-Write a feedback protocol: what an agent does when it discovers a discrepancy, false assumption, or blocker in someone else's work. Define the reporting path, the acknowledgment requirement, and the resolution owner.
+**Step 4 — Define the correction path.**
+Write a correction protocol: what an agent does when it discovers a discrepancy, false assumption, or blocker in someone else's work. Define the reporting path, the acknowledgment requirement, and the resolution owner.
 
 **Step 5 — Define conflict resolution.**
 Write a conflict-resolution document: what happens when agents disagree, who has authority to resolve which type of conflict, and when the human must be consulted.
@@ -90,7 +90,7 @@ Write `communication/main.md` — a brief orientation that describes the two sub
 
 **Protocols buried in the workflow document.** The workflow becomes a policy reference. Agents reading it for phase sequencing must wade through protocol detail. Neither the process nor the protocols are easy to find.
 
-**Feedback path undefined.** When a sub-agent finds a bug in the plan, it either silently works around it (losing traceability) or stops without knowing how to report. Both outcomes are worse than having a protocol.
+**Correction path undefined.** When a sub-agent finds a bug in the plan, it either silently works around it (losing traceability) or stops without knowing how to report. Both outcomes are worse than having a protocol.
 
 ---
 
@@ -99,7 +99,7 @@ Write `communication/main.md` — a brief orientation that describes the two sub
 Scale the communication folder to the number of roles and the complexity of handoffs:
 
 - **Two roles, simple handoff:** A single `conversation/` template and a brief `coordination/` document covering the status model and one escalation path may be sufficient.
-- **Three or more roles with multi-directional handoffs:** Separate templates per role-pair, a full status model, bidirectional clarification rules, feedback protocol, and conflict resolution.
+- **Three or more roles with multi-directional handoffs:** Separate templates per role-pair, a full status model, bidirectional clarification rules, correction protocol, and conflict resolution.
 - **Asynchronous or long-running work:** Add pre-replacement checks, session state tracking, and explicit rules about artifact immutability once a unit of work is closed.
 
 Do not create more coordination infrastructure than the project's actual handoff complexity requires. A two-person project with one handoff direction does not need a conflict-resolution document.

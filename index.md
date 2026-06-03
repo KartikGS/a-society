@@ -42,7 +42,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_ROLES` | `a-society/general/instructions/roles/main.md` | How to create role documents — archetypes and templates |
 | `$INSTRUCTION_REQUIRED_READINGS` | `a-society/general/instructions/roles/required-readings.md` | How to maintain per-role `required-readings.yaml` files — machine-readable startup-context authority |
 | `$INSTRUCTION_OWNERSHIP` | `a-society/general/instructions/roles/ownership.md` | How to maintain per-role `ownership.yaml` files — distributed surface accountability |
-| `$INSTRUCTION_ARCHITECTURE` | `a-society/general/instructions/project-information/architecture.md` | How to create an architecture document for any project |
+| `$INSTRUCTION_ARCHITECTURE` | `a-society/general/project-types/executable/instructions/project-information/architecture.md` | How to create an architecture document for projects with an executable layer |
 | `$INSTRUCTION_LOG` | `a-society/general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `a-society/general/instructions/project-information/principles.md` | How to create a project principles document for any project |
 | `$INSTRUCTION_WORKFLOW` | `a-society/general/instructions/workflow/main.md` | How to create a workflow document for any project |
@@ -52,8 +52,8 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_WORKFLOW_PLANS` | `a-society/general/instructions/workflow/plans/main.md` | How to create a plans structure for any project |
 | `$INSTRUCTION_WORKFLOW_REPORTS` | `a-society/general/instructions/workflow/reports/main.md` | How to create a reports structure for any project |
 | `$INSTRUCTION_WORKFLOW_REQUIREMENTS` | `a-society/general/instructions/workflow/requirements/main.md` | How to create a requirements structure for any project |
-| `$INSTRUCTION_DEVELOPMENT` | `a-society/general/instructions/development/main.md` | How to create a development folder for any project |
-| `$INSTRUCTION_GOVERNANCE` | `a-society/general/instructions/governance/main.md` | How to create a governance folder for any project |
+| `$INSTRUCTION_DEVELOPMENT` | `a-society/general/project-types/executable/instructions/development/main.md` | How to create a development folder for projects with an executable layer |
+| `$INSTRUCTION_GOVERNANCE` | `a-society/general/project-types/executable/instructions/governance/main.md` | How to create a governance folder for projects with an executable layer |
 | `$INSTRUCTION_COMMUNICATION` | `a-society/general/instructions/communication/main.md` | How to create a communication folder for any project |
 | `$INSTRUCTION_COMMUNICATION_CONVERSATION` | `a-society/general/instructions/communication/conversation/main.md` | How to create a conversation layer |
 | `$INSTRUCTION_COMMUNICATION_COORDINATION` | `a-society/general/instructions/communication/coordination/main.md` | How to create coordination protocols |

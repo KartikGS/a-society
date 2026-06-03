@@ -130,3 +130,12 @@ The role document does not enumerate "before X, read Y" cues. The workflow does 
 - A pattern emerges that suggests the vision itself needs refinement
 - A surface ownership assignment is contested between two domain leads
 - [CUSTOMIZE: any other escalation triggers specific to this project]
+
+---
+
+## Maintenance Rules
+
+- **Update [CUSTOMIZE] sections as the project evolves.** Domain leads, workflows, owned artifacts, and escalation triggers should reflect the project's current shape, not its initial shape at initialization.
+- **Update the "does not" list when new boundary disputes arise.** When two roles' authority overlaps in practice, resolve it in the role document before the next flow. Unresolved boundaries recur.
+- **Update escalation triggers when new patterns emerge.** If the Owner has been escalating the same class of decision repeatedly, add it to the explicit trigger list.
+- **Never add phase-specific instructions.** Those belong in workflow node context or support docs surfaced by the workflow. A growing role document is a sign that content is landing in the wrong place.
