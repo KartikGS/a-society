@@ -53,26 +53,12 @@ This file governs the authoring model of the a-docs layer. It does not replace t
 
 ---
 
-## Keeping It Current
+## Maintenance Rules
 
-Update the file when the project's a-docs authoring model changes materially - for example:
-- when role files are restructured around workflow-linked support docs
-- when the project changes how workflows surface node-linked support docs
-- when `agents.md` scope changes
-- when the project adds or retires a standing anti-pattern check in meta-analysis
+Copy these rules into the project's `a-docs-design.md` at initialization. They govern how the file is updated over its lifetime.
 
-Do not update it for one-off edits that do not change the documentation model.
-
----
-
-## Improvement Protocol Interaction
-
-Meta-analysis should treat this document as a standing evaluation standard. When backward-pass findings identify:
-- redundant context in `agents.md`
-- workflow-conditional instructions embedded in role files
-- pointer-only JIT where the workflow does not surface the required support doc at the relevant node
-- additions that left vestigial content behind
-
-the finding should be framed against this document's principles rather than as an isolated stylistic preference.
-
-If the project introduces new recurring a-docs anti-pattern checks in meta-analysis, update this file so the design rule and the backward-pass check remain aligned.
+- **Update when the authoring model changes materially** — not for one-off edits. Triggers: restructuring role files around workflow-linked support docs, changing how workflows surface node-linked support docs, changing the scope of `agents.md`, adding or retiring a standing anti-pattern check in meta-analysis.
+- **Do not update to reflect individual backward-pass findings.** If meta-analysis surfaces a specific violation, fix the violated document. Only update `a-docs-design.md` when the underlying design rule itself needs to change.
+- **Keep principles ahead of the current state.** This file governs how `a-docs/` should be authored. It should describe the intended model, not document what currently exists.
+- **During meta-analysis, treat this file as the evaluation standard.** Frame findings about redundant context in `agents.md`, workflow-conditional instructions in role files, pointer-only JIT, or vestigial content against the principles here — not as isolated stylistic observations.
+- **When a new recurring anti-pattern check is added to meta-analysis, update this file.** The design rule and the backward-pass check must stay aligned.
