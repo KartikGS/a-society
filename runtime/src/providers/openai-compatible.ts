@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { LLMGatewayError } from '../common/types.js';
-import type { LLMProvider, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions } from '../common/types.js';
+import type { LLMProvider, ProviderReasoningBlock, RuntimeMessageParam, ToolDefinition, ProviderTurnResult, TurnOptions } from '../common/types.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
@@ -16,17 +16,18 @@ import {
   METRIC_GEN_AI_CLIENT_OPERATION_DURATION,
 } from '@opentelemetry/semantic-conventions/incubating';
 import {
-  appendThinkingSystemInstruction,
+  buildOpenAIChatCompletionTokenParams,
   DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS,
   resolveMaxOutputTokens,
   type ProviderRuntimeConfig
 } from './config.js';
+import type { ModelReasoningConfig } from '../common/model-reasoning.js';
 
 export class OpenAICompatibleProvider implements LLMProvider {
   private client: OpenAI;
   private model: string;
   private maxOutputTokens: number;
-  private supportsThinking: boolean;
+  private reasoning?: ModelReasoningConfig;
 
   constructor(config: { baseURL: string; apiKey: string; model: string } & ProviderRuntimeConfig) {
     this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey });
@@ -35,7 +36,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       config.maxOutputTokens,
       DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS
     );
-    this.supportsThinking = config.supportsThinking === true;
+    this.reasoning = config.reasoning;
   }
 
   private formatProviderError(err: any, summary: string, suggestion?: string): string {
@@ -47,6 +48,53 @@ export class OpenAICompatibleProvider implements LLMProvider {
       : '';
     const nextStep = suggestion ? ` ${suggestion}` : '';
     return `${summary} Model: ${this.model}.${requestId}${detail}${nextStep}`;
+  }
+
+  private customReasoningTraceConfig() {
+    return this.reasoning?.mode === 'custom-openai-compatible' ? this.reasoning.trace : undefined;
+  }
+
+  private readStringPath(source: unknown, fieldPath: string | undefined): string {
+    if (!fieldPath || !source || typeof source !== 'object') return '';
+    let current: unknown = source;
+    for (const part of fieldPath.split('.')) {
+      if (!part || !current || typeof current !== 'object') return '';
+      current = (current as Record<string, unknown>)[part];
+    }
+    return typeof current === 'string' ? current : '';
+  }
+
+  private emitReasoningTrace(text: string, options?: TurnOptions): void {
+    const trace = this.customReasoningTraceConfig();
+    if (!trace || trace.display === 'hidden' || text === '') return;
+    options?.operatorRenderer?.emit({
+      kind: 'provider.reasoning_trace',
+      role: options?.roleInstanceId ?? '__system__',
+      label: trace.label,
+      text,
+      display: trace.display,
+    });
+  }
+
+  private buildProviderReasoningBlocks(text: string): ProviderReasoningBlock[] | undefined {
+    const trace = this.customReasoningTraceConfig();
+    if (!trace || trace.replay === 'never' || text === '') return undefined;
+    return [{
+      provider: 'openai-compatible',
+      type: 'message-field',
+      field: trace.requestMessageField,
+      content: text,
+      replay: trace.replay,
+    }];
+  }
+
+  private applyProviderReasoningBlocks(message: Record<string, unknown>, blocks: ProviderReasoningBlock[] | undefined): void {
+    if (!blocks?.length) return;
+    for (const block of blocks) {
+      if (block.provider !== 'openai-compatible' || block.type !== 'message-field') continue;
+      if (block.replay === 'never') continue;
+      message[block.field] = block.content;
+    }
   }
 
   async executeTurn(
@@ -66,7 +114,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
         [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
         [ATTR_GEN_AI_REQUEST_MAX_TOKENS]: this.maxOutputTokens,
-        'provider.supports_thinking': this.supportsThinking,
+        'provider.reasoning_mode': this.reasoning?.mode ?? 'disabled',
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
       }
@@ -84,20 +132,24 @@ export class OpenAICompatibleProvider implements LLMProvider {
         const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
           {
             role: 'system' as const,
-            content: appendThinkingSystemInstruction(systemPrompt, this.supportsThinking)
+            content: systemPrompt
           },
           ...messages.map(m => {
             if (m.role === 'user') return { role: 'user' as const, content: m.content };
             if (m.role === 'assistant') return { role: 'assistant' as const, content: m.content };
-            if (m.role === 'assistant_tool_calls') return {
-              role: 'assistant' as const,
-              content: m.text || null,
-              tool_calls: m.calls.map(c => ({
-                id: c.id,
-                type: 'function' as const,
-                function: { name: c.name, arguments: JSON.stringify(c.input) }
-              }))
-            };
+            if (m.role === 'assistant_tool_calls') {
+              const message: Record<string, unknown> = {
+                role: 'assistant' as const,
+                content: m.text || null,
+                tool_calls: m.calls.map(c => ({
+                  id: c.id,
+                  type: 'function' as const,
+                  function: { name: c.name, arguments: JSON.stringify(c.input) }
+                }))
+              };
+              this.applyProviderReasoningBlocks(message, m.providerReasoning);
+              return message as unknown as OpenAI.Chat.ChatCompletionMessageParam;
+            }
             if (m.role === 'tool_result') return {
               role: 'tool' as const,
               content: m.content,
@@ -118,19 +170,21 @@ export class OpenAICompatibleProvider implements LLMProvider {
             }))
           : undefined;
 
-        const stream = await this.client.chat.completions.create({
+        const stream = await (this.client.chat.completions.create({
           model: this.model,
           messages: openAIMessages,
           stream: true,
-          max_tokens: this.maxOutputTokens,
           stream_options: { include_usage: true },
+          ...buildOpenAIChatCompletionTokenParams(this.reasoning, this.maxOutputTokens),
           ...(nativeTools ? { tools: nativeTools } : {})
-        }, { signal: options?.signal });
+        } as any, { signal: options?.signal }) as any);
 
         renderer?.receivingResponse(options?.roleInstanceId ?? '');
 
         let finishReason: string | null = null;
         const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
+        let reasoningTrace = '';
+        const trace = this.customReasoningTraceConfig();
 
         for await (const chunk of stream) {
           if (chunk.usage) {
@@ -142,33 +196,37 @@ export class OpenAICompatibleProvider implements LLMProvider {
           }
           if (!chunk.choices.length) continue;
 
-          const choice = chunk.choices[0];
-          if (!choice) continue;
-          if (choice.finish_reason) finishReason = choice.finish_reason;
-          const delta = choice.delta;
-          if (!delta) continue;
-          if (delta.content) {
-            outputStream?.write(delta.content);
-            options?.onAssistantTextDelta?.(delta.content);
-            fullText += delta.content;
-          }
-          if (delta.tool_calls) {
-            for (const tc of delta.tool_calls) {
-              if (!toolCallAcc.has(tc.index)) {
-                toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
-                if (tc.id || tc.function?.name) {
-                  span.addEvent('provider.tool_call_received', { 'tool.name': tc.function?.name, 'tool.id': tc.id });
+          for (const choice of chunk.choices) {
+            if (!choice) continue;
+            if (choice.finish_reason) finishReason = choice.finish_reason;
+            const delta = choice.delta;
+            if (!delta) continue;
+            if (delta.content) {
+              outputStream?.write(delta.content);
+              options?.onAssistantTextDelta?.(delta.content);
+              fullText += delta.content;
+            }
+            const reasoningDelta = this.readStringPath(delta, trace?.responseDeltaField);
+            if (reasoningDelta) {
+              reasoningTrace += reasoningDelta;
+              this.emitReasoningTrace(reasoningDelta, options);
+            }
+            if (delta.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                if (!toolCallAcc.has(tc.index)) {
+                  toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
+                  if (tc.id || tc.function?.name) {
+                    span.addEvent('provider.tool_call_received', { 'tool.name': tc.function?.name, 'tool.id': tc.id });
+                  }
                 }
+                const acc = toolCallAcc.get(tc.index)!;
+                if (tc.id) acc.id = tc.id;
+                if (tc.function?.name) acc.name = acc.name || tc.function.name;
+                if (tc.function?.arguments) acc.args += tc.function.arguments;
               }
-              const acc = toolCallAcc.get(tc.index)!;
-              if (tc.id) acc.id = tc.id;
-              if (tc.function?.name) acc.name = acc.name || tc.function.name;
-              if (tc.function?.arguments) acc.args += tc.function.arguments;
             }
           }
         }
-
-
 
         if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
         if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
@@ -186,7 +244,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
           return {
             type: 'tool_calls' as const,
             calls,
-            continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
+            continuationMessages: [{
+              role: 'assistant_tool_calls' as const,
+              calls,
+              text: fullText || undefined,
+              providerReasoning: this.buildProviderReasoningBlocks(reasoningTrace),
+            }],
             contextUsage
           };
         }

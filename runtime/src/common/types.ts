@@ -8,6 +8,10 @@ import type {
   FeedbackConsentStatus,
   ProtocolImprovementChoiceMode,
 } from './protocol-constants.js';
+import type {
+  ProviderReasoningDisplay,
+  ProviderReasoningReplayPolicy,
+} from './model-reasoning.js';
 
 export type FlowStatus =
   | 'running'
@@ -204,10 +208,20 @@ export interface ToolCall {
   parseError?: string;
 }
 
+export type ProviderReasoningBlock =
+  | { provider: 'anthropic'; type: 'thinking'; thinking: string; signature: string }
+  | {
+      provider: 'openai-compatible';
+      type: 'message-field';
+      field: string;
+      content: string;
+      replay: ProviderReasoningReplayPolicy;
+    };
+
 export type RuntimeMessageParam =
   | { role: 'user';                content: string }
   | { role: 'assistant';           content: string }
-  | { role: 'assistant_tool_calls'; calls: ToolCall[]; text?: string }
+  | { role: 'assistant_tool_calls'; calls: ToolCall[]; text?: string; providerReasoning?: ProviderReasoningBlock[] }
   | { role: 'tool_result';         callId: string; toolName: string; content: string; isError: boolean };
 
 export interface RoleTurnResult {
@@ -229,6 +243,7 @@ export type OperatorEvent =
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
+  | { kind: 'provider.reasoning_trace'; role: string; label: string; text: string; display: Exclude<ProviderReasoningDisplay, 'hidden'> }
   | { kind: 'flow.forward_pass_closed' }
   | { kind: 'flow.completed' }
   | { kind: 'consent.requested'; request: ConsentRequest }
@@ -267,7 +282,17 @@ export interface FeedItem {
   type: FeedItemType;
   label: string;
   text: string;
+  segments?: AssistantFeedSegment[];
 }
+
+export type AssistantFeedSegment =
+  | { type: 'text'; text: string }
+  | {
+      type: 'reasoning';
+      label: string;
+      text: string;
+      display: Exclude<ProviderReasoningDisplay, 'hidden'>;
+    };
 
 export interface TurnOptions {
   signal?: AbortSignal;

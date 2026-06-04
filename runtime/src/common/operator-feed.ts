@@ -2,7 +2,13 @@ import type { FeedItem, OperatorEvent, OperatorFeedMessage } from './types.js';
 
 export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: string): FeedItem | null {
   if (message.type === 'output_text') {
-    return { id, type: 'assistant', label: 'Assistant', text: message.text };
+    return {
+      id,
+      type: 'assistant',
+      label: 'Assistant',
+      text: message.text,
+      segments: [{ type: 'text', text: message.text }],
+    };
   }
   if (message.type === 'input_text') {
     return { id, type: 'user', label: 'You', text: message.text };
@@ -66,16 +72,28 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
     case 'usage.turn_summary':
       return null;
     case 'session.compaction_started':
-      return null;
-    case 'session.compaction_failed':
-      return null;
-    case 'session.compacted':
       return {
         id,
         type: 'tool',
-        label: 'Context',
+        label: 'Compaction',
+        text: `Compacting context (${event.trigger}).`
+      };
+    case 'session.compaction_failed':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'Compaction',
+        text: `Context compaction failed (${event.trigger}): ${event.reason}`
+      };
+    case 'session.compacted':
+      return {
+        id,
+        type: 'tool-success',
+        label: 'Compaction',
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
+    case 'provider.reasoning_trace':
+      return null;
     case 'flow.forward_pass_closed':
       return {
         id,

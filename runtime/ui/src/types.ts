@@ -1,5 +1,15 @@
 import type {
+  ModelReasoningConfig,
+  AnthropicEffort,
+  AnthropicThinkingDisplay,
+  OpenAICompatibleTokenLimitParam,
+  OpenAIReasoningEffort,
+  ProviderReasoningDisplay,
+  ProviderReasoningReplayPolicy,
+} from '../../src/common/model-reasoning.js';
+import type {
   AwaitingHumanReason,
+  AssistantFeedSegment,
   ConsentMode,
   ConsentRequest,
   ConsentResponseDecision,
@@ -22,6 +32,7 @@ import type {
 
 export type {
   AwaitingHumanReason,
+  AssistantFeedSegment,
   ConsentMode,
   ConsentRequest,
   ConsentResponseDecision,
@@ -39,6 +50,15 @@ export type {
 
 export type ProviderType = 'anthropic' | 'openai-compatible';
 export type InputModality = 'image' | 'audio' | 'video';
+export type {
+  AnthropicEffort,
+  AnthropicThinkingDisplay,
+  ModelReasoningConfig,
+  OpenAICompatibleTokenLimitParam,
+  OpenAIReasoningEffort,
+  ProviderReasoningDisplay,
+  ProviderReasoningReplayPolicy,
+};
 
 export interface ModelConfig {
   id: string;
@@ -48,7 +68,7 @@ export interface ModelConfig {
   modelId: string;
   contextWindow: number;
   maxOutputTokens: number;
-  supportsThinking: boolean;
+  reasoning: ModelReasoningConfig;
   supportedInputTypes: InputModality[];
   active: boolean;
 }
@@ -65,6 +85,10 @@ export interface WebSearchToolSettings {
 
 export interface ToolSettings {
   webSearch: WebSearchToolSettings;
+}
+
+export interface FeedSettings {
+  historyLimit: number;
 }
 
 export interface ProjectSummary {

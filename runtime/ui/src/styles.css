@@ -515,6 +515,32 @@ textarea {
   color: var(--ink);
 }
 
+.feed-reasoning {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(15, 118, 110, 0.05);
+}
+
+.feed-reasoning summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.feed-reasoning pre {
+  max-height: 260px;
+  margin: 0;
+  padding: 0 10px 10px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ink-soft);
+  font: 12px/1.45 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 .feed-markdown p { margin: 0 0 10px; }
 .feed-markdown p:last-child { margin-bottom: 0; }
 .feed-markdown h1, .feed-markdown h2, .feed-markdown h3 {
@@ -1920,6 +1946,13 @@ textarea {
 .form-input:focus {
   outline: none;
   border-color: rgba(15, 118, 110, 0.4);
+}
+
+.form-textarea {
+  min-height: 130px;
+  resize: vertical;
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  line-height: 1.45;
 }
 
 .form-select {

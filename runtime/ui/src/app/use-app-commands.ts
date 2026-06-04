@@ -236,13 +236,8 @@ export function useAppCommands(input: UseAppCommandsInput) {
   const handleCompactContext = useCallback((): void => {
     if (!activeTab || !viewedRole) return;
     if (!ensureConfiguredModel()) return;
-    if (activeUi?.compactingRoles[viewedRole]) return;
-    updateFlowUi(activeTab.key, (state) => ({
-      ...state,
-      compactingRoles: { ...state.compactingRoles, [viewedRole]: true },
-    }));
     sendMessage({ type: CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT, flowRef: activeTab.ref, role: viewedRole });
-  }, [activeTab, activeUi, ensureConfiguredModel, sendMessage, updateFlowUi, viewedRole]);
+  }, [activeTab, ensureConfiguredModel, sendMessage, viewedRole]);
 
   const handleResumeFlow = useCallback((): void => {
     if (!activeTab) return;

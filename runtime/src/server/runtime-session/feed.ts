@@ -1,20 +1,28 @@
 import { Writable } from 'node:stream';
 import type {
+  AssistantFeedSegment,
   FeedItem,
   FlowRef,
+  OperatorEvent,
   RoleSession,
 } from '../../common/types.js';
 import { SessionStore } from '../../orchestration/store.js';
+import { getFeedSettings } from '../../settings/settings-store.js';
 import type { HistoricalMessage } from '../protocol.js';
 import { getOperatorFeedRoleKey, projectMessageToFeedItem } from '../role-feed.js';
 import type { ActiveSession } from './types.js';
-
-const HISTORY_LIMIT = 400;
 
 function nextFeedItemId(session: ActiveSession, roleKey: string): string {
   const seq = session.roleFeedSequence.get(roleKey) ?? 0;
   session.roleFeedSequence.set(roleKey, seq + 1);
   return `${roleKey}_${seq}`;
+}
+
+function pruneFeedHistory(history: FeedItem[]): void {
+  const historyLimit = getFeedSettings().historyLimit;
+  if (history.length > historyLimit) {
+    history.splice(0, history.length - historyLimit);
+  }
 }
 
 export function recoverRoleFeedSequence(roleFeedHistory: Map<string, FeedItem[]>): Map<string, number> {
@@ -52,6 +60,99 @@ export function loadLatestContextUsageByRole(
   );
 }
 
+function isPendingCompactionItem(item: FeedItem): boolean {
+  return item.type === 'tool' && item.label === 'Compaction';
+}
+
+function appendAssistantTextSegment(item: FeedItem, text: string): FeedItem {
+  const segments: AssistantFeedSegment[] = item.segments
+    ? [...item.segments]
+    : item.text
+      ? [{ type: 'text', text: item.text }]
+      : [];
+  const previous = segments[segments.length - 1];
+  if (previous?.type === 'text') {
+    segments[segments.length - 1] = { ...previous, text: previous.text + text };
+  } else {
+    segments.push({ type: 'text', text });
+  }
+  return { ...item, text: item.text + text, segments };
+}
+
+function appendAssistantReasoningSegment(
+  item: FeedItem,
+  event: Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }>
+): FeedItem {
+  const segments: AssistantFeedSegment[] = item.segments
+    ? [...item.segments]
+    : item.text
+      ? [{ type: 'text', text: item.text }]
+      : [];
+  const previous = segments[segments.length - 1];
+  if (
+    previous?.type === 'reasoning' &&
+    previous.label === event.label &&
+    previous.display === event.display
+  ) {
+    segments[segments.length - 1] = { ...previous, text: previous.text + event.text };
+  } else {
+    segments.push({
+      type: 'reasoning',
+      label: event.label,
+      text: event.text,
+      display: event.display,
+    });
+  }
+  return { ...item, segments };
+}
+
+function applyReasoningTraceToLatestAssistant(
+  session: ActiveSession,
+  history: FeedItem[],
+  roleKey: string,
+  event: Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }>,
+  workspaceRoot: string
+): void {
+  const previous = history[history.length - 1];
+  if (previous?.type !== 'assistant') {
+    history.push({
+      id: nextFeedItemId(session, roleKey),
+      type: 'assistant',
+      label: 'Assistant',
+      text: '',
+      segments: [{
+        type: 'reasoning',
+        label: event.label,
+        text: event.text,
+        display: event.display,
+      }],
+    });
+  } else {
+    history[history.length - 1] = appendAssistantReasoningSegment(previous, event);
+  }
+
+  pruneFeedHistory(history);
+  session.roleFeedHistory.set(roleKey, history);
+  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+}
+
+function appendProjectedFeedItem(
+  session: ActiveSession,
+  history: FeedItem[],
+  roleKey: string,
+  message: HistoricalMessage,
+  workspaceRoot: string
+): void {
+  const id = nextFeedItemId(session, roleKey);
+  const item = projectMessageToFeedItem(message, id);
+  if (!item) return;
+
+  history.push(item);
+  pruneFeedHistory(history);
+  session.roleFeedHistory.set(roleKey, history);
+  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+}
+
 export function rememberMessage(
   session: ActiveSession,
   message: HistoricalMessage,
@@ -60,6 +161,11 @@ export function rememberMessage(
   const roleKey = getOperatorFeedRoleKey(message);
   if (!roleKey) return;
   const history = session.roleFeedHistory.get(roleKey) ?? [];
+
+  if (message.type === 'operator_event' && message.event.kind === 'provider.reasoning_trace') {
+    applyReasoningTraceToLatestAssistant(session, history, roleKey, message.event, workspaceRoot);
+    return;
+  }
 
   if (message.type === 'operator_event' && message.event.kind === 'activity.tool_result') {
     const { toolName, isError } = message.event;
@@ -73,24 +179,37 @@ export function rememberMessage(
     return;
   }
 
+  if (
+    message.type === 'operator_event' &&
+    (message.event.kind === 'session.compacted' || message.event.kind === 'session.compaction_failed')
+  ) {
+    const projected = projectMessageToFeedItem(message, 'compaction-resolution');
+    const idx = [...history].reverse().findIndex(isPendingCompactionItem);
+    if (idx !== -1 && projected) {
+      const realIdx = history.length - 1 - idx;
+      history[realIdx] = {
+        ...history[realIdx],
+        type: projected.type,
+        label: projected.label,
+        text: projected.text,
+      };
+      session.roleFeedHistory.set(roleKey, history);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      return;
+    }
+
+    return;
+  }
+
   const previous = history[history.length - 1];
   if (previous?.type === 'assistant' && message.type === 'output_text') {
-    history[history.length - 1] = { ...previous, text: previous.text + message.text };
+    history[history.length - 1] = appendAssistantTextSegment(previous, message.text);
     session.roleFeedHistory.set(roleKey, history);
     SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
     return;
   }
 
-  const id = nextFeedItemId(session, roleKey);
-  const item = projectMessageToFeedItem(message, id);
-  if (!item) return;
-
-  history.push(item);
-  if (history.length > HISTORY_LIMIT) {
-    history.splice(0, history.length - HISTORY_LIMIT);
-  }
-  session.roleFeedHistory.set(roleKey, history);
-  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+  appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
 }
 
 export function createRoleOutputStream(

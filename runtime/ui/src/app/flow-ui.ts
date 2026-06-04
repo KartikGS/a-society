@@ -29,9 +29,9 @@ export interface FlowUiState {
   composerValue: string;
   waitLabels: Record<string, string | null>;
   stopRequestedRoles: Record<string, boolean>;
+  compactingRoles: Record<string, boolean>;
   consentRequests: Record<string, ConsentRequest>;
   latestContextUsageByRole: Record<string, number>;
-  compactingRoles: Record<string, boolean>;
   hasActiveSession: boolean;
 }
 
@@ -47,9 +47,9 @@ export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     composerValue: '',
     waitLabels: {},
     stopRequestedRoles: {},
+    compactingRoles: {},
     consentRequests: {},
     latestContextUsageByRole: {},
-    compactingRoles: {},
     hasActiveSession: false,
   };
 }

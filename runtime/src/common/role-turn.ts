@@ -1,9 +1,11 @@
 import crypto from 'node:crypto';
-import type { FlowRef, RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate } from '../common/types.js';
+import type { FlowRef, FlowRun, RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate, RoleSession } from './types.js';
 import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
-import { HandoffInterpreter, HandoffParseError } from './handoff.js';
+import { HandoffInterpreter, HandoffParseError } from '../orchestration/handoff.js';
+import { autoCompactRoleSessionBeforeTurn } from '../orchestration/compaction.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
+import { getActiveModelWithKey } from '../settings/settings-store.js';
 
 function extractFileRefs(content: string): string[] {
   const refs: string[] = [];
@@ -18,6 +20,18 @@ function extractFileRefs(content: string): string[] {
 export function emitUsage(renderer: OperatorRenderSink | undefined, contextUsage: number | undefined, role?: string): void {
   if (!renderer) return;
   renderer.emit({ kind: 'usage.turn_summary', role, contextUsage });
+}
+
+export function recordRoleTurnUsage(
+  session: RoleSession,
+  renderer: OperatorRenderSink | undefined,
+  role: string,
+  contextUsage: number | undefined,
+): void {
+  if (contextUsage !== undefined) {
+    session.latestContextUsage = contextUsage;
+  }
+  emitUsage(renderer, contextUsage, role);
 }
 
 type SessionTurnResult = {
@@ -177,20 +191,40 @@ async function executeSessionTurn(
   }
 }
 
-export interface RunRoleTurnInput {
+interface RunRoleTurnBaseInput {
   workspaceRoot: string;
   roleInstanceId: string;
   providedSystemPrompt: string;
   flowRef: FlowRef;
-  providedHistory?: RuntimeMessageParam[];
+  providedHistory: RuntimeMessageParam[];
   roleOutputStream?: NodeJS.WritableStream;
-  externalSignal?: AbortSignal;
-  operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
-  nodeId?: string;
 }
+
+type RunRoleTurnWithoutCompactionInput = {
+  externalSignal?: AbortSignal;
+  operatorRenderer?: OperatorRenderSink;
+  nodeId?: string;
+  compaction?: undefined;
+};
+
+type RunRoleTurnWithCompactionInput = {
+  externalSignal: AbortSignal;
+  operatorRenderer: OperatorRenderSink;
+  nodeId: string;
+  compaction: {
+    session: RoleSession;
+    flowRun: FlowRun;
+    saveSession: () => void | Promise<void>;
+    nodeId: string;
+  };
+};
+
+export type RunRoleTurnInput = RunRoleTurnBaseInput & (
+  RunRoleTurnWithoutCompactionInput | RunRoleTurnWithCompactionInput
+);
 
 export async function runRoleTurn({
   workspaceRoot,
@@ -205,6 +239,7 @@ export async function runRoleTurn({
   onConversationMessages,
   onAssistantTextDelta,
   nodeId,
+  compaction,
 }: RunRoleTurnInput): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
@@ -217,7 +252,41 @@ export async function runRoleTurn({
     workspaceRoot,
     flowRef,
   });
-  const history: RuntimeMessageParam[] = providedHistory ?? [];
+  const history: RuntimeMessageParam[] = providedHistory;
+
+  if (compaction) {
+    if (!operatorRenderer) {
+      throw new Error('Role-turn compaction requires an operator renderer.');
+    }
+    if (!externalSignal) {
+      throw new Error('Role-turn compaction requires an abort signal.');
+    }
+
+    const compactionResult = await autoCompactRoleSessionBeforeTurn({
+      session: compaction.session,
+      flowRun: compaction.flowRun,
+      roleName: roleInstanceId,
+      nodeId: compaction.nodeId,
+      contextWindow: getActiveModelWithKey()?.contextWindow ?? null,
+      signal: externalSignal,
+      operatorRenderer,
+      activeHistory: history,
+    });
+
+    if (compactionResult.aborted) {
+      return null;
+    }
+
+    if (compactionResult.compacted) {
+      history.splice(
+        0,
+        history.length,
+        ...(compaction.session.transcriptHistory as RuntimeMessageParam[])
+      );
+      compaction.session.transcriptHistory = history;
+      await compaction.saveSession();
+    }
+  }
 
   if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
     logger.debug('session.system_prompt', {

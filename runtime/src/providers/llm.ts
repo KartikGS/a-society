@@ -33,7 +33,7 @@ function createProvider(): LLMProvider {
   }
   const providerRuntimeConfig = {
     maxOutputTokens: active.maxOutputTokens,
-    supportsThinking: active.supportsThinking,
+    reasoning: active.reasoning,
   };
   switch (active.providerType) {
     case 'anthropic':

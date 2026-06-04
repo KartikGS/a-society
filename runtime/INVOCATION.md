@@ -176,6 +176,14 @@ When a backward edge reopens a node for the same role instance, the runtime keep
 
 Concurrent execution of the same role instance is serialized because a role instance has one flow-scoped session. If multiple runnable nodes share a role instance, the runtime claims only the earliest runnable node for that role instance; later same-role-instance work remains derivable from flow state or the runner's initial-node list until that role instance is free. Distinct role instances may run in parallel, including instances that share the same base role such as `owner_1` and `owner_2`.
 
+### Context compaction
+
+The runtime tracks the latest reported context usage per role session. When usage reaches the auto-compaction threshold, compaction runs immediately before that role's next model turn. This applies consistently across forward flow turns, backward-pass meta-analysis turns, and feedback turns.
+
+Manual compaction from the browser uses the same model-request lifecycle as a normal role turn: `request_sent`, `receiving_response`, and `response_end`. The stop control can abort the compaction turn through the role's active abort controller.
+
+Compaction archives the raw transcript in the role session, replaces active model input with a runtime-authored restoration message, resets the displayed context usage for that role, and preserves the compacted event as an audit/feed item.
+
 ---
 
 ## Session Transcript Access

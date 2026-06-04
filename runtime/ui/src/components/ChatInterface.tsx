@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { Fragment, useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
@@ -25,7 +25,6 @@ interface ChatInterfaceProps {
   consentMode?: ConsentMode;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
-  isCompactingContext?: boolean;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
@@ -33,6 +32,7 @@ interface ChatInterfaceProps {
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
+  isCompactingContext?: boolean;
 }
 
 function normalizeAssistantMarkdown(text: string): string {
@@ -145,6 +145,37 @@ function renderAssistantMarkdown(text: string) {
   });
 }
 
+function assistantSegments(message: FeedItem) {
+  return message.segments && message.segments.length > 0
+    ? message.segments
+    : message.text
+      ? [{ type: 'text' as const, text: message.text }]
+      : [];
+}
+
+function renderAssistantFeedItem(message: FeedItem) {
+  return assistantSegments(message).map((segment, index) => {
+    if (segment.type === 'text') {
+      return (
+        <Fragment key={`text-${index}`}>
+          {renderAssistantMarkdown(segment.text)}
+        </Fragment>
+      );
+    }
+
+    return (
+      <details
+        key={`reasoning-${index}`}
+        className="feed-reasoning"
+        open={segment.display === 'expanded'}
+      >
+        <summary>{segment.label}</summary>
+        <pre>{segment.text}</pre>
+      </details>
+    );
+  });
+}
+
 function SendIcon() {
   return (
     <svg viewBox="0 0 20 20" aria-hidden="true">
@@ -168,12 +199,12 @@ function ContextRing({
   contextWindow,
   contextUsage,
   onCompactContext,
-  isCompacting
+  isCompactingContext = false,
 }: {
   contextWindow: number;
   contextUsage: number | null;
   onCompactContext?: () => void;
-  isCompacting?: boolean;
+  isCompactingContext?: boolean;
 }) {
   const RADIUS = 16;
   const STROKE = 3;
@@ -188,8 +219,8 @@ function ContextRing({
       type="button"
       className="context-ring"
       onClick={onCompactContext}
-      disabled={!onCompactContext || isCompacting}
-      aria-label="Compact context"
+      disabled={!onCompactContext || isCompactingContext}
+      aria-label={isCompactingContext ? 'Context compaction in progress' : 'Compact context'}
     >
       <svg width={RADIUS * 2} height={RADIUS * 2} aria-hidden="true">
         <circle cx={RADIUS} cy={RADIUS} r={normalizedRadius} fill="none" stroke="var(--border)" strokeWidth={STROKE} />
@@ -205,7 +236,7 @@ function ContextRing({
       <span className="context-ring-pct">{pctDisplay}%</span>
       <div className="context-ring-tooltip">
         <span>{contextUsage != null ? contextUsage.toLocaleString() : '0'} / {contextWindow.toLocaleString()} tokens</span>
-        <span className="context-ring-tooltip-action">{isCompacting ? 'Compacting...' : 'Click to compact'}</span>
+        <span className="context-ring-tooltip-action">{isCompactingContext ? 'Compacting context' : 'Click to compact'}</span>
         <span className="context-ring-tooltip-hint">Usage updated at end of LLM turn</span>
       </div>
     </button>
@@ -304,7 +335,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   <p className="feed-label">{message.label}</p>
                   {message.type === 'assistant' ? (
                     <div className="feed-markdown">
-                      {renderAssistantMarkdown(message.text)}
+                      {renderAssistantFeedItem(message)}
                     </div>
                   ) : message.type === 'user' ? (
                     <div className="feed-user-text">
@@ -401,7 +432,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 contextWindow={props.contextWindow}
                 contextUsage={props.latestContextUsage ?? null}
                 onCompactContext={props.onCompactContext}
-                isCompacting={props.isCompactingContext}
+                isCompactingContext={props.isCompactingContext}
               />
             ) : null}
             <select

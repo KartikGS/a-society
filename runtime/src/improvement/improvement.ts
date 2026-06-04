@@ -11,7 +11,7 @@ import {
 import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import { SessionStore } from '../orchestration/store.js';
-import { runRoleTurn } from '../orchestration/orient.js';
+import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { ConsentGate, FlowRun, HandoffResult, ImprovementPhaseState, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import {
@@ -71,6 +71,13 @@ async function saveImprovementPhase(
     mutate(latest.improvementPhase);
     latest.status = flowRun.status;
   }, SessionStore.flowRef(flowRun), flowRun.workspaceRoot);
+}
+
+async function markImprovementRoleAwaitingAbort(flowRun: FlowRun, roleInstanceId: string): Promise<void> {
+  await saveImprovementPhase(flowRun, (p) => {
+    if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
+    p.awaitingHumanRoles[roleInstanceId] = { reason: 'autonomous-abort' };
+  });
 }
 
 function buildUnexpectedSignalRepairMessage(
@@ -173,7 +180,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   consentGate?: ConsentGate,
   validateExpectedSignal?: ExpectedSignalValidator<K>,
 ): Promise<ExpectedImprovementSignal<K> | null> {
-  const history = session.transcriptHistory as RuntimeMessageParam[];
+  let history = session.transcriptHistory as RuntimeMessageParam[];
   const stepLabel = describeExpectedStep(expectedKind);
   const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
@@ -202,20 +209,26 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           saveSession();
         },
         nodeId,
+        compaction: {
+          session,
+          flowRun,
+          saveSession,
+          nodeId,
+        },
       });
+      history = session.transcriptHistory as RuntimeMessageParam[];
 
       if (sessionResult === null) {
         if (signal?.aborted) {
           session.isActive = false;
           saveSession();
-          await saveImprovementPhase(flowRun, (p) => {
-            if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-            p.awaitingHumanRoles[roleInstanceId] = { reason: 'autonomous-abort' };
-          });
+          await markImprovementRoleAwaitingAbort(flowRun, roleInstanceId);
           return null;
         }
         throw new Error(`[improvement] ${expectedKind} session for ${roleInstanceId} ended unexpectedly without a handoff result.`);
       }
+      recordRoleTurnUsage(session, renderer, roleInstanceId, sessionResult.contextUsage);
+      saveSession();
       const result = sessionResult.handoff;
 
       if (result.kind === 'awaiting_human') {
@@ -243,7 +256,9 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
               summary: guidance.operatorSummary,
               role: roleInstanceId
             });
+            appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: guidance.modelRepairMessage }]);
             history.push({ role: 'user', content: guidance.modelRepairMessage });
+            saveSession();
             continue;
           }
         }
@@ -257,7 +272,9 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
             summary: repair.operatorSummary,
             role: roleInstanceId
           });
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: repair.modelRepairMessage }]);
           history.push({ role: 'user', content: repair.modelRepairMessage });
+          saveSession();
           continue;
         }
 
@@ -273,12 +290,13 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         summary: `${roleInstanceId} emitted ${describeUnexpectedSignal(result)} during backward pass ${stepLabel}`,
         role: roleInstanceId
       });
-      history.push({
-        role: 'user',
-        content: buildUnexpectedSignalRepairMessage(roleInstanceId, expectedKind)
-      });
+      const unexpectedRepairMessage = buildUnexpectedSignalRepairMessage(roleInstanceId, expectedKind);
+      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: unexpectedRepairMessage }]);
+      history.push({ role: 'user', content: unexpectedRepairMessage });
+      saveSession();
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
+        recordRoleTurnUsage(session, renderer, roleInstanceId, error.contextUsage);
         renderer.emit({
           kind: 'repair.requested',
           scope: 'improvement',
@@ -286,7 +304,9 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           summary: error.details.operatorSummary,
           role: roleInstanceId
         });
+        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: error.details.modelRepairMessage }]);
         history.push({ role: 'user', content: error.details.modelRepairMessage });
+        saveSession();
         continue;
       }
       throw error;
@@ -324,97 +344,98 @@ async function runMetaAnalysisEntry(
     renderer.emit({ kind: 'role.resumed', nodeId: roleInstanceId, role: roleInstanceId, reason: 'interrupted-turn' });
   }
 
-  let session: RoleSession;
-
-  if (isRunning) {
-    const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
-    if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
-    session = loaded;
-    session.isActive = true;
-
-    if (hasPendingInput && isAwaitingHuman) {
-      const inputText = phase.pendingHumanInputs![roleInstanceId].text;
-      const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
-      if (lastMsg?.role === 'user') {
-        lastMsg.content += '\n\n' + inputText;
-        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
-      } else {
-        (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: inputText });
-        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
-      }
-      await saveImprovementPhase(flowRun, (p) => {
-        delete p.pendingHumanInputs?.[roleInstanceId];
-        delete p.awaitingHumanRoles?.[roleInstanceId];
-      });
-    } else {
-      // Crash resume: if turn was interrupted mid-stream, append continuation prompt
-      const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
-      if (lastMsg?.role === 'assistant') {
-        (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
-        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
-      }
-    }
-    SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
-  } else {
-    // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
-    const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
-    const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
-
-    if (existing && lastMsg?.role === 'user') {
-      session = existing;
-      session.isActive = true;
-      appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
-    } else {
-      const findingsFilePaths = locateFindingsFiles(recordFolderPath, findingsRoles);
-      const metaAnalysisInstructionPath = path.join(
-        flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'meta-analysis.md'
-      );
-      const userMessage = buildImprovementEntryMessage({
-        stepLabel: 'meta-analysis',
-        recordFolderPath,
-        workspaceRoot: flowRun.workspaceRoot,
-        instructionFilePath: metaAnalysisInstructionPath,
-        findingsFilePaths,
-        completionSignal: [
-          `Produce your findings artifact at exactly this runtime-assigned path: ${assignedFindingsRepoPath}.`,
-          'Do not choose a sequence number or alternate filename.',
-          `When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set exactly to ${assignedFindingsRepoPath}.`
-        ].join(' ')
-      });
-      // Continue from the forward-pass session so the role can reflect on what it actually did.
-      // A fresh session would leave the role with no record of its own decisions, tool calls,
-      // or errors — making findings superficial. The meta-analysis message is appended on top.
-      if (existing) {
-        session = existing;
-        session.isActive = true;
-      } else {
-        session = {
-          roleName: roleInstanceId,
-          logicalSessionId: `${flowRun.flowId}__${roleInstanceId}`,
-          transcriptHistory: [],
-          isActive: true,
-        };
-      }
-      (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: userMessage });
-      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
-    }
-
-    SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
-    await saveImprovementPhase(flowRun, (p) => {
-      if (!p.runningRoles.includes(roleInstanceId)) {
-        p.runningRoles = [...p.runningRoles, roleInstanceId];
-      }
-    });
-  }
-
-  if (!session.systemPrompt) {
-    session.systemPrompt = ContextInjectionService.buildContextBundle(
-      flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath
-    ).bundleContent;
-  }
-
   const signal = scheduler.registerRoleTurn(roleInstanceId);
   try {
+
+    let session: RoleSession;
+
+    if (isRunning) {
+      const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
+      session = loaded;
+      session.isActive = true;
+
+      if (hasPendingInput && isAwaitingHuman) {
+        const inputText = phase.pendingHumanInputs![roleInstanceId].text;
+        const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
+        if (lastMsg?.role === 'user') {
+          lastMsg.content += '\n\n' + inputText;
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
+        } else {
+          (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: inputText });
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
+        }
+        await saveImprovementPhase(flowRun, (p) => {
+          delete p.pendingHumanInputs?.[roleInstanceId];
+          delete p.awaitingHumanRoles?.[roleInstanceId];
+        });
+      } else {
+        // Crash resume: if turn was interrupted mid-stream, append continuation prompt
+        const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
+        if (lastMsg?.role === 'assistant') {
+          (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
+        }
+      }
+      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+    } else {
+      // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
+      const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
+
+      if (existing && lastMsg?.role === 'user') {
+        session = existing;
+        session.isActive = true;
+        appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
+      } else {
+        const findingsFilePaths = locateFindingsFiles(recordFolderPath, findingsRoles);
+        const metaAnalysisInstructionPath = path.join(
+          flowRun.workspaceRoot, flowRun.projectNamespace, 'a-docs', 'improvement', 'meta-analysis.md'
+        );
+        const userMessage = buildImprovementEntryMessage({
+          stepLabel: 'meta-analysis',
+          recordFolderPath,
+          workspaceRoot: flowRun.workspaceRoot,
+          instructionFilePath: metaAnalysisInstructionPath,
+          findingsFilePaths,
+          completionSignal: [
+            `Produce your findings artifact at exactly this runtime-assigned path: ${assignedFindingsRepoPath}.`,
+            'Do not choose a sequence number or alternate filename.',
+            `When your findings artifact is saved, emit a meta-analysis-complete handoff block with findings_path set exactly to ${assignedFindingsRepoPath}.`
+          ].join(' ')
+        });
+        // Continue from the forward-pass session so the role can reflect on what it actually did.
+        // A fresh session would leave the role with no record of its own decisions, tool calls,
+        // or errors — making findings superficial. The meta-analysis message is appended on top.
+        if (existing) {
+          session = existing;
+          session.isActive = true;
+        } else {
+          session = {
+            roleName: roleInstanceId,
+            logicalSessionId: `${flowRun.flowId}__${roleInstanceId}`,
+            transcriptHistory: [],
+            isActive: true,
+          };
+        }
+        (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: userMessage });
+        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
+      }
+
+      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+      await saveImprovementPhase(flowRun, (p) => {
+        if (!p.runningRoles.includes(roleInstanceId)) {
+          p.runningRoles = [...p.runningRoles, roleInstanceId];
+        }
+      });
+    }
+
+    if (!session.systemPrompt) {
+      session.systemPrompt = ContextInjectionService.buildContextBundle(
+        flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath
+      ).bundleContent;
+    }
+
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleInstanceId, session.systemPrompt, session, 'meta-analysis-complete',
       roleOutputStream, renderer,
@@ -488,81 +509,81 @@ async function runFeedbackEntry(
     renderer.emit({ kind: 'role.resumed', nodeId: roleInstanceId, role: roleInstanceId, reason: 'interrupted-turn' });
   }
 
-  let session: RoleSession;
-
-  if (isRunning) {
-    const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
-    if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
-    session = loaded;
-    session.isActive = true;
-
-    if (hasPendingInput && isAwaitingHuman) {
-      const inputText = phase.pendingHumanInputs![roleInstanceId].text;
-      const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
-      if (lastMsg?.role === 'user') {
-        lastMsg.content += '\n\n' + inputText;
-        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
-      } else {
-        (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: inputText });
-        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
-      }
-      await saveImprovementPhase(flowRun, (p) => {
-        delete p.pendingHumanInputs?.[roleInstanceId];
-        delete p.awaitingHumanRoles?.[roleInstanceId];
-      });
-    } else {
-      const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
-      if (lastMsg?.role === 'assistant') {
-        (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
-        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
-      }
-    }
-    SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
-  } else {
-    // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
-    const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
-    const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
-
-    if (existing && lastMsg?.role === 'user') {
-      session = existing;
-      session.isActive = true;
-      appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
-    } else {
-      const allFindingsFiles = locateAllFindingsFiles(recordFolderPath);
-      const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
-      const userMessage = buildImprovementEntryMessage({
-        stepLabel: 'feedback',
-        recordFolderPath,
-        workspaceRoot: flowRun.workspaceRoot,
-        instructionFilePath: feedbackInstructionPath,
-        findingsFilePaths: allFindingsFiles,
-        contextLines: feedbackContextLines(flowRun),
-        completionSignal: [
-          'Findings from all roles in this flow are in your context.',
-          `Produce the upstream feedback artifact at exactly this runtime-assigned path: ${assignedFeedbackRepoPath}.`,
-          'Do not choose an alternate filename or location.',
-          `When the feedback artifact is saved, emit a backward-pass-complete handoff block with artifact_path set exactly to ${assignedFeedbackRepoPath}.`
-        ].join(' ')
-      });
-      session = {
-        roleName: roleInstanceId,
-        logicalSessionId: `${flowRun.flowId}__${roleInstanceId}`,
-        transcriptHistory: [{ role: 'user', content: userMessage }],
-        isActive: true,
-      };
-      appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
-    }
-
-    SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
-    await saveImprovementPhase(flowRun, (p) => {
-      if (!p.runningRoles.includes(roleInstanceId)) {
-        p.runningRoles = [...p.runningRoles, roleInstanceId];
-      }
-    });
-  }
-
   const signal = scheduler.registerRoleTurn(roleInstanceId);
   try {
+    let session: RoleSession;
+
+    if (isRunning) {
+      const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
+      session = loaded;
+      session.isActive = true;
+
+      if (hasPendingInput && isAwaitingHuman) {
+        const inputText = phase.pendingHumanInputs![roleInstanceId].text;
+        const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
+        if (lastMsg?.role === 'user') {
+          lastMsg.content += '\n\n' + inputText;
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
+        } else {
+          (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: inputText });
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: inputText }]);
+        }
+        await saveImprovementPhase(flowRun, (p) => {
+          delete p.pendingHumanInputs?.[roleInstanceId];
+          delete p.awaitingHumanRoles?.[roleInstanceId];
+        });
+      } else {
+        const lastMsg = (session.transcriptHistory as RuntimeMessageParam[]).at(-1);
+        if (lastMsg?.role === 'assistant') {
+          (session.transcriptHistory as RuntimeMessageParam[]).push({ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+          appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
+        }
+      }
+      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+    } else {
+      // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
+      const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
+
+      if (existing && lastMsg?.role === 'user') {
+        session = existing;
+        session.isActive = true;
+        appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
+      } else {
+        const allFindingsFiles = locateAllFindingsFiles(recordFolderPath);
+        const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
+        const userMessage = buildImprovementEntryMessage({
+          stepLabel: 'feedback',
+          recordFolderPath,
+          workspaceRoot: flowRun.workspaceRoot,
+          instructionFilePath: feedbackInstructionPath,
+          findingsFilePaths: allFindingsFiles,
+          contextLines: feedbackContextLines(flowRun),
+          completionSignal: [
+            'Findings from all roles in this flow are in your context.',
+            `Produce the upstream feedback artifact at exactly this runtime-assigned path: ${assignedFeedbackRepoPath}.`,
+            'Do not choose an alternate filename or location.',
+            `When the feedback artifact is saved, emit a backward-pass-complete handoff block with artifact_path set exactly to ${assignedFeedbackRepoPath}.`
+          ].join(' ')
+        });
+        session = {
+          roleName: roleInstanceId,
+          logicalSessionId: `${flowRun.flowId}__${roleInstanceId}`,
+          transcriptHistory: [{ role: 'user', content: userMessage }],
+          isActive: true,
+        };
+        appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
+      }
+
+      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+      await saveImprovementPhase(flowRun, (p) => {
+        if (!p.runningRoles.includes(roleInstanceId)) {
+          p.runningRoles = [...p.runningRoles, roleInstanceId];
+        }
+      });
+    }
+
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleInstanceId, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete',
       roleOutputStream, renderer,

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { LLMGateway } from '../providers/llm.js';
-import type { FlowRun, RoleSession, RuntimeMessageParam } from '../common/types.js';
+import type { FlowRun, GatewayTurnResult, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
 
 export const AUTO_COMPACTION_CONTEXT_RATIO = 0.8;
 
@@ -10,6 +10,8 @@ export interface RoleSessionCompactionResult {
   compacted: boolean;
   archiveId?: string;
   reason?: string;
+  aborted?: boolean;
+  skipped?: boolean;
 }
 
 export function shouldAutoCompact(contextUsage: number | undefined, contextWindow: number | null | undefined): boolean {
@@ -131,15 +133,17 @@ export async function compactRoleSession(options: {
   flowRun: FlowRun;
   roleName: string;
   trigger: CompactionTrigger;
+  signal: AbortSignal;
+  operatorRenderer: OperatorRenderSink;
+  nodeId: string;
+  exchanges: RuntimeMessageParam[];
 }): Promise<RoleSessionCompactionResult> {
-  const nodeId = options.session.currentNodeContext?.nodeId ?? options.session.currentNodeId;
+  const nodeId = options.nodeId;
   if (!nodeId) {
     return { compacted: false, reason: 'Session has no current node.' };
   }
 
-  const exchanges = options.session.currentNodeContext?.exchanges?.length
-    ? options.session.currentNodeContext.exchanges as RuntimeMessageParam[]
-    : options.session.transcriptHistory as RuntimeMessageParam[];
+  const exchanges = options.exchanges;
 
   if (exchanges.length === 0 || options.session.transcriptHistory.length === 0) {
     return { compacted: false, reason: 'Session has no transcript messages to compact.' };
@@ -149,14 +153,25 @@ export async function compactRoleSession(options: {
     mode: 'system',
     workspaceRoot: options.flowRun.workspaceRoot,
   });
-  const result = await llm.executeTurn(
-    [
-      'You are the A-Society runtime context compactor.',
-      'Return only a concise operational summary of the supplied current-node conversation.',
-      'Do not emit a handoff block. Do not call tools.'
-    ].join('\n'),
-    [{ role: 'user', content: buildSummaryPrompt(nodeId, exchanges) }]
-  );
+  let result: GatewayTurnResult;
+  try {
+    result = await llm.executeTurn(
+      [
+        'You are the A-Society runtime context compactor.',
+        'Return only a concise operational summary of the supplied current-node conversation.',
+        'Do not emit a handoff block. Do not call tools.'
+      ].join('\n'),
+      [{ role: 'user', content: buildSummaryPrompt(nodeId, exchanges) }],
+      {
+        signal: options.signal,
+        operatorRenderer: options.operatorRenderer,
+        roleInstanceId: options.roleName,
+        nodeId,
+      }
+    );
+  } finally {
+    options.operatorRenderer.responseEnd(options.roleName);
+  }
 
   const archiveId = crypto.randomUUID();
   const replacementMessage = buildReplacementMessage({
@@ -188,4 +203,72 @@ export async function compactRoleSession(options: {
   options.session.latestContextUsage = 0;
 
   return { compacted: true, archiveId };
+}
+
+export async function autoCompactRoleSessionBeforeTurn(options: {
+  session: RoleSession;
+  flowRun: FlowRun;
+  roleName: string;
+  nodeId: string;
+  contextWindow: number | null | undefined;
+  signal: AbortSignal;
+  operatorRenderer: OperatorRenderSink;
+  activeHistory: RuntimeMessageParam[];
+}): Promise<RoleSessionCompactionResult> {
+  if (!shouldAutoCompact(options.session.latestContextUsage, options.contextWindow)) {
+    return { compacted: false, skipped: true };
+  }
+
+  options.operatorRenderer.emit({ kind: 'session.compaction_started', role: options.roleName, trigger: 'auto' });
+
+  try {
+    const result = await compactRoleSession({
+      session: options.session,
+      flowRun: options.flowRun,
+      roleName: options.roleName,
+      trigger: 'auto',
+      signal: options.signal,
+      operatorRenderer: options.operatorRenderer,
+      nodeId: options.nodeId,
+      exchanges: options.activeHistory,
+    });
+
+    if (!result.compacted) {
+      options.operatorRenderer.emit({
+        kind: 'session.compaction_failed',
+        role: options.roleName,
+        trigger: 'auto',
+        reason: result.reason ?? 'No context was available to compact.'
+      });
+      return result;
+    }
+
+    options.operatorRenderer.emit({
+      kind: 'session.compacted',
+      role: options.roleName,
+      nodeId: options.nodeId,
+      trigger: 'auto',
+      archiveId: result.archiveId!
+    });
+    return result;
+  } catch (error) {
+    if (options.signal?.aborted) {
+      const reason = 'Context compaction aborted by operator.';
+      options.operatorRenderer.emit({
+        kind: 'session.compaction_failed',
+        role: options.roleName,
+        trigger: 'auto',
+        reason
+      });
+      return { compacted: false, aborted: true, reason };
+    }
+
+    options.operatorRenderer.emit({
+      kind: 'session.compaction_failed',
+      role: options.roleName,
+      trigger: 'auto',
+      reason: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
 }

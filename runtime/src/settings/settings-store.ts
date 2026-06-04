@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { DISABLED_REASONING, normalizeModelReasoningConfig, type ModelReasoningConfig } from '../common/model-reasoning.js';
 
 export interface ModelConfig {
   id: string;
@@ -10,7 +11,7 @@ export interface ModelConfig {
   modelId: string;
   contextWindow: number;
   maxOutputTokens: number;
-  supportsThinking: boolean;
+  reasoning: ModelReasoningConfig;
   supportedInputTypes: Array<'image' | 'audio' | 'video'>;
   active: boolean;
 }
@@ -25,6 +26,10 @@ interface StoredToolSettings {
   };
 }
 
+export interface FeedSettings {
+  historyLimit: number;
+}
+
 export interface ToolSettings {
   webSearch: {
     enabled: boolean;
@@ -36,6 +41,7 @@ interface SettingsData {
   version: number;
   models: ModelConfig[];
   tools: StoredToolSettings;
+  feed: FeedSettings;
 }
 
 interface PersistedModelConfig {
@@ -46,7 +52,7 @@ interface PersistedModelConfig {
   modelId: string;
   contextWindow: number;
   maxOutputTokens: number;
-  supportsThinking: boolean;
+  reasoning?: unknown;
   supportedInputTypes?: unknown;
   active: boolean;
 }
@@ -57,8 +63,15 @@ interface PersistedToolSettings {
   };
 }
 
+interface PersistedFeedSettings {
+  historyLimit?: unknown;
+}
+
 export const MODEL_CONFIGURATION_REQUIRED_MESSAGE =
   'No active model is configured in Settings. Add and activate a model before starting or continuing runtime work.';
+export const DEFAULT_FEED_HISTORY_LIMIT = 400;
+export const MIN_FEED_HISTORY_LIMIT = 50;
+export const MAX_FEED_HISTORY_LIMIT = 10000;
 const WEB_SEARCH_SECRET_KEY = '__tool_web_search_tavily_api_key';
 
 let defaultWorkspaceRoot = process.cwd();
@@ -115,7 +128,7 @@ function normalizeModelConfig(model: PersistedModelConfig): ModelConfig {
     modelId: model.modelId,
     contextWindow: model.contextWindow,
     maxOutputTokens: model.maxOutputTokens,
-    supportsThinking: model.supportsThinking,
+    reasoning: normalizeModelReasoningConfig(model.reasoning ?? DISABLED_REASONING),
     supportedInputTypes: normalizeSupportedInputTypes(model.supportedInputTypes),
     active: model.active,
   };
@@ -130,24 +143,50 @@ function normalizeStoredToolSettings(tools: unknown): StoredToolSettings {
   };
 }
 
+function normalizeFeedHistoryLimit(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_FEED_HISTORY_LIMIT;
+  const integer = Math.trunc(parsed);
+  return Math.min(MAX_FEED_HISTORY_LIMIT, Math.max(MIN_FEED_HISTORY_LIMIT, integer));
+}
+
+function normalizeFeedSettings(feed: unknown): FeedSettings {
+  const raw = feed && typeof feed === 'object' ? feed as PersistedFeedSettings : {};
+  return {
+    historyLimit: normalizeFeedHistoryLimit(raw.historyLimit),
+  };
+}
+
 function loadSettings(): SettingsData {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
-    return { version: 1, models: [], tools: normalizeStoredToolSettings(undefined) };
+    return {
+      version: 1,
+      models: [],
+      tools: normalizeStoredToolSettings(undefined),
+      feed: normalizeFeedSettings(undefined),
+    };
   }
   try {
     const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
       version?: number;
       models?: PersistedModelConfig[];
       tools?: PersistedToolSettings;
+      feed?: PersistedFeedSettings;
     };
     return {
       version: raw.version ?? 1,
       models: Array.isArray(raw.models) ? raw.models.map(normalizeModelConfig) : [],
       tools: normalizeStoredToolSettings(raw.tools),
+      feed: normalizeFeedSettings(raw.feed),
     };
   } catch {
-    return { version: 1, models: [], tools: normalizeStoredToolSettings(undefined) };
+    return {
+      version: 1,
+      models: [],
+      tools: normalizeStoredToolSettings(undefined),
+      feed: normalizeFeedSettings(undefined),
+    };
   }
 }
 
@@ -278,6 +317,21 @@ export function getToolSettings(): ToolSettings {
       hasApiKey,
     },
   };
+}
+
+export function getFeedSettings(): FeedSettings {
+  return loadSettings().feed;
+}
+
+export function updateFeedSettings(params: {
+  historyLimit: number;
+}): FeedSettings {
+  const data = loadSettings();
+  data.feed = {
+    historyLimit: normalizeFeedHistoryLimit(params.historyLimit),
+  };
+  saveSettings(data);
+  return data.feed;
 }
 
 export function updateWebSearchToolSettings(params: {

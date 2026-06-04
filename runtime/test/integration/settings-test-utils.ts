@@ -7,6 +7,7 @@ export function seedTestModelSettings(
     providerBaseUrl: string;
     apiKey?: string;
     modelId?: string;
+    contextWindow?: number;
   }
 ): void {
   fs.mkdirSync(settingsDir, { recursive: true });
@@ -17,9 +18,9 @@ export function seedTestModelSettings(
     providerType: 'openai-compatible' as const,
     providerBaseUrl: config.providerBaseUrl,
     modelId: config.modelId ?? 'mock-model',
-    contextWindow: 0,
+    contextWindow: config.contextWindow ?? 0,
     maxOutputTokens: 0,
-    supportsThinking: false,
+    reasoning: { mode: 'disabled' },
     supportedInputTypes: [],
     active: true,
   };

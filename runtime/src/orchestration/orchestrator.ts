@@ -4,8 +4,7 @@ import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
 import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
-import { emitUsage, runRoleTurn } from './orient.js';
-import { compactRoleSession, shouldAutoCompact } from './compaction.js';
+import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
 import { buildWorkflowRepairGuidance } from '../framework-services/workflow-graph-validator.js';
@@ -17,10 +16,9 @@ import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { CANONICAL_WORKFLOW_FILENAME, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
-import { WorkflowGraph, allEdgesCovered, allIncidentEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing, parseHandoffKey, type HandoffKeyParts } from './workflow-graph.js';
+import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing, parseHandoffKey, type HandoffKeyParts } from './workflow-graph.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
-import { getActiveModelWithKey } from '../settings/settings-store.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -112,10 +110,10 @@ export class FlowOrchestrator {
     return stopped;
   }
 
-  public hasActiveTurn(target?: { nodeId?: string; role?: string }): boolean {
+  public hasActiveTurn(target?: { nodeId?: string; roleInstanceId?: string }): boolean {
     for (const [nodeId, entry] of this.activeTurnControllers.entries()) {
       if (target?.nodeId && target.nodeId !== nodeId) continue;
-      if (target?.role && this.roleKey(target.role) !== this.roleKey(entry.role)) continue;
+      if (target?.roleInstanceId && target.roleInstanceId !== this.roleKey(entry.role)) continue;
       if (!entry.controller.signal.aborted) return true;
     }
     return false;
@@ -123,62 +121,6 @@ export class FlowOrchestrator {
 
   public wake(): void {
     this.wakeController.wake();
-  }
-
-  public async compactRoleContext(
-    flowRun: FlowRun,
-    roleName: string,
-    trigger: 'manual' | 'auto' = 'manual'
-  ): Promise<{ compacted: boolean; archiveId?: string; reason?: string }> {
-    this.setFlowContext(flowRun);
-    const session = SessionStore.loadRoleSession(
-      this.roleKey(roleName),
-      this.requireFlowRef(),
-      this.requireWorkspaceRoot()
-    );
-    if (!session) {
-      const reason = `No persisted session found for role "${roleName}".`;
-      this.renderer.emit({ kind: 'session.compaction_failed', role: roleName, trigger, reason });
-      return { compacted: false, reason };
-    }
-
-    this.renderer.emit({ kind: 'session.compaction_started', role: roleName, trigger });
-
-    let result: { compacted: boolean; archiveId?: string; reason?: string };
-    try {
-      result = await compactRoleSession({
-        session,
-        flowRun,
-        roleName,
-        trigger
-      });
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      this.renderer.emit({ kind: 'session.compaction_failed', role: roleName, trigger, reason });
-      throw error;
-    }
-
-    if (!result.compacted) {
-      this.renderer.emit({
-        kind: 'session.compaction_failed',
-        role: roleName,
-        trigger,
-        reason: result.reason ?? 'No context was available to compact.'
-      });
-    }
-
-    if (result.compacted) {
-      SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-      this.renderer.emit({
-        kind: 'session.compacted',
-        role: roleName,
-        nodeId: session.currentNodeContext?.nodeId ?? session.currentNodeId ?? '(unknown)',
-        trigger,
-        archiveId: result.archiveId!
-      });
-    }
-
-    return result;
   }
 
   public async runStoredFlow(
@@ -388,6 +330,7 @@ export class FlowOrchestrator {
             role: currentNodeDef.role,
           });
         }
+
         if (sameNodeResume) {
           if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
             session.currentNodeContext = { nodeId, exchanges: [...injectedHistory] };
@@ -507,6 +450,12 @@ export class FlowOrchestrator {
                   saveRoleSession();
                 },
                 nodeId,
+                compaction: {
+                  session,
+                  flowRun,
+                  saveSession: saveRoleSession,
+                  nodeId,
+                },
               });
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);
@@ -519,8 +468,7 @@ export class FlowOrchestrator {
             if (sessionResult) {
               const handoffResult = sessionResult.handoff;
               const turnUsage = sessionResult.contextUsage;
-              this.applyLatestTurnUsage(session, turnUsage);
-              emitUsage(this.renderer, turnUsage, roleName);
+              recordRoleTurnUsage(session, this.renderer, roleName, turnUsage);
               if (handoffResult.kind === 'awaiting_human') {
                 const awaitingReason = sessionResult.awaitingHumanReason ?? 'prompt-human';
                 span.setAttribute('node.outcome', 'awaiting_human');
@@ -528,7 +476,6 @@ export class FlowOrchestrator {
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
                 flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, awaitingReason);
-                await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
                 this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: awaitingReason });
                 break;
               }
@@ -590,7 +537,6 @@ export class FlowOrchestrator {
                   appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: guidance.modelRepairMessage });
                   session.transcriptHistory = injectedHistory;
                   SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-                  await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
                   continue;
                 }
 
@@ -661,14 +607,10 @@ export class FlowOrchestrator {
 
               const handoffs = handoffResult.targets;
               await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
-              const latestFlowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot()) ?? flowRun;
 
               session.transcriptHistory = injectedHistory;
               session.isActive = false;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              if (this.roleHasFutureNode(wf, latestFlowRun, nodeId, currentNodeDef.role)) {
-                await this.autoCompactSessionIfNeeded(session, latestFlowRun, nodeId, currentNodeDef.role, injectedHistory, turnUsage);
-              }
               span.addEvent('store.session_saved', { 'session.id': sessionId, 'session.active': false });
               break;
             } else {
@@ -682,8 +624,7 @@ export class FlowOrchestrator {
             }
           } catch (e: any) {
             if (e instanceof HandoffParseError) {
-              this.applyLatestTurnUsage(session, e.contextUsage);
-              emitUsage(this.renderer, e.contextUsage, roleName);
+              recordRoleTurnUsage(session, this.renderer, roleName, e.contextUsage);
               span.addEvent('handoff.parse_error_injected', {
                 error_type: e.name,
                 error_message: e.message.slice(0, 500)
@@ -699,7 +640,6 @@ export class FlowOrchestrator {
               appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: e.details.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory, e.contextUsage);
               continue;
             }
             if (e instanceof WorkflowError) {
@@ -716,7 +656,6 @@ export class FlowOrchestrator {
               appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: guidance.modelRepairMessage });
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              await this.autoCompactSessionIfNeeded(session, flowRun, nodeId, currentNodeDef.role, injectedHistory);
               continue;
             }
             span.recordException(e);
@@ -1206,22 +1145,6 @@ export class FlowOrchestrator {
     return parseRoleIdentity(roleName).instanceRoleId;
   }
 
-  private applyLatestTurnUsage(session: RoleSession, contextUsage: number | undefined): void {
-    if (contextUsage !== undefined) {
-      session.latestContextUsage = contextUsage;
-    }
-  }
-
-  private roleHasFutureNode(wf: WorkflowGraph, flowRun: FlowRun, currentNodeId: string, roleName: string): boolean {
-    const roleKey = this.roleKey(roleName);
-    return wf.nodes.some((node) =>
-      node?.id !== currentNodeId &&
-      typeof node?.role === 'string' &&
-      this.roleKey(node.role) === roleKey &&
-      !((flowRun.visitedNodeIds ?? []).includes(node.id) && allIncidentEdgesCovered(wf, flowRun.completedHandoffs, node.id))
-    );
-  }
-
   private isPredecessor(wf: WorkflowGraph, nodeId: string, possiblePredecessorId: string): boolean {
     return wf.getIncomingEdges(nodeId).some((edge: any) => edge.from === possiblePredecessorId);
   }
@@ -1260,63 +1183,6 @@ export class FlowOrchestrator {
     // an active backward correction request addressed to that same predecessor.
     return !this.hasActiveBackwardHandoffToPredecessor(flowRun, wf, nodeId, fromNodeId);
   }
-
-  private async autoCompactSessionIfNeeded(
-    session: RoleSession,
-    flowRun: FlowRun,
-    nodeId: string,
-    roleName: string,
-    activeHistory: RuntimeMessageParam[],
-    contextUsage: number | undefined = session.latestContextUsage
-  ): Promise<void> {
-    const contextWindow = getActiveModelWithKey()?.contextWindow ?? null;
-    if (!shouldAutoCompact(contextUsage, contextWindow)) return;
-
-    this.renderer.emit({ kind: 'session.compaction_started', role: roleName, trigger: 'auto' });
-
-    try {
-      const result = await compactRoleSession({
-        session,
-        flowRun,
-        roleName,
-        trigger: 'auto'
-      });
-
-      if (!result.compacted) {
-        this.renderer.emit({
-          kind: 'session.compaction_failed',
-          role: roleName,
-          trigger: 'auto',
-          reason: result.reason ?? 'No context was available to compact.'
-        });
-        return;
-      }
-
-      activeHistory.splice(
-        0,
-        activeHistory.length,
-        ...(session.transcriptHistory as RuntimeMessageParam[])
-      );
-      SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-      this.renderer.emit({
-        kind: 'session.compacted',
-        role: roleName,
-        nodeId,
-        trigger: 'auto',
-        archiveId: result.archiveId!
-      });
-    } catch (error) {
-      this.renderer.emit({
-        kind: 'session.compaction_failed',
-        role: roleName,
-        trigger: 'auto',
-        reason: error instanceof Error ? error.message : String(error)
-      });
-      // Auto compaction is opportunistic. A failed compaction must not invalidate
-      // the role turn that just completed successfully.
-    }
-  }
-
 
   private roleSessionId(flowRun: FlowRun, roleName: string): string {
     return `${flowRun.flowId}__${this.roleKey(roleName)}`;

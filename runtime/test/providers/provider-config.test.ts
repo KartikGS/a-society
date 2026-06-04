@@ -1,7 +1,8 @@
 import assert from 'node:assert';
 import {
-  appendThinkingSystemInstruction,
   DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS,
+  buildAnthropicReasoningParams,
+  buildOpenAIChatCompletionTokenParams,
   resolveMaxOutputTokens,
 } from '../../src/providers/config.js';
 
@@ -33,18 +34,98 @@ test('resolveMaxOutputTokens falls back for unset or invalid values', () => {
   assert.strictEqual(resolveMaxOutputTokens(12.5, DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS), 8192);
 });
 
-test('appendThinkingSystemInstruction only changes prompts when enabled', () => {
-  const prompt = 'Base system prompt.';
-
-  assert.strictEqual(appendThinkingSystemInstruction(prompt, false), prompt);
-  assert.match(appendThinkingSystemInstruction(prompt, true), /supportsThinking is enabled/);
+test('OpenAI chat reasoning uses native reasoning parameters', () => {
+  assert.deepStrictEqual(
+    buildOpenAIChatCompletionTokenParams({ mode: 'openai-chat', effort: 'medium' }, 4096),
+    { max_completion_tokens: 4096, reasoning_effort: 'medium' }
+  );
 });
 
-test('appendThinkingSystemInstruction is idempotent', () => {
-  const once = appendThinkingSystemInstruction('Base system prompt.', true);
-  const twice = appendThinkingSystemInstruction(once, true);
+test('OpenAI chat completion falls back to max_tokens when reasoning is disabled', () => {
+  assert.deepStrictEqual(
+    buildOpenAIChatCompletionTokenParams({ mode: 'disabled' }, 4096),
+    { max_tokens: 4096 }
+  );
+});
 
-  assert.strictEqual(twice, once);
+test('OpenAI chat completion rejects Anthropic reasoning modes', () => {
+  assert.throws(
+    () => buildOpenAIChatCompletionTokenParams({
+      mode: 'anthropic-adaptive',
+      effort: 'medium',
+      display: 'omitted',
+    }, 4096),
+    /not valid for OpenAI-compatible/
+  );
+});
+
+test('custom OpenAI-compatible reasoning merges extra body and selected token parameter', () => {
+  assert.deepStrictEqual(
+    buildOpenAIChatCompletionTokenParams({
+      mode: 'custom-openai-compatible',
+      request: {
+        tokenLimitParam: 'max_tokens',
+        extraBody: {
+          thinking: { type: 'enabled' },
+          reasoning_effort: 'high',
+        },
+      },
+      trace: {
+        responseDeltaField: 'reasoning_content',
+        requestMessageField: 'reasoning_content',
+        replay: 'tool-calls-only',
+        display: 'collapsed',
+        label: 'Provider reasoning trace',
+      },
+    }, 8192),
+    {
+      thinking: { type: 'enabled' },
+      reasoning_effort: 'high',
+      max_tokens: 8192,
+    }
+  );
+});
+
+test('custom OpenAI-compatible reasoning rejects reserved extra body keys', () => {
+  assert.throws(
+    () => buildOpenAIChatCompletionTokenParams({
+      mode: 'custom-openai-compatible',
+      request: {
+        tokenLimitParam: 'max_tokens',
+        extraBody: { messages: [] },
+      },
+    }, 8192),
+    /reserved request keys/
+  );
+});
+
+test('Anthropic adaptive thinking uses native thinking and effort parameters', () => {
+  assert.deepStrictEqual(
+    buildAnthropicReasoningParams({ mode: 'anthropic-adaptive', effort: 'medium', display: 'omitted' }, 8192),
+    {
+      thinking: { type: 'adaptive', display: 'omitted' },
+      output_config: { effort: 'medium' },
+    }
+  );
+});
+
+test('Anthropic manual thinking validates budget before building parameters', () => {
+  assert.throws(
+    () => buildAnthropicReasoningParams({
+      mode: 'anthropic-manual',
+      effort: 'medium',
+      display: 'omitted',
+      budgetTokens: 4096,
+    }, 4096),
+    /less than max output tokens/
+  );
+});
+
+test('Anthropic reasoning rejects OpenAI reasoning modes', () => {
+  assert.throws(
+    () => buildAnthropicReasoningParams({ mode: 'openai-chat', effort: 'medium' }, 4096),
+    /not valid for Anthropic/
+  );
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
