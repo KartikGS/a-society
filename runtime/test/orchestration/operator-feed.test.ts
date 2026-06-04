@@ -6,6 +6,7 @@ import { SessionStore } from '../../src/orchestration/store.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import { rememberMessage } from '../../src/server/runtime-session/feed.js';
+import { configureSettingsStore, updateFeedSettings } from '../../src/settings/settings-store.js';
 import type { FeedItem, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -107,7 +108,13 @@ test('projectMessageToFeedItem produces the expected FeedItem shape for output_t
     { type: 'output_text', role: 'owner', text: 'hi' },
     'owner_0'
   );
-  assert.deepStrictEqual(item, { id: 'owner_0', type: 'assistant', label: 'Assistant', text: 'hi' });
+  assert.deepStrictEqual(item, {
+    id: 'owner_0',
+    type: 'assistant',
+    label: 'Assistant',
+    text: 'hi',
+    segments: [{ type: 'text', text: 'hi' }],
+  });
 });
 
 test('projectMessageToFeedItem returns a tool FeedItem for activity.tool_call with role', () => {
@@ -205,6 +212,198 @@ test('compaction failure without a pending item is not stored in the feed', () =
   }, tmpDir);
 
   assert.strictEqual(activeSession.roleFeedHistory.has('reviewer'), false);
+});
+
+test('provider reasoning trace attaches to the latest assistant feed item', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'output_text',
+    role: 'owner',
+    text: 'Visible answer.',
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: {
+      kind: 'provider.reasoning_trace',
+      role: 'owner',
+      label: 'Provider reasoning trace',
+      text: 'Reasoning detail.',
+      display: 'collapsed',
+    },
+  }, tmpDir);
+
+  const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+  assert.strictEqual(feed.length, 1);
+  assert.strictEqual(feed[0].text, 'Visible answer.');
+  assert.deepStrictEqual(feed[0].segments, [
+    { type: 'text', text: 'Visible answer.' },
+    { type: 'reasoning', label: 'Provider reasoning trace', text: 'Reasoning detail.', display: 'collapsed' },
+  ]);
+});
+
+test('provider reasoning trace creates an assistant feed item when no assistant text exists', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: {
+      kind: 'provider.reasoning_trace',
+      role: 'owner_2',
+      label: 'Provider reasoning trace',
+      text: 'Only reasoning detail.',
+      display: 'collapsed',
+    },
+  }, tmpDir);
+
+  const feed = activeSession.roleFeedHistory.get('owner_2') ?? [];
+  assert.strictEqual(feed.length, 1);
+  assert.strictEqual(feed[0].type, 'assistant');
+  assert.strictEqual(feed[0].text, '');
+  assert.deepStrictEqual(feed[0].segments, [
+    { type: 'reasoning', label: 'Provider reasoning trace', text: 'Only reasoning detail.', display: 'collapsed' },
+  ]);
+});
+
+test('provider reasoning trace starts a new assistant feed item after a user message', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'output_text',
+    role: 'owner_3',
+    text: 'Previous answer.',
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'input_text',
+    role: 'owner_3',
+    text: 'Next prompt.',
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: {
+      kind: 'provider.reasoning_trace',
+      role: 'owner_3',
+      label: 'Provider reasoning trace',
+      text: 'New turn reasoning.',
+      display: 'collapsed',
+    },
+  }, tmpDir);
+
+  const feed = activeSession.roleFeedHistory.get('owner_3') ?? [];
+  assert.strictEqual(feed.length, 3);
+  assert.strictEqual(feed[0].type, 'assistant');
+  assert.deepStrictEqual(feed[0].segments, [{ type: 'text', text: 'Previous answer.' }]);
+  assert.strictEqual(feed[1].type, 'user');
+  assert.strictEqual(feed[2].type, 'assistant');
+  assert.strictEqual(feed[2].text, '');
+  assert.deepStrictEqual(feed[2].segments, [
+    { type: 'reasoning', label: 'Provider reasoning trace', text: 'New turn reasoning.', display: 'collapsed' },
+  ]);
+});
+
+test('provider reasoning trace preserves interleaving around assistant text', () => {
+  const activeSession = {
+    flowRef: ref,
+    roleFeedHistory: new Map<string, FeedItem[]>(),
+    roleFeedSequence: new Map<string, number>(),
+  };
+
+  rememberMessage(activeSession as any, {
+    type: 'output_text',
+    role: 'owner_4',
+    text: 'Assistant text A. ',
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: {
+      kind: 'provider.reasoning_trace',
+      role: 'owner_4',
+      label: 'Provider reasoning trace',
+      text: 'Reasoning R1. ',
+      display: 'collapsed',
+    },
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'output_text',
+    role: 'owner_4',
+    text: 'Assistant text B. ',
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'operator_event',
+    event: {
+      kind: 'provider.reasoning_trace',
+      role: 'owner_4',
+      label: 'Provider reasoning trace',
+      text: 'Reasoning R2. ',
+      display: 'collapsed',
+    },
+  }, tmpDir);
+  rememberMessage(activeSession as any, {
+    type: 'output_text',
+    role: 'owner_4',
+    text: 'Assistant text C.',
+  }, tmpDir);
+
+  const feed = activeSession.roleFeedHistory.get('owner_4') ?? [];
+  assert.strictEqual(feed.length, 1);
+  assert.strictEqual(feed[0].type, 'assistant');
+  assert.strictEqual(feed[0].text, 'Assistant text A. Assistant text B. Assistant text C.');
+  assert.deepStrictEqual(feed[0].segments, [
+    { type: 'text', text: 'Assistant text A. ' },
+    { type: 'reasoning', label: 'Provider reasoning trace', text: 'Reasoning R1. ', display: 'collapsed' },
+    { type: 'text', text: 'Assistant text B. ' },
+    { type: 'reasoning', label: 'Provider reasoning trace', text: 'Reasoning R2. ', display: 'collapsed' },
+    { type: 'text', text: 'Assistant text C.' },
+  ]);
+});
+
+test('rememberMessage prunes role feed history using configured feed settings', () => {
+  const settingsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-feed-settings-'));
+  const originalSettingsDir = process.env.A_SOCIETY_SETTINGS_DIR;
+  try {
+    process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+    configureSettingsStore(settingsDir);
+    updateFeedSettings({ historyLimit: 50 });
+
+    const activeSession = {
+      flowRef: ref,
+      roleFeedHistory: new Map<string, FeedItem[]>(),
+      roleFeedSequence: new Map<string, number>(),
+    };
+
+    for (let i = 0; i < 55; i++) {
+      rememberMessage(activeSession as any, {
+        type: 'input_text',
+        role: 'owner_5',
+        text: `message ${i}`,
+      }, tmpDir);
+    }
+
+    const feed = activeSession.roleFeedHistory.get('owner_5') ?? [];
+    assert.strictEqual(feed.length, 50);
+    assert.strictEqual(feed[0].text, 'message 5');
+    assert.strictEqual(feed[49].text, 'message 54');
+  } finally {
+    if (originalSettingsDir === undefined) {
+      delete process.env.A_SOCIETY_SETTINGS_DIR;
+    } else {
+      process.env.A_SOCIETY_SETTINGS_DIR = originalSettingsDir;
+    }
+    configureSettingsStore(process.cwd());
+    fs.rmSync(settingsDir, { recursive: true, force: true });
+  }
 });
 
 test('role.active becomes a role feed activation item', () => {

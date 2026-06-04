@@ -15,7 +15,7 @@ import {
   METRIC_GEN_AI_CLIENT_OPERATION_DURATION,
 } from '@opentelemetry/semantic-conventions/incubating';
 import {
-  appendThinkingSystemInstruction,
+  buildAnthropicReasoningParams,
   DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS,
   resolveMaxOutputTokens,
   type ProviderRuntimeConfig
@@ -23,17 +23,19 @@ import {
 
 import type {
   LLMProvider,
+  ProviderReasoningBlock,
   RuntimeMessageParam,
   ProviderTurnResult,
   ToolDefinition,
   TurnOptions
 } from '../common/types.js';
+import type { ModelReasoningConfig } from '../common/model-reasoning.js';
 
 export class AnthropicProvider implements LLMProvider {
   private client: Anthropic;
   private model: string;
   private maxOutputTokens: number;
-  private supportsThinking: boolean;
+  private reasoning?: ModelReasoningConfig;
 
   constructor(apiKey: string, model: string, config: ProviderRuntimeConfig = {}) {
     this.client = new Anthropic({ apiKey });
@@ -42,7 +44,57 @@ export class AnthropicProvider implements LLMProvider {
       config.maxOutputTokens,
       DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS
     );
-    this.supportsThinking = config.supportsThinking === true;
+    this.reasoning = config.reasoning;
+  }
+
+  private formatAnthropicReasoningBlocks(blocks: ProviderReasoningBlock[] | undefined): any[] {
+    if (!blocks?.length) return [];
+    return blocks
+      .filter((block) => block.provider === 'anthropic' && block.type === 'thinking')
+      .map((block) => ({
+        type: 'thinking',
+        thinking: block.thinking,
+        signature: block.signature,
+      }));
+  }
+
+  private extractAnthropicReasoningBlocks(content: any[] | undefined): ProviderReasoningBlock[] {
+    if (!Array.isArray(content)) return [];
+    return content
+      .filter((block) => block?.type === 'thinking' && typeof block.signature === 'string')
+      .map((block) => ({
+        provider: 'anthropic' as const,
+        type: 'thinking' as const,
+        thinking: typeof block.thinking === 'string' ? block.thinking : '',
+        signature: block.signature,
+      }));
+  }
+
+  private shouldEmitAnthropicThinkingSummary(): boolean {
+    return (
+      (this.reasoning?.mode === 'anthropic-adaptive' || this.reasoning?.mode === 'anthropic-manual') &&
+      this.reasoning.display === 'summarized'
+    );
+  }
+
+  private emitAnthropicThinkingSummary(text: string, options?: TurnOptions): void {
+    if (!this.shouldEmitAnthropicThinkingSummary() || text === '') return;
+    options?.operatorRenderer?.emit({
+      kind: 'provider.reasoning_trace',
+      role: options?.roleInstanceId ?? '__system__',
+      label: 'Anthropic thinking summary',
+      text,
+      display: 'collapsed',
+    });
+  }
+
+  private readableAnthropicThinkingSummary(content: any[] | undefined): string {
+    if (!Array.isArray(content)) return '';
+    return content
+      .filter((block) => block?.type === 'thinking' && typeof block.thinking === 'string')
+      .map((block) => block.thinking)
+      .filter((thinking) => thinking !== '')
+      .join('');
   }
 
   async executeTurn(
@@ -62,7 +114,7 @@ export class AnthropicProvider implements LLMProvider {
         [ATTR_GEN_AI_OPERATION_NAME]: GEN_AI_OPERATION_NAME_VALUE_CHAT,
         [ATTR_GEN_AI_REQUEST_MODEL]: this.model,
         [ATTR_GEN_AI_REQUEST_MAX_TOKENS]: this.maxOutputTokens,
-        'provider.supports_thinking': this.supportsThinking,
+        'provider.reasoning_mode': this.reasoning?.mode ?? 'disabled',
         'provider.tools_count': tools?.length ?? 0,
         'provider.message_count': messages.length
       }
@@ -70,6 +122,7 @@ export class AnthropicProvider implements LLMProvider {
       const renderer = options?.operatorRenderer;
       const outputStream = options?.outputStream;
       let fullText = '';
+      let thinkingSummary = '';
 
       try {
         renderer?.requestSent(options?.roleInstanceId ?? '', 'anthropic', this.model);
@@ -78,7 +131,7 @@ export class AnthropicProvider implements LLMProvider {
           if (msg.role === 'user') return { role: 'user', content: msg.content };
           if (msg.role === 'assistant') return { role: 'assistant', content: msg.content };
           if (msg.role === 'assistant_tool_calls') {
-            const content: any[] = [];
+            const content: any[] = this.formatAnthropicReasoningBlocks(msg.providerReasoning);
             if (msg.text) content.push({ type: 'text', text: msg.text });
             content.push(...msg.calls.map(c => ({
               type: 'tool_use',
@@ -104,15 +157,16 @@ export class AnthropicProvider implements LLMProvider {
 
         const stream = this.client.messages.stream({
           max_tokens: this.maxOutputTokens,
-          system: appendThinkingSystemInstruction(systemPrompt, this.supportsThinking),
+          system: systemPrompt,
           messages: anthropicMessages,
           model: this.model,
           tools: tools?.map(t => ({
             name: t.name,
             description: t.description,
             input_schema: t.inputSchema
-          }))
-        }, {
+          })),
+          ...buildAnthropicReasoningParams(this.reasoning, this.maxOutputTokens),
+        } as any, {
           signal: options?.signal
         });
 
@@ -135,6 +189,9 @@ export class AnthropicProvider implements LLMProvider {
               outputStream?.write(delta.text);
               options?.onAssistantTextDelta?.(delta.text);
               fullText += delta.text;
+            } else if (delta.type === 'thinking_delta') {
+              thinkingSummary += delta.thinking;
+              this.emitAnthropicThinkingSummary(delta.thinking, options);
             } else if (delta.type === 'input_json_delta') {
               const block = toolUseBlocks.get(chunk.index);
               if (block) block.inputJson += delta.partial_json;
@@ -156,7 +213,13 @@ export class AnthropicProvider implements LLMProvider {
         if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
         if (stopReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [stopReason]);
 
+        if (thinkingSummary === '') {
+          thinkingSummary = this.readableAnthropicThinkingSummary(finalMsg.content as any[]);
+          this.emitAnthropicThinkingSummary(thinkingSummary, options);
+        }
+
         if (toolUseBlocks.size > 0) {
+          const providerReasoning = this.extractAnthropicReasoningBlocks(finalMsg.content as any[]);
           const calls = Array.from(toolUseBlocks.values()).map(b => {
             let input: any = {};
             try { input = JSON.parse(b.inputJson); } catch (_e) { /* ignore */ }
@@ -166,7 +229,12 @@ export class AnthropicProvider implements LLMProvider {
           return {
             type: 'tool_calls' as const,
             calls,
-            continuationMessages: [{ role: 'assistant_tool_calls' as const, calls, text: fullText || undefined }],
+            continuationMessages: [{
+              role: 'assistant_tool_calls' as const,
+              calls,
+              text: fullText || undefined,
+              providerReasoning: providerReasoning.length > 0 ? providerReasoning : undefined,
+            }],
             contextUsage
           };
         }

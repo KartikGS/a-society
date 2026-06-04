@@ -99,6 +99,10 @@ export function App() {
     }
   }, []);
 
+  const handleModelsChange = useCallback((): void => {
+    void refreshSettingsStatus();
+  }, [refreshSettingsStatus]);
+
   const setProjectFlows = useCallback((projectNamespace: string, flows: FlowSummary[]): void => {
     setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: flows }));
   }, []);
@@ -453,7 +457,7 @@ export function App() {
         <SettingsModal
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
-          onModelsChange={() => { void refreshSettingsStatus(); }}
+          onModelsChange={handleModelsChange}
         />
       )}
     </main>

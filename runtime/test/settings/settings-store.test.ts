@@ -6,10 +6,12 @@ import {
   configureSettingsStore,
   createModel,
   getEnabledWebSearchApiKey,
+  getFeedSettings,
   getActiveModelWithKey,
   getToolSettings,
   listModels,
   updateModel,
+  updateFeedSettings,
   updateWebSearchToolSettings,
 } from '../../src/settings/settings-store.js';
 
@@ -44,7 +46,7 @@ test('default settings directory lives under the configured workspace root', () 
     modelId: 'workspace-model',
     contextWindow: 0,
     maxOutputTokens: 0,
-    supportsThinking: false,
+    reasoning: { mode: 'disabled' },
     supportedInputTypes: [],
   }, 'workspace-key');
 
@@ -66,7 +68,7 @@ test('updateModel changes persisted config and preserves api key when left blank
     modelId: 'workspace-model-v2',
     contextWindow: 64000,
     maxOutputTokens: 4096,
-    supportsThinking: true,
+    reasoning: { mode: 'openai-chat', effort: 'medium' },
     supportedInputTypes: ['image', 'audio'],
   });
 
@@ -107,6 +109,18 @@ test('web search tool stores Tavily key in secrets and only enables when configu
     },
   });
   assert.strictEqual(getEnabledWebSearchApiKey(), 'tavily-test-key');
+});
+
+test('feed settings persist and clamp history limit', () => {
+  assert.strictEqual(getFeedSettings().historyLimit, 400);
+
+  assert.deepStrictEqual(updateFeedSettings({ historyLimit: 25 }), { historyLimit: 50 });
+  assert.strictEqual(getFeedSettings().historyLimit, 50);
+
+  assert.deepStrictEqual(updateFeedSettings({ historyLimit: 250 }), { historyLimit: 250 });
+  assert.strictEqual(getFeedSettings().historyLimit, 250);
+
+  assert.deepStrictEqual(updateFeedSettings({ historyLimit: 50000 }), { historyLimit: 10000 });
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

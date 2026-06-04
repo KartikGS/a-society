@@ -1,4 +1,5 @@
-import type { InputModality, ModelConfig, ProviderType, SettingsStatus, ToolSettings } from './types';
+import type { FeedSettings, InputModality, ModelConfig, ProviderType, SettingsStatus, ToolSettings } from './types';
+import { normalizeModelReasoningConfig } from '../../src/common/model-reasoning.js';
 
 const INPUT_MODALITY_SET = new Set<InputModality>(['image', 'audio', 'video']);
 
@@ -42,7 +43,7 @@ export function normalizeModelConfig(value: unknown): ModelConfig | null {
     modelId: raw.modelId,
     contextWindow: normalizeInteger(raw.contextWindow),
     maxOutputTokens: normalizeInteger(raw.maxOutputTokens),
-    supportsThinking: raw.supportsThinking === true,
+    reasoning: normalizeModelReasoningConfig(raw.reasoning),
     supportedInputTypes: normalizeSupportedInputTypes(raw.supportedInputTypes),
     active: raw.active === true,
   };
@@ -85,4 +86,14 @@ export function normalizeToolSettings(value: unknown): ToolSettings | null {
       hasApiKey: webSearchRaw.hasApiKey,
     },
   };
+}
+
+export function normalizeFeedSettings(value: unknown): FeedSettings | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const raw = value as Record<string, unknown>;
+  const historyLimit = normalizeInteger(raw.historyLimit);
+  if (historyLimit <= 0) return null;
+
+  return { historyLimit };
 }

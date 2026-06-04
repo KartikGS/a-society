@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { Fragment, useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
@@ -141,6 +141,37 @@ function renderAssistantMarkdown(text: string) {
           </tbody>
         </table>
       </div>
+    );
+  });
+}
+
+function assistantSegments(message: FeedItem) {
+  return message.segments && message.segments.length > 0
+    ? message.segments
+    : message.text
+      ? [{ type: 'text' as const, text: message.text }]
+      : [];
+}
+
+function renderAssistantFeedItem(message: FeedItem) {
+  return assistantSegments(message).map((segment, index) => {
+    if (segment.type === 'text') {
+      return (
+        <Fragment key={`text-${index}`}>
+          {renderAssistantMarkdown(segment.text)}
+        </Fragment>
+      );
+    }
+
+    return (
+      <details
+        key={`reasoning-${index}`}
+        className="feed-reasoning"
+        open={segment.display === 'expanded'}
+      >
+        <summary>{segment.label}</summary>
+        <pre>{segment.text}</pre>
+      </details>
     );
   });
 }
@@ -304,7 +335,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   <p className="feed-label">{message.label}</p>
                   {message.type === 'assistant' ? (
                     <div className="feed-markdown">
-                      {renderAssistantMarkdown(message.text)}
+                      {renderAssistantFeedItem(message)}
                     </div>
                   ) : message.type === 'user' ? (
                     <div className="feed-user-text">

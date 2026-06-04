@@ -3,7 +3,7 @@ import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
 import type { FlowRef, FlowSummary, OperatorEvent, ProjectDiscovery, ServerMessage } from '../types';
 import { SYSTEM_ROLE_KEY } from './constants';
-import { appendFeedItem, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveToolFeedItem } from './feed';
+import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveToolFeedItem } from './feed';
 import {
   getConsentRequestRoleKey,
   hasImprovementGraph,
@@ -94,6 +94,17 @@ function applyOperatorEvent(
           latestContextUsageByRole: { ...state.latestContextUsageByRole, [role]: contextUsage },
         };
       });
+    }
+    return;
+  }
+
+  if (event.kind === 'provider.reasoning_trace') {
+    const roleKey = toRoleKey(event.role);
+    if (roleKey) {
+      handlers.updateFlowUi(key, (state) => ({
+        ...state,
+        roleFeeds: applyReasoningTraceToFeed(state.roleFeeds, roleKey, event),
+      }));
     }
     return;
   }

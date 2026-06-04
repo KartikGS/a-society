@@ -20,7 +20,7 @@ export function seedTestModelSettings(
     modelId: config.modelId ?? 'mock-model',
     contextWindow: config.contextWindow ?? 0,
     maxOutputTokens: 0,
-    supportsThinking: false,
+    reasoning: { mode: 'disabled' },
     supportedInputTypes: [],
     active: true,
   };

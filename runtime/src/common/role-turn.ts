@@ -191,26 +191,40 @@ async function executeSessionTurn(
   }
 }
 
-export interface RunRoleTurnInput {
+interface RunRoleTurnBaseInput {
   workspaceRoot: string;
   roleInstanceId: string;
   providedSystemPrompt: string;
   flowRef: FlowRef;
-  providedHistory?: RuntimeMessageParam[];
+  providedHistory: RuntimeMessageParam[];
   roleOutputStream?: NodeJS.WritableStream;
-  externalSignal?: AbortSignal;
-  operatorRenderer?: OperatorRenderSink;
   consentGate?: ConsentGate;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
+}
+
+type RunRoleTurnWithoutCompactionInput = {
+  externalSignal?: AbortSignal;
+  operatorRenderer?: OperatorRenderSink;
   nodeId?: string;
-  compaction?: {
+  compaction?: undefined;
+};
+
+type RunRoleTurnWithCompactionInput = {
+  externalSignal: AbortSignal;
+  operatorRenderer: OperatorRenderSink;
+  nodeId: string;
+  compaction: {
     session: RoleSession;
     flowRun: FlowRun;
-    saveSession?: () => void | Promise<void>;
-    nodeId?: string;
+    saveSession: () => void | Promise<void>;
+    nodeId: string;
   };
-}
+};
+
+export type RunRoleTurnInput = RunRoleTurnBaseInput & (
+  RunRoleTurnWithoutCompactionInput | RunRoleTurnWithCompactionInput
+);
 
 export async function runRoleTurn({
   workspaceRoot,
@@ -238,7 +252,7 @@ export async function runRoleTurn({
     workspaceRoot,
     flowRef,
   });
-  const history: RuntimeMessageParam[] = providedHistory ?? [];
+  const history: RuntimeMessageParam[] = providedHistory;
 
   if (compaction) {
     if (!operatorRenderer) {
@@ -252,7 +266,7 @@ export async function runRoleTurn({
       session: compaction.session,
       flowRun: compaction.flowRun,
       roleName: roleInstanceId,
-      nodeId: compaction.nodeId ?? nodeId ?? roleInstanceId,
+      nodeId: compaction.nodeId,
       contextWindow: getActiveModelWithKey()?.contextWindow ?? null,
       signal: externalSignal,
       operatorRenderer,
@@ -270,7 +284,7 @@ export async function runRoleTurn({
         ...(compaction.session.transcriptHistory as RuntimeMessageParam[])
       );
       compaction.session.transcriptHistory = history;
-      await compaction.saveSession?.();
+      await compaction.saveSession();
     }
   }
 

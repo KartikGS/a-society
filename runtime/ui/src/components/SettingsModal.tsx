@@ -1,6 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
-import { normalizeModelConfig, normalizeModelConfigs, normalizeToolSettings } from '../model-config';
-import type { InputModality, ModelConfig, ProviderType, ToolSettings } from '../types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ANTHROPIC_EFFORTS,
+  ANTHROPIC_THINKING_DISPLAYS,
+  DISABLED_REASONING,
+  OPENAI_COMPATIBLE_TOKEN_LIMIT_PARAMS,
+  OPENAI_REASONING_EFFORTS,
+  PROVIDER_REASONING_DISPLAYS,
+  PROVIDER_REASONING_REPLAY_POLICIES,
+  defaultReasoningForProvider,
+  reasoningLabel,
+} from '../../../src/common/model-reasoning.js';
+import { normalizeFeedSettings, normalizeModelConfig, normalizeModelConfigs, normalizeToolSettings } from '../model-config';
+import type {
+  AnthropicEffort,
+  AnthropicThinkingDisplay,
+  FeedSettings,
+  InputModality,
+  ModelConfig,
+  ModelReasoningConfig,
+  OpenAICompatibleTokenLimitParam,
+  OpenAIReasoningEffort,
+  ProviderReasoningDisplay,
+  ProviderReasoningReplayPolicy,
+  ProviderType,
+  ToolSettings,
+} from '../types';
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -16,13 +40,18 @@ interface ModelFormState {
   apiKey: string;
   contextWindow: string;
   maxOutputTokens: string;
-  supportsThinking: boolean;
+  reasoning: ModelReasoningConfig;
+  customReasoningExtraBodyJson: string;
   supportedInputTypes: InputModality[];
 }
 
 interface ToolFormState {
   tavilyApiKey: string;
   webSearchEnabled: boolean;
+}
+
+interface FeedFormState {
+  historyLimit: string;
 }
 
 const DEFAULT_FORM: ModelFormState = {
@@ -33,13 +62,18 @@ const DEFAULT_FORM: ModelFormState = {
   apiKey: '',
   contextWindow: '',
   maxOutputTokens: '',
-  supportsThinking: false,
+  reasoning: DISABLED_REASONING,
+  customReasoningExtraBodyJson: '{}',
   supportedInputTypes: [],
 };
 
 const DEFAULT_TOOL_FORM: ToolFormState = {
   tavilyApiKey: '',
   webSearchEnabled: false,
+};
+
+const DEFAULT_FEED_FORM: FeedFormState = {
+  historyLimit: '400',
 };
 
 const INPUT_MODALITY_OPTIONS: Array<{ value: InputModality; label: string }> = [
@@ -52,8 +86,20 @@ function formatInputModality(value: InputModality): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function formatJsonObject(value: Record<string, unknown>): string {
+  return JSON.stringify(value, null, 2);
+}
+
+function parseJsonObject(value: string): Record<string, unknown> {
+  const parsed = JSON.parse(value);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Extra request body must be a JSON object.');
+  }
+  return parsed as Record<string, unknown>;
+}
+
 type EditorView = 'list' | 'add' | 'edit';
-type SettingsTab = 'models' | 'tools';
+type SettingsTab = 'models' | 'tools' | 'feed';
 
 export function SettingsModal({ onClose, onModelsChange, required = false }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
@@ -68,12 +114,16 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
   const [toolForm, setToolForm] = useState<ToolFormState>(DEFAULT_TOOL_FORM);
   const [toolError, setToolError] = useState<string | null>(null);
   const [savingTools, setSavingTools] = useState(false);
+  const [feedSettings, setFeedSettings] = useState<FeedSettings | null>(null);
+  const [feedForm, setFeedForm] = useState<FeedFormState>(DEFAULT_FEED_FORM);
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [savingFeed, setSavingFeed] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  function replaceModels(next: ModelConfig[]): void {
+  const replaceModels = useCallback((next: ModelConfig[]): void => {
     setModels(next);
     onModelsChange?.();
-  }
+  }, [onModelsChange]);
 
   function replaceToolSettings(next: ToolSettings): void {
     setToolSettings(next);
@@ -81,6 +131,11 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       tavilyApiKey: '',
       webSearchEnabled: next.webSearch.enabled,
     });
+  }
+
+  function replaceFeedSettings(next: FeedSettings): void {
+    setFeedSettings(next);
+    setFeedForm({ historyLimit: String(next.historyLimit) });
   }
 
   useEffect(() => {
@@ -108,9 +163,23 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       }
     }
 
+    async function fetchFeedSettings() {
+      try {
+        const res = await fetch('/api/settings/feed');
+        if (!res.ok) throw new Error(await res.text());
+        const next = normalizeFeedSettings(await res.json());
+        if (!next) throw new Error('Failed to load feed settings.');
+        replaceFeedSettings(next);
+        setFeedError(null);
+      } catch (err) {
+        setFeedError(err instanceof Error ? err.message : 'Failed to load feed settings.');
+      }
+    }
+
     void fetchModels();
     void fetchTools();
-  }, []);
+    void fetchFeedSettings();
+  }, [replaceModels]);
 
   async function handleActivate(id: string) {
     try {
@@ -148,6 +217,10 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       setFormError('Provider base URL is required for OpenAI-compatible providers.');
       return;
     }
+    if (form.reasoning.mode === 'anthropic-manual' && form.reasoning.budgetTokens <= 0) {
+      setFormError('Thinking budget must be a positive number.');
+      return;
+    }
     if (isEditing && !editingModelId) {
       setFormError('No model is selected for editing.');
       return;
@@ -155,6 +228,15 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
 
     setSubmitting(true);
     try {
+      const reasoning: ModelReasoningConfig = form.reasoning.mode === 'custom-openai-compatible'
+        ? {
+            ...form.reasoning,
+            request: {
+              ...form.reasoning.request,
+              extraBody: parseJsonObject(form.customReasoningExtraBodyJson),
+            },
+          }
+        : form.reasoning;
       const payload = {
         displayName: form.displayName.trim(),
         providerType: form.providerType,
@@ -163,7 +245,7 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
         apiKey: form.apiKey.trim(),
         contextWindow: form.contextWindow ? parseInt(form.contextWindow, 10) : 0,
         maxOutputTokens: form.maxOutputTokens ? parseInt(form.maxOutputTokens, 10) : 0,
-        supportsThinking: form.supportsThinking,
+        reasoning,
         supportedInputTypes: form.supportedInputTypes,
       };
       const res = await fetch(isEditing ? `/api/settings/models/${encodeURIComponent(editingModelId!)}` : '/api/settings/models', {
@@ -219,7 +301,10 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       apiKey: '',
       contextWindow: model.contextWindow > 0 ? String(model.contextWindow) : '',
       maxOutputTokens: model.maxOutputTokens > 0 ? String(model.maxOutputTokens) : '',
-      supportsThinking: model.supportsThinking,
+      reasoning: model.reasoning,
+      customReasoningExtraBodyJson: model.reasoning.mode === 'custom-openai-compatible'
+        ? formatJsonObject(model.reasoning.request.extraBody)
+        : '{}',
       supportedInputTypes: [...model.supportedInputTypes],
     });
     setFormError(null);
@@ -254,6 +339,33 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
     }
   }
 
+  async function handleSaveFeed(e: React.FormEvent) {
+    e.preventDefault();
+    setFeedError(null);
+
+    try {
+      setSavingFeed(true);
+      const response = await fetch('/api/settings/feed', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          historyLimit: feedForm.historyLimit ? parseInt(feedForm.historyLimit, 10) : 0,
+        }),
+      });
+      if (!response.ok) {
+        const body = await response.json() as { message?: string };
+        throw new Error(body.message ?? 'Failed to save feed settings.');
+      }
+      const next = normalizeFeedSettings(await response.json());
+      if (!next) throw new Error('Server returned invalid feed settings.');
+      replaceFeedSettings(next);
+    } catch (err) {
+      setFeedError(err instanceof Error ? err.message : 'Failed to save feed settings.');
+    } finally {
+      setSavingFeed(false);
+    }
+  }
+
   const canEnableWebSearch = (toolSettings?.webSearch.hasApiKey ?? false) || toolForm.tavilyApiKey.trim() !== '';
 
   return (
@@ -281,6 +393,13 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
               onClick={() => setActiveTab('tools')}
             >
               Tools
+            </button>
+            <button
+              type="button"
+              className={`settings-nav-item${activeTab === 'feed' ? ' settings-nav-item-active' : ''}`}
+              onClick={() => setActiveTab('feed')}
+            >
+              Feed
             </button>
           </nav>
 
@@ -310,7 +429,7 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
                 }}
               />
               )
-            ) : (
+            ) : activeTab === 'tools' ? (
               <ToolsSettingsPanel
                 settings={toolSettings}
                 form={toolForm}
@@ -319,6 +438,15 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
                 canEnableWebSearch={canEnableWebSearch}
                 onChange={(updater) => setToolForm((current) => updater(current))}
                 onSubmit={handleSaveTools}
+              />
+            ) : (
+              <FeedSettingsPanel
+                settings={feedSettings}
+                form={feedForm}
+                error={feedError}
+                saving={savingFeed}
+                onChange={(updater) => setFeedForm((current) => updater(current))}
+                onSubmit={handleSaveFeed}
               />
             )}
           </div>
@@ -368,10 +496,10 @@ function ModelList({ models, error, onAdd, onEdit, onActivate, onDelete }: Model
                       <span>{model.contextWindow.toLocaleString()} ctx</span>
                     </>
                   )}
-                  {model.supportsThinking && (
+                  {reasoningLabel(model.reasoning) && (
                     <>
                       <span className="model-meta-sep">·</span>
-                      <span>Thinking</span>
+                      <span>{reasoningLabel(model.reasoning)}</span>
                     </>
                   )}
                   {(model.supportedInputTypes ?? []).map((modality) => (
@@ -444,6 +572,117 @@ interface AddModelFormProps {
 function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCancel }: AddModelFormProps) {
   const isEditing = mode === 'edit';
 
+  function updateProviderType(providerType: ProviderType): void {
+    onChange('providerType', providerType);
+    if (form.reasoning.mode !== 'disabled') {
+      onChange('reasoning', defaultReasoningForProvider(providerType));
+    }
+  }
+
+  function updateReasoningMode(mode: ModelReasoningConfig['mode']): void {
+    if (mode === 'disabled') {
+      onChange('reasoning', DISABLED_REASONING);
+      return;
+    }
+    if (mode === 'openai-chat') {
+      onChange('reasoning', { mode, effort: 'medium' });
+      return;
+    }
+    if (mode === 'anthropic-adaptive') {
+      onChange('reasoning', { mode, effort: 'medium', display: 'omitted' });
+      return;
+    }
+    if (mode === 'custom-openai-compatible') {
+      onChange('reasoning', {
+        mode,
+        request: {
+          tokenLimitParam: 'max_tokens',
+          extraBody: {},
+        },
+        trace: {
+          responseDeltaField: 'reasoning_content',
+          requestMessageField: 'reasoning_content',
+          replay: 'tool-calls-only',
+          display: 'collapsed',
+          label: 'Provider reasoning trace',
+        },
+      });
+      onChange('customReasoningExtraBodyJson', '{}');
+      return;
+    }
+    onChange('reasoning', { mode, effort: 'medium', display: 'omitted', budgetTokens: 2048 });
+  }
+
+  function updateOpenAIEffort(effort: OpenAIReasoningEffort): void {
+    if (form.reasoning.mode !== 'openai-chat') return;
+    onChange('reasoning', { ...form.reasoning, effort });
+  }
+
+  function updateAnthropicEffort(effort: AnthropicEffort): void {
+    if (form.reasoning.mode !== 'anthropic-adaptive' && form.reasoning.mode !== 'anthropic-manual') return;
+    onChange('reasoning', { ...form.reasoning, effort });
+  }
+
+  function updateAnthropicDisplay(display: AnthropicThinkingDisplay): void {
+    if (form.reasoning.mode !== 'anthropic-adaptive' && form.reasoning.mode !== 'anthropic-manual') return;
+    onChange('reasoning', { ...form.reasoning, display });
+  }
+
+  function updateAnthropicBudget(value: string): void {
+    if (form.reasoning.mode !== 'anthropic-manual') return;
+    const parsed = Number(value);
+    onChange('reasoning', {
+      ...form.reasoning,
+      budgetTokens: Number.isFinite(parsed) ? Math.trunc(parsed) : 0,
+    });
+  }
+
+  function updateCustomTokenLimitParam(tokenLimitParam: OpenAICompatibleTokenLimitParam): void {
+    if (form.reasoning.mode !== 'custom-openai-compatible') return;
+    onChange('reasoning', {
+      ...form.reasoning,
+      request: { ...form.reasoning.request, tokenLimitParam },
+    });
+  }
+
+  function updateCustomTraceField<K extends 'responseDeltaField' | 'requestMessageField' | 'label'>(
+    key: K,
+    value: string
+  ): void {
+    if (form.reasoning.mode !== 'custom-openai-compatible') return;
+    const trace = form.reasoning.trace ?? {
+      responseDeltaField: '',
+      requestMessageField: '',
+      replay: 'tool-calls-only' as const,
+      display: 'collapsed' as const,
+      label: 'Provider reasoning trace',
+    };
+    onChange('reasoning', {
+      ...form.reasoning,
+      trace: { ...trace, [key]: value },
+    });
+  }
+
+  function updateCustomTraceReplay(replay: ProviderReasoningReplayPolicy): void {
+    if (form.reasoning.mode !== 'custom-openai-compatible') return;
+    const trace = form.reasoning.trace;
+    if (!trace) return;
+    onChange('reasoning', {
+      ...form.reasoning,
+      trace: { ...trace, replay },
+    });
+  }
+
+  function updateCustomTraceDisplay(display: ProviderReasoningDisplay): void {
+    if (form.reasoning.mode !== 'custom-openai-compatible') return;
+    const trace = form.reasoning.trace;
+    if (!trace) return;
+    onChange('reasoning', {
+      ...form.reasoning,
+      trace: { ...trace, display },
+    });
+  }
+
   function toggleInputModality(modality: InputModality, checked: boolean) {
     const next = checked
       ? [...form.supportedInputTypes, modality]
@@ -477,7 +716,7 @@ function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCan
             id="sf-providerType"
             className="form-input form-select"
             value={form.providerType}
-            onChange={(e) => onChange('providerType', e.target.value as ProviderType)}
+            onChange={(e) => updateProviderType(e.target.value as ProviderType)}
           >
             <option value="anthropic">Anthropic</option>
             <option value="openai-compatible">OpenAI-compatible</option>
@@ -565,14 +804,176 @@ function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCan
         </div>
 
         <div className="form-checkboxes">
-          <label className="form-checkbox-label">
-            <input
-              type="checkbox"
-              checked={form.supportsThinking}
-              onChange={(e) => onChange('supportsThinking', e.target.checked)}
-            />
-            Supports extended thinking / reasoning
-          </label>
+          <div className="form-fieldset">
+            <span className="form-label">Reasoning</span>
+            <select
+              className="form-input form-select"
+              value={form.reasoning.mode}
+              onChange={(e) => updateReasoningMode(e.target.value as ModelReasoningConfig['mode'])}
+            >
+              <option value="disabled">Disabled</option>
+              {form.providerType === 'openai-compatible' && (
+                <>
+                  <option value="openai-chat">OpenAI Chat reasoning</option>
+                  <option value="custom-openai-compatible">Custom OpenAI-compatible</option>
+                </>
+              )}
+              {form.providerType === 'anthropic' && (
+                <>
+                  <option value="anthropic-adaptive">Anthropic adaptive thinking</option>
+                  <option value="anthropic-manual">Anthropic manual thinking</option>
+                </>
+              )}
+            </select>
+          </div>
+
+          {form.reasoning.mode === 'openai-chat' && (
+            <div className="form-fieldset">
+              <span className="form-label">Reasoning effort</span>
+              <select
+                className="form-input form-select"
+                value={form.reasoning.effort}
+                onChange={(e) => updateOpenAIEffort(e.target.value as OpenAIReasoningEffort)}
+              >
+                {OPENAI_REASONING_EFFORTS.map((effort) => (
+                  <option key={effort} value={effort}>{effort}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.reasoning.mode === 'custom-openai-compatible' && (
+            <>
+              <div className="form-fieldset">
+                <span className="form-label">Token limit parameter</span>
+                <select
+                  className="form-input form-select"
+                  value={form.reasoning.request.tokenLimitParam}
+                  onChange={(e) => updateCustomTokenLimitParam(e.target.value as OpenAICompatibleTokenLimitParam)}
+                >
+                  {OPENAI_COMPATIBLE_TOKEN_LIMIT_PARAMS.map((param) => (
+                    <option key={param} value={param}>{param}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-fieldset">
+                <span className="form-label">Extra request body JSON</span>
+                <textarea
+                  className="form-input form-textarea"
+                  value={form.customReasoningExtraBodyJson}
+                  onChange={(e) => onChange('customReasoningExtraBodyJson', e.target.value)}
+                  spellCheck={false}
+                  rows={6}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-field">
+                  <label className="form-label" htmlFor="sf-reasoningResponseField">Response delta field</label>
+                  <input
+                    id="sf-reasoningResponseField"
+                    className="form-input"
+                    type="text"
+                    value={form.reasoning.trace?.responseDeltaField ?? ''}
+                    onChange={(e) => updateCustomTraceField('responseDeltaField', e.target.value)}
+                    placeholder="reasoning_content"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="sf-reasoningRequestField">Request message field</label>
+                  <input
+                    id="sf-reasoningRequestField"
+                    className="form-input"
+                    type="text"
+                    value={form.reasoning.trace?.requestMessageField ?? ''}
+                    onChange={(e) => updateCustomTraceField('requestMessageField', e.target.value)}
+                    placeholder="reasoning_content"
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-field">
+                  <label className="form-label" htmlFor="sf-reasoningReplay">Replay</label>
+                  <select
+                    id="sf-reasoningReplay"
+                    className="form-input form-select"
+                    value={form.reasoning.trace?.replay ?? 'tool-calls-only'}
+                    onChange={(e) => updateCustomTraceReplay(e.target.value as ProviderReasoningReplayPolicy)}
+                  >
+                    {PROVIDER_REASONING_REPLAY_POLICIES.map((policy) => (
+                      <option key={policy} value={policy}>{policy}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="sf-reasoningDisplay">Display</label>
+                  <select
+                    id="sf-reasoningDisplay"
+                    className="form-input form-select"
+                    value={form.reasoning.trace?.display ?? 'collapsed'}
+                    onChange={(e) => updateCustomTraceDisplay(e.target.value as ProviderReasoningDisplay)}
+                  >
+                    {PROVIDER_REASONING_DISPLAYS.map((display) => (
+                      <option key={display} value={display}>{display}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-fieldset">
+                <span className="form-label">Trace label</span>
+                <input
+                  className="form-input"
+                  type="text"
+                  value={form.reasoning.trace?.label ?? ''}
+                  onChange={(e) => updateCustomTraceField('label', e.target.value)}
+                  placeholder="Provider reasoning trace"
+                />
+              </div>
+            </>
+          )}
+
+          {(form.reasoning.mode === 'anthropic-adaptive' || form.reasoning.mode === 'anthropic-manual') && (
+            <>
+              <div className="form-fieldset">
+                <span className="form-label">Effort</span>
+                <select
+                  className="form-input form-select"
+                  value={form.reasoning.effort}
+                  onChange={(e) => updateAnthropicEffort(e.target.value as AnthropicEffort)}
+                >
+                  {ANTHROPIC_EFFORTS.map((effort) => (
+                    <option key={effort} value={effort}>{effort}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-fieldset">
+                <span className="form-label">Thinking display</span>
+                <select
+                  className="form-input form-select"
+                  value={form.reasoning.display}
+                  onChange={(e) => updateAnthropicDisplay(e.target.value as AnthropicThinkingDisplay)}
+                >
+                  {ANTHROPIC_THINKING_DISPLAYS.map((display) => (
+                    <option key={display} value={display}>{display}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {form.reasoning.mode === 'anthropic-manual' && (
+            <div className="form-fieldset">
+              <span className="form-label">Thinking budget</span>
+              <input
+                className="form-input"
+                type="number"
+                min="1"
+                value={form.reasoning.budgetTokens > 0 ? String(form.reasoning.budgetTokens) : ''}
+                onChange={(e) => updateAnthropicBudget(e.target.value)}
+                placeholder="e.g. 2048"
+              />
+            </div>
+          )}
+
           <div className="form-fieldset">
             <span className="form-label">Supports multimodal input</span>
             <div className="form-checkbox-group">
@@ -688,6 +1089,69 @@ function ToolsSettingsPanel({
         <div className="form-actions">
           <button type="submit" className="form-btn-submit" disabled={saving}>
             {saving ? 'Saving…' : 'Save Tool Settings'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+interface FeedSettingsPanelProps {
+  settings: FeedSettings | null;
+  form: FeedFormState;
+  error: string | null;
+  saving: boolean;
+  onChange: (updater: (current: FeedFormState) => FeedFormState) => void;
+  onSubmit: (e: React.FormEvent) => void;
+}
+
+function FeedSettingsPanel({
+  settings,
+  form,
+  error,
+  saving,
+  onChange,
+  onSubmit,
+}: FeedSettingsPanelProps) {
+  return (
+    <div className="settings-section">
+      <div className="settings-section-header">
+        <h3 className="settings-section-title">Feed</h3>
+      </div>
+
+      <form className="tool-settings-form" onSubmit={onSubmit} noValidate>
+        <section className="tool-settings-card">
+	          <div className="tool-settings-header">
+	            <div>
+	              <h4 className="tool-settings-subtitle">History</h4>
+	            </div>
+	          </div>
+
+          <div className="form-field">
+            <label className="form-label" htmlFor="sf-feedHistoryLimit">History limit per role</label>
+            <input
+              id="sf-feedHistoryLimit"
+              className="form-input"
+              type="number"
+              min="50"
+              max="10000"
+              step="1"
+              value={form.historyLimit}
+              onChange={(e) => onChange((current) => ({ ...current, historyLimit: e.target.value }))}
+              placeholder="400"
+            />
+          </div>
+
+	          <p className="tool-settings-note">
+	            Saved: {settings?.historyLimit.toLocaleString() ?? 'loading'}
+	          </p>
+        </section>
+
+        {error && <p className="settings-error">{error}</p>}
+
+        <div className="form-actions">
+          <button type="submit" className="form-btn-submit" disabled={saving}>
+            {saving ? 'Saving…' : 'Save Feed Settings'}
           </button>
         </div>
       </form>

@@ -2,7 +2,13 @@ import type { FeedItem, OperatorEvent, OperatorFeedMessage } from './types.js';
 
 export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: string): FeedItem | null {
   if (message.type === 'output_text') {
-    return { id, type: 'assistant', label: 'Assistant', text: message.text };
+    return {
+      id,
+      type: 'assistant',
+      label: 'Assistant',
+      text: message.text,
+      segments: [{ type: 'text', text: message.text }],
+    };
   }
   if (message.type === 'input_text') {
     return { id, type: 'user', label: 'You', text: message.text };
@@ -86,6 +92,8 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         label: 'Compaction',
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
+    case 'provider.reasoning_trace':
+      return null;
     case 'flow.forward_pass_closed':
       return {
         id,
