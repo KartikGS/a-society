@@ -60,7 +60,7 @@ Classify the modification:
 
 - **Add a branch:** a new route or optional node path entering the graph from the Owner node. Define the new nodes and edges from Owner through to the Owner exit node, including all handoffs, roles, and invariants.
 - **Modify a node:** a phase's input, output, owner, or human-collaborative designation changes. Define what the node looks like before and after. Identify which edges are affected.
-- **Modify an edge:** a handoff's transition condition, artifact format, or direction changes. Identify the upstream and downstream nodes. Confirm no node contract is broken.
+- **Modify an edge:** a handoff's transition condition, artifact format, or forward route changes. Identify the upstream and downstream nodes. Confirm no node contract is broken.
 - **Remove a node or edge:** the most structurally significant operation. Before removing, verify that no hard rule is violated — especially Hard Rule 2 (authorization remains explicit and any needed second perspective is still present) and Hard Rule 3 (each remaining node is owned by exactly one role). Document why the removal is safe.
 - **Modify a structural rule:** an invariant or escalation rule changes. Justify the change against all five principles explicitly — invariants are the non-negotiable layer of the workflow and require the highest scrutiny.
 
@@ -106,4 +106,3 @@ After implementation, verify:
 
 - The canonical workflow definition is still registered correctly in the project's index
 - Cross-references to modified sections still resolve correctly
-

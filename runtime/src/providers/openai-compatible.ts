@@ -64,6 +64,17 @@ export class OpenAICompatibleProvider implements LLMProvider {
     return typeof current === 'string' ? current : '';
   }
 
+  private readStringField(source: unknown, fieldName: string): string {
+    if (!source || typeof source !== 'object') return '';
+    const value = (source as Record<string, unknown>)[fieldName];
+    return typeof value === 'string' ? value : '';
+  }
+
+  private cumulativeStringDelta(text: string, accumulated: string): string {
+    if (!text || !accumulated) return text;
+    return text.startsWith(accumulated) ? text.slice(accumulated.length) : text;
+  }
+
   private emitReasoningTrace(text: string, options?: TurnOptions): void {
     const trace = this.customReasoningTraceConfig();
     if (!trace || trace.display === 'hidden' || text === '') return;
@@ -200,19 +211,34 @@ export class OpenAICompatibleProvider implements LLMProvider {
             if (!choice) continue;
             if (choice.finish_reason) finishReason = choice.finish_reason;
             const delta = choice.delta;
-            if (!delta) continue;
-            if (delta.content) {
-              outputStream?.write(delta.content);
-              options?.onAssistantTextDelta?.(delta.content);
-              fullText += delta.content;
+            const payload = delta ?? choice.message;
+            if (!payload) continue;
+            const rawContent = this.readStringField(payload, 'content');
+            if (rawContent) {
+              const content = delta
+                ? rawContent
+                : this.cumulativeStringDelta(rawContent, fullText);
+              if (content) {
+                outputStream?.write(content);
+                options?.onAssistantTextDelta?.(content);
+                fullText += content;
+              }
             }
-            const reasoningDelta = this.readStringPath(delta, trace?.responseDeltaField);
+            const rawReasoningDelta = this.readStringPath(payload, trace?.responseDeltaField);
+            const reasoningDelta = delta
+              ? rawReasoningDelta
+              : this.cumulativeStringDelta(rawReasoningDelta, reasoningTrace);
             if (reasoningDelta) {
               reasoningTrace += reasoningDelta;
               this.emitReasoningTrace(reasoningDelta, options);
             }
-            if (delta.tool_calls) {
-              for (const tc of delta.tool_calls) {
+            const toolCalls = (payload as { tool_calls?: Array<{
+              index: number;
+              id?: string;
+              function?: { name?: string; arguments?: string };
+            }> }).tool_calls;
+            if (Array.isArray(toolCalls)) {
+              for (const tc of toolCalls) {
                 if (!toolCallAcc.has(tc.index)) {
                   toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
                   if (tc.id || tc.function?.name) {

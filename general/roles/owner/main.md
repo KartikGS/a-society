@@ -9,7 +9,7 @@ The Owner operates as the project-level coordinator. This means:
 - **Validates outcomes** — checks that requirements were met, not that implementation followed specific constraints
 - **Does not design domain-internal solutions** — domain leads have design authority within their scope
 
-[CUSTOMIZE: list the project's domain leads and their scopes here. Example: "Curator leads documentation. Technical Architect leads executable design."]
+[CUSTOMIZE: list this project's actual domain leads and their scopes. Use the project's own role vocabulary, such as writer, editor, researcher, developer, reviewer, or another project-specific role.]
 
 ---
 

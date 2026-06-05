@@ -522,7 +522,7 @@ test('state-aware validation rejects orphaned handoff edge state', () => {
   );
 });
 
-test('state-aware validation allows backward receiving handoff when reverse edge exists', () => {
+test('state-aware validation allows backward receiving handoff along an existing forward edge', () => {
   const graph = {
     workflow: {
       name: 'T',

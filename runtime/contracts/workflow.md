@@ -62,6 +62,8 @@ Validation rules:
 - The first declared node must have `id: owner-intake`.
 - `workflow.edges` is required and must be an array.
 - Every edge requires `from` and `to`, and both must match node ids.
+- Edges define the forward DAG topology. Do not add reverse `to` -> `from` edges to model clarification or correction.
+- Every forward edge already permits runtime backward handoffs from its `to` node to its `from` node.
 - Optional node string-list fields must be arrays of non-empty strings when present.
 - Optional object-list fields (`invariants`, `escalation`) must contain the fields shown above.
 - Unknown keys fail validation.
@@ -108,14 +110,14 @@ Use the node `role` field as the role-session identity.
 
 Use numbered role instance ids when two nodes share the same base role but must have separate runtime histories:
 
-- `curator_1`
-- `curator_2`
+- `domain-lead_1`
+- `domain-lead_2`
 - `owner_1`
 - `owner_2`
 
 The suffix pattern is `role-id_N`, where `N` is a positive numeric suffix. The runtime loads the base role authority and base role required readings, while preserving a separate session identity and transcript for the numbered role instance.
 
-Node notes such as "Curator A" or "Curator B" are descriptive only. They do not create separate runtime sessions.
+Node notes such as "Domain Lead A" or "Domain Lead B" are descriptive only. They do not create separate runtime sessions.
 
 Edges may connect neighboring nodes with the same role instance. The runtime treats the second node as a continuation of the same flow-scoped role-instance session and injects that node's current task inputs before the role continues.
 

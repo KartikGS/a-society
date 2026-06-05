@@ -19,6 +19,8 @@ When multiple target nodes must receive the handoff, emit one handoff entry per 
 **Neighbor-only handoff rule:**
 A node may only handoff to its direct neighbors — forward to immediate successors, backward to immediate predecessors. Handoffs to non-adjacent nodes are not permitted. To route work to a node that is not a direct neighbor, chain handoffs through each intermediate node in sequence: each node receives the work and passes it to its own neighbor until the destination is reached.
 
+Do not add reverse workflow edges to make backward clarification or correction possible. Runtime workflow edges remain a DAG; every forward edge already allows the downstream node to hand off backward to its immediate upstream node.
+
 ---
 
 ## How to Emit It
@@ -111,7 +113,7 @@ Emit `type: await-handoff` to suspend the current node and wait for an inbound h
 
 ```handoff
 target_node_id: owner-review
-artifact_path: .a-society/state/[project-name]/[flow-id]/record/curator-to-owner.md
+artifact_path: .a-society/state/[project-name]/[flow-id]/record/reviewer-to-owner.md
 ```
 
 **Fork**
@@ -126,8 +128,8 @@ artifact_path: .a-society/state/[project-name]/[flow-id]/record/curator-to-owner
 **Backward revise / resubmission**
 
 ```handoff
-target_node_id: curator-proposal
-artifact_path: .a-society/state/[project-name]/[flow-id]/record/owner-to-curator.md
+target_node_id: producer-revision
+artifact_path: .a-society/state/[project-name]/[flow-id]/record/reviewer-to-producer.md
 ```
 
 **Forward-pass closure**
