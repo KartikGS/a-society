@@ -1,6 +1,5 @@
 import { Writable } from 'node:stream';
 import type {
-  AssistantFeedSegment,
   FeedItem,
   FlowRef,
   OperatorEvent,
@@ -64,49 +63,7 @@ function isPendingCompactionItem(item: FeedItem): boolean {
   return item.type === 'tool' && item.label === 'Compaction';
 }
 
-function appendAssistantTextSegment(item: FeedItem, text: string): FeedItem {
-  const segments: AssistantFeedSegment[] = item.segments
-    ? [...item.segments]
-    : item.text
-      ? [{ type: 'text', text: item.text }]
-      : [];
-  const previous = segments[segments.length - 1];
-  if (previous?.type === 'text') {
-    segments[segments.length - 1] = { ...previous, text: previous.text + text };
-  } else {
-    segments.push({ type: 'text', text });
-  }
-  return { ...item, text: item.text + text, segments };
-}
-
-function appendAssistantReasoningSegment(
-  item: FeedItem,
-  event: Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }>
-): FeedItem {
-  const segments: AssistantFeedSegment[] = item.segments
-    ? [...item.segments]
-    : item.text
-      ? [{ type: 'text', text: item.text }]
-      : [];
-  const previous = segments[segments.length - 1];
-  if (
-    previous?.type === 'reasoning' &&
-    previous.label === event.label &&
-    previous.display === event.display
-  ) {
-    segments[segments.length - 1] = { ...previous, text: previous.text + event.text };
-  } else {
-    segments.push({
-      type: 'reasoning',
-      label: event.label,
-      text: event.text,
-      display: event.display,
-    });
-  }
-  return { ...item, segments };
-}
-
-function applyReasoningTraceToLatestAssistant(
+function applyReasoningTraceToFeed(
   session: ActiveSession,
   history: FeedItem[],
   roleKey: string,
@@ -114,21 +71,14 @@ function applyReasoningTraceToLatestAssistant(
   workspaceRoot: string
 ): void {
   const previous = history[history.length - 1];
-  if (previous?.type !== 'assistant') {
-    history.push({
-      id: nextFeedItemId(session, roleKey),
-      type: 'assistant',
-      label: 'Assistant',
-      text: '',
-      segments: [{
-        type: 'reasoning',
-        label: event.label,
-        text: event.text,
-        display: event.display,
-      }],
-    });
+  if (previous?.type === 'reasoning') {
+    history[history.length - 1] = { ...previous, text: previous.text + event.text };
   } else {
-    history[history.length - 1] = appendAssistantReasoningSegment(previous, event);
+    const item = projectMessageToFeedItem(
+      { type: 'operator_event', event },
+      nextFeedItemId(session, roleKey)
+    );
+    if (item) history.push(item);
   }
 
   pruneFeedHistory(history);
@@ -163,7 +113,7 @@ export function rememberMessage(
   const history = session.roleFeedHistory.get(roleKey) ?? [];
 
   if (message.type === 'operator_event' && message.event.kind === 'provider.reasoning_trace') {
-    applyReasoningTraceToLatestAssistant(session, history, roleKey, message.event, workspaceRoot);
+    applyReasoningTraceToFeed(session, history, roleKey, message.event, workspaceRoot);
     return;
   }
 
@@ -203,7 +153,7 @@ export function rememberMessage(
 
   const previous = history[history.length - 1];
   if (previous?.type === 'assistant' && message.type === 'output_text') {
-    history[history.length - 1] = appendAssistantTextSegment(previous, message.text);
+    history[history.length - 1] = { ...previous, text: previous.text + message.text };
     session.roleFeedHistory.set(roleKey, history);
     SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
     return;

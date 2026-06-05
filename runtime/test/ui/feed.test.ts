@@ -29,7 +29,7 @@ function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { ki
 
 console.log('\nui/feed');
 
-test('applyReasoningTraceToFeed starts a new assistant item after a user message', () => {
+test('applyReasoningTraceToFeed starts a new reasoning item after a user message', () => {
   const feeds: Record<string, FeedItem[]> = {
     owner: [
       { id: 'assistant-1', type: 'assistant', label: 'Assistant', text: 'Previous answer.' },
@@ -40,15 +40,25 @@ test('applyReasoningTraceToFeed starts a new assistant item after a user message
   const updated = applyReasoningTraceToFeed(feeds, 'owner', reasoningTrace('owner', 'New turn reasoning.'));
 
   assert.strictEqual(updated.owner.length, 3);
-  assert.strictEqual(updated.owner[0].segments, undefined);
-  assert.strictEqual(updated.owner[2].type, 'assistant');
-  assert.strictEqual(updated.owner[2].text, '');
-  assert.deepStrictEqual(updated.owner[2].segments, [
-    { type: 'reasoning', label: 'Provider reasoning trace', text: 'New turn reasoning.', display: 'collapsed' },
-  ]);
+  assert.strictEqual(updated.owner[2].type, 'reasoning');
+  assert.strictEqual(updated.owner[2].label, 'Provider reasoning trace');
+  assert.strictEqual(updated.owner[2].text, 'New turn reasoning.');
+  assert.strictEqual(updated.owner[2].reasoningDisplay, 'collapsed');
 });
 
-test('applyReasoningTraceToFeed preserves interleaving around assistant text', () => {
+test('applyReasoningTraceToFeed appends to the latest reasoning item', () => {
+  let feeds: Record<string, FeedItem[]> = {};
+
+  feeds = applyReasoningTraceToFeed(feeds, 'owner', reasoningTrace('owner', 'Reasoning A. '));
+  feeds = applyReasoningTraceToFeed(feeds, 'owner', reasoningTrace('owner', 'Reasoning B.'));
+
+  assert.strictEqual(feeds.owner.length, 1);
+  assert.strictEqual(feeds.owner[0].type, 'reasoning');
+  assert.strictEqual(feeds.owner[0].text, 'Reasoning A. Reasoning B.');
+  assert.strictEqual(feeds.owner[0].reasoningDisplay, 'collapsed');
+});
+
+test('applyReasoningTraceToFeed preserves chronological item order around assistant text', () => {
   let feeds: Record<string, FeedItem[]> = {};
 
   feeds = appendFeedItem(feeds, 'owner', {
@@ -72,14 +82,19 @@ test('applyReasoningTraceToFeed preserves interleaving around assistant text', (
     text: 'Assistant text C.',
   });
 
-  assert.strictEqual(feeds.owner.length, 1);
-  assert.strictEqual(feeds.owner[0].text, 'Assistant text A. Assistant text B. Assistant text C.');
-  assert.deepStrictEqual(feeds.owner[0].segments, [
-    { type: 'text', text: 'Assistant text A. ' },
-    { type: 'reasoning', label: 'Provider reasoning trace', text: 'Reasoning R1. ', display: 'collapsed' },
-    { type: 'text', text: 'Assistant text B. ' },
-    { type: 'reasoning', label: 'Provider reasoning trace', text: 'Reasoning R2. ', display: 'collapsed' },
-    { type: 'text', text: 'Assistant text C.' },
+  assert.deepStrictEqual(feeds.owner.map((item) => item.type), [
+    'assistant',
+    'reasoning',
+    'assistant',
+    'reasoning',
+    'assistant',
+  ]);
+  assert.deepStrictEqual(feeds.owner.map((item) => item.text), [
+    'Assistant text A. ',
+    'Reasoning R1. ',
+    'Assistant text B. ',
+    'Reasoning R2. ',
+    'Assistant text C.',
   ]);
 });
 

@@ -1,23 +1,17 @@
 # A-Society Runtime Workflow Contract
 
-This file defines the runtime-owned `workflow.yaml` contract.
-
-The runtime uses this contract when it creates record folders, validates workflow YAML, resolves canonical node contracts, injects node-entry context, routes handoffs, and computes backward-pass ordering. The runtime injects this guide into node-entry messages for nodes whose contract says they may create or update `workflow.yaml`.
-
-This is runtime-owned context, not a role startup reading. Do not copy this file into record folders.
-
----
+Use these rules when creating, updating, repairing, or interpreting `workflow.yaml`. Do not copy this contract into record folders.
 
 ## Workflow Files
 
-The runtime reads two workflow YAML surfaces:
+Use two workflow YAML surfaces:
 
 - **Canonical workflow definition:** `[project]/a-docs/workflow/main.yaml`
 - **Record workflow snapshot:** `.a-society/state/[project]/[flow-id]/record/workflow.yaml`
 
 The canonical definition is the standing workflow map and node-contract source. The record snapshot is the active flow's topology: the nodes and edges this flow traverses or may still traverse.
 
-When both files exist, the runtime resolves node contracts by `node.id`: it starts with the canonical node, then applies any fields present on the matching record-snapshot node as overrides. The record snapshot's `edges` are authoritative for the active flow.
+When both files exist, resolve node contracts by `node.id`: start with the canonical node, then apply any fields present on the matching record-snapshot node as overrides. The record snapshot's `edges` are authoritative for the active flow.
 
 ---
 
@@ -27,9 +21,6 @@ When both files exist, the runtime resolves node contracts by `node.id`: it star
 workflow:
   name: <string>
   summary: <string>                # optional
-  use_when: <string>               # optional
-  companion_docs:
-    - $VARIABLE_NAME               # optional
   nodes:
     - id: <string>
       role: <string>
@@ -59,10 +50,6 @@ workflow:
     - situation: <string>           # optional
       escalated_by: <string>
       to: <string>
-  session_model:
-    - <string>                      # optional
-  forward_pass_closure:
-    - <string>                      # optional
 ```
 
 Validation rules:
@@ -75,8 +62,8 @@ Validation rules:
 - The first declared node must have `id: owner-intake`.
 - `workflow.edges` is required and must be an array.
 - Every edge requires `from` and `to`, and both must match node ids.
-- Optional string-list fields must be arrays of non-empty strings when present.
-- Optional object-list fields must contain the fields shown above.
+- Optional node string-list fields must be arrays of non-empty strings when present.
+- Optional object-list fields (`invariants`, `escalation`) must contain the fields shown above.
 - Unknown keys fail validation.
 
 Strict validation additionally requires a single `owner` start node whose id is `owner-intake`, and an `owner` terminal node. A single-node workflow is valid only when that node's id is `owner-intake` and its role id is `owner`.
@@ -99,7 +86,7 @@ Artifact names in edge `artifact` fields are descriptors for handoff type. They 
 
 ## Node-Entry Injection
 
-On first entry to a node, the runtime may inject the resolved node contract into the node-entry user message:
+On first entry to a node, expect the resolved node contract in the node-entry user message:
 
 - `required_readings`
 - `guidance`
@@ -117,7 +104,7 @@ Do not use node-specific `required_readings` for files already loaded at role st
 
 ## Role Instances
 
-The runtime uses the node `role` field as the role-session identity.
+Use the node `role` field as the role-session identity.
 
 Use numbered role instance ids when two nodes share the same base role but must have separate runtime histories:
 

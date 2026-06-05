@@ -31,6 +31,9 @@ function buildServer(workspaceRoot: string) {
     flowReadModel,
     onFlowDeleted(projectNamespace) {
       runtimeSessions.refreshProjectFlows(projectNamespace);
+    },
+    onProjectDeleted(projectNamespace) {
+      runtimeSessions.refreshProjectFlows(projectNamespace);
     }
   });
   registerSettingsRoutes(app);
@@ -38,11 +41,6 @@ function buildServer(workspaceRoot: string) {
 
   wss.on('connection', (socket) => {
     socketHub.add(socket);
-
-    runtimeSessions.sendToSocket(socket, {
-      type: 'init',
-      projects: discoverProjects(workspaceRoot),
-    });
 
     socket.on('message', (raw) => {
       const message = parseClientMessage(String(raw));

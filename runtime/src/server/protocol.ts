@@ -20,7 +20,6 @@ import type {
   ProtocolFeedbackConsentDecision,
   ProtocolImprovementChoiceMode,
 } from '../common/protocol-constants.js';
-import type { ProjectDiscovery } from '../projects/project-discovery.js';
 import type { RuntimeServerMessage } from './ws-operator-sink.js';
 
 export type ClientMessage =
@@ -54,7 +53,6 @@ export type FlowScopedHistoricalMessage = HistoricalMessage & { flowRef: FlowRef
 export type FeedReplayMessage = { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> };
 
 export type ServerMessage =
-  | { type: 'init'; projects: ProjectDiscovery }
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
   | FeedReplayMessage
   | FlowStateMessage

@@ -50,7 +50,7 @@ The UI Developer does **NOT** own:
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected behavior and escalate.
 - **Do not cross the server/WebSocket contract boundary without TA direction.** If the UI implementation requires a change to the server API or WebSocket protocol owned by the Orchestration Developer, stop, surface the dependency to the TA, and wait for design resolution before proceeding.
 - **Do not open a Developer session before the executable gate clears.** The executable role doc, the relevant standing executable design, and the Owner-approved implementation scope must exist before implementation begins.
-- **Never hardcode a registered file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_PUBLIC_INDEX`, use its variable name.
+- **Never hardcode a registered file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_GENERAL_INDEX`, use its variable name.
 
 ---
 

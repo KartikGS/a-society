@@ -14,6 +14,7 @@ import {
   fetchActiveModelContextWindow,
   fetchFlowState,
   fetchProjectFlows as fetchProjectFlowsApi,
+  fetchProjects as fetchProjectsApi,
   fetchSettingsStatus as fetchSettingsStatusApi,
   IncompatibleFlowError,
 } from './app/runtime-api';
@@ -115,13 +116,19 @@ export function App() {
     }
   }, [setProjectFlows]);
 
+  const refreshProjects = useCallback(async (): Promise<void> => {
+    try {
+      setProjects(await fetchProjectsApi());
+    } catch (err) {
+      setSelectorError(err instanceof Error ? err.message : 'Failed to load projects.');
+    }
+  }, []);
+
   const handleIncomingMessage = useCallback((message: ServerMessage): void => {
     handleServerMessage(message, {
       updateFlowUi,
       ensureTab,
-      setProjects,
       setProjectFlows,
-      setNewProjectName,
       setSelectorError,
       refreshProjectFlows: (projectNamespace) => {
         void refreshProjectFlows(projectNamespace);
@@ -187,13 +194,17 @@ export function App() {
   const appCommandInput = useMemo(() => ({
     activeView,
     activeTabKey,
+    selectedProject,
     newProjectName,
     ensureConfiguredModel,
     ensureTab,
+    refreshProjects,
     refreshProjectFlows,
     sendMessage,
     updateFlowUi,
     setSelectedProject,
+    setProjects,
+    setProjectFlowsByProject,
     setNewProjectName,
     setSelectorError,
     setActiveTabKey,
@@ -205,7 +216,9 @@ export function App() {
     ensureConfiguredModel,
     ensureTab,
     newProjectName,
+    refreshProjects,
     refreshProjectFlows,
+    selectedProject,
     sendMessage,
     updateFlowUi,
   ]);
@@ -218,6 +231,7 @@ export function App() {
     handleOpenFlow,
     handleNewFlow,
     handleDeleteFlow,
+    handleDeleteProject,
     handleTabSelect,
     handleCloseTab,
     handleSubmit,
@@ -251,6 +265,19 @@ export function App() {
       .catch(() => { if (!cancelled) setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 }); });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchProjectsApi()
+      .then((nextProjects) => {
+        if (!cancelled) setProjects(nextProjects);
+      })
+      .catch((err) => {
+        if (!cancelled) setSelectorError(err instanceof Error ? err.message : 'Failed to load projects.');
+      });
+    return () => { cancelled = true; };
+  }, []);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -351,6 +378,7 @@ export function App() {
             onOpenFlow={handleOpenFlow}
             onNewFlow={handleNewFlow}
             onDeleteFlow={handleDeleteFlow}
+            onDeleteProject={handleDeleteProject}
             onNewProjectNameChange={setNewProjectName}
             onCreateNew={handleCreateNewProject}
             onOpenSettings={() => setSettingsOpen(true)}

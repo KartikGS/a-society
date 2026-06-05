@@ -52,7 +52,7 @@ function test(name: string, fn: () => void): void {
 
 const SOCIETY_ROOT      = path.resolve(__dirname, '../../..');
 const MANIFEST_PATH     = path.join(SOCIETY_ROOT, 'runtime/contracts/a-docs-manifest.yaml');
-const PUBLIC_INDEX      = path.join(SOCIETY_ROOT, 'index.md');
+const GENERAL_INDEX     = path.join(SOCIETY_ROOT, 'index.md');
 const INTERNAL_INDEX    = path.join(SOCIETY_ROOT, 'a-docs/indexes/main.md');
 const WORKFLOW_FILE     = path.join(SOCIETY_ROOT, 'a-docs/workflow/main.yaml');
 // Temp directory for the simulated project
@@ -141,17 +141,17 @@ test('Scenario 2 — second scaffold run skips all existing files (no overwrites
 
 // ── Scenario 3: Path Validator against live indexes ───────────────────────────
 
-test('Scenario 3 — path validator runs against public index without throwing', () => {
+test('Scenario 3 — path validator runs against general index without throwing', () => {
   let results: any[] | undefined;
   assert.doesNotThrow(() => {
-    results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
+    results = validatePaths(GENERAL_INDEX, REPO_ROOT);
   });
   assert.ok(Array.isArray(results));
   assert.ok(results!.length > 0);
 });
 
-test('Scenario 3 — public index: all results have required fields', () => {
-  const results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
+test('Scenario 3 — general index: all results have required fields', () => {
+  const results = validatePaths(GENERAL_INDEX, REPO_ROOT);
   for (const r of results) {
     assert.ok('variable' in r, 'missing variable field');
     assert.ok('path' in r, 'missing path field');

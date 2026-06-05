@@ -50,7 +50,7 @@ The Framework Services Developer does **NOT** own:
 
   **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder. This exception does not extend to any other file under `a-docs/`.
 - **Do not open a Developer session before the executable gate clears.** The executable role doc, the relevant standing executable design, and the Owner-approved implementation scope must exist before implementation begins.
-- **Never hardcode a registered file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_PUBLIC_INDEX`, use its variable name.
+- **Never hardcode a registered file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_GENERAL_INDEX`, use its variable name.
 
 ---
 

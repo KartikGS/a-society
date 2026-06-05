@@ -17,26 +17,32 @@ import type {
   ConsentResponseDecision,
   FlowRef,
   FlowSummary,
+  ProjectDiscovery,
+  ProjectSummary,
   WorkflowGraph,
 } from '../types';
 import type { ActiveFlowView } from './active-flow-view';
 import { SYSTEM_ROLE_KEY } from './constants';
 import { titleForFlow, type FlowTab, type FlowUiState } from './flow-ui';
 import { writeUrlFlowRef } from './routing';
-import { deleteFlow as deleteFlowApi } from './runtime-api';
+import { deleteFlow as deleteFlowApi, deleteProject as deleteProjectApi } from './runtime-api';
 
 type FlowUiUpdater = (state: FlowUiState) => FlowUiState;
 
 interface UseAppCommandsInput {
   activeView: ActiveFlowView;
   activeTabKey: string | null;
+  selectedProject: string | null;
   newProjectName: string;
   ensureConfiguredModel: () => boolean;
   ensureTab: (ref: FlowRef, title: string) => void;
+  refreshProjects: () => Promise<void>;
   refreshProjectFlows: (projectNamespace: string) => Promise<void>;
   sendMessage: (message: ClientMessage) => void;
   updateFlowUi: (key: string, updater: FlowUiUpdater) => void;
   setSelectedProject: Dispatch<SetStateAction<string | null>>;
+  setProjects: Dispatch<SetStateAction<ProjectDiscovery>>;
+  setProjectFlowsByProject: Dispatch<SetStateAction<Record<string, FlowSummary[]>>>;
   setNewProjectName: Dispatch<SetStateAction<string>>;
   setSelectorError: Dispatch<SetStateAction<string | null>>;
   setActiveTabKey: Dispatch<SetStateAction<string | null>>;
@@ -50,11 +56,15 @@ export function useAppCommands(input: UseAppCommandsInput) {
     ensureConfiguredModel,
     ensureTab,
     newProjectName,
+    refreshProjects,
     refreshProjectFlows,
+    selectedProject,
     sendMessage,
     setActiveTabKey,
     setFlowUiByKey,
     setNewProjectName,
+    setProjectFlowsByProject,
+    setProjects,
     setSelectedProject,
     setSelectorError,
     setTabs,
@@ -81,8 +91,10 @@ export function useAppCommands(input: UseAppCommandsInput) {
     setSelectorError(null);
     if (projectNamespace) {
       void refreshProjectFlows(projectNamespace);
+    } else {
+      void refreshProjects();
     }
-  }, [refreshProjectFlows, setNewProjectName, setSelectedProject, setSelectorError]);
+  }, [refreshProjectFlows, refreshProjects, setNewProjectName, setSelectedProject, setSelectorError]);
 
   const handleExistingInitialization = useCallback((projectNamespace: string): void => {
     if (!ensureConfiguredModel()) return;
@@ -136,6 +148,65 @@ export function useAppCommands(input: UseAppCommandsInput) {
       setSelectorError(err instanceof Error ? err.message : 'Failed to delete flow.');
     }
   }, [activeTabKey, refreshProjectFlows, setActiveTabKey, setFlowUiByKey, setSelectorError, setTabs]);
+
+  const handleDeleteProject = useCallback(async (project: ProjectSummary): Promise<void> => {
+    const projectNamespace = project.folderName;
+    if (!window.confirm(`Delete project "${project.displayName}", its folder, and all runtime state? This cannot be undone.`)) return;
+
+    try {
+      const nextProjects = await deleteProjectApi(project);
+
+      setProjects(nextProjects);
+      setSelectorError(null);
+      setNewProjectName('');
+      setProjectFlowsByProject((current) => {
+        const next = { ...current };
+        delete next[projectNamespace];
+        return next;
+      });
+
+      setFlowUiByKey((current) => {
+        const next = { ...current };
+        for (const key of Object.keys(next)) {
+          if (key.startsWith(`${projectNamespace}/`)) {
+            delete next[key];
+          }
+        }
+        return next;
+      });
+
+      setTabs((current) => {
+        const next = current.filter((tab) => tab.ref.projectNamespace !== projectNamespace);
+        const deletedActiveTab = activeTabKey
+          ? current.some((tab) => tab.key === activeTabKey && tab.ref.projectNamespace === projectNamespace)
+          : false;
+
+        if (deletedActiveTab) {
+          const fallback = next[0] ?? null;
+          setActiveTabKey(fallback?.key ?? null);
+          setSelectedProject(fallback?.ref.projectNamespace ?? null);
+          writeUrlFlowRef(fallback?.ref ?? null);
+        } else if (selectedProject === projectNamespace) {
+          setSelectedProject(null);
+        }
+
+        return next;
+      });
+    } catch (err) {
+      setSelectorError(err instanceof Error ? err.message : 'Failed to delete project.');
+    }
+  }, [
+    activeTabKey,
+    selectedProject,
+    setActiveTabKey,
+    setFlowUiByKey,
+    setNewProjectName,
+    setProjectFlowsByProject,
+    setProjects,
+    setSelectedProject,
+    setSelectorError,
+    setTabs,
+  ]);
 
   const handleTabSelect = useCallback((tab: FlowTab): void => {
     setActiveTabKey(tab.key);
@@ -278,6 +349,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     handleOpenFlow,
     handleNewFlow,
     handleDeleteFlow,
+    handleDeleteProject,
     handleTabSelect,
     handleCloseTab,
     handleSubmit,

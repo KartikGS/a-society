@@ -60,6 +60,16 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
     workflowDoc.workflow.nodes[0].guidance.some((entry: string) => entry.includes('# Runtime Initialization Brief')),
     'initialization brief should be embedded in the node guidance'
   );
+  assert.ok(
+    workflowDoc.workflow.nodes[0].guidance.some((entry: string) => entry.includes('workflow.yaml')),
+    'workflow contract trigger should be present in initialization node guidance'
+  );
+  const generalIndexGuidance = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    entry.includes('A-Society general index:')
+  );
+  assert.ok(generalIndexGuidance, 'A-Society general index should be embedded in the node guidance');
+  assert.ok(generalIndexGuidance.includes('$GENERAL_OWNER_ROLE'));
+  assert.ok(generalIndexGuidance.includes('a-society/general/roles/owner/main.md'));
 
   const metadata = readRecordMetadata(result.flowRun.recordFolderPath);
   assert.ok(metadata, 'record metadata should exist');
@@ -84,7 +94,18 @@ test('bootstrapInitializationFlow: greenfield mode creates the project, scaffold
   );
   assert.ok(!fs.existsSync(path.join(result.flowRun.recordFolderPath, '00-runtime-initialization-brief.md')));
   assert.ok(briefContent.includes('Mode: greenfield'));
-  assert.ok(briefContent.includes('Required outcomes for this initialization flow'));
+  assert.ok(!briefContent.includes('## Runtime intent'));
+  assert.ok(briefContent.includes('## Mode-specific guidance'));
+  assert.ok(briefContent.includes('Gather the minimum project truth interactively.'));
+  assert.ok(!briefContent.includes('Inspect existing non-`a-docs/` project files before asking questions.'));
+  assert.ok(!briefContent.includes('## Scaffold summary'));
+  assert.ok(!briefContent.includes('## Injected A-Society general index'));
+  assert.ok(!briefContent.includes('## Required outcomes for this initialization flow'));
+
+  assert.strictEqual(workflowDoc.workflow.nodes[0].inputs, undefined);
+  assert.strictEqual(workflowDoc.workflow.nodes[0].work, undefined);
+  assert.strictEqual(workflowDoc.workflow.nodes[0].outputs, undefined);
+  assert.strictEqual(workflowDoc.workflow.nodes[0].notes, undefined);
 });
 
 test('bootstrapInitializationFlow: takeover mode scaffolds an existing project and embeds a takeover brief', () => {
@@ -105,7 +126,12 @@ test('bootstrapInitializationFlow: takeover mode scaffolds an existing project a
   );
   assert.ok(!fs.existsSync(path.join(result.flowRun.recordFolderPath, '00-runtime-initialization-brief.md')));
   assert.ok(briefContent.includes('Mode: takeover'));
-  assert.ok(briefContent.includes('README.md'));
+  assert.ok(!briefContent.includes('## Runtime intent'));
+  assert.ok(briefContent.includes('## Mode-specific guidance'));
+  assert.ok(briefContent.includes('Inspect existing non-`a-docs/` project files before asking questions.'));
+  assert.ok(!briefContent.includes('Gather the minimum project truth interactively.'));
+  assert.ok(!briefContent.includes('## Existing top-level project entries'));
+  assert.ok(!briefContent.includes('README.md'));
 });
 
 test('bootstrapInitializationFlow: rejects a greenfield project when the target folder already exists', () => {

@@ -1,7 +1,7 @@
 import { flowKey } from '../../../src/common/flow-ref.js';
 import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
-import type { FlowRef, FlowSummary, OperatorEvent, ProjectDiscovery, ServerMessage } from '../types';
+import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types';
 import { SYSTEM_ROLE_KEY } from './constants';
 import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveToolFeedItem } from './feed';
 import {
@@ -17,9 +17,7 @@ type FlowUiUpdater = (state: FlowUiState) => FlowUiState;
 export interface ServerMessageHandlers {
   updateFlowUi: (key: string, updater: FlowUiUpdater) => void;
   ensureTab: (ref: FlowRef, title: string) => void;
-  setProjects: (projects: ProjectDiscovery) => void;
   setProjectFlows: (projectNamespace: string, flows: FlowSummary[]) => void;
-  setNewProjectName: (value: string) => void;
   setSelectorError: (value: string | null) => void;
   refreshProjectFlows: (projectNamespace: string) => void;
   showToast: (message: string) => void;
@@ -187,13 +185,6 @@ function applyOperatorEvent(
 }
 
 export function handleServerMessage(message: ServerMessage, handlers: ServerMessageHandlers): void {
-  if (message.type === 'init') {
-    handlers.setProjects(message.projects);
-    handlers.setNewProjectName('');
-    handlers.setSelectorError(null);
-    return;
-  }
-
   if (message.type === 'flow_summaries') {
     handlers.setProjectFlows(message.projectNamespace, message.flows);
     return;

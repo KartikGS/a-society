@@ -5,7 +5,7 @@
 <h1 align="center">A-Society</h1>
 
 <p align="center">
-  <strong>An agentic harness for project work.</strong>
+  <strong>An agentic harness for any project.</strong>
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 
 <p align="center">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-5EEAD4?style=flat-square">
-  <img alt="Node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-F59E0B?style=flat-square">
+  <img alt="Node v18+" src="https://img.shields.io/badge/node-v18%2B-F59E0B?style=flat-square">
   <img alt="Browser runtime" src="https://img.shields.io/badge/runtime-browser%20UI-FB7185?style=flat-square">
   <img alt="Project learning" src="https://img.shields.io/badge/feedback-self--improving-CBD5E1?style=flat-square">
 </p>
@@ -148,6 +148,7 @@ Fill in:
 - **Provider** — Anthropic, OpenAI, or a compatible base URL
 - **API key** — from your provider's account dashboard ([Anthropic Console](https://console.anthropic.com) · [OpenAI Platform](https://platform.openai.com/api-keys))
 - **Model ID** — from your provider's model catalog ([Anthropic model cards](https://docs.anthropic.com/en/docs/about-claude/models/overview) · [OpenAI models](https://platform.openai.com/docs/models))
+- **Context window** — the model's token context limit; used to calculate when to compact session history
 
 Save and set the model as active. The project selector appears once a model is active.
 

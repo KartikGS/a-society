@@ -7,7 +7,6 @@ export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: stri
       type: 'assistant',
       label: 'Assistant',
       text: message.text,
-      segments: [{ type: 'text', text: message.text }],
     };
   }
   if (message.type === 'input_text') {
@@ -93,7 +92,13 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
     case 'provider.reasoning_trace':
-      return null;
+      return {
+        id,
+        type: 'reasoning',
+        label: event.label,
+        text: event.text,
+        reasoningDisplay: event.display,
+      };
     case 'flow.forward_pass_closed':
       return {
         id,

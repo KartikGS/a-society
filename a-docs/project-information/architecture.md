@@ -14,7 +14,7 @@ Detailed executable architecture, capability inventory, and implementation owner
 
 Two indexes govern path resolution:
 
-- **`a-society/index.md`** — the public index. Covers all public-facing paths in `general/` and the standing operator entry point in `runtime/`. Public runtime surfaces and project owners resolve paths here.
+- **`a-society/index.md`** — the general library index. Covers reusable `general/` instructions and templates. Runtime initialization injects this index so the initialization Owner can navigate the general library.
 - **`a-society/a-docs/indexes/main.md`** — the internal index. Covers A-Society's internal documentation set plus the internal-facing and operator-facing references that A-Society roles maintain directly. Internal agents resolve paths here.
 
 ---
@@ -57,11 +57,11 @@ Violation: Creating a new executable implementation root that recreates the reti
 
 ### Boundary Respect
 
-Public runtime initialization surfaces operate outside A-Society's internal documentation layer. They must not cross into `a-docs/` as standing required reads for external project work.
+Runtime initialization surfaces operate outside A-Society's internal documentation layer. They must not cross into `a-docs/` as standing required reads for external project work.
 
-- Public runtime initialization surfaces resolve paths from `a-society/index.md` only — never from `a-society/a-docs/indexes/main.md`
+- Runtime initialization surfaces use `a-society/index.md` only for general-library navigation — never as a registry for runtime contracts or A-Society internal documentation
 - Their standing context loading must not include `a-docs/` files as required reads
-- If a public runtime surface needs framework knowledge (e.g., what an a-docs artifact is), that knowledge must be available in `general/` or `runtime/` — not gated behind internal documentation
+- If a runtime initialization surface needs framework knowledge (e.g., what an a-docs artifact is), that knowledge must be available in `general/` or `runtime/` — not gated behind internal documentation
 
 Violation: A runtime initialization surface loading `a-docs/agents.md` or `a-docs/project-information/vision.md` as part of its standing context loading.
 
@@ -90,7 +90,7 @@ Every piece of information has exactly one home. Duplication is not a convenienc
 
 - When the same information appears in two places, one of them is wrong or will become wrong
 - The resolution is always clearer scope, not consolidation or duplication
-- The index (public or internal) is the single source of truth for file paths — paths are never hardcoded in documents that reference variables
+- The relevant index (general or internal) is the single source of truth for file paths — paths are never hardcoded in documents that reference variables
 
 Violation: Listing `$GENERAL_*` paths in both the internal index and a separate document, creating two registries that must be kept in sync.
 
@@ -99,7 +99,7 @@ Violation: Listing `$GENERAL_*` paths in both the internal index and a separate 
 An agent's context loading contains only what is directly necessary for its specific job. Loading unnecessary documents wastes context and creates false dependencies.
 
 - An agent working on A-Society itself reads `a-docs/` orientation documents
-- A runtime initialization surface working on other projects reads only the public index plus the `general/` and `runtime/` content relevant to its task
+- A runtime initialization surface working on other projects reads only the general library index plus the `general/` and `runtime/` content relevant to its task
 - The test: "Would removing this document from context loading cause this agent to make a worse decision?" If no, remove it
 
 Violation: A runtime initialization surface loading A-Society's internal vision and structure documents when its job is to initialize a different project entirely.

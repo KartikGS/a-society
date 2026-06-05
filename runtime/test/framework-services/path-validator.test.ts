@@ -12,7 +12,7 @@ const SOCIETY_ROOT = path.resolve(__dirname, '..', '..', '..');
 const REPO_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'path-validator-root-'));
 fs.symlinkSync(SOCIETY_ROOT, path.join(REPO_ROOT, 'a-society'), 'dir');
 const INTERNAL_INDEX = path.join(SOCIETY_ROOT, 'a-docs', 'indexes', 'main.md');
-const PUBLIC_INDEX = path.join(SOCIETY_ROOT, 'index.md');
+const GENERAL_INDEX = path.join(SOCIETY_ROOT, 'index.md');
 const FIXTURE_INDEX = path.join(__dirname, 'fixtures', 'index-sample.md');
 
 let passed = 0;
@@ -71,9 +71,9 @@ test('marks missing paths as missing', () => {
 });
 
 test('skips section-header rows (no $ variable)', () => {
-  // The public index has section headers like | **Agents** | | |
+  // The general index has section headers like | **Instructions** | | |
   // They should not appear in results
-  const results = validatePaths(PUBLIC_INDEX, REPO_ROOT);
+  const results = validatePaths(GENERAL_INDEX, REPO_ROOT);
   const nonVar = results.filter(r => !r.variable.startsWith('$'));
   assert.strictEqual(nonVar.length, 0, `unexpected non-variable entries: ${JSON.stringify(nonVar)}`);
 });
@@ -127,7 +127,7 @@ function report(indexName: string, indexPath: string): void {
 }
 
 report('internal index', INTERNAL_INDEX);
-report('public index', PUBLIC_INDEX);
+report('general index', GENERAL_INDEX);
 
 // --- Summary ---
 

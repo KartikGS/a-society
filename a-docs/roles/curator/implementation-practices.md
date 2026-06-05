@@ -51,7 +51,7 @@ Do not expand the current flow's scope to address out-of-scope drift, and do not
 
 **Implementation stage — operator-facing references require direct source comparison.** When registration or maintenance touches an operator-facing reference for an executable layer (for example an `INVOCATION.md` file), compare the documented commands, parameters, exposed entry points, and environment-variable names directly against the live implementation or CLI surface. Do not rely on advisory summaries, approval artifacts, or completion-report prose as substitutes for source comparison.
 
-**Implementation stage — public/internal index changes require direct comparison.** When a change adds, retires, or revises a variable that appears in `$A_SOCIETY_PUBLIC_INDEX`, compare the affected rows in both `$A_SOCIETY_INDEX` and `$A_SOCIETY_PUBLIC_INDEX` before closing the implementation pass. Do not assume that updating one index propagates to the other automatically.
+**Implementation stage — general/internal index changes require direct comparison.** When a change adds, retires, or revises a variable that appears in `$A_SOCIETY_GENERAL_INDEX`, compare the affected rows in both `$A_SOCIETY_INDEX` and `$A_SOCIETY_GENERAL_INDEX` before closing the implementation pass. Do not assume that updating one index propagates to the other automatically.
 
 **Implementation stage — registration must not mutate closure-owned log lifecycle sections.** During registration, do not write or reorder `$A_SOCIETY_LOG`'s `Recent Focus` section. Those lifecycle updates belong to the Owner at forward-pass closure. If registration reveals a needed closure-time log update, note it in the registration artifact and return to the Owner with the lifecycle sections still untouched.
 

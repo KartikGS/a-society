@@ -20,7 +20,7 @@ Templates convert handoffs into contracts. When both the sender and receiver kno
 
 ### 1. Record Artifacts
 
-A record artifact carries a handoff or report for one unit of work and lives in that unit's record folder (see `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`). It is:
+A record artifact carries a handoff or report for one unit of work and lives in that unit's active record folder. It is:
 - Created at a defined trigger point in the workflow
 - Named clearly for its sender, receiver, and purpose within the record folder
 - Never replaced — each unit of work produces a distinct set of artifacts in a distinct folder

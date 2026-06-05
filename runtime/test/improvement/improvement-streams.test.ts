@@ -41,9 +41,7 @@ console.log('\nimprovement-streams');
 
 await test('feedback repair status is emitted as an event, not role output stream text', async () => {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-improvement-streams-'));
-  const previousSettingsDir = process.env.A_SOCIETY_SETTINGS_DIR;
-  const settingsDir = path.join(workspaceRoot, '.settings');
-  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  const settingsDir = path.join(workspaceRoot, '.a-society');
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
   const projectNamespace = 'demo-project';
   const flowId = 'repair-flow';
@@ -147,11 +145,6 @@ await test('feedback repair status is emitted as an event, not role output strea
     finalFlowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot);
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
-    if (previousSettingsDir === undefined) {
-      delete process.env.A_SOCIETY_SETTINGS_DIR;
-    } else {
-      process.env.A_SOCIETY_SETTINGS_DIR = previousSettingsDir;
-    }
     fs.rmSync(workspaceRoot, { recursive: true, force: true });
   }
 

@@ -1,22 +1,12 @@
 # Runtime Project Initialization
 
-This file is runtime-owned guidance for initialization flows.
-
-The runtime uses this guide only when a project is being initialized through the browser UI. It applies to both:
-
-- takeover of an existing project that does not yet have `a-docs/`
-- greenfield startup of a brand-new project
-
-The active initialization brief in the record folder declares which mode is active. Treat that brief as the flow-specific source of truth.
-
----
+Use the active initialization brief as the flow-specific source of truth. The brief declares whether this is a takeover or greenfield initialization.
 
 ## Core Contract
 
 - The runtime already scaffolded the compulsory `a-docs/` surfaces for this project.
 - Do not recreate those files. Fill them.
 - Keep all writes inside the target project's `a-docs/` during this initialization flow.
-- Read the existing project before asking questions whenever project files already exist.
 - Batch questions. Do not ask one question at a time if you can gather them into one round.
 - Do not invent project facts. If the project does not reveal them and the human has not confirmed them, ask.
 
@@ -28,6 +18,8 @@ The runtime scaffold has two source types:
 
 - **Copied templates** come from `general/` ready-made files. Treat them as starting material, not finished project truth.
 - **Stubbed files** point to a `source_path` instruction in their placeholder comment. Use that instruction to understand what the file should contain.
+
+The initialization node also includes the A-Society general index in context. Use that index to navigate the `general/` library when a scaffold comment, copied template, or initialization question references a reusable instruction or template. The injected general index is runtime context only; do not copy A-Society framework-library entries into the target project's own `a-docs/indexes/main.md` unless the initialized project must keep referencing them after initialization.
 
 When filling copied templates:
 
@@ -51,28 +43,6 @@ That means, at minimum:
 - the compulsory project-information, role, workflow, improvement, and entry-point files are filled with real project content rather than left as templates
 
 The runtime seeded a minimal index and Owner required-readings file only to make initialization possible. Those seeds are starting points, not finished project truth.
-
----
-
-## Mode Guidance
-
-### Takeover
-
-The project already exists outside `a-docs/`.
-
-- inspect the project before asking questions
-- infer what you can from the existing files and folder structure
-- ask only the questions required to fill the missing truth
-- document the project as it exists rather than redesigning it
-
-### Greenfield
-
-The project has just been created.
-
-- gather the minimum project truth interactively
-- ask for project purpose, outputs, intended users, workflow, contributors, tools, and major constraints
-- keep the questioning practical and batched
-- fill the scaffolded `a-docs/` from those answers
 
 ---
 

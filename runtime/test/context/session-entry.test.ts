@@ -143,7 +143,7 @@ test('buildForwardNodeEntryMessage: renders node contract fields and node-specif
     }
   });
 
-  assert.ok(msg.includes('Workflow node contract (first entry to this node only):'));
+  assert.ok(msg.includes('Node-specific instructions for node owner-gate:'));
   assert.ok(msg.includes('Guidance:'));
   assert.ok(msg.includes('Use the approved review checklist.'));
   assert.ok(msg.includes('Declared inputs:'));

@@ -1,6 +1,7 @@
 import { type Express, type Request, type Response } from 'express';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import { SessionStore } from '../orchestration/store.js';
+import { deleteProject, ProjectDeletionError } from '../projects/project-deletion.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import type { FlowReadModel } from './flow-read-model.js';
 
@@ -8,6 +9,7 @@ type RegisterFlowRoutesOptions = {
   workspaceRoot: string;
   flowReadModel: FlowReadModel;
   onFlowDeleted(projectNamespace: string): void;
+  onProjectDeleted(projectNamespace: string): void;
 };
 
 function routeParam(value: string | string[]): string {
@@ -42,7 +44,7 @@ function workflowResponse(workflow: any) {
 }
 
 export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOptions): void {
-  const { workspaceRoot, flowReadModel, onFlowDeleted } = options;
+  const { workspaceRoot, flowReadModel, onFlowDeleted, onProjectDeleted } = options;
 
   app.get('/api/projects', (_req: Request, res: Response) => {
     res.json(discoverProjects(workspaceRoot));
@@ -51,6 +53,25 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
   app.get('/api/projects/:projectNamespace/flows', (req: Request, res: Response) => {
     const projectNamespace = routeParam(req.params.projectNamespace);
     res.json(SessionStore.listFlowSummaries(workspaceRoot, projectNamespace));
+  });
+
+  app.delete('/api/projects/:projectNamespace', (req: Request, res: Response) => {
+    const projectNamespace = routeParam(req.params.projectNamespace);
+
+    try {
+      const deletion = deleteProject(workspaceRoot, projectNamespace);
+      onProjectDeleted(projectNamespace);
+      res.status(200).json({
+        ok: true,
+        deletion,
+        projects: discoverProjects(workspaceRoot),
+      });
+    } catch (error: any) {
+      const statusCode = error instanceof ProjectDeletionError ? error.statusCode : 500;
+      res.status(statusCode).json({
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 
   app.get('/api/flows/:projectNamespace/:flowId/state', (req: Request, res: Response) => {

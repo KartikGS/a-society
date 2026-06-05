@@ -16,6 +16,7 @@ export interface InitializationBootstrapResult {
 }
 
 const RUNTIME_INITIALIZATION_RELATIVE_PATH = path.join('a-society', 'runtime', 'contracts', 'initialization.md');
+const A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH = path.join('a-society', 'index.md');
 
 function sanitizeProjectVariablePrefix(projectNamespace: string): string {
   const normalized = projectNamespace
@@ -129,47 +130,27 @@ function seedBootstrapContextFiles(projectRoot: string, projectNamespace: string
   );
 }
 
-function formatScaffoldSummary(scaffoldResult: ScaffoldResult): string[] {
-  const lines: string[] = [];
-  lines.push(`- Created: ${scaffoldResult.created.length}`);
-  lines.push(`- Skipped: ${scaffoldResult.skipped.length}`);
-  lines.push(`- Failed: ${scaffoldResult.failed.length}`);
-
-  if (scaffoldResult.created.length > 0) {
-    lines.push('- Created paths:');
-    for (const item of scaffoldResult.created.slice(0, 15)) {
-      lines.push(`  - ${item.path}`);
-    }
-  }
-
-  if (scaffoldResult.skipped.length > 0) {
-    lines.push('- Skipped paths:');
-    for (const item of scaffoldResult.skipped.slice(0, 10)) {
-      lines.push(`  - ${item.path} (${item.reason})`);
-    }
-  }
-
-  return lines;
-}
-
-function listTopLevelProjectEntries(projectRoot: string): string[] {
-  const entries = fs.readdirSync(projectRoot, { withFileTypes: true })
-    .map((entry) => `${entry.name}${entry.isDirectory() ? '/' : ''}`)
-    .sort((left, right) => left.localeCompare(right));
-
-  return entries.slice(0, 25);
-}
-
 function buildInitializationBrief(
   workspaceRoot: string,
   projectNamespace: string,
   projectRoot: string,
   recordFolderPath: string,
-  mode: InitializationMode,
-  scaffoldResult: ScaffoldResult
+  mode: InitializationMode
 ): string {
   const relativeRecordFolder = path.relative(workspaceRoot, recordFolderPath);
-  const topLevelEntries = listTopLevelProjectEntries(projectRoot);
+  const modeGuidance = mode === 'greenfield'
+    ? [
+        '- Gather the minimum project truth interactively.',
+        '- Ask for project purpose, outputs, intended users, workflow, contributors, tools, and major constraints.',
+        '- Keep the questioning practical and batched.',
+        '- Fill the scaffolded `a-docs/` from those answers.'
+      ]
+    : [
+        '- Inspect existing non-`a-docs/` project files before asking questions.',
+        '- Infer what you can from the existing files and folder structure.',
+        '- Ask only the questions required to fill the missing truth.',
+        '- Document the project as it exists rather than redesigning it.'
+      ];
   const lines = [
     '# Runtime Initialization Brief',
     '',
@@ -178,32 +159,9 @@ function buildInitializationBrief(
     `- Project root: ${projectRoot}`,
     `- Record folder: ${relativeRecordFolder}`,
     '',
-    '## Runtime intent',
+    '## Mode-specific guidance',
     '',
-    mode === 'greenfield'
-      ? 'This is a brand-new project. The runtime already created the project folder and scaffolded the compulsory `a-docs/` surfaces. Gather the missing project truth interactively, then replace scaffold placeholders with real content.'
-      : 'This is an existing project without `a-docs/`. The runtime already scaffolded the compulsory `a-docs/` surfaces. Read the existing project first, infer what you can, then ask only the questions needed to fill the missing truth.',
-    '',
-    '## Scaffold summary',
-    '',
-    ...formatScaffoldSummary(scaffoldResult),
-    '',
-    '## Existing top-level project entries',
-    '',
-    ...(topLevelEntries.length > 0
-      ? topLevelEntries.map((entry) => `- ${entry}`)
-      : ['- (No project files existed before scaffold.)']),
-    '',
-    '## Required outcomes for this initialization flow',
-    '',
-    '- Fill the compulsory scaffolded `a-docs/` surfaces with project-specific content rather than recreating them.',
-    '- Replace `[CUSTOMIZE]` markers, copied-template defaults, and placeholder language in the scaffolded role and project documents.',
-    '- Use `source_path` comments in stubbed files to find the relevant general instruction when a scaffolded surface is unclear.',
-    '- Do not add optional roles, support docs, or examples from `general/` unless this project actually needs them.',
-    '- Populate `a-docs/indexes/main.md` beyond the runtime bootstrap seed if additional variables are needed.',
-    '- Expand `a-docs/roles/owner/required-readings.yaml` so future Owner sessions have the startup context they actually need.',
-    '- Keep all writes inside this project\'s `a-docs/` during this initialization flow.',
-    '- Close the flow only when the scaffolded `a-docs/` are usable for normal Owner-led work.'
+    ...modeGuidance,
   ];
 
   return lines.join('\n') + '\n';
@@ -211,7 +169,8 @@ function buildInitializationBrief(
 
 function buildInitializationWorkflowDocument(
   initializationGuideContent: string,
-  initializationBriefContent: string
+  initializationBriefContent: string,
+  generalIndexContent: string
 ): string {
   return yaml.dump({
     workflow: {
@@ -223,35 +182,10 @@ function buildInitializationWorkflowDocument(
           role: 'owner',
           'human-collaborative': 'direction',
           guidance: [
-            'This is a runtime-created initialization flow.',
-            'Use the runtime initialization guide and initialization brief as the authoritative instructions for this flow.',
-            'The runtime already scaffolded the compulsory a-docs files; fill those files rather than recreating them.',
-            'Ask batched questions only after reading what the project already reveals.',
-            'When the compulsory scaffolded surfaces are populated enough for normal Owner-led work, close the forward pass from this node.',
+            'Use the runtime workflow contract when creating or updating workflow.yaml for this initialization flow.',
             `Runtime initialization guide:\n\n${initializationGuideContent.trim()}`,
-            `Runtime initialization brief:\n\n${initializationBriefContent.trim()}`
-          ],
-          inputs: [
-            'Runtime initialization guide artifact',
-            'Runtime initialization brief artifact',
-            'Scaffolded a-docs permanent files',
-            'Existing project files when present'
-          ],
-          work: [
-            'Determine the project truth needed to populate the scaffolded a-docs.',
-            'For takeover flows: read the existing project before asking questions.',
-            'For greenfield flows: gather the minimum viable project truth interactively.',
-            'Rewrite scaffold placeholders into real project content.',
-            'Keep the flow Owner-only unless the runtime later introduces a richer initialization workflow.'
-          ],
-          outputs: [
-            'Updated scaffolded a-docs files',
-            'Owner-authored initialization artifacts in the record folder',
-            'A forward-pass closure artifact when initialization is complete'
-          ],
-          notes: [
-            'This node is the sole forward-pass node for runtime initialization.',
-            'The runtime seeded a minimal index and Owner required-readings file; treat them as starting points, not finished project truth.'
+            `Runtime initialization brief:\n\n${initializationBriefContent.trim()}`,
+            `A-Society general index:\n\n${generalIndexContent.trim()}`
           ]
         }
       ],
@@ -282,6 +216,7 @@ export function bootstrapInitializationFlow(
   const aSocietyRoot = path.join(workspaceRoot, 'a-society');
   const manifestPath = path.join(workspaceRoot, RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH);
   const runtimeInitializationPath = path.join(workspaceRoot, RUNTIME_INITIALIZATION_RELATIVE_PATH);
+  const aSocietyGeneralIndexPath = path.join(workspaceRoot, A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH);
 
   if (!fs.existsSync(aSocietyRoot)) {
     throw new Error(`A-Society root not found at ${aSocietyRoot}.`);
@@ -291,6 +226,9 @@ export function bootstrapInitializationFlow(
   }
   if (!fs.existsSync(runtimeInitializationPath)) {
     throw new Error(`Runtime initialization guide not found at ${runtimeInitializationPath}.`);
+  }
+  if (!fs.existsSync(aSocietyGeneralIndexPath)) {
+    throw new Error(`A-Society general index not found at ${aSocietyGeneralIndexPath}.`);
   }
 
   const scaffoldResult = scaffoldFromManifestFile(
@@ -315,18 +253,18 @@ export function bootstrapInitializationFlow(
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   const initializationGuideContent = fs.readFileSync(runtimeInitializationPath, 'utf8');
+  const generalIndexContent = fs.readFileSync(aSocietyGeneralIndexPath, 'utf8');
   const initializationBriefContent = buildInitializationBrief(
     workspaceRoot,
     namespace,
     projectRoot,
     recordFolderPath,
-    mode,
-    scaffoldResult
+    mode
   );
 
   fs.writeFileSync(
     path.join(recordFolderPath, 'workflow.yaml'),
-    buildInitializationWorkflowDocument(initializationGuideContent, initializationBriefContent),
+    buildInitializationWorkflowDocument(initializationGuideContent, initializationBriefContent, generalIndexContent),
     'utf8'
   );
   syncRecordMetadataFromWorkflow(recordFolderPath);

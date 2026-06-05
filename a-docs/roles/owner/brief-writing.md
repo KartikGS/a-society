@@ -71,7 +71,7 @@ When a decision artifact or review constraint directs downstream implementation 
 
 **Registration scope must be file-based.** When directing index registration or verification, scope the instruction by the newly created or modified files, not by their parent directory, unless the directory boundary is itself the point of the constraint. "Verify whether `$A_SOCIETY_INDEX` needs updating for any newly created or modified files" is mechanically actionable; a location-based qualifier can accidentally exclude the relevant file.
 
-**Public-index variable retirement requires a reference sweep.** When a brief, convergence decision, or other Owner authorization retires a public-index variable or deletes a publicly registered artifact, sweep `a-society/` for references to that `$VARIABLE_NAME` before finalizing scope. Explicitly name every dependent file that must change, including any `general/` artifacts, so required `[LIB]` authorization is granted up front rather than retroactively.
+**General-index variable retirement requires a reference sweep.** When a brief, convergence decision, or other Owner authorization retires a general-index variable or deletes a general-library registered artifact, sweep `a-society/` for references to that `$VARIABLE_NAME` before finalizing scope. Explicitly name every dependent file that must change, including any `general/` artifacts, so required `[LIB]` authorization is granted up front rather than retroactively.
 
 ---
 

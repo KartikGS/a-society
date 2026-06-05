@@ -1,8 +1,6 @@
 # A-Society Runtime Handoff Contract
 
-This file defines the machine-readable handoff block format used by the A-Society runtime.
-
----
+Emit machine-readable handoff blocks exactly as specified here.
 
 ## When to Emit It
 

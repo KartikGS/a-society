@@ -33,9 +33,6 @@ function test(name: string, fn: () => void): void {
 console.log('\nsettings-store');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-store-'));
-const originalSettingsDir = process.env.A_SOCIETY_SETTINGS_DIR;
-
-delete process.env.A_SOCIETY_SETTINGS_DIR;
 configureSettingsStore(tmpDir);
 
 test('default settings directory lives under the configured workspace root', () => {
@@ -125,11 +122,6 @@ test('feed settings persist and clamp history limit', () => {
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 
-if (originalSettingsDir === undefined) {
-  delete process.env.A_SOCIETY_SETTINGS_DIR;
-} else {
-  process.env.A_SOCIETY_SETTINGS_DIR = originalSettingsDir;
-}
 configureSettingsStore(process.cwd());
 fs.rmSync(tmpDir, { recursive: true, force: true });
 

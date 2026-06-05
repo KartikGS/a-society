@@ -29,15 +29,12 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-draft-flow-'));
 const workspaceRoot = tmpDir;
 const projectNamespace = 'test-project';
 const projectRoot = path.join(workspaceRoot, projectNamespace);
-const stateDir = path.join(tmpDir, '.state');
 
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles', 'owner'), { recursive: true });
 fs.mkdirSync(path.join(projectRoot, 'a-docs', 'indexes'), { recursive: true });
 fs.writeFileSync(path.join(projectRoot, 'a-docs', 'roles', 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
 fs.writeFileSync(path.join(projectRoot, 'a-docs', 'indexes', 'main.md'), '');
-
-process.env.A_SOCIETY_STATE_DIR = stateDir;
-SessionStore.init();
+SessionStore.init(workspaceRoot);
 
 test('initializeDraftFlow creates an opaque-id record folder, record metadata, and single Owner node workflow', () => {
   const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
@@ -107,7 +104,6 @@ test('SessionStore.loadFlowRun keeps the canonical state record folder', () => {
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 
 fs.rmSync(tmpDir, { recursive: true, force: true });
-delete process.env.A_SOCIETY_STATE_DIR;
 
 if (failed > 0) {
   process.exit(1);

@@ -1,10 +1,6 @@
 # A-Society Runtime Feedback
 
-This file is runtime-owned guidance for the final backward-pass feedback step.
-
-The runtime uses this guide after participating roles have produced their meta-analysis findings. This phase is not a project role session and is not the same as the forward-pass Owner. It is an A-Society-owned feedback pass over the findings produced in the just-completed flow.
-
----
+Run this as the final A-Society feedback agent pass over the findings produced in the just-completed flow. Do not treat this as a project role session.
 
 ## Core Contract
 
@@ -23,7 +19,7 @@ Capture feedback that can improve A-Society as a framework:
 
 - runtime or operator-surface issues
 - workflow or orchestration friction
-- recurring documentation gaps
+- recurring standing-surface gaps
 - cross-project patterns or anti-patterns
 - unclear role, handoff, or improvement-phase behavior
 - suggestions that may belong in `general/`, runtime, or A-Society governance
@@ -32,8 +28,6 @@ Do not use the feedback artifact as a local maintenance backlog. Local standing-
 
 Include enough detail to make the report useful upstream, but avoid unnecessary project-sensitive specifics.
 
-Add a short suggested PR title/body section so the human has reusable share text if they decide to submit the report upstream.
-
 ---
 
 ## Generality Classification
@@ -41,14 +35,46 @@ Add a short suggested PR title/body section so the human has reusable share text
 Every candidate framework improvement in the feedback artifact must be labeled with one of three generality buckets so A-Society's intake can route it correctly:
 
 - **Universal** — the proposed change would apply without modification to every project type (software, writing, legal, research, or any other domain). Universal candidates are eligible for the universal layer of `general/`.
-- **Category-shaped (`<category>`)** — the proposed change would apply without modification across a recognizable category of projects but not universally. Examples of categories: projects with an executable layer; projects with a public publishing surface; projects coordinating across multiple human teams. Name the category explicitly. If the named category does not already exist under `a-society/general/project-types/`, the contribution implies a category-creation request that requires explicit Owner approval before any category folder is created.
+- **Category-shaped (`<category>`)** — the proposed change would apply without modification across a recognizable category of projects but not universally. Examples of categories: projects with an executable layer; projects with a public publishing surface; projects coordinating across multiple human teams. Name the category explicitly, even when it does not already exist. Do not create category folders or modify `general/`.
 - **Project-specific** — the proposed change only applies to the originating project. Project-specific items are included for context — they are not candidates for `general/` and will not be added to the framework. They may still inform A-Society's understanding of cross-project patterns when several project-specific reports converge on the same shape.
 
-When uncertain, label the candidate with the strongest claim that holds with confidence — for example, prefer `category-shaped` over `universal` when only one category of project has produced the pattern. Do not over-claim universality. Reviewers can promote a candidate from category-shaped to universal once additional categories produce the same pattern; reviewers cannot easily walk back an unwarranted universal claim once it lands at the universal layer.
+When uncertain, choose the strongest classification supported by the findings supplied in this feedback step. Do not claim `universal` unless the supplied evidence clearly supports cross-domain applicability; otherwise prefer `category-shaped` or `project-specific`.
 
-Apply the classification using the placement tests defined in A-Society's structure document — universal placement requires the candidate to apply equally to a writing project, a legal project, and a software project; category placement requires the candidate to apply equally across the named category but not universally.
+Apply these classification tests: universal placement requires the candidate to apply equally to a writing project, a legal project, and a software project; category placement requires the candidate to apply equally across the named category but not universally.
 
-The classification must appear in the feedback artifact alongside each candidate (the standard report template carries a dedicated column for this). A feedback artifact that omits classification for any framework-improvement candidate is malformed.
+The classification must appear in the feedback artifact alongside each candidate. A feedback artifact that omits classification for any framework-improvement candidate is incomplete.
+
+---
+
+## Output Shape
+
+Write the feedback artifact in Markdown using this rough shape:
+
+```md
+# A-Society Feedback: <project-or-flow>
+
+## Summary
+
+- <brief summary of the feedback signal>
+
+## Framework-Improvement Candidates
+
+| Candidate | Evidence from findings | Classification | Suggested surface | Notes |
+|---|---|---|---|---|
+| <candidate improvement> | <finding or observed friction> | <Universal / Category-shaped (<category>) / Project-specific> | <general/ / runtime / governance / other> | <constraints, uncertainty, or follow-up needed> |
+
+## Suggested PR Share Text
+
+### Title
+
+<short title>
+
+### Body
+
+<short body the human can reuse or edit>
+```
+
+If no framework-improvement candidates surfaced, say that clearly under `Framework-Improvement Candidates` and still include a brief summary.
 
 ---
 

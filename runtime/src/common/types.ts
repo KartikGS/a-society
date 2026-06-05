@@ -272,6 +272,7 @@ export type FeedItemType =
   | 'handoff'
   | 'resume'
   | 'repair'
+  | 'reasoning'
   | 'tool'
   | 'tool-success'
   | 'tool-error'
@@ -282,17 +283,8 @@ export interface FeedItem {
   type: FeedItemType;
   label: string;
   text: string;
-  segments?: AssistantFeedSegment[];
+  reasoningDisplay?: Exclude<ProviderReasoningDisplay, 'hidden'>;
 }
-
-export type AssistantFeedSegment =
-  | { type: 'text'; text: string }
-  | {
-      type: 'reasoning';
-      label: string;
-      text: string;
-      display: Exclude<ProviderReasoningDisplay, 'hidden'>;
-    };
 
 export interface TurnOptions {
   signal?: AbortSignal;

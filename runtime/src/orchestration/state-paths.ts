@@ -2,9 +2,6 @@ import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
 
 export function getStateRoot(workspaceRoot = process.cwd()): string {
-  if (process.env.A_SOCIETY_STATE_DIR) {
-    return path.resolve(process.env.A_SOCIETY_STATE_DIR);
-  }
   return path.join(path.resolve(workspaceRoot), '.a-society', 'state');
 }
 
