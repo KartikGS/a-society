@@ -1,12 +1,6 @@
 # A-Society Runtime Records Contract
 
-This contract tells you where flow artifacts go and what you may write.
-
-The runtime loads this contract into every managed agent session with the handoff contract. Treat it as active instruction, not background reference.
-
-Use this contract whenever you create, update, repair, or reference artifacts for the active flow.
-
----
+Use these rules whenever you create, update, repair, or reference artifacts for the active flow.
 
 ## Use The Active Record Folder
 
@@ -40,6 +34,7 @@ Do not:
 
 - Invent a record folder path.
 - Create, rename, or move the record folder.
+- Put standing project documents, templates, runtime internals outside `record/`, or general project work product in `record/`.
 
 ---
 
@@ -64,26 +59,8 @@ Do not create, edit, or repair `record.yaml` by hand.
 
 `workflow.yaml` is the active flow's machine-readable topology snapshot. It lives directly inside `record/`.
 
-The executable schema and runtime interpretation are defined in `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`. This contract owns record placement and writable scope, not the workflow schema.
+For schema and runtime interpretation, follow `a-society/runtime/contracts/workflow.md`. Use this file only for record placement and writable scope.
 
 The workflow-authority role may update `workflow.yaml` when the active path changes. Standard implementer roles do not edit it unless their node explicitly grants workflow-authority responsibility.
 
-When you create or repair `workflow.yaml`, also follow `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`.
-
----
-
-## Put Only Flow Artifacts In record/
-
-Put these in the active record folder:
-
-- Owner intake and workflow plan artifacts
-- Handoff, proposal, decision, review, completion, and closure artifacts for this flow
-- Flow-local implementation reports
-- Backward-pass findings and runtime-generated improvement artifacts
-
-What does not belong in `record/`:
-
-- Standing project documentation
-- Templates
-- Runtime internals outside `record/`
-- General work product that belongs in the project itself
+When you create or repair `workflow.yaml`, also follow `a-society/runtime/contracts/workflow.md`.

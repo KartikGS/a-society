@@ -74,8 +74,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
       lines.push('');
     };
 
-    lines.push('Workflow node contract (first entry to this node only):');
-    lines.push('Use this snapshot as the authoritative node contract for this node in the active flow.');
+    lines.push(`Node-specific instructions for node ${nodeId}:`);
     lines.push('');
 
     appendStringList('Guidance:', nodeContext.guidance);
@@ -86,7 +85,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     appendStringList('Node notes:', nodeContext.notes);
 
     if (nodeContext.required_readings && nodeContext.required_readings.length > 0) {
-      lines.push('Node-specific required reading (first entry to this node only):');
+      lines.push('Node-specific required reading:');
       for (const varName of nodeContext.required_readings) {
         const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
         if (resolvedPath && fs.existsSync(resolvedPath)) {

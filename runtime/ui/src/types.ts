@@ -9,7 +9,6 @@ import type {
 } from '../../src/common/model-reasoning.js';
 import type {
   AwaitingHumanReason,
-  AssistantFeedSegment,
   ConsentMode,
   ConsentRequest,
   ConsentResponseDecision,
@@ -32,7 +31,6 @@ import type {
 
 export type {
   AwaitingHumanReason,
-  AssistantFeedSegment,
   ConsentMode,
   ConsentRequest,
   ConsentResponseDecision,
@@ -117,7 +115,6 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode };
 
 export type ServerMessage =
-  | { type: 'init'; projects: ProjectDiscovery }
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
   | { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> }
   | { type: 'operator_event'; flowRef: FlowRef; event: OperatorEvent }

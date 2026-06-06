@@ -12,7 +12,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 
 | Variable | Current Path | Description |
 |---|---|---|
-| `$A_SOCIETY_PUBLIC_INDEX` | `a-society/index.md` | Public-facing index — all `general/` and `runtime/` public paths; used by project owners and public runtime surfaces |
+| `$A_SOCIETY_GENERAL_INDEX` | `a-society/index.md` | General library index — reusable `general/` instructions and templates injected during runtime initialization |
 | `$A_SOCIETY_VISION` | `a-society/a-docs/project-information/vision.md` | A-Society project vision — the core bet, what the framework is, and direction for agents |
 | `$A_SOCIETY_STRUCTURE` | `a-society/a-docs/project-information/structure.md` | A-Society folder structure — governing principle and placement rules for each folder |
 | `$A_SOCIETY_ARCHITECTURE` | `a-society/a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |

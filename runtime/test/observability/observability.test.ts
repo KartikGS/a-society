@@ -110,8 +110,7 @@ async function test(name: string, fn: () => Promise<void> | void): Promise<void>
 async function run() {
   await setupTestTelemetry();
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-test-'));
-  const stateDir = path.join(tmpDir, '.state');
-  const settingsDir = path.join(tmpDir, '.settings');
+  const settingsDir = path.join(tmpDir, '.a-society');
   const directRunFlowRef = { projectNamespace: 'a-society', flowId: 'direct-run-role-turn' };
   const observabilityGatewayFlowRef = { projectNamespace: 'a-society', flowId: 'observability-gateway' };
   const projectGateway = (provider: MockProvider): LLMGateway => new LLMGateway({
@@ -138,7 +137,6 @@ async function run() {
   fs.writeFileSync(path.join(rolesDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
 
   process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE = 'true';
-  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
   console.log('\nobservability-foundation integration corrections (Pass 2)');
@@ -355,11 +353,47 @@ async function run() {
     assert.deepStrictEqual(renderer.events, []);
   });
 
+  await test('Scenario: output-limit parse failure asks the model to continue in smaller chunks', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    const mockProvider = new MockProvider([
+      {
+        type: 'text',
+        text: 'I started a large file but did not finish.',
+        contextUsage: 8192,
+        finishReason: 'length',
+      }
+    ]);
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
+    };
+
+    try {
+      await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Produce a handoff.' }],
+      });
+      assert.fail('Expected parse failure to propagate as HandoffParseError.');
+    } catch (error: any) {
+      assert.ok(error instanceof HandoffParseError);
+      assert.strictEqual(error.contextUsage, 8192);
+      assert.strictEqual(error.details.operatorSummary, 'Model output limit reached before valid handoff');
+      assert.ok(error.details.modelRepairMessage.includes('hit the model output limit (length)'));
+      assert.ok(error.details.modelRepairMessage.includes('Continue from the interrupted point in smaller chunks.'));
+      assert.ok(error.details.modelRepairMessage.includes('one concrete tool action at a time'));
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+  });
+
   await test('Scenario: Orchestrator emits usage only after accepted handoff and before handoff notice', async () => {
     clearTestSpans();
     clearTestMetrics();
-    process.env.A_SOCIETY_STATE_DIR = stateDir;
-    SessionStore.init();
+    SessionStore.init(tmpDir);
 
     const recordDir = getFlowRecordDir(tmpDir, { projectNamespace: 'a-society', flowId: 'accepted-handoff-flow' });
     fs.mkdirSync(recordDir, { recursive: true });
@@ -440,8 +474,7 @@ async function run() {
   await test('Scenario: ImprovementOrchestrator closure (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
-    process.env.A_SOCIETY_STATE_DIR = stateDir;
-    SessionStore.init();
+    SessionStore.init(tmpDir);
     
     const flowRun: any = {
       flowId: 'test-flow',
@@ -474,8 +507,7 @@ async function run() {
   await test('Scenario: ImprovementOrchestrator repairs feedback until terminal handoff (REAL CODE)', async () => {
     clearTestSpans();
     clearTestMetrics();
-    process.env.A_SOCIETY_STATE_DIR = stateDir;
-    SessionStore.init();
+    SessionStore.init(tmpDir);
 
     const derivedNamespaceDir = path.join(tmpDir, path.basename(tmpDir), 'a-docs', 'roles');
     const projectRoot = path.join(tmpDir, path.basename(tmpDir));
@@ -651,8 +683,6 @@ async function run() {
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
   
   await TelemetryManager.shutdown();
-  delete process.env.A_SOCIETY_STATE_DIR;
-  delete process.env.A_SOCIETY_SETTINGS_DIR;
   fs.rmSync(tmpDir, { recursive: true, force: true });
   
   if (failed > 0) process.exit(1);

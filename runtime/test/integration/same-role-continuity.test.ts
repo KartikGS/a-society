@@ -28,12 +28,10 @@ import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 // ---- Harness setup ----
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
-const stateDir = path.join(tmpDir, '.state');
-const settingsDir = path.join(tmpDir, '.settings');
+const stateDir = path.join(tmpDir, '.a-society', 'state');
+const settingsDir = path.join(tmpDir, '.a-society');
 const projectNamespace = 'test-proj';
 const workspaceRoot = tmpDir;
-process.env.A_SOCIETY_STATE_DIR = stateDir;
-process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
 const namespaceDir = path.join(workspaceRoot, projectNamespace);
 const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
 const indexDir = path.join(namespaceDir, 'a-docs', 'indexes');
@@ -112,7 +110,7 @@ function resetState() {
   fs.rmSync(stateDir, { recursive: true, force: true });
   fs.mkdirSync(stateDir, { recursive: true });
   seedRecordFixtures();
-  SessionStore.init();
+  SessionStore.init(workspaceRoot);
 }
 
 // ---- Mock LLM provider ----
@@ -928,8 +926,6 @@ async function run() {
   console.log(`\n  ${passed} passed, ${failed} failed\n`);
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
-  delete process.env.A_SOCIETY_STATE_DIR;
-  delete process.env.A_SOCIETY_SETTINGS_DIR;
 
   if (failed > 0) process.exit(1);
 }

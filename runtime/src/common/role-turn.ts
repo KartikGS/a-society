@@ -17,6 +17,21 @@ function extractFileRefs(content: string): string[] {
   return refs;
 }
 
+function hitOutputLimit(finishReason: string | undefined): finishReason is 'length' | 'max_tokens' {
+  return finishReason === 'length' || finishReason === 'max_tokens';
+}
+
+function applyOutputLimitRepair(error: HandoffParseError, finishReason: string): void {
+  error.details.operatorSummary = 'Model output limit reached before valid handoff';
+  error.details.modelRepairMessage = [
+    `Error: Your previous response hit the model output limit (${finishReason}) before producing a valid tool call or handoff.`,
+    'Continue from the interrupted point in smaller chunks.',
+    'Use tools for concrete file writes instead of inlining large file contents in assistant text.',
+    'Perform one concrete tool action at a time, wait for each tool result, and only end with a valid fenced `handoff` block when the task is actually complete.'
+  ].join(' ');
+  error.message = error.details.operatorSummary;
+}
+
 export function emitUsage(renderer: OperatorRenderSink | undefined, contextUsage: number | undefined, role?: string): void {
   if (!renderer) return;
   renderer.emit({ kind: 'usage.turn_summary', role, contextUsage });
@@ -113,6 +128,9 @@ async function executeSessionTurn(
     } catch (error: any) {
       if (error instanceof HandoffParseError) {
         error.contextUsage = result.contextUsage;
+        if (hitOutputLimit(result.finishReason)) {
+          applyOutputLimitRepair(error, result.finishReason);
+        }
       }
       throw error;
     }

@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useLayoutEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
@@ -145,35 +145,16 @@ function renderAssistantMarkdown(text: string) {
   });
 }
 
-function assistantSegments(message: FeedItem) {
-  return message.segments && message.segments.length > 0
-    ? message.segments
-    : message.text
-      ? [{ type: 'text' as const, text: message.text }]
-      : [];
-}
-
-function renderAssistantFeedItem(message: FeedItem) {
-  return assistantSegments(message).map((segment, index) => {
-    if (segment.type === 'text') {
-      return (
-        <Fragment key={`text-${index}`}>
-          {renderAssistantMarkdown(segment.text)}
-        </Fragment>
-      );
-    }
-
-    return (
-      <details
-        key={`reasoning-${index}`}
-        className="feed-reasoning"
-        open={segment.display === 'expanded'}
-      >
-        <summary>{segment.label}</summary>
-        <pre>{segment.text}</pre>
-      </details>
-    );
-  });
+function renderReasoningFeedItem(message: FeedItem) {
+  return (
+    <details
+      className="feed-reasoning"
+      open={message.reasoningDisplay === 'expanded'}
+    >
+      <summary>{message.label}</summary>
+      <pre>{message.text}</pre>
+    </details>
+  );
 }
 
 function SendIcon() {
@@ -325,7 +306,9 @@ export function ChatInterface(props: ChatInterfaceProps) {
         ) : (
           props.messages.map((message) => (
             <article key={message.id} className={`feed-item feed-item-${message.type}`}>
-              {message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'resume' || message.type === 'tool' || message.type === 'tool-success' || message.type === 'tool-error' ? (
+              {message.type === 'reasoning' ? (
+                renderReasoningFeedItem(message)
+              ) : message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'resume' || message.type === 'tool' || message.type === 'tool-success' || message.type === 'tool-error' ? (
                 <div className={`feed-compact-line feed-compact-${message.type}`}>
                   <span className="feed-compact-label">{message.label}</span>
                   <span className="feed-compact-text">{message.text}</span>
@@ -335,7 +318,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   <p className="feed-label">{message.label}</p>
                   {message.type === 'assistant' ? (
                     <div className="feed-markdown">
-                      {renderAssistantFeedItem(message)}
+                      {renderAssistantMarkdown(message.text)}
                     </div>
                   ) : message.type === 'user' ? (
                     <div className="feed-user-text">

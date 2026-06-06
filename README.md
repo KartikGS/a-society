@@ -5,7 +5,7 @@
 <h1 align="center">A-Society</h1>
 
 <p align="center">
-  <strong>An agentic harness for project work.</strong>
+  <strong>An agentic harness for any project.</strong>
 </p>
 
 <p align="center">
@@ -14,9 +14,9 @@
 
 <p align="center">
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-5EEAD4?style=flat-square">
-  <img alt="Node >= 18" src="https://img.shields.io/badge/node-%3E%3D18-F59E0B?style=flat-square">
+  <img alt="Node v18+" src="https://img.shields.io/badge/node-v18%2B-F59E0B?style=flat-square">
   <img alt="Browser runtime" src="https://img.shields.io/badge/runtime-browser%20UI-FB7185?style=flat-square">
-  <img alt="Project learning" src="https://img.shields.io/badge/feedback-self--improving-CBD5E1?style=flat-square">
+  <img alt="Status: early and experimental" src="https://img.shields.io/badge/status-early%20%26%20experimental-CBD5E1?style=flat-square">
 </p>
 
 <p align="center">
@@ -30,11 +30,15 @@
 
 ---
 
-## What A Project Gets
+> **Status: early & experimental.** A-Society is a working idea, not a finished product. The runtime runs and you can try it today — but it is rough, lightly proven, and still being built in the open. It has one real proving ground so far (the project it is being developed alongside), so treat the cross-project claims below as design intent, not a track record. If that sounds interesting, clone it, play with it, and tell us what breaks — early feedback is exactly what it needs right now.
+
+---
+
+## What the Harness Is Designed to Give a Project
 
 | Structured memory | Workflow execution | Cross-project learning |
 |---|---|---|
-| `a-docs/` preserves roles, rules, indexes, and standing project truth across sessions. | The runtime routes work through explicit roles, handoffs, records, and closure checks. | Feedback and backward-pass findings improve universal templates and project-type standards over time. |
+| `a-docs/` is designed to preserve roles, rules, indexes, and standing project truth across sessions. | The runtime aims to route work through explicit roles, handoffs, records, and closure checks. | Feedback and backward-pass findings are intended to improve universal templates and project-type standards over time. |
 
 ---
 
@@ -72,14 +76,14 @@ When these standards conflict, A-Society prioritizes them in this order:
 
 ## What A-Society Is
 
-A-Society is both a reusable library of project standards and an executable runtime for agentic work. It helps initialize projects, orchestrate role-based sessions, preserve handoff records, verify closure, and turn feedback from real flows into better future defaults.
+A-Society is both a reusable library of project standards and an executable runtime for agentic work. It is built to initialize projects, orchestrate role-based sessions, preserve handoff records, verify closure, and turn feedback from real flows into better future defaults.
 
 It is:
 - **Project-portable** — sits beside many kinds of projects without being embedded inside them
 - **Domain-flexible after setup** — can support software, writing, legal, research, design, and other project work once initialized
 - **Technically honest** — setup and operation currently require a technical operator or technical environment
 - **Agent-adaptable** — is not conceptually bound to one model or agent platform
-- **Learning across projects** — uses feedback to improve universal templates, project-type standards, runtime behavior, and initialization defaults
+- **Designed to learn across projects** — intended to use feedback to improve universal templates, project-type standards, runtime behavior, and initialization defaults as more projects adopt it
 
 ---
 
@@ -109,7 +113,7 @@ my-project/         ← your project
 | `general/project-types/` | Reusable standards for approved project categories |
 | `general/roles/` | Ready-made universal role templates and support docs, currently centered on Owner |
 | `general/improvement/` | Protocols and templates for iterative doc improvement |
-| `a-docs/` | A-Society's own agent documentation — a live example of the framework applied |
+| `a-docs/` | A-Society's own agent documentation — the framework dogfooded on itself |
 
 ---
 
@@ -148,6 +152,7 @@ Fill in:
 - **Provider** — Anthropic, OpenAI, or a compatible base URL
 - **API key** — from your provider's account dashboard ([Anthropic Console](https://console.anthropic.com) · [OpenAI Platform](https://platform.openai.com/api-keys))
 - **Model ID** — from your provider's model catalog ([Anthropic model cards](https://docs.anthropic.com/en/docs/about-claude/models/overview) · [OpenAI models](https://platform.openai.com/docs/models))
+- **Context window** — the model's token context limit; used to calculate when to compact session history
 
 Save and set the model as active. The project selector appears once a model is active.
 

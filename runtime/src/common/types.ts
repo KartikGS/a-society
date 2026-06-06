@@ -272,6 +272,7 @@ export type FeedItemType =
   | 'handoff'
   | 'resume'
   | 'repair'
+  | 'reasoning'
   | 'tool'
   | 'tool-success'
   | 'tool-error'
@@ -282,17 +283,8 @@ export interface FeedItem {
   type: FeedItemType;
   label: string;
   text: string;
-  segments?: AssistantFeedSegment[];
+  reasoningDisplay?: Exclude<ProviderReasoningDisplay, 'hidden'>;
 }
-
-export type AssistantFeedSegment =
-  | { type: 'text'; text: string }
-  | {
-      type: 'reasoning';
-      label: string;
-      text: string;
-      display: Exclude<ProviderReasoningDisplay, 'hidden'>;
-    };
 
 export interface TurnOptions {
   signal?: AbortSignal;
@@ -308,11 +300,12 @@ export interface TurnOptions {
 export interface GatewayTurnResult {
   text: string;
   contextUsage?: number;
+  finishReason?: string;
 }
 
 export type ProviderTurnResult =
-  | { type: 'text';       text: string;                                                   contextUsage?: number }
-  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; contextUsage?: number };
+  | { type: 'text';       text: string;                                                   contextUsage?: number; finishReason?: string }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; contextUsage?: number; finishReason?: string };
 
 export interface LLMProvider {
   executeTurn(

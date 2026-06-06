@@ -235,12 +235,18 @@ export class AnthropicProvider implements LLMProvider {
               text: fullText || undefined,
               providerReasoning: providerReasoning.length > 0 ? providerReasoning : undefined,
             }],
-            contextUsage
+            contextUsage,
+            ...(stopReason ? { finishReason: stopReason } : {}),
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, contextUsage };
+        return {
+          type: 'text' as const,
+          text: fullText,
+          contextUsage,
+          ...(stopReason ? { finishReason: stopReason } : {}),
+        };
 
       } catch (error: any) {
         if (error.name === 'AbortError' || error.type === 'aborted' || options?.signal?.aborted) {

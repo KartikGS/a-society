@@ -46,8 +46,7 @@ await test('shouldAutoCompact uses 80 percent of the raw context window', () => 
 
 await test('compactRoleSession archives raw history and replaces active history with a restoration message', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-compaction-'));
-  const settingsDir = path.join(tmpDir, '.settings');
-  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  const settingsDir = path.join(tmpDir, '.a-society');
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
   const originalExecuteTurn = LLMGateway.prototype.executeTurn;
@@ -123,14 +122,12 @@ await test('compactRoleSession archives raw history and replaces active history 
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 });
 
 await test('compactRoleSession passes abort and renderer metadata through the compaction turn', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-compaction-'));
-  const settingsDir = path.join(tmpDir, '.settings');
-  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  const settingsDir = path.join(tmpDir, '.a-society');
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1' });
 
   const controller = new AbortController();
@@ -201,14 +198,12 @@ await test('compactRoleSession passes abort and renderer metadata through the co
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 });
 
 await test('runRoleTurn auto-compacts role history before the model turn', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-compaction-'));
-  const settingsDir = path.join(tmpDir, '.settings');
-  process.env.A_SOCIETY_SETTINGS_DIR = settingsDir;
+  const settingsDir = path.join(tmpDir, '.a-society');
   seedTestModelSettings(settingsDir, { providerBaseUrl: 'http://127.0.0.1:1/v1', contextWindow: 100 });
 
   const originalExecuteTurn = LLMGateway.prototype.executeTurn;
@@ -299,7 +294,6 @@ await test('runRoleTurn auto-compacts role history before the model turn', async
   } finally {
     LLMGateway.prototype.executeTurn = originalExecuteTurn;
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 });
 

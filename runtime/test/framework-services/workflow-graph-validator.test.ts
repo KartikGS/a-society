@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -121,6 +122,13 @@ test('extra keys on workflow produce error', () => {
   };
   const errors = validateGraph(graph);
   assert.ok(errors.some((e: string) => e.includes('workflow contains invalid keys: graph')));
+});
+
+test('runtime workflow contract omits unsupported legacy workflow keys', () => {
+  const contract = fs.readFileSync(path.join(SOCIETY_ROOT, 'runtime', 'contracts', 'workflow.md'), 'utf8');
+  for (const key of ['use_when', 'companion_docs', 'session_model', 'forward_pass_closure']) {
+    assert.ok(!contract.includes(`${key}:`), `contract should not advertise unsupported key ${key}`);
+  }
 });
 
 test('valid node with human-collaborative passes', () => {
@@ -514,7 +522,7 @@ test('state-aware validation rejects orphaned handoff edge state', () => {
   );
 });
 
-test('state-aware validation allows backward receiving handoff when reverse edge exists', () => {
+test('state-aware validation allows backward receiving handoff along an existing forward edge', () => {
   const graph = {
     workflow: {
       name: 'T',

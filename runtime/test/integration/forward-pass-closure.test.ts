@@ -43,10 +43,10 @@ async function runTest() {
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
-  const testStateDir = path.join(tmpBase, '.state');
-  const testSettingsDir = path.join(tmpBase, '.settings');
+  const testStateDir = path.join(tmpBase, '.a-society', 'state');
+  const testSettingsDir = path.join(tmpBase, '.a-society');
   fs.mkdirSync(testDir);
-  fs.mkdirSync(testStateDir);
+  fs.mkdirSync(testStateDir, { recursive: true });
   const aSocietyRoot = path.join(workspaceRoot, 'a-society');
   fs.symlinkSync(frameworkRoot, aSocietyRoot, 'dir');
   const scaffoldResult = scaffoldFromManifestFile(
@@ -58,8 +58,6 @@ async function runTest() {
   if (scaffoldResult.failed.length > 0) {
     throw new Error(`Failed to scaffold fixture a-docs: ${scaffoldResult.failed.map((item) => `${item.path}: ${item.reason}`).join('; ')}`);
   }
-  process.env.A_SOCIETY_STATE_DIR = testStateDir;
-  process.env.A_SOCIETY_SETTINGS_DIR = testSettingsDir;
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const flowId = 'test-fpc-flow-id';
@@ -97,7 +95,7 @@ async function runTest() {
   const closureArtifactPath = path.join(recordPath, 'closure-artifact.md');
   fs.writeFileSync(closureArtifactPath, "Forward pass closure artifact.");
 
-  SessionStore.init();
+  SessionStore.init(workspaceRoot);
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -176,8 +174,6 @@ async function runTest() {
     server.close();
     outputStream.destroy();
     fs.rmSync(tmpBase, { recursive: true, force: true });
-    delete process.env.A_SOCIETY_STATE_DIR;
-    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 }
 

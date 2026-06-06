@@ -20,7 +20,7 @@ Default URL:
 
 `http://localhost:3000`
 
-Override the port with:
+Optionally choose the port with:
 
 `A_SOCIETY_UI_PORT`
 
@@ -30,7 +30,7 @@ Example:
 A_SOCIETY_UI_PORT=4010 npm --prefix ./a-society/runtime start
 ```
 
-When launched through npm, the runtime uses npm's `INIT_CWD` as the workspace root. To set the workspace root explicitly, use `A_SOCIETY_WORKSPACE_ROOT`.
+The runtime resolves the workspace from its fixed location at `{workspace}/a-society/runtime`. The workspace root is the parent of the cloned `a-society/` folder; it is not operator-configurable.
 
 If the selected port is already in use, the runtime prints a clear error and exits non-zero.
 
@@ -66,7 +66,7 @@ Fresh starts open in the project selector. The selector now has three startup pa
 
 Selecting a project with `a-docs/` starts the normal stored Owner draft flow.
 
-Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder under `.a-society/state/<project>/<flow-id>/record/` with a single-node Owner workflow, injects initialization guidance as active artifacts, and then runs that stored flow.
+Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder under `.a-society/state/<project>/<flow-id>/record/` with a single-node Owner workflow, injects initialization guidance and the A-Society general index as active artifacts, and then runs that stored flow.
 
 The runtime injects `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` with the handoff contract in every managed session. It defines flow record placement, metadata, and writable scope.
 
@@ -218,12 +218,10 @@ When the runtime is waiting for human input, the UI keeps the current flow state
 
 ## State Location and Resume
 
-- Default state directory: `{workspace}/.a-society/state`
-- Default settings directory: `{workspace}/.a-society`
-- Override: `A_SOCIETY_STATE_DIR`
-- Override: `A_SOCIETY_SETTINGS_DIR`
+- State directory: `{workspace}/.a-society/state`
+- Settings directory: `{workspace}/.a-society`
 
-The runtime persists flow state and role sessions under `{stateDir}/{projectNamespace}/{flowId}/`.
+The runtime persists flow state and role sessions under `{workspace}/.a-society/state/{projectNamespace}/{flowId}/`.
 
 Per-flow layout:
 
@@ -233,9 +231,9 @@ Per-flow layout:
 
 Resume behavior:
 
-- Existing `FlowRun` state is read from `{stateDir}/{projectNamespace}/{flowId}/flow.json`
+- Existing `FlowRun` state is read from `{workspace}/.a-society/state/{projectNamespace}/{flowId}/flow.json`
 - Selecting a flow opens it in graph mode
-- The browser feed is replayed from `{stateDir}/{projectNamespace}/{flowId}/roles/<roleKey>/feed.json` when available
+- The browser feed is replayed from `{workspace}/.a-society/state/{projectNamespace}/{flowId}/roles/<roleKey>/feed.json` when available
 - Role-scoped session continuity is preserved from persisted role transcript files
 - Persisted `runningNodes` are taken as initial runner work and cleared before live claims are made
 

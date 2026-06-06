@@ -23,8 +23,7 @@ async function runTest() {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'backward-resubmission-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
-  const stateDir = path.join(tmpBase, '.state');
-  process.env.A_SOCIETY_STATE_DIR = stateDir;
+  const stateDir = path.join(tmpBase, '.a-society', 'state');
   const flowId = 'backward-flow';
   const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
 
@@ -66,7 +65,7 @@ async function runTest() {
   const reviewFeedbackRel = path.relative(workspaceRoot, reviewFeedbackPath);
   const flowRef = { projectNamespace, flowId };
 
-  SessionStore.init();
+  SessionStore.init(workspaceRoot);
   SessionStore.saveFlowRun({
     flowId: flowRef.flowId,
     workspaceRoot,
@@ -110,7 +109,6 @@ async function runTest() {
   console.log('Integration test PASSED.');
 
   fs.rmSync(tmpBase, { recursive: true, force: true });
-  delete process.env.A_SOCIETY_STATE_DIR;
 }
 
 runTest().catch(err => {

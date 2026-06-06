@@ -28,12 +28,10 @@ async function runTest() {
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
-  const testStateDir = path.join(tmpBase, '.state');
-  const testSettingsDir = path.join(tmpBase, '.settings');
+  const testStateDir = path.join(tmpBase, '.a-society', 'state');
+  const testSettingsDir = path.join(tmpBase, '.a-society');
   fs.mkdirSync(testDir);
-  fs.mkdirSync(testStateDir);
-  process.env.A_SOCIETY_STATE_DIR = testStateDir;
-  process.env.A_SOCIETY_SETTINGS_DIR = testSettingsDir;
+  fs.mkdirSync(testStateDir, { recursive: true });
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const flowId = 'test-missing-artifact-flow-id';
@@ -71,7 +69,7 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  SessionStore.init();
+  SessionStore.init(workspaceRoot);
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -125,8 +123,6 @@ async function runTest() {
   } finally {
     server.close();
     fs.rmSync(tmpBase, { recursive: true, force: true });
-    delete process.env.A_SOCIETY_STATE_DIR;
-    delete process.env.A_SOCIETY_SETTINGS_DIR;
   }
 
   console.log('Integration test PASSED.');

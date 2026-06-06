@@ -17,7 +17,19 @@ export function parsePort(rawPort: string | undefined): number {
 }
 
 export function resolveWorkspaceRoot(): string {
-  return path.resolve(process.env.A_SOCIETY_WORKSPACE_ROOT || process.env.INIT_CWD || process.cwd());
+  let current = path.dirname(fileURLToPath(import.meta.url));
+
+  while (true) {
+    if (path.basename(current) === 'runtime' && path.basename(path.dirname(current)) === 'a-society') {
+      return path.dirname(path.dirname(current));
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new Error('Could not resolve workspace root from the fixed a-society/runtime location.');
+    }
+    current = parent;
+  }
 }
 
 function buildOpenCommand(url: string): string | null {

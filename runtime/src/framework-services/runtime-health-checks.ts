@@ -329,7 +329,7 @@ function readGitTrackedFiles(projectRoot: string): string[] | null {
 
 function shouldIgnoreOwnershipCoverageEntry(entryPath: string): boolean {
   const parts = entryPath.split(path.sep).filter(Boolean);
-  return parts.some((part) => part === '.git' || part === 'node_modules' || part === 'dist' || part === '.state');
+  return parts.some((part) => part === '.git' || part === 'node_modules' || part === 'dist' || part === '.a-society');
 }
 
 function walkProjectFiles(projectRoot: string, relativeDir = ''): string[] {

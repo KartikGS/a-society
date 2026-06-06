@@ -91,6 +91,15 @@ function chunk(delta: Record<string, unknown>, finishReason: string | null = nul
   };
 }
 
+function messageChunk(message: Record<string, unknown>, finishReason: string | null = null): Record<string, unknown> {
+  return {
+    choices: [{
+      message,
+      finish_reason: finishReason,
+    }],
+  };
+}
+
 function multiChoiceChunk(choices: Array<{ delta: Record<string, unknown>; finishReason?: string | null }>): Record<string, unknown> {
   return {
     choices: choices.map((choice) => ({
@@ -172,6 +181,35 @@ await test('does not drop assistant text when reasoning and content arrive as se
     text: 'Reasoning before answer. ',
     display: 'collapsed',
   }]);
+});
+
+await test('keeps the first assistant text token when a router emits it as a message chunk', async () => {
+  const provider = createProvider();
+  const streamedText: string[] = [];
+  installFakeClient(provider, [
+    chunk({ reasoning_content: 'I need to write a directive.' }),
+    messageChunk({ content: 'Good' }),
+    chunk({ content: '. Now let me write the directive.' }),
+    chunk({
+      tool_calls: [{
+        index: 0,
+        id: 'call_1',
+        function: { name: 'read_file', arguments: '{"path":"notes.md"}' },
+      }],
+    }, 'tool_calls'),
+  ]);
+
+  const result = await provider.executeTurn(
+    'system',
+    [{ role: 'user', content: 'Prompt.' }],
+    [readFileTool],
+    { onAssistantTextDelta: (text) => streamedText.push(text) }
+  );
+
+  assert.strictEqual(result.type, 'tool_calls');
+  assert.deepStrictEqual(streamedText, ['Good', '. Now let me write the directive.']);
+  assert.strictEqual(result.continuationMessages[0]?.role, 'assistant_tool_calls');
+  assert.strictEqual(result.continuationMessages[0]?.text, 'Good. Now let me write the directive.');
 });
 
 await test('keeps accumulated custom reasoning for tool-call replay while streaming deltas', async () => {

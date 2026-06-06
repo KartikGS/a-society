@@ -81,10 +81,7 @@ export function configureSettingsStore(workspaceRoot: string): void {
 }
 
 function getSettingsDir(): string {
-  const override = process.env.A_SOCIETY_SETTINGS_DIR?.trim();
-  return override && override.length > 0
-    ? path.resolve(override)
-    : path.join(defaultWorkspaceRoot, '.a-society');
+  return path.join(defaultWorkspaceRoot, '.a-society');
 }
 
 function getSettingsPath(): string {

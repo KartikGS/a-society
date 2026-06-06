@@ -63,13 +63,13 @@ A communication artifact or protocol belongs in this folder if it answers one of
 ## How to Create One
 
 **Step 1 — Identify the role pairs.**
-List every pair of roles that must communicate during execution. For each pair, determine the direction of each handoff (A → B only, or bidirectional).
+List every pair of roles that must communicate during execution. For each forward handoff, identify the source role and receiving role. Do not create reverse workflow edges for clarification; if the receiver may ask the sender for clarification or correction, define that as a backward handoff rule in the coordination layer.
 
 **Step 2 — Define the conversation layer.**
 For each role-pair handoff: what artifact carries it, what fields it must include, what the receiver checks before acting, and when it is replaced. Write this into `conversation/main.md` and create templates for each handoff type.
 
 **Step 3 — Define the coordination layer.**
-Write a handoff protocol document: the canonical status model (every project needs one), the bidirectional clarification rules (can agents exchange rounds, or is the handoff one-way?), and the pre-replacement check for artifacts that are replaced per unit of work.
+Write a handoff protocol document: the canonical status model (every project needs one), the clarification and correction rules (when may a receiver send a backward handoff to the sender, and how many rounds are allowed?), and the pre-replacement check for artifacts that are replaced per unit of work.
 
 **Step 4 — Define the correction path.**
 Write a correction protocol: what an agent does when it discovers a discrepancy, false assumption, or blocker in someone else's work. Define the reporting path, the acknowledgment requirement, and the resolution owner.
@@ -99,7 +99,7 @@ Write `communication/main.md` — a brief orientation that describes the two sub
 Scale the communication folder to the number of roles and the complexity of handoffs:
 
 - **Two roles, simple handoff:** A single `conversation/` template and a brief `coordination/` document covering the status model and one escalation path may be sufficient.
-- **Three or more roles with multi-directional handoffs:** Separate templates per role-pair, a full status model, bidirectional clarification rules, correction protocol, and conflict resolution.
+- **Three or more roles with multiple handoff paths:** Separate templates per role-pair, a full status model, clarification and correction rules, correction protocol, and conflict resolution.
 - **Asynchronous or long-running work:** Add pre-replacement checks, session state tracking, and explicit rules about artifact immutability once a unit of work is closed.
 
 Do not create more coordination infrastructure than the project's actual handoff complexity requires. A two-person project with one handoff direction does not need a conflict-resolution document.

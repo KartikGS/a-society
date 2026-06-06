@@ -68,10 +68,10 @@ A workflow is a **graph**: a named set of nodes connected by transitions.
 - **Human-collaborative** *(when applicable)* — the nature of human contribution to this node. Use this field when the human must actively contribute through the assigned agent.
 - **Notes** *(when applicable)* — node-specific cautions, edge cases, or constraints that do not belong in global invariants
 
-**Transition (edge)** — the rule by which work moves between nodes. Every transition has a **transition condition**: the criterion that determines when work passes from one node to the next. Transitions also have a **direction property**:
+**Transition (edge)** — the forward rule by which work moves between nodes. Every transition has a **transition condition**: the criterion that determines when work passes from one node to the next. Runtime workflow graphs are DAGs; do not model clarification or correction by adding a reverse edge from the downstream node back to the upstream node.
 
-- **Unidirectional** (default) — work passes in one direction only. The downstream node completes its work and the transition fires onward.
-- **Bidirectional** — the downstream node may send a message upstream and receive a response without exiting the current node. The downstream node enters a waiting state (not complete) until the response arrives, then resumes. Designate a transition as bidirectional when the downstream node may need clarification from the upstream node during execution — information it cannot resolve independently and that the upstream node must provide.
+- **Forward handoff** — work passes from the edge's `from` node to its `to` node when the transition condition is satisfied.
+- **Backward clarification or correction handoff** — every forward edge inherently allows the downstream node to hand off backward to its immediate upstream node and wait for a reply without completing. The downstream node enters a waiting state until the response arrives, then resumes. This is runtime handoff behavior, not a separate reverse edge and not an edge-level option. Define when roles may use this behavior in the project's coordination protocol.
 
 **Parallel fork** — a node may have multiple outgoing transitions that fire simultaneously, producing parallel execution branches. Use when work can proceed concurrently across different roles or role-session identities before converging downstream.
 

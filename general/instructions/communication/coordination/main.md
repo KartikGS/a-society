@@ -33,7 +33,7 @@ The handoff protocol defines:
 - **Status vocabulary** — the canonical set of status tokens used across all handoff artifacts. Every agent uses exactly these tokens; natural-language descriptions of state are not permitted in artifacts. Define the full set: what each token means, when it applies, and what constitutes a valid transition.
 - **Handoff format requirements** — what each handoff artifact must contain for the receiver to act. Reference the conversation templates; do not duplicate them here.
 - **Receiver confirmation** — what the receiving role must do before beginning work. Typically: acknowledge receipt, confirm the task is well-defined, and raise concerns before starting.
-- **Bidirectional clarification rules** — can agents exchange rounds of questions and responses before the receiver acts? If yes, define the structure (rounds, recording requirements, escalation threshold). If no, define the alternative.
+- **Clarification and correction rules** — when may a receiver send a backward handoff to the immediate upstream sender before acting? If rounds are allowed, define the structure, recording requirements, and escalation threshold. If not, define the alternative.
 - **Scope override synchronization** — if scope changes after handoffs are issued, which artifacts must be updated in what order before implementation resumes?
 
 ### 2. Correction Protocol
@@ -71,7 +71,7 @@ The conflict-resolution document defines what happens when two agents disagree:
 Everything else depends on it. Write the canonical set of status tokens before writing any protocol. Include: name, meaning, valid prior states, and valid next states. Keep the set minimal — every token must be distinguishable from all others, and agents must be able to apply the right token without deliberation.
 
 **Step 2 — Write the handoff protocol.**
-For each role-pair transition: what artifact carries the handoff, what it must contain, what the receiver confirms before acting. Add the bidirectional clarification rules.
+For each role-pair transition: what artifact carries the handoff, what it must contain, what the receiver confirms before acting. Add the clarification and correction rules.
 
 **Step 3 — Write the correction protocol.**
 Define the discovery conditions, the reporting path (which file, what structure), the halt requirement, and the priority rule. Make the priority rule unambiguous — if it requires judgment, it will be applied inconsistently.

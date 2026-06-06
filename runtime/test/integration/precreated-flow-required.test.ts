@@ -13,17 +13,15 @@ async function runTest() {
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
-  const testStateDir = path.join(tmpBase, '.state');
+  const testStateDir = path.join(tmpBase, '.a-society', 'state');
 
   fs.mkdirSync(testDir);
-  fs.mkdirSync(testStateDir);
-
-  process.env.A_SOCIETY_STATE_DIR = testStateDir;
+  fs.mkdirSync(testStateDir, { recursive: true });
 
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   try {
-    SessionStore.init();
+    SessionStore.init(workspaceRoot);
 
     await assert.rejects(
       () => orchestrator.runStoredFlow(
@@ -34,7 +32,6 @@ async function runTest() {
     );
   } finally {
     fs.rmSync(tmpBase, { recursive: true, force: true });
-    delete process.env.A_SOCIETY_STATE_DIR;
   }
 
   console.log('Integration test PASSED.');

@@ -109,7 +109,11 @@ export class LLMGateway {
           const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
-            return { text: result.text, contextUsage: result.contextUsage };
+            return {
+              text: result.text,
+              contextUsage: result.contextUsage,
+              ...(result.finishReason ? { finishReason: result.finishReason } : {}),
+            };
           }
           throwIfAborted(options?.signal);
           throw new LLMGatewayError('PROVIDER_MALFORMED', 'Provider returned tool_calls but no tools were configured.');
@@ -142,7 +146,8 @@ export class LLMGateway {
             span.setAttribute('llm.tool_round_count', round);
             return {
               text: result.text,
-              contextUsage: accContextUsage
+              contextUsage: accContextUsage,
+              ...(result.finishReason ? { finishReason: result.finishReason } : {}),
             };
           }
 

@@ -17,6 +17,7 @@ interface ProjectSelectorProps {
   onOpenFlow: (flow: FlowSummary) => void;
   onNewFlow: (projectNamespace: string) => void;
   onDeleteFlow: (flow: FlowSummary) => void;
+  onDeleteProject: (project: ProjectSummary) => void;
   onNewProjectNameChange: (value: string) => void;
   onCreateNew: () => void;
   onOpenSettings: () => void;
@@ -26,8 +27,10 @@ interface ProjectSectionProps {
   title: string;
   projects: ProjectSummary[];
   selectedProject: string | null;
-  disabled: boolean;
+  selectDisabled: boolean;
+  deleteDisabled: boolean;
   onSelect: (projectNamespace: string) => void;
+  onDelete: (project: ProjectSummary) => void;
   emptyMessage: string;
 }
 
@@ -36,19 +39,38 @@ function ProjectSection(props: ProjectSectionProps) {
     <div className="sidebar-section">
       <h3 className="sidebar-section-title">{props.title}</h3>
       <div className="sidebar-project-list">
-        {props.projects.map((project) => (
-          <button
-            key={project.folderName}
-            type="button"
-            className="sidebar-project-item"
-            disabled={props.disabled}
-            data-active={props.selectedProject === project.folderName}
-            onClick={() => props.onSelect(project.folderName)}
-          >
-            <span className="sidebar-project-name">{project.displayName}</span>
-            <span className="sidebar-project-path">{project.folderName}</span>
-          </button>
-        ))}
+        {props.projects.map((project) => {
+          const protectedProject = project.folderName === 'a-society';
+          const deleteDisabled = props.deleteDisabled || protectedProject;
+          return (
+            <div
+              key={project.folderName}
+              className="sidebar-project-row"
+              data-active={props.selectedProject === project.folderName}
+              data-disabled={props.selectDisabled && deleteDisabled}
+            >
+              <button
+                type="button"
+                className="sidebar-project-open-btn"
+                disabled={props.selectDisabled}
+                onClick={() => props.onSelect(project.folderName)}
+              >
+                <span className="sidebar-project-name">{project.displayName}</span>
+                <span className="sidebar-project-path">{project.folderName}</span>
+              </button>
+              <button
+                type="button"
+                className="sidebar-project-delete-btn"
+                disabled={deleteDisabled}
+                title={protectedProject ? 'The A-Society framework project cannot be deleted here.' : 'Delete project'}
+                aria-label={`Delete project ${project.displayName}`}
+                onClick={() => props.onDelete(project)}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
       </div>
       {props.projects.length === 0 ? (
         <p className="sidebar-empty-state">{props.emptyMessage}</p>
@@ -204,8 +226,10 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           title="Initialized"
           projects={props.projectsWithADocs}
           selectedProject={props.selectedProject}
-          disabled={props.disabled}
+          selectDisabled={props.disabled}
+          deleteDisabled={props.disabled}
           onSelect={props.onSelectInitialized}
+          onDelete={props.onDeleteProject}
           emptyMessage="No initialized projects."
         />
 
@@ -213,8 +237,10 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           title="Uninitialized"
           projects={props.projectsWithoutADocs}
           selectedProject={props.selectedProject}
-          disabled={props.disabled || !props.canStartFlows}
+          selectDisabled={props.disabled || !props.canStartFlows}
+          deleteDisabled={props.disabled}
           onSelect={props.onInitializeExisting}
+          onDelete={props.onDeleteProject}
           emptyMessage="No uninitialized projects."
         />
       </div>
