@@ -1,9 +1,5 @@
 # A-Society Runtime Invocation
 
-This is the sole default operator-facing executable reference for A-Society. It is authored by the Orchestration Developer and registered or verified by the Curator.
-
----
-
 ## Startup
 
 ### `npm --prefix ./a-society/runtime start`
@@ -39,6 +35,8 @@ If the selected port is already in use, the runtime prints a clear error and exi
 The runtime server can start without a model, but runtime work cannot proceed until the operator configures and activates at least one model in the Settings UI.
 
 - Provider, model ID, base URL, and API key are configured in Settings
+- Saving a model runs a small sample request before persisting the configuration; validation failures are shown to the operator
+- Anthropic thinking effort can be set to `none` to omit the Anthropic `output_config.effort` request parameter for models that do not support it
 - The Settings modal stays open until a usable active model exists
 - Environment variables in `.env` no longer select the runtime model
 

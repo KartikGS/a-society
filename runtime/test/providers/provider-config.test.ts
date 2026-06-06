@@ -109,6 +109,29 @@ test('Anthropic adaptive thinking uses native thinking and effort parameters', (
   );
 });
 
+test('Anthropic adaptive thinking omits output_config when effort is none', () => {
+  assert.deepStrictEqual(
+    buildAnthropicReasoningParams({ mode: 'anthropic-adaptive', effort: 'none', display: 'omitted' }, 8192),
+    {
+      thinking: { type: 'adaptive', display: 'omitted' },
+    }
+  );
+});
+
+test('Anthropic manual thinking omits output_config when effort is none', () => {
+  assert.deepStrictEqual(
+    buildAnthropicReasoningParams({
+      mode: 'anthropic-manual',
+      effort: 'none',
+      display: 'omitted',
+      budgetTokens: 2048,
+    }, 8192),
+    {
+      thinking: { type: 'enabled', budget_tokens: 2048, display: 'omitted' },
+    }
+  );
+});
+
 test('Anthropic manual thinking validates budget before building parameters', () => {
   assert.throws(
     () => buildAnthropicReasoningParams({

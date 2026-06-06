@@ -50,7 +50,11 @@ export class AnthropicProvider implements LLMProvider {
   private formatAnthropicReasoningBlocks(blocks: ProviderReasoningBlock[] | undefined): any[] {
     if (!blocks?.length) return [];
     return blocks
-      .filter((block) => block.provider === 'anthropic' && block.type === 'thinking')
+      .filter((block): block is Extract<ProviderReasoningBlock, { provider: 'anthropic'; type: 'thinking' }> =>
+        block.provider === 'anthropic' &&
+        block.type === 'thinking' &&
+        block.thinking.trim() !== ''
+      )
       .map((block) => ({
         type: 'thinking',
         thinking: block.thinking,
@@ -61,11 +65,16 @@ export class AnthropicProvider implements LLMProvider {
   private extractAnthropicReasoningBlocks(content: any[] | undefined): ProviderReasoningBlock[] {
     if (!Array.isArray(content)) return [];
     return content
-      .filter((block) => block?.type === 'thinking' && typeof block.signature === 'string')
+      .filter((block) =>
+        block?.type === 'thinking' &&
+        typeof block.thinking === 'string' &&
+        block.thinking.trim() !== '' &&
+        typeof block.signature === 'string'
+      )
       .map((block) => ({
         provider: 'anthropic' as const,
         type: 'thinking' as const,
-        thinking: typeof block.thinking === 'string' ? block.thinking : '',
+        thinking: block.thinking,
         signature: block.signature,
       }));
   }

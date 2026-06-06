@@ -43,11 +43,15 @@ class FakeAnthropicStream {
 function installFakeClient(
   provider: AnthropicProvider,
   streamEvents: Record<string, unknown>[],
-  finalResponse: Record<string, unknown>
+  finalResponse: Record<string, unknown>,
+  onRequest?: (request: Record<string, unknown>) => void
 ): void {
   (provider as unknown as { client: unknown }).client = {
     messages: {
-      stream: () => new FakeAnthropicStream(streamEvents, finalResponse),
+      stream: (request: Record<string, unknown>) => {
+        onRequest?.(request);
+        return new FakeAnthropicStream(streamEvents, finalResponse);
+      },
     },
   };
 }
@@ -182,6 +186,47 @@ await test('does not show omitted Anthropic thinking in the feed', async () => {
   );
 
   assert.deepStrictEqual(emitted, []);
+});
+
+await test('does not replay empty Anthropic thinking blocks', async () => {
+  const provider = new AnthropicProvider('test-key', 'claude-test', {
+    maxOutputTokens: 1024,
+    reasoning: { mode: 'anthropic-manual', effort: 'none', display: 'omitted', budgetTokens: 128 },
+  });
+  const requestPayloads: Record<string, unknown>[] = [];
+  installFakeClient(provider, [
+    textDelta('Done.'),
+  ], finalMessage(''), (request) => {
+    requestPayloads.push(request);
+  });
+
+  await provider.executeTurn(
+    'system',
+    [
+      { role: 'user', content: 'Prompt.' },
+      {
+        role: 'assistant_tool_calls',
+        text: 'Need tool.',
+        calls: [{ id: 'toolu_1', name: 'read_file', input: { path: 'README.md' } }],
+        providerReasoning: [{
+          provider: 'anthropic',
+          type: 'thinking',
+          thinking: '',
+          signature: 'signed-empty-thinking',
+        }],
+      },
+      { role: 'tool_result', callId: 'toolu_1', toolName: 'read_file', content: 'file content', isError: false },
+    ],
+    undefined
+  );
+
+  const requestPayload = requestPayloads[0];
+  assert.ok(requestPayload);
+  const messages = requestPayload.messages as Array<{ role: string; content: unknown }>;
+  const assistantMessage = messages.find((message) => message.role === 'assistant');
+  assert.ok(assistantMessage);
+  const content = assistantMessage.content as Array<{ type: string }>;
+  assert.ok(content.every((block) => block.type !== 'thinking'));
 });
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);

@@ -215,6 +215,14 @@ export function listModels(): ModelConfig[] {
   return loadSettings().models;
 }
 
+export function getModelWithKey(id: string): ModelConfigWithKey | null {
+  const model = loadSettings().models.find((entry) => entry.id === id) ?? null;
+  if (!model) return null;
+
+  const secrets = loadSecrets();
+  return { ...model, apiKey: secrets[model.id] ?? '' };
+}
+
 export function createModel(
   params: Omit<ModelConfig, 'id' | 'active'>,
   apiKey: string

@@ -1,7 +1,7 @@
 export const OPENAI_REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const;
 export type OpenAIReasoningEffort = typeof OPENAI_REASONING_EFFORTS[number];
 
-export const ANTHROPIC_EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export const ANTHROPIC_EFFORTS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type AnthropicEffort = typeof ANTHROPIC_EFFORTS[number];
 
 export const ANTHROPIC_THINKING_DISPLAYS = ['omitted', 'summarized'] as const;

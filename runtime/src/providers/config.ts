@@ -1,4 +1,4 @@
-import type { ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { AnthropicEffort, ModelReasoningConfig } from '../common/model-reasoning.js';
 import { getCustomOpenAICompatibleReservedBodyKeys } from '../common/model-reasoning.js';
 
 export const DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS = 4096;
@@ -43,6 +43,10 @@ export function buildOpenAIChatCompletionTokenParams(
   return { max_tokens: maxOutputTokens };
 }
 
+function buildAnthropicEffortParams(effort: AnthropicEffort): Record<string, unknown> {
+  return effort === 'none' ? {} : { output_config: { effort } };
+}
+
 export function buildAnthropicReasoningParams(
   reasoning: ModelReasoningConfig | undefined,
   maxOutputTokens: number
@@ -57,7 +61,7 @@ export function buildAnthropicReasoningParams(
         type: 'adaptive',
         display: reasoning.display,
       },
-      output_config: { effort: reasoning.effort },
+      ...buildAnthropicEffortParams(reasoning.effort),
     };
   }
 
@@ -75,7 +79,7 @@ export function buildAnthropicReasoningParams(
         budget_tokens: reasoning.budgetTokens,
         display: reasoning.display,
       },
-      output_config: { effort: reasoning.effort },
+      ...buildAnthropicEffortParams(reasoning.effort),
     };
   }
 
