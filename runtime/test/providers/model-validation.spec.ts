@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-import { LLMGatewayError, type LLMProvider, type RuntimeMessageParam, type ToolDefinition, type TurnOptions } from '../../src/common/types.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { LLMGatewayError } from '../../src/common/types.js';
+import { AnthropicProvider } from '../../src/providers/anthropic.js';
 import { validateModelConfiguration, type ModelValidationConfig } from '../../src/providers/model-validation.js';
 
 const baseConfig: ModelValidationConfig = {
@@ -12,12 +13,17 @@ const baseConfig: ModelValidationConfig = {
 };
 
 describe('model validation', () => {
-  it('sends a small sample request through the configured provider', async () => {
-    const executeTurn = vi.fn<LLMProvider['executeTurn']>().mockResolvedValue({ type: 'text', text: 'OK' });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
 
-    await validateModelConfiguration(baseConfig, {
-      createProvider: () => ({ executeTurn }),
-    });
+  it('sends a small sample request through the configured provider', async () => {
+    const executeTurn = vi
+      .spyOn(AnthropicProvider.prototype, 'executeTurn')
+      .mockResolvedValue({ type: 'text', text: 'OK' });
+
+    await validateModelConfiguration(baseConfig);
 
     expect(executeTurn).toHaveBeenCalledWith(
       expect.stringContaining('validating'),
@@ -28,32 +34,25 @@ describe('model validation', () => {
   });
 
   it('redacts the API key from provider validation errors', async () => {
-    const provider: LLMProvider = {
-      async executeTurn() {
-        throw new LLMGatewayError('AUTH_ERROR', 'Bad key secret-validation-key.');
-      },
-    };
+    vi.spyOn(AnthropicProvider.prototype, 'executeTurn')
+      .mockRejectedValue(new LLMGatewayError('AUTH_ERROR', 'Bad key secret-validation-key.'));
 
-    await expect(validateModelConfiguration(baseConfig, { createProvider: () => provider }))
+    await expect(validateModelConfiguration(baseConfig))
       .rejects.toThrow(/Model validation failed \(AUTH_ERROR\).*Bad key \[redacted\]\./);
   });
 
   it('fails validation when the sample request times out', async () => {
-    const provider: LLMProvider = {
-      async executeTurn(
-        _systemPrompt: string,
-        _messages: RuntimeMessageParam[],
-        _tools?: ToolDefinition[],
-        options?: TurnOptions
-      ) {
-        return new Promise((resolve, reject) => {
-          options?.signal?.addEventListener('abort', () => reject(new LLMGatewayError('ABORTED', 'aborted')));
-          setTimeout(() => resolve({ type: 'text' as const, text: 'late' }), 50);
-        });
-      },
-    };
+    vi.useFakeTimers();
+    vi.spyOn(AnthropicProvider.prototype, 'executeTurn').mockImplementation(
+      (_systemPrompt, _messages, _tools, options) => new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener('abort', () => reject(new LLMGatewayError('ABORTED', 'aborted')));
+      })
+    );
 
-    await expect(validateModelConfiguration(baseConfig, { createProvider: () => provider, timeoutMs: 1 }))
-      .rejects.toThrow(/sample request timed out/);
+    const validation = validateModelConfiguration(baseConfig);
+    const assertion = expect(validation).rejects.toThrow(/sample request timed out after 20 seconds/);
+    await vi.advanceTimersByTimeAsync(20_000);
+
+    await assertion;
   });
 });
