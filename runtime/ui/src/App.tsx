@@ -43,6 +43,8 @@ const GraphView = lazy(async () => {
   return { default: module.GraphView };
 });
 
+const ERROR_TOAST_DURATION_MS = 12_000;
+
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const socketUrl = `${protocol}://${window.location.host}`;
@@ -68,7 +70,7 @@ export function App() {
   const showToast = useCallback((message: string): void => {
     if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
     setErrorToast(message);
-    toastTimerRef.current = setTimeout(() => setErrorToast(null), 5000);
+    toastTimerRef.current = setTimeout(() => setErrorToast(null), ERROR_TOAST_DURATION_MS);
   }, []);
 
   const updateFlowUi = useCallback((key: string, updater: (state: FlowUiState) => FlowUiState): void => {
@@ -486,6 +488,7 @@ export function App() {
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
+          onError={showToast}
         />
       )}
     </main>

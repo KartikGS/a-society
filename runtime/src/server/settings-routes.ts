@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response } from 'express';
 import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../common/model-reasoning.js';
+import { validateModelConfiguration } from '../providers/model-validation.js';
 import * as SettingsStore from '../settings/settings-store.js';
 
 function isValidProviderBaseUrl(value: unknown): value is string {
@@ -62,10 +63,15 @@ export function registerSettingsRoutes(app: Express): void {
     res.json(SettingsStore.getFeedSettings());
   });
 
-  app.post('/api/settings/models', (req: Request, res: Response) => {
+  app.post('/api/settings/models', async (req: Request, res: Response) => {
     const { apiKey, ...params } = req.body as any;
     if (!params.displayName || !params.providerType || !params.modelId) {
       res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
+      return;
+    }
+    const apiKeyValue = String(apiKey ?? '').trim();
+    if (apiKeyValue.trim() === '') {
+      res.status(400).json({ message: 'API key is required.' });
       return;
     }
     if (!isProviderType(params.providerType)) {
@@ -85,7 +91,7 @@ export function registerSettingsRoutes(app: Express): void {
       res.status(400).json({ message: reasoningError });
       return;
     }
-    const model = SettingsStore.createModel({
+    const modelParams = {
       displayName: String(params.displayName),
       providerType,
       providerBaseUrl: String(params.providerBaseUrl ?? ''),
@@ -98,11 +104,27 @@ export function registerSettingsRoutes(app: Express): void {
             .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
               value === 'image' || value === 'audio' || value === 'video')
         : [],
-    }, String(apiKey ?? ''));
+    };
+
+    try {
+      await validateModelConfiguration({
+        providerType: modelParams.providerType,
+        providerBaseUrl: modelParams.providerBaseUrl,
+        modelId: modelParams.modelId,
+        apiKey: apiKeyValue,
+        maxOutputTokens: modelParams.maxOutputTokens,
+        reasoning: modelParams.reasoning,
+      });
+    } catch (err: any) {
+      res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+
+    const model = SettingsStore.createModel(modelParams, apiKeyValue);
     res.status(201).json(model);
   });
 
-  app.put('/api/settings/models/:id', (req: Request, res: Response) => {
+  app.put('/api/settings/models/:id', async (req: Request, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { apiKey, ...params } = req.body as any;
     if (!params.displayName || !params.providerType || !params.modelId) {
@@ -126,22 +148,49 @@ export function registerSettingsRoutes(app: Express): void {
       res.status(400).json({ message: reasoningError });
       return;
     }
+    const existing = SettingsStore.getModelWithKey(id);
+    if (!existing) {
+      res.status(404).json({ message: `Model "${id}" not found.` });
+      return;
+    }
+    const apiKeyValue = typeof apiKey === 'string' && apiKey.trim() !== ''
+      ? apiKey.trim()
+      : existing.apiKey;
+    if (apiKeyValue.trim() === '') {
+      res.status(400).json({ message: 'API key is required.' });
+      return;
+    }
+    const modelParams = {
+      displayName: String(params.displayName),
+      providerType,
+      providerBaseUrl: String(params.providerBaseUrl ?? ''),
+      modelId: String(params.modelId),
+      contextWindow: Number(params.contextWindow) || 0,
+      maxOutputTokens: Number(params.maxOutputTokens) || 0,
+      reasoning,
+      supportedInputTypes: Array.isArray(params.supportedInputTypes)
+        ? params.supportedInputTypes
+            .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
+              value === 'image' || value === 'audio' || value === 'video')
+        : [],
+    };
 
     try {
-      const model = SettingsStore.updateModel(id, {
-        displayName: String(params.displayName),
-        providerType,
-        providerBaseUrl: String(params.providerBaseUrl ?? ''),
-        modelId: String(params.modelId),
-        contextWindow: Number(params.contextWindow) || 0,
-        maxOutputTokens: Number(params.maxOutputTokens) || 0,
-        reasoning,
-        supportedInputTypes: Array.isArray(params.supportedInputTypes)
-          ? params.supportedInputTypes
-              .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
-                value === 'image' || value === 'audio' || value === 'video')
-          : [],
-      }, typeof apiKey === 'string' ? apiKey : undefined);
+      await validateModelConfiguration({
+        providerType: modelParams.providerType,
+        providerBaseUrl: modelParams.providerBaseUrl,
+        modelId: modelParams.modelId,
+        apiKey: apiKeyValue,
+        maxOutputTokens: modelParams.maxOutputTokens,
+        reasoning: modelParams.reasoning,
+      });
+    } catch (err: any) {
+      res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+
+    try {
+      const model = SettingsStore.updateModel(id, modelParams, typeof apiKey === 'string' ? apiKey : undefined);
       res.json(model);
     } catch (err: any) {
       res.status(404).json({ message: err instanceof Error ? err.message : String(err) });

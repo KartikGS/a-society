@@ -28,6 +28,7 @@ import type {
 
 interface SettingsModalProps {
   onClose: () => void;
+  onError?: (message: string) => void;
   onModelsChange?: () => void;
   required?: boolean;
 }
@@ -101,24 +102,24 @@ function parseJsonObject(value: string): Record<string, unknown> {
 type EditorView = 'list' | 'add' | 'edit';
 type SettingsTab = 'models' | 'tools' | 'feed';
 
-export function SettingsModal({ onClose, onModelsChange, required = false }: SettingsModalProps) {
+export function SettingsModal({ onClose, onError, onModelsChange, required = false }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
   const [view, setView] = useState<EditorView>('list');
   const [models, setModels] = useState<ModelConfig[]>([]);
-  const [listError, setListError] = useState<string | null>(null);
   const [form, setForm] = useState<ModelFormState>(DEFAULT_FORM);
-  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [toolSettings, setToolSettings] = useState<ToolSettings | null>(null);
   const [toolForm, setToolForm] = useState<ToolFormState>(DEFAULT_TOOL_FORM);
-  const [toolError, setToolError] = useState<string | null>(null);
   const [savingTools, setSavingTools] = useState(false);
   const [feedSettings, setFeedSettings] = useState<FeedSettings | null>(null);
   const [feedForm, setFeedForm] = useState<FeedFormState>(DEFAULT_FEED_FORM);
-  const [feedError, setFeedError] = useState<string | null>(null);
   const [savingFeed, setSavingFeed] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  const reportError = useCallback((message: string): void => {
+    onError?.(message);
+  }, [onError]);
 
   const replaceModels = useCallback((next: ModelConfig[]): void => {
     setModels(next);
@@ -144,9 +145,8 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
         const res = await fetch('/api/settings/models');
         if (!res.ok) throw new Error(await res.text());
         replaceModels(normalizeModelConfigs(await res.json()));
-        setListError(null);
       } catch (err) {
-        setListError(err instanceof Error ? err.message : 'Failed to load models.');
+        reportError(err instanceof Error ? err.message : 'Failed to load models.');
       }
     }
 
@@ -157,9 +157,8 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
         const next = normalizeToolSettings(await res.json());
         if (!next) throw new Error('Failed to load tool settings.');
         replaceToolSettings(next);
-        setToolError(null);
       } catch (err) {
-        setToolError(err instanceof Error ? err.message : 'Failed to load tool settings.');
+        reportError(err instanceof Error ? err.message : 'Failed to load tool settings.');
       }
     }
 
@@ -170,16 +169,15 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
         const next = normalizeFeedSettings(await res.json());
         if (!next) throw new Error('Failed to load feed settings.');
         replaceFeedSettings(next);
-        setFeedError(null);
       } catch (err) {
-        setFeedError(err instanceof Error ? err.message : 'Failed to load feed settings.');
+        reportError(err instanceof Error ? err.message : 'Failed to load feed settings.');
       }
     }
 
     void fetchModels();
     void fetchTools();
     void fetchFeedSettings();
-  }, [replaceModels]);
+  }, [replaceModels, reportError]);
 
   async function handleActivate(id: string) {
     try {
@@ -187,7 +185,7 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       if (!res.ok) throw new Error(await res.text());
       replaceModels(models.map((m) => ({ ...m, active: m.id === id })));
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Failed to activate model.');
+      reportError(err instanceof Error ? err.message : 'Failed to activate model.');
     }
   }
 
@@ -201,28 +199,27 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       }
       replaceModels(next);
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'Failed to delete model.');
+      reportError(err instanceof Error ? err.message : 'Failed to delete model.');
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setFormError(null);
     const isEditing = view === 'edit';
 
-    if (!form.displayName.trim()) { setFormError('Display name is required.'); return; }
-    if (!form.modelId.trim()) { setFormError('Model ID is required.'); return; }
-    if (!isEditing && !form.apiKey.trim()) { setFormError('API key is required.'); return; }
+    if (!form.displayName.trim()) { reportError('Display name is required.'); return; }
+    if (!form.modelId.trim()) { reportError('Model ID is required.'); return; }
+    if (!isEditing && !form.apiKey.trim()) { reportError('API key is required.'); return; }
     if (form.providerType === 'openai-compatible' && !form.providerBaseUrl.trim()) {
-      setFormError('Provider base URL is required for OpenAI-compatible providers.');
+      reportError('Provider base URL is required for OpenAI-compatible providers.');
       return;
     }
     if (form.reasoning.mode === 'anthropic-manual' && form.reasoning.budgetTokens <= 0) {
-      setFormError('Thinking budget must be a positive number.');
+      reportError('Thinking budget must be a positive number.');
       return;
     }
     if (isEditing && !editingModelId) {
-      setFormError('No model is selected for editing.');
+      reportError('No model is selected for editing.');
       return;
     }
 
@@ -268,7 +265,8 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       setEditingModelId(null);
       setView('list');
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : (isEditing ? 'Failed to update model.' : 'Failed to create model.'));
+      const message = err instanceof Error ? err.message : (isEditing ? 'Failed to update model.' : 'Failed to create model.');
+      reportError(message);
     } finally {
       setSubmitting(false);
     }
@@ -286,7 +284,6 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
     setActiveTab('models');
     setEditingModelId(null);
     setForm(DEFAULT_FORM);
-    setFormError(null);
     setView('add');
   }
 
@@ -307,13 +304,11 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
         : '{}',
       supportedInputTypes: [...model.supportedInputTypes],
     });
-    setFormError(null);
     setView('edit');
   }
 
   async function handleSaveTools(e: React.FormEvent) {
     e.preventDefault();
-    setToolError(null);
 
     try {
       setSavingTools(true);
@@ -333,7 +328,7 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       if (!next) throw new Error('Server returned invalid tool settings.');
       replaceToolSettings(next);
     } catch (err) {
-      setToolError(err instanceof Error ? err.message : 'Failed to save tool settings.');
+      reportError(err instanceof Error ? err.message : 'Failed to save tool settings.');
     } finally {
       setSavingTools(false);
     }
@@ -341,7 +336,6 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
 
   async function handleSaveFeed(e: React.FormEvent) {
     e.preventDefault();
-    setFeedError(null);
 
     try {
       setSavingFeed(true);
@@ -360,7 +354,7 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
       if (!next) throw new Error('Server returned invalid feed settings.');
       replaceFeedSettings(next);
     } catch (err) {
-      setFeedError(err instanceof Error ? err.message : 'Failed to save feed settings.');
+      reportError(err instanceof Error ? err.message : 'Failed to save feed settings.');
     } finally {
       setSavingFeed(false);
     }
@@ -408,7 +402,6 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
               view === 'list' ? (
               <ModelList
                 models={models}
-                error={listError}
                 onAdd={startAdd}
                 onEdit={startEdit}
                 onActivate={handleActivate}
@@ -418,13 +411,11 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
               <AddModelForm
                 form={form}
                 mode={view}
-                error={formError}
                 submitting={submitting}
                 onChange={setField}
                 onSubmit={handleSubmit}
                 onCancel={() => {
                   setEditingModelId(null);
-                  setFormError(null);
                   setView('list');
                 }}
               />
@@ -433,7 +424,6 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
               <ToolsSettingsPanel
                 settings={toolSettings}
                 form={toolForm}
-                error={toolError}
                 saving={savingTools}
                 canEnableWebSearch={canEnableWebSearch}
                 onChange={(updater) => setToolForm((current) => updater(current))}
@@ -443,7 +433,6 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
               <FeedSettingsPanel
                 settings={feedSettings}
                 form={feedForm}
-                error={feedError}
                 saving={savingFeed}
                 onChange={(updater) => setFeedForm((current) => updater(current))}
                 onSubmit={handleSaveFeed}
@@ -458,22 +447,19 @@ export function SettingsModal({ onClose, onModelsChange, required = false }: Set
 
 interface ModelListProps {
   models: ModelConfig[];
-  error: string | null;
   onAdd: () => void;
   onEdit: (model: ModelConfig) => void;
   onActivate: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-function ModelList({ models, error, onAdd, onEdit, onActivate, onDelete }: ModelListProps) {
+function ModelList({ models, onAdd, onEdit, onActivate, onDelete }: ModelListProps) {
   return (
     <div className="settings-section">
       <div className="settings-section-header">
         <h3 className="settings-section-title">Configured Models</h3>
         <button type="button" className="settings-add-btn" onClick={onAdd}>+ Add Model</button>
       </div>
-
-      {error && <p className="settings-error">{error}</p>}
 
       {models.length === 0 ? (
         <p className="settings-empty">No models configured. Add one to get started.</p>
@@ -562,14 +548,13 @@ function ModelList({ models, error, onAdd, onEdit, onActivate, onDelete }: Model
 interface AddModelFormProps {
   form: ModelFormState;
   mode: EditorView;
-  error: string | null;
   submitting: boolean;
   onChange: <K extends keyof ModelFormState>(key: K, value: ModelFormState[K]) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }
 
-function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCancel }: AddModelFormProps) {
+function AddModelForm({ form, mode, submitting, onChange, onSubmit, onCancel }: AddModelFormProps) {
   const isEditing = mode === 'edit';
 
   function updateProviderType(providerType: ProviderType): void {
@@ -991,13 +976,16 @@ function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCan
           </div>
         </div>
 
-        {error && <p className="settings-error">{error}</p>}
-
         <div className="form-actions">
           <button type="button" className="form-btn-cancel" onClick={onCancel} disabled={submitting}>
             Cancel
           </button>
-          <button type="submit" className="form-btn-submit" disabled={submitting}>
+          <button
+            type="submit"
+            className="form-btn-submit"
+            disabled={submitting}
+            title="A small sample request will be sent to verify this model configuration before saving."
+          >
             {submitting ? (isEditing ? 'Saving…' : 'Adding…') : (isEditing ? 'Save Changes' : 'Add Model')}
           </button>
         </div>
@@ -1009,7 +997,6 @@ function AddModelForm({ form, mode, error, submitting, onChange, onSubmit, onCan
 interface ToolsSettingsPanelProps {
   settings: ToolSettings | null;
   form: ToolFormState;
-  error: string | null;
   saving: boolean;
   canEnableWebSearch: boolean;
   onChange: (updater: (current: ToolFormState) => ToolFormState) => void;
@@ -1019,7 +1006,6 @@ interface ToolsSettingsPanelProps {
 function ToolsSettingsPanel({
   settings,
   form,
-  error,
   saving,
   canEnableWebSearch,
   onChange,
@@ -1084,8 +1070,6 @@ function ToolsSettingsPanel({
           </p>
         </section>
 
-        {error && <p className="settings-error">{error}</p>}
-
         <div className="form-actions">
           <button type="submit" className="form-btn-submit" disabled={saving}>
             {saving ? 'Saving…' : 'Save Tool Settings'}
@@ -1099,7 +1083,6 @@ function ToolsSettingsPanel({
 interface FeedSettingsPanelProps {
   settings: FeedSettings | null;
   form: FeedFormState;
-  error: string | null;
   saving: boolean;
   onChange: (updater: (current: FeedFormState) => FeedFormState) => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -1108,7 +1091,6 @@ interface FeedSettingsPanelProps {
 function FeedSettingsPanel({
   settings,
   form,
-  error,
   saving,
   onChange,
   onSubmit,
@@ -1146,8 +1128,6 @@ function FeedSettingsPanel({
 	            Saved: {settings?.historyLimit.toLocaleString() ?? 'loading'}
 	          </p>
         </section>
-
-        {error && <p className="settings-error">{error}</p>}
 
         <div className="form-actions">
           <button type="submit" className="form-btn-submit" disabled={saving}>
