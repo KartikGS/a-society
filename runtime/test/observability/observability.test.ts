@@ -353,6 +353,43 @@ async function run() {
     assert.deepStrictEqual(renderer.events, []);
   });
 
+  await test('Scenario: output-limit parse failure asks the model to continue in smaller chunks', async () => {
+    clearTestSpans();
+    clearTestMetrics();
+    const mockProvider = new MockProvider([
+      {
+        type: 'text',
+        text: 'I started a large file but did not finish.',
+        contextUsage: 8192,
+        finishReason: 'length',
+      }
+    ]);
+    const originalExecuteTurn = LLMGateway.prototype.executeTurn;
+    LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
+      return originalExecuteTurn.call(projectGateway(mockProvider), sys, hist, opts);
+    };
+
+    try {
+      await runRoleTurn({
+        workspaceRoot: tmpDir,
+        roleInstanceId: 'curator',
+        providedSystemPrompt: 'System prompt',
+        flowRef: directRunFlowRef,
+        providedHistory: [{ role: 'user', content: 'Produce a handoff.' }],
+      });
+      assert.fail('Expected parse failure to propagate as HandoffParseError.');
+    } catch (error: any) {
+      assert.ok(error instanceof HandoffParseError);
+      assert.strictEqual(error.contextUsage, 8192);
+      assert.strictEqual(error.details.operatorSummary, 'Model output limit reached before valid handoff');
+      assert.ok(error.details.modelRepairMessage.includes('hit the model output limit (length)'));
+      assert.ok(error.details.modelRepairMessage.includes('Continue from the interrupted point in smaller chunks.'));
+      assert.ok(error.details.modelRepairMessage.includes('one concrete tool action at a time'));
+    } finally {
+      LLMGateway.prototype.executeTurn = originalExecuteTurn;
+    }
+  });
+
   await test('Scenario: Orchestrator emits usage only after accepted handoff and before handoff notice', async () => {
     clearTestSpans();
     clearTestMetrics();

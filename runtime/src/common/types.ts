@@ -300,11 +300,12 @@ export interface TurnOptions {
 export interface GatewayTurnResult {
   text: string;
   contextUsage?: number;
+  finishReason?: string;
 }
 
 export type ProviderTurnResult =
-  | { type: 'text';       text: string;                                                   contextUsage?: number }
-  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; contextUsage?: number };
+  | { type: 'text';       text: string;                                                   contextUsage?: number; finishReason?: string }
+  | { type: 'tool_calls'; calls: ToolCall[]; continuationMessages: RuntimeMessageParam[]; contextUsage?: number; finishReason?: string };
 
 export interface LLMProvider {
   executeTurn(

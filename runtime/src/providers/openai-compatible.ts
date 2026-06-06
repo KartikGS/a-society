@@ -276,12 +276,18 @@ export class OpenAICompatibleProvider implements LLMProvider {
               text: fullText || undefined,
               providerReasoning: this.buildProviderReasoningBlocks(reasoningTrace),
             }],
-            contextUsage
+            contextUsage,
+            ...(finishReason ? { finishReason } : {}),
           };
         }
 
         span.setAttribute('provider.result_type', 'text');
-        return { type: 'text' as const, text: fullText, contextUsage };
+        return {
+          type: 'text' as const,
+          text: fullText,
+          contextUsage,
+          ...(finishReason ? { finishReason } : {}),
+        };
       } catch (err: any) {
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
           span.addEvent('provider.aborted');
