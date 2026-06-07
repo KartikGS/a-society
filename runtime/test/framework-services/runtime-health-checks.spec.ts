@@ -1,9 +1,8 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { it as test } from 'vitest';
+import { expect, it } from 'vitest';
 import {
   buildRuntimeHealthRepairGuidance,
   runRuntimeHealthChecks
@@ -76,18 +75,18 @@ function cleanup(tmpRoot: string): void {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }
 
-test('passes for a minimal healthy runtime fixture', () => {
+it('passes for a minimal healthy runtime fixture', () => {
   const fixture = makeProjectFixture();
   try {
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, true, `expected healthy fixture, got errors: ${result.errors.join('; ')}`);
-    assert.deepStrictEqual(result.errors, []);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('passes when workflow uses a numbered role instance backed by the base role folder', () => {
+it('passes when workflow uses a numbered role instance backed by the base role folder', () => {
   const fixture = makeProjectFixture();
   try {
     fs.writeFileSync(
@@ -105,13 +104,14 @@ test('passes when workflow uses a numbered role instance backed by the base role
     );
 
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, true, `expected role instance to use base owner folder, got errors: ${result.errors.join('; ')}`);
+    expect(result.ok).toBe(true);
+    expect(result.errors).toEqual([]);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('fails when a role folder is missing ownership.yaml', () => {
+it('fails when a role folder is missing ownership.yaml', () => {
   const fixture = makeProjectFixture();
   try {
     fs.rmSync(
@@ -119,17 +119,14 @@ test('fails when a role folder is missing ownership.yaml', () => {
       { force: true }
     );
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, false);
-    assert.ok(
-      result.errors.some((error) => error.includes('Role owner ownership.yaml is missing')),
-      `expected missing ownership error, got: ${result.errors.join('; ')}`
-    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes('Role owner ownership.yaml is missing'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('fails when required readings reference an unregistered variable', () => {
+it('fails when required readings reference an unregistered variable', () => {
   const fixture = makeProjectFixture();
   try {
     fs.writeFileSync(
@@ -138,32 +135,26 @@ test('fails when required readings reference an unregistered variable', () => {
       'utf8'
     );
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, false);
-    assert.ok(
-      result.errors.some((error) => error.includes('references $MISSING_VAR')),
-      `expected missing variable error, got: ${result.errors.join('; ')}`
-    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes('references $MISSING_VAR'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('fails when the index points to a missing path', () => {
+it('fails when the index points to a missing path', () => {
   const fixture = makeProjectFixture();
   try {
     fs.rmSync(path.join(fixture.projectRoot, 'a-docs', 'agents.md'), { force: true });
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, false);
-    assert.ok(
-      result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> test-project/a-docs/agents.md, but that path is missing')),
-      `expected missing index target error, got: ${result.errors.join('; ')}`
-    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> test-project/a-docs/agents.md, but that path is missing'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('fails when a workflow node required reading duplicates startup role reading', () => {
+it('fails when a workflow node required reading duplicates startup role reading', () => {
   const fixture = makeProjectFixture();
   try {
     fs.writeFileSync(
@@ -182,36 +173,30 @@ test('fails when a workflow node required reading duplicates startup role readin
       'utf8'
     );
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, false);
-    assert.ok(
-      result.errors.some((error) => error.includes('repeats $TEST_PROJECT_AGENTS in required_readings')),
-      `expected required-reading overlap error, got: ${result.errors.join('; ')}`
-    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes('repeats $TEST_PROJECT_AGENTS in required_readings'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('fails when a project file is not covered by any ownership surface', () => {
+it('fails when a project file is not covered by any ownership surface', () => {
   const fixture = makeProjectFixture();
   try {
     fs.writeFileSync(path.join(fixture.projectRoot, 'LICENSE'), 'Test license\n', 'utf8');
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
-    assert.strictEqual(result.ok, false);
-    assert.ok(
-      result.errors.some((error) => error.includes('Project file LICENSE is not covered by any ownership.yaml surface')),
-      `expected uncovered file error, got: ${result.errors.join('; ')}`
-    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes('Project file LICENSE is not covered by any ownership.yaml surface'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
 });
 
-test('repair guidance names the completion signal that must be retried', () => {
+it('repair guidance names the completion signal that must be retried', () => {
   const guidance = buildRuntimeHealthRepairGuidance(
     ['Required workflow definition is missing at test-project/a-docs/workflow/main.yaml'],
     'meta-analysis-complete'
   );
-  assert.strictEqual(guidance.operatorSummary, 'A-docs runtime health checks failed');
-  assert.ok(guidance.modelRepairMessage.includes('type: meta-analysis-complete'));
+  expect(guidance.operatorSummary).toBe('A-docs runtime health checks failed');
+  expect(guidance.modelRepairMessage.includes('type: meta-analysis-complete')).toBeTruthy();
 });

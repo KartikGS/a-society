@@ -11,11 +11,10 @@
  *  5. Same-role-instance runnable nodes are serialized by the scheduler
  */
 
-import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterAll, it as test } from 'vitest';
+import { afterAll, expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -234,7 +233,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   };
 }
 
-test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
+it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
     const { bundleContent } = ContextInjectionService.buildContextBundle(
       projectNamespace,
       'owner',
@@ -242,12 +241,12 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
       recordDir
     );
 
-    assert.ok(bundleContent.includes('RUNTIME-LOADED REQUIRED READING'));
-    assert.ok(bundleContent.includes('These files are already loaded into this session by the runtime.'));
-    assert.ok(!bundleContent.includes('MANDATORY CONTEXT LOADING'));
+    expect(bundleContent.includes('RUNTIME-LOADED REQUIRED READING')).toBeTruthy();
+    expect(bundleContent.includes('These files are already loaded into this session by the runtime.')).toBeTruthy();
+    expect(bundleContent.includes('MANDATORY CONTEXT LOADING')).toBeFalsy();
   });
 
-  test('Same-node resume: role-scoped session transcript is preserved intact', async () => {
+  it('Same-node resume: role-scoped session transcript is preserved intact', async () => {
     resetState();
 
     const sessionId = ownerSessionId();
@@ -264,14 +263,14 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }, flowRef(), workspaceRoot);
 
     const loadedSession = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
-    assert.ok(loadedSession !== null, 'Session must be persisted before resume');
-    assert.strictEqual(loadedSession!.logicalSessionId, sessionId);
-    assert.strictEqual(loadedSession!.transcriptHistory.length, 2);
-    assert.strictEqual((loadedSession!.transcriptHistory[0] as any).content, 'original node entry message');
-    assert.strictEqual(loadedSession!.currentNodeId, 'owner-intake');
+    expect(loadedSession !== null).toBeTruthy();
+    expect(loadedSession!.logicalSessionId).toBe(sessionId);
+    expect(loadedSession!.transcriptHistory.length).toBe(2);
+    expect((loadedSession!.transcriptHistory[0] as any).content).toBe('original node entry message');
+    expect(loadedSession!.currentNodeId).toBe('owner-intake');
   });
 
-  test('Store: loading an incompatible flow is rejected but it remains listable for deletion', async () => {
+  it('Store: loading an incompatible flow is rejected but it remains listable for deletion', async () => {
     resetState();
 
     const v5Flow: any = {
@@ -290,14 +289,10 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     fs.mkdirSync(v5FlowDir, { recursive: true });
     fs.writeFileSync(path.join(v5FlowDir, 'flow.json'), JSON.stringify(v5Flow, null, 2));
 
-    assert.throws(
-      () => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot),
-      new RegExp(`only supports flow state version "${CURRENT_FLOW_STATE_VERSION}"`)
-    );
+    expect(() => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot))
+      .toThrow(new RegExp(`only supports flow state version "${CURRENT_FLOW_STATE_VERSION}"`));
 
-    assert.deepStrictEqual(
-      SessionStore.listFlowSummaries(workspaceRoot, projectNamespace),
-      [{
+    expect(SessionStore.listFlowSummaries(workspaceRoot, projectNamespace)).toEqual([{
         projectNamespace,
         flowId: 'v5-flow',
         status: 'completed',
@@ -307,11 +302,10 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
         recordName: undefined,
         recordSummary: undefined,
         updatedAt: fs.statSync(path.join(v5FlowDir, 'flow.json')).mtime.toISOString(),
-      }]
-    );
+      }]);
   });
 
-  test('Orchestrator: streamed assistant text is persisted before the turn completes', async () => {
+  it('Orchestrator: streamed assistant text is persisted before the turn completes', async () => {
     resetState();
 
     const flowRun = makeFlowRun({ runningNodes: ['owner-intake'] });
@@ -339,15 +333,15 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
       unpatch();
     }
 
-    assert.ok(partialObserved, 'partial streamed text should be saved while the provider is still running');
+    expect(partialObserved).toBeTruthy();
     const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
-    assert.ok(session !== null, 'role session should be saved');
-    const lastMessage = session!.transcriptHistory[session!.transcriptHistory.length - 1] as RuntimeMessageParam;
-    assert.strictEqual(lastMessage.role, 'assistant');
-    assert.strictEqual(lastMessage.content, finalText);
+    expect(session !== null).toBeTruthy();
+    const lastMessage = session!.transcriptHistory[session!.transcriptHistory.length - 1] as Extract<RuntimeMessageParam, { role: 'assistant' }>;
+    expect(lastMessage.role).toBe('assistant');
+    expect(lastMessage.content).toBe(finalText);
   });
 
-  test('Orchestrator: queued human input is consumed by the stored-flow scheduler', async () => {
+  it('Orchestrator: queued human input is consumed by the stored-flow scheduler', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -396,19 +390,19 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
 
     const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
     const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot)!;
-    assert.deepStrictEqual(updated.pendingHumanInputs, {});
-    assert.ok(updated.awaitingHumanNodes['owner-intake'], 'node should be waiting again after the mock turn re-prompts');
-    assert.ok(
+    expect(updated.pendingHumanInputs).toEqual({});
+    expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
+    expect(
       sink.events.some((event) => event.kind === 'human.resumed' && event.nodeId === 'owner-intake'),
       'queued input should resume the suspended node through the scheduler'
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       session.transcriptHistory.some((message: any) => message.role === 'user' && message.content.includes('Optimize for correctness first.')),
       'queued human input should be appended to the resumed transcript'
-    );
+    ).toBeTruthy();
   });
 
-  test('Orchestrator: interrupted same-node resume appends continuation prompt', async () => {
+  it('Orchestrator: interrupted same-node resume appends continuation prompt', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -448,27 +442,24 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
 
     const interruptedAssistant = seenMessages[seenMessages.length - 2] as any;
     const continuationMessage = seenMessages[seenMessages.length - 1] as any;
-    assert.strictEqual(interruptedAssistant.role, 'assistant');
-    assert.strictEqual(
-      interruptedAssistant.content,
-      'Partial streamed answer before server shutdown.'
-    );
-    assert.strictEqual(continuationMessage.role, 'user');
-    assert.ok(
+    expect(interruptedAssistant.role).toBe('assistant');
+    expect(interruptedAssistant.content).toBe('Partial streamed answer before server shutdown.');
+    expect(continuationMessage.role).toBe('user');
+    expect(
       continuationMessage.content.includes('previous assistant response was interrupted'),
       'expected the resume turn to ask the role to continue'
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       !sink.events.some(event => event.kind === 'role.active' && event.nodeId === 'owner-intake'),
       'same active node resume should not emit a fresh role.active activation'
-    );
-    assert.ok(
+    ).toBeTruthy();
+    expect(
       sink.events.some(event => event.kind === 'role.resumed' && event.nodeId === 'owner-intake' && event.reason === 'interrupted-turn'),
       'interrupted same-node resume should emit a visible resume boundary'
-    );
+    ).toBeTruthy();
   });
 
-  test('Orchestrator: later same-role node reuses role-scoped session and appends transition packet', async () => {
+  it('Orchestrator: later same-role node reuses role-scoped session and appends transition packet', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -511,21 +502,21 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
-    assert.ok(session !== null, 'role-scoped Owner session must be preserved');
-    assert.strictEqual((session!.transcriptHistory[0] as any).content, 'owner-intake entry message');
+    expect(session !== null).toBeTruthy();
+    expect((session!.transcriptHistory[0] as any).content).toBe('owner-intake entry message');
 
     const transitionMessage = (session!.transcriptHistory as any[])
       .find(message => message.role === 'user' && typeof message.content === 'string' &&
         message.content.includes('Node owner-gate started at:'));
 
-    assert.ok(transitionMessage, 'expected a node-entry packet in the reused Owner session');
-    assert.ok(transitionMessage.content.includes('Handoffs received:'));
-    assert.ok(transitionMessage.content.includes('From predecessor ta:'));
-    assert.ok(transitionMessage.content.includes('TA design content.'));
-    assert.strictEqual(session!.currentNodeId, 'owner-gate');
+    expect(transitionMessage).toBeTruthy();
+    expect(transitionMessage.content.includes('Handoffs received:')).toBeTruthy();
+    expect(transitionMessage.content.includes('From predecessor ta:')).toBeTruthy();
+    expect(transitionMessage.content.includes('TA design content.')).toBeTruthy();
+    expect(session!.currentNodeId).toBe('owner-gate');
   });
 
-  test('Orchestrator: reopened same-role node keeps prior session and appends reopened packet', async () => {
+  it('Orchestrator: reopened same-role node keeps prior session and appends reopened packet', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -567,20 +558,20 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
-    assert.ok(session !== null, 'reopened node should keep the prior role-scoped session');
+    expect(session !== null).toBeTruthy();
 
     const reopenedMessage = (session!.transcriptHistory as any[])
       .find(message => message.role === 'user' && typeof message.content === 'string' &&
         message.content.includes('Node owner-intake resumed at:'));
 
-    assert.ok(reopenedMessage, 'expected a resumed node-entry packet in the reused Owner session');
-    assert.ok(reopenedMessage.content.includes('Handoffs received:'));
-    assert.ok(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):'));
-    assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
-    assert.strictEqual(session!.currentNodeId, 'owner-intake');
+    expect(reopenedMessage).toBeTruthy();
+    expect(reopenedMessage.content.includes('Handoffs received:')).toBeTruthy();
+    expect(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):')).toBeTruthy();
+    expect(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.')).toBeTruthy();
+    expect(session!.currentNodeId).toBe('owner-intake');
   });
 
-  test('Orchestrator: backward re-entry to an earlier node is framed as reopened even after the role visited another node', async () => {
+  it('Orchestrator: backward re-entry to an earlier node is framed as reopened even after the role visited another node', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -623,25 +614,25 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
-    assert.ok(session !== null, 'backward re-entry should keep the prior role-scoped session');
+    expect(session !== null).toBeTruthy();
 
     const reopenedMessage = (session!.transcriptHistory as any[])
       .find(message => message.role === 'user' && typeof message.content === 'string' &&
         message.content.includes('Node owner-intake resumed at:'));
 
-    assert.ok(reopenedMessage, 'expected backward re-entry to use resumed node-entry framing');
-    assert.ok(!reopenedMessage.content.includes('Node owner-gate started at:'));
-    assert.ok(reopenedMessage.content.includes('Handoffs received:'));
-    assert.ok(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):'));
-    assert.ok(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.'));
-    assert.strictEqual(session!.currentNodeId, 'owner-intake');
-    assert.ok(
+    expect(reopenedMessage).toBeTruthy();
+    expect(reopenedMessage.content.includes('Node owner-gate started at:')).toBeFalsy();
+    expect(reopenedMessage.content.includes('Handoffs received:')).toBeTruthy();
+    expect(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):')).toBeTruthy();
+    expect(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.')).toBeTruthy();
+    expect(session!.currentNodeId).toBe('owner-intake');
+    expect(
       sink.events.some(event => event.kind === 'role.active' && event.nodeId === 'owner-intake'),
       'backward re-entry should emit a fresh role.active activation'
-    );
+    ).toBeTruthy();
   });
 
-  test('Orchestrator: role instances with the same base role use separate sessions', async () => {
+  it('Orchestrator: role instances with the same base role use separate sessions', async () => {
     resetState();
 
     const flowRun = makeInstanceFlowRun({ runningNodes: ['owner-one'] });
@@ -674,18 +665,18 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
       workspaceRoot
     );
 
-    assert.ok(ownerOneSession !== null, 'owner_1 should have a separate session');
-    assert.ok(ownerTwoSession !== null, 'owner_2 should have a separate session');
-    assert.strictEqual(ownerOneSession!.roleName, 'owner_1');
-    assert.strictEqual(ownerTwoSession!.roleName, 'owner_2');
-    assert.strictEqual(ownerOneSession!.logicalSessionId, ownerInstanceSessionId(1));
-    assert.strictEqual(ownerTwoSession!.logicalSessionId, ownerInstanceSessionId(2));
-    assert.notDeepStrictEqual(ownerOneSession!.transcriptHistory, ownerTwoSession!.transcriptHistory);
-    assert.ok((ownerOneSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
-    assert.ok((ownerTwoSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
+    expect(ownerOneSession !== null).toBeTruthy();
+    expect(ownerTwoSession !== null).toBeTruthy();
+    expect(ownerOneSession!.roleName).toBe('owner_1');
+    expect(ownerTwoSession!.roleName).toBe('owner_2');
+    expect(ownerOneSession!.logicalSessionId).toBe(ownerInstanceSessionId(1));
+    expect(ownerTwoSession!.logicalSessionId).toBe(ownerInstanceSessionId(2));
+    expect(ownerOneSession!.transcriptHistory).not.toEqual(ownerTwoSession!.transcriptHistory);
+    expect((ownerOneSession!.systemPrompt ?? '').includes('Loaded from base role owner.')).toBeTruthy();
+    expect((ownerTwoSession!.systemPrompt ?? '').includes('Loaded from base role owner.')).toBeTruthy();
   });
 
-  test('Orchestrator: multiple queued human replies resume distinct role instances in one scheduler pass', async () => {
+  it('Orchestrator: multiple queued human replies resume distinct role instances in one scheduler pass', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -747,15 +738,15 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
       .filter((event) => event.kind === 'human.resumed')
       .map((event: any) => event.nodeId)
       .sort();
-    assert.deepStrictEqual(resumedNodeIds, ['owner-one', 'owner-two']);
+    expect(resumedNodeIds).toEqual(['owner-one', 'owner-two']);
 
     const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot)!;
-    assert.deepStrictEqual(updated.pendingHumanInputs, {});
-    assert.ok(updated.awaitingHumanNodes['owner-one']);
-    assert.ok(updated.awaitingHumanNodes['owner-two']);
+    expect(updated.pendingHumanInputs).toEqual({});
+    expect(updated.awaitingHumanNodes['owner-one']).toBeTruthy();
+    expect(updated.awaitingHumanNodes['owner-two']).toBeTruthy();
   });
 
-  test('Orchestrator: awaiting-handoff node wakes on inbound successor handoff', async () => {
+  it('Orchestrator: awaiting-handoff node wakes on inbound successor handoff', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -793,11 +784,11 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
-    assert.ok(!updated.awaitingHandoff.includes('owner-intake'));
-    assert.ok(updated.awaitingHumanNodes['owner-intake']);
+    expect(updated.awaitingHandoff.includes('owner-intake')).toBeFalsy();
+    expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
   });
 
-  test('Orchestrator: same-role received handoffs are claimed in graph order', async () => {
+  it('Orchestrator: same-role received handoffs are claimed in graph order', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -832,16 +823,12 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
-    assert.ok(updated.awaitingHumanNodes['owner-intake'], 'earlier graph node should claim the owner role first');
-    assert.ok(!updated.runningNodes.includes('owner-gate'), 'later same-role node should not be claimed first');
-    assert.deepStrictEqual(
-      updated.receivingHandoff['ta=>owner-gate'],
-      [path.relative(workspaceRoot, taArtifact)],
-      'later same-role received handoff should remain ready for a later scheduler pass'
-    );
+    expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
+    expect(updated.runningNodes.includes('owner-gate')).toBeFalsy();
+    expect(updated.receivingHandoff['ta=>owner-gate']).toEqual([path.relative(workspaceRoot, taArtifact)]);
   });
 
-  test('Orchestrator: same-role-instance initial running nodes are serialized by the scheduler', async () => {
+  it('Orchestrator: same-role-instance initial running nodes are serialized by the scheduler', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -870,11 +857,11 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
-    assert.ok(!updated.runningNodes.includes('owner-gate'), 'later same-role node should not be claimed while owner-intake is suspended');
-    assert.ok(updated.awaitingHumanNodes['owner-intake'], 'first same-role node should be awaiting human input');
+    expect(updated.runningNodes.includes('owner-gate')).toBeFalsy();
+    expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
   });
 
-  test('Orchestrator: handoff to busy same-role target is accepted and left ready', async () => {
+  it('Orchestrator: handoff to busy same-role target is accepted and left ready', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -900,12 +887,9 @@ test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING'
     }
 
     const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
-    assert.ok(updated.completedHandoffs.includes('ta=>owner-gate'), 'completed handoffs should include ta=>owner-gate');
-    assert.deepStrictEqual(updated.receivingHandoff['ta=>owner-gate'], [handoffArtifact], 'busy same-role handoff target should receive the handoff');
-    assert.ok(updated.runningNodes.includes('owner-intake'), 'existing same-role node should remain running');
-    assert.ok(!updated.runningNodes.includes('owner-gate'), 'busy same-role target should not be claimed immediately');
-    assert.ok(
-      !sink.events.some(event => event.kind === 'repair.requested'),
-      'busy same-role handoff should not request repair'
-    );
+    expect(updated.completedHandoffs.includes('ta=>owner-gate')).toBeTruthy();
+    expect(updated.receivingHandoff['ta=>owner-gate']).toEqual([handoffArtifact]);
+    expect(updated.runningNodes.includes('owner-intake')).toBeTruthy();
+    expect(updated.runningNodes.includes('owner-gate')).toBeFalsy();
+    expect(sink.events.some(event => event.kind === 'repair.requested')).toBeFalsy();
   });

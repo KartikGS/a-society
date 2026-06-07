@@ -153,6 +153,8 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
 
     if (notReceivedFromNodeIds.length > 0) {
       lines.push('Handoffs not yet received from:');
+      lines.push('Do not search the record folder for these handoffs. Any matching files there may be stale; the runtime will inject each handoff here when it is ready.');
+      lines.push('If you need one of these handoffs before you can proceed, emit await-handoff.');
       for (const id of notReceivedFromNodeIds) lines.push(`- ${id}`);
       lines.push('');
     }

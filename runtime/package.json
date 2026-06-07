@@ -8,9 +8,8 @@
     "build:ui": "vite build",
     "build": "tsc && npm run build:ui",
     "lint": "eslint .",
-    "check": "npm run lint && npm run build && npm test && npm run test:vitest",
-    "test": "tsx test/run-tests.ts",
-    "test:vitest": "vitest run --config vitest.config.ts"
+    "check": "npm run lint && npm run build && npm test",
+    "test": "vitest run --config vitest.config.ts"
   },
   "engines": {
     "node": ">=18"

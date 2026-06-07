@@ -1,8 +1,7 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { it as test } from 'vitest';
+import { expect, it } from 'vitest';
 import {
   validateWorkflowFile,
   validateGraph,
@@ -32,7 +31,7 @@ function flowState(overrides: Partial<WorkflowStateValidationInput> = {}): Workf
   };
 }
 
-test('valid graph passes validation', () => {
+it('valid graph passes validation', () => {
   const graph = {
     workflow: {
       name: 'Test',
@@ -48,15 +47,15 @@ test('valid graph passes validation', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('missing workflow key produces error', () => {
+it('missing workflow key produces error', () => {
   const errors = validateGraph({ other: 'value' });
-  assert.ok(errors.some((e: string) => e.includes('workflow')));
+  expect(errors.some((e: string) => e.includes('workflow'))).toBeTruthy();
 });
 
-test('duplicate node id produces error', () => {
+it('duplicate node id produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -68,10 +67,10 @@ test('duplicate node id produces error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('not unique') && e.includes('n1')));
+  expect(errors.some((e: string) => e.includes('not unique') && e.includes('n1'))).toBeTruthy();
 });
 
-test('edge referencing non-existent node produces error', () => {
+it('edge referencing non-existent node produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -80,10 +79,10 @@ test('edge referencing non-existent node produces error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('nonexistent') && e.includes('does not match any node id')));
+  expect(errors.some((e: string) => e.includes('nonexistent') && e.includes('does not match any node id'))).toBeTruthy();
 });
 
-test('extra keys on node produces error', () => {
+it('extra keys on node produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -92,10 +91,10 @@ test('extra keys on node produces error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('invalid keys: invalid')));
+  expect(errors.some((e: string) => e.includes('invalid keys: invalid'))).toBeTruthy();
 });
 
-test('extra keys on workflow produce error', () => {
+it('extra keys on workflow produce error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -105,17 +104,17 @@ test('extra keys on workflow produce error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('workflow contains invalid keys: graph')));
+  expect(errors.some((e: string) => e.includes('workflow contains invalid keys: graph'))).toBeTruthy();
 });
 
-test('runtime workflow contract omits unsupported legacy workflow keys', () => {
+it('runtime workflow contract omits unsupported legacy workflow keys', () => {
   const contract = fs.readFileSync(path.join(SOCIETY_ROOT, 'runtime', 'contracts', 'workflow.md'), 'utf8');
   for (const key of ['use_when', 'companion_docs', 'session_model', 'forward_pass_closure']) {
-    assert.ok(!contract.includes(`${key}:`), `contract should not advertise unsupported key ${key}`);
+    expect(contract.includes(`${key}:`)).toBeFalsy();
   }
 });
 
-test('valid node with human-collaborative passes', () => {
+it('valid node with human-collaborative passes', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -124,10 +123,10 @@ test('valid node with human-collaborative passes', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('role display names are rejected', () => {
+it('role display names are rejected', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -136,10 +135,10 @@ test('role display names are rejected', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('Invalid role id "Owner"')));
+  expect(errors.some((e: string) => e.includes('Invalid role id "Owner"'))).toBeTruthy();
 });
 
-test('node-level workflow guidance fields pass when well-formed', () => {
+it('node-level workflow guidance fields pass when well-formed', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -159,10 +158,10 @@ test('node-level workflow guidance fields pass when well-formed', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('non-string human-collaborative value is rejected', () => {
+it('non-string human-collaborative value is rejected', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -171,14 +170,14 @@ test('non-string human-collaborative value is rejected', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(
+  expect(
     errors.some((e: string) =>
       e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('empty or whitespace human-collaborative value is rejected', () => {
+it('empty or whitespace human-collaborative value is rejected', () => {
   const emptyValueGraph = {
     workflow: {
       name: 'T',
@@ -197,19 +196,19 @@ test('empty or whitespace human-collaborative value is rejected', () => {
   const emptyErrors = validateGraph(emptyValueGraph);
   const whitespaceErrors = validateGraph(whitespaceValueGraph);
 
-  assert.ok(
+  expect(
     emptyErrors.some((e: string) =>
       e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
     )
-  );
-  assert.ok(
+  ).toBeTruthy();
+  expect(
     whitespaceErrors.some((e: string) =>
       e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('unknown node keys still fail after allowing human-collaborative', () => {
+it('unknown node keys still fail after allowing human-collaborative', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -225,25 +224,25 @@ test('unknown node keys still fail after allowing human-collaborative', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('invalid keys: invalid')));
+  expect(errors.some((e: string) => e.includes('invalid keys: invalid'))).toBeTruthy();
 });
 
-test('existing workflow document without human-collaborative remains valid', () => {
+it('existing workflow document without human-collaborative remains valid', () => {
   const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.yaml'));
-  assert.strictEqual(result.valid, true, `Expected valid workflow, got errors: ${result.errors.join('; ')}`);
+  expect(result.valid).toBe(true);
 });
 
-test('valid fixture file passes', () => {
+it('valid fixture file passes', () => {
   const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.yaml'));
-  assert.strictEqual(result.valid, true, `Expected valid, got errors: ${result.errors.join('; ')}`);
+  expect(result.valid).toBe(true);
 });
 
-test('file without frontmatter fails', () => {
+it('file without frontmatter fails', () => {
   const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-no-frontmatter.yaml'));
-  assert.strictEqual(result.valid, false);
+  expect(result.valid).toBe(false);
 });
 
-test('neighboring same-role-instance nodes pass', () => {
+it('neighboring same-role-instance nodes pass', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -255,10 +254,10 @@ test('neighboring same-role-instance nodes pass', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('neighboring numbered role instances with the same base role pass', () => {
+it('neighboring numbered role instances with the same base role pass', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -274,10 +273,10 @@ test('neighboring numbered role instances with the same base role pass', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('non-Owner start node produces error', () => {
+it('non-Owner start node produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -289,10 +288,10 @@ test('non-Owner start node produces error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('Start node "owner-intake" must have role "owner"')));
+  expect(errors.some((e: string) => e.includes('Start node "owner-intake" must have role "owner"'))).toBeTruthy();
 });
 
-test('first node must be owner-intake', () => {
+it('first node must be owner-intake', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -304,14 +303,14 @@ test('first node must be owner-intake', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(
+  expect(
     errors.some((e: string) =>
       e.includes('workflow.nodes[0].id must be exactly "owner-intake"')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('multiple start nodes produce error', () => {
+it('multiple start nodes produce error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -324,10 +323,10 @@ test('multiple start nodes produce error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('Workflow must have exactly one start node (found 2)')));
+  expect(errors.some((e: string) => e.includes('Workflow must have exactly one start node (found 2)'))).toBeTruthy();
 });
 
-test('non-Owner end node produces error', () => {
+it('non-Owner end node produces error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -339,10 +338,10 @@ test('non-Owner end node produces error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('End node "n2" must have role "owner"')));
+  expect(errors.some((e: string) => e.includes('End node "n2" must have role "owner"'))).toBeTruthy();
 });
 
-test('sole node must be owner', () => {
+it('sole node must be owner', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -351,10 +350,10 @@ test('sole node must be owner', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('Sole node role must be exactly "owner"')));
+  expect(errors.some((e: string) => e.includes('Sole node role must be exactly "owner"'))).toBeTruthy();
 });
 
-test('valid owner-bounded graph passes', () => {
+it('valid owner-bounded graph passes', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -370,10 +369,10 @@ test('valid owner-bounded graph passes', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('cyclic graph produces acyclic validation error', () => {
+it('cyclic graph produces acyclic validation error', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -392,15 +391,15 @@ test('cyclic graph produces acyclic validation error', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(
+  expect(
     errors.some((e: string) =>
       e.includes('Workflow graph must be acyclic') &&
       e.includes('curator-a -> curator-b -> curator-a')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('numbered Owner instances at start/end produce errors', () => {
+it('numbered Owner instances at start/end produce errors', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -416,11 +415,11 @@ test('numbered Owner instances at start/end produce errors', () => {
     },
   };
   const errors = validateGraph(graph);
-  assert.ok(errors.some((e: string) => e.includes('Start node "owner-intake" must have role "owner"')));
-  assert.ok(errors.some((e: string) => e.includes('End node "n3" must have role "owner"')));
+  expect(errors.some((e: string) => e.includes('Start node "owner-intake" must have role "owner"'))).toBeTruthy();
+  expect(errors.some((e: string) => e.includes('End node "n3" must have role "owner"'))).toBeTruthy();
 });
 
-test('state-aware validation accepts preserved active flow state', () => {
+it('state-aware validation accepts preserved active flow state', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -442,10 +441,10 @@ test('state-aware validation accepts preserved active flow state', () => {
       'owner-intake=>curator-work': ['record/brief.md'],
     },
   }));
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('state-aware validation rejects nodes removed from active flow state', () => {
+it('state-aware validation rejects nodes removed from active flow state', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -465,14 +464,14 @@ test('state-aware validation rejects nodes removed from active flow state', () =
     awaitingHandoff: ['missing-awaiting-handoff'],
   }));
 
-  assert.ok(errors.some((e: string) => e.includes('"missing-running"') && e.includes('runningNodes')));
-  assert.ok(errors.some((e: string) => e.includes('"missing-awaiting"') && e.includes('awaitingHumanNodes')));
-  assert.ok(errors.some((e: string) => e.includes('"missing-pending"') && e.includes('pendingHumanInputs')));
-  assert.ok(errors.some((e: string) => e.includes('"missing-visited"') && e.includes('visitedNodeIds')));
-  assert.ok(errors.some((e: string) => e.includes('"missing-awaiting-handoff"') && e.includes('awaitingHandoff')));
+  expect(errors.some((e: string) => e.includes('"missing-running"') && e.includes('runningNodes'))).toBeTruthy();
+  expect(errors.some((e: string) => e.includes('"missing-awaiting"') && e.includes('awaitingHumanNodes'))).toBeTruthy();
+  expect(errors.some((e: string) => e.includes('"missing-pending"') && e.includes('pendingHumanInputs'))).toBeTruthy();
+  expect(errors.some((e: string) => e.includes('"missing-visited"') && e.includes('visitedNodeIds'))).toBeTruthy();
+  expect(errors.some((e: string) => e.includes('"missing-awaiting-handoff"') && e.includes('awaitingHandoff'))).toBeTruthy();
 });
 
-test('state-aware validation rejects orphaned handoff edge state', () => {
+it('state-aware validation rejects orphaned handoff edge state', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -494,19 +493,19 @@ test('state-aware validation rejects orphaned handoff edge state', () => {
     },
   }));
 
-  assert.ok(
+  expect(
     errors.some((e: string) =>
       e.includes('completedHandoffs contains "owner-intake=>owner-close"')
     )
-  );
-  assert.ok(
+  ).toBeTruthy();
+  expect(
     errors.some((e: string) =>
       e.includes('receivingHandoff contains "owner-close=>owner-intake"')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('state-aware validation allows backward receiving handoff along an existing forward edge', () => {
+it('state-aware validation allows backward receiving handoff along an existing forward edge', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -526,10 +525,10 @@ test('state-aware validation allows backward receiving handoff along an existing
       'curator-work=>owner-intake': ['record/backward.md'],
     },
   }));
-  assert.deepStrictEqual(errors, []);
+  expect(errors).toEqual([]);
 });
 
-test('state-aware validation rejects awaiting-human role changes', () => {
+it('state-aware validation rejects awaiting-human role changes', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -542,14 +541,14 @@ test('state-aware validation rejects awaiting-human role changes', () => {
       'owner-intake': { role: 'curator', reason: 'prompt-human' },
     },
   }));
-  assert.ok(
+  expect(
     errors.some((e: string) =>
       e.includes('awaitingHumanNodes references node "owner-intake" with role "curator"')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('state-aware validation rejects impossible awaiting-handoff waits', () => {
+it('state-aware validation rejects impossible awaiting-handoff waits', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -563,58 +562,54 @@ test('state-aware validation rejects impossible awaiting-handoff waits', () => {
   const errors = validateGraph(graph, undefined, flowState({
     awaitingHandoff: ['owner-intake'],
   }));
-  assert.ok(
+  expect(
     errors.some((e: string) =>
       e.includes('awaitingHandoff contains "owner-intake"') &&
       e.includes('has no inbound edge')
     )
-  );
+  ).toBeTruthy();
 });
 
-test('live A-Society workflows pass validation', () => {
+it('live A-Society workflows pass validation', () => {
   for (const workflowPath of LIVE_WORKFLOWS) {
     const result = validateWorkflowFile(workflowPath);
-    assert.strictEqual(
-      result.valid,
-      true,
-      `Live workflow ${path.basename(workflowPath)} invalid:\n${result.errors.map(e => '  ' + e).join('\n')}`
-    );
+    expect(result.valid, `Live workflow ${path.basename(workflowPath)} invalid:\n${result.errors.map(e => '  ' + e).join('\n')}`).toBe(true);
   }
 });
 
-test('buildWorkflowRepairGuidance: schema errors produce Workflow schema invalid summary', () => {
+it('buildWorkflowRepairGuidance: schema errors produce Workflow schema invalid summary', () => {
   const errors = ['workflow.nodes[0].id must be a non-empty string', 'workflow.name must be a non-empty string'];
   const guidance = buildWorkflowRepairGuidance(errors);
-  assert.strictEqual(guidance.operatorSummary, 'Workflow schema invalid');
-  assert.ok(guidance.modelRepairMessage.includes('workflow.nodes[0].id'));
+  expect(guidance.operatorSummary).toBe('Workflow schema invalid');
+  expect(guidance.modelRepairMessage.includes('workflow.nodes[0].id')).toBeTruthy();
 });
 
-test('buildWorkflowRepairGuidance: YAML parse errors produce Workflow parse failure summary', () => {
+it('buildWorkflowRepairGuidance: YAML parse errors produce Workflow parse failure summary', () => {
   const errors = ['YAML parse error: unexpected token'];
   const guidance = buildWorkflowRepairGuidance(errors);
-  assert.strictEqual(guidance.operatorSummary, 'Workflow parse failure');
-  assert.ok(guidance.modelRepairMessage.includes('YAML parse error'));
+  expect(guidance.operatorSummary).toBe('Workflow parse failure');
+  expect(guidance.modelRepairMessage.includes('YAML parse error')).toBeTruthy();
 });
 
-test('buildWorkflowRepairGuidance: model repair message does not contain description field', () => {
+it('buildWorkflowRepairGuidance: model repair message does not contain description field', () => {
   const errors = ['workflow.nodes[0].id must be a non-empty string'];
   const guidance = buildWorkflowRepairGuidance(errors);
-  assert.ok(!guidance.modelRepairMessage.includes('description'),
-    'model repair message must not mention "description" field — this is the anti-drift test');
+  expect(guidance.modelRepairMessage.includes('description'),
+    'model repair message must not mention "description" field — this is the anti-drift test').toBeFalsy();
 });
 
-test('buildWorkflowRepairGuidance: model repair message mentions all live schema node keys', () => {
+it('buildWorkflowRepairGuidance: model repair message mentions all live schema node keys', () => {
   const errors = ['workflow.name must be a non-empty string'];
   const guidance = buildWorkflowRepairGuidance(errors);
-  assert.ok(guidance.modelRepairMessage.includes('id:'), 'should mention id key');
-  assert.ok(guidance.modelRepairMessage.includes('role:'), 'should mention role key');
-  assert.ok(guidance.modelRepairMessage.includes('human-collaborative:'), 'should mention human-collaborative key');
+  expect(guidance.modelRepairMessage.includes('id:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('role:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('human-collaborative:')).toBeTruthy();
 });
 
-test('buildWorkflowRepairGuidance: model repair message mentions live schema edge keys', () => {
+it('buildWorkflowRepairGuidance: model repair message mentions live schema edge keys', () => {
   const errors = ['workflow.edges[0].from must be a non-empty string'];
   const guidance = buildWorkflowRepairGuidance(errors);
-  assert.ok(guidance.modelRepairMessage.includes('from:'), 'should mention from key');
-  assert.ok(guidance.modelRepairMessage.includes('to:'), 'should mention to key');
-  assert.ok(guidance.modelRepairMessage.includes('artifact:'), 'should mention artifact key');
+  expect(guidance.modelRepairMessage.includes('from:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('to:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('artifact:')).toBeTruthy();
 });

@@ -12,12 +12,11 @@
  * informational warnings and do not fail the suite, consistent with prior phases.
  */
 
-import assert from 'node:assert';
 import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, it as test } from 'vitest';
+import { afterAll, expect, it } from 'vitest';
 
 import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import {
@@ -79,18 +78,18 @@ fs.writeFileSync(
 import type { ScaffoldResult } from '../../src/framework-services/scaffolding-system.js';
 let scaffoldResult: ScaffoldResult | undefined;
 
-test('Scenario 1 — scaffold runs against live runtime a-docs manifest without throwing', () => {
-  assert.doesNotThrow(() => {
+it('Scenario 1 — scaffold runs against live runtime a-docs manifest without throwing', () => {
+  expect(() => {
     scaffoldResult = scaffoldFromManifestFile(
       PROJECT_ROOT,
       'Integration Test Project',
       SOCIETY_ROOT,
       MANIFEST_PATH,
     );
-  });
+  }).not.toThrow();
 });
 
-test('Scenario 1 — scaffold reports created and skipped arrays (no unexpected failures)', () => {
+it('Scenario 1 — scaffold reports created and skipped arrays (no unexpected failures)', () => {
   if (!scaffoldResult) return; // prior test failed
   // Copy failures allowed only if source is absent in framework (index drift)
   const unexpected = scaffoldResult.failed.filter(f => !f.reason.includes('Cannot copy from'));
@@ -98,58 +97,58 @@ test('Scenario 1 — scaffold reports created and skipped arrays (no unexpected 
     console.log(`    [info] ${scaffoldResult.failed.length} scaffold failure(s) — source templates absent in framework:`);
     scaffoldResult.failed.forEach(f => console.log(`      - ${path.basename(f.path)}: ${f.reason}`));
   }
-  assert.strictEqual(unexpected.length, 0, `Unexpected scaffold failures: ${JSON.stringify(unexpected)}`);
-  assert.ok(scaffoldResult.created.length > 0, 'Expected at least some files created');
+  expect(unexpected.length).toBe(0);
+  expect(scaffoldResult.created.length > 0).toBeTruthy();
 });
 
-test('Scenario 1 — a-docs/ directory tree was created', () => {
-  assert.ok(fs.existsSync(ADOCS_ROOT), 'a-docs/ does not exist');
-  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'roles')), 'roles/ subdir missing');
-  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'improvement')), 'improvement/ subdir missing');
-  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'roles', 'owner')), 'owner role subdir missing');
-  assert.ok(fs.existsSync(path.join(ADOCS_ROOT, 'improvement', 'meta-analysis.md')), 'meta-analysis instruction missing');
+it('Scenario 1 — a-docs/ directory tree was created', () => {
+  expect(fs.existsSync(ADOCS_ROOT)).toBeTruthy();
+  expect(fs.existsSync(path.join(ADOCS_ROOT, 'roles'))).toBeTruthy();
+  expect(fs.existsSync(path.join(ADOCS_ROOT, 'improvement'))).toBeTruthy();
+  expect(fs.existsSync(path.join(ADOCS_ROOT, 'roles', 'owner'))).toBeTruthy();
+  expect(fs.existsSync(path.join(ADOCS_ROOT, 'improvement', 'meta-analysis.md'))).toBeTruthy();
 });
 
 // ── Scenario 2: Scaffold idempotency ─────────────────────────────────────────
 // A second scaffold run on the same project skips all existing files.
 
-test('Scenario 2 — second scaffold run skips all existing files (no overwrites)', () => {
+it('Scenario 2 — second scaffold run skips all existing files (no overwrites)', () => {
   const second = scaffoldFromManifestFile(
     PROJECT_ROOT,
     'Integration Test Project',
     SOCIETY_ROOT,
     MANIFEST_PATH,
   );
-  assert.strictEqual(second.created.length, 0, `Expected 0 created, got ${second.created.length}`);
-  assert.ok(second.skipped.length > 0, 'Expected some skipped entries');
+  expect(second.created.length).toBe(0);
+  expect(second.skipped.length > 0).toBeTruthy();
 });
 
 // ── Scenario 3: Path Validator against live indexes ───────────────────────────
 
-test('Scenario 3 — path validator runs against general index without throwing', () => {
+it('Scenario 3 — path validator runs against general index without throwing', () => {
   let results: any[] | undefined;
-  assert.doesNotThrow(() => {
+  expect(() => {
     results = validatePaths(GENERAL_INDEX, REPO_ROOT);
-  });
-  assert.ok(Array.isArray(results));
-  assert.ok(results!.length > 0);
+  }).not.toThrow();
+  expect(Array.isArray(results)).toBeTruthy();
+  expect(results!.length > 0).toBeTruthy();
 });
 
-test('Scenario 3 — general index: all results have required fields', () => {
+it('Scenario 3 — general index: all results have required fields', () => {
   const results = validatePaths(GENERAL_INDEX, REPO_ROOT);
   for (const r of results) {
-    assert.ok('variable' in r, 'missing variable field');
-    assert.ok('path' in r, 'missing path field');
-    assert.ok('status' in r, 'missing status field');
-    assert.ok(['ok', 'missing', 'parse-error'].includes(r.status), `unexpected status: ${r.status}`);
+    expect('variable' in r).toBeTruthy();
+    expect('path' in r).toBeTruthy();
+    expect('status' in r).toBeTruthy();
+    expect(['ok', 'missing', 'parse-error']).toContain(r.status);
   }
 });
 
-test('Scenario 3 — path validator runs against internal index without throwing', () => {
-  assert.doesNotThrow(() => validatePaths(INTERNAL_INDEX, REPO_ROOT));
+it('Scenario 3 — path validator runs against internal index without throwing', () => {
+  expect(() => validatePaths(INTERNAL_INDEX, REPO_ROOT)).not.toThrow();
 });
 
-test('Scenario 3 — internal index: any failures are framework drift, not tool errors', () => {
+it('Scenario 3 — internal index: any failures are framework drift, not tool errors', () => {
   const results = validatePaths(INTERNAL_INDEX, REPO_ROOT);
   const missing = results.filter(r => r.status === 'missing');
   const parseErrors = results.filter(r => r.status === 'parse-error');
@@ -158,7 +157,7 @@ test('Scenario 3 — internal index: any failures are framework drift, not tool 
     missing.forEach(r => console.log(`      - ${r.variable}: ${r.path}`));
   }
   // parse-errors are tool errors; missing entries are framework drift — informational only
-  assert.strictEqual(parseErrors.length, 0, `Path validator produced parse errors: ${JSON.stringify(parseErrors)}`);
+  expect(parseErrors.length).toBe(0);
 });
 
 // ── Scenario 4: Workflow Graph Validator + Backward Pass Orderer ──────────────
@@ -166,39 +165,39 @@ test('Scenario 3 — internal index: any failures are framework drift, not tool 
 let backwardPlan: BackwardPassPlan | undefined;
 let backwardOrder: BackwardPassEntry[] | undefined;
 
-test('Scenario 4 — workflow graph validator runs on live workflow and reports framework drift without failing', () => {
+it('Scenario 4 — workflow graph validator runs on live workflow and reports framework drift without failing', () => {
   const result = validateWorkflowFile(WORKFLOW_FILE);
-  assert.ok(typeof result.valid === 'boolean');
-  assert.ok(Array.isArray(result.errors));
+  expect(typeof result.valid === 'boolean').toBeTruthy();
+  expect(Array.isArray(result.errors)).toBeTruthy();
   if (!result.valid) {
     console.log(`    [info] live workflow validation failed (framework drift): ${result.errors.join('; ')}`);
   }
 });
 
-test('Scenario 4 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
-  assert.doesNotThrow(() => {
+it('Scenario 4 — backward pass orderer runs on record-folder workflow.yaml without throwing', () => {
+  expect(() => {
     backwardPlan = computeBackwardPassPlan(RECORD_FOLDER, 'a-society-feedback', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
     backwardOrder = backwardPlan.entries;
-  });
+  }).not.toThrow();
 });
 
-test('Scenario 4 — backward pass order has at least two entries', () => {
+it('Scenario 4 — backward pass order has at least two entries', () => {
   if (!backwardOrder) return;
-  assert.ok(backwardOrder.length >= 2, `Expected ≥ 2 entries, got ${backwardOrder.length}`);
+  expect(backwardOrder.length >= 2).toBeTruthy();
 });
 
-test('Scenario 4 — backward pass last entry is feedback role', () => {
+it('Scenario 4 — backward pass last entry is feedback role', () => {
   if (!backwardOrder) return;
   const last = backwardOrder[backwardOrder.length - 1];
-  assert.strictEqual(last.stepType, 'feedback', 'Last entry should be the feedback role');
-  assert.strictEqual(last.sessionInstruction, 'new-session', 'Feedback step should open a new session');
-  assert.strictEqual(last.role, 'a-society-feedback', 'feedback entry role should equal feedbackRole argument');
+  expect(last.stepType).toBe('feedback');
+  expect(last.sessionInstruction).toBe('new-session');
+  expect(last.role).toBe('a-society-feedback');
 });
 
-test('Scenario 5 — meta-analysis entries reuse the existing session', () => {
+it('Scenario 5 — meta-analysis entries reuse the existing session', () => {
   if (!backwardOrder) return;
   backwardOrder.slice(0, -1).forEach((entry) => {
-    assert.strictEqual(entry.stepType, 'meta-analysis');
-    assert.strictEqual(entry.sessionInstruction, 'existing-session');
+    expect(entry.stepType).toBe('meta-analysis');
+    expect(entry.sessionInstruction).toBe('existing-session');
   });
 });

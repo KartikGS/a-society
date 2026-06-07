@@ -1,8 +1,7 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -96,14 +95,14 @@ async function runTest() {
 
   const updated = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
 
-  assert.deepStrictEqual(updated.receivingHandoff['review=>proposal'], [reviewFeedbackRel], 'proposal should receive the backward handoff');
-  assert.ok(updated.awaitingHandoff.includes('review'), 'review should suspend after sending work back');
-  assert.ok(!updated.completedHandoffs.includes('proposal=>review'), 'rejected edge must be invalidated');
-  assert.ok(updated.completedHandoffs.includes('proposal=>audit'), 'sibling completed edge must remain intact');
+  expect(updated.receivingHandoff['review=>proposal']).toEqual([reviewFeedbackRel]);
+  expect(updated.awaitingHandoff.includes('review')).toBeTruthy();
+  expect(updated.completedHandoffs.includes('proposal=>review')).toBeFalsy();
+  expect(updated.completedHandoffs.includes('proposal=>audit')).toBeTruthy();
   const reopenedSession = SessionStore.loadRoleSession('curator', flowRef, workspaceRoot);
-  assert.ok(reopenedSession, 'role-scoped predecessor session should be preserved for re-entry');
-  assert.strictEqual(reopenedSession!.currentNodeId, 'proposal');
-  assert.strictEqual((reopenedSession!.transcriptHistory[0] as any).content, 'stale proposal session');
+  expect(reopenedSession).toBeTruthy();
+  expect(reopenedSession!.currentNodeId).toBe('proposal');
+  expect((reopenedSession!.transcriptHistory[0] as any).content).toBe('stale proposal session');
 
   fs.rmSync(tmpBase, { recursive: true, force: true });
 }

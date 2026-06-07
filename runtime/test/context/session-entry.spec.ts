@@ -140,6 +140,28 @@ describe('session-entry', () => {
       expect(message).toContain('(File does not exist yet)');
     });
 
+    it('warns against reading pending handoffs from the record folder', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{ id: 'source-node', role: 'source' }, { id: 'owner-gate', role: 'owner' }],
+        edges: [{ from: 'source-node', to: 'owner-gate' }],
+      });
+
+      const message = buildForwardNodeEntryMessage({
+        nodeId: 'owner-gate',
+        workspaceRoot: fixture.tmpDir,
+        projectNamespace: fixture.projectNamespace,
+        handoffContext: {
+          wf: workflow,
+          completedHandoffs: [],
+        },
+      });
+
+      expect(message).toContain('Handoffs not yet received from:');
+      expect(message).toContain('Do not search the record folder for these handoffs. Any matching files there may be stale; the runtime will inject each handoff here when it is ready.');
+      expect(message).toContain('If you need one of these handoffs before you can proceed, emit await-handoff.');
+      expect(message).toContain('- source-node');
+    });
+
     it('renders superseded forward artifact paths for backward correction context', () => {
       const forwardRelPath = path.relative(fixture.tmpDir, fixture.artifactPath);
       const backwardRelPath = path.relative(fixture.tmpDir, fixture.backwardFeedbackPath);

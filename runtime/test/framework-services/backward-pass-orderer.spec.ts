@@ -1,8 +1,7 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { it as test } from 'vitest';
+import { expect, it } from 'vitest';
 import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import {
   buildBackwardPassPlan,
@@ -41,87 +40,87 @@ function sortedEdges<T extends { from: string; to: string }>(edges: T[]): T[] {
   return [...edges].sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
 }
 
-test('buildBackwardPassPlan (Graph-based, Linear): verifies edges and injection', () => {
+it('buildBackwardPassPlan (Graph-based, Linear): verifies edges and injection', () => {
   const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'a-society-feedback', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
 
-  assert.strictEqual(result.entries.length, 3);
+  expect(result.entries.length).toBe(3);
 
   const curatorEntry = result.entries.find(entry => entry.role === 'curator');
-  assert.ok(curatorEntry);
-  assert.deepStrictEqual(curatorEntry.findingsRolesToInject, []);
+  expect(curatorEntry).toBeTruthy();
+  expect(curatorEntry!.findingsRolesToInject).toEqual([]);
 
   const ownerEntry = result.entries.find(entry => entry.role === 'owner' && entry.stepType === 'meta-analysis');
-  assert.ok(ownerEntry);
-  assert.deepStrictEqual(ownerEntry.findingsRolesToInject, ['curator']);
+  expect(ownerEntry).toBeTruthy();
+  expect(ownerEntry!.findingsRolesToInject).toEqual(['curator']);
 
   const feedbackEntry = result.entries.at(-1)!;
-  assert.strictEqual(feedbackEntry.role, 'a-society-feedback');
-  assert.strictEqual(feedbackEntry.stepType, 'feedback');
-  assert.deepStrictEqual(sortedEdges(result.edges), sortedEdges([
+  expect(feedbackEntry.role).toBe('a-society-feedback');
+  expect(feedbackEntry.stepType).toBe('feedback');
+  expect(sortedEdges(result.edges)).toEqual(sortedEdges([
     { from: 'curator', to: 'owner' },
     { from: 'owner', to: 'a-society-feedback' },
   ]));
 });
 
-test('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace §2.5', () => {
+it('buildBackwardPassPlan (Graph-based, Repeated Role): verifies worked trace §2.5', () => {
   const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'a-society-feedback', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
 
   // Repeated owner/curator nodes collapse to their first forward occurrence,
   // then the remaining role graph is reversed for findings flow.
 
-  assert.strictEqual(result.entries.length, 4);
+  expect(result.entries.length).toBe(4);
 
   const technicalArchitectEntry = result.entries.find(entry => entry.role === 'technical-architect');
-  assert.ok(technicalArchitectEntry);
-  assert.deepStrictEqual(technicalArchitectEntry.findingsRolesToInject, []);
+  expect(technicalArchitectEntry).toBeTruthy();
+  expect(technicalArchitectEntry!.findingsRolesToInject).toEqual([]);
 
   const curatorEntry = result.entries.find(entry => entry.role === 'curator');
-  assert.ok(curatorEntry);
-  assert.deepStrictEqual(curatorEntry.findingsRolesToInject, ['technical-architect']);
+  expect(curatorEntry).toBeTruthy();
+  expect(curatorEntry!.findingsRolesToInject).toEqual(['technical-architect']);
 
   const ownerEntry = result.entries.find(entry => entry.role === 'owner' && entry.stepType === 'meta-analysis');
-  assert.ok(ownerEntry);
-  assert.deepStrictEqual(ownerEntry.findingsRolesToInject, ['curator']);
+  expect(ownerEntry).toBeTruthy();
+  expect(ownerEntry!.findingsRolesToInject).toEqual(['curator']);
 
   const feedbackEntry = result.entries.at(-1)!;
-  assert.strictEqual(feedbackEntry.role, 'a-society-feedback');
-  assert.strictEqual(feedbackEntry.stepType, 'feedback');
-  assert.deepStrictEqual(sortedEdges(result.edges), sortedEdges([
+  expect(feedbackEntry.role).toBe('a-society-feedback');
+  expect(feedbackEntry.stepType).toBe('feedback');
+  expect(sortedEdges(result.edges)).toEqual(sortedEdges([
     { from: 'technical-architect', to: 'curator' },
     { from: 'curator', to: 'owner' },
     { from: 'owner', to: 'a-society-feedback' },
   ]));
 });
 
-test('buildBackwardPassPlan (Parallel Mode): non-Owner roles run together before Owner and feedback', () => {
+it('buildBackwardPassPlan (Parallel Mode): non-Owner roles run together before Owner and feedback', () => {
   const result = buildBackwardPassPlan(REPEATED_NODES, REPEATED_EDGES, 'a-society-feedback', IMPROVEMENT_CHOICE_MODE.PARALLEL);
   
-  assert.strictEqual(result.entries.length, 4);
+  expect(result.entries.length).toBe(4);
   
   const roles = result.entries.filter(e => e.stepType === 'meta-analysis').map(e => e.role);
-  assert.ok(roles.includes('curator'));
-  assert.ok(roles.includes('technical-architect'));
+  expect(roles.includes('curator')).toBeTruthy();
+  expect(roles.includes('technical-architect')).toBeTruthy();
   
-  assert.ok(result.entries
+  expect(result.entries
     .filter(e => e.stepType === 'meta-analysis' && e.role !== 'owner')
-    .every(e => e.findingsRolesToInject.length === 0));
+    .every(e => e.findingsRolesToInject.length === 0)).toBeTruthy();
   
   const ownerEntry = result.entries.find(e => e.role === 'owner' && e.stepType === 'meta-analysis');
-  assert.ok(ownerEntry);
-  assert.deepStrictEqual(ownerEntry.findingsRolesToInject, ['curator', 'technical-architect']);
+  expect(ownerEntry).toBeTruthy();
+  expect(ownerEntry!.findingsRolesToInject).toEqual(['curator', 'technical-architect']);
   
   const feedbackEntry = result.entries.at(-1)!;
-  assert.strictEqual(feedbackEntry.role, 'a-society-feedback');
-  assert.strictEqual(feedbackEntry.stepType, 'feedback');
-  assert.deepStrictEqual(feedbackEntry.findingsRolesToInject, []);
-  assert.deepStrictEqual(sortedEdges(result.edges), sortedEdges([
+  expect(feedbackEntry.role).toBe('a-society-feedback');
+  expect(feedbackEntry.stepType).toBe('feedback');
+  expect(feedbackEntry.findingsRolesToInject).toEqual([]);
+  expect(sortedEdges(result.edges)).toEqual(sortedEdges([
     { from: 'curator', to: 'owner' },
     { from: 'technical-architect', to: 'owner' },
     { from: 'owner', to: 'a-society-feedback' },
   ]));
 });
 
-test('buildBackwardPassPlan (Graph-based, Branching): preserves real role dependencies without depth barriers', () => {
+it('buildBackwardPassPlan (Graph-based, Branching): preserves real role dependencies without depth barriers', () => {
   const nodes: WorkflowNode[] = [
     { id: 'owner-intake', role: 'owner' },
     { id: 'curator-research', role: 'curator' },
@@ -154,7 +153,7 @@ test('buildBackwardPassPlan (Graph-based, Branching): preserves real role depend
 
   const result = buildBackwardPassPlan(nodes, edges, 'a-society-feedback', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
 
-  assert.deepStrictEqual(sortedEdges(result.edges), sortedEdges([
+  expect(sortedEdges(result.edges)).toEqual(sortedEdges([
     { from: 'curator', to: 'owner' },
     { from: 'technical-architect', to: 'curator' },
     { from: 'curator_2', to: 'technical-architect' },
@@ -164,22 +163,20 @@ test('buildBackwardPassPlan (Graph-based, Branching): preserves real role depend
     { from: 'orchestration-developer', to: 'curator_3' },
     { from: 'owner', to: 'a-society-feedback' },
   ]));
-  assert.deepStrictEqual(
-    result.entries.find(entry => entry.role === 'curator_2')?.findingsRolesToInject,
-    ['framework-services-developer', 'ui-developer']
-  );
-  assert.deepStrictEqual(
-    result.entries.find(entry => entry.role === 'curator_3')?.findingsRolesToInject,
-    ['orchestration-developer']
-  );
+  expect(
+    result.entries.find(entry => entry.role === 'curator_2')?.findingsRolesToInject
+  ).toEqual(['framework-services-developer', 'ui-developer']);
+  expect(
+    result.entries.find(entry => entry.role === 'curator_3')?.findingsRolesToInject
+  ).toEqual(['orchestration-developer']);
 });
 
-test('locateFindingsFiles: finds deterministic role-id findings files', () => {
+it('locateFindingsFiles: finds deterministic role-id findings files', () => {
   const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-files-'));
   const ownerFindingsPath = deterministicFindingsFilePath(recordFolder, 'owner');
   const ownerTwoFindingsPath = deterministicFindingsFilePath(recordFolder, 'owner_2');
   const technicalArchitectFindingsPath = deterministicFindingsFilePath(recordFolder, 'technical-architect');
-  assert.strictEqual(path.basename(ownerTwoFindingsPath), 'owner_2-findings.md');
+  expect(path.basename(ownerTwoFindingsPath)).toBe('owner_2-findings.md');
   fs.mkdirSync(path.dirname(ownerFindingsPath), { recursive: true });
   fs.writeFileSync(ownerFindingsPath, 'test');
   fs.writeFileSync(ownerTwoFindingsPath, 'test');
@@ -188,18 +185,18 @@ test('locateFindingsFiles: finds deterministic role-id findings files', () => {
 
   try {
     const results = locateFindingsFiles(recordFolder, ['owner', 'owner_2', 'technical-architect', 'other-role']);
-    assert.deepStrictEqual(results, [ownerFindingsPath, ownerTwoFindingsPath, technicalArchitectFindingsPath]);
+    expect(results).toEqual([ownerFindingsPath, ownerTwoFindingsPath, technicalArchitectFindingsPath]);
   } finally {
     fs.rmSync(recordFolder, { recursive: true, force: true });
   }
 });
 
-test('locateFindingsFiles: returns [] for absent directory', () => {
+it('locateFindingsFiles: returns [] for absent directory', () => {
   const results = locateFindingsFiles('/non/existent/path', ['owner']);
-  assert.deepStrictEqual(results, []);
+  expect(results).toEqual([]);
 });
 
-test('locateAllFindingsFiles: returns all deterministic findings files', () => {
+it('locateAllFindingsFiles: returns all deterministic findings files', () => {
   const recordFolder = fs.mkdtempSync(path.join(tmpdir(), 'bp-order-all-files-'));
   const ownerFindingsPath = deterministicFindingsFilePath(recordFolder, 'owner');
   const ownerTwoFindingsPath = deterministicFindingsFilePath(recordFolder, 'owner_2');
@@ -211,17 +208,17 @@ test('locateAllFindingsFiles: returns all deterministic findings files', () => {
 
   try {
     const results = locateAllFindingsFiles(recordFolder);
-    assert.deepStrictEqual(results, [curatorFindingsPath, ownerFindingsPath, ownerTwoFindingsPath]);
+    expect(results).toEqual([curatorFindingsPath, ownerFindingsPath, ownerTwoFindingsPath]);
   } finally {
     fs.rmSync(recordFolder, { recursive: true, force: true });
   }
 });
 
-test('feedback entry has correct fields', () => {
+it('feedback entry has correct fields', () => {
   const result = buildBackwardPassPlan(LINEAR_NODES, LINEAR_EDGES, 'admin', IMPROVEMENT_CHOICE_MODE.GRAPH_BASED);
   const feedbackEntry = result.entries.at(-1)!;
-  assert.strictEqual(feedbackEntry.role, 'admin');
-  assert.strictEqual(feedbackEntry.stepType, 'feedback');
-  assert.strictEqual(feedbackEntry.sessionInstruction, 'new-session');
-  assert.deepStrictEqual(feedbackEntry.findingsRolesToInject, []);
+  expect(feedbackEntry.role).toBe('admin');
+  expect(feedbackEntry.stepType).toBe('feedback');
+  expect(feedbackEntry.sessionInstruction).toBe('new-session');
+  expect(feedbackEntry.findingsRolesToInject).toEqual([]);
 });

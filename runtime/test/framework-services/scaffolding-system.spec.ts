@@ -1,9 +1,8 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, it as test } from 'vitest';
+import { afterAll, expect, it } from 'vitest';
 import {
   scaffold,
   scaffoldFromManifestFile,
@@ -30,145 +29,139 @@ seedSourceFile('general/roles/owner/main.md', '# Owner\n\nOwner role content.\n'
 
 // ── renderStub ────────────────────────────────────────────────────────────────
 
-test('renderStub: produces a heading derived from file basename', () => {
+it('renderStub: produces a heading derived from file basename', () => {
   const content = renderStub({ path: 'project-information/vision.md', scaffold: 'stub', source_path: 'general/instructions/project-information/vision.md' });
-  assert.ok(content.startsWith('# Vision\n'), `Expected heading "# Vision", got: ${content.slice(0, 40)}`);
+  expect(content.startsWith('# Vision\n')).toBeTruthy();
 });
 
-test('renderStub: includes stub comment pointing to source_path', () => {
+it('renderStub: includes stub comment pointing to source_path', () => {
   const content = renderStub({ path: 'indexes/main.md', scaffold: 'stub', source_path: 'general/instructions/indexes/main.md' });
-  assert.ok(content.includes('general/instructions/indexes/main.md'));
+  expect(content.includes('general/instructions/indexes/main.md')).toBeTruthy();
 });
 
-test('renderStub: handles TEMPLATE- prefix in filename', () => {
+it('renderStub: handles TEMPLATE- prefix in filename', () => {
   const content = renderStub({ path: 'communication/conversation/TEMPLATE-owner-workflow-plan.md', scaffold: 'stub', source_path: 'general/instructions/communication/conversation/TEMPLATE-owner-workflow-plan.md' });
-  assert.ok(content.startsWith('# Template:'), `Expected "# Template:" heading, got: ${content.slice(0, 50)}`);
+  expect(content.startsWith('# Template:')).toBeTruthy();
 });
 
-test('renderStub: creates role required-readings YAML stub', () => {
+it('renderStub: creates role required-readings YAML stub', () => {
   const content = renderStub({
     path: 'roles/owner/required-readings.yaml',
     scaffold: 'stub',
     source_path: 'general/instructions/roles/required-readings.md',
   });
-  assert.strictEqual(
-    content,
-    '# Stub — fill in per general/instructions/roles/required-readings.md\nrole: owner\nrequired_readings: []\n'
-  );
+  expect(content).toBe('# Stub — fill in per general/instructions/roles/required-readings.md\nrole: owner\nrequired_readings: []\n');
 });
 
-test('renderStub: creates workflow YAML stub', () => {
+it('renderStub: creates workflow YAML stub', () => {
   const content = renderStub({
     path: 'workflow/main.yaml',
     scaffold: 'stub',
     source_path: 'general/instructions/workflow/main.md',
   });
-  assert.strictEqual(
-    content,
-    '# Stub — fill in per general/instructions/workflow/main.md\nworkflow:\n  name: <project workflow>\n  summary: <one-line workflow summary>\n  nodes: []\n  edges: []\n'
-  );
+  expect(content).toBe('# Stub — fill in per general/instructions/workflow/main.md\nworkflow:\n  name: <project workflow>\n  summary: <one-line workflow summary>\n  nodes: []\n  edges: []\n');
 });
 
 // ── scaffold — stub entries ───────────────────────────────────────────────────
 
-test('scaffold: creates a stub file at the correct a-docs/ path', () => {
+it('scaffold: creates a stub file at the correct a-docs/ path', () => {
   const projectRoot = path.join(TEMP_BASE, 'stub-test');
   const entries = [
     { path: 'project-information/vision.md', scaffold: 'stub', source_path: 'general/instructions/project-information/vision.md' },
   ];
   const result = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   const target = path.join(projectRoot, 'a-docs', 'project-information', 'vision.md');
-  assert.strictEqual(result.created.length, 1);
-  assert.strictEqual(result.skipped.length, 0);
-  assert.strictEqual(result.failed.length, 0);
-  assert.ok(fs.existsSync(target));
-  assert.ok(fs.readFileSync(target, 'utf8').startsWith('# Vision'));
+  expect(result.created.length).toBe(1);
+  expect(result.skipped.length).toBe(0);
+  expect(result.failed.length).toBe(0);
+  expect(fs.existsSync(target)).toBeTruthy();
+  expect(fs.readFileSync(target, 'utf8').startsWith('# Vision')).toBeTruthy();
 });
 
-test('scaffold: creates parent directories for nested stub paths', () => {
+it('scaffold: creates parent directories for nested stub paths', () => {
   const projectRoot = path.join(TEMP_BASE, 'nested-stub-test');
   const entries = [
     { path: 'communication/conversation/main.md', scaffold: 'stub', source_path: 'general/instructions/communication/conversation/main.md' },
   ];
   scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   const dir = path.join(projectRoot, 'a-docs', 'communication', 'conversation');
-  assert.ok(fs.existsSync(dir));
+  expect(fs.existsSync(dir)).toBeTruthy();
 });
 
 // ── scaffold — copy entries ───────────────────────────────────────────────────
 
-test('scaffold: copies source file verbatim to target path', () => {
+it('scaffold: copies source file verbatim to target path', () => {
   const projectRoot = path.join(TEMP_BASE, 'copy-test');
   const entries = [
     { path: 'roles/owner/main.md', scaffold: 'copy', source_path: 'general/roles/owner/main.md' },
   ];
   const result = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   const target = path.join(projectRoot, 'a-docs', 'roles', 'owner', 'main.md');
-  assert.strictEqual(result.created.length, 1);
-  assert.ok(fs.existsSync(target));
-  assert.strictEqual(fs.readFileSync(target, 'utf8'), '# Owner\n\nOwner role content.\n');
+  expect(result.created.length).toBe(1);
+  expect(fs.existsSync(target)).toBeTruthy();
+  expect(fs.readFileSync(target, 'utf8')).toBe('# Owner\n\nOwner role content.\n');
 });
 
-test('scaffold: fails gracefully when copy source does not exist', () => {
+it('scaffold: fails gracefully when copy source does not exist', () => {
   const projectRoot = path.join(TEMP_BASE, 'copy-missing-test');
   const entries = [
     { path: 'roles/missing/main.md', scaffold: 'copy', source_path: 'general/roles/does-not-exist/main.md' },
   ];
   const result = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
-  assert.strictEqual(result.failed.length, 1);
-  assert.ok(result.failed[0].reason.includes('Cannot copy from'));
+  expect(result.failed.length).toBe(1);
+  expect(result.failed[0].reason.includes('Cannot copy from')).toBeTruthy();
 });
 
 // ── scaffold — overwrite and skip behaviour ───────────────────────────────────
 
-test('scaffold: skips existing files when overwrite is false', () => {
+it('scaffold: skips existing files when overwrite is false', () => {
   const projectRoot = path.join(TEMP_BASE, 'skip-test');
   const entries = [
     { path: 'project-information/log.md', scaffold: 'stub', source_path: 'general/instructions/project-information/log.md' },
   ];
   scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   const second = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
-  assert.strictEqual(second.skipped.length, 1);
-  assert.strictEqual(second.created.length, 0);
-  assert.strictEqual(second.skipped[0].reason, 'already-existed');
+  expect(second.skipped.length).toBe(1);
+  expect(second.created.length).toBe(0);
+  expect(second.skipped[0].reason).toBe('already-existed');
 });
 
-test('scaffold: overwrites existing files when overwrite is true', () => {
+it('scaffold: overwrites existing files when overwrite is true', () => {
   const projectRoot = path.join(TEMP_BASE, 'overwrite-test');
   const entries = [
     { path: 'project-information/log.md', scaffold: 'stub', source_path: 'general/instructions/project-information/log.md' },
   ];
   scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries);
   const second = scaffold(projectRoot, 'Test Project', SOCIETY_ROOT, entries, { overwrite: true });
-  assert.strictEqual(second.created.length, 1);
-  assert.strictEqual(second.skipped.length, 0);
+  expect(second.created.length).toBe(1);
+  expect(second.skipped.length).toBe(0);
 });
 
 // ── scaffold — invalid entry handling ────────────────────────────────────────
 
-test('scaffold: fails entry with missing path field', () => {
+it('scaffold: fails entry with missing path field', () => {
   const projectRoot = path.join(TEMP_BASE, 'invalid-entry-test');
   const entries = [{ scaffold: 'stub', source_path: 'general/instructions/something.md' }] as any;
   const result = scaffold(projectRoot, 'Test', SOCIETY_ROOT, entries);
-  assert.strictEqual(result.failed.length, 1);
-  assert.ok(result.failed[0].reason.includes('missing required fields'));
+  expect(result.failed.length).toBe(1);
+  expect(result.failed[0].reason.includes('missing required fields')).toBeTruthy();
 });
 
-test('scaffold: fails entry with unknown scaffold type', () => {
+it('scaffold: fails entry with unknown scaffold type', () => {
   const projectRoot = path.join(TEMP_BASE, 'unknown-scaffold-test');
   const entries = [{ path: 'some/file.md', scaffold: 'magic', source_path: 'general/something.md' }];
   const result = scaffold(projectRoot, 'Test', SOCIETY_ROOT, entries);
-  assert.strictEqual(result.failed.length, 1);
-  assert.ok(result.failed[0].reason.includes('Unknown scaffold type'));
+  expect(result.failed.length).toBe(1);
+  expect(result.failed[0].reason.includes('Unknown scaffold type')).toBeTruthy();
 });
 
-test('scaffold: throws if projectRoot is missing', () => {
+it('scaffold: throws if projectRoot is missing', () => {
   // @ts-expect-error intentional null call to test runtime guard
-  assert.throws(() => scaffold(null, 'Test', SOCIETY_ROOT, []), /projectRoot is required/);
+  expect(() => scaffold(null, 'Test', SOCIETY_ROOT, [])).toThrow(/projectRoot is required/);
 });
 
-test('scaffold: throws if projectName is missing', () => {
-  assert.throws(() => scaffold('/some/path', '', SOCIETY_ROOT, []), /projectName is required/);
+it('scaffold: throws if projectName is missing', () => {
+  expect(() => scaffold('/some/path', '', SOCIETY_ROOT, [])).toThrow(/projectName is required/);
 });
 
 // ── scaffoldFromManifestFile — live runtime a-docs manifest ───────────────────
@@ -178,18 +171,18 @@ const SOCIETY_ACTUAL_ROOT = path.resolve(__dirname, '../../..');
 const MANIFEST_PATH = path.join(SOCIETY_ACTUAL_ROOT, 'runtime/contracts/a-docs-manifest.yaml');
 
 if (fs.existsSync(MANIFEST_PATH)) {
-  test('scaffoldFromManifestFile: runs against live runtime a-docs manifest without throwing', () => {
+  it('scaffoldFromManifestFile: runs against live runtime a-docs manifest without throwing', () => {
     const projectRoot = path.join(TEMP_BASE, 'live-manifest-test');
     let result;
-    assert.doesNotThrow(() => {
+    expect(() => {
       result = scaffoldFromManifestFile(projectRoot, 'Live Test Project', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH);
-    });
-    assert.ok(Array.isArray(result!.created));
-    assert.ok(Array.isArray(result!.skipped));
-    assert.ok(Array.isArray(result!.failed));
+    }).not.toThrow();
+    expect(Array.isArray(result!.created)).toBeTruthy();
+    expect(Array.isArray(result!.skipped)).toBeTruthy();
+    expect(Array.isArray(result!.failed)).toBeTruthy();
   });
 
-  test('scaffoldFromManifestFile: creates manifest entries, no unexpected failures', () => {
+  it('scaffoldFromManifestFile: creates manifest entries, no unexpected failures', () => {
     const projectRoot = path.join(TEMP_BASE, 'live-manifest-test2');
     const result = scaffoldFromManifestFile(projectRoot, 'Live Test Project 2', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH);
     // Copy failures are allowed only if a source template is absent in the framework (index drift);
@@ -199,23 +192,23 @@ if (fs.existsSync(MANIFEST_PATH)) {
       console.log(`    [info] ${result.failed.length} failure(s) during live manifest run:`);
       result.failed.forEach(f => console.log(`      - ${path.basename(f.path)}: ${f.reason}`));
     }
-    assert.strictEqual(unexpectedFailures.length, 0, `Unexpected failures: ${JSON.stringify(unexpectedFailures)}`);
-    assert.ok(result.created.length > 0, 'Expected at least some files to be created');
+    expect(unexpectedFailures.length).toBe(0);
+    expect(result.created.length > 0).toBeTruthy();
   });
 
-  test('scaffoldFromManifestFile: stub files contain heading derived from filename', () => {
+  it('scaffoldFromManifestFile: stub files contain heading derived from filename', () => {
     const projectRoot = path.join(TEMP_BASE, 'live-manifest-stubs-test');
     scaffoldFromManifestFile(projectRoot, 'Stub Heading Test', SOCIETY_ACTUAL_ROOT, MANIFEST_PATH);
     const visionPath = path.join(projectRoot, 'a-docs', 'project-information', 'vision.md');
     if (fs.existsSync(visionPath)) {
       const content = fs.readFileSync(visionPath, 'utf8');
-      assert.ok(content.startsWith('# Vision'), `Expected "# Vision" heading in stub, got: ${content.slice(0, 40)}`);
+      expect(content.startsWith('# Vision')).toBeTruthy();
     }
   });
 
-  test('scaffoldFromManifestFile: live runtime manifest has no optional required flag', () => {
+  it('scaffoldFromManifestFile: live runtime manifest has no optional required flag', () => {
     const content = fs.readFileSync(MANIFEST_PATH, 'utf8');
-    assert.ok(!content.includes('required:'), 'Runtime a-docs manifest should not contain required flags');
+    expect(content.includes('required:')).toBeFalsy();
   });
 } else {
   console.log(`  [skip] Live manifest tests — runtime a-docs manifest not found at expected path`);
@@ -223,27 +216,21 @@ if (fs.existsSync(MANIFEST_PATH)) {
 
 // ── scaffoldFromManifestFile — error handling ────────────────────────────────
 
-test('scaffoldFromManifestFile: throws on missing manifest file', () => {
-  assert.throws(
-    () => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, '/nonexistent/manifest.yaml'),
-    /Cannot read manifest file/,
-  );
+it('scaffoldFromManifestFile: throws on missing manifest file', () => {
+  expect(() => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, '/nonexistent/manifest.yaml'))
+    .toThrow(/Cannot read manifest file/);
 });
 
-test('scaffoldFromManifestFile: throws on invalid YAML', () => {
+it('scaffoldFromManifestFile: throws on invalid YAML', () => {
   const badManifest = path.join(TEMP_BASE, 'bad-manifest.yaml');
   fs.writeFileSync(badManifest, 'files: [\ninvalid yaml{{{', 'utf8');
-  assert.throws(
-    () => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, badManifest),
-    /Cannot parse manifest YAML/,
-  );
+  expect(() => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, badManifest))
+    .toThrow(/Cannot parse manifest YAML/);
 });
 
-test('scaffoldFromManifestFile: throws if manifest has no files array', () => {
+it('scaffoldFromManifestFile: throws if manifest has no files array', () => {
   const badManifest = path.join(TEMP_BASE, 'no-files-manifest.yaml');
   fs.writeFileSync(badManifest, 'manifest_version: "1.0"\n', 'utf8');
-  assert.throws(
-    () => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, badManifest),
-    /Manifest must contain a "files" array/,
-  );
+  expect(() => scaffoldFromManifestFile('/tmp/proj', 'Test', SOCIETY_ROOT, badManifest))
+    .toThrow(/Manifest must contain a "files" array/);
 });

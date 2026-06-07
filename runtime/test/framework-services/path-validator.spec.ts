@@ -1,9 +1,8 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, it as test } from 'vitest';
+import { afterAll, expect, it } from 'vitest';
 import { validatePaths } from '../../src/framework-services/path-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,73 +18,69 @@ afterAll(() => fs.rmSync(REPO_ROOT, { recursive: true, force: true }));
 
 // --- Core behavior (fixture-based) ---
 
-test('returns array of results', () => {
+it('returns array of results', () => {
   const results = validatePaths(FIXTURE_INDEX, REPO_ROOT);
-  assert.ok(Array.isArray(results));
-  assert.strictEqual(results.length, 3);
+  expect(Array.isArray(results)).toBeTruthy();
+  expect(results.length).toBe(3);
 });
 
-test('all results have variable, path, and status fields', () => {
+it('all results have variable, path, and status fields', () => {
   const results = validatePaths(FIXTURE_INDEX, REPO_ROOT);
   for (const r of results) {
-    assert.ok(typeof r.variable === 'string');
-    assert.ok(typeof r.path === 'string');
-    assert.ok(['ok', 'missing', 'parse-error'].includes(r.status));
+    expect(typeof r.variable === 'string').toBeTruthy();
+    expect(typeof r.path === 'string').toBeTruthy();
+    expect(['ok', 'missing', 'parse-error']).toContain(r.status);
   }
 });
 
-test('variables start with $', () => {
+it('variables start with $', () => {
   const results = validatePaths(FIXTURE_INDEX, REPO_ROOT);
   for (const r of results) {
-    assert.ok(r.variable.startsWith('$'), `expected $ prefix: ${r.variable}`);
+    expect(r.variable.startsWith('$')).toBeTruthy();
   }
 });
 
-test('marks existing paths as ok', () => {
+it('marks existing paths as ok', () => {
   const results = validatePaths(FIXTURE_INDEX, REPO_ROOT);
   const existing = results.filter(r => r.variable === '$FIXTURE_PACKAGE_JSON');
-  assert.strictEqual(existing.length, 1);
-  assert.strictEqual(existing[0].status, 'ok');
+  expect(existing.length).toBe(1);
+  expect(existing[0].status).toBe('ok');
 });
 
-test('marks missing paths as missing', () => {
+it('marks missing paths as missing', () => {
   const results = validatePaths(FIXTURE_INDEX, REPO_ROOT);
   const missing = results.filter(r => r.variable === '$FIXTURE_MISSING');
-  assert.strictEqual(missing.length, 1);
-  assert.strictEqual(missing[0].status, 'missing');
+  expect(missing.length).toBe(1);
+  expect(missing[0].status).toBe('missing');
 });
 
-test('skips section-header rows (no $ variable)', () => {
+it('skips section-header rows (no $ variable)', () => {
   // The general index has section headers like | **Instructions** | | |
   // They should not appear in results
   const results = validatePaths(GENERAL_INDEX, REPO_ROOT);
   const nonVar = results.filter(r => !r.variable.startsWith('$'));
-  assert.strictEqual(nonVar.length, 0, `unexpected non-variable entries: ${JSON.stringify(nonVar)}`);
+  expect(nonVar.length).toBe(0);
 });
 
-test('strips backticks from path values', () => {
+it('strips backticks from path values', () => {
   // Paths in the index are formatted as `/path/to/file` with backticks — must be stripped
   const results = validatePaths(FIXTURE_INDEX, REPO_ROOT);
   for (const r of results) {
-    assert.ok(!r.path.includes('`'), `backtick found in path: ${r.path}`);
+    expect(r.path.includes('`')).toBeFalsy();
   }
 });
 
 // --- Error handling ---
 
-test('throws on unreadable index file', () => {
-  assert.throws(
-    () => validatePaths('/nonexistent/path/index.md', REPO_ROOT),
-    /Cannot read index file/,
-  );
+it('throws on unreadable index file', () => {
+  expect(() => validatePaths('/nonexistent/path/index.md', REPO_ROOT)).toThrow(/Cannot read index file/);
 });
 
-test('throws when repoRoot is omitted', () => {
-  assert.throws(
+it('throws when repoRoot is omitted', () => {
+  expect(() =>
     // @ts-expect-error intentional wrong-arity call to test runtime guard
-    () => validatePaths(FIXTURE_INDEX),
-    /repoRoot is required/,
-  );
+    validatePaths(FIXTURE_INDEX)
+  ).toThrow(/repoRoot is required/);
 });
 
 // --- Framework state (informational - failures indicate index drift, not tool bugs) ---
@@ -109,7 +104,7 @@ function report(indexName: string, indexPath: string): void {
   }
 }
 
-test('reports framework index resolution state without failing on drift', () => {
+it('reports framework index resolution state without failing on drift', () => {
   report('internal index', INTERNAL_INDEX);
   report('general index', GENERAL_INDEX);
 });

@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -6,7 +5,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
@@ -134,8 +133,8 @@ async function runTest() {
     await orchestrator.advanceFlow(flowRun, 'start');
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
-    assert.ok(flowAfterStart.completedHandoffs.includes('start=>next'), "Expected 'start' handoff to be completed.");
-    assert.deepStrictEqual(flowAfterStart.receivingHandoff['start=>next'], ['start-output.md'], "Expected 'next' to receive the handoff.");
+    expect(flowAfterStart.completedHandoffs.includes('start=>next')).toBeTruthy();
+    expect(flowAfterStart.receivingHandoff['start=>next']).toEqual(['start-output.md']);
 
     await orchestrator.advanceFlow(flowAfterStart, 'next');
 
@@ -143,14 +142,10 @@ async function runTest() {
       e => e.kind === 'role.active' && e.nodeId === 'next'
     ).length;
 
-    assert.strictEqual(
-      nextRoleActiveCount,
-      1,
-      `Expected exactly one role.active event for successor node 'next', got ${nextRoleActiveCount}`
-    );
+    expect(nextRoleActiveCount).toBe(1);
     const flowAfterNext = SessionStore.loadFlowRun()!;
-    assert.ok(flowAfterNext.completedHandoffs.includes('next=>end'), "Expected node 'next' handoff to be completed.");
-    assert.deepStrictEqual(flowAfterNext.receivingHandoff['next=>end'], ['next-output.md'], "Expected successor node 'end' to receive the handoff.");
+    expect(flowAfterNext.completedHandoffs.includes('next=>end')).toBeTruthy();
+    expect(flowAfterNext.receivingHandoff['next=>end']).toEqual(['next-output.md']);
   } finally {
     server.close();
     fs.rmSync(tmpBase, { recursive: true, force: true });

@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -7,7 +6,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
@@ -113,11 +112,11 @@ async function runTest() {
     const repairNotice = sink.events.find(
       (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
     );
-    assert.ok(updatedFlow.completedHandoffs.includes('start=>next'), "Expected handoff 'start=>next' to be completed after repair.");
-    assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['valid-output.md'], "Expected node 'next' to receive the repaired handoff.");
-    assert.ok(repairNotice, 'Expected sink to contain a repair.requested event with scope "node".');
-    assert.strictEqual(repairNotice.role, 'start');
-    assert.strictEqual(repairNotice.nodeId, 'start');
+    expect(updatedFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
+    expect(updatedFlow.receivingHandoff['start=>next']).toEqual(['valid-output.md']);
+    expect(repairNotice).toBeTruthy();
+    expect(repairNotice?.role).toBe('start');
+    expect(repairNotice?.nodeId).toBe('start');
   } finally {
     server.close();
     fs.rmSync(tmpBase, { recursive: true, force: true });

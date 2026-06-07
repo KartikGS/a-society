@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -8,7 +7,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
@@ -158,15 +157,15 @@ async function runTest() {
     );
     const hasRepairNotice = repairNotice !== undefined;
 
-    assert.ok(updatedFlow.completedHandoffs.includes('start=>next'), "Expected handoff 'start=>next' to be completed.");
-    assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['mock.md'], "Expected node 'next' to receive a handoff.");
-    assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
-    assert.ok(canonicalGuidanceInjected, "Expected node contract guidance to be resolved from a-docs/workflow/main.yaml.");
-    assert.ok(hasHandoffNotice, "Expected sink to contain a handoff.applied event.");
-    assert.ok(hasRoleActiveNotice, "Expected sink to contain a role.active event.");
-    assert.ok(hasRepairNotice, "Expected sink to contain a repair.requested event.");
-    assert.strictEqual(repairNotice?.role, 'start', "Expected repair.requested to be attributed to the active role.");
-    assert.strictEqual(repairNotice?.nodeId, 'start', "Expected repair.requested to be attributed to the active node.");
+    expect(updatedFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
+    expect(updatedFlow.receivingHandoff['start=>next']).toEqual(['mock.md']);
+    expect(repairInjected).toBeTruthy();
+    expect(canonicalGuidanceInjected).toBeTruthy();
+    expect(hasHandoffNotice).toBeTruthy();
+    expect(hasRoleActiveNotice).toBeTruthy();
+    expect(hasRepairNotice).toBeTruthy();
+    expect(repairNotice?.role).toBe('start');
+    expect(repairNotice?.nodeId).toBe('start');
   } finally {
     process.chdir(originalCwd);
     server.close();

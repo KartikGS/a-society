@@ -1,4 +1,3 @@
-import assert from 'node:assert';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -8,7 +7,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
@@ -143,18 +142,14 @@ async function runTest() {
       e => e.kind === 'flow.forward_pass_closed'
     );
 
-    assert.ok(hasForwardPassNotice, "Expected sink to contain flow.forward_pass_closed event");
+    expect(hasForwardPassNotice).toBeTruthy();
 
-    assert.ok(!assistantOut.includes('Enter 1, 2, or 3:'),
-      "Expected improvement mode selection to move out of the assistant stream.");
+    expect(assistantOut.includes('Enter 1, 2, or 3:')).toBeFalsy();
 
     const finalFlow = SessionStore.loadFlowRun()!;
-    assert.strictEqual(finalFlow.status, 'awaiting_improvement_choice',
-      "Expected flow to pause for improvement mode selection after forward-pass closure.");
-    assert.strictEqual(finalFlow.improvementPhase?.status, 'awaiting_choice',
-      "Expected forward-pass closure to enter improvement choice without persisting redundant closure metadata.");
-    assert.ok(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase),
-      "Expected forward-pass closure metadata to be omitted from persisted improvement state.");
+    expect(finalFlow.status).toBe('awaiting_improvement_choice');
+    expect(finalFlow.improvementPhase?.status).toBe('awaiting_choice');
+    expect(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase)).toBeTruthy();
   } finally {
     server.close();
     outputStream.destroy();

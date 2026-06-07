@@ -1,8 +1,7 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -22,13 +21,10 @@ async function runTest() {
   try {
     SessionStore.init(workspaceRoot);
 
-    await assert.rejects(
-      () => orchestrator.runStoredFlow(
-        workspaceRoot,
-        projectNamespace
-      ),
-      /No active flow state found\. Create and persist a draft flow before starting orchestration\./
-    );
+    await expect(orchestrator.runStoredFlow(
+      workspaceRoot,
+      projectNamespace
+    )).rejects.toThrow(/No active flow state found\. Create and persist a draft flow before starting orchestration\./);
   } finally {
     fs.rmSync(tmpBase, { recursive: true, force: true });
   }

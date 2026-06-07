@@ -1,8 +1,7 @@
-import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -89,15 +88,12 @@ async function runTest() {
   ]);
 
   const updated = SessionStore.loadFlowRun()!;
-  assert.ok(
-    ['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k)),
-    'concurrent handoffs should record all edge keys'
-  );
-  assert.deepStrictEqual(updated.receivingHandoff['producer=>branch-a'], [producerToARel]);
-  assert.ok(
+  expect(['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k))).toBeTruthy();
+  expect(updated.receivingHandoff['producer=>branch-a']).toEqual([producerToARel]);
+  expect(
     updated.receivingHandoff['producer=>branch-b'] && updated.receivingHandoff['branch-c=>branch-b'],
     'branch-b should receive both concurrent predecessor handoffs'
-  );
+  ).toBeTruthy();
 
   fs.rmSync(tmpBase, { recursive: true, force: true });
 }
