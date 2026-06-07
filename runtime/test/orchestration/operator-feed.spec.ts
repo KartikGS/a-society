@@ -1,15 +1,18 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import { rememberMessage } from '../../src/server/runtime-session/feed.js';
 import { configureSettingsStore, updateFeedSettings } from '../../src/settings/settings-store.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
-import type { FeedItem, FlowRef, FlowRun, OperatorEvent, RoleSession } from '../../src/common/types.js';
+import type { FeedItem, FlowRef, FlowRun, GatewayTurnResult, OperatorEvent, RoleSession } from '../../src/common/types.js';
+import { LLMGateway } from '../../src/providers/llm.js';
 import type { ActiveSession } from '../../src/server/runtime-session/types.js';
+import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 
 const tempDirs = new Set<string>();
 
@@ -55,8 +58,17 @@ function createActiveSession(flowRef: FlowRef): ActiveSession {
   } as ActiveSession;
 }
 
+function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: string): void {
+  const roleDir = path.join(workspaceRoot, projectNamespace, 'a-docs', 'roles', roleId);
+  fs.mkdirSync(roleDir, { recursive: true });
+  fs.writeFileSync(path.join(roleDir, 'main.md'), `${roleId} role`);
+  fs.writeFileSync(path.join(roleDir, 'ownership.yaml'), `role: ${roleId}\nsurfaces: []\n`);
+  fs.writeFileSync(path.join(roleDir, 'required-readings.yaml'), `role: ${roleId}\nrequired_readings: []\n`);
+}
+
 describe('operator-feed', () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     configureSettingsStore(process.cwd());
     for (const dir of tempDirs) {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -488,5 +500,67 @@ describe('operator-feed', () => {
 
   it('returns null for messages that do not become feed items', () => {
     expect(projectMessageToFeedItem({ type: 'error', message: 'boom' }, 'x')).toBeNull();
+  });
+
+  it('emits usage after an accepted handoff response and before the handoff notice', async () => {
+    const { tmpDir, ref } = createFixture('accepted-handoff-flow');
+    seedTestModelSettings(path.join(tmpDir, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+    scaffoldRole(tmpDir, ref.projectNamespace, 'curator');
+    scaffoldRole(tmpDir, ref.projectNamespace, 'owner');
+
+    const recordDir = getFlowRecordDir(tmpDir, ref);
+    fs.writeFileSync(
+      path.join(recordDir, 'workflow.yaml'),
+      'workflow:\n  name: Accepted Handoff Test\n  nodes:\n    - id: start\n      role: curator\n    - id: next\n      role: owner\n  edges:\n    - from: start\n      to: next\n'
+    );
+    fs.writeFileSync(path.join(tmpDir, 'accepted-output.md'), 'Accepted artifact content.');
+
+    const flowRun: FlowRun = {
+      flowId: ref.flowId,
+      workspaceRoot: tmpDir,
+      projectNamespace: ref.projectNamespace,
+      recordFolderPath: recordDir,
+      runningNodes: ['start'],
+      awaitingHumanNodes: {},
+      pendingHumanInputs: {},
+      visitedNodeIds: [],
+      completedHandoffs: [],
+      receivingHandoff: {},
+      historyHandoff: {},
+      awaitingHandoff: [],
+      status: 'running',
+      stateVersion: CURRENT_FLOW_STATE_VERSION,
+    };
+    SessionStore.saveFlowRun(flowRun, ref, tmpDir);
+
+    vi.spyOn(LLMGateway.prototype, 'executeTurn').mockResolvedValue({
+      text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
+      contextUsage: 68,
+    } satisfies GatewayTurnResult);
+
+    const events: OperatorEvent[] = [];
+    const renderer = {
+      emit(event: OperatorEvent) {
+        events.push(event);
+      },
+      requestSent() {},
+      receivingResponse() {},
+      responseEnd() {},
+      sendError() {},
+    };
+
+    await new FlowOrchestrator(renderer).advanceFlow(flowRun, 'start');
+
+    expect(events.map(event => event.kind)).toEqual([
+      'role.active',
+      'usage.turn_summary',
+      'handoff.applied',
+    ]);
+    expect(events[1]).toEqual({
+      kind: 'usage.turn_summary',
+      role: 'curator',
+      contextUsage: 68,
+    });
+    expect(SessionStore.loadRoleSession('curator', ref, tmpDir)?.latestContextUsage).toBe(68);
   });
 });

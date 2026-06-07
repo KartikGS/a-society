@@ -2,13 +2,12 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 async function runTest() {
-  console.log('Starting precreated-flow-required integration test...');
-
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'precreated-flow-required-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
@@ -34,10 +33,8 @@ async function runTest() {
     fs.rmSync(tmpBase, { recursive: true, force: true });
   }
 
-  console.log('Integration test PASSED.');
 }
 
-runTest().catch(err => {
-  console.error(err);
-  process.exit(1);
+it('requires a persisted draft flow before running stored orchestration', async () => {
+  await runTest();
 });

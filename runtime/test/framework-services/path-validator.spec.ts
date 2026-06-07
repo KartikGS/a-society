@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { afterAll, it as test } from 'vitest';
 import { validatePaths } from '../../src/framework-services/path-validator.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,23 +15,7 @@ fs.symlinkSync(SOCIETY_ROOT, path.join(REPO_ROOT, 'a-society'), 'dir');
 const INTERNAL_INDEX = path.join(SOCIETY_ROOT, 'a-docs', 'indexes', 'main.md');
 const GENERAL_INDEX = path.join(SOCIETY_ROOT, 'index.md');
 const FIXTURE_INDEX = path.join(__dirname, 'fixtures', 'index-sample.md');
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
-
-console.log('\npath-validator');
+afterAll(() => fs.rmSync(REPO_ROOT, { recursive: true, force: true }));
 
 // --- Core behavior (fixture-based) ---
 
@@ -103,9 +88,7 @@ test('throws when repoRoot is omitted', () => {
   );
 });
 
-// --- Framework state (informational — failures indicate index drift, not tool bugs) ---
-
-console.log('\n  Framework state (informational):');
+// --- Framework state (informational - failures indicate index drift, not tool bugs) ---
 
 function report(indexName: string, indexPath: string): void {
   let results;
@@ -126,11 +109,7 @@ function report(indexName: string, indexPath: string): void {
   }
 }
 
-report('internal index', INTERNAL_INDEX);
-report('general index', GENERAL_INDEX);
-
-// --- Summary ---
-
-console.log(`\n  ${passed} passed, ${failed} failed\n`);
-fs.rmSync(REPO_ROOT, { recursive: true, force: true });
-if (failed > 0) process.exit(1);
+test('reports framework index resolution state without failing on drift', () => {
+  report('internal index', INTERNAL_INDEX);
+  report('general index', GENERAL_INDEX);
+});

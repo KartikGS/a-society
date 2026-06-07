@@ -3,28 +3,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { it as test } from 'vitest';
 import {
   buildRuntimeHealthRepairGuidance,
   runRuntimeHealthChecks
 } from '../../src/framework-services/runtime-health-checks.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 
-let passed = 0;
-let failed = 0;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frameworkRoot = path.resolve(__dirname, '../../..');
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
 
 function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; projectNamespace: string; projectRoot: string } {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-health-'));
@@ -88,8 +75,6 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
 function cleanup(tmpRoot: string): void {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
 }
-
-console.log('\nruntime-health-checks');
 
 test('passes for a minimal healthy runtime fixture', () => {
   const fixture = makeProjectFixture();
@@ -230,6 +215,3 @@ test('repair guidance names the completion signal that must be retried', () => {
   assert.strictEqual(guidance.operatorSummary, 'A-docs runtime health checks failed');
   assert.ok(guidance.modelRepairMessage.includes('type: meta-analysis-complete'));
 });
-
-console.log(`\n  ${passed} passed, ${failed} failed\n`);
-if (failed > 0) process.exit(1);

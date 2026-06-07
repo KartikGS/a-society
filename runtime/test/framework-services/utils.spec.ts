@@ -1,22 +1,6 @@
 import assert from 'node:assert';
+import { it as test } from 'vitest';
 import { extractFrontmatter } from '../../src/framework-services/utils.js';
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
-
-console.log('\nutils');
 
 test('returns frontmatter content from valid markdown', () => {
   const content = '---\nfoo: bar\nbaz: qux\n---\n\nBody text.';
@@ -57,8 +41,3 @@ test('handles multiline frontmatter values', () => {
   const result = extractFrontmatter(content);
   assert.strictEqual(result, 'workflow:\n  name: Test\n  phases: []');
 });
-
-// --- Summary ---
-
-console.log(`\n  ${passed} passed, ${failed} failed\n`);
-if (failed > 0) process.exit(1);

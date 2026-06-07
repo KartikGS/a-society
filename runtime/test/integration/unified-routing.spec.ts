@@ -8,13 +8,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { seedTestModelSettings } from './settings-test-utils.js';
+import { it } from 'vitest';
+import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
-  console.log("Starting unified-routing integration test...");
-
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Test server catch-all." } }] })}\n\n`);
@@ -22,8 +21,7 @@ async function runTest() {
     res.end();
   });
 
-  await new Promise<void>(resolve => server.listen(0, resolve));
-  const port = (server.address() as any).port;
+  const port = await listenOnLocalhost(server);
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'unified-routing-test-'));
   const workspaceRoot = tmpBase;
@@ -108,7 +106,6 @@ async function runTest() {
     const flowRun = SessionStore.loadFlowRun();
     if (!flowRun) throw new Error("flowRun not loaded");
 
-    console.log("\n--- Starting Orchestration Run ---");
     let serverTurn = 0;
     server.removeAllListeners('request');
     server.on('request', (req, res) => {
@@ -136,7 +133,6 @@ async function runTest() {
     });
 
     await orchestrator.advanceFlow(flowRun, 'start');
-    console.log("\n--- Orchestration Complete ---\n");
 
     const updatedFlow = SessionStore.loadFlowRun()!;
     const session = SessionStore.loadRoleSession('start');
@@ -162,15 +158,6 @@ async function runTest() {
     );
     const hasRepairNotice = repairNotice !== undefined;
 
-    console.log("Validation:");
-    console.log(`- Handoff 'start=>next' completed: ${updatedFlow.completedHandoffs.includes('start=>next') ? "Yes" : "No"}`);
-    console.log(`- Node 'next' received handoff: ${updatedFlow.receivingHandoff['start=>next'] ? "Yes" : "No"}`);
-    console.log(`- Repair message injected into history: ${repairInjected ? "Yes" : "No"}`);
-    console.log(`- Canonical node guidance injected from main workflow: ${canonicalGuidanceInjected ? "Yes" : "No"}`);
-    console.log(`- Sink has handoff event: ${hasHandoffNotice ? "Yes" : "No"}`);
-    console.log(`- Sink has role.active event: ${hasRoleActiveNotice ? "Yes" : "No"}`);
-    console.log(`- Sink has repair event: ${hasRepairNotice ? "Yes" : "No"}`);
-
     assert.ok(updatedFlow.completedHandoffs.includes('start=>next'), "Expected handoff 'start=>next' to be completed.");
     assert.deepStrictEqual(updatedFlow.receivingHandoff['start=>next'], ['mock.md'], "Expected node 'next' to receive a handoff.");
     assert.ok(repairInjected, "Expected model-facing repair message to be injected into session history.");
@@ -180,12 +167,6 @@ async function runTest() {
     assert.ok(hasRepairNotice, "Expected sink to contain a repair.requested event.");
     assert.strictEqual(repairNotice?.role, 'start', "Expected repair.requested to be attributed to the active role.");
     assert.strictEqual(repairNotice?.nodeId, 'start', "Expected repair.requested to be attributed to the active node.");
-
-    console.log("Integration test PASSED.");
-
-  } catch (e: any) {
-    console.error("Test execution failed:", e.stack);
-    process.exitCode = 1;
   } finally {
     process.chdir(originalCwd);
     server.close();
@@ -193,7 +174,6 @@ async function runTest() {
   }
 }
 
-runTest().catch(err => {
-  console.error(err);
-  process.exit(1);
+it('repairs malformed handoffs while preserving canonical workflow guidance', async () => {
+  await runTest();
 });

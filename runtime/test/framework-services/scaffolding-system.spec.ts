@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { afterAll, it as test } from 'vitest';
 import {
   scaffold,
   scaffoldFromManifestFile,
@@ -12,25 +13,11 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
-
 // Temp directories: one as project root, one as fake a-society root with source templates
 const TEMP_BASE = fs.mkdtempSync(path.join(tmpdir(), 'a-society-scaffold-'));
 const SOCIETY_ROOT = path.join(TEMP_BASE, 'a-society-src');
 function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
+afterAll(cleanup);
 
 // Seed the fake a-society source tree with copy templates used in tests
 function seedSourceFile(relativePath: string, content: string): void {
@@ -40,8 +27,6 @@ function seedSourceFile(relativePath: string, content: string): void {
 }
 
 seedSourceFile('general/roles/owner/main.md', '# Owner\n\nOwner role content.\n');
-
-console.log('\nscaffolding-system');
 
 // ── renderStub ────────────────────────────────────────────────────────────────
 
@@ -262,10 +247,3 @@ test('scaffoldFromManifestFile: throws if manifest has no files array', () => {
     /Manifest must contain a "files" array/,
   );
 });
-
-// ── Cleanup and summary ───────────────────────────────────────────────────────
-
-cleanup();
-
-console.log(`\n  ${passed} passing, ${failed} failing\n`);
-if (failed > 0) process.exit(1);

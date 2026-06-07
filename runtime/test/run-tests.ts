@@ -54,9 +54,17 @@ function matchesFilters(relativePath: string, filters: string[]): boolean {
 }
 
 const { filters, listOnly } = parseArgs(process.argv.slice(2));
-const testFiles = discoverTests(testDir)
-  .map((filePath) => toPosixPath(path.relative(runtimeRoot, filePath)))
+const allTestFiles = discoverTests(testDir)
+  .map((filePath) => toPosixPath(path.relative(runtimeRoot, filePath)));
+const testFiles = allTestFiles
   .filter((relativePath) => matchesFilters(relativePath, filters));
+
+if (allTestFiles.length === 0) {
+  if (!listOnly) {
+    console.log('[test-runner] No legacy .test.ts files remain. Use `npm run test:vitest` for the migrated suite.');
+  }
+  process.exit(0);
+}
 
 if (testFiles.length === 0) {
   console.error('[test-runner] No test files matched.');

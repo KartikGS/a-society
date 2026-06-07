@@ -7,13 +7,12 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { seedTestModelSettings } from './settings-test-utils.js';
+import { it } from 'vitest';
+import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 async function runTest() {
-  console.log('Starting missing-artifact-handoff integration test...');
-
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Test server catch-all.' } }] })}\n\n`);
@@ -21,8 +20,7 @@ async function runTest() {
     res.end();
   });
 
-  await new Promise<void>(resolve => server.listen(0, resolve));
-  const port = (server.address() as any).port;
+  const port = await listenOnLocalhost(server);
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'missing-artifact-handoff-test-'));
   const workspaceRoot = tmpBase;
@@ -124,11 +122,8 @@ async function runTest() {
     server.close();
     fs.rmSync(tmpBase, { recursive: true, force: true });
   }
-
-  console.log('Integration test PASSED.');
 }
 
-runTest().catch(err => {
-  console.error(err);
-  process.exit(1);
+it('requests repair when a handoff references a missing artifact and accepts the retry', async () => {
+  await runTest();
 });

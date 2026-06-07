@@ -15,6 +15,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { afterAll, it as test } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -28,6 +29,7 @@ import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 // ---- Harness setup ----
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
+afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
 const stateDir = path.join(tmpDir, '.a-society', 'state');
 const settingsDir = path.join(tmpDir, '.a-society');
 const projectNamespace = 'test-proj';
@@ -232,22 +234,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
   };
 }
 
-// ---- Test runner ----
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void | Promise<void>): Promise<void> {
-  return Promise.resolve()
-    .then(() => fn())
-    .then(() => { console.log(`  ✓ ${name}`); passed++; })
-    .catch((err: any) => { console.error(`  ✗ ${name}\n    ${err.message}`); failed++; });
-}
-
-async function run() {
-  console.log('\nsame-role-continuity integration');
-
-  await test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
+test('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
     const { bundleContent } = ContextInjectionService.buildContextBundle(
       projectNamespace,
       'owner',
@@ -260,7 +247,7 @@ async function run() {
     assert.ok(!bundleContent.includes('MANDATORY CONTEXT LOADING'));
   });
 
-  await test('Same-node resume: role-scoped session transcript is preserved intact', async () => {
+  test('Same-node resume: role-scoped session transcript is preserved intact', async () => {
     resetState();
 
     const sessionId = ownerSessionId();
@@ -284,7 +271,7 @@ async function run() {
     assert.strictEqual(loadedSession!.currentNodeId, 'owner-intake');
   });
 
-  await test('Store: loading an incompatible flow is rejected but it remains listable for deletion', async () => {
+  test('Store: loading an incompatible flow is rejected but it remains listable for deletion', async () => {
     resetState();
 
     const v5Flow: any = {
@@ -324,7 +311,7 @@ async function run() {
     );
   });
 
-  await test('Orchestrator: streamed assistant text is persisted before the turn completes', async () => {
+  test('Orchestrator: streamed assistant text is persisted before the turn completes', async () => {
     resetState();
 
     const flowRun = makeFlowRun({ runningNodes: ['owner-intake'] });
@@ -360,7 +347,7 @@ async function run() {
     assert.strictEqual(lastMessage.content, finalText);
   });
 
-  await test('Orchestrator: queued human input is consumed by the stored-flow scheduler', async () => {
+  test('Orchestrator: queued human input is consumed by the stored-flow scheduler', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -421,7 +408,7 @@ async function run() {
     );
   });
 
-  await test('Orchestrator: interrupted same-node resume appends continuation prompt', async () => {
+  test('Orchestrator: interrupted same-node resume appends continuation prompt', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -481,7 +468,7 @@ async function run() {
     );
   });
 
-  await test('Orchestrator: later same-role node reuses role-scoped session and appends transition packet', async () => {
+  test('Orchestrator: later same-role node reuses role-scoped session and appends transition packet', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -538,7 +525,7 @@ async function run() {
     assert.strictEqual(session!.currentNodeId, 'owner-gate');
   });
 
-  await test('Orchestrator: reopened same-role node keeps prior session and appends reopened packet', async () => {
+  test('Orchestrator: reopened same-role node keeps prior session and appends reopened packet', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -593,7 +580,7 @@ async function run() {
     assert.strictEqual(session!.currentNodeId, 'owner-intake');
   });
 
-  await test('Orchestrator: backward re-entry to an earlier node is framed as reopened even after the role visited another node', async () => {
+  test('Orchestrator: backward re-entry to an earlier node is framed as reopened even after the role visited another node', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -654,7 +641,7 @@ async function run() {
     );
   });
 
-  await test('Orchestrator: role instances with the same base role use separate sessions', async () => {
+  test('Orchestrator: role instances with the same base role use separate sessions', async () => {
     resetState();
 
     const flowRun = makeInstanceFlowRun({ runningNodes: ['owner-one'] });
@@ -698,7 +685,7 @@ async function run() {
     assert.ok((ownerTwoSession!.systemPrompt ?? '').includes('Loaded from base role owner.'));
   });
 
-  await test('Orchestrator: multiple queued human replies resume distinct role instances in one scheduler pass', async () => {
+  test('Orchestrator: multiple queued human replies resume distinct role instances in one scheduler pass', async () => {
     resetState();
 
     SessionStore.saveRoleSession({
@@ -768,7 +755,7 @@ async function run() {
     assert.ok(updated.awaitingHumanNodes['owner-two']);
   });
 
-  await test('Orchestrator: awaiting-handoff node wakes on inbound successor handoff', async () => {
+  test('Orchestrator: awaiting-handoff node wakes on inbound successor handoff', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -810,7 +797,7 @@ async function run() {
     assert.ok(updated.awaitingHumanNodes['owner-intake']);
   });
 
-  await test('Orchestrator: same-role received handoffs are claimed in graph order', async () => {
+  test('Orchestrator: same-role received handoffs are claimed in graph order', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -854,7 +841,7 @@ async function run() {
     );
   });
 
-  await test('Orchestrator: same-role-instance initial running nodes are serialized by the scheduler', async () => {
+  test('Orchestrator: same-role-instance initial running nodes are serialized by the scheduler', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -887,7 +874,7 @@ async function run() {
     assert.ok(updated.awaitingHumanNodes['owner-intake'], 'first same-role node should be awaiting human input');
   });
 
-  await test('Orchestrator: handoff to busy same-role target is accepted and left ready', async () => {
+  test('Orchestrator: handoff to busy same-role target is accepted and left ready', async () => {
     resetState();
 
     const flowRun = makeFlowRun({
@@ -922,15 +909,3 @@ async function run() {
       'busy same-role handoff should not request repair'
     );
   });
-
-  console.log(`\n  ${passed} passed, ${failed} failed\n`);
-
-  fs.rmSync(tmpDir, { recursive: true, force: true });
-
-  if (failed > 0) process.exit(1);
-}
-
-run().catch(err => {
-  console.error(err);
-  process.exit(1);
-});

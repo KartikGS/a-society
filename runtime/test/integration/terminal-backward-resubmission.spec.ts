@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
@@ -18,8 +19,6 @@ function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: s
 }
 
 async function runTest() {
-  console.log('Starting terminal-backward-resubmission integration test...');
-
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'terminal-backward-resubmission-test-'));
   const workspaceRoot = tmpBase;
   const projectNamespace = 'test-project';
@@ -93,12 +92,9 @@ async function runTest() {
   assert.strictEqual(reopenedSession!.currentNodeId, 'proposal');
   assert.strictEqual((reopenedSession!.transcriptHistory[0] as any).content, 'stale proposal session');
 
-  console.log('Integration test PASSED.');
-
   fs.rmSync(tmpBase, { recursive: true, force: true });
 }
 
-runTest().catch(err => {
-  console.error(err);
-  process.exit(1);
+it('keeps terminal review suspended when it resubmits work backward', async () => {
+  await runTest();
 });

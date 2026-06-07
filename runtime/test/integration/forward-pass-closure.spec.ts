@@ -8,7 +8,8 @@ import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
-import { seedTestModelSettings } from './settings-test-utils.js';
+import { it } from 'vitest';
+import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
@@ -27,8 +28,6 @@ const frameworkRoot = path.resolve(__dirname, '../../..');
  * the improvement phase runs.
  */
 async function runTest() {
-  console.log("Starting forward-pass-closure integration test...");
-
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "placeholder" } }] })}\n\n`);
@@ -36,8 +35,7 @@ async function runTest() {
     res.end();
   });
 
-  await new Promise<void>(resolve => server.listen(0, resolve));
-  const port = (server.address() as any).port;
+  const port = await listenOnLocalhost(server);
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'forward-pass-closure-test-'));
   const workspaceRoot = tmpBase;
@@ -137,21 +135,13 @@ async function runTest() {
     const flowRun = SessionStore.loadFlowRun();
     if (!flowRun) throw new Error("flowRun not loaded");
 
-    console.log("\n--- Advancing 'start' node (expects forward-pass-closed) ---");
     await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, () => outputStream);
-    console.log("\n--- Orchestration Complete ---\n");
 
     const assistantOut = outputChunks.join('');
-
-    console.log("Assistant/improvement stream output:");
-    console.log(assistantOut);
 
     const hasForwardPassNotice = sink.events.some(
       e => e.kind === 'flow.forward_pass_closed'
     );
-
-    console.log("Validation:");
-    console.log(`- Sink has flow.forward_pass_closed event: ${hasForwardPassNotice ? "Yes" : "No"}`);
 
     assert.ok(hasForwardPassNotice, "Expected sink to contain flow.forward_pass_closed event");
 
@@ -165,11 +155,6 @@ async function runTest() {
       "Expected forward-pass closure to enter improvement choice without persisting redundant closure metadata.");
     assert.ok(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase),
       "Expected forward-pass closure metadata to be omitted from persisted improvement state.");
-
-    console.log("Forward-pass-closure test PASSED.");
-  } catch (e: any) {
-    console.error("Test execution failed:", e.stack);
-    process.exitCode = 1;
   } finally {
     server.close();
     outputStream.destroy();
@@ -177,7 +162,6 @@ async function runTest() {
   }
 }
 
-runTest().catch(err => {
-  console.error(err);
-  process.exit(1);
+it('pauses for improvement choice after a forward-pass-closed signal', async () => {
+  await runTest();
 });

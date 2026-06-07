@@ -6,7 +6,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { seedTestModelSettings } from './settings-test-utils.js';
+import { it } from 'vitest';
+import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -18,8 +19,6 @@ import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
  * scheduler or direct caller actually claims and enters that node.
  */
 async function runTest() {
-  console.log("Starting linear-role-active integration test...");
-
   const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' });
     res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "placeholder" } }] })}\n\n`);
@@ -27,8 +26,7 @@ async function runTest() {
     res.end();
   });
 
-  await new Promise<void>(resolve => server.listen(0, resolve));
-  const port = (server.address() as any).port;
+  const port = await listenOnLocalhost(server);
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-role-active-test-'));
   const workspaceRoot = tmpBase;
@@ -133,22 +131,17 @@ async function runTest() {
     const flowRun = SessionStore.loadFlowRun();
     if (!flowRun) throw new Error("flowRun not loaded");
 
-    console.log("\n--- Advancing 'start' node ---");
     await orchestrator.advanceFlow(flowRun, 'start');
 
     const flowAfterStart = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterStart.completedHandoffs.includes('start=>next'), "Expected 'start' handoff to be completed.");
     assert.deepStrictEqual(flowAfterStart.receivingHandoff['start=>next'], ['start-output.md'], "Expected 'next' to receive the handoff.");
 
-    console.log("\n--- Advancing 'next' node ---");
     await orchestrator.advanceFlow(flowAfterStart, 'next');
 
     const nextRoleActiveCount = sink.events.filter(
       e => e.kind === 'role.active' && e.nodeId === 'next'
     ).length;
-
-    console.log("Validation:");
-    console.log(`- role.active events for 'next': ${nextRoleActiveCount} (expected: 1)`);
 
     assert.strictEqual(
       nextRoleActiveCount,
@@ -158,18 +151,12 @@ async function runTest() {
     const flowAfterNext = SessionStore.loadFlowRun()!;
     assert.ok(flowAfterNext.completedHandoffs.includes('next=>end'), "Expected node 'next' handoff to be completed.");
     assert.deepStrictEqual(flowAfterNext.receivingHandoff['next=>end'], ['next-output.md'], "Expected successor node 'end' to receive the handoff.");
-
-    console.log("Linear-role-active test PASSED.");
-  } catch (e: any) {
-    console.error("Test execution failed:", e.stack);
-    process.exitCode = 1;
   } finally {
     server.close();
     fs.rmSync(tmpBase, { recursive: true, force: true });
   }
 }
 
-runTest().catch(err => {
-  console.error(err);
-  process.exit(1);
+it('emits exactly one role.active notice when a linear successor is claimed', async () => {
+  await runTest();
 });

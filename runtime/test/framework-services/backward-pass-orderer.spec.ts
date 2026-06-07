@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { it as test } from 'vitest';
 import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import {
   buildBackwardPassPlan,
@@ -13,23 +14,6 @@ import type {
   WorkflowNode,
   WorkflowEdge,
 } from '../../src/framework-services/backward-pass-orderer.js';
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
-
-console.log('\nbackward-pass-orderer (Component 4 Redesign)');
 
 const LINEAR_NODES: WorkflowNode[] = [
   { id: '1', role: 'owner' },
@@ -241,6 +225,3 @@ test('feedback entry has correct fields', () => {
   assert.strictEqual(feedbackEntry.sessionInstruction, 'new-session');
   assert.deepStrictEqual(feedbackEntry.findingsRolesToInject, []);
 });
-
-console.log(`\n  ${passed} passed, ${failed} failed\n`);
-if (failed > 0) process.exit(1);

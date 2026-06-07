@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { it as test } from 'vitest';
 import {
   validateWorkflowFile,
   validateGraph,
@@ -18,9 +19,6 @@ const LIVE_WORKFLOWS = [
 ];
 const FIXTURES = path.join(__dirname, 'fixtures');
 
-let passed = 0;
-let failed = 0;
-
 function flowState(overrides: Partial<WorkflowStateValidationInput> = {}): WorkflowStateValidationInput {
   return {
     runningNodes: [],
@@ -33,20 +31,6 @@ function flowState(overrides: Partial<WorkflowStateValidationInput> = {}): Workf
     ...overrides,
   };
 }
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
-
-console.log('\nworkflow-graph-validator');
 
 test('valid graph passes validation', () => {
   const graph = {
@@ -634,6 +618,3 @@ test('buildWorkflowRepairGuidance: model repair message mentions live schema edg
   assert.ok(guidance.modelRepairMessage.includes('to:'), 'should mention to key');
   assert.ok(guidance.modelRepairMessage.includes('artifact:'), 'should mention artifact key');
 });
-
-console.log(`\n  ${passed} passed, ${failed} failed\n`);
-if (failed > 0) process.exit(1);

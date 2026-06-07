@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { afterAll, it as test } from 'vitest';
 
 import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import {
@@ -32,21 +33,6 @@ import type {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void): void {
-  try {
-    fn();
-    console.log(`  ✓ ${name}`);
-    passed++;
-  } catch (err) {
-    console.error(`  ✗ ${name}`);
-    console.error(`    ${(err as Error).message}`);
-    failed++;
-  }
-}
 
 // ── Path resolution ───────────────────────────────────────────────────────────
 
@@ -64,8 +50,7 @@ const RECORD_FOLDER = path.join(TEMP_BASE, 'record-folder');
 const RECORD_WORKFLOW = path.join(RECORD_FOLDER, 'workflow.yaml');
 
 function cleanup(): void { fs.rmSync(TEMP_BASE, { recursive: true, force: true }); }
-
-console.log('\nintegration');
+afterAll(cleanup);
 
 fs.mkdirSync(REPO_ROOT, { recursive: true });
 fs.symlinkSync(SOCIETY_ROOT, path.join(REPO_ROOT, 'a-society'), 'dir');
@@ -217,10 +202,3 @@ test('Scenario 5 — meta-analysis entries reuse the existing session', () => {
     assert.strictEqual(entry.sessionInstruction, 'existing-session');
   });
 });
-
-// ── Cleanup and summary ───────────────────────────────────────────────────────
-
-cleanup();
-
-console.log(`\n  ${passed} passing, ${failed} failing\n`);
-if (failed > 0) process.exit(1);
