@@ -1,5 +1,26 @@
 import fs from 'node:fs';
+import type http from 'node:http';
 import path from 'node:path';
+
+export function listenOnLocalhost(server: http.Server): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const onError = (error: Error) => {
+      server.off('error', onError);
+      reject(error);
+    };
+
+    server.once('error', onError);
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', onError);
+      const address = server.address();
+      if (address && typeof address === 'object') {
+        resolve(address.port);
+        return;
+      }
+      reject(new Error('Test server did not expose a TCP port.'));
+    });
+  });
+}
 
 export function seedTestModelSettings(
   settingsDir: string,

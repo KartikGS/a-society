@@ -14,13 +14,6 @@ export interface ModelValidationConfig {
   reasoning: ModelReasoningConfig;
 }
 
-export type ModelValidationProviderFactory = (config: ModelValidationConfig) => LLMProvider;
-
-export interface ModelValidationOptions {
-  createProvider?: ModelValidationProviderFactory;
-  timeoutMs?: number;
-}
-
 function createProvider(config: ModelValidationConfig): LLMProvider {
   const providerRuntimeConfig = {
     maxOutputTokens: config.maxOutputTokens,
@@ -63,10 +56,7 @@ function validationFailureMessage(
   return `Model validation failed: ${cleanMessage}`;
 }
 
-export async function validateModelConfiguration(
-  config: ModelValidationConfig,
-  options: ModelValidationOptions = {}
-): Promise<void> {
+export async function validateModelConfiguration(config: ModelValidationConfig): Promise<void> {
   if (config.apiKey.trim() === '') {
     throw new Error('Model validation failed: API key is required.');
   }
@@ -76,14 +66,14 @@ export async function validateModelConfiguration(
 
   const controller = new AbortController();
   let timedOut = false;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_VALIDATION_TIMEOUT_MS;
+  const timeoutMs = DEFAULT_VALIDATION_TIMEOUT_MS;
   const timeout = setTimeout(() => {
     timedOut = true;
     controller.abort();
   }, timeoutMs);
 
   try {
-    const provider = (options.createProvider ?? createProvider)(config);
+    const provider = createProvider(config);
     await provider.executeTurn(
       'You are validating a runtime model configuration. Reply with exactly OK.',
       [{ role: 'user', content: 'Reply with OK.' }],

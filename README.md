@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  Structured memory, role-based workflows, runtime orchestration, verification, and self-improvement.
+  Structured memory, role-based workflows, self-improvement, and cross-project feedback.
 </p>
 
 <p align="center">
@@ -30,94 +30,39 @@
 
 ---
 
-> **Status: early & experimental.** A-Society is a working idea, not a finished product. The runtime runs and you can try it today — but it is rough, lightly proven, and still being built in the open. It has one real proving ground so far (the project it is being developed alongside), so treat the cross-project claims below as design intent, not a track record. If that sounds interesting, clone it, play with it, and tell us what breaks — early feedback is exactly what it needs right now.
-
----
-
 ## What the Harness Is Designed to Give a Project
 
-| Structured memory | Workflow execution | Cross-project learning |
-|---|---|---|
-| `a-docs/` is designed to preserve roles, rules, indexes, and standing project truth across sessions. | The runtime aims to route work through explicit roles, handoffs, records, and closure checks. | Feedback and backward-pass findings are intended to improve universal templates and project-type standards over time. |
+<!-- DEMO VIDEO: open this README in the GitHub web editor and drag-and-drop the demo mp4 onto this line. GitHub uploads it to user-attachments and replaces this comment with a playable embed — no file is committed to the repo. -->
 
----
 
-## Why It Exists
 
-Agents are capable. The bottleneck is not capability — it is the operating environment around the agent.
+| Structured memory | Workflow execution | Self-improvement | Cross-project feedback |
+|---|---|---|---|
+| `a-docs/` is designed to preserve roles, rules, indexes, and standing project truth across sessions. | The runtime aims to route work through explicit roles, handoffs, records, and closure checks. | After a flow, a backward pass turns what happened into findings that improve the project's own docs. | With your consent, the same findings can be distilled into a report that improves A-Society's reusable templates. |
 
-Most projects are not set up in a way that agents can navigate confidently, act through a designed process, retain useful memory between sessions, or improve the project from the work they just performed. There is no declared canonical tool, no structured role boundary, no workflow authority, no durable record of decisions, and no feedback loop that turns recurring friction into better defaults. The result is inconsistency, rework, and friction — not because the agent failed, but because the project has no harness for agentic work.
+https://github.com/user-attachments/assets/48d3b1db-baa9-4598-9b81-3c8d0dc8fd5a
 
-This is a solvable problem. It is solved by giving the project a standing agentic harness: structured memory, role boundaries, workflow execution, verification, and self-improvement.
-
----
-
-## The Core Bet
-
-> The quality of agent output is determined more by the quality of the project's harness — its structure, workflow, memory, verification, and feedback loops — than by the capability of the agent alone.
-
-A well-harnessed project makes a good agent reliable. A poorly harnessed project makes a great agent guess.
-
----
-
-## The Standards A-Society Targets
-
-A-Society is designed to help projects achieve three standards:
-
-- **Comprehensive work** — touched standing surfaces are accounted for, not silently left stale
-- **Cost optimization** — agents load only the context and verification burden they actually need
-- **Low latency** — workflows take the shortest safe path and parallelize independent work
-
-When these standards conflict, A-Society prioritizes them in this order:
-
-`comprehensive work > cost optimization > low latency`
-
----
-
-## What A-Society Is
-
-A-Society is both a reusable library of project standards and an executable runtime for agentic work. It is built to initialize projects, orchestrate role-based sessions, preserve handoff records, verify closure, and turn feedback from real flows into better future defaults.
-
-It is:
-- **Project-portable** — sits beside many kinds of projects without being embedded inside them
-- **Domain-flexible after setup** — can support software, writing, legal, research, design, and other project work once initialized
-- **Technically honest** — setup and operation currently require a technical operator or technical environment
-- **Agent-adaptable** — is not conceptually bound to one model or agent platform
-- **Designed to learn across projects** — intended to use feedback to improve universal templates, project-type standards, runtime behavior, and initialization defaults as more projects adopt it
-
----
-
-## How It Works
-
-A-Society is a standalone repository that sits alongside your project. You initialize an `a-docs/` folder inside your project through the runtime UI, which scaffolds the compulsory surfaces and then runs an Owner-led initialization flow that fills them with project truth. After initialization, the runtime supports ongoing flows with role context, workflow routing, records, handoffs, closure checks, and improvement feedback.
-
-```
-a-society/          ← this repo (the framework)
-  general/          ← reusable instructions, templates, role archetypes
-  runtime/          ← executable layer, browser UI, and initialization contract
-  a-docs/           ← a-society's own agent documentation
-
-my-project/         ← your project
-  [project files]
-  a-docs/           ← your project's agent documentation (initialized from a-society)
-```
-
----
-
-## What's Inside
-
-| Folder | Contents |
-|---|---|
-| `runtime/` | The executable layer — browser runtime, orchestration, context loading, records, handoffs, initialization, and improvement support |
-| `general/instructions/` | How to create each agent-doc artifact for any project |
-| `general/project-types/` | Reusable standards for approved project categories |
-| `general/roles/` | Ready-made universal role templates and support docs, currently centered on Owner |
-| `general/improvement/` | Protocols and templates for iterative doc improvement |
-| `a-docs/` | A-Society's own agent documentation — the framework dogfooded on itself |
+https://github.com/user-attachments/assets/70431d7a-44de-4137-9187-4cd5824a31b7
 
 ---
 
 ## Getting Started
+
+**Requirements:** Node.js ≥ 18, npm, git.
+
+**One-line install.** Clone the framework and install runtime dependencies in a single step — no PATH changes, no global installs:
+
+```bash
+curl -fsSL https://a-society.dev/install.sh | bash
+```
+
+Then start the runtime and continue from step 3:
+
+```bash
+npm --prefix ./a-society/runtime start
+```
+
+Prefer to set it up by hand? Follow the steps below.
 
 **1. Set up your workspace**
 
@@ -149,10 +94,12 @@ The runtime opens at `http://localhost:3000`.
 The Settings panel opens automatically and stays open until you activate a model. The runtime cannot start project work without one.
 
 Fill in:
-- **Provider** — Anthropic, OpenAI, or a compatible base URL
-- **API key** — from your provider's account dashboard ([Anthropic Console](https://console.anthropic.com) · [OpenAI Platform](https://platform.openai.com/api-keys))
-- **Model ID** — from your provider's model catalog ([Anthropic model cards](https://docs.anthropic.com/en/docs/about-claude/models/overview) · [OpenAI models](https://platform.openai.com/docs/models))
+- **Provider** — your model provider and its API base URL; use whichever provider you prefer
+- **API key** — from your provider's account dashboard
+- **Model ID** — from your provider's model catalog
 - **Context window** — the model's token context limit; used to calculate when to compact session history
+
+Any OpenAI-compatible provider (Hugging Face, OpenRouter, self-hosted, and others) or Anthropic's API is supported.
 
 Save and set the model as active. The project selector appears once a model is active.
 
@@ -168,3 +115,22 @@ Approve the result and your project has a structured agent harness.
 
 Click **New Record**. The runtime opens a draft flow and routes it to the Owner node. You're in.
 
+---
+
+## How It Works
+
+A-Society has a **library** of reusable instructions, role templates, and standards, and a **runtime** that uses them. The runtime reads the library and your project's `a-docs/` to drive each agent session. The library is what every initialized project inherits and what the framework improves over time.
+
+The runtime runs as a local web app, driven from the browser. Here is what it does, at a surface level.
+
+**Model configuration.** In Settings you pick a provider, paste an API key, and set the model ID and its context-window size. The runtime sends a small test request before saving and won't start project work until an active model exists. Keys and settings stay local to your workspace.
+
+**Context injection.** When a role's session begins, the runtime assembles a context bundle for it: who it is, the session contracts it must follow (how to hand off, where to write records), and the role's required-reading files — resolved through the project's index so paths are never hardcoded. Each workflow step can add its own first-entry reading, inputs, and task description, injected only when that step is first entered. Each agent loads only what its job needs.
+
+**Handoffs.** Work moves between roles through small machine-readable handoff blocks. When a role finishes its part, it emits a block naming the next step and the artifact it's passing along, and the runtime routes control there. A step can only hand off to its direct neighbors, can pause to ask you a question, or can signal that a phase is complete. Every handoff and artifact is persisted, so a flow survives a restart and you can reopen any step's transcript later.
+
+**Records.** Every flow gets its own folder under `.a-society/state/`, holding the flow's workflow snapshot, its plan, the artifacts roles hand off, and the findings from improvement. Roles write only inside that folder; standing project docs live elsewhere. This is the durable memory of what happened and why.
+
+**Self-improvement.** When a flow's forward work closes, the runtime can run a backward pass: each role that took part reflects on what it actually did and writes findings, ordered so later roles' lessons reach the roles that set their work up. Those findings feed back into the project's own docs and standing surfaces — so the project gets better from the work it just did.
+
+**Cross-project feedback.** After the backward pass, the runtime asks whether to share an upstream feedback report. Only if you say yes does a final pass distill the findings into one report under `a-society/feedback/`, labeling each suggestion by how broadly it applies — universal, category-specific, or project-only. Nothing is sent anywhere automatically: you review and redact before any of it leaves your machine, and consent is asked per flow.
