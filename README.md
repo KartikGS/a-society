@@ -84,6 +84,7 @@ From the workspace root:
 
 ```bash
 npm --prefix ./a-society/runtime install
+npm --prefix ./a-society/runtime run build:ui
 npm --prefix ./a-society/runtime start
 ```
 
