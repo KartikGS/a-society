@@ -34,9 +34,15 @@
 
 <!-- DEMO VIDEO: open this README in the GitHub web editor and drag-and-drop the demo mp4 onto this line. GitHub uploads it to user-attachments and replaces this comment with a playable embed — no file is committed to the repo. -->
 
+
+
 | Structured memory | Workflow execution | Self-improvement | Cross-project feedback |
 |---|---|---|---|
 | `a-docs/` is designed to preserve roles, rules, indexes, and standing project truth across sessions. | The runtime aims to route work through explicit roles, handoffs, records, and closure checks. | After a flow, a backward pass turns what happened into findings that improve the project's own docs. | With your consent, the same findings can be distilled into a report that improves A-Society's reusable templates. |
+
+https://github.com/user-attachments/assets/48d3b1db-baa9-4598-9b81-3c8d0dc8fd5a
+
+https://github.com/user-attachments/assets/70431d7a-44de-4137-9187-4cd5824a31b7
 
 ---
 
