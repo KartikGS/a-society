@@ -3,7 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
-import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam } from '../common/types.js';
+import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam, OperatorEvent } from '../common/types.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
@@ -27,7 +27,10 @@ export class WorkflowError extends Error {
   }
 }
 
-type ClaimedRunnableWork = { nodeId: string; humanInput?: string };
+type ClaimedRunnableWork = {
+  nodeId: string;
+  roleInstanceId: string;
+};
 
 
 function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
@@ -204,22 +207,23 @@ export class FlowOrchestrator {
     });
   }
 
-  public async advanceFlow(
-    flowRun: FlowRun,
+  private async advanceFlow(
     nodeId: string,
-    humanInput?: string,
+    roleInstanceId: string,
     consentGate?: ConsentGate,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
+    let flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
+    const session = SessionStore.loadRoleSession(roleInstanceId, this.requireFlowRef(), this.requireWorkspaceRoot())!;
+    const injectedHistory = session.transcriptHistory as RuntimeMessageParam[];
+
     this.setFlowContext(flowRun);
-    const claim = await this.claimNodeForAdvance(nodeId, humanInput !== undefined);
-    flowRun = claim.flowRun;
     const tracer = TelemetryManager.getTracer();
     return tracer.startActiveSpan('flow.node.advance', {
       kind: SpanKind.INTERNAL,
       attributes: {
         'flow.id': flowRun.flowId,
-        'node.id': nodeId
+        'node.id': nodeId,
       }
     }, async (span) => {
       try {
@@ -245,193 +249,27 @@ export class FlowOrchestrator {
           }
         }
 
-        const wf = this.loadWorkflowDocument(flowRun);
-        const currentNodeDef = wf.findNodeById(nodeId);
+        span.setAttribute('role', roleInstanceId);
+        span.setAttribute('role_name', roleInstanceId);
+        span.setAttribute('session.id', this.roleSessionId(flowRun, roleInstanceId));
+        const nodeOutputStream = outputStreamFactory?.(roleInstanceId);
+        const bundleContent = session.systemPrompt!;
 
-        const roleName = currentNodeDef.role;
-        span.setAttribute('role', roleName);
-        span.setAttribute('role_name', roleName);
-        span.setAttribute('session.id', this.roleSessionId(flowRun, roleName));
-        if (claim.resumedFromHuman) {
-          span.addEvent('human_input.received');
-          this.renderer.emit({ kind: 'human.resumed', nodeId, role: currentNodeDef.role });
-        }
-
-        const sessionId = this.roleSessionId(flowRun, roleName);
-        const visitedNodeIds = flowRun.visitedNodeIds ?? (flowRun.visitedNodeIds = []);
-        const firstNodeVisit = !visitedNodeIds.includes(nodeId);
-
-        const inboundHandoffSnapshot = Object.entries(flowRun.receivingHandoff)
-          .map(([key, artifacts]) => {
-            const handoff = parseHandoffKey(key);
-            return handoff ? { ...handoff, key, artifacts: [...artifacts] } : null;
-          })
-          .filter((handoff): handoff is HandoffKeyParts & { key: string; artifacts: string[] } =>
-            handoff !== null &&
-            handoff.targetId === nodeId &&
-            this.isDeliverableInboundHandoff(flowRun, wf, nodeId, handoff.fromNodeId)
-          )
-          .map(({ key, artifacts }) => ({ key, artifacts }));
-        const receivingHandoffSnapshot = inboundHandoffSnapshot.map(({ key, artifacts }) => ({
-          fromNodeId: key.split('=>')[0],
-          artifacts,
-        }));
-
-        // Stale forward handoffs: nodeId sent to a successor, but that successor sent a backward handoff back.
-        // These are superseded and should not be delivered to the successor — collect them for context and cleanup.
-        const backwardSenderIds = new Set(
-          inboundHandoffSnapshot
-            .map(({ key }) => key.split('=>')[0])
-            .filter(from => wf.getIncomingEdges(nodeId).every(e => e.from !== from))
-        );
-        const staleForwardSnapshot = Object.entries(flowRun.receivingHandoff)
-          .filter(([key]) => {
-            const [from, to] = key.split('=>');
-            return from === nodeId && backwardSenderIds.has(to);
-          })
-          .map(([key, artifacts]) => ({ key, toNodeId: key.split('=>')[1], artifacts: [...artifacts] }));
-
-        const nodeOutputStream = outputStreamFactory?.(roleName);
-
-        let session = SessionStore.loadRoleSession(this.roleKey(roleName), this.requireFlowRef(), this.requireWorkspaceRoot());
-        span.setAttribute('node.session_resumed', session !== null);
-        if (!session) {
-          session = {
-            roleName,
-            logicalSessionId: sessionId,
-            transcriptHistory: [],
-            isActive: true,
-            currentNodeId: nodeId
-          };
-        } else {
-          span.addEvent('store.session_loaded', { 'session.id': sessionId, 'session.resumed': true });
-          session.currentNodeId = session.currentNodeId ?? nodeId;
-        }
-
-        if (!session.systemPrompt) {
-          session.systemPrompt = ContextInjectionService.buildContextBundle(
-            flowRun.projectNamespace, roleName, flowRun.workspaceRoot, flowRun.recordFolderPath
-          ).bundleContent;
-        }
-        const bundleContent = session.systemPrompt;
-
-        const injectedHistory = [...session.transcriptHistory] as RuntimeMessageParam[];
         const saveRoleSession = (): void => {
-          session.transcriptHistory = injectedHistory;
           SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
         };
-        const isVisitedNode = !firstNodeVisit;
-        const isSameNode = session.currentNodeId === nodeId;
-        const sameNodeResume = session.isActive && isSameNode && injectedHistory.length > 0;
-        if (!isVisitedNode || !sameNodeResume) {
-          this.renderer.emit({
-            kind: 'role.active',
-            nodeId,
-            role: currentNodeDef.role,
-          });
-        }
-
-        if (sameNodeResume) {
-          if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
-            session.currentNodeContext = { nodeId, exchanges: [...injectedHistory] };
-          }
-        } else {
-          session.currentNodeContext = { nodeId, exchanges: [] };
-        }
-        const rawNodeContext = firstNodeVisit ? {
-          required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
-          guidance: Array.isArray(currentNodeDef.guidance) ? currentNodeDef.guidance : undefined,
-          inputs: Array.isArray(currentNodeDef.inputs) ? currentNodeDef.inputs : undefined,
-          work: Array.isArray(currentNodeDef.work) ? currentNodeDef.work : undefined,
-          outputs: Array.isArray(currentNodeDef.outputs) ? currentNodeDef.outputs : undefined,
-          transitions: Array.isArray(currentNodeDef.transitions) ? currentNodeDef.transitions : undefined,
-          notes: Array.isArray(currentNodeDef.notes) ? currentNodeDef.notes : undefined,
-        } : undefined;
-        const nodeContext = rawNodeContext && Object.values(rawNodeContext).some(value =>
-          Array.isArray(value) ? value.length > 0 : false
-        ) ? rawNodeContext : undefined;
-        const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
-
-        const staleForwardArtifacts = staleForwardSnapshot.map(({ toNodeId, artifacts }) => ({ toNodeId, artifacts }));
-
-        if (!sameNodeResume) {
-          const nodeEntryMessage = buildForwardNodeEntryMessage({
-            nodeId,
-            workspaceRoot: flowRun.workspaceRoot,
-            projectNamespace: flowRun.projectNamespace,
-            isResume: !firstNodeVisit,
-            handoffContext: { wf, completedHandoffs: flowRun.completedHandoffs, receivingHandoffSnapshot, staleForwardArtifacts },
-            includeWorkflowContract,
-            nodeContext,
-          });
-          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
-        } else if (humanInput) {
-          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: humanInput });
-        }
-
-        if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
-          this.renderer.emit({
-            kind: 'role.resumed',
-            nodeId,
-            role: currentNodeDef.role,
-            reason: 'interrupted-turn',
-          });
-          appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
-          span.addEvent('session.interrupted_turn_continuation');
-        }
-
-        if (firstNodeVisit && (injectedHistory.length > 0)) {
-          flowRun = await SessionStore.updateFlowRun((latest) => {
-            const latestVisitedNodeIds = latest.visitedNodeIds ?? [];
-            if (!latestVisitedNodeIds.includes(nodeId)) {
-              latestVisitedNodeIds.push(nodeId);
-            }
-            latest.visitedNodeIds = latestVisitedNodeIds;
-          }, this.requireFlowRef(), this.requireWorkspaceRoot());
-        }
-
-        session.currentNodeId = nodeId;
-        session.isActive = true;
-        saveRoleSession();
-
-        if (humanInput !== undefined) {
-          flowRun = await SessionStore.updateFlowRun((latest) => {
-            const pending = latest.pendingHumanInputs[nodeId];
-            if (pending?.text === humanInput) {
-              delete latest.pendingHumanInputs[nodeId];
-            }
-          }, this.requireFlowRef(), this.requireWorkspaceRoot());
-        }
-
-        if (!sameNodeResume && (inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0)) {
-          flowRun = await SessionStore.updateFlowRun((latest) => {
-            for (const { key, artifacts } of inboundHandoffSnapshot) {
-              if (!(key in latest.receivingHandoff)) continue;
-              latest.receivingHandoff[key] = latest.receivingHandoff[key].filter(a => !artifacts.includes(a));
-              if (latest.receivingHandoff[key].length === 0) {
-                delete latest.receivingHandoff[key];
-              }
-            }
-            for (const { key } of staleForwardSnapshot) {
-              delete latest.receivingHandoff[key];
-              latest.completedHandoffs = latest.completedHandoffs.filter(k => k !== key);
-            }
-          }, this.requireFlowRef(), this.requireWorkspaceRoot());
-        }
-
-        span.addEvent('store.flow_saved', { 'flow.status': flowRun.status });
 
         while (true) {
           try {
             const controller = new AbortController();
-            this.activeTurnControllers.set(nodeId, { role: roleName, controller });
+            this.activeTurnControllers.set(nodeId, { role: roleInstanceId, controller });
             this.ensureSigintHandler();
 
             let sessionResult: RoleTurnResult | null = null;
             try {
               sessionResult = await runRoleTurn({
                 workspaceRoot: flowRun.workspaceRoot,
-                roleInstanceId: roleName,
+                roleInstanceId: roleInstanceId,
                 providedSystemPrompt: bundleContent,
                 flowRef: this.requireFlowRef(),
                 providedHistory: injectedHistory,
@@ -468,20 +306,20 @@ export class FlowOrchestrator {
             if (sessionResult) {
               const handoffResult = sessionResult.handoff;
               const turnUsage = sessionResult.contextUsage;
-              recordRoleTurnUsage(session, this.renderer, roleName, turnUsage);
+              recordRoleTurnUsage(session, this.renderer, roleInstanceId, turnUsage);
               if (handoffResult.kind === 'awaiting_human') {
                 const awaitingReason = sessionResult.awaitingHumanReason ?? 'prompt-human';
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: awaitingReason });
                 session.transcriptHistory = injectedHistory;
                 SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-                flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, awaitingReason);
-                this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: awaitingReason });
+                flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, awaitingReason);
+                this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: awaitingReason });
                 break;
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
-                const emitterInstanceRole = parseRoleIdentity(currentNodeDef.role).instanceRoleId;
+                const emitterInstanceRole = parseRoleIdentity(roleInstanceId).instanceRoleId;
                 const latestForFpc = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
                 const fpcWf = this.loadWorkflowDocument(latestForFpc);
                 const fpcOutgoing = fpcWf.getOutgoingEdges(nodeId);
@@ -531,7 +369,7 @@ export class FlowOrchestrator {
                     scope: 'node',
                     code: 'runtime_health',
                     summary: guidance.operatorSummary,
-                    role: currentNodeDef.role,
+                    role: roleInstanceId,
                     nodeId
                   });
                   appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: guidance.modelRepairMessage });
@@ -566,7 +404,8 @@ export class FlowOrchestrator {
 
               if (handoffResult.kind === 'await-handoff') {
                 const latestForCheck = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
-                const isPendingTarget = getOutstandingInboundSources(wf, latestForCheck.completedHandoffs, nodeId).length > 0;
+                const awaitHandoffWf = this.loadWorkflowDocument(latestForCheck);
+                const isPendingTarget = getOutstandingInboundSources(awaitHandoffWf, latestForCheck.completedHandoffs, nodeId).length > 0;
                 const isReceivingTarget = Object.keys(latestForCheck.receivingHandoff).some(k => k.split('=>')[1] === nodeId);
 
                 if (!isPendingTarget && !isReceivingTarget) {
@@ -575,7 +414,7 @@ export class FlowOrchestrator {
                     scope: 'node',
                     code: 'invalid_transition',
                     summary: 'await-handoff invalid: no inbound handoff established',
-                    role: currentNodeDef.role,
+                    role: roleInstanceId,
                     nodeId
                   });
                   appendRuntimeMessage(injectedHistory, session, nodeId, {
@@ -606,25 +445,25 @@ export class FlowOrchestrator {
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
-              await this.applyHandoffAndAdvance(flowRun, nodeId, currentNodeDef.role, handoffs);
+              await this.applyHandoffAndAdvance(flowRun, nodeId, roleInstanceId, handoffs);
 
               session.transcriptHistory = injectedHistory;
               session.isActive = false;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              span.addEvent('store.session_saved', { 'session.id': sessionId, 'session.active': false });
+              span.addEvent('store.session_saved', { 'session.id': this.roleSessionId(flowRun, roleInstanceId), 'session.active': false });
               break;
             } else {
               span.setAttribute('node.outcome', 'null_return');
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              flowRun = await this.markNodeAwaitingHuman(nodeId, currentNodeDef.role, 'autonomous-abort');
-              this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: currentNodeDef.role, reason: 'autonomous-abort' });
+              flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, 'autonomous-abort');
+              this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: 'autonomous-abort' });
               span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'null_session_return' });
               break;
             }
           } catch (e: any) {
             if (e instanceof HandoffParseError) {
-              recordRoleTurnUsage(session, this.renderer, roleName, e.contextUsage);
+              recordRoleTurnUsage(session, this.renderer, roleInstanceId, e.contextUsage);
               span.addEvent('handoff.parse_error_injected', {
                 error_type: e.name,
                 error_message: e.message.slice(0, 500)
@@ -634,7 +473,7 @@ export class FlowOrchestrator {
                 scope: 'node',
                 code: e.details.code,
                 summary: e.details.operatorSummary,
-                role: currentNodeDef.role,
+                role: roleInstanceId,
                 nodeId
               });
               appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: e.details.modelRepairMessage });
@@ -650,7 +489,7 @@ export class FlowOrchestrator {
                 scope: 'node',
                 code: 'workflow_parse',
                 summary: guidance.operatorSummary,
-                role: currentNodeDef.role,
+                role: roleInstanceId,
                 nodeId
               });
               appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: guidance.modelRepairMessage });
@@ -889,9 +728,8 @@ export class FlowOrchestrator {
       for (const claimedWork of claimedWorkItems) {
         if (runningTasks.has(claimedWork.nodeId)) continue;
         const task = this.advanceFlow(
-          SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!,
           claimedWork.nodeId,
-          claimedWork.humanInput,
+          claimedWork.roleInstanceId,
           consentGate,
           outputStreamFactory
         ).catch((error) => {
@@ -1007,12 +845,11 @@ export class FlowOrchestrator {
   }
 
   private async claimRunnableWorkForParallelRun(initialNodeIds: string[] = []): Promise<ClaimedRunnableWork[]> {
-    let claimedWork: ClaimedRunnableWork[] = [];
+    const claimed: ClaimedRunnableWork[] = [];
+    const pendingEmits: OperatorEvent[] = [];
+
     await SessionStore.updateFlowRun((flowRun) => {
-      if (flowRun.status !== 'running') {
-        claimedWork = [];
-        return;
-      }
+      if (flowRun.status !== 'running') return;
 
       const wf = this.loadWorkflowDocument(flowRun);
       const runnableNodeIds = this.deriveRunnableNodeIds(flowRun, wf);
@@ -1020,13 +857,11 @@ export class FlowOrchestrator {
         .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes);
       const pendingInitialNodeIds = this.pruneInitialNodeIds(flowRun, wf, initialNodeIds);
       const allRunnableNodeIds = pendingInitialNodeIds.length > 0
-        ? this.mergeNodeIds(resumableHumanNodeIds, pendingInitialNodeIds)
+        ? this.mergeNodeIds(resumableHumanNodeIds, pendingInitialNodeIds) //adding resumable human nodes to both as a crash may happen before human input is cleared
         : this.mergeNodeIds(resumableHumanNodeIds, runnableNodeIds);
 
-      if (allRunnableNodeIds.length === 0) {
-        claimedWork = [];
-        return;
-      }
+      if (allRunnableNodeIds.length === 0) return;
+
       const occupiedRoles = new Map<string, string>();
       for (const nodeId of [...flowRun.runningNodes, ...Object.keys(flowRun.awaitingHumanNodes)]) {
         const node = wf.findNodeByIdOrNull(nodeId);
@@ -1034,71 +869,171 @@ export class FlowOrchestrator {
         occupiedRoles.set(this.roleKey(node.role), nodeId);
       }
 
-      const selected: ClaimedRunnableWork[] = [];
+      const selectedNodeIds: string[] = [];
+
       for (const nodeId of allRunnableNodeIds) {
         const node = wf.findNodeByIdOrNull(nodeId);
         if (!node) continue;
         const nodeRoleKey = this.roleKey(node.role);
         const conflictingNodeId = occupiedRoles.get(nodeRoleKey);
-        if (conflictingNodeId && conflictingNodeId !== nodeId) {
-          continue;
-        }
+        if (conflictingNodeId && conflictingNodeId !== nodeId) continue;
         occupiedRoles.set(nodeRoleKey, nodeId);
-        selected.push({
-          nodeId,
-          humanInput: flowRun.pendingHumanInputs[nodeId]?.text,
-        });
+
+        const humanInput = flowRun.pendingHumanInputs[nodeId]?.text;
+        const work = this.buildNodeWork(nodeId, humanInput, flowRun, wf, pendingEmits);
+        selectedNodeIds.push(nodeId);
+        claimed.push(work);
       }
 
-      const selectedNodeIds = selected.map((item) => item.nodeId);
-      for (const item of selected) {
-        if (item.humanInput !== undefined) {
-          delete flowRun.awaitingHumanNodes[item.nodeId];
-        }
-      }
+      if (selectedNodeIds.length === 0) return;
       flowRun.runningNodes = this.mergeNodeIds(flowRun.runningNodes, selectedNodeIds);
       flowRun.status = 'running';
-      claimedWork = selected;
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
-    return claimedWork;
+
+    for (const event of pendingEmits) this.renderer.emit(event);
+
+    return claimed;
   }
 
-  private async claimNodeForAdvance(nodeId: string, hasHumanInput: boolean): Promise<{ flowRun: FlowRun; resumedFromHuman: boolean }> {
-    let resumedFromHuman = false;
-    const flowRun = await SessionStore.updateFlowRun((latest) => {
-      if (latest.status === 'completed') {
-        throw new Error(`Cannot advance flow in state: ${latest.status}`);
+  private buildNodeWork(nodeId: string, humanInput: string | undefined, flowRun: FlowRun, wf: WorkflowGraph, pendingEmits: OperatorEvent[]): ClaimedRunnableWork {
+    const currentNodeDef = wf.findNodeById(nodeId);
+    const roleInstanceId = currentNodeDef.role;
+
+    const firstNodeVisit = !(flowRun.visitedNodeIds ?? []).includes(nodeId);
+    const isVisitedNode = !firstNodeVisit;
+
+    const inboundHandoffSnapshot = Object.entries(flowRun.receivingHandoff)
+      .map(([key, artifacts]) => {
+        const handoff = parseHandoffKey(key);
+        return handoff ? { ...handoff, key, artifacts: [...artifacts] } : null;
+      })
+      .filter((handoff): handoff is HandoffKeyParts & { key: string; artifacts: string[] } =>
+        handoff !== null &&
+        handoff.targetId === nodeId &&
+        this.isDeliverableInboundHandoff(flowRun, wf, nodeId, handoff.fromNodeId)
+      )
+      .map(({ key, artifacts }) => ({ key, artifacts }));
+
+    const receivingHandoffSnapshot = inboundHandoffSnapshot.map(({ key, artifacts }) => ({
+      fromNodeId: key.split('=>')[0],
+      artifacts,
+    }));
+
+    // Stale forward handoffs: nodeId sent to a successor, but that successor sent a backward handoff back.
+    // These are superseded and should not be delivered to the successor — collect them for context and cleanup.
+    const backwardSenderIds = new Set(
+      inboundHandoffSnapshot
+        .map(({ key }) => key.split('=>')[0])
+        .filter(from => wf.getIncomingEdges(nodeId).every(e => e.from !== from))
+    );
+    const staleForwardSnapshot = Object.entries(flowRun.receivingHandoff)
+      .filter(([key]) => {
+        const [from, to] = key.split('=>');
+        return from === nodeId && backwardSenderIds.has(to);
+      })
+      .map(([key, artifacts]) => ({ key, toNodeId: key.split('=>')[1], artifacts: [...artifacts] }));
+
+    const staleForwardArtifacts = staleForwardSnapshot.map(({ toNodeId, artifacts }) => ({ toNodeId, artifacts }));
+
+    let session = SessionStore.loadRoleSession(this.roleKey(roleInstanceId), this.requireFlowRef(), this.requireWorkspaceRoot());
+    if (!session) {
+      session = {
+        roleName: roleInstanceId,
+        logicalSessionId: this.roleSessionId(flowRun, roleInstanceId),
+        transcriptHistory: [],
+        isActive: true,
+        currentNodeId: nodeId,
+      };
+    } else {
+      session.currentNodeId = session.currentNodeId ?? nodeId;
+    }
+
+    if (!session.systemPrompt) {
+      session.systemPrompt = ContextInjectionService.buildContextBundle(
+        flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath
+      ).bundleContent;
+    }
+
+    const injectedHistory = [...session.transcriptHistory] as RuntimeMessageParam[];
+    const isSameNode = session.currentNodeId === nodeId;
+    const sameNodeResume = session.isActive && isSameNode && injectedHistory.length > 0;
+    const resumedFromHuman = humanInput !== undefined && Boolean(flowRun.pendingHumanInputs[nodeId]);
+
+    if (sameNodeResume) {
+      if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
+        session.currentNodeContext = { nodeId, exchanges: [...injectedHistory] };
       }
+    } else {
+      session.currentNodeContext = { nodeId, exchanges: [] };
+    }
 
-      if (latest.runningNodes.includes(nodeId)) {
-        latest.status = 'running';
-        resumedFromHuman = hasHumanInput && Boolean(latest.pendingHumanInputs[nodeId]);
-        return;
+    const rawNodeContext = firstNodeVisit ? {
+      required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
+      guidance: Array.isArray(currentNodeDef.guidance) ? currentNodeDef.guidance : undefined,
+      inputs: Array.isArray(currentNodeDef.inputs) ? currentNodeDef.inputs : undefined,
+      work: Array.isArray(currentNodeDef.work) ? currentNodeDef.work : undefined,
+      outputs: Array.isArray(currentNodeDef.outputs) ? currentNodeDef.outputs : undefined,
+      transitions: Array.isArray(currentNodeDef.transitions) ? currentNodeDef.transitions : undefined,
+      notes: Array.isArray(currentNodeDef.notes) ? currentNodeDef.notes : undefined,
+    } : undefined;
+    const nodeContext = rawNodeContext && Object.values(rawNodeContext).some(value =>
+      Array.isArray(value) ? value.length > 0 : false
+    ) ? rawNodeContext : undefined;
+    const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
+
+    if (!sameNodeResume) {
+      const nodeEntryMessage = buildForwardNodeEntryMessage({
+        nodeId,
+        workspaceRoot: flowRun.workspaceRoot,
+        projectNamespace: flowRun.projectNamespace,
+        isResume: !firstNodeVisit,
+        handoffContext: { wf, completedHandoffs: flowRun.completedHandoffs, receivingHandoffSnapshot, staleForwardArtifacts },
+        includeWorkflowContract,
+        nodeContext,
+      });
+      appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
+    } else if (humanInput) {
+      appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: humanInput });
+    }
+
+    if (resumedFromHuman) {
+      pendingEmits.push({ kind: 'human.resumed', nodeId, role: roleInstanceId });
+    }
+
+    if (!isVisitedNode || !sameNodeResume) {
+      pendingEmits.push({ kind: 'role.active', nodeId, role: roleInstanceId });
+    }
+
+    if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
+      pendingEmits.push({ kind: 'role.resumed', nodeId, role: roleInstanceId, reason: 'interrupted-turn' });
+      appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
+    }
+
+    if (firstNodeVisit) {
+      if (!flowRun.visitedNodeIds.includes(nodeId)) flowRun.visitedNodeIds.push(nodeId);
+    }
+    if (humanInput !== undefined) {
+      delete flowRun.pendingHumanInputs[nodeId];
+      delete flowRun.awaitingHumanNodes[nodeId];
+    }
+    if (!sameNodeResume && (inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0)) {
+      for (const { key, artifacts } of inboundHandoffSnapshot) {
+        if (!(key in flowRun.receivingHandoff)) continue;
+        flowRun.receivingHandoff[key] = flowRun.receivingHandoff[key].filter(a => !artifacts.includes(a));
+        if (flowRun.receivingHandoff[key].length === 0) delete flowRun.receivingHandoff[key];
       }
-
-      if (hasHumanInput && latest.awaitingHumanNodes[nodeId]) {
-        delete latest.awaitingHumanNodes[nodeId];
-        latest.runningNodes = this.mergeNodeIds(latest.runningNodes, [nodeId]);
-        latest.status = 'running';
-        resumedFromHuman = true;
-        return;
+      for (const { key } of staleForwardSnapshot) {
+        delete flowRun.receivingHandoff[key];
+        flowRun.completedHandoffs = flowRun.completedHandoffs.filter(k => k !== key);
       }
+    }
 
-      if (latest.awaitingHumanNodes[nodeId]) {
-        throw new Error(`Node '${nodeId}' is awaiting targeted human input and cannot advance without a reply.`);
-      }
+    session.currentNodeId = nodeId;
+    session.isActive = true;
+    session.transcriptHistory = injectedHistory;
+    SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
 
-      const wf = this.loadWorkflowDocument(latest);
-      const runnableNodeIds = this.deriveRunnableNodeIds(latest, wf);
-      if (!runnableNodeIds.includes(nodeId)) {
-        throw new Error(`Node '${nodeId}' is not ready, running, or awaiting human input.`);
-      }
-
-      latest.runningNodes = this.mergeNodeIds(latest.runningNodes, [nodeId]);
-      latest.status = 'running';
-    }, this.requireFlowRef(), this.requireWorkspaceRoot());
-
-    return { flowRun, resumedFromHuman };
+    return { nodeId, roleInstanceId };
   }
 
   private async markNodeAwaitingHuman(
@@ -1141,8 +1076,8 @@ export class FlowOrchestrator {
     return this.workspaceRoot;
   }
 
-  private roleKey(roleName: string): string {
-    return parseRoleIdentity(roleName).instanceRoleId;
+  private roleKey(roleInstanceId: string): string {
+    return parseRoleIdentity(roleInstanceId).instanceRoleId;
   }
 
   private isPredecessor(wf: WorkflowGraph, nodeId: string, possiblePredecessorId: string): boolean {
@@ -1184,8 +1119,8 @@ export class FlowOrchestrator {
     return !this.hasActiveBackwardHandoffToPredecessor(flowRun, wf, nodeId, fromNodeId);
   }
 
-  private roleSessionId(flowRun: FlowRun, roleName: string): string {
-    return `${flowRun.flowId}__${this.roleKey(roleName)}`;
+  private roleSessionId(flowRun: FlowRun, roleInstanceId: string): string {
+    return `${flowRun.flowId}__${this.roleKey(roleInstanceId)}`;
   }
 
   private throwHandoffTransitionRepair(detail: string): never {

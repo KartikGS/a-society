@@ -61,6 +61,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: ['proposal=>review'],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,

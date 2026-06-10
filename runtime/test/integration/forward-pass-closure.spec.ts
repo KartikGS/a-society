@@ -102,6 +102,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -131,10 +132,7 @@ async function runTest() {
   });
 
   try {
-    const flowRun = SessionStore.loadFlowRun();
-    if (!flowRun) throw new Error("flowRun not loaded");
-
-    await orchestrator.advanceFlow(flowRun, 'start', undefined, undefined, () => outputStream);
+    await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId, () => outputStream);
 
     const assistantOut = outputChunks.join('');
 

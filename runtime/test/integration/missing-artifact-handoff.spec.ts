@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import type { OperatorEvent } from '../../src/common/types.js';
 import http from 'node:http';
@@ -76,6 +77,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -93,27 +95,31 @@ async function runTest() {
     if (serverTurn === 1) {
       const handoffBlock = "```handoff\ntarget_node_id: 'next'\nartifact_path: 'missing-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Attempting handoff. " + handoffBlock } }] })}\n\n`);
-    } else {
+    } else if (serverTurn === 2) {
       fs.writeFileSync(path.join(workspaceRoot, 'valid-output.md'), 'Valid artifact content.');
       const handoffBlock = "```handoff\ntarget_node_id: 'next'\nartifact_path: 'valid-output.md'\n```";
       res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Retrying with saved artifact. " + handoffBlock } }] })}\n\n`);
+    } else {
+      // 'next' node: block immediately so runStoredFlow can be terminated
+      const content = "Ready for review. ```handoff\ntype: prompt-human\n```";
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
     }
     res.write('data: [DONE]\n\n');
     res.end();
   });
 
   try {
-    const flowRun = SessionStore.loadFlowRun();
-    if (!flowRun) throw new Error('flowRun not loaded');
+    await runStoredFlowUntil(
+      orchestrator, workspaceRoot, projectNamespace, flowId,
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['next']
+    );
 
-    await orchestrator.advanceFlow(flowRun, 'start');
-
-    const updatedFlow = SessionStore.loadFlowRun()!;
+    const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
     const repairNotice = sink.events.find(
       (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
     );
     expect(updatedFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
-    expect(updatedFlow.receivingHandoff['start=>next']).toEqual(['valid-output.md']);
+    expect(updatedFlow.historyHandoff['start=>next']).toEqual(['valid-output.md']);
     expect(repairNotice).toBeTruthy();
     expect(repairNotice?.role).toBe('start');
     expect(repairNotice?.nodeId).toBe('start');

@@ -209,6 +209,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
@@ -226,6 +227,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
@@ -328,7 +330,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
+        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+      );
     } finally {
       unpatch();
     }
@@ -435,7 +439,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
+        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+      );
     } finally {
       unpatch();
     }
@@ -496,7 +502,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-gate');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
+        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-gate']
+      );
     } finally {
       unpatch();
     }
@@ -552,7 +560,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
+        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+      );
     } finally {
       unpatch();
     }
@@ -608,7 +618,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-intake');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
+        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+      );
     } finally {
       unpatch();
     }
@@ -635,7 +647,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
   it('Orchestrator: role instances with the same base role use separate sessions', async () => {
     resetState();
 
-    const flowRun = makeInstanceFlowRun({ runningNodes: ['owner-one'] });
+    const flowRun = makeInstanceFlowRun({ runningNodes: ['owner-one', 'owner-two'] });
     SessionStore.saveFlowRun(flowRun);
 
     const unpatch = patchLLM(new MockProvider([
@@ -645,11 +657,10 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
-      await orchestrator.advanceFlow(flowRun, 'owner-one');
-      const afterOwnerOne = SessionStore.loadFlowRun({ projectNamespace, flowId: 'instance-flow-id' }, workspaceRoot)!;
-      afterOwnerOne.runningNodes = ['owner-two'];
-      SessionStore.saveFlowRun(afterOwnerOne, flowRef('instance-flow-id'), workspaceRoot);
-      await orchestrator.advanceFlow(afterOwnerOne, 'owner-two');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
+        const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot);
+        return Boolean(updated?.awaitingHumanNodes['owner-one'] && updated?.awaitingHumanNodes['owner-two']);
+      });
     } finally {
       unpatch();
     }
@@ -865,8 +876,8 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     resetState();
 
     const flowRun = makeFlowRun({
-      runningNodes: ['owner-intake', 'ta'],
-      awaitingHumanNodes: {},
+      runningNodes: ['ta'],
+      awaitingHumanNodes: { 'owner-intake': { role: 'owner', reason: 'prompt-human' } },
       pendingHumanInputs: {},
       completedHandoffs: ['owner-intake=>ta'],
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
@@ -881,7 +892,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
     try {
-      await orchestrator.advanceFlow(flowRun, 'ta');
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
+        SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.completedHandoffs.includes('ta=>owner-gate') ?? false
+      );
     } finally {
       unpatch();
     }
@@ -889,7 +902,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
     expect(updated.completedHandoffs.includes('ta=>owner-gate')).toBeTruthy();
     expect(updated.receivingHandoff['ta=>owner-gate']).toEqual([handoffArtifact]);
-    expect(updated.runningNodes.includes('owner-intake')).toBeTruthy();
+    expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
     expect(updated.runningNodes.includes('owner-gate')).toBeFalsy();
     expect(sink.events.some(event => event.kind === 'repair.requested')).toBeFalsy();
   });

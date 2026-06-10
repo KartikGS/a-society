@@ -11,6 +11,7 @@ import {
   type FlowTab,
   type FlowUiState,
 } from './flow-ui';
+import { isBackwardHandoffSource } from './handoff-source.js';
 import { toRoleKey } from './roles';
 
 export interface ActiveFlowViewInput {
@@ -113,7 +114,10 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const graphMode = selectedGraph === 'improvement' && improvementGraphAvailable ? 'improvement' : 'flow';
   const lastHandoffFromNodeId = lastHandoff?.fromNodeId;
   const backwardSources =
-    activeNodeIds && lastHandoffFromNodeId && activeNodeIds.includes(lastHandoffFromNodeId)
+    activeNodeIds &&
+    lastHandoffFromNodeId &&
+    activeNodeIds.includes(lastHandoffFromNodeId) &&
+    isBackwardHandoffSource(workflow, lastHandoff)
       ? [lastHandoffFromNodeId]
       : EMPTY_STRINGS;
 

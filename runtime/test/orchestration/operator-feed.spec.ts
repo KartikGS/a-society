@@ -13,6 +13,7 @@ import type { FeedItem, FlowRef, FlowRun, GatewayTurnResult, OperatorEvent, Role
 import { LLMGateway } from '../../src/providers/llm.js';
 import type { ActiveSession } from '../../src/server/runtime-session/types.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { runStoredFlowUntil } from '../integration/orchestrator-test-utils.js';
 
 const tempDirs = new Set<string>();
 
@@ -533,10 +534,15 @@ describe('operator-feed', () => {
     };
     SessionStore.saveFlowRun(flowRun, ref, tmpDir);
 
-    vi.spyOn(LLMGateway.prototype, 'executeTurn').mockResolvedValue({
-      text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
-      contextUsage: 68,
-    } satisfies GatewayTurnResult);
+    vi.spyOn(LLMGateway.prototype, 'executeTurn')
+      .mockResolvedValueOnce({
+        text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
+        contextUsage: 68,
+      } satisfies GatewayTurnResult)
+      .mockResolvedValue({
+        text: "Ready for review. ```handoff\ntype: prompt-human\n```",
+        contextUsage: 10,
+      } satisfies GatewayTurnResult);
 
     const events: OperatorEvent[] = [];
     const renderer = {
@@ -549,9 +555,14 @@ describe('operator-feed', () => {
       sendError() {},
     };
 
-    await new FlowOrchestrator(renderer).advanceFlow(flowRun, 'start');
+    SessionStore.init(tmpDir);
+    const orchestrator = new FlowOrchestrator(renderer);
+    await runStoredFlowUntil(
+      orchestrator, tmpDir, ref.projectNamespace, ref.flowId,
+      () => !!SessionStore.loadFlowRun(ref, tmpDir)?.awaitingHumanNodes['next']
+    );
 
-    expect(events.map(event => event.kind)).toEqual([
+    expect(events.slice(0, 3).map(event => event.kind)).toEqual([
       'role.active',
       'usage.turn_summary',
       'handoff.applied',

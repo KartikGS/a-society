@@ -141,7 +141,7 @@ export interface FlowRun {
   runningNodes: string[];                         // node IDs claimed by a live runtime turn
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   pendingHumanInputs: Record<string, { text: string; receivedAt: string }>; // durable operator replies queued for scheduler consumption
-  visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
+  visitedNodeIds: string[];                       // node IDs whose first-entry workflow guidance has already been delivered
   completedHandoffs: string[];                     // `${from}=>${to}` edge keys for forward handoffs that have been made; removed on backward handoff
   receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
   historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse
