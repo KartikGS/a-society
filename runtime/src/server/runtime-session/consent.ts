@@ -1,5 +1,5 @@
 import { flowKey } from '../../common/flow-ref.js';
-import { CONSENT_RESPONSE_DECISION } from '../../common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON, CONSENT_RESPONSE_DECISION } from '../../common/protocol-constants.js';
 import { parseRoleIdentity } from '../../common/role-id.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
@@ -34,11 +34,11 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
       if (flow.improvementPhase?.status === 'running') {
         const roleInstanceId = parseRoleIdentity(request.role).instanceRoleId;
         if (!flow.improvementPhase.awaitingHumanRoles) flow.improvementPhase.awaitingHumanRoles = {};
-        flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: 'consent' };
+        flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: AWAITING_HUMAN_REASON.CONSENT };
         return;
       }
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
-      flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent' };
+      flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: AWAITING_HUMAN_REASON.CONSENT };
       flow.status = 'running';
     }, session.flowRef, workspaceRoot);
     emitFlowState(session);
@@ -54,19 +54,19 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
 
       if (flow.improvementPhase?.status === 'running') {
         const roleInstanceId = parseRoleIdentity(request.role).instanceRoleId;
-        if (flow.improvementPhase.awaitingHumanRoles?.[roleInstanceId]?.reason !== 'consent') return;
+        if (flow.improvementPhase.awaitingHumanRoles?.[roleInstanceId]?.reason !== AWAITING_HUMAN_REASON.CONSENT) return;
         if (decision === CONSENT_RESPONSE_DECISION.DENY) {
-          flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: 'consent-denied' };
+          flow.improvementPhase.awaitingHumanRoles[roleInstanceId] = { reason: AWAITING_HUMAN_REASON.CONSENT_DENIED };
         } else {
           delete flow.improvementPhase.awaitingHumanRoles[roleInstanceId];
         }
         return;
       }
 
-      if (flow.awaitingHumanNodes[request.nodeId]?.reason !== 'consent') return;
+      if (flow.awaitingHumanNodes[request.nodeId]?.reason !== AWAITING_HUMAN_REASON.CONSENT) return;
 
       if (decision === CONSENT_RESPONSE_DECISION.DENY) {
-        flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: 'consent-denied' };
+        flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: AWAITING_HUMAN_REASON.CONSENT_DENIED };
         flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
         flow.status = 'running';
         return;

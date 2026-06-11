@@ -6,6 +6,7 @@ import { autoCompactRoleSessionBeforeTurn } from '../orchestration/compaction.js
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
 import { getActiveModelWithKey } from '../settings/settings-store.js';
+import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
 
 function extractFileRefs(content: string): string[] {
   const refs: string[] = [];
@@ -351,7 +352,7 @@ export async function runRoleTurn({
   if (turnResult.consentDenied) {
     return {
       handoff: { kind: 'awaiting_human' },
-      awaitingHumanReason: 'consent-denied'
+      awaitingHumanReason: AWAITING_HUMAN_REASON.CONSENT_DENIED
     };
   }
 

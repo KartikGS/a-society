@@ -69,6 +69,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running' as const,
     stateVersion: CURRENT_FLOW_STATE_VERSION

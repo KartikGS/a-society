@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../../src/common/types.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
@@ -95,5 +96,81 @@ describe('scheduler-ordering', () => {
 
     expect(deriveRunnableNodeIds(flowRun, workflow)).toEqual(['b']);
     expect(flowRun.awaitingHandoff).toEqual([]);
+  });
+
+  it('wakes an awaiting-human node from a deliverable inbound handoff', () => {
+    const workflow = new WorkflowGraph({
+      nodes: [
+        { id: 'owner', role: 'owner' },
+        { id: 'worker', role: 'worker' },
+      ],
+      edges: [
+        { from: 'owner', to: 'worker' },
+      ],
+    });
+    const flowRun = makeFlowRun({
+      awaitingHumanNodes: {
+        owner: { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
+      },
+      receivingHandoff: {
+        'worker=>owner': ['worker-output.md'],
+      },
+    });
+
+    expect(deriveRunnableNodeIds(flowRun, workflow)).toEqual(['owner']);
+  });
+
+  it('leaves an awaiting-human handoff queued when a human reply is already pending', () => {
+    const workflow = new WorkflowGraph({
+      nodes: [
+        { id: 'owner', role: 'owner' },
+        { id: 'worker', role: 'worker' },
+      ],
+      edges: [
+        { from: 'owner', to: 'worker' },
+      ],
+    });
+    const flowRun = makeFlowRun({
+      awaitingHumanNodes: {
+        owner: { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
+      },
+      pendingHumanInputs: {
+        owner: { text: 'Use the human answer first.', receivedAt: '2026-06-10T00:00:00.000Z' },
+      },
+      receivingHandoff: {
+        'worker=>owner': ['worker-output.md'],
+      },
+    });
+
+    expect(deriveRunnableNodeIds(flowRun, workflow)).toEqual([]);
+  });
+
+  it('does not wake non-prompt awaiting-human reasons from inbound handoff', () => {
+    const workflow = new WorkflowGraph({
+      nodes: [
+        { id: 'owner', role: 'owner' },
+        { id: 'worker', role: 'worker' },
+      ],
+      edges: [
+        { from: 'owner', to: 'worker' },
+      ],
+    });
+
+    for (const reason of [
+      AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT,
+      AWAITING_HUMAN_REASON.CONSENT_DENIED,
+      AWAITING_HUMAN_REASON.CONSENT,
+    ]) {
+      const flowRun = makeFlowRun({
+        awaitingHumanNodes: {
+          owner: { role: 'owner', reason },
+        },
+        receivingHandoff: {
+          'worker=>owner': [`${reason}-worker-output.md`],
+        },
+      });
+
+      expect(deriveRunnableNodeIds(flowRun, workflow)).toEqual([]);
+    }
   });
 });

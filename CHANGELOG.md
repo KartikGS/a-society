@@ -4,6 +4,14 @@ All notable changes to A-Society will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Runtime
+
+- Allow `prompt-human` nodes to resume from inbound handoffs and allow targeted human input for nodes suspended in `await-handoff`, with queued human replies taking priority for that turn.
+
+---
+
 ## [0.1.0] — 2026-06-08
 
 Initial release.

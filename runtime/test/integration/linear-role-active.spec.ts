@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -91,6 +92,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -120,32 +122,30 @@ async function runTest() {
       res.write(`data: [DONE]\n\n`);
       res.end();
     } else {
-      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Done." } }] })}\n\n`);
+      // Turn 3+: 'end' node: block immediately so runStoredFlow can be terminated
+      const content = "All done. ```handoff\ntype: prompt-human\n```";
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
       res.write(`data: [DONE]\n\n`);
       res.end();
     }
   });
 
   try {
-    const flowRun = SessionStore.loadFlowRun();
-    if (!flowRun) throw new Error("flowRun not loaded");
-
-    await orchestrator.advanceFlow(flowRun, 'start');
-
-    const flowAfterStart = SessionStore.loadFlowRun()!;
-    expect(flowAfterStart.completedHandoffs.includes('start=>next')).toBeTruthy();
-    expect(flowAfterStart.receivingHandoff['start=>next']).toEqual(['start-output.md']);
-
-    await orchestrator.advanceFlow(flowAfterStart, 'next');
+    await runStoredFlowUntil(
+      orchestrator, workspaceRoot, projectNamespace, flowId,
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['end']
+    );
 
     const nextRoleActiveCount = sink.events.filter(
       e => e.kind === 'role.active' && e.nodeId === 'next'
     ).length;
 
     expect(nextRoleActiveCount).toBe(1);
-    const flowAfterNext = SessionStore.loadFlowRun()!;
-    expect(flowAfterNext.completedHandoffs.includes('next=>end')).toBeTruthy();
-    expect(flowAfterNext.receivingHandoff['next=>end']).toEqual(['next-output.md']);
+    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    expect(finalFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
+    expect(finalFlow.historyHandoff['start=>next']).toEqual(['start-output.md']);
+    expect(finalFlow.completedHandoffs.includes('next=>end')).toBeTruthy();
+    expect(finalFlow.historyHandoff['next=>end']).toEqual(['next-output.md']);
   } finally {
     server.close();
     fs.rmSync(tmpBase, { recursive: true, force: true });

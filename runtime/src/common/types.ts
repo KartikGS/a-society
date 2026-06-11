@@ -3,6 +3,7 @@ import {
   CONSENT_MODES,
 } from './protocol-constants.js';
 import type {
+  ProtocolAwaitingHumanReason,
   ProtocolConsentMode,
   ProtocolConsentResponseDecision,
   FeedbackConsentStatus,
@@ -24,7 +25,7 @@ export const CURRENT_FLOW_STATE_VERSION = '11';
 export type ConsentMode = ProtocolConsentMode;
 export type ConsentRequestKind = 'file-write' | 'bash-command';
 export type ConsentResponseDecision = ProtocolConsentResponseDecision;
-export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent' | 'consent-denied';
+export type AwaitingHumanReason = ProtocolAwaitingHumanReason;
 
 export type ConsentRequest =
   | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
@@ -141,7 +142,7 @@ export interface FlowRun {
   runningNodes: string[];                         // node IDs claimed by a live runtime turn
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   pendingHumanInputs: Record<string, { text: string; receivedAt: string }>; // durable operator replies queued for scheduler consumption
-  visitedNodeIds?: string[];                      // node IDs whose first-entry workflow guidance has already been delivered
+  visitedNodeIds: string[];                       // node IDs whose first-entry workflow guidance has already been delivered
   completedHandoffs: string[];                     // `${from}=>${to}` edge keys for forward handoffs that have been made; removed on backward handoff
   receivingHandoff: Record<string, string[]>;      // `${from}=>${to}` → artifacts sent along that handoff (forward or backward), appended on each traversal
   historyHandoff: Record<string, string[]>;        // `${from}=>${to}` → all artifacts ever sent along that handoff (deduplicated); used to reject reuse

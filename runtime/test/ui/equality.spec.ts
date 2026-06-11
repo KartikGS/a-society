@@ -16,6 +16,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     },
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {},
     historyHandoff: {},
     awaitingHandoff: [],

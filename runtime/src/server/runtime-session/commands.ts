@@ -24,9 +24,9 @@ import type { HistoricalMessage, ServerMessage } from '../protocol.js';
 import type { RuntimeSessionConsent } from './consent.js';
 import { createRoleOutputStream } from './feed.js';
 import {
-  hasAwaitingHumanNodes,
+  hasHumanInputTargets,
   isAwaitingHumanReply,
-  resolveAwaitingHumanNode,
+  resolveHumanInputTarget,
 } from './human-input.js';
 import { compactPersistedRoleContext } from './manual-compaction.js';
 import type { ActiveSession } from './types.js';
@@ -64,8 +64,8 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
   async function handleHumanInput(ref: FlowRef, text: string, target?: { nodeId?: string; role?: string }): Promise<void> {
     const flowRun = readFlowRun(ref);
-    if (!flowRun || !hasAwaitingHumanNodes(flowRun)) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently waiting for human input.' });
+    if (!flowRun || !hasHumanInputTargets(flowRun)) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'The runtime is not currently accepting human input.' });
       return;
     }
 
@@ -74,17 +74,21 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    let targetNodeId: string;
+    let targetNodeId: string | null = null;
+    let targetRole: string | undefined;
     try {
-      targetNodeId = resolveAwaitingHumanNode(flowRun, target);
       await SessionStore.updateFlowRun((latest) => {
+        const resolvedTarget = resolveHumanInputTarget(latest, resolveWorkflow(latest), target);
+        targetNodeId = resolvedTarget.nodeId;
         const awaitingState = latest.awaitingHumanNodes[targetNodeId];
-        if (!awaitingState || !isAwaitingHumanReply(awaitingState.reason)) {
-          throw new Error(`Node '${targetNodeId}' is no longer awaiting human input.`);
+        const awaitingHandoff = latest.awaitingHandoff.includes(targetNodeId);
+        if ((!awaitingState || !isAwaitingHumanReply(awaitingState.reason)) && !awaitingHandoff) {
+          throw new Error(`Node '${targetNodeId}' is no longer accepting human input.`);
         }
         if (latest.pendingHumanInputs[targetNodeId]) {
           throw new Error(`Node '${targetNodeId}' already has queued human input.`);
         }
+        targetRole = resolvedTarget.role;
         latest.pendingHumanInputs[targetNodeId] = {
           text,
           receivedAt: new Date().toISOString(),
@@ -98,6 +102,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       });
       return;
     }
+    if (!targetNodeId) return;
 
     let session = activeSessions.get(flowKey(ref));
     if (!session || session.finished) {
@@ -107,7 +112,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     emitHistoricalMessage(session, {
       type: 'input_text',
-      role: flowRun.awaitingHumanNodes[targetNodeId]?.role,
+      role: targetRole,
       text,
     });
     session.orchestrator.wake();
@@ -354,7 +359,13 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     try {
       await SessionStore.updateFlowRun((latest) => {
-        if (!latest.improvementPhase) return;
+        if (!latest.improvementPhase) {
+          throw new Error('No active improvement phase for this flow.');
+        }
+        const awaitingState = latest.improvementPhase.awaitingHumanRoles?.[roleInstanceId];
+        if (!awaitingState || !isAwaitingHumanReply(awaitingState.reason)) {
+          throw new Error(`Role "${roleInstanceId}" is no longer awaiting human input in the improvement phase.`);
+        }
         if (latest.improvementPhase.pendingHumanInputs?.[roleInstanceId]) {
           throw new Error(`Role "${roleInstanceId}" already has queued human input.`);
         }

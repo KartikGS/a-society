@@ -1,4 +1,4 @@
-import { IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
 import type { FeedItem } from '../components/ChatInterface';
 import type { GraphMode } from '../components/GraphView';
 import type {
@@ -59,8 +59,23 @@ export function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string |
   const targetKey = toRoleKey(role);
   if (!targetKey) return null;
   const match = Object.entries(flowRun.awaitingHumanNodes)
-    .find(([, state]) => state.reason !== 'consent' && toRoleKey(state.role) === targetKey);
+    .find(([, state]) => state.reason !== AWAITING_HUMAN_REASON.CONSENT && toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
+}
+
+export function getAwaitingHandoffNodeIdForRole(
+  flowRun: FlowRun | null,
+  workflow: WorkflowGraph | null,
+  role: string | null
+): string | null {
+  if (!flowRun || !workflow || !role) return null;
+  const targetKey = toRoleKey(role);
+  if (!targetKey) return null;
+  const match = flowRun.awaitingHandoff.find((nodeId) => {
+    const node = workflow.nodes.find((candidate) => candidate.id === nodeId);
+    return toRoleKey(node?.role) === targetKey;
+  });
+  return match ?? null;
 }
 
 export function getImprovementAwaitingRoleName(flowRun: FlowRun | null, role: string | null): string | null {
@@ -70,7 +85,7 @@ export function getImprovementAwaitingRoleName(flowRun: FlowRun | null, role: st
   const awaitingRoles = flowRun.improvementPhase?.awaitingHumanRoles;
   if (!awaitingRoles) return null;
   const match = Object.entries(awaitingRoles).find(
-    ([roleName, state]) => state.reason !== 'consent' && toRoleKey(roleName) === targetKey
+    ([roleName, state]) => state.reason !== AWAITING_HUMAN_REASON.CONSENT && toRoleKey(roleName) === targetKey
   );
   return match?.[0] ?? null;
 }
