@@ -20,6 +20,7 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { ContextInjectionService } from '../../src/context/injection.js';
 import { LLMGateway } from '../../src/providers/llm.js';
+import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
@@ -581,6 +582,96 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     expect(session!.currentNodeId).toBe('owner-intake');
   });
 
+  it('Orchestrator: inbound handoff wakes an awaiting-human node without a queued human reply', async () => {
+    resetState();
+
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'I need a human answer before closing.' }
+      ],
+      currentNodeContext: {
+        nodeId: 'owner-intake',
+        exchanges: [
+          { role: 'user', content: 'Human-side closure discussion worth preserving.' },
+          { role: 'assistant', content: 'I need a human answer before closing.' }
+        ],
+      },
+      isActive: true,
+      currentNodeId: 'owner-intake'
+    }, flowRef(), workspaceRoot);
+
+    const flowRun = makeFlowRun({
+      runningNodes: [],
+      awaitingHumanNodes: {
+        'owner-intake': { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN }
+      },
+      pendingHumanInputs: {},
+      visitedNodeIds: ['owner-intake', 'ta'],
+      completedHandoffs: ['owner-intake=>ta'],
+      receivingHandoff: {
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      historyHandoff: {
+        'owner-intake=>ta': [ownerArtifact1Rel],
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      awaitingHandoff: []
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    const unpatch = patchLLM(new MockProvider([
+      { type: 'text', text: 'Subagent result received. ```handoff\ntype: prompt-human\n```' }
+    ]));
+
+    const sink = new RecordingOperatorSink();
+    const orchestrator = new FlowOrchestrator(sink);
+    try {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
+        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        return Boolean(
+          updated &&
+          !updated.receivingHandoff['ta=>owner-intake'] &&
+          updated.awaitingHumanNodes['owner-intake']
+        );
+      });
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    expect(updated.receivingHandoff['ta=>owner-intake']).toBeUndefined();
+    expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
+    expect(
+      sink.events.some(event => event.kind === 'role.active' && event.nodeId === 'owner-intake'),
+      'handoff wake should emit a fresh role.active activation'
+    ).toBeTruthy();
+
+    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    expect(session !== null).toBeTruthy();
+    expect(
+      session!.currentNodeContext?.exchanges.some(message =>
+        message.role === 'user' &&
+        typeof message.content === 'string' &&
+        message.content.includes('Human-side closure discussion worth preserving.')
+      )
+    ).toBeTruthy();
+    const reopenedMessage = (session!.transcriptHistory as any[])
+      .find(message => message.role === 'user' && typeof message.content === 'string' &&
+        message.content.includes('Node owner-intake resumed at:'));
+    const reopenedCurrentNodeMessage = session!.currentNodeContext?.exchanges
+      .find(message => message.role === 'user' && typeof message.content === 'string' &&
+        message.content.includes('Node owner-intake resumed at:'));
+
+    expect(reopenedMessage).toBeTruthy();
+    expect(reopenedCurrentNodeMessage).toBeTruthy();
+    expect(reopenedMessage.content.includes('Handoffs received:')).toBeTruthy();
+    expect(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):')).toBeTruthy();
+    expect(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.')).toBeTruthy();
+  });
+
   it('Orchestrator: backward re-entry to an earlier node is framed as reopened even after the role visited another node', async () => {
     resetState();
 
@@ -797,6 +888,87 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
     expect(updated.awaitingHandoff.includes('owner-intake')).toBeFalsy();
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
+  });
+
+  it('Orchestrator: queued human input wakes awaiting-handoff before inbound handoff', async () => {
+    resetState();
+
+    SessionStore.saveRoleSession({
+      roleName: 'owner',
+      logicalSessionId: ownerSessionId(),
+      transcriptHistory: [
+        { role: 'user', content: 'owner-intake entry message' },
+        { role: 'assistant', content: 'Waiting for the subagent handoff.' }
+      ],
+      currentNodeContext: {
+        nodeId: 'owner-intake',
+        exchanges: [
+          { role: 'user', content: 'owner-intake entry message' },
+          { role: 'assistant', content: 'Waiting for the subagent handoff.' }
+        ],
+      },
+      isActive: false,
+      currentNodeId: 'owner-intake'
+    }, flowRef(), workspaceRoot);
+
+    const flowRun = makeFlowRun({
+      runningNodes: [],
+      awaitingHumanNodes: {},
+      pendingHumanInputs: {
+        'owner-intake': {
+          text: 'Proceed with the human override before reading the subagent result.',
+          receivedAt: '2026-06-11T00:00:00.000Z',
+        },
+      },
+      visitedNodeIds: ['owner-intake', 'ta'],
+      completedHandoffs: ['owner-intake=>ta'],
+      receivingHandoff: {
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      historyHandoff: {
+        'owner-intake=>ta': [ownerArtifact1Rel],
+        'ta=>owner-intake': [reviewFeedbackArtifactRel]
+      },
+      awaitingHandoff: ['owner-intake']
+    });
+    SessionStore.saveFlowRun(flowRun);
+
+    let firstModelInputText = '';
+    let modelCallCount = 0;
+    const unpatch = patchLLM(new MockProvider([
+      (messages) => {
+        modelCallCount++;
+        if (!firstModelInputText) {
+          firstModelInputText = messages
+            .map((message) => typeof (message as any).content === 'string' ? (message as any).content : '')
+            .join('\n');
+        }
+        return { type: 'text', text: 'Human override handled. ```handoff\ntype: prompt-human\n```' };
+      }
+    ]));
+
+    const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
+    try {
+      await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
+        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        return Boolean(
+          updated &&
+          modelCallCount > 0 &&
+          !updated.awaitingHandoff.includes('owner-intake') &&
+          Object.keys(updated.pendingHumanInputs).length === 0
+        );
+      });
+    } finally {
+      unpatch();
+    }
+
+    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    expect(updated.pendingHumanInputs).toEqual({});
+    expect(updated.awaitingHandoff.includes('owner-intake')).toBeFalsy();
+    expect(modelCallCount).toBeGreaterThan(0);
+    expect(firstModelInputText).toContain('Proceed with the human override before reading the subagent result.');
+    expect(firstModelInputText).not.toContain('Handoffs received:');
+    expect(firstModelInputText).not.toContain('Reviewer requests revision to the Owner brief.');
   });
 
   it('Orchestrator: same-role received handoffs are claimed in graph order', async () => {

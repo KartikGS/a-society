@@ -1,4 +1,5 @@
 import { parseRoleIdentity } from '../../common/role-id.js';
+import { AWAITING_HUMAN_REASON } from '../../common/protocol-constants.js';
 import type {
   FlowRef,
   FlowRun,
@@ -50,7 +51,7 @@ export async function normalizeStaleConsentWaits(
   if (!flowRun) return null;
 
   const staleConsentNodes = Object.entries(flowRun.awaitingHumanNodes)
-    .filter(([, state]) => state.reason === 'consent');
+    .filter(([, state]) => state.reason === AWAITING_HUMAN_REASON.CONSENT);
   if (staleConsentNodes.length === 0) return flowRun;
 
   for (const [nodeId, state] of staleConsentNodes) {
@@ -59,8 +60,8 @@ export async function normalizeStaleConsentWaits(
 
   return SessionStore.updateFlowRun((flow) => {
     for (const [nodeId, state] of Object.entries(flow.awaitingHumanNodes)) {
-      if (state.reason === 'consent') {
-        flow.awaitingHumanNodes[nodeId] = { role: state.role, reason: 'consent-denied' };
+      if (state.reason === AWAITING_HUMAN_REASON.CONSENT) {
+        flow.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.CONSENT_DENIED };
       }
     }
   }, ref, workspaceRoot);

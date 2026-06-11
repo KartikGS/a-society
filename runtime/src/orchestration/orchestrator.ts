@@ -12,7 +12,7 @@ import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../fra
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import { WakeController } from '../common/wake-controller.js';
-import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON, OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { CANONICAL_WORKFLOW_FILENAME, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
@@ -308,7 +308,7 @@ export class FlowOrchestrator {
               const turnUsage = sessionResult.contextUsage;
               recordRoleTurnUsage(session, this.renderer, roleInstanceId, turnUsage);
               if (handoffResult.kind === 'awaiting_human') {
-                const awaitingReason = sessionResult.awaitingHumanReason ?? 'prompt-human';
+                const awaitingReason = sessionResult.awaitingHumanReason ?? AWAITING_HUMAN_REASON.PROMPT_HUMAN;
                 span.setAttribute('node.outcome', 'awaiting_human');
                 span.addEvent('node.awaiting_human_suspended', { suspension_reason: awaitingReason });
                 session.transcriptHistory = injectedHistory;
@@ -456,8 +456,8 @@ export class FlowOrchestrator {
               span.setAttribute('node.outcome', 'null_return');
               session.transcriptHistory = injectedHistory;
               SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
-              flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, 'autonomous-abort');
-              this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: 'autonomous-abort' });
+              flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT);
+              this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT });
               span.addEvent('node.awaiting_human_suspended', { suspension_reason: 'null_session_return' });
               break;
             }
@@ -789,6 +789,7 @@ export class FlowOrchestrator {
 
     const visitedSet = new Set(flowRun.visitedNodeIds ?? []);
     const awaitingHandoffSet = new Set(flowRun.awaitingHandoff);
+    const runningNodeSet = new Set(flowRun.runningNodes);
     const activeNodes = new Set(getActiveNodeIds(flowRun));
 
     const result: string[] = [];
@@ -811,12 +812,18 @@ export class FlowOrchestrator {
     for (const node of wf.nodes) {
       const nodeId = node.id;
       if (!hasWakeableInboundHandoff(nodeId)) continue;
+      const awaitingHumanState = flowRun.awaitingHumanNodes[nodeId];
+      const awaitingHumanReplyWithoutQueuedInput =
+        awaitingHumanState &&
+        awaitingHumanState.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN &&
+        !Object.prototype.hasOwnProperty.call(flowRun.pendingHumanInputs, nodeId);
       // A received handoff may intentionally reopen a completed node, especially
       // during backward-pass correction. Iterating wf.nodes is the structural
       // guard that the target node still exists in the active workflow.
       if (
         !seen.has(nodeId) &&
-        !activeNodes.has(nodeId) &&
+        !runningNodeSet.has(nodeId) &&
+        (!awaitingHumanState || awaitingHumanReplyWithoutQueuedInput) &&
         !awaitingHandoffSet.has(nodeId)
       ) {
         result.push(nodeId);
@@ -852,9 +859,9 @@ export class FlowOrchestrator {
       if (flowRun.status !== 'running') return;
 
       const wf = this.loadWorkflowDocument(flowRun);
-      const runnableNodeIds = this.deriveRunnableNodeIds(flowRun, wf);
       const resumableHumanNodeIds = Object.keys(flowRun.pendingHumanInputs)
-        .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes);
+        .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes || flowRun.awaitingHandoff.includes(nodeId));
+      const runnableNodeIds = this.deriveRunnableNodeIds(flowRun, wf);
       const pendingInitialNodeIds = this.pruneInitialNodeIds(flowRun, wf, initialNodeIds);
       const allRunnableNodeIds = pendingInitialNodeIds.length > 0
         ? this.mergeNodeIds(resumableHumanNodeIds, pendingInitialNodeIds) //adding resumable human nodes to both as a crash may happen before human input is cleared
@@ -934,6 +941,7 @@ export class FlowOrchestrator {
       .map(([key, artifacts]) => ({ key, toNodeId: key.split('=>')[1], artifacts: [...artifacts] }));
 
     const staleForwardArtifacts = staleForwardSnapshot.map(({ toNodeId, artifacts }) => ({ toNodeId, artifacts }));
+    const hasHandoffContext = inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0;
 
     let session = SessionStore.loadRoleSession(this.roleKey(roleInstanceId), this.requireFlowRef(), this.requireWorkspaceRoot());
     if (!session) {
@@ -956,10 +964,12 @@ export class FlowOrchestrator {
 
     const injectedHistory = [...session.transcriptHistory] as RuntimeMessageParam[];
     const isSameNode = session.currentNodeId === nodeId;
-    const sameNodeResume = session.isActive && isSameNode && injectedHistory.length > 0;
     const resumedFromHuman = humanInput !== undefined && Boolean(flowRun.pendingHumanInputs[nodeId]);
+    const resumedFromHandoff = !resumedFromHuman && hasHandoffContext;
+    const sameNodeResume = session.isActive && isSameNode && injectedHistory.length > 0;
+    const sameNodeHumanResume = resumedFromHuman && isSameNode && injectedHistory.length > 0;
 
-    if (sameNodeResume) {
+    if (sameNodeResume || sameNodeHumanResume) {
       if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
         session.currentNodeContext = { nodeId, exchanges: [...injectedHistory] };
       }
@@ -981,7 +991,9 @@ export class FlowOrchestrator {
     ) ? rawNodeContext : undefined;
     const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
 
-    if (!sameNodeResume) {
+    if (resumedFromHuman) {
+      appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: humanInput });
+    } else if (!sameNodeResume || resumedFromHandoff) {
       const nodeEntryMessage = buildForwardNodeEntryMessage({
         nodeId,
         workspaceRoot: flowRun.workspaceRoot,
@@ -992,19 +1004,17 @@ export class FlowOrchestrator {
         nodeContext,
       });
       appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
-    } else if (humanInput) {
-      appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: humanInput });
     }
 
     if (resumedFromHuman) {
       pendingEmits.push({ kind: 'human.resumed', nodeId, role: roleInstanceId });
     }
 
-    if (!isVisitedNode || !sameNodeResume) {
+    if (!isVisitedNode || !sameNodeResume || resumedFromHandoff) {
       pendingEmits.push({ kind: 'role.active', nodeId, role: roleInstanceId });
     }
 
-    if (sameNodeResume && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
+    if (sameNodeResume && !resumedFromHandoff && injectedHistory[injectedHistory.length - 1]?.role === 'assistant') {
       pendingEmits.push({ kind: 'role.resumed', nodeId, role: roleInstanceId, reason: 'interrupted-turn' });
       appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE });
     }
@@ -1015,8 +1025,11 @@ export class FlowOrchestrator {
     if (humanInput !== undefined) {
       delete flowRun.pendingHumanInputs[nodeId];
       delete flowRun.awaitingHumanNodes[nodeId];
+      flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
+    } else if (resumedFromHandoff && flowRun.awaitingHumanNodes[nodeId]?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN) {
+      delete flowRun.awaitingHumanNodes[nodeId];
     }
-    if (!sameNodeResume && (inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0)) {
+    if (!resumedFromHuman && (!sameNodeResume || resumedFromHandoff) && (inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0)) {
       for (const { key, artifacts } of inboundHandoffSnapshot) {
         if (!(key in flowRun.receivingHandoff)) continue;
         flowRun.receivingHandoff[key] = flowRun.receivingHandoff[key].filter(a => !artifacts.includes(a));

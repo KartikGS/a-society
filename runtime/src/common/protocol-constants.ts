@@ -32,6 +32,22 @@ export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = [
 
 export const OWNER_BASE_ROLE_ID = 'owner';
 
+export const AWAITING_HUMAN_REASON = {
+  PROMPT_HUMAN: 'prompt-human',
+  AUTONOMOUS_ABORT: 'autonomous-abort',
+  CONSENT: 'consent',
+  CONSENT_DENIED: 'consent-denied',
+} as const;
+
+export type ProtocolAwaitingHumanReason = ValueOf<typeof AWAITING_HUMAN_REASON>;
+
+export const AWAITING_HUMAN_REASONS = [
+  AWAITING_HUMAN_REASON.PROMPT_HUMAN,
+  AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT,
+  AWAITING_HUMAN_REASON.CONSENT,
+  AWAITING_HUMAN_REASON.CONSENT_DENIED,
+] as const;
+
 export const IMPROVEMENT_CHOICE_MODE = {
   GRAPH_BASED: 'graph-based',
   PARALLEL: 'parallel',

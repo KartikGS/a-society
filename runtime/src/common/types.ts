@@ -3,6 +3,7 @@ import {
   CONSENT_MODES,
 } from './protocol-constants.js';
 import type {
+  ProtocolAwaitingHumanReason,
   ProtocolConsentMode,
   ProtocolConsentResponseDecision,
   FeedbackConsentStatus,
@@ -24,7 +25,7 @@ export const CURRENT_FLOW_STATE_VERSION = '11';
 export type ConsentMode = ProtocolConsentMode;
 export type ConsentRequestKind = 'file-write' | 'bash-command';
 export type ConsentResponseDecision = ProtocolConsentResponseDecision;
-export type AwaitingHumanReason = 'prompt-human' | 'autonomous-abort' | 'consent' | 'consent-denied';
+export type AwaitingHumanReason = ProtocolAwaitingHumanReason;
 
 export type ConsentRequest =
   | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }

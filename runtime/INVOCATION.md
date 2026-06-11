@@ -112,6 +112,12 @@ If more than one role instance is awaiting input, the browser message must ident
 
 Human replies are queued durably on the flow and consumed by that flow's single live runner. The runner drains runnable work, sleeps when no work is available, and wakes when a queued reply arrives; it does not create a second runner for the same flow just to process operator input.
 
+The runtime writes a queued human reply only if the targeted node or improvement role is still awaiting non-consent human input, or the targeted node is still suspended in `awaitingHandoff`, in the latest persisted flow state. If the node was already woken by handoff or otherwise stopped accepting input, the reply is rejected instead of leaving stale `pendingHumanInputs`.
+
+A node awaiting a `prompt-human` reply can also be woken by a deliverable inbound handoff. If a human reply is already queued for that node, the queued human reply is consumed first and the inbound handoff is not injected into that human-input turn. If no human reply is queued, the inbound handoff wakes the same node, clears its awaiting-human suspension for the turn, and appends the normal reopened-node handoff packet before the model continues.
+
+A node suspended with `await-handoff` can also receive targeted human input. Queued human input has priority over received handoffs: the runtime resumes the node with the human reply, removes the `awaitingHandoff` suspension, and does not inject inbound handoff artifacts into that human-input turn.
+
 When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
 ### Tool permission modes
@@ -161,6 +167,8 @@ There is no persisted ready queue. At runner startup, persisted `runningNodes` a
 ### Same-node `prompt-human` resume
 
 When a `type: prompt-human` handoff pauses execution, the active role-scoped transcript is preserved. On resume at the same node, the runtime reuses that same node session and appends only the new human reply.
+
+If that same `prompt-human` node receives a handoff before a human reply is queued, the runtime treats the handoff as the wake-up signal instead of an interrupted-turn continuation. The existing role-scoped transcript and current-node conversation context are preserved, and the runtime appends a reopened-node packet containing the inbound handoff context.
 
 ### Later same-role-instance return
 

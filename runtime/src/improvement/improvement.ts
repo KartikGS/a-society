@@ -15,6 +15,7 @@ import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { ConsentGate, FlowRun, HandoffResult, ImprovementPhaseState, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import {
+  AWAITING_HUMAN_REASON,
   FEEDBACK_CONSENT_STATUS,
   IMPROVEMENT_CHOICE_MODE,
   OWNER_BASE_ROLE_ID,
@@ -76,7 +77,7 @@ async function saveImprovementPhase(
 async function markImprovementRoleAwaitingAbort(flowRun: FlowRun, roleInstanceId: string): Promise<void> {
   await saveImprovementPhase(flowRun, (p) => {
     if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-    p.awaitingHumanRoles[roleInstanceId] = { reason: 'autonomous-abort' };
+    p.awaitingHumanRoles[roleInstanceId] = { reason: AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT };
   });
 }
 
@@ -101,7 +102,7 @@ function buildUnexpectedSignalRepairMessage(
 
 function describeUnexpectedSignal(result: HandoffResult): string {
   if (result.kind === 'targets') return 'routing handoff';
-  if (result.kind === 'awaiting_human') return 'prompt-human';
+  if (result.kind === 'awaiting_human') return AWAITING_HUMAN_REASON.PROMPT_HUMAN;
   return result.kind;
 }
 
@@ -236,7 +237,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         saveSession();
         await saveImprovementPhase(flowRun, (p) => {
           if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-          p.awaitingHumanRoles[roleInstanceId] = { reason: sessionResult.awaitingHumanReason ?? 'prompt-human' };
+          p.awaitingHumanRoles[roleInstanceId] = { reason: sessionResult.awaitingHumanReason ?? AWAITING_HUMAN_REASON.PROMPT_HUMAN };
         });
         return null;
       }
