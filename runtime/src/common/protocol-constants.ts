@@ -12,6 +12,7 @@ export const CLIENT_MESSAGE_TYPE = {
   FEEDBACK_CONSENT_CHOICE: 'feedback_consent_choice',
   CONSENT_RESPONSE: 'consent_response',
   CONSENT_MODE: 'consent_mode',
+  MODEL_SELECTION: 'model_selection',
 } as const;
 
 type ValueOf<T> = T[keyof T];
@@ -37,6 +38,7 @@ export const AWAITING_HUMAN_REASON = {
   AUTONOMOUS_ABORT: 'autonomous-abort',
   CONSENT: 'consent',
   CONSENT_DENIED: 'consent-denied',
+  MODEL_SELECTION: 'model-selection',
 } as const;
 
 export type ProtocolAwaitingHumanReason = ValueOf<typeof AWAITING_HUMAN_REASON>;
@@ -46,6 +48,7 @@ export const AWAITING_HUMAN_REASONS = [
   AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT,
   AWAITING_HUMAN_REASON.CONSENT,
   AWAITING_HUMAN_REASON.CONSENT_DENIED,
+  AWAITING_HUMAN_REASON.MODEL_SELECTION,
 ] as const;
 
 export const IMPROVEMENT_CHOICE_MODE = {

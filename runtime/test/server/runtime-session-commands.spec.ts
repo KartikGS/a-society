@@ -4,10 +4,11 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
+import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
 import { configureSettingsStore } from '../../src/settings/settings-store.js';
-import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
 function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): FlowRun {
   const flowId = overrides.flowId ?? 'test-flow';
@@ -38,6 +39,7 @@ function createCommands(
 ) {
   const errors: string[] = [];
   const historicalMessages: Array<{ role?: string; text: string }> = [];
+  const historicalEvents: Array<{ kind: string; role?: string; nodeId?: string; modelDisplayName?: string }> = [];
   const activeSessions = new Map<string, any>();
   const commands = createRuntimeSessionCommands({
     workspaceRoot,
@@ -57,6 +59,7 @@ function createCommands(
     attachSessionTask: async () => {},
     emitHistoricalMessage: (_session, message) => {
       if (message.type === 'input_text') historicalMessages.push({ role: message.role, text: message.text });
+      if (message.type === 'operator_event') historicalEvents.push(message.event as any);
     },
     emitFlowState: () => {},
     broadcastToFlow: (_ref, message) => {
@@ -66,7 +69,7 @@ function createCommands(
     consent: {} as any,
   });
 
-  return { commands, errors, historicalMessages };
+  return { commands, errors, historicalMessages, historicalEvents };
 }
 
 describe('runtime session human input commands', () => {
@@ -197,6 +200,124 @@ describe('runtime session human input commands', () => {
       const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
       expect(latest.improvementPhase?.pendingHumanInputs).toEqual({});
       expect(errors).toEqual(['Role "owner" is no longer awaiting human input in the improvement phase.']);
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('persists a model selection for an awaiting node and marks it in the role feed', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
+        { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
+        { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', displayName: 'Model B' },
+      ]);
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+
+      const { commands, errors, historicalMessages, historicalEvents } = createCommands(workspaceRoot, () => flow);
+      commands.handleModelSelection(ref, 'plan', 'model-b');
+
+      expect(errors).toEqual([]);
+      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')?.modelConfigId).toBe('model-b');
+      expect(historicalMessages).toEqual([]);
+      expect(historicalEvents).toEqual([{
+        kind: 'human.model_selected',
+        nodeId: 'plan',
+        role: 'planner',
+        modelDisplayName: 'Model B',
+      }]);
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a model selection for a node that is not awaiting one', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-stale-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
+        { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
+        { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1' },
+      ]);
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+
+      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      commands.handleModelSelection(ref, 'plan', 'model-b');
+
+      expect(errors).toEqual(["Node 'plan' is not awaiting a model selection."]);
+      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a model selection that references an unknown model', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-unknown-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
+        { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
+        { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1' },
+      ]);
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+
+      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      commands.handleModelSelection(ref, 'plan', 'missing-model');
+
+      expect(errors).toEqual(['The selected model is not usable. Complete its configuration in Settings and select it again.']);
+      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a text reply targeted at a node awaiting model selection', async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-text-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION },
+          review: { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+
+      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      await commands.handleHumanInput(ref, 'use the cheap one', { nodeId: 'plan' });
+
+      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      expect(latest.pendingHumanInputs).toEqual({});
+      expect(errors).toEqual(["Node 'plan' is awaiting a model selection, not a text reply."]);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }

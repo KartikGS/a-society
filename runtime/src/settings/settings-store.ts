@@ -92,7 +92,7 @@ function getSecretsPath(): string {
   return path.join(getSettingsDir(), 'secrets.json');
 }
 
-function isUsableModelConfig(model: ModelConfigWithKey | null): model is ModelConfigWithKey {
+export function isUsableModelConfig(model: ModelConfigWithKey | null): model is ModelConfigWithKey {
   if (!model) return false;
   if (model.modelId.trim() === '' || model.apiKey.trim() === '') return false;
   if (model.providerType === 'openai-compatible' && model.providerBaseUrl.trim() === '') return false;

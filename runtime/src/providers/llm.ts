@@ -8,7 +8,7 @@ import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-search-executor.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE } from '../settings/settings-store.js';
+import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
@@ -19,15 +19,17 @@ export type LLMGatewayOptions =
       workspaceRoot: string;
       flowRef: FlowRef;
       provider?: LLMProvider;
+      model?: ModelConfigWithKey | null;
     }
   | {
       mode: 'system';
       workspaceRoot: string;
       provider?: LLMProvider;
+      model?: ModelConfigWithKey | null;
     };
 
-function createProvider(): LLMProvider {
-  const active = getActiveModelWithKey();
+function createProvider(model?: ModelConfigWithKey | null): LLMProvider {
+  const active = model ?? getActiveModelWithKey();
   if (!active || active.modelId.trim() === '' || active.apiKey.trim() === '') {
     throw new LLMGatewayError('UNKNOWN', MODEL_CONFIGURATION_REQUIRED_MESSAGE);
   }
@@ -75,7 +77,7 @@ export class LLMGateway {
     if (options.provider) {
       this.provider = options.provider;
     } else {
-      this.provider = createProvider();
+      this.provider = createProvider(options.model);
     }
 
     if (options.mode === 'project') {

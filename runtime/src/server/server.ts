@@ -159,6 +159,11 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
+      if (message.type === CLIENT_MESSAGE_TYPE.MODEL_SELECTION) {
+        runtimeSessions.handleModelSelection(message.flowRef, message.nodeId, message.modelConfigId);
+        return;
+      }
+
       void runtimeSessions.handleHumanInput(
         message.flowRef,
         message.text,

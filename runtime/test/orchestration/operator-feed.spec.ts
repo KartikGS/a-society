@@ -150,6 +150,40 @@ describe('operator-feed', () => {
     });
   });
 
+  it('projects model selection waits and resolves the persisted item when selected', () => {
+    const { tmpDir, ref } = createFixture();
+    const activeSession = createActiveSession(ref);
+
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: {
+        kind: 'human.awaiting_input',
+        nodeId: 'owner-intake',
+        role: 'owner',
+        reason: 'model-selection',
+      },
+    }, tmpDir);
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: {
+        kind: 'human.model_selected',
+        nodeId: 'owner-intake',
+        role: 'owner',
+        modelDisplayName: 'Claude Sonnet',
+      },
+    }, tmpDir);
+
+    const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toEqual({
+      id: 'owner_0',
+      type: 'event',
+      label: 'Model Selection',
+      text: 'owner-intake (owner) is waiting for a model selection. Choose a model for this role to continue:\n\nClaude Sonnet selected.',
+    });
+    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
+  });
+
   it('projects activity.tool_call events with a role into tool FeedItems', () => {
     expect(projectMessageToFeedItem(
       {

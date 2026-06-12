@@ -13,6 +13,7 @@ import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import {
   fetchActiveModelContextWindow,
   fetchFlowState,
+  fetchModels as fetchModelsApi,
   fetchProjectFlows as fetchProjectFlowsApi,
   fetchProjects as fetchProjectsApi,
   fetchSettingsStatus as fetchSettingsStatusApi,
@@ -33,6 +34,7 @@ import type {
   ClientMessage,
   FlowRef,
   FlowSummary,
+  ModelConfig,
   ProjectDiscovery,
   ServerMessage,
   SettingsStatus,
@@ -56,6 +58,7 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState<SettingsStatus | null>(null);
   const [contextWindow, setContextWindow] = useState<number | null>(null);
+  const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -102,9 +105,18 @@ export function App() {
     }
   }, []);
 
+  const refreshConfiguredModels = useCallback(async (): Promise<void> => {
+    try {
+      setConfiguredModels(await fetchModelsApi());
+    } catch {
+      // Keep the last known model list; the selection card re-renders on the next refresh.
+    }
+  }, []);
+
   const handleModelsChange = useCallback((): void => {
     void refreshSettingsStatus();
-  }, [refreshSettingsStatus]);
+    void refreshConfiguredModels();
+  }, [refreshConfiguredModels, refreshSettingsStatus]);
 
   const setProjectFlows = useCallback((projectNamespace: string, flows: FlowSummary[]): void => {
     setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: flows }));
@@ -169,6 +181,7 @@ export function App() {
     viewedRole,
     visibleFeed,
     visibleConsentRequest,
+    modelSelectionNodeId,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -181,6 +194,7 @@ export function App() {
     isViewedRoleCompacting,
     composerValue,
     latestContextUsage,
+    viewedRoleContextWindow,
   } = activeView;
 
   const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
@@ -240,6 +254,7 @@ export function App() {
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleConsentResponse,
+    handleModelSelect,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,
@@ -290,6 +305,16 @@ export function App() {
       .catch(() => { });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchModelsApi()
+      .then((models) => {
+        if (!cancelled) setConfiguredModels(models);
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [modelSelectionNodeId]);
 
   useEffect(() => {
     if (settingsReady && !hasConfiguredModel) {
@@ -443,15 +468,17 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
+                  modelSelection={modelSelectionNodeId ? { nodeId: modelSelectionNodeId, models: configuredModels } : null}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
+                  onModelSelect={handleModelSelect}
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   isCompactingContext={isViewedRoleCompacting}
-                  contextWindow={contextWindow}
+                  contextWindow={viewedRoleContextWindow ?? contextWindow}
                   latestContextUsage={latestContextUsage}
                 />
               </Panel>

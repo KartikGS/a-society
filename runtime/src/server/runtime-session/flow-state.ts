@@ -3,6 +3,7 @@ import type {
   FlowRef,
   FlowRun,
 } from '../../common/types.js';
+import { resolveRoleModel } from '../../orchestration/role-model.js';
 import { SessionStore } from '../../orchestration/store.js';
 import type { FlowStateMessage } from '../protocol.js';
 import { latestContextUsageFromSession } from './feed.js';
@@ -32,6 +33,16 @@ export function buildFlowStateMessage(
           })
           .filter((entry): entry is [string, number] => entry !== null)
       );
+  // Context window of the model each role actually runs on: its persisted
+  // per-flow selection when usable, otherwise the active model.
+  const contextWindowByRole: Record<string, number> = Object.fromEntries(
+    SessionStore.listRoleKeys(ref, workspaceRoot)
+      .map((roleKey) => {
+        const model = resolveRoleModel(workspaceRoot, ref, roleKey);
+        return model ? [roleKey, model.contextWindow] as const : null;
+      })
+      .filter((entry): entry is [string, number] => entry !== null)
+  );
   return {
     type: 'flow_state',
     flowRef: ref,
@@ -39,5 +50,6 @@ export function buildFlowStateMessage(
     backwardActive,
     hasActiveSession: session !== null && !session.finished,
     contextUsageByRole,
+    contextWindowByRole,
   };
 }

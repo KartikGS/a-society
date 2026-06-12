@@ -1,4 +1,5 @@
 import { Writable } from 'node:stream';
+import { modelSelectionPromptText } from '../../common/operator-feed.js';
 import type {
   FeedItem,
   FlowRef,
@@ -63,6 +64,17 @@ function isPendingCompactionItem(item: FeedItem): boolean {
   return item.type === 'tool' && item.label === 'Compaction';
 }
 
+function isModelSelectionItemForEvent(
+  item: FeedItem,
+  event: Extract<OperatorEvent, { kind: 'human.model_selected' }>
+): boolean {
+  return (
+    item.type === 'event' &&
+    item.label === 'Model Selection' &&
+    item.text.startsWith(modelSelectionPromptText(event.nodeId, event.role))
+  );
+}
+
 function applyReasoningTraceToFeed(
   session: ActiveSession,
   history: FeedItem[],
@@ -103,6 +115,35 @@ function appendProjectedFeedItem(
   SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
 }
 
+function resolveModelSelectionFeedItem(
+  session: ActiveSession,
+  history: FeedItem[],
+  roleKey: string,
+  message: { type: 'operator_event'; event: Extract<OperatorEvent, { kind: 'human.model_selected' }> },
+  workspaceRoot: string
+): void {
+  const projected = projectMessageToFeedItem(message, 'model-selection-resolution');
+  if (!projected) return;
+
+  const idx = [...history].reverse().findIndex((item) =>
+    isModelSelectionItemForEvent(item, message.event)
+  );
+  if (idx === -1) {
+    appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
+    return;
+  }
+
+  const realIdx = history.length - 1 - idx;
+  history[realIdx] = {
+    ...history[realIdx],
+    type: projected.type,
+    label: projected.label,
+    text: projected.text,
+  };
+  session.roleFeedHistory.set(roleKey, history);
+  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+}
+
 export function rememberMessage(
   session: ActiveSession,
   message: HistoricalMessage,
@@ -126,6 +167,12 @@ export function rememberMessage(
       session.roleFeedHistory.set(roleKey, history);
       SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
     }
+    return;
+  }
+
+  if (message.type === 'operator_event' && message.event.kind === 'human.model_selected') {
+    const event = message.event;
+    resolveModelSelectionFeedItem(session, history, roleKey, { type: 'operator_event', event }, workspaceRoot);
     return;
   }
 

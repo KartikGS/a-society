@@ -40,6 +40,18 @@ The runtime server can start without a model, but runtime work cannot proceed un
 - The Settings modal stays open until a usable active model exists
 - Environment variables in `.env` no longer select the runtime model
 
+### Per-Role Model Selection
+
+When more than one model is configured, each role instance chooses its model per flow:
+
+- The first time a role instance is activated in a flow, the runtime suspends that node as awaiting human input with reason `model-selection` and shows a model list in that role's chat panel
+- The operator picks one of the configured models; the choice applies to all of that role instance's turns in the flow, including improvement-phase and compaction turns
+- The role feed keeps model selection in a single `Model Selection` item; after a choice, the same item records `<model name> selected.`
+- The selection is persisted as `roles/<roleKey>/model.json` in that flow's state folder and survives restart; the node resumes as soon as a selection exists
+- A node awaiting `model-selection` does not accept a text reply — only the model choice
+- With exactly one configured model, no selection is requested and the active model is used
+- If a selected model is later deleted or becomes unusable while multiple models remain configured, the role re-prompts for a model at its next activation
+
 ### Web Search Connectivity
 
 Web search is Tavily-backed. Enabling it in Settings requires a Tavily API key, and successful tool calls require outbound HTTPS access from the runtime process to:
@@ -234,6 +246,7 @@ Per-flow layout:
 - `flow.json` — persisted `FlowRun`
 - `roles/<roleKey>/feed.json` — persisted per-role browser feed (`FeedItem[]`) for replay after reconnect or server restart
 - `roles/<roleKey>/transcript.json` — persisted role-instance-scoped session transcript for that role
+- `roles/<roleKey>/model.json` — persisted per-role model selection for that flow (present once the operator has chosen a model for the role)
 
 Resume behavior:
 

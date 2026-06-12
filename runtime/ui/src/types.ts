@@ -112,7 +112,8 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE; flowRef: FlowRef; mode: ProtocolImprovementChoiceMode }
   | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode };
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
+  | { type: typeof CLIENT_MESSAGE_TYPE.MODEL_SELECTION; flowRef: FlowRef; nodeId: string; modelConfigId: string };
 
 export type ServerMessage =
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
@@ -123,7 +124,7 @@ export type ServerMessage =
   | { type: 'response_end'; flowRef: FlowRef; role: string }
   | { type: 'output_text'; flowRef: FlowRef; role: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
-  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; contextUsageByRole: Record<string, number> }
+  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; contextUsageByRole: Record<string, number>; contextWindowByRole: Record<string, number> }
   | { type: 'error'; flowRef: FlowRef; message: string }
 ;
 

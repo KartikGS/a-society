@@ -4,6 +4,7 @@ import {
   type CompactionTrigger,
   type RoleSessionCompactionResult,
 } from '../../orchestration/compaction.js';
+import { resolveRoleModel } from '../../orchestration/role-model.js';
 import { SessionStore } from '../../orchestration/store.js';
 
 export async function compactPersistedRoleContext(options: {
@@ -54,6 +55,7 @@ export async function compactPersistedRoleContext(options: {
       operatorRenderer: options.operatorRenderer,
       nodeId,
       exchanges,
+      model: resolveRoleModel(options.workspaceRoot, options.flowRef, options.roleInstanceId),
     });
   } catch (error) {
     if (options.signal.aborted) {

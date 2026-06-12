@@ -1,4 +1,5 @@
 import { operatorMessageToFeedItem } from '../common/operator-feed.js';
+import { AWAITING_HUMAN_REASON } from '../common/protocol-constants.js';
 import { parseRoleIdentity } from '../common/role-id.js';
 import type { FeedItem, OperatorEvent, OperatorFeedMessage } from '../common/types.js';
 
@@ -13,8 +14,14 @@ export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | n
 
   if (message.type === 'operator_event') {
     const event = message.event;
+    if (event.kind === 'human.awaiting_input') {
+      // Model-selection waits persist a marker in the requesting role's feed;
+      // other awaiting reasons stay feed-transparent.
+      return event.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION
+        ? parseRoleIdentity(event.role).instanceRoleId
+        : null;
+    }
     if (
-      event.kind === 'human.awaiting_input' ||
       event.kind === 'human.resumed' ||
       event.kind === 'usage.turn_summary'
     ) {

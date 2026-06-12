@@ -1,5 +1,6 @@
 import { flowKey } from '../../common/flow-ref.js';
 import {
+  AWAITING_HUMAN_REASON,
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
   FEEDBACK_CONSENT_DECISION,
@@ -17,6 +18,7 @@ import type {
   FlowRun,
 } from '../../common/types.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
+import { saveRoleModelSelection } from '../../orchestration/role-model.js';
 import { SessionStore } from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
@@ -114,6 +116,55 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       type: 'input_text',
       role: targetRole,
       text,
+    });
+    session.orchestrator.wake();
+    emitFlowState(session);
+  }
+
+  function handleModelSelection(ref: FlowRef, nodeId: string, modelConfigId: string): void {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
+      return;
+    }
+
+    const awaitingState = flowRun.awaitingHumanNodes[nodeId];
+    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.MODEL_SELECTION) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting a model selection.` });
+      return;
+    }
+
+    const model = SettingsStore.getModelWithKey(modelConfigId);
+    if (!SettingsStore.isUsableModelConfig(model)) {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'The selected model is not usable. Complete its configuration in Settings and select it again.'
+      });
+      return;
+    }
+
+    saveRoleModelSelection(workspaceRoot, ref, awaitingState.role, {
+      modelConfigId: model.id,
+      displayName: model.displayName,
+      modelId: model.modelId,
+      selectedAt: new Date().toISOString(),
+    });
+
+    let session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      session = createSession(ref);
+      startFlowRunner(session, flowRun.projectNamespace);
+    }
+
+    emitHistoricalMessage(session, {
+      type: 'operator_event',
+      event: {
+        kind: 'human.model_selected',
+        nodeId,
+        role: awaitingState.role,
+        modelDisplayName: model.displayName,
+      },
     });
     session.orchestrator.wake();
     emitFlowState(session);
@@ -492,6 +543,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
   return {
     handleHumanInput,
+    handleModelSelection,
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleImprovementHumanInput,

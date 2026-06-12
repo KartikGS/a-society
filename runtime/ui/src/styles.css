@@ -1120,6 +1120,80 @@ textarea {
   background: rgba(187, 62, 3, 0.06);
 }
 
+.model-select-banner {
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: rgba(240, 253, 250, 0.96);
+  border: 1px solid rgba(13, 148, 136, 0.22);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.model-select-banner-body {
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+
+.model-select-banner-title {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.model-select-banner-desc {
+  display: block;
+  color: var(--ink-soft);
+}
+
+.model-select-empty {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.model-select-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.model-select-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(13, 148, 136, 0.3);
+  background: white;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.model-select-option:hover {
+  background: rgba(13, 148, 136, 0.08);
+  border-color: var(--accent);
+}
+
+.model-select-option-name {
+  font-weight: 600;
+}
+
+.model-select-option-meta {
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-family: "IBM Plex Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
 .consent-mode-select {
   appearance: none;
   -webkit-appearance: none;
@@ -2341,6 +2415,20 @@ textarea {
   .consent-btn-deny {
     color: var(--warning);
     border-color: rgba(251, 146, 60, 0.35);
+  }
+
+  .model-select-banner {
+    background: rgba(45, 212, 191, 0.07);
+    border-color: rgba(45, 212, 191, 0.24);
+  }
+
+  .model-select-option {
+    background: var(--surface-strong);
+    border-color: rgba(45, 212, 191, 0.3);
+  }
+
+  .model-select-option:hover {
+    background: rgba(45, 212, 191, 0.1);
   }
 
   .consent-btn-deny:hover {

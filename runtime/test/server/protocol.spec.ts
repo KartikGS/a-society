@@ -64,6 +64,32 @@ describe('protocol', () => {
     });
   });
 
+  it('accepts a model selection with node and model config ids', () => {
+    const parsed = parseClientMessage(JSON.stringify({
+      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+      modelConfigId: 'model-b',
+    }));
+
+    expect(parsed).toEqual({
+      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+      modelConfigId: 'model-b',
+    });
+  });
+
+  it('rejects a model selection without a model config id', () => {
+    const parsed = parseClientMessage(JSON.stringify({
+      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+    }));
+
+    expect(parsed).toBeNull();
+  });
+
   it('rejects legacy consent values', () => {
     expect(parseClientMessage(JSON.stringify({
       type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,
