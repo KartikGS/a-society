@@ -3,7 +3,7 @@ import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
 import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types';
 import { SYSTEM_ROLE_KEY } from './constants';
-import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveToolFeedItem } from './feed';
+import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveModelSelectionFeedItem, resolveToolFeedItem } from './feed';
 import {
   getConsentRequestRoleKey,
   hasImprovementGraph,
@@ -107,6 +107,17 @@ function applyOperatorEvent(
     return;
   }
 
+  if (event.kind === 'human.model_selected') {
+    const roleKey = toRoleKey(event.role);
+    if (roleKey) {
+      handlers.updateFlowUi(key, (state) => ({
+        ...state,
+        roleFeeds: resolveModelSelectionFeedItem(state.roleFeeds, roleKey, event),
+      }));
+    }
+    return;
+  }
+
   if (event.kind === 'role.active' || event.kind === 'human.awaiting_input') {
     handlers.updateFlowUi(key, (state) => {
       const item = formatOperatorEvent(event);
@@ -202,6 +213,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
         stopRequestedRoles: {},
         compactingRoles: {},
         latestContextUsageByRole: {},
+        contextWindowByRole: {},
         consentRequests: {},
       }));
       return;
@@ -285,6 +297,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
           compactingRoles: message.flowRun.status !== 'running' ? {} : state.compactingRoles,
           hasActiveSession: message.hasActiveSession,
           latestContextUsageByRole: { ...state.latestContextUsageByRole, ...message.contextUsageByRole },
+          contextWindowByRole: message.contextWindowByRole,
         };
       });
       handlers.refreshProjectFlows(message.flowRef.projectNamespace);

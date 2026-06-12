@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendFeedItem, applyReasoningTraceToFeed } from '../../ui/src/app/feed.js';
+import { appendFeedItem, applyReasoningTraceToFeed, resolveModelSelectionFeedItem } from '../../ui/src/app/feed.js';
 import type { FeedItem, OperatorEvent } from '../../ui/src/types.js';
 
 function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }> {
@@ -13,6 +13,33 @@ function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { ki
 }
 
 describe('ui/feed', () => {
+  it('resolves model selection into the existing prompt item', () => {
+    const feeds: Record<string, FeedItem[]> = {
+      owner: [
+        {
+          id: 'owner_0',
+          type: 'event',
+          label: 'Model Selection',
+          text: 'owner-intake (owner) is waiting for a model selection. Choose a model for this role to continue:',
+        },
+      ],
+    };
+
+    const updated = resolveModelSelectionFeedItem(feeds, 'owner', {
+      kind: 'human.model_selected',
+      nodeId: 'owner-intake',
+      role: 'owner',
+      modelDisplayName: 'Claude Sonnet',
+    });
+
+    expect(updated.owner).toEqual([{
+      id: 'owner_0',
+      type: 'event',
+      label: 'Model Selection',
+      text: 'owner-intake (owner) is waiting for a model selection. Choose a model for this role to continue:\n\nClaude Sonnet selected.',
+    }]);
+  });
+
   it('starts a new reasoning item after a user message', () => {
     const feeds: Record<string, FeedItem[]> = {
       owner: [

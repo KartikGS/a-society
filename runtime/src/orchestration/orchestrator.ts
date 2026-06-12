@@ -3,6 +3,7 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
+import { resolveRoleModelGate } from './role-model.js';
 import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam, OperatorEvent } from '../common/types.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
@@ -259,6 +260,16 @@ export class FlowOrchestrator {
           SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
         };
 
+        const modelGate = resolveRoleModelGate(flowRun.workspaceRoot, this.requireFlowRef(), roleInstanceId);
+        if (modelGate.kind === 'selection-required') {
+          span.setAttribute('node.outcome', 'awaiting_human');
+          span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.MODEL_SELECTION });
+          flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.MODEL_SELECTION);
+          this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.MODEL_SELECTION });
+          return;
+        }
+        const roleModel = modelGate.model;
+
         while (true) {
           try {
             const controller = new AbortController();
@@ -277,6 +288,7 @@ export class FlowOrchestrator {
                 externalSignal: controller.signal,
                 operatorRenderer: this.renderer,
                 consentGate,
+                model: roleModel,
                 onConversationMessages: async (messages) => {
                   removeAssistantDraftBeforeToolCalls(injectedHistory, messages);
                   appendConversationMessagesToCurrentNode(session, nodeId, messages);
@@ -861,11 +873,20 @@ export class FlowOrchestrator {
       const wf = this.loadWorkflowDocument(flowRun);
       const resumableHumanNodeIds = Object.keys(flowRun.pendingHumanInputs)
         .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes || flowRun.awaitingHandoff.includes(nodeId));
+      // Nodes suspended for model selection become claimable again once their
+      // role's model gate clears (selection persisted, or configured models
+      // reduced to one).
+      const resumableModelSelectionNodeIds = Object.entries(flowRun.awaitingHumanNodes)
+        .filter(([, state]) =>
+          state.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION &&
+          resolveRoleModelGate(flowRun.workspaceRoot, this.requireFlowRef(), state.role).kind === 'ready'
+        )
+        .map(([nodeId]) => nodeId);
       const runnableNodeIds = this.deriveRunnableNodeIds(flowRun, wf);
       const pendingInitialNodeIds = this.pruneInitialNodeIds(flowRun, wf, initialNodeIds);
       const allRunnableNodeIds = pendingInitialNodeIds.length > 0
-        ? this.mergeNodeIds(resumableHumanNodeIds, pendingInitialNodeIds) //adding resumable human nodes to both as a crash may happen before human input is cleared
-        : this.mergeNodeIds(resumableHumanNodeIds, runnableNodeIds);
+        ? this.mergeNodeIds(resumableHumanNodeIds, resumableModelSelectionNodeIds, pendingInitialNodeIds) //adding resumable human nodes to both as a crash may happen before human input is cleared
+        : this.mergeNodeIds(resumableHumanNodeIds, resumableModelSelectionNodeIds, runnableNodeIds);
 
       if (allRunnableNodeIds.length === 0) return;
 
@@ -1027,6 +1048,10 @@ export class FlowOrchestrator {
       delete flowRun.awaitingHumanNodes[nodeId];
       flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     } else if (resumedFromHandoff && flowRun.awaitingHumanNodes[nodeId]?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN) {
+      delete flowRun.awaitingHumanNodes[nodeId];
+    }
+    //this node will only be picked up if selection is resolved, so we can clear it
+    if (flowRun.awaitingHumanNodes[nodeId]?.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION) {
       delete flowRun.awaitingHumanNodes[nodeId];
     }
     if (!resumedFromHuman && (!sameNodeResume || resumedFromHandoff) && (inboundHandoffSnapshot.length > 0 || staleForwardSnapshot.length > 0)) {

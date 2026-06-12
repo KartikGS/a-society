@@ -9,6 +9,7 @@ All notable changes to A-Society will be documented here.
 ### Runtime
 
 - Allow `prompt-human` nodes to resume from inbound handoffs and allow targeted human input for nodes suspended in `await-handoff`, with queued human replies taking priority for that turn.
+- Per-role model selection: when more than one model is configured, each role instance prompts for a model in its feed at first activation — the node suspends as awaiting human input with reason `model-selection` — and the chosen model is persisted per flow in `roles/<roleKey>/model.json` and used for all of that role's turns, including improvement and compaction.
 
 ---
 

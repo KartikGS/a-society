@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { LLMGateway } from '../providers/llm.js';
 import type { FlowRun, GatewayTurnResult, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
+import type { ModelConfigWithKey } from '../settings/settings-store.js';
 
 export const AUTO_COMPACTION_CONTEXT_RATIO = 0.8;
 
@@ -137,6 +138,7 @@ export async function compactRoleSession(options: {
   operatorRenderer: OperatorRenderSink;
   nodeId: string;
   exchanges: RuntimeMessageParam[];
+  model?: ModelConfigWithKey | null;
 }): Promise<RoleSessionCompactionResult> {
   const nodeId = options.nodeId;
   if (!nodeId) {
@@ -152,6 +154,7 @@ export async function compactRoleSession(options: {
   const llm = new LLMGateway({
     mode: 'system',
     workspaceRoot: options.flowRun.workspaceRoot,
+    model: options.model,
   });
   let result: GatewayTurnResult;
   try {
@@ -214,6 +217,7 @@ export async function autoCompactRoleSessionBeforeTurn(options: {
   signal: AbortSignal;
   operatorRenderer: OperatorRenderSink;
   activeHistory: RuntimeMessageParam[];
+  model?: ModelConfigWithKey | null;
 }): Promise<RoleSessionCompactionResult> {
   if (!shouldAutoCompact(options.session.latestContextUsage, options.contextWindow)) {
     return { compacted: false, skipped: true };
@@ -231,6 +235,7 @@ export async function autoCompactRoleSessionBeforeTurn(options: {
       operatorRenderer: options.operatorRenderer,
       nodeId: options.nodeId,
       exchanges: options.activeHistory,
+      model: options.model,
     });
 
     if (!result.compacted) {

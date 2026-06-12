@@ -1,4 +1,13 @@
+import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
 import type { FeedItem, OperatorEvent, OperatorFeedMessage } from './types.js';
+
+export function modelSelectionPromptText(nodeId: string, role: string): string {
+  return `${nodeId} (${role}) is waiting for a model selection. Choose a model for this role to continue:`;
+}
+
+export function modelSelectionSelectedText(nodeId: string, role: string, modelDisplayName: string): string {
+  return `${modelSelectionPromptText(nodeId, role)}\n${modelDisplayName} selected.`;
+}
 
 export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: string): FeedItem | null {
   if (message.type === 'output_text') {
@@ -65,7 +74,22 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         text: event.summary
       };
     case 'human.awaiting_input':
+      if (event.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION) {
+        return {
+          id,
+          type: 'event',
+          label: 'Model Selection',
+          text: modelSelectionPromptText(event.nodeId, event.role)
+        };
+      }
       return null;
+    case 'human.model_selected':
+      return {
+        id,
+        type: 'event',
+        label: 'Model Selection',
+        text: modelSelectionSelectedText(event.nodeId, event.role, event.modelDisplayName)
+      };
     case 'human.resumed':
       return null;
     case 'usage.turn_summary':

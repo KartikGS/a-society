@@ -290,6 +290,16 @@ export function useAppCommands(input: UseAppCommandsInput) {
     });
   }, [activeTab, sendMessage, visibleConsentRequest]);
 
+  const handleModelSelect = useCallback((nodeId: string, modelConfigId: string): void => {
+    if (!activeTab) return;
+    sendMessage({
+      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      flowRef: activeTab.ref,
+      nodeId,
+      modelConfigId,
+    });
+  }, [activeTab, sendMessage]);
+
   const handleConsentModeChange = useCallback((mode: ConsentMode): void => {
     if (!activeTab) return;
     sendMessage({ type: CLIENT_MESSAGE_TYPE.CONSENT_MODE, flowRef: activeTab.ref, mode });
@@ -356,6 +366,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleConsentResponse,
+    handleModelSelect,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,

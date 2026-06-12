@@ -4,9 +4,14 @@ import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
 } from '../../../src/common/protocol-constants.js';
-import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem } from '../types';
+import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, ModelConfig } from '../types';
 
 export type { FeedItem };
+
+export interface ModelSelectionPrompt {
+  nodeId: string;
+  models: ModelConfig[];
+}
 
 interface ChatInterfaceProps {
   subtitle: string;
@@ -23,6 +28,7 @@ interface ChatInterfaceProps {
   activeRoles?: string[];
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
+  modelSelection?: ModelSelectionPrompt | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
   onRoleSelect?: (role: string) => void;
@@ -30,6 +36,7 @@ interface ChatInterfaceProps {
   onSubmit: () => void;
   onStop?: () => void;
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
+  onModelSelect?: (nodeId: string, modelConfigId: string) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
   isCompactingContext?: boolean;
@@ -173,6 +180,45 @@ function StopIcon() {
     <svg viewBox="0 0 20 20" aria-hidden="true">
       <rect x="5" y="5" width="10" height="10" rx="2.5" fill="currentColor" />
     </svg>
+  );
+}
+
+function ModelSelectionBanner({
+  modelSelection,
+  onModelSelect,
+}: {
+  modelSelection: ModelSelectionPrompt;
+  onModelSelect?: (nodeId: string, modelConfigId: string) => void;
+}) {
+  return (
+    <div className="model-select-banner">
+      <div className="model-select-banner-body">
+        <span className="model-select-banner-title">Choose a model for this role</span>
+        <span className="model-select-banner-desc">
+          The selected model is used for all of this role&apos;s turns in this flow.
+        </span>
+      </div>
+      {modelSelection.models.length === 0 ? (
+        <p className="model-select-empty">No configured models found. Add a model in Settings.</p>
+      ) : (
+        <ul className="model-select-options">
+          {modelSelection.models.map((model) => (
+            <li key={model.id}>
+              <button
+                type="button"
+                className="model-select-option"
+                onClick={() => onModelSelect?.(modelSelection.nodeId, model.id)}
+              >
+                <span className="model-select-option-name">{model.displayName}</span>
+                <span className="model-select-option-meta">
+                  {model.providerType} · {model.modelId}{model.active ? ' · active' : ''}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -336,6 +382,13 @@ export function ChatInterface(props: ChatInterfaceProps) {
 
       {props.showComposer ? (
         <div className="composer-area">
+          {props.modelSelection ? (
+            <ModelSelectionBanner
+              modelSelection={props.modelSelection}
+              onModelSelect={props.onModelSelect}
+            />
+          ) : null}
+
           {props.consentRequest ? (
             <div className="consent-banner">
               <div className="consent-banner-body">

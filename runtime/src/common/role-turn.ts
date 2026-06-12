@@ -5,7 +5,7 @@ import { HandoffInterpreter, HandoffParseError } from '../orchestration/handoff.
 import { autoCompactRoleSessionBeforeTurn } from '../orchestration/compaction.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
-import { getActiveModelWithKey } from '../settings/settings-store.js';
+import { getActiveModelWithKey, type ModelConfigWithKey } from '../settings/settings-store.js';
 import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
 
 function extractFileRefs(content: string): string[] {
@@ -218,6 +218,7 @@ interface RunRoleTurnBaseInput {
   providedHistory: RuntimeMessageParam[];
   roleOutputStream?: NodeJS.WritableStream;
   consentGate?: ConsentGate;
+  model?: ModelConfigWithKey | null;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
 }
@@ -255,6 +256,7 @@ export async function runRoleTurn({
   externalSignal,
   operatorRenderer,
   consentGate,
+  model,
   onConversationMessages,
   onAssistantTextDelta,
   nodeId,
@@ -270,6 +272,7 @@ export async function runRoleTurn({
     mode: 'project',
     workspaceRoot,
     flowRef,
+    model,
   });
   const history: RuntimeMessageParam[] = providedHistory;
 
@@ -286,10 +289,11 @@ export async function runRoleTurn({
       flowRun: compaction.flowRun,
       roleName: roleInstanceId,
       nodeId: compaction.nodeId,
-      contextWindow: getActiveModelWithKey()?.contextWindow ?? null,
+      contextWindow: (model ?? getActiveModelWithKey())?.contextWindow ?? null,
       signal: externalSignal,
       operatorRenderer,
       activeHistory: history,
+      model,
     });
 
     if (compactionResult.aborted) {

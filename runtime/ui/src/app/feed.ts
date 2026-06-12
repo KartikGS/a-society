@@ -1,4 +1,7 @@
-import { operatorEventToFeedItem } from '../../../src/common/operator-feed.js';
+import {
+  modelSelectionPromptText,
+  operatorEventToFeedItem,
+} from '../../../src/common/operator-feed.js';
 import type { FeedItem, OperatorEvent } from '../types.js';
 
 export function nextFeedId(): string {
@@ -27,6 +30,42 @@ export function resolveCompactionFeedItem(feeds: Record<string, FeedItem[]>, rol
   const existing = feeds[role] ?? [];
   const idx = [...existing].reverse().findIndex(item => item.type === 'tool' && item.label === 'Compaction');
   if (idx === -1) return feeds;
+
+  const realIdx = existing.length - 1 - idx;
+  const updated = existing.map((item, i) =>
+    i === realIdx
+      ? { ...item, type: resolved.type, label: resolved.label, text: resolved.text }
+      : item
+  );
+  return { ...feeds, [role]: updated };
+}
+
+function isModelSelectionItemForEvent(
+  item: FeedItem,
+  event: Extract<OperatorEvent, { kind: 'human.model_selected' }>
+): boolean {
+  return (
+    item.type === 'event' &&
+    item.label === 'Model Selection' &&
+    item.text.startsWith(modelSelectionPromptText(event.nodeId, event.role))
+  );
+}
+
+export function resolveModelSelectionFeedItem(
+  feeds: Record<string, FeedItem[]>,
+  role: string,
+  event: Extract<OperatorEvent, { kind: 'human.model_selected' }>
+): Record<string, FeedItem[]> {
+  const resolved = formatOperatorEvent(event);
+  if (!resolved) return feeds;
+
+  const existing = feeds[role] ?? [];
+  const idx = [...existing].reverse().findIndex((item) =>
+    isModelSelectionItemForEvent(item, event)
+  );
+  if (idx === -1) {
+    return { ...feeds, [role]: [...existing, resolved] };
+  }
 
   const realIdx = existing.length - 1 - idx;
   const updated = existing.map((item, i) =>

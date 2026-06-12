@@ -35,7 +35,8 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE; flowRef: FlowRef; mode: ProtocolImprovementChoiceMode }
   | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode };
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
+  | { type: typeof CLIENT_MESSAGE_TYPE.MODEL_SELECTION; flowRef: FlowRef; nodeId: string; modelConfigId: string };
 
 export type FlowStateMessage = {
   type: 'flow_state';
@@ -44,6 +45,7 @@ export type FlowStateMessage = {
   backwardActive: string[];
   hasActiveSession: boolean;
   contextUsageByRole: Record<string, number>;
+  contextWindowByRole: Record<string, number>;
 };
 
 export type HistoricalMessage = OperatorFeedMessage;
@@ -143,6 +145,15 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       parsed.type === CLIENT_MESSAGE_TYPE.CONSENT_MODE &&
       hasFlowRef(parsed.flowRef) &&
       isOneOf(parsed.mode, CONSENT_MODES)
+    ) {
+      return parsed as ClientMessage;
+    }
+
+    if (
+      parsed.type === CLIENT_MESSAGE_TYPE.MODEL_SELECTION &&
+      hasFlowRef(parsed.flowRef) &&
+      typeof parsed.nodeId === 'string' &&
+      typeof parsed.modelConfigId === 'string'
     ) {
       return parsed as ClientMessage;
     }

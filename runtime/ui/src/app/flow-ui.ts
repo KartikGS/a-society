@@ -32,6 +32,7 @@ export interface FlowUiState {
   compactingRoles: Record<string, boolean>;
   consentRequests: Record<string, ConsentRequest>;
   latestContextUsageByRole: Record<string, number>;
+  contextWindowByRole: Record<string, number>;
   hasActiveSession: boolean;
 }
 
@@ -50,6 +51,7 @@ export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     compactingRoles: {},
     consentRequests: {},
     latestContextUsageByRole: {},
+    contextWindowByRole: {},
     hasActiveSession: false,
   };
 }
@@ -59,7 +61,21 @@ export function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string |
   const targetKey = toRoleKey(role);
   if (!targetKey) return null;
   const match = Object.entries(flowRun.awaitingHumanNodes)
-    .find(([, state]) => state.reason !== AWAITING_HUMAN_REASON.CONSENT && toRoleKey(state.role) === targetKey);
+    .find(([, state]) =>
+      state.reason !== AWAITING_HUMAN_REASON.CONSENT &&
+      state.reason !== AWAITING_HUMAN_REASON.MODEL_SELECTION &&
+      toRoleKey(state.role) === targetKey);
+  return match?.[0] ?? null;
+}
+
+export function getModelSelectionNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
+  if (!flowRun || !role) return null;
+  const targetKey = toRoleKey(role);
+  if (!targetKey) return null;
+  const match = Object.entries(flowRun.awaitingHumanNodes)
+    .find(([, state]) =>
+      state.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION &&
+      toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
 }
 

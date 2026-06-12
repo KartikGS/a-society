@@ -11,6 +11,7 @@ import {
 import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import { SessionStore } from '../orchestration/store.js';
+import { resolveRoleModel } from '../orchestration/role-model.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { ConsentGate, FlowRun, HandoffResult, ImprovementPhaseState, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
@@ -185,6 +186,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   const stepLabel = describeExpectedStep(expectedKind);
   const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
+  const roleModel = resolveRoleModel(flowRun.workspaceRoot, flowRef, roleInstanceId);
   const saveSession = () => SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
 
   while (true) {
@@ -199,6 +201,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         externalSignal: signal,
         operatorRenderer: renderer,
         consentGate,
+        model: roleModel,
         onConversationMessages: async (messages) => {
           removeAssistantDraftBeforeToolCalls(history, messages);
           appendConversationMessagesToCurrentNode(session, nodeId, messages);
