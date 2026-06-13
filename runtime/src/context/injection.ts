@@ -6,6 +6,9 @@ import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from './required-reading.js';
 import { parseRoleIdentity } from '../common/role-id.js';
+import type { FlowRef } from '../common/types.js';
+import { resolveEffectiveCapabilities } from '../orchestration/capability-selection.js';
+import { readSkillSummary } from '../framework-services/skills.js';
 
 export interface ContextBundleResult {
   bundleContent: string;
@@ -33,7 +36,8 @@ export class ContextInjectionService {
     projectNamespace: string,
     roleInstanceId: string,
     workspaceRoot: string,
-    recordFolderPath: string
+    recordFolderPath: string,
+    flowRef: FlowRef
   ): ContextBundleResult {
     const roleIdentity = parseRoleIdentity(roleInstanceId);
     let bundle = `=== A-SOCIETY RUNTIME CONTEXT BUNDLE ===\n\n`;
@@ -82,6 +86,23 @@ export class ContextInjectionService {
       }
     } else {
       bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleId} IN ${projectNamespace}. No required reading available. ---\n\n`;
+    }
+
+    const capabilities = resolveEffectiveCapabilities(workspaceRoot, flowRef, roleInstanceId);
+    const selectedSkills = capabilities.skills
+      .map((name) => readSkillSummary(workspaceRoot, name))
+      .filter((skill): skill is NonNullable<typeof skill> => skill !== null)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (selectedSkills.length > 0) {
+      bundle += `--- AVAILABLE SKILLS FOR ${roleIdentity.instanceRoleId} ---\n`;
+      bundle += `The following skills are available to you. Each lists a name and description. Read a skill's\n`;
+      bundle += `SKILL.md with read_file only when the current task calls for it; do not read them pre-emptively.\n\n`;
+      for (const skill of selectedSkills) {
+        bundle += `[SKILL: ${skill.name}] ${skill.description}\n`;
+        bundle += `  SKILL.md: ${skill.skillMdPath}\n`;
+      }
+      bundle += '\n';
     }
 
     // Compute hash

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
+import { readCapabilitySelection } from '../../src/orchestration/capability-selection.js';
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
@@ -70,6 +71,18 @@ function createCommands(
   });
 
   return { commands, errors, historicalMessages, historicalEvents };
+}
+
+function writeSkill(workspaceRoot: string, name: string): void {
+  const dir = path.join(workspaceRoot, '.a-society', 'skills', name);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), `---
+name: ${name}
+description: ${name} description.
+---
+
+Body.
+`, 'utf8');
 }
 
 describe('runtime session human input commands', () => {
@@ -205,7 +218,7 @@ describe('runtime session human input commands', () => {
     }
   });
 
-  it('persists a model selection for an awaiting node and marks it in the role feed', () => {
+  it('persists role configuration for an awaiting node and marks it in the role feed', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-'));
     try {
       configureSettingsStore(workspaceRoot);
@@ -218,29 +231,31 @@ describe('runtime session human input commands', () => {
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
         awaitingHumanNodes: {
-          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION },
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
       SessionStore.saveFlowRun(flow, ref, workspaceRoot);
 
       const { commands, errors, historicalMessages, historicalEvents } = createCommands(workspaceRoot, () => flow);
-      commands.handleModelSelection(ref, 'plan', 'model-b');
+      commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
 
       expect(errors).toEqual([]);
       expect(readRoleModelSelection(workspaceRoot, ref, 'planner')?.modelConfigId).toBe('model-b');
       expect(historicalMessages).toEqual([]);
       expect(historicalEvents).toEqual([{
-        kind: 'human.model_selected',
+        kind: 'human.role_configured',
         nodeId: 'plan',
         role: 'planner',
         modelDisplayName: 'Model B',
+        skillCount: 0,
+        mcpServerCount: 0,
       }]);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
 
-  it('rejects a model selection for a node that is not awaiting one', () => {
+  it('rejects role configuration for a node that is not awaiting it', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-stale-'));
     try {
       configureSettingsStore(workspaceRoot);
@@ -259,16 +274,16 @@ describe('runtime session human input commands', () => {
       SessionStore.saveFlowRun(flow, ref, workspaceRoot);
 
       const { commands, errors } = createCommands(workspaceRoot, () => flow);
-      commands.handleModelSelection(ref, 'plan', 'model-b');
+      commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
 
-      expect(errors).toEqual(["Node 'plan' is not awaiting a model selection."]);
+      expect(errors).toEqual(["Node 'plan' is not awaiting role configuration."]);
       expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
   });
 
-  it('rejects a model selection that references an unknown model', () => {
+  it('rejects role configuration that references an unknown model', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-unknown-'));
     try {
       configureSettingsStore(workspaceRoot);
@@ -281,13 +296,13 @@ describe('runtime session human input commands', () => {
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
         awaitingHumanNodes: {
-          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION },
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
       SessionStore.saveFlowRun(flow, ref, workspaceRoot);
 
       const { commands, errors } = createCommands(workspaceRoot, () => flow);
-      commands.handleModelSelection(ref, 'plan', 'missing-model');
+      commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'missing-model', skills: [], mcpServers: [] });
 
       expect(errors).toEqual(['The selected model is not usable. Complete its configuration in Settings and select it again.']);
       expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
@@ -296,7 +311,83 @@ describe('runtime session human input commands', () => {
     }
   });
 
-  it('refuses a text reply targeted at a node awaiting model selection', async () => {
+  it('persists selected skills and clears the pre-selection system prompt', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-role-config-skills-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+      writeSkill(workspaceRoot, 'review-writing');
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveRoleSession({
+        roleName: 'planner',
+        logicalSessionId: 'test-flow__planner',
+        transcriptHistory: [{ role: 'user', content: 'Node entry.' }],
+        isActive: true,
+        currentNodeId: 'plan',
+        systemPrompt: 'Pre-selection prompt without skills.',
+      }, ref, workspaceRoot);
+
+      const { commands, errors, historicalEvents } = createCommands(workspaceRoot, () => flow);
+      commands.handleRoleConfiguration(ref, 'plan', {
+        skills: ['review-writing'],
+        mcpServers: [],
+      });
+
+      expect(errors).toEqual([]);
+      expect(readCapabilitySelection(workspaceRoot, ref, 'planner')?.skills).toEqual(['review-writing']);
+      expect(SessionStore.loadRoleSession('planner', ref, workspaceRoot)?.systemPrompt).toBeUndefined();
+      expect(historicalEvents).toEqual([expect.objectContaining({
+        kind: 'human.role_configured',
+        nodeId: 'plan',
+        role: 'planner',
+        skillCount: 1,
+        mcpServerCount: 0,
+      })]);
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects role configuration with an unknown skill', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-role-config-unknown-skill-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+      writeSkill(workspaceRoot, 'review-writing');
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+
+      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      commands.handleRoleConfiguration(ref, 'plan', {
+        modelConfigId: 'test-model',
+        skills: ['missing-skill'],
+        mcpServers: [],
+      });
+
+      expect(errors).toEqual(['Unknown skill "missing-skill". Refresh Settings and try again.']);
+      expect(readCapabilitySelection(workspaceRoot, ref, 'planner')).toBeNull();
+      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a text reply targeted at a node awaiting role configuration', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-text-'));
     try {
       configureSettingsStore(workspaceRoot);
@@ -306,7 +397,7 @@ describe('runtime session human input commands', () => {
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
         awaitingHumanNodes: {
-          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION },
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
           review: { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
         },
       });
@@ -317,7 +408,7 @@ describe('runtime session human input commands', () => {
 
       const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
       expect(latest.pendingHumanInputs).toEqual({});
-      expect(errors).toEqual(["Node 'plan' is awaiting a model selection, not a text reply."]);
+      expect(errors).toEqual(["Node 'plan' is awaiting role configuration, not a text reply."]);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }

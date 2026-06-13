@@ -18,7 +18,9 @@ import type {
   FlowRun,
 } from '../../common/types.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
-import { saveRoleModelSelection } from '../../orchestration/role-model.js';
+import { listSkills } from '../../framework-services/skills.js';
+import { listMcpServers, saveCapabilitySelection } from '../../orchestration/capability-selection.js';
+import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
 import { SessionStore } from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
@@ -47,6 +49,12 @@ type RuntimeSessionCommandsDeps = {
   missingModelError: (ref: FlowRef) => ServerMessage;
   consent: RuntimeSessionConsent;
 };
+
+export interface RoleConfigurationPayload {
+  modelConfigId?: string;
+  skills: string[];
+  mcpServers: string[];
+}
 
 export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
   const {
@@ -121,7 +129,15 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitFlowState(session);
   }
 
-  function handleModelSelection(ref: FlowRef, nodeId: string, modelConfigId: string): void {
+  function uniqueStrings(values: string[]): string[] {
+    return values
+      .filter((value) => typeof value === 'string' && value.trim() !== '')
+      .map((value) => value.trim())
+      .filter((value, index, entries) => entries.indexOf(value) === index)
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  function handleRoleConfiguration(ref: FlowRef, nodeId: string, payload: RoleConfigurationPayload): void {
     const flowRun = readFlowRun(ref);
     if (!flowRun) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
@@ -129,27 +145,95 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const awaitingState = flowRun.awaitingHumanNodes[nodeId];
-    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.MODEL_SELECTION) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting a model selection.` });
+    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting role configuration.` });
       return;
     }
 
-    const model = SettingsStore.getModelWithKey(modelConfigId);
-    if (!SettingsStore.isUsableModelConfig(model)) {
-      broadcastToFlow(ref, {
-        type: 'error',
-        flowRef: ref,
-        message: 'The selected model is not usable. Complete its configuration in Settings and select it again.'
+    const modelGate = resolveRoleModelGate(workspaceRoot, ref, awaitingState.role);
+    let modelDisplayName: string | undefined;
+    let modelSelection: {
+      modelConfigId: string;
+      displayName: string;
+      modelId: string;
+      selectedAt: string;
+    } | null = null;
+    if (modelGate.kind === 'selection-required') {
+      if (!payload.modelConfigId) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'Select a model before submitting role configuration.' });
+        return;
+      }
+      const model = SettingsStore.getModelWithKey(payload.modelConfigId);
+      if (!SettingsStore.isUsableModelConfig(model)) {
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: 'The selected model is not usable. Complete its configuration in Settings and select it again.'
+        });
+        return;
+      }
+
+      modelSelection = {
+        modelConfigId: model.id,
+        displayName: model.displayName,
+        modelId: model.modelId,
+        selectedAt: new Date().toISOString(),
+      };
+      modelDisplayName = model.displayName;
+    } else if (payload.modelConfigId) {
+      const model = SettingsStore.getModelWithKey(payload.modelConfigId);
+      if (!SettingsStore.isUsableModelConfig(model)) {
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: 'The selected model is not usable. Complete its configuration in Settings and select it again.'
+        });
+        return;
+      }
+      modelSelection = {
+        modelConfigId: model.id,
+        displayName: model.displayName,
+        modelId: model.modelId,
+        selectedAt: new Date().toISOString(),
+      };
+      modelDisplayName = model.displayName;
+    }
+
+    const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
+    const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
+    const selectedSkills = uniqueStrings(payload.skills);
+    const selectedMcpServers = uniqueStrings(payload.mcpServers);
+    const unknownSkill = selectedSkills.find((name) => !validSkillNames.has(name));
+    const unknownServer = selectedMcpServers.find((id) => !validMcpServerIds.has(id));
+    if (unknownSkill) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Unknown skill "${unknownSkill}". Refresh Settings and try again.` });
+      return;
+    }
+    if (unknownServer) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Unknown MCP server "${unknownServer}". Refresh Settings and try again.` });
+      return;
+    }
+
+    if (modelSelection) {
+      saveRoleModelSelection(workspaceRoot, ref, awaitingState.role, modelSelection);
+    }
+
+    if (validSkillNames.size > 0 || validMcpServerIds.size > 0) {
+      saveCapabilitySelection(workspaceRoot, ref, awaitingState.role, {
+        skills: selectedSkills,
+        mcpServers: selectedMcpServers,
+        selectedAt: new Date().toISOString(),
       });
-      return;
     }
 
-    saveRoleModelSelection(workspaceRoot, ref, awaitingState.role, {
-      modelConfigId: model.id,
-      displayName: model.displayName,
-      modelId: model.modelId,
-      selectedAt: new Date().toISOString(),
-    });
+    if (selectedSkills.length > 0) {
+      const roleKey = parseRoleIdentity(awaitingState.role).instanceRoleId;
+      const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+      if (roleSession) {
+        delete roleSession.systemPrompt;
+        SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
+      }
+    }
 
     let session = activeSessions.get(flowKey(ref));
     if (!session || session.finished) {
@@ -160,10 +244,12 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitHistoricalMessage(session, {
       type: 'operator_event',
       event: {
-        kind: 'human.model_selected',
+        kind: 'human.role_configured',
         nodeId,
         role: awaitingState.role,
-        modelDisplayName: model.displayName,
+        modelDisplayName,
+        skillCount: selectedSkills.length,
+        mcpServerCount: selectedMcpServers.length,
       },
     });
     session.orchestrator.wake();
@@ -543,7 +629,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
   return {
     handleHumanInput,
-    handleModelSelection,
+    handleRoleConfiguration,
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleImprovementHumanInput,

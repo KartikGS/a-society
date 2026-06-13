@@ -12,11 +12,12 @@ vi.mock('../../src/providers/model-validation.js', () => ({
 }));
 
 const validateModelConfigurationMock = vi.mocked(validateModelConfiguration);
+let workspaceRoot: string;
 
 beforeEach(() => {
   validateModelConfigurationMock.mockReset();
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
-  SettingsStore.configureSettingsStore(tmpDir);
+  workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
+  SettingsStore.configureSettingsStore(workspaceRoot);
 });
 
 interface MockResponse {
@@ -41,7 +42,9 @@ function createMockResponse(): MockResponse {
   return response;
 }
 
-function findRouteHandler(app: express.Express, method: 'post' | 'put', routePath: string) {
+type RouteMethod = 'get' | 'post' | 'put' | 'delete';
+
+function findRouteHandler(app: express.Express, method: RouteMethod, routePath: string) {
   const stack = (app as unknown as { _router: { stack: any[] } })._router.stack;
   const layer = stack.find((entry) => entry.route?.path === routePath && entry.route.methods[method]);
   if (!layer) throw new Error(`Route ${method.toUpperCase()} ${routePath} was not registered.`);
@@ -52,13 +55,13 @@ function findRouteHandler(app: express.Express, method: 'post' | 'put', routePat
 }
 
 async function callSettingsRoute(
-  method: 'post' | 'put',
+  method: RouteMethod,
   routePath: string,
-  body: unknown,
+  body: unknown = {},
   params: Record<string, string> = {}
 ): Promise<{ status: number; body: unknown }> {
   const app = express();
-  registerSettingsRoutes(app);
+  registerSettingsRoutes(app, workspaceRoot);
   const response = createMockResponse();
   await findRouteHandler(app, method, routePath)({ body, params }, response);
   return { status: response.statusCode, body: response.body };
@@ -126,5 +129,45 @@ describe('settings routes', () => {
     expect(response.status).toBe(200);
     expect(validateModelConfigurationMock).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-key' }));
     expect(SettingsStore.getModelWithKey(existing.id)?.apiKey).toBe('stored-key');
+  });
+
+  it('imports the full skill folder including bundled scripts', async () => {
+    const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-import-skill-'));
+    fs.mkdirSync(path.join(sourceDir, 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(sourceDir, 'SKILL.md'), `---
+name: review-writing
+description: Helps write reviews.
+---
+
+Run scripts/foo.py when needed.
+`, 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'scripts', 'foo.py'), 'print("ok")\n', 'utf8');
+
+    const imported = await callSettingsRoute('post', '/api/settings/skills/import', { path: sourceDir });
+
+    expect(imported.status).toBe(201);
+    expect(imported.body).toMatchObject({
+      skill: {
+        name: 'review-writing',
+        description: 'Helps write reviews.',
+        skillMdPath: '.a-society/skills/review-writing/SKILL.md',
+      },
+      notice: 'This skill may bundle scripts the agent can run; they execute only through the normal command-permission prompts.',
+    });
+    expect(fs.readFileSync(path.join(workspaceRoot, '.a-society', 'skills', 'review-writing', 'scripts', 'foo.py'), 'utf8'))
+      .toBe('print("ok")\n');
+  });
+
+  it('surfaces malformed skills and returns 404 when deleting a missing skill', async () => {
+    fs.mkdirSync(path.join(workspaceRoot, '.a-society', 'skills', 'broken-skill'), { recursive: true });
+
+    const listed = await callSettingsRoute('get', '/api/settings/skills');
+    expect(listed.body).toEqual([
+      { kind: 'malformed', name: 'broken-skill', reason: 'Missing SKILL.md.' },
+    ]);
+
+    const deleted = await callSettingsRoute('delete', '/api/settings/skills/:name', {}, { name: 'missing-skill' });
+    expect(deleted.status).toBe(404);
+    expect(deleted.body).toMatchObject({ message: 'Skill "missing-skill" not found.' });
   });
 });

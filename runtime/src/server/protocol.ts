@@ -36,7 +36,7 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
-  | { type: typeof CLIENT_MESSAGE_TYPE.MODEL_SELECTION; flowRef: FlowRef; nodeId: string; modelConfigId: string };
+  | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; skills: string[]; mcpServers: string[] };
 
 export type FlowStateMessage = {
   type: 'flow_state';
@@ -150,10 +150,14 @@ export function parseClientMessage(raw: string): ClientMessage | null {
     }
 
     if (
-      parsed.type === CLIENT_MESSAGE_TYPE.MODEL_SELECTION &&
+      parsed.type === CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION &&
       hasFlowRef(parsed.flowRef) &&
       typeof parsed.nodeId === 'string' &&
-      typeof parsed.modelConfigId === 'string'
+      hasOptionalString(parsed, 'modelConfigId') &&
+      Array.isArray(parsed.skills) &&
+      parsed.skills.every((entry) => typeof entry === 'string') &&
+      Array.isArray(parsed.mcpServers) &&
+      parsed.mcpServers.every((entry) => typeof entry === 'string')
     ) {
       return parsed as ClientMessage;
     }

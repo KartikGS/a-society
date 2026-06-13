@@ -15,9 +15,9 @@ export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | n
   if (message.type === 'operator_event') {
     const event = message.event;
     if (event.kind === 'human.awaiting_input') {
-      // Model-selection waits persist a marker in the requesting role's feed;
+      // Role-configuration waits persist a marker in the requesting role's feed;
       // other awaiting reasons stay feed-transparent.
-      return event.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION
+      return event.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION
         ? parseRoleIdentity(event.role).instanceRoleId
         : null;
     }

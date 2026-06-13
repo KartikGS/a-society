@@ -239,7 +239,7 @@ export type OperatorEvent =
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
-  | { kind: 'human.model_selected'; nodeId: string; role: string; modelDisplayName: string }
+  | { kind: 'human.role_configured'; nodeId: string; role: string; modelDisplayName?: string; skillCount: number; mcpServerCount: number }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }

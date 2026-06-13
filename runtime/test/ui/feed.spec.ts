@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendFeedItem, applyReasoningTraceToFeed, resolveModelSelectionFeedItem } from '../../ui/src/app/feed.js';
+import { appendFeedItem, applyReasoningTraceToFeed, resolveRoleConfigurationFeedItem } from '../../ui/src/app/feed.js';
 import type { FeedItem, OperatorEvent } from '../../ui/src/types.js';
 
 function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }> {
@@ -13,30 +13,32 @@ function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { ki
 }
 
 describe('ui/feed', () => {
-  it('resolves model selection into the existing prompt item', () => {
+  it('resolves role configuration into the existing prompt item', () => {
     const feeds: Record<string, FeedItem[]> = {
       owner: [
         {
           id: 'owner_0',
           type: 'event',
-          label: 'Model Selection',
-          text: 'owner-intake (owner) is waiting for a model selection. Choose a model for this role to continue:',
+          label: 'Role Configuration',
+          text: 'owner-intake (owner) is waiting for role configuration. Choose the available options for this role to continue:',
         },
       ],
     };
 
-    const updated = resolveModelSelectionFeedItem(feeds, 'owner', {
-      kind: 'human.model_selected',
+    const updated = resolveRoleConfigurationFeedItem(feeds, 'owner', {
+      kind: 'human.role_configured',
       nodeId: 'owner-intake',
       role: 'owner',
       modelDisplayName: 'Claude Sonnet',
+      skillCount: 1,
+      mcpServerCount: 0,
     });
 
     expect(updated.owner).toEqual([{
       id: 'owner_0',
       type: 'event',
-      label: 'Model Selection',
-      text: 'owner-intake (owner) is waiting for a model selection. Choose a model for this role to continue:\n\nClaude Sonnet selected.',
+      label: 'Role Configuration',
+      text: 'owner-intake (owner) is waiting for role configuration. Choose the available options for this role to continue:\n\nModel: Claude Sonnet\nSkills: 1 selected\nMCP servers: 0 selected',
     }]);
   });
 

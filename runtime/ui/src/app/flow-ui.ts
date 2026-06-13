@@ -63,18 +63,18 @@ export function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string |
   const match = Object.entries(flowRun.awaitingHumanNodes)
     .find(([, state]) =>
       state.reason !== AWAITING_HUMAN_REASON.CONSENT &&
-      state.reason !== AWAITING_HUMAN_REASON.MODEL_SELECTION &&
+      state.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
       toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
 }
 
-export function getModelSelectionNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
+export function getRoleConfigurationNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
   if (!flowRun || !role) return null;
   const targetKey = toRoleKey(role);
   if (!targetKey) return null;
   const match = Object.entries(flowRun.awaitingHumanNodes)
     .find(([, state]) =>
-      state.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION &&
+      state.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
       toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
 }

@@ -1,4 +1,4 @@
-import type { FeedSettings, InputModality, ModelConfig, ProviderType, SettingsStatus, ToolSettings } from './types';
+import type { FeedSettings, InputModality, ModelConfig, ProviderType, SettingsStatus, SkillLoadResult, SkillSummary, ToolSettings } from './types';
 import { normalizeModelReasoningConfig } from '../../src/common/model-reasoning.js';
 
 const INPUT_MODALITY_SET = new Set<InputModality>(['image', 'audio', 'video']);
@@ -96,4 +96,42 @@ export function normalizeFeedSettings(value: unknown): FeedSettings | null {
   if (historyLimit <= 0) return null;
 
   return { historyLimit };
+}
+
+export function normalizeSkillSummary(value: unknown): SkillSummary | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.name !== 'string' ||
+    typeof raw.description !== 'string' ||
+    typeof raw.skillMdPath !== 'string'
+  ) {
+    return null;
+  }
+
+  return {
+    name: raw.name,
+    description: raw.description,
+    skillMdPath: raw.skillMdPath,
+  };
+}
+
+export function normalizeSkillLoadResults(value: unknown): SkillLoadResult[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry): SkillLoadResult | null => {
+      if (!entry || typeof entry !== 'object') return null;
+      const raw = entry as Record<string, unknown>;
+      if (raw.kind === 'ok') {
+        const skill = normalizeSkillSummary(raw.skill);
+        return skill ? { kind: 'ok', skill } : null;
+      }
+      if (raw.kind === 'malformed' && typeof raw.name === 'string' && typeof raw.reason === 'string') {
+        return { kind: 'malformed', name: raw.name, reason: raw.reason };
+      }
+      return null;
+    })
+    .filter((entry): entry is SkillLoadResult => entry !== null);
 }

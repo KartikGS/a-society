@@ -1,5 +1,5 @@
 import { Writable } from 'node:stream';
-import { modelSelectionPromptText } from '../../common/operator-feed.js';
+import { roleConfigurationPromptText } from '../../common/operator-feed.js';
 import type {
   FeedItem,
   FlowRef,
@@ -64,14 +64,14 @@ function isPendingCompactionItem(item: FeedItem): boolean {
   return item.type === 'tool' && item.label === 'Compaction';
 }
 
-function isModelSelectionItemForEvent(
+function isRoleConfigurationItemForEvent(
   item: FeedItem,
-  event: Extract<OperatorEvent, { kind: 'human.model_selected' }>
+  event: Extract<OperatorEvent, { kind: 'human.role_configured' }>
 ): boolean {
   return (
     item.type === 'event' &&
-    item.label === 'Model Selection' &&
-    item.text.startsWith(modelSelectionPromptText(event.nodeId, event.role))
+    item.label === 'Role Configuration' &&
+    item.text.startsWith(roleConfigurationPromptText(event.nodeId, event.role))
   );
 }
 
@@ -115,18 +115,18 @@ function appendProjectedFeedItem(
   SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
 }
 
-function resolveModelSelectionFeedItem(
+function resolveRoleConfigurationFeedItem(
   session: ActiveSession,
   history: FeedItem[],
   roleKey: string,
-  message: { type: 'operator_event'; event: Extract<OperatorEvent, { kind: 'human.model_selected' }> },
+  message: { type: 'operator_event'; event: Extract<OperatorEvent, { kind: 'human.role_configured' }> },
   workspaceRoot: string
 ): void {
-  const projected = projectMessageToFeedItem(message, 'model-selection-resolution');
+  const projected = projectMessageToFeedItem(message, 'role-configuration-resolution');
   if (!projected) return;
 
   const idx = [...history].reverse().findIndex((item) =>
-    isModelSelectionItemForEvent(item, message.event)
+    isRoleConfigurationItemForEvent(item, message.event)
   );
   if (idx === -1) {
     appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
@@ -170,9 +170,9 @@ export function rememberMessage(
     return;
   }
 
-  if (message.type === 'operator_event' && message.event.kind === 'human.model_selected') {
+  if (message.type === 'operator_event' && message.event.kind === 'human.role_configured') {
     const event = message.event;
-    resolveModelSelectionFeedItem(session, history, roleKey, { type: 'operator_event', event }, workspaceRoot);
+    resolveRoleConfigurationFeedItem(session, history, roleKey, { type: 'operator_event', event }, workspaceRoot);
     return;
   }
 

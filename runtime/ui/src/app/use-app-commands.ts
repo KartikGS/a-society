@@ -290,13 +290,15 @@ export function useAppCommands(input: UseAppCommandsInput) {
     });
   }, [activeTab, sendMessage, visibleConsentRequest]);
 
-  const handleModelSelect = useCallback((nodeId: string, modelConfigId: string): void => {
+  const handleRoleConfigure = useCallback((nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }): void => {
     if (!activeTab) return;
     sendMessage({
-      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
       flowRef: activeTab.ref,
       nodeId,
-      modelConfigId,
+      modelConfigId: payload.modelConfigId,
+      skills: payload.skills,
+      mcpServers: payload.mcpServers,
     });
   }, [activeTab, sendMessage]);
 
@@ -366,7 +368,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleConsentResponse,
-    handleModelSelect,
+    handleRoleConfigure,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,

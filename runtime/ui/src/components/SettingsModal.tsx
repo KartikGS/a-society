@@ -10,7 +10,7 @@ import {
   defaultReasoningForProvider,
   reasoningLabel,
 } from '../../../src/common/model-reasoning.js';
-import { normalizeFeedSettings, normalizeModelConfig, normalizeModelConfigs, normalizeToolSettings } from '../model-config';
+import { normalizeFeedSettings, normalizeModelConfig, normalizeModelConfigs, normalizeSkillLoadResults, normalizeToolSettings } from '../model-config';
 import type {
   AnthropicEffort,
   AnthropicThinkingDisplay,
@@ -23,6 +23,7 @@ import type {
   ProviderReasoningDisplay,
   ProviderReasoningReplayPolicy,
   ProviderType,
+  SkillLoadResult,
   ToolSettings,
 } from '../types';
 
@@ -30,6 +31,7 @@ interface SettingsModalProps {
   onClose: () => void;
   onError?: (message: string) => void;
   onModelsChange?: () => void;
+  onSkillsChange?: () => void;
   required?: boolean;
 }
 
@@ -55,6 +57,10 @@ interface FeedFormState {
   historyLimit: string;
 }
 
+interface SkillFormState {
+  importPath: string;
+}
+
 const DEFAULT_FORM: ModelFormState = {
   displayName: '',
   providerType: 'openai-compatible',
@@ -75,6 +81,10 @@ const DEFAULT_TOOL_FORM: ToolFormState = {
 
 const DEFAULT_FEED_FORM: FeedFormState = {
   historyLimit: '400',
+};
+
+const DEFAULT_SKILL_FORM: SkillFormState = {
+  importPath: '',
 };
 
 const INPUT_MODALITY_OPTIONS: Array<{ value: InputModality; label: string }> = [
@@ -100,9 +110,9 @@ function parseJsonObject(value: string): Record<string, unknown> {
 }
 
 type EditorView = 'list' | 'add' | 'edit';
-type SettingsTab = 'models' | 'tools' | 'feed';
+type SettingsTab = 'models' | 'tools' | 'feed' | 'skills';
 
-export function SettingsModal({ onClose, onError, onModelsChange, required = false }: SettingsModalProps) {
+export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange, required = false }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
   const [view, setView] = useState<EditorView>('list');
   const [models, setModels] = useState<ModelConfig[]>([]);
@@ -115,6 +125,9 @@ export function SettingsModal({ onClose, onError, onModelsChange, required = fal
   const [feedSettings, setFeedSettings] = useState<FeedSettings | null>(null);
   const [feedForm, setFeedForm] = useState<FeedFormState>(DEFAULT_FEED_FORM);
   const [savingFeed, setSavingFeed] = useState(false);
+  const [skillResults, setSkillResults] = useState<SkillLoadResult[]>([]);
+  const [skillForm, setSkillForm] = useState<SkillFormState>(DEFAULT_SKILL_FORM);
+  const [savingSkills, setSavingSkills] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const reportError = useCallback((message: string): void => {
@@ -138,6 +151,11 @@ export function SettingsModal({ onClose, onError, onModelsChange, required = fal
     setFeedSettings(next);
     setFeedForm({ historyLimit: String(next.historyLimit) });
   }
+
+  const replaceSkillResults = useCallback((next: SkillLoadResult[]): void => {
+    setSkillResults(next);
+    onSkillsChange?.();
+  }, [onSkillsChange]);
 
   useEffect(() => {
     async function fetchModels() {
@@ -174,10 +192,21 @@ export function SettingsModal({ onClose, onError, onModelsChange, required = fal
       }
     }
 
+    async function fetchSkills() {
+      try {
+        const res = await fetch('/api/settings/skills');
+        if (!res.ok) throw new Error(await res.text());
+        replaceSkillResults(normalizeSkillLoadResults(await res.json()));
+      } catch (err) {
+        reportError(err instanceof Error ? err.message : 'Failed to load skills.');
+      }
+    }
+
     void fetchModels();
     void fetchTools();
     void fetchFeedSettings();
-  }, [replaceModels, reportError]);
+    void fetchSkills();
+  }, [replaceModels, replaceSkillResults, reportError]);
 
   async function handleActivate(id: string) {
     try {
@@ -360,6 +389,56 @@ export function SettingsModal({ onClose, onError, onModelsChange, required = fal
     }
   }
 
+  async function refreshSkills(): Promise<void> {
+    const response = await fetch('/api/settings/skills');
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    replaceSkillResults(normalizeSkillLoadResults(await response.json()));
+  }
+
+  async function handleImportSkill(e: React.FormEvent) {
+    e.preventDefault();
+    const importPath = skillForm.importPath.trim();
+    if (!importPath) { reportError('Import path is required.'); return; }
+
+    try {
+      setSavingSkills(true);
+      const response = await fetch('/api/settings/skills/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: importPath }),
+      });
+      const body = await response.json().catch(() => null) as { message?: string; notice?: string | null } | null;
+      if (!response.ok) {
+        throw new Error(body?.message ?? 'Failed to import skill.');
+      }
+      if (body?.notice) reportError(body.notice);
+      setSkillForm((current) => ({ ...current, importPath: '' }));
+      await refreshSkills();
+    } catch (err) {
+      reportError(err instanceof Error ? err.message : 'Failed to import skill.');
+    } finally {
+      setSavingSkills(false);
+    }
+  }
+
+  async function handleDeleteSkill(name: string) {
+    try {
+      setSavingSkills(true);
+      const response = await fetch(`/api/settings/skills/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { message?: string } | null;
+        throw new Error(body?.message ?? 'Failed to delete skill.');
+      }
+      await refreshSkills();
+    } catch (err) {
+      reportError(err instanceof Error ? err.message : 'Failed to delete skill.');
+    } finally {
+      setSavingSkills(false);
+    }
+  }
+
   const canEnableWebSearch = (toolSettings?.webSearch.hasApiKey ?? false) || toolForm.tavilyApiKey.trim() !== '';
 
   return (
@@ -395,6 +474,13 @@ export function SettingsModal({ onClose, onError, onModelsChange, required = fal
             >
               Feed
             </button>
+            <button
+              type="button"
+              className={`settings-nav-item${activeTab === 'skills' ? ' settings-nav-item-active' : ''}`}
+              onClick={() => setActiveTab('skills')}
+            >
+              Skills
+            </button>
           </nav>
 
           <div className="settings-content">
@@ -429,13 +515,22 @@ export function SettingsModal({ onClose, onError, onModelsChange, required = fal
                 onChange={(updater) => setToolForm((current) => updater(current))}
                 onSubmit={handleSaveTools}
               />
-            ) : (
+            ) : activeTab === 'feed' ? (
               <FeedSettingsPanel
                 settings={feedSettings}
                 form={feedForm}
                 saving={savingFeed}
                 onChange={(updater) => setFeedForm((current) => updater(current))}
                 onSubmit={handleSaveFeed}
+              />
+            ) : (
+              <SkillsSettingsPanel
+                results={skillResults}
+                form={skillForm}
+                saving={savingSkills}
+                onChange={(updater) => setSkillForm((current) => updater(current))}
+                onImport={handleImportSkill}
+                onDelete={handleDeleteSkill}
               />
             )}
           </div>
@@ -1134,6 +1229,129 @@ function FeedSettingsPanel({
             {saving ? 'Saving…' : 'Save Feed Settings'}
           </button>
         </div>
+      </form>
+    </div>
+  );
+}
+
+interface SkillsSettingsPanelProps {
+  results: SkillLoadResult[];
+  form: SkillFormState;
+  saving: boolean;
+  onChange: (updater: (current: SkillFormState) => SkillFormState) => void;
+  onImport: (e: React.FormEvent) => void;
+  onDelete: (name: string) => void;
+}
+
+function SkillsSettingsPanel({
+  results,
+  form,
+  saving,
+  onChange,
+  onImport,
+  onDelete,
+}: SkillsSettingsPanelProps) {
+  const validSkills = results.filter((result): result is Extract<SkillLoadResult, { kind: 'ok' }> => result.kind === 'ok');
+  const malformedSkills = results.filter((result): result is Extract<SkillLoadResult, { kind: 'malformed' }> => result.kind === 'malformed');
+
+  return (
+    <div className="settings-section">
+      <div className="settings-section-header">
+        <h3 className="settings-section-title">Skills</h3>
+      </div>
+
+      {validSkills.length === 0 && malformedSkills.length === 0 ? (
+        <p className="settings-empty">No skills configured.</p>
+      ) : null}
+
+      <p className="tool-settings-note">
+        Imported skills may include runnable scripts. Import from trusted sources; scripts still run only through normal command-permission prompts.
+      </p>
+
+      {validSkills.length > 0 ? (
+        <ul className="model-list">
+          {validSkills.map(({ skill }) => (
+            <li key={skill.name} className="model-card">
+              <div className="model-card-main">
+                <div className="model-card-name">{skill.name}</div>
+                <div className="model-card-meta">
+                  <span>{skill.description}</span>
+                  <span className="model-meta-sep">·</span>
+                  <span>{skill.skillMdPath}</span>
+                </div>
+              </div>
+              <div className="model-card-actions">
+                <button
+                  type="button"
+                  className="model-action-icon-btn model-delete-btn"
+                  disabled={saving}
+                  onClick={() => {
+                    if (window.confirm(`Delete "${skill.name}"?`)) onDelete(skill.name);
+                  }}
+                  aria-label={`Delete ${skill.name}`}
+                  title={`Delete ${skill.name}`}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 7.5h14" />
+                    <path d="M9.5 7.5V5.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25V7.5" />
+                    <path d="M8 10.5v6.25" />
+                    <path d="M12 10.5v6.25" />
+                    <path d="M16 10.5v6.25" />
+                    <path d="M6.75 7.5 7.5 19c.04.83.73 1.5 1.56 1.5h5.88c.83 0 1.52-.67 1.56-1.5l.75-11.5" />
+                  </svg>
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {malformedSkills.length > 0 ? (
+        <div className="tool-settings-card">
+          <div className="tool-settings-header">
+            <div>
+              <h4 className="tool-settings-subtitle">Malformed Skills</h4>
+            </div>
+          </div>
+          <ul className="model-list">
+            {malformedSkills.map((entry) => (
+              <li key={entry.name} className="model-card">
+                <div className="model-card-main">
+                  <div className="model-card-name">{entry.name}</div>
+                  <div className="model-card-meta">{entry.reason}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <form className="tool-settings-form skills-import-form" onSubmit={onImport} noValidate>
+        <section className="tool-settings-card">
+          <div className="tool-settings-header">
+            <div>
+              <h4 className="tool-settings-subtitle">Import Skill</h4>
+            </div>
+          </div>
+
+          <div className="form-field">
+            <label className="form-label" htmlFor="sf-skillImportPath">Folder path</label>
+            <input
+              id="sf-skillImportPath"
+              className="form-input"
+              type="text"
+              value={form.importPath}
+              onChange={(e) => onChange((current) => ({ ...current, importPath: e.target.value }))}
+              placeholder="/path/to/skill-folder"
+            />
+          </div>
+
+          <div className="form-actions">
+            <button type="submit" className="form-btn-submit" disabled={saving}>
+              {saving ? 'Importing…' : 'Import Skill'}
+            </button>
+          </div>
+        </section>
       </form>
     </div>
   );

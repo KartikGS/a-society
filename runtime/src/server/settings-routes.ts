@@ -1,4 +1,12 @@
 import express, { type Express, type Request, type Response } from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  isKebabCaseSkillName,
+  listSkillLoadResults,
+  parseSkillMarkdownFrontmatter,
+  readSkillSummary,
+} from '../framework-services/skills.js';
 import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../common/model-reasoning.js';
 import { validateModelConfiguration } from '../providers/model-validation.js';
 import * as SettingsStore from '../settings/settings-store.js';
@@ -36,7 +44,32 @@ function validateReasoningForSettings(
   return null;
 }
 
-export function registerSettingsRoutes(app: Express): void {
+function skillsRoot(workspaceRoot: string): string {
+  return path.join(path.resolve(workspaceRoot), '.a-society', 'skills');
+}
+
+function skillDir(workspaceRoot: string, name: string): string {
+  return path.join(skillsRoot(workspaceRoot), name);
+}
+
+function copySkillDirectory(sourceDir: string, targetDir: string): void {
+  const copyDir = (source: string, target: string): void => {
+    fs.mkdirSync(target, { recursive: true });
+    for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+      const sourcePath = path.join(source, entry.name);
+      const targetPath = path.join(target, entry.name);
+      if (entry.isDirectory()) {
+        copyDir(sourcePath, targetPath);
+      } else if (entry.isFile()) {
+        fs.copyFileSync(sourcePath, targetPath);
+      }
+    }
+  };
+
+  copyDir(sourceDir, targetDir);
+}
+
+export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd()): void {
   app.use(express.json());
 
   app.get('/api/settings/models', (_req: Request, res: Response) => {
@@ -61,6 +94,54 @@ export function registerSettingsRoutes(app: Express): void {
 
   app.get('/api/settings/feed', (_req: Request, res: Response) => {
     res.json(SettingsStore.getFeedSettings());
+  });
+
+  app.get('/api/settings/skills', (_req: Request, res: Response) => {
+    res.json(listSkillLoadResults(workspaceRoot));
+  });
+
+  app.post('/api/settings/skills/import', (req: Request, res: Response) => {
+    const sourcePath = typeof req.body?.path === 'string' ? path.resolve(req.body.path.trim()) : '';
+    if (!sourcePath) {
+      res.status(400).json({ message: 'Import path is required.' });
+      return;
+    }
+    if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isDirectory()) {
+      res.status(400).json({ message: 'Import path must be an existing directory.' });
+      return;
+    }
+
+    const sourceSkillMd = path.join(sourcePath, 'SKILL.md');
+    if (!fs.existsSync(sourceSkillMd)) {
+      res.status(400).json({ message: 'Import folder must contain SKILL.md.' });
+      return;
+    }
+    const frontmatter = parseSkillMarkdownFrontmatter(fs.readFileSync(sourceSkillMd, 'utf8'));
+    if (frontmatter.kind === 'malformed') {
+      res.status(400).json({ message: frontmatter.reason });
+      return;
+    }
+    if (fs.existsSync(skillDir(workspaceRoot, frontmatter.name))) {
+      res.status(400).json({ message: `Skill "${frontmatter.name}" already exists.` });
+      return;
+    }
+
+    const targetDir = skillDir(workspaceRoot, frontmatter.name);
+    copySkillDirectory(sourcePath, targetDir);
+    res.status(201).json({
+      skill: readSkillSummary(workspaceRoot, frontmatter.name),
+      notice: 'This skill may bundle scripts the agent can run; they execute only through the normal command-permission prompts.',
+    });
+  });
+
+  app.delete('/api/settings/skills/:name', (req: Request, res: Response) => {
+    const name = Array.isArray(req.params.name) ? req.params.name[0] : req.params.name;
+    if (!isKebabCaseSkillName(name) || !fs.existsSync(skillDir(workspaceRoot, name))) {
+      res.status(404).json({ message: `Skill "${name}" not found.` });
+      return;
+    }
+    fs.rmSync(skillDir(workspaceRoot, name), { recursive: true, force: true });
+    res.json({ ok: true });
   });
 
   app.post('/api/settings/models', async (req: Request, res: Response) => {

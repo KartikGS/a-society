@@ -1,12 +1,20 @@
 import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
 import type { FeedItem, OperatorEvent, OperatorFeedMessage } from './types.js';
 
-export function modelSelectionPromptText(nodeId: string, role: string): string {
-  return `${nodeId} (${role}) is waiting for a model selection. Choose a model for this role to continue:`;
+export function roleConfigurationPromptText(nodeId: string, role: string): string {
+  return `${nodeId} (${role}) is waiting for role configuration. Choose the available options for this role to continue:`;
 }
 
-export function modelSelectionSelectedText(nodeId: string, role: string, modelDisplayName: string): string {
-  return `${modelSelectionPromptText(nodeId, role)}\n${modelDisplayName} selected.`;
+export function roleConfigurationSelectedText(
+  nodeId: string,
+  role: string,
+  event: { modelDisplayName?: string; skillCount: number; mcpServerCount: number }
+): string {
+  const lines = [roleConfigurationPromptText(nodeId, role), ''];
+  if (event.modelDisplayName) lines.push(`Model: ${event.modelDisplayName}`);
+  lines.push(`Skills: ${event.skillCount} selected`);
+  lines.push(`MCP servers: ${event.mcpServerCount} selected`);
+  return lines.join('\n');
 }
 
 export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: string): FeedItem | null {
@@ -74,21 +82,21 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         text: event.summary
       };
     case 'human.awaiting_input':
-      if (event.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION) {
+      if (event.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) {
         return {
           id,
           type: 'event',
-          label: 'Model Selection',
-          text: modelSelectionPromptText(event.nodeId, event.role)
+          label: 'Role Configuration',
+          text: roleConfigurationPromptText(event.nodeId, event.role)
         };
       }
       return null;
-    case 'human.model_selected':
+    case 'human.role_configured':
       return {
         id,
         type: 'event',
-        label: 'Model Selection',
-        text: modelSelectionSelectedText(event.nodeId, event.role, event.modelDisplayName)
+        label: 'Role Configuration',
+        text: roleConfigurationSelectedText(event.nodeId, event.role, event)
       };
     case 'human.resumed':
       return null;

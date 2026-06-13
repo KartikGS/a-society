@@ -1,5 +1,5 @@
-import { normalizeModelConfigs, normalizeSettingsStatus } from '../model-config';
-import type { FlowRef, FlowRun, FlowSummary, ModelConfig, ProjectDiscovery, ProjectSummary, SettingsStatus } from '../types';
+import { normalizeModelConfigs, normalizeSettingsStatus, normalizeSkillLoadResults } from '../model-config';
+import type { FlowRef, FlowRun, FlowSummary, ModelConfig, ProjectDiscovery, ProjectSummary, SettingsStatus, SkillLoadResult } from '../types';
 
 export class IncompatibleFlowError extends Error {
   constructor(message: string) {
@@ -42,6 +42,15 @@ export async function fetchModels(): Promise<ModelConfig[]> {
   }
 
   return normalizeModelConfigs(await response.json());
+}
+
+export async function fetchSkills(): Promise<SkillLoadResult[]> {
+  const response = await fetch('/api/settings/skills');
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+
+  return normalizeSkillLoadResults(await response.json());
 }
 
 export async function fetchActiveModelContextWindow(): Promise<number | null> {

@@ -1,6 +1,6 @@
 import {
-  modelSelectionPromptText,
   operatorEventToFeedItem,
+  roleConfigurationPromptText,
 } from '../../../src/common/operator-feed.js';
 import type { FeedItem, OperatorEvent } from '../types.js';
 
@@ -40,28 +40,28 @@ export function resolveCompactionFeedItem(feeds: Record<string, FeedItem[]>, rol
   return { ...feeds, [role]: updated };
 }
 
-function isModelSelectionItemForEvent(
+function isRoleConfigurationItemForEvent(
   item: FeedItem,
-  event: Extract<OperatorEvent, { kind: 'human.model_selected' }>
+  event: Extract<OperatorEvent, { kind: 'human.role_configured' }>
 ): boolean {
   return (
     item.type === 'event' &&
-    item.label === 'Model Selection' &&
-    item.text.startsWith(modelSelectionPromptText(event.nodeId, event.role))
+    item.label === 'Role Configuration' &&
+    item.text.startsWith(roleConfigurationPromptText(event.nodeId, event.role))
   );
 }
 
-export function resolveModelSelectionFeedItem(
+export function resolveRoleConfigurationFeedItem(
   feeds: Record<string, FeedItem[]>,
   role: string,
-  event: Extract<OperatorEvent, { kind: 'human.model_selected' }>
+  event: Extract<OperatorEvent, { kind: 'human.role_configured' }>
 ): Record<string, FeedItem[]> {
   const resolved = formatOperatorEvent(event);
   if (!resolved) return feeds;
 
   const existing = feeds[role] ?? [];
   const idx = [...existing].reverse().findIndex((item) =>
-    isModelSelectionItemForEvent(item, event)
+    isRoleConfigurationItemForEvent(item, event)
   );
   if (idx === -1) {
     return { ...feeds, [role]: [...existing, resolved] };

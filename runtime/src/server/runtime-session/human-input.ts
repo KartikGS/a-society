@@ -12,7 +12,7 @@ interface ResolvedHumanInputTarget {
 }
 
 export function isAwaitingHumanReply(reason: FlowRun['awaitingHumanNodes'][string]['reason']): boolean {
-  return reason !== AWAITING_HUMAN_REASON.CONSENT && reason !== AWAITING_HUMAN_REASON.MODEL_SELECTION;
+  return reason !== AWAITING_HUMAN_REASON.CONSENT && reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION;
 }
 
 function workflowRoleForNode(workflow: WorkflowLike | null | undefined, nodeId: string): string | undefined {
@@ -52,8 +52,8 @@ export function resolveHumanInputTarget(
     const awaitingState = flowRun.awaitingHumanNodes[target.nodeId];
     if (awaitingState) {
       if (!isAwaitingHumanReply(awaitingState.reason)) {
-        const waitKind = awaitingState.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION
-          ? 'a model selection'
+        const waitKind = awaitingState.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION
+          ? 'role configuration'
           : 'consent';
         throw new Error(`Node '${target.nodeId}' is awaiting ${waitKind}, not a text reply.`);
       }
