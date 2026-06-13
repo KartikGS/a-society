@@ -1183,6 +1183,11 @@ textarea {
   border-color: var(--accent);
 }
 
+.model-select-option-selected {
+  border-color: var(--accent);
+  background: rgba(13, 148, 136, 0.12);
+}
+
 .model-select-option-name {
   font-weight: 600;
 }
@@ -1192,6 +1197,55 @@ textarea {
   color: var(--ink-soft);
   font-family: "IBM Plex Mono", monospace;
   overflow-wrap: anywhere;
+}
+
+.skill-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.skill-select-option {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 7px 10px;
+  border: 1px solid rgba(13, 148, 136, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.skill-select-option input {
+  margin-top: 2px;
+}
+
+.skill-select-name {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.skill-select-desc {
+  display: block;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.role-config-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.role-config-submit {
+  padding: 7px 14px;
+  font-size: 13px;
 }
 
 .consent-mode-select {
@@ -1878,6 +1932,10 @@ textarea {
   gap: 14px;
 }
 
+.skills-import-form {
+  margin-top: 18px;
+}
+
 .tool-settings-card {
   display: flex;
   flex-direction: column;
@@ -2429,6 +2487,15 @@ textarea {
 
   .model-select-option:hover {
     background: rgba(45, 212, 191, 0.1);
+  }
+
+  .model-select-option-selected {
+    background: rgba(45, 212, 191, 0.14);
+  }
+
+  .skill-select-option {
+    background: rgba(45, 212, 191, 0.06);
+    border-color: rgba(45, 212, 191, 0.22);
   }
 
   .consent-btn-deny:hover {

@@ -64,25 +64,29 @@ describe('protocol', () => {
     });
   });
 
-  it('accepts a model selection with node and model config ids', () => {
+  it('accepts role configuration with optional model and capability arrays', () => {
     const parsed = parseClientMessage(JSON.stringify({
-      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
       flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
       nodeId: 'owner-intake',
       modelConfigId: 'model-b',
+      skills: ['review-writing'],
+      mcpServers: [],
     }));
 
     expect(parsed).toEqual({
-      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
       flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
       nodeId: 'owner-intake',
       modelConfigId: 'model-b',
+      skills: ['review-writing'],
+      mcpServers: [],
     });
   });
 
-  it('rejects a model selection without a model config id', () => {
+  it('rejects role configuration without capability arrays', () => {
     const parsed = parseClientMessage(JSON.stringify({
-      type: CLIENT_MESSAGE_TYPE.MODEL_SELECTION,
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
       flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
       nodeId: 'owner-intake',
     }));

@@ -3,7 +3,7 @@ import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
 import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types';
 import { SYSTEM_ROLE_KEY } from './constants';
-import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveModelSelectionFeedItem, resolveToolFeedItem } from './feed';
+import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveRoleConfigurationFeedItem, resolveToolFeedItem } from './feed';
 import {
   getConsentRequestRoleKey,
   hasImprovementGraph,
@@ -107,12 +107,12 @@ function applyOperatorEvent(
     return;
   }
 
-  if (event.kind === 'human.model_selected') {
+  if (event.kind === 'human.role_configured') {
     const roleKey = toRoleKey(event.role);
     if (roleKey) {
       handlers.updateFlowUi(key, (state) => ({
         ...state,
-        roleFeeds: resolveModelSelectionFeedItem(state.roleFeeds, roleKey, event),
+        roleFeeds: resolveRoleConfigurationFeedItem(state.roleFeeds, roleKey, event),
       }));
     }
     return;

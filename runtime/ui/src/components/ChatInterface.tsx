@@ -1,16 +1,17 @@
-import { useCallback, useLayoutEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
 } from '../../../src/common/protocol-constants.js';
-import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, ModelConfig } from '../types';
+import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, ModelConfig, SkillSummary } from '../types';
 
 export type { FeedItem };
 
-export interface ModelSelectionPrompt {
+export interface RoleConfigurationPrompt {
   nodeId: string;
   models: ModelConfig[];
+  skills: SkillSummary[];
 }
 
 interface ChatInterfaceProps {
@@ -28,7 +29,7 @@ interface ChatInterfaceProps {
   activeRoles?: string[];
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
-  modelSelection?: ModelSelectionPrompt | null;
+  roleConfiguration?: RoleConfigurationPrompt | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
   onRoleSelect?: (role: string) => void;
@@ -36,7 +37,7 @@ interface ChatInterfaceProps {
   onSubmit: () => void;
   onStop?: () => void;
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
-  onModelSelect?: (nodeId: string, modelConfigId: string) => void;
+  onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
   isCompactingContext?: boolean;
@@ -183,31 +184,42 @@ function StopIcon() {
   );
 }
 
-function ModelSelectionBanner({
-  modelSelection,
-  onModelSelect,
+function RoleConfigurationBanner({
+  roleConfiguration,
+  onRoleConfigure,
 }: {
-  modelSelection: ModelSelectionPrompt;
-  onModelSelect?: (nodeId: string, modelConfigId: string) => void;
+  roleConfiguration: RoleConfigurationPrompt;
+  onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
 }) {
+  const showModelSection = roleConfiguration.models.length > 1;
+  const [modelConfigId, setModelConfigId] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+
+  function toggleSkill(name: string, checked: boolean): void {
+    setSelectedSkills((current) => checked
+      ? [...current, name].sort((a, b) => a.localeCompare(b))
+      : current.filter((entry) => entry !== name));
+  }
+
+  const submitDisabled = showModelSection && !modelConfigId;
+
   return (
     <div className="model-select-banner">
       <div className="model-select-banner-body">
-        <span className="model-select-banner-title">Choose a model for this role</span>
+        <span className="model-select-banner-title">Configure this role</span>
         <span className="model-select-banner-desc">
-          The selected model is used for all of this role&apos;s turns in this flow.
+          The selection is used for this role&apos;s turns in this flow.
         </span>
       </div>
-      {modelSelection.models.length === 0 ? (
-        <p className="model-select-empty">No configured models found. Add a model in Settings.</p>
-      ) : (
+
+      {showModelSection ? (
         <ul className="model-select-options">
-          {modelSelection.models.map((model) => (
+          {roleConfiguration.models.map((model) => (
             <li key={model.id}>
               <button
                 type="button"
-                className="model-select-option"
-                onClick={() => onModelSelect?.(modelSelection.nodeId, model.id)}
+                className={`model-select-option${modelConfigId === model.id ? ' model-select-option-selected' : ''}`}
+                onClick={() => setModelConfigId(model.id)}
               >
                 <span className="model-select-option-name">{model.displayName}</span>
                 <span className="model-select-option-meta">
@@ -217,7 +229,44 @@ function ModelSelectionBanner({
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
+
+      {roleConfiguration.skills.length > 0 ? (
+        <div className="skill-select-list">
+          {roleConfiguration.skills.map((skill) => (
+            <label key={skill.name} className="skill-select-option">
+              <input
+                type="checkbox"
+                checked={selectedSkills.includes(skill.name)}
+                onChange={(event) => toggleSkill(skill.name, event.target.checked)}
+              />
+              <span>
+                <span className="skill-select-name">{skill.name}</span>
+                <span className="skill-select-desc">{skill.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="role-config-actions">
+        <button
+          type="button"
+          className="form-btn-submit role-config-submit"
+          disabled={submitDisabled}
+          onClick={() => onRoleConfigure?.(roleConfiguration.nodeId, {
+            modelConfigId: modelConfigId || undefined,
+            skills: selectedSkills,
+            mcpServers: [],
+          })}
+        >
+          Continue
+        </button>
+      </div>
+
+      {!showModelSection && roleConfiguration.skills.length === 0 ? (
+        <p className="model-select-empty">No role configuration options are available.</p>
+      ) : null}
     </div>
   );
 }
@@ -382,10 +431,11 @@ export function ChatInterface(props: ChatInterfaceProps) {
 
       {props.showComposer ? (
         <div className="composer-area">
-          {props.modelSelection ? (
-            <ModelSelectionBanner
-              modelSelection={props.modelSelection}
-              onModelSelect={props.onModelSelect}
+          {props.roleConfiguration ? (
+            <RoleConfigurationBanner
+              key={props.roleConfiguration.nodeId}
+              roleConfiguration={props.roleConfiguration}
+              onRoleConfigure={props.onRoleConfigure}
             />
           ) : null}
 

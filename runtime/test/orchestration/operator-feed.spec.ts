@@ -150,7 +150,7 @@ describe('operator-feed', () => {
     });
   });
 
-  it('projects model selection waits and resolves the persisted item when selected', () => {
+  it('projects role configuration waits and resolves the persisted item when selected', () => {
     const { tmpDir, ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
@@ -160,16 +160,18 @@ describe('operator-feed', () => {
         kind: 'human.awaiting_input',
         nodeId: 'owner-intake',
         role: 'owner',
-        reason: 'model-selection',
+        reason: 'role-configuration',
       },
     }, tmpDir);
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
-        kind: 'human.model_selected',
+        kind: 'human.role_configured',
         nodeId: 'owner-intake',
         role: 'owner',
         modelDisplayName: 'Claude Sonnet',
+        skillCount: 2,
+        mcpServerCount: 0,
       },
     }, tmpDir);
 
@@ -178,8 +180,8 @@ describe('operator-feed', () => {
     expect(feed[0]).toEqual({
       id: 'owner_0',
       type: 'event',
-      label: 'Model Selection',
-      text: 'owner-intake (owner) is waiting for a model selection. Choose a model for this role to continue:\n\nClaude Sonnet selected.',
+      label: 'Role Configuration',
+      text: 'owner-intake (owner) is waiting for role configuration. Choose the available options for this role to continue:\n\nModel: Claude Sonnet\nSkills: 2 selected\nMCP servers: 0 selected',
     });
     expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
   });

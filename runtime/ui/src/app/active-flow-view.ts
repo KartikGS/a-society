@@ -8,7 +8,7 @@ import {
   getAwaitingHandoffNodeIdForRole,
   getAwaitingNodeIdForRole,
   getImprovementAwaitingRoleName,
-  getModelSelectionNodeIdForRole,
+  getRoleConfigurationNodeIdForRole,
   hasImprovementGraph,
   type FlowTab,
   type FlowUiState,
@@ -41,7 +41,7 @@ export interface ActiveFlowView {
   viewedRole: string | null;
   visibleFeed: FeedItem[];
   visibleConsentRequest: ConsentRequest | null;
-  modelSelectionNodeId: string | null;
+  roleConfigurationNodeId: string | null;
   isAwaitingImprovementChoice: boolean;
   isAwaitingFeedbackConsent: boolean;
   feedbackPrompt: ReturnType<typeof feedbackConsentCopy>;
@@ -141,7 +141,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const isViewedRoleActive = viewedRole ? activeRoles.includes(viewedRole) : false;
   const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
   const viewedRoleAwaitingHandoffNodeId = getAwaitingHandoffNodeIdForRole(flowRun, workflow, viewedRole);
-  const modelSelectionNodeId = getModelSelectionNodeIdForRole(flowRun, viewedRole);
+  const roleConfigurationNodeId = getRoleConfigurationNodeIdForRole(flowRun, viewedRole);
   const improvementInputTargetRole = getImprovementAwaitingRoleName(flowRun, viewedRole);
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
@@ -149,8 +149,8 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const visibleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
   const hasActiveSession = activeUi?.hasActiveSession ?? false;
   const inputDisabled = !hasActiveSession || (!viewedRoleAwaitingNodeId && !viewedRoleAwaitingHandoffNodeId && !improvementInputTargetRole);
-  const inputPlaceholder = modelSelectionNodeId
-    ? 'Choose a model for this role to continue.'
+  const inputPlaceholder = roleConfigurationNodeId
+    ? 'Configure this role to continue.'
     : !hasActiveSession
       ? 'Resume the flow to reply.'
       : !inputDisabled
@@ -163,7 +163,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const viewedRoleWaitLabel = viewedRole ? (activeUi?.waitLabels[viewedRole] ?? null) : null;
   const canStopViewedRole = canStop && (
     !!viewedRoleWaitLabel ||
-    (isViewedRoleActive && !viewedRoleAwaitingNodeId && !viewedRoleAwaitingHandoffNodeId && !modelSelectionNodeId && !improvementInputTargetRole)
+    (isViewedRoleActive && !viewedRoleAwaitingNodeId && !viewedRoleAwaitingHandoffNodeId && !roleConfigurationNodeId && !improvementInputTargetRole)
   );
   const stopRequestedForViewedRole = viewedRole ? Boolean(activeUi?.stopRequestedRoles[viewedRole]) : false;
   const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
@@ -186,7 +186,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     viewedRole,
     visibleFeed,
     visibleConsentRequest,
-    modelSelectionNodeId,
+    roleConfigurationNodeId,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,

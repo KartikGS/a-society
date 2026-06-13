@@ -17,6 +17,7 @@ import {
   fetchProjectFlows as fetchProjectFlowsApi,
   fetchProjects as fetchProjectsApi,
   fetchSettingsStatus as fetchSettingsStatusApi,
+  fetchSkills as fetchSkillsApi,
   IncompatibleFlowError,
 } from './app/runtime-api';
 import { handleServerMessage } from './app/server-messages';
@@ -38,6 +39,7 @@ import type {
   ProjectDiscovery,
   ServerMessage,
   SettingsStatus,
+  SkillSummary,
 } from './types';
 
 const GraphView = lazy(async () => {
@@ -59,6 +61,7 @@ export function App() {
   const [settingsStatus, setSettingsStatus] = useState<SettingsStatus | null>(null);
   const [contextWindow, setContextWindow] = useState<number | null>(null);
   const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
+  const [configuredSkills, setConfiguredSkills] = useState<SkillSummary[]>([]);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -110,6 +113,17 @@ export function App() {
       setConfiguredModels(await fetchModelsApi());
     } catch {
       // Keep the last known model list; the selection card re-renders on the next refresh.
+    }
+  }, []);
+
+  const refreshConfiguredSkills = useCallback(async (): Promise<void> => {
+    try {
+      const results = await fetchSkillsApi();
+      setConfiguredSkills(results
+        .filter((result): result is Extract<typeof result, { kind: 'ok' }> => result.kind === 'ok')
+        .map((result) => result.skill));
+    } catch {
+      // Keep the last known skill list; role configuration validates on submit.
     }
   }, []);
 
@@ -181,7 +195,7 @@ export function App() {
     viewedRole,
     visibleFeed,
     visibleConsentRequest,
-    modelSelectionNodeId,
+    roleConfigurationNodeId,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -254,7 +268,7 @@ export function App() {
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleConsentResponse,
-    handleModelSelect,
+    handleRoleConfigure,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,
@@ -314,7 +328,20 @@ export function App() {
       })
       .catch(() => { });
     return () => { cancelled = true; };
-  }, [modelSelectionNodeId]);
+  }, [roleConfigurationNodeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchSkillsApi()
+      .then((results) => {
+        if (cancelled) return;
+        setConfiguredSkills(results
+          .filter((result): result is Extract<typeof result, { kind: 'ok' }> => result.kind === 'ok')
+          .map((result) => result.skill));
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [roleConfigurationNodeId]);
 
   useEffect(() => {
     if (settingsReady && !hasConfiguredModel) {
@@ -468,13 +495,13 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
-                  modelSelection={modelSelectionNodeId ? { nodeId: modelSelectionNodeId, models: configuredModels } : null}
+                  roleConfiguration={roleConfigurationNodeId ? { nodeId: roleConfigurationNodeId, models: configuredModels, skills: configuredSkills } : null}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
-                  onModelSelect={handleModelSelect}
+                  onRoleConfigure={handleRoleConfigure}
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   isCompactingContext={isViewedRoleCompacting}
@@ -515,6 +542,7 @@ export function App() {
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
+          onSkillsChange={refreshConfiguredSkills}
           onError={showToast}
         />
       )}

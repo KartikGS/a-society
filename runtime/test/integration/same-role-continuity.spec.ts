@@ -241,7 +241,8 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       projectNamespace,
       'owner',
       workspaceRoot,
-      recordDir
+      recordDir,
+      { projectNamespace, flowId: 'same-role-flow' }
     );
 
     expect(bundleContent.includes('RUNTIME-LOADED REQUIRED READING')).toBeTruthy();

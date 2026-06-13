@@ -5,6 +5,7 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
+import { saveCapabilitySelection } from '../../src/orchestration/capability-selection.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { saveRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { getFlowDir, getFlowRecordDir } from '../../src/orchestration/state-paths.js';
@@ -55,7 +56,19 @@ function writeWorkflow(recordPath: string): void {
 `);
 }
 
-it('suspends first role activation for model selection and resumes each role on its own model', async () => {
+function writeSkill(workspaceRoot: string, name: string): void {
+  const dir = path.join(workspaceRoot, '.a-society', 'skills', name);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), `---
+name: ${name}
+description: ${name} description.
+---
+
+Body.
+`, 'utf8');
+}
+
+it('suspends first role activation for role configuration and resumes each role on its own model', async () => {
   const requests: Array<{ model: string }> = [];
   const server = http.createServer((req, res) => {
     const chunks: Buffer[] = [];
@@ -116,19 +129,19 @@ it('suspends first role activation for model selection and resumes each role on 
 
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
-    await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION);
+    await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
 
     expect(requests).toHaveLength(0);
     expect(loadFlow().awaitingHumanNodes['start']).toEqual({
       role: 'start',
-      reason: AWAITING_HUMAN_REASON.MODEL_SELECTION,
+      reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION,
     });
     expect(sink.events.filter((e) => e.kind === 'role.active' && e.nodeId === 'start')).toHaveLength(1);
     expect(sink.events).toContainEqual({
       kind: 'human.awaiting_input',
       nodeId: 'start',
       role: 'start',
-      reason: AWAITING_HUMAN_REASON.MODEL_SELECTION,
+      reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION,
     });
 
     saveRoleModelSelection(workspaceRoot, flowRef, 'start', {
@@ -139,7 +152,7 @@ it('suspends first role activation for model selection and resumes each role on 
     });
     orchestrator.wake();
 
-    await waitUntil(() => loadFlow().awaitingHumanNodes['next']?.reason === AWAITING_HUMAN_REASON.MODEL_SELECTION);
+    await waitUntil(() => loadFlow().awaitingHumanNodes['next']?.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
 
     expect(requests.map((request) => request.model)).toEqual(['model-b']);
     expect(loadFlow().awaitingHumanNodes['start']).toBeUndefined();
@@ -201,14 +214,14 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
 
   SessionStore.init(workspaceRoot);
   // Persisted shape left behind by a suspension: node already visited and
-  // entered (session exists), no running claim, awaiting model selection.
+  // entered (session exists), no running claim, awaiting role configuration.
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
     projectNamespace,
     recordFolderPath: recordPath,
     runningNodes: [],
-    awaitingHumanNodes: { start: { role: 'start', reason: AWAITING_HUMAN_REASON.MODEL_SELECTION } },
+    awaitingHumanNodes: { start: { role: 'start', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION } },
     pendingHumanInputs: {},
     completedHandoffs: [],
     visitedNodeIds: ['start'],
@@ -240,6 +253,84 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
     await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
 
     expect(requests.map((request) => request.model)).toEqual(['model-b']);
+  } finally {
+    await SessionStore.updateFlowRun((flow) => {
+      flow.status = 'completed';
+    }, flowRef, workspaceRoot);
+    orchestrator.wake();
+    await runPromise;
+    server.close();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+it('suspends for skills-only role configuration and persists an empty skip selection', async () => {
+  const requests: Array<{ model: string }> = [];
+  const server = http.createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as { model: string };
+      requests.push({ model: body.model });
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+      const content = 'Need input. ```handoff\ntype: prompt-human\n```';
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+  });
+  const port = await listenOnLocalhost(server);
+
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'skills-only-role-config-'));
+  const projectNamespace = 'test-project';
+  const flowId = 'skills-only-flow';
+  const flowRef = { projectNamespace, flowId };
+
+  seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
+    { id: 'model-a', providerBaseUrl: `http://127.0.0.1:${port}/v1`, active: true },
+  ]);
+  writeSkill(workspaceRoot, 'review-writing');
+  scaffoldProjectDocs(workspaceRoot, projectNamespace, ['start', 'next']);
+
+  const recordPath = getFlowRecordDir(workspaceRoot, flowRef);
+  fs.mkdirSync(recordPath, { recursive: true });
+  writeWorkflow(recordPath);
+
+  SessionStore.init(workspaceRoot);
+  SessionStore.saveFlowRun({
+    flowId,
+    workspaceRoot,
+    projectNamespace,
+    recordFolderPath: recordPath,
+    runningNodes: ['start'],
+    awaitingHumanNodes: {},
+    pendingHumanInputs: {},
+    completedHandoffs: [],
+    visitedNodeIds: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    status: 'running',
+    stateVersion: CURRENT_FLOW_STATE_VERSION
+  });
+
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
+  const loadFlow = () => SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+
+  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  try {
+    await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
+    expect(requests).toHaveLength(0);
+
+    saveCapabilitySelection(workspaceRoot, flowRef, 'start', {
+      skills: [],
+      mcpServers: [],
+      selectedAt: new Date().toISOString(),
+    });
+    orchestrator.wake();
+
+    await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
+    expect(requests.map((request) => request.model)).toEqual(['model-a']);
+    expect(fs.existsSync(path.join(getFlowDir(workspaceRoot, flowRef), 'roles', 'start', 'capabilities.json'))).toBe(true);
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
