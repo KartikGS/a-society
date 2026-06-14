@@ -101,6 +101,7 @@ export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
+const FILE_TOOL_NAMES = new Set(FILE_TOOL_DEFINITIONS.map((definition) => definition.name));
 
 export class FileToolExecutor {
   private readonly workspaceRoot: string;
@@ -125,6 +126,10 @@ export class FileToolExecutor {
     ].map(p => path.resolve(p)));
   }
 
+  canHandle(name: string): boolean {
+    return FILE_TOOL_NAMES.has(name);
+  }
+
   private validateWorkflowContent(content: string, resolvedPath: string): string[] {
     let doc: unknown;
     try {
@@ -147,6 +152,8 @@ export class FileToolExecutor {
   }
 
   validate(call: ToolCall): { content: string; isError: boolean } | null {
+    if (!this.canHandle(call.name)) return null;
+
     const reqPath = call.input?.path as string | undefined;
     if (!reqPath || typeof reqPath !== 'string') return null;
 

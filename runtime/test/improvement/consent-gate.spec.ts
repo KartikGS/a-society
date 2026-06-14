@@ -215,13 +215,64 @@ describe('consent-gate', () => {
 
     expect(await gate.check(request({ toolName: 'write_file', input: { path: 'a.txt' } }))).toBe(CONSENT_CHECK_RESULT.PROCEED);
     expect(await gate.check(request({ toolName: 'run_command', input: { command: 'npm install' } }))).toBe(CONSENT_CHECK_RESULT.PROCEED);
+    expect(await gate.check(request({ toolName: 'mcp__linear__create_issue', input: { title: 'Bug' } }))).toBe(CONSENT_CHECK_RESULT.PROCEED);
     expect(events).toHaveLength(eventCount);
+  });
+
+  it('prompts for MCP tools by default and previews arguments', async () => {
+    const { gate, events } = createGate();
+
+    const pending = gate.check(request({
+      toolName: 'mcp__linear__create_issue',
+      input: { title: 'Broken build' },
+    }));
+
+    expect(events[0]).toEqual({
+      kind: 'consent.requested',
+      request: {
+        kind: 'mcp-tool',
+        toolName: 'mcp__linear__create_issue',
+        serverName: 'linear',
+        toolDisplayName: 'create_issue',
+        argsPreview: '{"title":"Broken build"}',
+        nodeId: 'test-node',
+        role: 'tester',
+      },
+    });
+
+    gate.respond(CONSENT_RESPONSE_DECISION.DENY, 'tester');
+    expect(await pending).toBe(CONSENT_CHECK_RESULT.DENY);
+  });
+
+  it('honors an MCP allow_flow grant in partial-access mode', async () => {
+    const { gate, events } = createGate();
+
+    const first = gate.check(request({ toolName: 'mcp__linear__create_issue', input: { title: 'Bug' } }));
+    gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'tester');
+    expect(await first).toBe(CONSENT_CHECK_RESULT.PROCEED);
+
+    const eventCount = events.length;
+    expect(await gate.check(request({ toolName: 'mcp__linear__create_issue', input: { title: 'Next' } }))).toBe(CONSENT_CHECK_RESULT.PROCEED);
+    expect(events).toHaveLength(eventCount);
+    expect(gate.getState().mcp.allowedTools.mcp__linear__create_issue.toolName).toBe('mcp__linear__create_issue');
   });
 
   it('hydrates invalid consent state to no-access', () => {
     expect(normalizeConsentState({ mode: 'invalid-mode', fileWrites: true, shellNetwork: true })).toEqual({
       mode: CONSENT_MODE.NO_ACCESS,
       bash: { allowedCommands: {} },
+      mcp: { allowedTools: {} },
+    });
+  });
+
+  it('normalizes malformed MCP grants to empty', () => {
+    expect(normalizeConsentState({
+      mode: CONSENT_MODE.PARTIAL_ACCESS,
+      mcp: { allowedTools: { bad: { command: 'not an mcp grant' } } },
+    })).toEqual({
+      mode: CONSENT_MODE.PARTIAL_ACCESS,
+      bash: { allowedCommands: {} },
+      mcp: { allowedTools: {} },
     });
   });
 });

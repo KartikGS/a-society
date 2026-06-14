@@ -355,6 +355,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         session.sink,
         (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage),
         session.consentGate,
+        session.mcpManagers,
       );
 
       const latestFlow = readFlowRun(ref);
@@ -413,6 +414,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         session.sink,
         (roleName) => createRoleOutputStream(session, roleName, emitHistoricalMessage),
         session.consentGate,
+        session.mcpManagers,
       );
 
       const latestFlow = readFlowRun(ref);

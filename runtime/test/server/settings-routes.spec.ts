@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateModelConfiguration } from '../../src/providers/model-validation.js';
+import { validateMcpServerConfiguration } from '../../src/providers/mcp/validate.js';
 import { registerSettingsRoutes } from '../../src/server/settings-routes.js';
 import * as SettingsStore from '../../src/settings/settings-store.js';
 
@@ -11,11 +12,17 @@ vi.mock('../../src/providers/model-validation.js', () => ({
   validateModelConfiguration: vi.fn(),
 }));
 
+vi.mock('../../src/providers/mcp/validate.js', () => ({
+  validateMcpServerConfiguration: vi.fn(),
+}));
+
 const validateModelConfigurationMock = vi.mocked(validateModelConfiguration);
+const validateMcpServerConfigurationMock = vi.mocked(validateMcpServerConfiguration);
 let workspaceRoot: string;
 
 beforeEach(() => {
   validateModelConfigurationMock.mockReset();
+  validateMcpServerConfigurationMock.mockReset();
   workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
   SettingsStore.configureSettingsStore(workspaceRoot);
 });
@@ -169,5 +176,70 @@ Run scripts/foo.py when needed.
     const deleted = await callSettingsRoute('delete', '/api/settings/skills/:name', {}, { name: 'missing-skill' });
     expect(deleted.status).toBe(404);
     expect(deleted.body).toMatchObject({ message: 'Skill "missing-skill" not found.' });
+  });
+
+  it('validates MCP server creation before saving discovered tools', async () => {
+    validateMcpServerConfigurationMock.mockResolvedValue({ toolNames: ['create_issue'] });
+
+    const response = await callSettingsRoute('post', '/api/settings/mcp', {
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+      args: ['server.js'],
+      env: { LINEAR_API_KEY: 'secret-key' },
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      name: 'linear',
+      transport: 'stdio',
+      toolNames: ['create_issue'],
+    });
+    expect(validateMcpServerConfigurationMock).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'linear',
+      command: 'node',
+      env: { LINEAR_API_KEY: 'secret-key' },
+    }));
+    const [saved] = SettingsStore.listMcpServerSummaries();
+    expect(saved.toolNames).toEqual(['create_issue']);
+    expect(SettingsStore.getMcpServerWithSecrets(saved.id)?.env).toEqual({ LINEAR_API_KEY: 'secret-key' });
+  });
+
+  it('blocks MCP server save when validation fails', async () => {
+    const timeout = Object.assign(new Error('connect ETIMEDOUT 140.82.112.21:443'), {
+      code: 'ETIMEDOUT',
+      address: '140.82.112.21',
+      port: 443,
+    });
+    validateMcpServerConfigurationMock.mockRejectedValue(new TypeError('fetch failed', {
+      cause: new AggregateError([timeout], ''),
+    }));
+
+    const response = await callSettingsRoute('post', '/api/settings/mcp', {
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ message: 'fetch failed (connect ETIMEDOUT 140.82.112.21:443)' });
+    expect(SettingsStore.listMcpServerSummaries()).toEqual([]);
+  });
+
+  it('deletes MCP servers', async () => {
+    const server = SettingsStore.createMcpServer({
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+      env: { TOKEN: 'secret' },
+      toolNames: ['search'],
+    });
+
+    const response = await callSettingsRoute('delete', '/api/settings/mcp/:id', {}, { id: server.id });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ ok: true });
+    expect(SettingsStore.listMcpServerSummaries()).toEqual([]);
+    expect(SettingsStore.getMcpServerWithSecrets(server.id)).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import type { FeedSettings, InputModality, ModelConfig, ProviderType, SettingsStatus, SkillLoadResult, SkillSummary, ToolSettings } from './types';
+import type { FeedSettings, InputModality, McpServerSummary, ModelConfig, ProviderType, SettingsStatus, SkillLoadResult, SkillSummary, ToolSettings } from './types';
 import { normalizeModelReasoningConfig } from '../../src/common/model-reasoning.js';
 
 const INPUT_MODALITY_SET = new Set<InputModality>(['image', 'audio', 'video']);
@@ -134,4 +134,31 @@ export function normalizeSkillLoadResults(value: unknown): SkillLoadResult[] {
       return null;
     })
     .filter((entry): entry is SkillLoadResult => entry !== null);
+}
+
+export function normalizeMcpServerSummary(value: unknown): McpServerSummary | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.id !== 'string' ||
+    typeof raw.name !== 'string' ||
+    (raw.transport !== 'stdio' && raw.transport !== 'http') ||
+    !Array.isArray(raw.toolNames)
+  ) {
+    return null;
+  }
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    transport: raw.transport,
+    toolNames: raw.toolNames.filter((entry): entry is string => typeof entry === 'string'),
+  };
+}
+
+export function normalizeMcpServerSummaries(value: unknown): McpServerSummary[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => normalizeMcpServerSummary(entry))
+    .filter((entry): entry is McpServerSummary => entry !== null);
 }

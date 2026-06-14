@@ -1,5 +1,5 @@
-import { normalizeModelConfigs, normalizeSettingsStatus, normalizeSkillLoadResults } from '../model-config';
-import type { FlowRef, FlowRun, FlowSummary, ModelConfig, ProjectDiscovery, ProjectSummary, SettingsStatus, SkillLoadResult } from '../types';
+import { normalizeMcpServerSummaries, normalizeModelConfigs, normalizeSettingsStatus, normalizeSkillLoadResults } from '../model-config';
+import type { FlowRef, FlowRun, FlowSummary, McpServerSummary, ModelConfig, ProjectDiscovery, ProjectSummary, SettingsStatus, SkillLoadResult } from '../types';
 
 export class IncompatibleFlowError extends Error {
   constructor(message: string) {
@@ -51,6 +51,15 @@ export async function fetchSkills(): Promise<SkillLoadResult[]> {
   }
 
   return normalizeSkillLoadResults(await response.json());
+}
+
+export async function fetchMcpServers(): Promise<McpServerSummary[]> {
+  const response = await fetch('/api/settings/mcp');
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+
+  return normalizeMcpServerSummaries(await response.json());
 }
 
 export async function fetchActiveModelContextWindow(): Promise<number | null> {

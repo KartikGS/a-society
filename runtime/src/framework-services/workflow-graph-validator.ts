@@ -333,6 +333,8 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
       // role
       if (typeof node.role !== 'string' || node.role.trim() === '') {
         errors.push(`workflow.nodes[${i}].role must be a non-empty string`);
+      } else if (node.role !== node.role.trim()) {
+        errors.push(`workflow.nodes[${i}].role must not include leading or trailing whitespace`);
       } else {
         let baseRoleId: string | null = null;
         try {
@@ -422,7 +424,7 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
   }
 
   if (workflow.edges.length === 0 && workflow.nodes.length === 1) {
-    if (parseRoleIdentity(workflow.nodes[0].role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+    if (workflow.nodes[0].role !== OWNER_BASE_ROLE_ID) {
       errors.push(`Sole node role must be exactly "owner" (found "${workflow.nodes[0].role}")`);
     }
   } else {
@@ -437,13 +439,13 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
       if (node.id !== REQUIRED_START_NODE_ID) {
         errors.push(`Start node "${node.id}" must be exactly "${REQUIRED_START_NODE_ID}"`);
       }
-      if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+      if (node.role !== OWNER_BASE_ROLE_ID) {
         errors.push(`Start node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
     }
 
     for (const node of endNodes) {
-      if (parseRoleIdentity(node.role).instanceRoleId !== OWNER_BASE_ROLE_ID) {
+      if (node.role !== OWNER_BASE_ROLE_ID) {
         errors.push(`End node "${node.id}" must have role "owner" (found "${node.role}")`);
       }
     }

@@ -13,6 +13,7 @@ import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import {
   fetchActiveModelContextWindow,
   fetchFlowState,
+  fetchMcpServers as fetchMcpServersApi,
   fetchModels as fetchModelsApi,
   fetchProjectFlows as fetchProjectFlowsApi,
   fetchProjects as fetchProjectsApi,
@@ -35,6 +36,7 @@ import type {
   ClientMessage,
   FlowRef,
   FlowSummary,
+  McpServerSummary,
   ModelConfig,
   ProjectDiscovery,
   ServerMessage,
@@ -62,6 +64,7 @@ export function App() {
   const [contextWindow, setContextWindow] = useState<number | null>(null);
   const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
   const [configuredSkills, setConfiguredSkills] = useState<SkillSummary[]>([]);
+  const [configuredMcpServers, setConfiguredMcpServers] = useState<McpServerSummary[]>([]);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -124,6 +127,14 @@ export function App() {
         .map((result) => result.skill));
     } catch {
       // Keep the last known skill list; role configuration validates on submit.
+    }
+  }, []);
+
+  const refreshConfiguredMcpServers = useCallback(async (): Promise<void> => {
+    try {
+      setConfiguredMcpServers(await fetchMcpServersApi());
+    } catch {
+      // Keep the last known MCP server list; role configuration validates on submit.
     }
   }, []);
 
@@ -344,6 +355,16 @@ export function App() {
   }, [roleConfigurationNodeId]);
 
   useEffect(() => {
+    let cancelled = false;
+    fetchMcpServersApi()
+      .then((servers) => {
+        if (!cancelled) setConfiguredMcpServers(servers);
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [roleConfigurationNodeId]);
+
+  useEffect(() => {
     if (settingsReady && !hasConfiguredModel) {
       startTransition(() => setSettingsOpen(true));
       return;
@@ -495,7 +516,7 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
-                  roleConfiguration={roleConfigurationNodeId ? { nodeId: roleConfigurationNodeId, models: configuredModels, skills: configuredSkills } : null}
+                  roleConfiguration={roleConfigurationNodeId ? { nodeId: roleConfigurationNodeId, models: configuredModels, skills: configuredSkills, mcpServers: configuredMcpServers } : null}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}
@@ -543,6 +564,7 @@ export function App() {
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
           onSkillsChange={refreshConfiguredSkills}
+          onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
         />
       )}

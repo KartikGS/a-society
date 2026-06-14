@@ -1,5 +1,5 @@
 import { parseRoleIdentity } from '../../../src/common/role-id.js';
-import { SYSTEM_ROLE_KEY } from './constants';
+import { SYSTEM_ROLE_KEY } from './constants.js';
 
 export function toRoleKey(role: string | null | undefined): string | null {
   if (!role) return null;

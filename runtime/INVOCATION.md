@@ -46,14 +46,26 @@ Each role instance can be configured once per flow:
 
 - The first time a role instance is activated in a flow, the runtime suspends that node as awaiting human input with reason `role-configuration` when there is anything for the operator to choose
 - The role configuration banner shows only the subsections that apply: Model when more than one model is configured, Skills when the workspace has at least one valid skill, and MCP servers when servers are configured
-- The operator submits the role configuration once; the choice applies to all of that role instance's turns in the flow, including improvement-phase and compaction turns
+- The operator submits the role configuration once; the selected model applies to that role instance's turns, improvement-phase turns, and compaction turns; selected skills and MCP servers apply to model turns for that role instance, including improvement-phase turns
 - The role feed keeps the wait and result in a single `Role Configuration` item with the selected model name when applicable and counts for selected skills and MCP servers
 - Model selection is persisted as `roles/<roleKey>/model.json`; selected optional capabilities are persisted as `roles/<roleKey>/capabilities.json`
 - A node awaiting `role-configuration` does not accept a text reply
 - With exactly one configured model and no skills or MCP servers, no role configuration is requested and the active model is used
 - If a selected model is later deleted or becomes unusable while multiple models remain configured, the role re-prompts at its next activation; if a selected skill or MCP server is later removed, it is dropped at use time without re-prompting
 
-Skills are markdown folders at `{workspace}/.a-society/skills/<name>/SKILL.md`. The runtime injects only selected skill names, descriptions, and `SKILL.md` paths into the role's system prompt. Skill bodies are read on demand by the agent with `read_file`.
+Skills are folders at `{workspace}/.a-society/skills/<name>/`, each with a `SKILL.md` (name + description frontmatter, markdown body) and optional bundled resources (`scripts/`, `references/`, `assets/`). The runtime injects only selected skill names, descriptions, and `SKILL.md` paths into the role's system prompt; the agent reads the body and any `references/` on demand with `read_file`, and runs any bundled `scripts/` through the consent-gated `run_command` (bash) tool. The runtime never auto-executes skill scripts — but an imported skill may include runnable code, so import from trusted sources. Skills are imported (not created) in Settings under `Skills`.
+
+### MCP Servers
+
+MCP servers are configured in Settings under `MCP`.
+
+- Server names must match `^[a-z0-9-]{1,32}$` because they become the namespace segment in model-visible tool names
+- Stdio servers store command, args, and env-var names in settings; env-var values are stored in `.a-society/secrets.json`
+- HTTP servers store URL and header names in settings; header values are stored in `.a-society/secrets.json`
+- Saving a server connects to it and runs `tools/list`; failures block the save, and discovered tool names are stored for display and role configuration
+- Selected tools are exposed as `mcp__<server>__<tool>`
+- If a selected server is unreachable when a role first needs it, that server's tools are absent for the role and the role feed records an MCP notice
+- If a server dies mid-flow, the tool remains in the role's frozen tool snapshot and returns an error result when called
 
 ### Web Search Connectivity
 
@@ -146,6 +158,8 @@ The chat footer exposes three per-flow tool permission modes:
 File writes (`edit_file`, `write_file`) prompt with the target path and offer `Allow`, `Allow all edits this flow`, or `Deny`.
 
 Bash commands prompt with the exact command and offer `Allow`, `Allow <command> this flow`, or `Deny`. Simple safe read-only commands such as `ls` do not prompt.
+
+MCP tool calls prompt by default with `<server> · <tool>` and an argument preview. `Allow this tool for this flow` stores a per-tool grant under `consentState.mcp.allowedTools`; MCP read-only hints are not auto-allowed.
 
 Permission state is stored on the active `FlowRun` as `consentState` in `flow.json`.
 

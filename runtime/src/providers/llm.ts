@@ -6,9 +6,11 @@ import { CONSENT_CHECK_RESULT, LLMGatewayError } from '../common/types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from '../tools/file-executor.js';
 import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.js';
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-search-executor.js';
+import { McpToolExecutor } from '../tools/mcp-executor.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
+import type { McpManager } from './mcp/manager.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
 export { LLMGatewayError } from '../common/types.js';
@@ -20,6 +22,7 @@ export type LLMGatewayOptions =
       flowRef: FlowRef;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
+      mcpManager?: McpManager;
     }
   | {
       mode: 'system';
@@ -68,6 +71,7 @@ export class LLMGateway {
   private fileExecutor?: FileToolExecutor;
   private bashExecutor?: BashToolExecutor;
   private webSearchExecutor?: WebSearchExecutor;
+  private mcpExecutor?: McpToolExecutor;
   private tools?: ToolDefinition[];
 
   constructor(options: LLMGatewayOptions) {
@@ -88,6 +92,10 @@ export class LLMGateway {
       if (tavilyKey) {
         this.webSearchExecutor = new WebSearchExecutor(tavilyKey);
         this.tools = [...this.tools, ...WEB_SEARCH_TOOL_DEFINITIONS];
+      }
+      if (options.mcpManager) {
+        this.mcpExecutor = new McpToolExecutor(options.mcpManager);
+        this.tools = [...this.tools, ...options.mcpManager.listTools()];
       }
     }
   }
@@ -236,6 +244,8 @@ export class LLMGateway {
               options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.roleInstanceId ?? '__system__', toolName: call.name, path: pathArg, command: commandArg });
               const res = await (this.bashExecutor!.canHandle(call.name)
                 ? this.bashExecutor!.execute(call, options?.signal)
+                : this.mcpExecutor?.canHandle(call.name)
+                ? this.mcpExecutor.execute(call, options?.signal)
                 : this.webSearchExecutor?.canHandle(call.name)
                 ? this.webSearchExecutor.execute(call, options?.signal)
                 : this.fileExecutor!.execute(call, options?.signal));

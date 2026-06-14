@@ -4,7 +4,7 @@ import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
 } from '../../../src/common/protocol-constants.js';
-import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, ModelConfig, SkillSummary } from '../types';
+import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, McpServerSummary, ModelConfig, SkillSummary } from '../types';
 
 export type { FeedItem };
 
@@ -12,6 +12,7 @@ export interface RoleConfigurationPrompt {
   nodeId: string;
   models: ModelConfig[];
   skills: SkillSummary[];
+  mcpServers: McpServerSummary[];
 }
 
 interface ChatInterfaceProps {
@@ -51,12 +52,25 @@ function consentPromptTitle(request: ConsentRequest): string {
   if (request.kind === 'file-write') {
     return `Allow write ${request.path}?`;
   }
+  if (request.kind === 'mcp-tool') {
+    return `Arguments: ${request.argsPreview}`;
+  }
   return `Allow ${request.command}?`;
+}
+
+function consentToolLabel(request: ConsentRequest): string {
+  if (request.kind === 'mcp-tool') {
+    return `${request.serverName} · ${request.toolDisplayName}`;
+  }
+  return request.toolName;
 }
 
 function consentAllowFlowLabel(request: ConsentRequest): string {
   if (request.kind === 'file-write') {
     return 'Allow all edits this flow';
+  }
+  if (request.kind === 'mcp-tool') {
+    return 'Allow this tool for this flow';
   }
   return 'Allow this command for this flow';
 }
@@ -194,6 +208,7 @@ function RoleConfigurationBanner({
   const showModelSection = roleConfiguration.models.length > 1;
   const [modelConfigId, setModelConfigId] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>([]);
 
   function toggleSkill(name: string, checked: boolean): void {
     setSelectedSkills((current) => checked
@@ -201,7 +216,14 @@ function RoleConfigurationBanner({
       : current.filter((entry) => entry !== name));
   }
 
+  function toggleMcpServer(id: string, checked: boolean): void {
+    setSelectedMcpServers((current) => checked
+      ? [...current, id].sort((a, b) => a.localeCompare(b))
+      : current.filter((entry) => entry !== id));
+  }
+
   const submitDisabled = showModelSection && !modelConfigId;
+  const hasCapabilitySections = roleConfiguration.skills.length > 0 || roleConfiguration.mcpServers.length > 0;
 
   return (
     <div className="model-select-banner">
@@ -213,40 +235,81 @@ function RoleConfigurationBanner({
       </div>
 
       {showModelSection ? (
-        <ul className="model-select-options">
-          {roleConfiguration.models.map((model) => (
-            <li key={model.id}>
-              <button
-                type="button"
-                className={`model-select-option${modelConfigId === model.id ? ' model-select-option-selected' : ''}`}
-                onClick={() => setModelConfigId(model.id)}
-              >
-                <span className="model-select-option-name">{model.displayName}</span>
-                <span className="model-select-option-meta">
-                  {model.providerType} · {model.modelId}{model.active ? ' · active' : ''}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <section className="role-config-section" aria-label="Model">
+          <h3 className="role-config-section-title">Model</h3>
+          <ul className="model-select-options role-config-options">
+            {roleConfiguration.models.map((model) => (
+              <li key={model.id}>
+                <button
+                  type="button"
+                  className={`model-select-option${modelConfigId === model.id ? ' model-select-option-selected' : ''}`}
+                  onClick={() => setModelConfigId(model.id)}
+                >
+                  <span className="model-select-option-name">{model.displayName}</span>
+                  <span className="model-select-option-meta">
+                    {model.providerType} · {model.modelId}{model.active ? ' · active' : ''}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {roleConfiguration.skills.length > 0 ? (
-        <div className="skill-select-list">
-          {roleConfiguration.skills.map((skill) => (
-            <label key={skill.name} className="skill-select-option">
-              <input
-                type="checkbox"
-                checked={selectedSkills.includes(skill.name)}
-                onChange={(event) => toggleSkill(skill.name, event.target.checked)}
-              />
-              <span>
-                <span className="skill-select-name">{skill.name}</span>
-                <span className="skill-select-desc">{skill.description}</span>
-              </span>
-            </label>
-          ))}
-        </div>
+        <section className="role-config-section" aria-label="Skills">
+          <h3 className="role-config-section-title">Skills</h3>
+          <div className="skill-select-list role-config-options">
+            {roleConfiguration.skills.map((skill) => {
+              const selected = selectedSkills.includes(skill.name);
+              return (
+                <label
+                  key={skill.name}
+                  className={`skill-select-option model-select-option${selected ? ' model-select-option-selected' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={(event) => toggleSkill(skill.name, event.target.checked)}
+                  />
+                  <span>
+                    <span className="skill-select-name model-select-option-name">{skill.name}</span>
+                    <span className="skill-select-desc model-select-option-meta">{skill.description}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {roleConfiguration.mcpServers.length > 0 ? (
+        <section className="role-config-section" aria-label="MCP">
+          <h3 className="role-config-section-title">MCP</h3>
+          <div className="skill-select-list role-config-options">
+            {roleConfiguration.mcpServers.map((server) => {
+              const selected = selectedMcpServers.includes(server.id);
+              return (
+                <label
+                  key={server.id}
+                  className={`skill-select-option model-select-option${selected ? ' model-select-option-selected' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={(event) => toggleMcpServer(server.id, event.target.checked)}
+                  />
+                  <span>
+                    <span className="skill-select-name model-select-option-name">{server.name}</span>
+                    <span className="skill-select-desc model-select-option-meta">
+                      {server.transport} · {server.toolNames.length} tools
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       <div className="role-config-actions">
@@ -257,14 +320,14 @@ function RoleConfigurationBanner({
           onClick={() => onRoleConfigure?.(roleConfiguration.nodeId, {
             modelConfigId: modelConfigId || undefined,
             skills: selectedSkills,
-            mcpServers: [],
+            mcpServers: selectedMcpServers,
           })}
         >
           Continue
         </button>
       </div>
 
-      {!showModelSection && roleConfiguration.skills.length === 0 ? (
+      {!showModelSection && !hasCapabilitySections ? (
         <p className="model-select-empty">No role configuration options are available.</p>
       ) : null}
     </div>
@@ -442,7 +505,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
           {props.consentRequest ? (
             <div className="consent-banner">
               <div className="consent-banner-body">
-                <span className="consent-banner-tool">{props.consentRequest.toolName}</span>
+                <span className="consent-banner-tool">{consentToolLabel(props.consentRequest)}</span>
                 <span className="consent-banner-desc">{consentPromptTitle(props.consentRequest)}</span>
               </div>
               <div className="consent-banner-actions">
@@ -451,7 +514,11 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   className="consent-btn consent-btn-allow"
                   onClick={() => props.onConsentResponse?.(CONSENT_RESPONSE_DECISION.ALLOW_ONCE)}
                 >
-                  {props.consentRequest.kind === 'bash-command' ? 'Allow this command' : 'Allow'}
+                  {props.consentRequest.kind === 'bash-command'
+                    ? 'Allow this command'
+                    : props.consentRequest.kind === 'mcp-tool'
+                      ? 'Allow this tool'
+                      : 'Allow'}
                 </button>
                 <button
                   type="button"

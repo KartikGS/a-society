@@ -23,13 +23,22 @@ export type FlowStatus =
 export const CURRENT_FLOW_STATE_VERSION = '11';
 
 export type ConsentMode = ProtocolConsentMode;
-export type ConsentRequestKind = 'file-write' | 'bash-command';
+export type ConsentRequestKind = 'file-write' | 'bash-command' | 'mcp-tool';
 export type ConsentResponseDecision = ProtocolConsentResponseDecision;
 export type AwaitingHumanReason = ProtocolAwaitingHumanReason;
 
 export type ConsentRequest =
   | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
-  | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string };
+  | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string }
+  | {
+      kind: 'mcp-tool';
+      toolName: string;
+      serverName: string;
+      toolDisplayName: string;
+      argsPreview: string;
+      nodeId: string;
+      role: string;
+    };
 
 export interface ConsentCheckRequest {
   toolName: string;
@@ -50,6 +59,9 @@ export interface ConsentState {
   bash: {
     allowedCommands: Record<string, { command: string; grantedAt: string }>;
   };
+  mcp: {
+    allowedTools: Record<string, { toolName: string; grantedAt: string }>;
+  };
 }
 
 export type FeedbackContextKind = 'standard' | 'initialization';
@@ -64,6 +76,9 @@ export function defaultConsentState(): ConsentState {
     mode: CONSENT_MODE.NO_ACCESS,
     bash: {
       allowedCommands: {},
+    },
+    mcp: {
+      allowedTools: {},
     },
   };
 }
@@ -91,9 +106,22 @@ export function normalizeConsentState(raw: unknown): ConsentState {
     }
   }
 
+  const allowedToolsSource = source.mcp?.allowedTools;
+  const allowedTools: Record<string, { toolName: string; grantedAt: string }> = {};
+  if (allowedToolsSource && typeof allowedToolsSource === 'object') {
+    for (const [key, value] of Object.entries(allowedToolsSource as Record<string, any>)) {
+      if (!value || typeof value !== 'object' || typeof value.toolName !== 'string') continue;
+      allowedTools[key] = {
+        toolName: value.toolName,
+        grantedAt: typeof value.grantedAt === 'string' ? value.grantedAt : new Date(0).toISOString(),
+      };
+    }
+  }
+
   return {
     mode,
     bash: { allowedCommands },
+    mcp: { allowedTools },
   };
 }
 
@@ -195,11 +223,7 @@ export interface RoleSession {
 export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: {
-    type: 'object';
-    properties: Record<string, { type: string; description: string }>;
-    required: string[];
-  };
+  inputSchema: Record<string, unknown>;
 }
 
 export interface ToolCall {
@@ -245,6 +269,8 @@ export type OperatorEvent =
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }
+  | { kind: 'mcp.server_unavailable'; role: string; nodeId: string; serverName: string; reason: string }
+  | { kind: 'mcp.tool_unavailable'; role: string; nodeId: string; serverName: string; toolName: string; reason: string }
   | { kind: 'provider.reasoning_trace'; role: string; label: string; text: string; display: Exclude<ProviderReasoningDisplay, 'hidden'> }
   | { kind: 'flow.forward_pass_closed' }
   | { kind: 'flow.completed' }

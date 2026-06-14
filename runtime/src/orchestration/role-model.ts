@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
-import { parseRoleIdentity } from '../common/role-id.js';
 import {
   configureSettingsStore,
   getActiveModelWithKey,
@@ -11,7 +10,7 @@ import {
   type ModelConfig,
   type ModelConfigWithKey,
 } from '../settings/settings-store.js';
-import { getFlowDir } from './state-paths.js';
+import { getRoleStateFilePath } from './state-paths.js';
 
 export interface RoleModelSelection {
   modelConfigId: string;
@@ -25,8 +24,7 @@ export type RoleModelGate =
   | { kind: 'selection-required'; options: ModelConfig[] };
 
 function roleModelSelectionPath(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): string {
-  const roleKey = parseRoleIdentity(roleInstanceId).instanceRoleId;
-  return path.join(getFlowDir(workspaceRoot, ref), 'roles', roleKey, 'model.json');
+  return getRoleStateFilePath(workspaceRoot, ref, roleInstanceId, 'model.json');
 }
 
 export function readRoleModelSelection(

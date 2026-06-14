@@ -123,6 +123,20 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         label: 'Compaction',
         text: `${event.nodeId} context compacted (${event.trigger}).`
       };
+    case 'mcp.server_unavailable':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'MCP',
+        text: `${event.serverName} unavailable: ${event.reason}`
+      };
+    case 'mcp.tool_unavailable':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'MCP',
+        text: `${event.serverName}.${event.toolName} skipped: ${event.reason}`
+      };
     case 'provider.reasoning_trace':
       return {
         id,

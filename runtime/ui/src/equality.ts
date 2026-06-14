@@ -130,6 +130,18 @@ function areConsentStatesEqual(
     if (leftCommands[key].grantedAt !== rightCommands[key].grantedAt) return false;
   }
 
+  const leftTools = left.mcp?.allowedTools ?? {};
+  const rightTools = right.mcp?.allowedTools ?? {};
+  const leftToolKeys = Object.keys(leftTools);
+  const rightToolKeys = Object.keys(rightTools);
+
+  if (leftToolKeys.length !== rightToolKeys.length) return false;
+  for (const key of leftToolKeys) {
+    if (!(key in rightTools)) return false;
+    if (leftTools[key].toolName !== rightTools[key].toolName) return false;
+    if (leftTools[key].grantedAt !== rightTools[key].grantedAt) return false;
+  }
+
   return left.mode === right.mode;
 }
 
