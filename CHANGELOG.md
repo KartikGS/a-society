@@ -6,12 +6,17 @@ All notable changes to A-Society will be documented here.
 
 ## [Unreleased]
 
+---
+
+## [0.2.0] — 2026-06-14
+
 ### Runtime
 
-- Allow `prompt-human` nodes to resume from inbound handoffs and allow targeted human input for nodes suspended in `await-handoff`, with queued human replies taking priority for that turn.
-- Add a per-role Role Configuration gate: first activation can suspend once with reason `role-configuration`; shows dynamic Model and Skills sections; persists model choices in `roles/<roleKey>/model.json` and optional skill choices in `roles/<roleKey>/capabilities.json`; injects selected skill summaries into role context; and adds Skills settings import/list/delete backed by `.a-society/skills/`.
-- Add MCP server integration: Settings can register stdio or HTTP MCP servers with validate-on-save tool discovery; Role Configuration can select servers per role instance; selected MCP tools are exposed as `mcp__<server>__<tool>` and are gated by normal tool-permission prompts.
-- Add optional automatic Role Configuration: per-dimension toggles in Settings (Models / Skills / MCP, default manual) let an agent choose a role instance's model, skills, and MCP servers instead of prompting. The decision is one independent system-mode turn on the active model, briefed with the role's workflow-snapshot nodes, run at most once per role instance; dimensions are independent (mixed auto/manual), single-option or empty dimensions contribute no turn, malformed output is re-prompted and transport errors fall back to manual selection. The feed shows a status-only auto-selection strip plus a `role.configured` result bubble listing the chosen model / skills / MCP servers by name.
+- `prompt-human` resume support: inbound handoffs and targeted human replies can now resume suspended human-prompt nodes.
+- Role Configuration: role instances can now be configured with model, skill, and MCP selections before execution.
+- Skills management: Settings now supports importing, listing, and deleting local skills from `.a-society/skills/`.
+- MCP integration: Settings can register stdio or HTTP MCP servers, and role instances can expose selected MCP tools through normal permission prompts.
+- Automatic Role Configuration: optional per-dimension auto-selection lets agents choose models, skills, and MCP servers when enabled, with manual fallback.
 
 ---
 
