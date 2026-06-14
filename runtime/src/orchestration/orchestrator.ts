@@ -21,6 +21,8 @@ import { CANONICAL_WORKFLOW_FILENAME, findWorkflowFilePath, resolveFlowWorkflow 
 import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing, parseHandoffKey, type HandoffKeyParts } from './workflow-graph.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
+import type { McpManager } from '../providers/mcp/manager.js';
+import { resolveRoleMcpManager } from './role-mcp-manager.js';
 
 export class WorkflowError extends Error {
   constructor(message: string) {
@@ -133,7 +135,8 @@ export class FlowOrchestrator {
     projectNamespace: string,
     flowId?: string,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
-    consentGate?: ConsentGate
+    consentGate?: ConsentGate,
+    mcpManagers?: Map<string, McpManager>
   ): Promise<void> {
     const tracer = TelemetryManager.getTracer();
     const meter = TelemetryManager.getMeter();
@@ -183,6 +186,7 @@ export class FlowOrchestrator {
           await this.runReadyNodesUntilBlocked(
             outputStreamFactory,
             consentGate,
+            mcpManagers,
             initialNodeIds
           );
           initialNodeIds.length = 0;
@@ -213,6 +217,7 @@ export class FlowOrchestrator {
     nodeId: string,
     roleInstanceId: string,
     consentGate?: ConsentGate,
+    mcpManagers?: Map<string, McpManager>,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream
   ): Promise<void> {
     let flowRun = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
@@ -272,6 +277,14 @@ export class FlowOrchestrator {
           return;
         }
         const roleModel = modelGate.model;
+        const mcpManager = await resolveRoleMcpManager({
+          workspaceRoot: flowRun.workspaceRoot,
+          flowRef: this.requireFlowRef(),
+          roleInstanceId,
+          nodeId,
+          renderer: this.renderer,
+          mcpManagers,
+        });
 
         while (true) {
           try {
@@ -292,6 +305,7 @@ export class FlowOrchestrator {
                 operatorRenderer: this.renderer,
                 consentGate,
                 model: roleModel,
+                mcpManager,
                 onConversationMessages: async (messages) => {
                   removeAssistantDraftBeforeToolCalls(injectedHistory, messages);
                   appendConversationMessagesToCurrentNode(session, nodeId, messages);
@@ -334,13 +348,12 @@ export class FlowOrchestrator {
               }
 
               if (handoffResult.kind === 'forward-pass-closed') {
-                const emitterInstanceRole = parseRoleIdentity(roleInstanceId).instanceRoleId;
                 const latestForFpc = SessionStore.loadFlowRun(this.requireFlowRef(), this.requireWorkspaceRoot())!;
                 const fpcWf = this.loadWorkflowDocument(latestForFpc);
                 const fpcOutgoing = fpcWf.getOutgoingEdges(nodeId);
                 const outstandingInbound = getOutstandingInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
                 const completedInbound = getCompletedInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
-                const isLastOwner = emitterInstanceRole === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
+                const isLastOwner = roleInstanceId === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
                 const hasBlockers =
                   latestForFpc.runningNodes.some(id => id !== nodeId) ||
                   Object.keys(latestForFpc.awaitingHumanNodes).length > 0 ||
@@ -729,6 +742,7 @@ export class FlowOrchestrator {
   private async runReadyNodesUntilBlocked(
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
+    mcpManagers?: Map<string, McpManager>,
     initialNodeIds: string[] = []
   ): Promise<void> {
     const runningTasks = new Map<string, Promise<void>>();
@@ -746,6 +760,7 @@ export class FlowOrchestrator {
           claimedWork.nodeId,
           claimedWork.roleInstanceId,
           consentGate,
+          mcpManagers,
           outputStreamFactory
         ).catch((error) => {
           if (!firstError) firstError = error;

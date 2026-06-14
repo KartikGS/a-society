@@ -25,6 +25,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
     consentState: {
       mode,
       bash: { allowedCommands: {} },
+      mcp: { allowedTools: {} },
     },
   };
 }
@@ -42,6 +43,17 @@ describe('ui/equality', () => {
     const right = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
     right.consentState!.bash.allowedCommands['npm test'] = {
       command: 'npm test',
+      grantedAt: '2026-05-03T00:00:00.000Z',
+    };
+
+    expect(areFlowRunsEqual(left, right)).toBe(false);
+  });
+
+  it('detects stored MCP consent changes', () => {
+    const left = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
+    const right = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
+    right.consentState!.mcp.allowedTools.mcp__linear__create_issue = {
+      toolName: 'mcp__linear__create_issue',
       grantedAt: '2026-05-03T00:00:00.000Z',
     };
 

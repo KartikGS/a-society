@@ -175,11 +175,16 @@ export function buildBackwardPassPlan(
 ): BackwardPassPlan {
   const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
   const feedbackRoleId = parseRoleIdentity(feedbackRole).instanceRoleId;
+  const parsedNodeRoles = nodes.map((node) => ({
+    node,
+    role: parseRoleIdentity(node.role).instanceRoleId,
+  }));
+  const roleByNodeId = new Map(parsedNodeRoles.map(({ node, role }) => [node.id, role]));
 
   if (mode === IMPROVEMENT_CHOICE_MODE.PARALLEL) {
-    const roles = Array.from(new Set(nodes.map(n => parseRoleIdentity(n.role).instanceRoleId)));
-    const nonOwnerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId !== OWNER_BASE_ROLE_ID);
-    const ownerRoles = roles.filter(r => parseRoleIdentity(r).instanceRoleId === OWNER_BASE_ROLE_ID);
+    const roles = Array.from(new Set(parsedNodeRoles.map(({ role }) => role)));
+    const nonOwnerRoles = roles.filter(r => r !== OWNER_BASE_ROLE_ID);
+    const ownerRoles = roles.filter(r => r === OWNER_BASE_ROLE_ID);
     if (ownerRoles.length !== 1) {
       throw new Error('parallel improvement mode requires exactly one owner role');
     }
@@ -217,9 +222,6 @@ export function buildBackwardPassPlan(
   // mode === graph-based
   const incomingCount = Object.fromEntries(nodes.map(n => [n.id, 0]));
   const children: Record<string, string[]> = Object.fromEntries(nodes.map(n => [n.id, []]));
-  for (const node of nodes) {
-    parseRoleIdentity(node.role);
-  }
   for (const edge of edges) {
     if (!nodeById[edge.from] || !nodeById[edge.to]) continue;
     incomingCount[edge.to] = (incomingCount[edge.to] ?? 0) + 1;
@@ -249,8 +251,7 @@ export function buildBackwardPassPlan(
   }
 
   const keptNodeByRole = new Map<string, WorkflowNode>();
-  for (const node of nodes) {
-    const role = parseRoleIdentity(node.role).instanceRoleId;
+  for (const { node, role } of parsedNodeRoles) {
     const current = keptNodeByRole.get(role);
     const depth = minDepth[node.id] ?? Number.POSITIVE_INFINITY;
     const currentDepth = current ? (minDepth[current.id] ?? Number.POSITIVE_INFINITY) : Number.POSITIVE_INFINITY;
@@ -328,7 +329,7 @@ export function buildBackwardPassPlan(
     sessionInstruction: 'new-session',
     findingsRolesToInject: [],
   };
-  const sourceRole = parseRoleIdentity(nodeById[sources[0]].role).instanceRoleId;
+  const sourceRole = roleByNodeId.get(sources[0])!;
   const feedbackEdge = { from: sourceRole, to: feedbackEntry.role };
 
   return {

@@ -138,6 +138,22 @@ it('role display names are rejected', () => {
   expect(errors.some((e: string) => e.includes('Invalid role id "Owner"'))).toBeTruthy();
 });
 
+it('role ids with leading or trailing whitespace are rejected', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'owner-intake', role: ' owner' },
+        { id: 'owner-close', role: 'owner ' },
+      ],
+      edges: [{ from: 'owner-intake', to: 'owner-close' }],
+    },
+  };
+  const errors = validateGraph(graph);
+  expect(errors).toContain('workflow.nodes[0].role must not include leading or trailing whitespace');
+  expect(errors).toContain('workflow.nodes[1].role must not include leading or trailing whitespace');
+});
+
 it('node-level workflow guidance fields pass when well-formed', () => {
   const graph = {
     workflow: {

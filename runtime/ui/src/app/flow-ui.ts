@@ -1,16 +1,17 @@
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
-import type { FeedItem } from '../components/ChatInterface';
-import type { GraphMode } from '../components/GraphView';
 import type {
   ConsentRequest,
+  FeedItem,
   FlowRef,
   FlowRun,
   FlowSummary,
   OperatorEvent,
   WorkflowGraph,
-} from '../types';
-import { SYSTEM_ROLE_KEY } from './constants';
-import { toRoleKey } from './roles';
+} from '../types.js';
+import { SYSTEM_ROLE_KEY } from './constants.js';
+import { toRoleKey } from './roles.js';
+
+export type GraphMode = 'flow' | 'improvement';
 
 export interface FlowTab {
   key: string;

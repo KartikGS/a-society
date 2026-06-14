@@ -95,6 +95,13 @@ export interface SkillSummary {
   skillMdPath: string;
 }
 
+export interface McpServerSummary {
+  id: string;
+  name: string;
+  transport: 'stdio' | 'http';
+  toolNames: string[];
+}
+
 export type SkillLoadResult =
   | { kind: 'ok'; skill: SkillSummary }
   | { kind: 'malformed'; name: string; reason: string };

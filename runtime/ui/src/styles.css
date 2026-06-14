@@ -1121,6 +1121,7 @@ textarea {
 }
 
 .model-select-banner {
+  --role-config-list-max-height: clamp(140px, 20vh, 200px);
   padding: 12px 14px;
   margin-bottom: 6px;
   border-radius: 12px;
@@ -1149,6 +1150,28 @@ textarea {
 .model-select-empty {
   margin: 0;
   color: var(--ink-soft);
+}
+
+.role-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.role-config-section-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.role-config-options {
+  max-height: var(--role-config-list-max-height);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .model-select-options {
@@ -1203,7 +1226,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 0;
   max-height: 220px;
   overflow-y: auto;
 }
@@ -1214,15 +1237,17 @@ textarea {
   gap: 8px;
   align-items: start;
   padding: 7px 10px;
-  border: 1px solid rgba(13, 148, 136, 0.22);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--ink);
-  cursor: pointer;
+  min-height: 48px;
 }
 
 .skill-select-option input {
   margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.model-select-options.role-config-options,
+.skill-select-list.role-config-options {
+  max-height: var(--role-config-list-max-height);
 }
 
 .skill-select-name {
@@ -2106,6 +2131,10 @@ textarea {
   line-height: 1.45;
 }
 
+.form-textarea-compact {
+  min-height: 86px;
+}
+
 .form-select {
   appearance: none;
   -webkit-appearance: none;
@@ -2493,9 +2522,9 @@ textarea {
     background: rgba(45, 212, 191, 0.14);
   }
 
-  .skill-select-option {
-    background: rgba(45, 212, 191, 0.06);
-    border-color: rgba(45, 212, 191, 0.22);
+  .skill-select-option.model-select-option {
+    background: var(--surface-strong);
+    border-color: rgba(45, 212, 191, 0.3);
   }
 
   .consent-btn-deny:hover {

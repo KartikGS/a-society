@@ -9,6 +9,8 @@ import {
 } from '../framework-services/skills.js';
 import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../common/model-reasoning.js';
 import { validateModelConfiguration } from '../providers/model-validation.js';
+import { formatMcpError } from '../providers/mcp/errors.js';
+import { validateMcpServerConfiguration } from '../providers/mcp/validate.js';
 import * as SettingsStore from '../settings/settings-store.js';
 
 function isValidProviderBaseUrl(value: unknown): value is string {
@@ -44,6 +46,69 @@ function validateReasoningForSettings(
   return null;
 }
 
+type ModelWriteParams = Omit<SettingsStore.ModelConfig, 'id' | 'active'>;
+
+type ParsedModelParams =
+  | { ok: true; params: ModelWriteParams }
+  | { ok: false; message: string };
+
+function normalizeSupportedInputTypes(value: unknown): Array<'image' | 'audio' | 'video'> {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is 'image' | 'audio' | 'video' =>
+        entry === 'image' || entry === 'audio' || entry === 'video')
+    : [];
+}
+
+function parseModelParams(params: any): ParsedModelParams {
+  if (!params.displayName || !params.providerType || !params.modelId) {
+    return { ok: false, message: 'displayName, providerType, and modelId are required.' };
+  }
+  if (!isProviderType(params.providerType)) {
+    return { ok: false, message: 'providerType must be "anthropic" or "openai-compatible".' };
+  }
+  if (params.providerType === 'openai-compatible' && !isValidProviderBaseUrl(params.providerBaseUrl)) {
+    return { ok: false, message: 'providerBaseUrl must be a valid http:// or https:// URL.' };
+  }
+
+  const providerType = params.providerType;
+  const reasoning = normalizeModelReasoningConfig(params.reasoning);
+  const reasoningError = validateReasoningForSettings(providerType, reasoning);
+  if (reasoningError) return { ok: false, message: reasoningError };
+
+  return {
+    ok: true,
+    params: {
+      displayName: String(params.displayName),
+      providerType,
+      providerBaseUrl: String(params.providerBaseUrl ?? ''),
+      modelId: String(params.modelId),
+      contextWindow: Number(params.contextWindow) || 0,
+      maxOutputTokens: Number(params.maxOutputTokens) || 0,
+      reasoning,
+      supportedInputTypes: normalizeSupportedInputTypes(params.supportedInputTypes),
+    },
+  };
+}
+
+async function validateModelRouteConfiguration(
+  modelParams: ModelWriteParams,
+  apiKey: string
+): Promise<string | null> {
+  try {
+    await validateModelConfiguration({
+      providerType: modelParams.providerType,
+      providerBaseUrl: modelParams.providerBaseUrl,
+      modelId: modelParams.modelId,
+      apiKey,
+      maxOutputTokens: modelParams.maxOutputTokens,
+      reasoning: modelParams.reasoning,
+    });
+    return null;
+  } catch (err: any) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
 function skillsRoot(workspaceRoot: string): string {
   return path.join(path.resolve(workspaceRoot), '.a-society', 'skills');
 }
@@ -67,6 +132,40 @@ function copySkillDirectory(sourceDir: string, targetDir: string): void {
   };
 
   copyDir(sourceDir, targetDir);
+}
+
+function mergeExistingSecretValues(
+  next: Record<string, string>,
+  existing: Record<string, string> | undefined
+): Record<string, string> {
+  if (!existing) return next;
+  const merged: Record<string, string> = {};
+  for (const [key, value] of Object.entries(next)) {
+    merged[key] = value.trim() === '' && existing[key] !== undefined ? existing[key] : value;
+  }
+  return merged;
+}
+
+function parseMcpServerParams(
+  body: any,
+  existing?: SettingsStore.ResolvedMcpServer
+): SettingsStore.McpServerWriteParams {
+  const rawEnv = body?.env === undefined
+    ? existing?.env ?? {}
+    : mergeExistingSecretValues(SettingsStore.normalizeMcpSecretValues(body.env), existing?.env);
+  const rawHeaders = body?.headers === undefined
+    ? existing?.headers ?? {}
+    : mergeExistingSecretValues(SettingsStore.normalizeMcpSecretValues(body.headers), existing?.headers);
+
+  return {
+    name: String(body?.name ?? existing?.name ?? '').trim(),
+    transport: (body?.transport ?? existing?.transport ?? 'stdio') as SettingsStore.McpTransport,
+    command: String(body?.command ?? existing?.command ?? '').trim(),
+    args: Array.isArray(body?.args) ? SettingsStore.normalizeMcpStringArray(body.args, { unique: false }) : existing?.args ?? [],
+    env: rawEnv,
+    url: String(body?.url ?? existing?.url ?? '').trim(),
+    headers: rawHeaders,
+  };
 }
 
 export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd()): void {
@@ -144,10 +243,71 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
     res.json({ ok: true });
   });
 
+  app.get('/api/settings/mcp', (_req: Request, res: Response) => {
+    res.json(SettingsStore.listMcpServerSummaries());
+  });
+
+  app.get('/api/settings/mcp/:id', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const server = SettingsStore.listMcpServers().find((entry) => entry.id === id) ?? null;
+    if (!server) {
+      res.status(404).json({ message: `MCP server "${id}" not found.` });
+      return;
+    }
+    res.json(server);
+  });
+
+  app.post('/api/settings/mcp', async (req: Request, res: Response) => {
+    const params = parseMcpServerParams(req.body);
+    const basicError = SettingsStore.getMcpServerWriteParamError(params, SettingsStore.listMcpServers());
+    if (basicError) {
+      res.status(400).json({ message: basicError });
+      return;
+    }
+
+    try {
+      const validation = await validateMcpServerConfiguration(params);
+      const server = SettingsStore.createMcpServer({ ...params, toolNames: validation.toolNames });
+      res.status(201).json(server);
+    } catch (err: any) {
+      res.status(400).json({ message: formatMcpError(err) });
+    }
+  });
+
+  app.put('/api/settings/mcp/:id', async (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const existing = SettingsStore.getMcpServerWithSecrets(id);
+    if (!existing) {
+      res.status(404).json({ message: `MCP server "${id}" not found.` });
+      return;
+    }
+
+    const params = parseMcpServerParams(req.body, existing);
+    const basicError = SettingsStore.getMcpServerWriteParamError(params, SettingsStore.listMcpServers(), id);
+    if (basicError) {
+      res.status(400).json({ message: basicError });
+      return;
+    }
+
+    try {
+      const validation = await validateMcpServerConfiguration(params);
+      res.json(SettingsStore.updateMcpServer(id, { ...params, toolNames: validation.toolNames }));
+    } catch (err: any) {
+      res.status(400).json({ message: formatMcpError(err) });
+    }
+  });
+
+  app.delete('/api/settings/mcp/:id', (req: Request, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    SettingsStore.deleteMcpServer(id);
+    res.json({ ok: true });
+  });
+
   app.post('/api/settings/models', async (req: Request, res: Response) => {
     const { apiKey, ...params } = req.body as any;
-    if (!params.displayName || !params.providerType || !params.modelId) {
-      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
+    const parsed = parseModelParams(params);
+    if (!parsed.ok) {
+      res.status(400).json({ message: parsed.message });
       return;
     }
     const apiKeyValue = String(apiKey ?? '').trim();
@@ -155,78 +315,22 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
       res.status(400).json({ message: 'API key is required.' });
       return;
     }
-    if (!isProviderType(params.providerType)) {
-      res.status(400).json({ message: 'providerType must be "anthropic" or "openai-compatible".' });
-      return;
-    }
-    if (params.providerType === 'openai-compatible') {
-      if (!isValidProviderBaseUrl(params.providerBaseUrl)) {
-        res.status(400).json({ message: 'providerBaseUrl must be a valid http:// or https:// URL.' });
-        return;
-      }
-    }
-    const providerType = params.providerType;
-    const reasoning = normalizeModelReasoningConfig(params.reasoning);
-    const reasoningError = validateReasoningForSettings(providerType, reasoning);
-    if (reasoningError) {
-      res.status(400).json({ message: reasoningError });
-      return;
-    }
-    const modelParams = {
-      displayName: String(params.displayName),
-      providerType,
-      providerBaseUrl: String(params.providerBaseUrl ?? ''),
-      modelId: String(params.modelId),
-      contextWindow: Number(params.contextWindow) || 0,
-      maxOutputTokens: Number(params.maxOutputTokens) || 0,
-      reasoning,
-      supportedInputTypes: Array.isArray(params.supportedInputTypes)
-        ? params.supportedInputTypes
-            .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
-              value === 'image' || value === 'audio' || value === 'video')
-        : [],
-    };
-
-    try {
-      await validateModelConfiguration({
-        providerType: modelParams.providerType,
-        providerBaseUrl: modelParams.providerBaseUrl,
-        modelId: modelParams.modelId,
-        apiKey: apiKeyValue,
-        maxOutputTokens: modelParams.maxOutputTokens,
-        reasoning: modelParams.reasoning,
-      });
-    } catch (err: any) {
-      res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
+    const validationError = await validateModelRouteConfiguration(parsed.params, apiKeyValue);
+    if (validationError) {
+      res.status(400).json({ message: validationError });
       return;
     }
 
-    const model = SettingsStore.createModel(modelParams, apiKeyValue);
+    const model = SettingsStore.createModel(parsed.params, apiKeyValue);
     res.status(201).json(model);
   });
 
   app.put('/api/settings/models/:id', async (req: Request, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { apiKey, ...params } = req.body as any;
-    if (!params.displayName || !params.providerType || !params.modelId) {
-      res.status(400).json({ message: 'displayName, providerType, and modelId are required.' });
-      return;
-    }
-    if (!isProviderType(params.providerType)) {
-      res.status(400).json({ message: 'providerType must be "anthropic" or "openai-compatible".' });
-      return;
-    }
-    if (params.providerType === 'openai-compatible') {
-      if (!isValidProviderBaseUrl(params.providerBaseUrl)) {
-        res.status(400).json({ message: 'providerBaseUrl must be a valid http:// or https:// URL.' });
-        return;
-      }
-    }
-    const providerType = params.providerType;
-    const reasoning = normalizeModelReasoningConfig(params.reasoning);
-    const reasoningError = validateReasoningForSettings(providerType, reasoning);
-    if (reasoningError) {
-      res.status(400).json({ message: reasoningError });
+    const parsed = parseModelParams(params);
+    if (!parsed.ok) {
+      res.status(400).json({ message: parsed.message });
       return;
     }
     const existing = SettingsStore.getModelWithKey(id);
@@ -241,37 +345,14 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
       res.status(400).json({ message: 'API key is required.' });
       return;
     }
-    const modelParams = {
-      displayName: String(params.displayName),
-      providerType,
-      providerBaseUrl: String(params.providerBaseUrl ?? ''),
-      modelId: String(params.modelId),
-      contextWindow: Number(params.contextWindow) || 0,
-      maxOutputTokens: Number(params.maxOutputTokens) || 0,
-      reasoning,
-      supportedInputTypes: Array.isArray(params.supportedInputTypes)
-        ? params.supportedInputTypes
-            .filter((value: unknown): value is 'image' | 'audio' | 'video' =>
-              value === 'image' || value === 'audio' || value === 'video')
-        : [],
-    };
-
-    try {
-      await validateModelConfiguration({
-        providerType: modelParams.providerType,
-        providerBaseUrl: modelParams.providerBaseUrl,
-        modelId: modelParams.modelId,
-        apiKey: apiKeyValue,
-        maxOutputTokens: modelParams.maxOutputTokens,
-        reasoning: modelParams.reasoning,
-      });
-    } catch (err: any) {
-      res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
+    const validationError = await validateModelRouteConfiguration(parsed.params, apiKeyValue);
+    if (validationError) {
+      res.status(400).json({ message: validationError });
       return;
     }
 
     try {
-      const model = SettingsStore.updateModel(id, modelParams, typeof apiKey === 'string' ? apiKey : undefined);
+      const model = SettingsStore.updateModel(id, parsed.params, typeof apiKey === 'string' ? apiKey : undefined);
       res.json(model);
     } catch (err: any) {
       res.status(404).json({ message: err instanceof Error ? err.message : String(err) });

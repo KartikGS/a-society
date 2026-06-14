@@ -203,6 +203,26 @@ describe('operator-feed', () => {
     expect(getOperatorFeedRoleKey({ type: 'operator_event', event })).toBe('owner');
   });
 
+  it('projects skipped MCP tool notices into role feed items', () => {
+    const event: OperatorEvent = {
+      kind: 'mcp.tool_unavailable',
+      role: 'owner',
+      nodeId: 'owner-intake',
+      serverName: 'github',
+      toolName: 'x'.repeat(80),
+      reason: 'MCP tool name is too long.',
+    };
+
+    expect(isTransientOperatorEvent(event)).toBe(false);
+    expect(getOperatorFeedRoleKey({ type: 'operator_event', event })).toBe('owner');
+    expect(projectMessageToFeedItem({ type: 'operator_event', event }, 'owner_4')).toEqual({
+      id: 'owner_4',
+      type: 'tool-error',
+      label: 'MCP',
+      text: `${event.serverName}.${event.toolName} skipped: ${event.reason}`,
+    });
+  });
+
   it('projects compaction started events into pending role feed items', () => {
     const event: OperatorEvent = { kind: 'session.compaction_started', role: 'owner', trigger: 'manual' };
 

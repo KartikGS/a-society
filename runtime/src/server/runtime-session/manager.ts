@@ -140,6 +140,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       finished: false,
       task: Promise.resolve(),
       latestContextUsageByRole,
+      mcpManagers: new Map(),
       manualCompactionControllers: new Map<string, AbortController>(),
       manualCompactionSigintHandler: null,
     };
@@ -155,9 +156,16 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         projectNamespace,
         session.flowRef.flowId,
         (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
-        session.consentGate
+        session.consentGate,
+        session.mcpManagers
       )
     ).catch(() => {});
+  }
+
+  async function closeSessionMcpManagers(session: ActiveSession): Promise<void> {
+    const managers = Array.from(session.mcpManagers.values());
+    session.mcpManagers.clear();
+    await Promise.allSettled(managers.map((manager) => manager.close()));
   }
 
   function attachSessionTask(session: ActiveSession, taskFactory: () => Promise<void>): Promise<void> {
@@ -170,10 +178,13 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         });
         throw error;
       })
-      .finally(() => {
+      .finally(async () => {
         const currentFlow = readFlowRun(session.flowRef);
         if (currentFlow?.status === 'completed') {
           session.finished = true;
+        }
+        if (session.finished) {
+          await closeSessionMcpManagers(session);
         }
         emitFlowState(session);
       });
@@ -311,6 +322,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
           session.sink,
           (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
           session.consentGate,
+          session.mcpManagers,
         );
         if (readFlowRun(ref)?.status === 'completed') {
           session.sink.emit({ kind: 'flow.completed' });

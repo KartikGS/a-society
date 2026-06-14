@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
-import { parseRoleIdentity } from '../common/role-id.js';
 import { listSkills, type SkillSummary } from '../framework-services/skills.js';
-import { getFlowDir } from './state-paths.js';
+import { configureSettingsStore, listMcpServerSummaries } from '../settings/settings-store.js';
+import { getRoleStateFilePath } from './state-paths.js';
 
 export interface CapabilitySelection {
   skills: string[];
@@ -13,8 +13,9 @@ export interface CapabilitySelection {
 
 export interface McpServerSummary {
   id: string;
-  displayName: string;
-  description?: string;
+  name: string;
+  transport: 'stdio' | 'http';
+  toolNames: string[];
 }
 
 export type CapabilityGate =
@@ -22,16 +23,18 @@ export type CapabilityGate =
   | { kind: 'selection-required'; skills: SkillSummary[]; mcpServers: McpServerSummary[] };
 
 function capabilitySelectionPath(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): string {
-  const roleKey = parseRoleIdentity(roleInstanceId).instanceRoleId;
-  return path.join(getFlowDir(workspaceRoot, ref), 'roles', roleKey, 'capabilities.json');
+  return getRoleStateFilePath(workspaceRoot, ref, roleInstanceId, 'capabilities.json');
 }
 
 function capabilitySelectionExists(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): boolean {
   return fs.existsSync(capabilitySelectionPath(workspaceRoot, ref, roleInstanceId));
 }
 
-export function listMcpServers(): McpServerSummary[] {
-  return [];
+export function listMcpServers(workspaceRoot?: string): McpServerSummary[] {
+  if (workspaceRoot) {
+    configureSettingsStore(workspaceRoot);
+  }
+  return listMcpServerSummaries();
 }
 
 function normalizeStringArray(value: unknown): string[] {
@@ -83,7 +86,7 @@ export function resolveCapabilityGate(workspaceRoot: string, ref: FlowRef, roleI
   }
 
   const skills = listSkills(workspaceRoot);
-  const mcpServers = listMcpServers();
+  const mcpServers = listMcpServers(workspaceRoot);
   if (skills.length > 0 || mcpServers.length > 0) {
     return { kind: 'selection-required', skills, mcpServers };
   }
@@ -98,7 +101,7 @@ export function resolveEffectiveCapabilities(
 ): CapabilitySelection {
   const selection = readCapabilitySelection(workspaceRoot, ref, roleInstanceId);
   const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
-  const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
+  const validMcpServerIds = new Set(listMcpServers(workspaceRoot).map((server) => server.id));
 
   return {
     skills: (selection?.skills ?? [])
@@ -110,4 +113,3 @@ export function resolveEffectiveCapabilities(
     selectedAt: selection?.selectedAt ?? new Date(0).toISOString(),
   };
 }
-

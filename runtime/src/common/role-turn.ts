@@ -7,6 +7,7 @@ import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
 import { getActiveModelWithKey, type ModelConfigWithKey } from '../settings/settings-store.js';
 import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
+import type { McpManager } from '../providers/mcp/manager.js';
 
 function extractFileRefs(content: string): string[] {
   const refs: string[] = [];
@@ -219,6 +220,7 @@ interface RunRoleTurnBaseInput {
   roleOutputStream?: NodeJS.WritableStream;
   consentGate?: ConsentGate;
   model?: ModelConfigWithKey | null;
+  mcpManager?: McpManager;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
 }
@@ -257,6 +259,7 @@ export async function runRoleTurn({
   operatorRenderer,
   consentGate,
   model,
+  mcpManager,
   onConversationMessages,
   onAssistantTextDelta,
   nodeId,
@@ -273,6 +276,7 @@ export async function runRoleTurn({
     workspaceRoot,
     flowRef,
     model,
+    mcpManager,
   });
   const history: RuntimeMessageParam[] = providedHistory;
 

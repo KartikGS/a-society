@@ -10,6 +10,7 @@ All notable changes to A-Society will be documented here.
 
 - Allow `prompt-human` nodes to resume from inbound handoffs and allow targeted human input for nodes suspended in `await-handoff`, with queued human replies taking priority for that turn.
 - Add a per-role Role Configuration gate: first activation can suspend once with reason `role-configuration`; shows dynamic Model and Skills sections; persists model choices in `roles/<roleKey>/model.json` and optional skill choices in `roles/<roleKey>/capabilities.json`; injects selected skill summaries into role context; and adds Skills settings import/list/delete backed by `.a-society/skills/`.
+- Add MCP server integration: Settings can register stdio or HTTP MCP servers with validate-on-save tool discovery; Role Configuration can select servers per role instance; selected MCP tools are exposed as `mcp__<server>__<tool>` and are gated by normal tool-permission prompts.
 
 ---
 
