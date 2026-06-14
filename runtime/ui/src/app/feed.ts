@@ -37,6 +37,30 @@ export function resolveCompactionFeedItem(feeds: Record<string, FeedItem[]>, rol
   return { ...feeds, [role]: updated };
 }
 
+export function resolveAutoSelectionFeedItem(
+  feeds: Record<string, FeedItem[]>,
+  role: string,
+  event: Extract<OperatorEvent, { kind: 'role.auto_configured' | 'role.auto_selection_fell_back' }>
+): Record<string, FeedItem[]> {
+  const resolved = formatOperatorEvent(event);
+  if (!resolved) return feeds;
+
+  const existing = feeds[role] ?? [];
+  const idx = [...existing].reverse().findIndex((item) => item.type === 'tool' && item.label === 'Role Configuration');
+  if (idx === -1) {
+    return { ...feeds, [role]: [...existing, resolved] };
+  }
+
+  const realIdx = existing.length - 1 - idx;
+  const updated = existing.map((item, i) =>
+    i === realIdx
+      ? { ...item, type: resolved.type, label: resolved.label, text: resolved.text }
+      : item
+  );
+  return { ...feeds, [role]: updated };
+}
+
+
 export function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
   const existing = feeds[role] ?? [];
   const previous = existing[existing.length - 1];

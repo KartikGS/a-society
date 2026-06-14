@@ -40,6 +40,44 @@ The runtime server can start without a model, but runtime work cannot proceed un
 - The Settings modal stays open until a usable active model exists
 - Environment variables in `.env` no longer select the runtime model
 
+### Role Configuration
+
+Each role instance can be configured once per flow:
+
+- The first time a role instance is activated in a flow, the runtime suspends that node as awaiting human input with reason `role-configuration` when there is anything for the operator to choose
+- The role configuration banner shows only the subsections that apply: Model when more than one model is configured, Skills when the workspace has at least one valid skill, and MCP servers when servers are configured
+- The operator submits the role configuration once; the selected model applies to that role instance's turns, improvement-phase turns, and compaction turns; selected skills and MCP servers apply to model turns for that role instance, including improvement-phase turns
+- Once the role is fully configured, a `Role Configuration` result feed item shows its complete effective configuration by **name** — the model, skills, and MCP servers it will run with, whether decided manually or automatically. The awaiting prompt is carried by the interactive banner only and produces no feed item of its own
+- Model selection is persisted as `roles/<roleKey>/model.json`; selected optional capabilities are persisted as `roles/<roleKey>/capabilities.json`
+- A node awaiting `role-configuration` does not accept a text reply
+- With exactly one configured model and no skills or MCP servers, no role configuration is requested and the active model is used
+- If a selected model is later deleted or becomes unusable while multiple models remain configured, the role re-prompts at its next activation; if a selected skill or MCP server is later removed, it is dropped at use time without re-prompting
+
+#### Automatic selection
+
+Model, skills, and MCP-server selection can each be switched from manual prompting to automatic selection — independently — via a toggle in the matching Settings tab (`Models`, `Skills`, `MCP`). The mode is global per dimension (it applies to every role instance) and defaults to **manual**, preserving the prompt-based behavior above.
+
+- When a dimension is set to **automatic** and a role instance reaches it undecided, the runtime runs one independent selection turn — like compaction, a system-mode turn on the **active model** — briefed with the role's own workflow-snapshot nodes (their guidance, inputs, work, and outputs) so it can match capabilities to the role's responsibilities, and persists the choice so the manual gate reads that dimension as decided and the node is not suspended for it
+- This runs at most once per role instance per flow: once a dimension is decided, every later activation of that role instance (any of its nodes) reuses the persisted choice without another turn
+- The turn's input is only the dimensions that actually need a decision: models are included only when more than one is configured (a single model is used as-is, with no turn); skills and MCP servers are included only when at least one is configured. If no dimension needs an automatic decision, no turn runs at all
+- Dimensions are independent: e.g. Model and Skills can stay manual while MCP is automatic. The node then suspends for `role-configuration` showing only the manual dimensions, and the operator's submit never overwrites a dimension that was already decided automatically
+- The turn appears in the role feed as a single, always status-only strip — running, then green on success or red if it falls back. The chosen configuration is shown by name in the `Role Configuration` result bubble once the role is fully configured: immediately after the turn in a pure-auto run, or after the operator's manual submit when a manual dimension still follows
+- Failure is two-tier: malformed model output is corrected with a bounded re-prompt; a transport error (network/timeout) or exhausted retries leaves the affected dimensions undecided and falls back to the manual `role-configuration` prompt — automation never blocks a flow on its own failure
+
+Skills are folders at `{workspace}/.a-society/skills/<name>/`, each with a `SKILL.md` (name + description frontmatter, markdown body) and optional bundled resources (`scripts/`, `references/`, `assets/`). The runtime injects only selected skill names, descriptions, and `SKILL.md` paths into the role's system prompt; the agent reads the body and any `references/` on demand with `read_file`, and runs any bundled `scripts/` through the consent-gated `run_command` (bash) tool. The runtime never auto-executes skill scripts — but an imported skill may include runnable code, so import from trusted sources. Skills are imported (not created) in Settings under `Skills`.
+
+### MCP Servers
+
+MCP servers are configured in Settings under `MCP`.
+
+- Server names must match `^[a-z0-9-]{1,32}$` because they become the namespace segment in model-visible tool names
+- Stdio servers store command, args, and env-var names in settings; env-var values are stored in `.a-society/secrets.json`
+- HTTP servers store URL and header names in settings; header values are stored in `.a-society/secrets.json`
+- Saving a server connects to it and runs `tools/list`; failures block the save, and discovered tool names are stored for display and role configuration
+- Selected tools are exposed as `mcp__<server>__<tool>`
+- If a selected server is unreachable when a role first needs it, that server's tools are absent for the role and the role feed records an MCP notice
+- If a server dies mid-flow, the tool remains in the role's frozen tool snapshot and returns an error result when called
+
 ### Web Search Connectivity
 
 Web search is Tavily-backed. Enabling it in Settings requires a Tavily API key, and successful tool calls require outbound HTTPS access from the runtime process to:
@@ -112,6 +150,12 @@ If more than one role instance is awaiting input, the browser message must ident
 
 Human replies are queued durably on the flow and consumed by that flow's single live runner. The runner drains runnable work, sleeps when no work is available, and wakes when a queued reply arrives; it does not create a second runner for the same flow just to process operator input.
 
+The runtime writes a queued human reply only if the targeted node or improvement role is still awaiting non-consent human input, or the targeted node is still suspended in `awaitingHandoff`, in the latest persisted flow state. If the node was already woken by handoff or otherwise stopped accepting input, the reply is rejected instead of leaving stale `pendingHumanInputs`.
+
+A node awaiting a `prompt-human` reply can also be woken by a deliverable inbound handoff. If a human reply is already queued for that node, the queued human reply is consumed first and the inbound handoff is not injected into that human-input turn. If no human reply is queued, the inbound handoff wakes the same node, clears its awaiting-human suspension for the turn, and appends the normal reopened-node handoff packet before the model continues.
+
+A node suspended with `await-handoff` can also receive targeted human input. Queued human input has priority over received handoffs: the runtime resumes the node with the human reply, removes the `awaitingHandoff` suspension, and does not inject inbound handoff artifacts into that human-input turn.
+
 When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
 ### Tool permission modes
@@ -125,6 +169,8 @@ The chat footer exposes three per-flow tool permission modes:
 File writes (`edit_file`, `write_file`) prompt with the target path and offer `Allow`, `Allow all edits this flow`, or `Deny`.
 
 Bash commands prompt with the exact command and offer `Allow`, `Allow <command> this flow`, or `Deny`. Simple safe read-only commands such as `ls` do not prompt.
+
+MCP tool calls prompt by default with `<server> · <tool>` and an argument preview. `Allow this tool for this flow` stores a per-tool grant under `consentState.mcp.allowedTools`; MCP read-only hints are not auto-allowed.
 
 Permission state is stored on the active `FlowRun` as `consentState` in `flow.json`.
 
@@ -161,6 +207,8 @@ There is no persisted ready queue. At runner startup, persisted `runningNodes` a
 ### Same-node `prompt-human` resume
 
 When a `type: prompt-human` handoff pauses execution, the active role-scoped transcript is preserved. On resume at the same node, the runtime reuses that same node session and appends only the new human reply.
+
+If that same `prompt-human` node receives a handoff before a human reply is queued, the runtime treats the handoff as the wake-up signal instead of an interrupted-turn continuation. The existing role-scoped transcript and current-node conversation context are preserved, and the runtime appends a reopened-node packet containing the inbound handoff context.
 
 ### Later same-role-instance return
 
@@ -226,6 +274,8 @@ Per-flow layout:
 - `flow.json` — persisted `FlowRun`
 - `roles/<roleKey>/feed.json` — persisted per-role browser feed (`FeedItem[]`) for replay after reconnect or server restart
 - `roles/<roleKey>/transcript.json` — persisted role-instance-scoped session transcript for that role
+- `roles/<roleKey>/model.json` — persisted per-role model selection for that flow (present once the operator has chosen a model for the role)
+- `roles/<roleKey>/capabilities.json` — persisted per-role selected skills and MCP servers for that flow, with per-dimension `skillsDecided` / `mcpDecided` provenance so skills and MCP can be resolved independently (manual or automatic); present once either dimension has been decided, including explicit empty selections
 
 Resume behavior:
 

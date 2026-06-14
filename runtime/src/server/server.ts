@@ -36,7 +36,7 @@ function buildServer(workspaceRoot: string) {
       runtimeSessions.refreshProjectFlows(projectNamespace);
     }
   });
-  registerSettingsRoutes(app);
+  registerSettingsRoutes(app, workspaceRoot);
   registerStaticUi(app);
 
   wss.on('connection', (socket) => {
@@ -156,6 +156,15 @@ function buildServer(workspaceRoot: string) {
 
       if (message.type === CLIENT_MESSAGE_TYPE.CONSENT_MODE) {
         runtimeSessions.handleConsentMode(message.flowRef, message.mode);
+        return;
+      }
+
+      if (message.type === CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION) {
+        runtimeSessions.handleRoleConfiguration(message.flowRef, message.nodeId, {
+          modelConfigId: message.modelConfigId,
+          skills: message.skills,
+          mcpServers: message.mcpServers,
+        });
         return;
       }
 

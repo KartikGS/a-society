@@ -1,16 +1,16 @@
 import { flowKey } from '../../../src/common/flow-ref.js';
 import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
-import { areFlowRunsEqual, areStringArraysEqual } from '../equality';
-import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types';
-import { SYSTEM_ROLE_KEY } from './constants';
-import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveCompactionFeedItem, resolveToolFeedItem } from './feed';
+import { areFlowRunsEqual, areStringArraysEqual } from '../equality.js';
+import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types.js';
+import { SYSTEM_ROLE_KEY } from './constants.js';
+import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveAutoSelectionFeedItem, resolveCompactionFeedItem, resolveToolFeedItem } from './feed.js';
 import {
   getConsentRequestRoleKey,
   hasImprovementGraph,
   titleForFlow,
   type FlowUiState,
-} from './flow-ui';
-import { toRoleKey } from './roles';
+} from './flow-ui.js';
+import { toRoleKey } from './roles.js';
 
 type FlowUiUpdater = (state: FlowUiState) => FlowUiState;
 
@@ -28,7 +28,9 @@ function feedRoleForEvent(event: OperatorEvent): string | null {
     event.kind === 'human.resumed' ||
     event.kind === 'role.resumed' ||
     event.kind === 'activity.tool_call' ||
-    event.kind === 'session.compaction_started'
+    event.kind === 'session.compaction_started' ||
+    event.kind === 'role.auto_selection_started' ||
+    event.kind === 'role.configured'
   ) {
     return toRoleKey(event.role);
   }
@@ -42,6 +44,10 @@ function feedRoleForEvent(event: OperatorEvent): string | null {
   }
 
   if (event.kind === 'session.compacted') {
+    return toRoleKey(event.role);
+  }
+
+  if (event.kind === 'mcp.server_unavailable' || event.kind === 'mcp.tool_unavailable') {
     return toRoleKey(event.role);
   }
 
@@ -102,6 +108,17 @@ function applyOperatorEvent(
       handlers.updateFlowUi(key, (state) => ({
         ...state,
         roleFeeds: applyReasoningTraceToFeed(state.roleFeeds, roleKey, event),
+      }));
+    }
+    return;
+  }
+
+  if (event.kind === 'role.auto_configured' || event.kind === 'role.auto_selection_fell_back') {
+    const roleKey = toRoleKey(event.role);
+    if (roleKey) {
+      handlers.updateFlowUi(key, (state) => ({
+        ...state,
+        roleFeeds: resolveAutoSelectionFeedItem(state.roleFeeds, roleKey, event),
       }));
     }
     return;
@@ -202,6 +219,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
         stopRequestedRoles: {},
         compactingRoles: {},
         latestContextUsageByRole: {},
+        contextWindowByRole: {},
         consentRequests: {},
       }));
       return;
@@ -285,6 +303,8 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
           compactingRoles: message.flowRun.status !== 'running' ? {} : state.compactingRoles,
           hasActiveSession: message.hasActiveSession,
           latestContextUsageByRole: { ...state.latestContextUsageByRole, ...message.contextUsageByRole },
+          contextWindowByRole: message.contextWindowByRole,
+          roleConfigurations: message.roleConfigurations,
         };
       });
       handlers.refreshProjectFlows(message.flowRef.projectNamespace);

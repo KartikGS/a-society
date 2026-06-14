@@ -4,6 +4,22 @@ All notable changes to A-Society will be documented here.
 
 ---
 
+## [Unreleased]
+
+---
+
+## [0.2.0] — 2026-06-14
+
+### Runtime
+
+- `prompt-human` resume support: inbound handoffs and targeted human replies can now resume suspended human-prompt nodes.
+- Role Configuration: role instances can now be configured with model, skill, and MCP selections before execution.
+- Skills management: Settings now supports importing, listing, and deleting local skills from `.a-society/skills/`.
+- MCP integration: Settings can register stdio or HTTP MCP servers, and role instances can expose selected MCP tools through normal permission prompts.
+- Automatic Role Configuration: optional per-dimension auto-selection lets agents choose models, skills, and MCP servers when enabled, with manual fallback.
+
+---
+
 ## [0.1.0] — 2026-06-08
 
 Initial release.

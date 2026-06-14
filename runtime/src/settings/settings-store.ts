@@ -20,6 +20,43 @@ export interface ModelConfigWithKey extends ModelConfig {
   apiKey: string;
 }
 
+export type McpTransport = 'stdio' | 'http';
+
+export interface McpServerConfig {
+  id: string;
+  name: string;
+  transport: McpTransport;
+  command?: string;
+  args?: string[];
+  envKeys?: string[];
+  url?: string;
+  headerKeys?: string[];
+  toolNames: string[];
+}
+
+export interface McpServerSummary {
+  id: string;
+  name: string;
+  transport: McpTransport;
+  toolNames: string[];
+}
+
+export interface ResolvedMcpServer extends McpServerConfig {
+  env: Record<string, string>;
+  headers: Record<string, string>;
+}
+
+export interface McpServerWriteParams {
+  name: string;
+  transport: McpTransport;
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string;
+  headers?: Record<string, string>;
+  toolNames?: string[];
+}
+
 interface StoredToolSettings {
   webSearch: {
     enabled: boolean;
@@ -28,6 +65,20 @@ interface StoredToolSettings {
 
 export interface FeedSettings {
   historyLimit: number;
+}
+
+export type SelectionMode = 'auto' | 'manual';
+
+/**
+ * Per-dimension automation mode. `auto` lets the runtime decide the role's
+ * model / skills / MCP servers via an independent selection turn; `manual`
+ * prompts the operator. Each dimension is independent (e.g. manual model,
+ * auto MCP). Defaults to `manual` so behavior is unchanged until opted in.
+ */
+export interface AutomationSettings {
+  models: SelectionMode;
+  skills: SelectionMode;
+  mcpServers: SelectionMode;
 }
 
 export interface ToolSettings {
@@ -40,8 +91,10 @@ export interface ToolSettings {
 interface SettingsData {
   version: number;
   models: ModelConfig[];
+  mcpServers: McpServerConfig[];
   tools: StoredToolSettings;
   feed: FeedSettings;
+  automation: AutomationSettings;
 }
 
 interface PersistedModelConfig {
@@ -73,6 +126,7 @@ export const DEFAULT_FEED_HISTORY_LIMIT = 400;
 export const MIN_FEED_HISTORY_LIMIT = 50;
 export const MAX_FEED_HISTORY_LIMIT = 10000;
 const WEB_SEARCH_SECRET_KEY = '__tool_web_search_tavily_api_key';
+const MCP_SERVER_NAME_PATTERN = /^[a-z0-9-]{1,32}$/;
 
 let defaultWorkspaceRoot = process.cwd();
 
@@ -92,7 +146,7 @@ function getSecretsPath(): string {
   return path.join(getSettingsDir(), 'secrets.json');
 }
 
-function isUsableModelConfig(model: ModelConfigWithKey | null): model is ModelConfigWithKey {
+export function isUsableModelConfig(model: ModelConfigWithKey | null): model is ModelConfigWithKey {
   if (!model) return false;
   if (model.modelId.trim() === '' || model.apiKey.trim() === '') return false;
   if (model.providerType === 'openai-compatible' && model.providerBaseUrl.trim() === '') return false;
@@ -131,6 +185,53 @@ function normalizeModelConfig(model: PersistedModelConfig): ModelConfig {
   };
 }
 
+export function normalizeMcpStringArray(
+  value: unknown,
+  options: { trim?: boolean; unique?: boolean } = {}
+): string[] {
+  if (!Array.isArray(value)) return [];
+  const entries = value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => options.trim === false ? entry : entry.trim())
+    .filter((entry) => entry !== '');
+  return options.unique === false
+    ? entries
+    : entries.filter((entry, index) => entries.indexOf(entry) === index);
+}
+
+export function isMcpTransport(value: unknown): value is McpTransport {
+  return value === 'stdio' || value === 'http';
+}
+
+export function isValidMcpServerName(name: string): boolean {
+  return MCP_SERVER_NAME_PATTERN.test(name);
+}
+
+function normalizeMcpServerConfig(value: unknown): McpServerConfig | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  if (
+    typeof raw.id !== 'string' ||
+    typeof raw.name !== 'string' ||
+    !isValidMcpServerName(raw.name) ||
+    !isMcpTransport(raw.transport)
+  ) {
+    return null;
+  }
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    transport: raw.transport,
+    ...(typeof raw.command === 'string' && raw.command.trim() !== '' ? { command: raw.command.trim() } : {}),
+    args: normalizeMcpStringArray(raw.args, { trim: false }),
+    envKeys: normalizeMcpStringArray(raw.envKeys),
+    ...(typeof raw.url === 'string' && raw.url.trim() !== '' ? { url: raw.url.trim() } : {}),
+    headerKeys: normalizeMcpStringArray(raw.headerKeys),
+    toolNames: normalizeMcpStringArray(raw.toolNames),
+  };
+}
+
 function normalizeStoredToolSettings(tools: unknown): StoredToolSettings {
   const raw = tools && typeof tools === 'object' ? tools as PersistedToolSettings : {};
   return {
@@ -154,35 +255,58 @@ function normalizeFeedSettings(feed: unknown): FeedSettings {
   };
 }
 
+function normalizeSelectionMode(value: unknown): SelectionMode {
+  return value === 'auto' ? 'auto' : 'manual';
+}
+
+function normalizeAutomationSettings(automation: unknown): AutomationSettings {
+  const raw = automation && typeof automation === 'object' ? automation as Record<string, unknown> : {};
+  return {
+    models: normalizeSelectionMode(raw.models),
+    skills: normalizeSelectionMode(raw.skills),
+    mcpServers: normalizeSelectionMode(raw.mcpServers),
+  };
+}
+
 function loadSettings(): SettingsData {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
     return {
       version: 1,
       models: [],
+      mcpServers: [],
       tools: normalizeStoredToolSettings(undefined),
       feed: normalizeFeedSettings(undefined),
+      automation: normalizeAutomationSettings(undefined),
     };
   }
   try {
     const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
       version?: number;
       models?: PersistedModelConfig[];
+      mcpServers?: unknown[];
       tools?: PersistedToolSettings;
       feed?: PersistedFeedSettings;
+      automation?: unknown;
     };
     return {
       version: raw.version ?? 1,
       models: Array.isArray(raw.models) ? raw.models.map(normalizeModelConfig) : [],
+      mcpServers: Array.isArray(raw.mcpServers)
+        ? raw.mcpServers.map(normalizeMcpServerConfig).filter((entry): entry is McpServerConfig => entry !== null)
+        : [],
       tools: normalizeStoredToolSettings(raw.tools),
       feed: normalizeFeedSettings(raw.feed),
+      automation: normalizeAutomationSettings(raw.automation),
     };
   } catch {
     return {
       version: 1,
       models: [],
+      mcpServers: [],
       tools: normalizeStoredToolSettings(undefined),
       feed: normalizeFeedSettings(undefined),
+      automation: normalizeAutomationSettings(undefined),
     };
   }
 }
@@ -209,6 +333,126 @@ function saveSecrets(secrets: Record<string, string>): void {
   ensureDir();
   fs.writeFileSync(secretsPath, JSON.stringify(secrets, null, 2), 'utf8');
   fs.chmodSync(secretsPath, 0o600);
+}
+
+function mcpEnvSecretKey(id: string, key: string): string {
+  return `mcp:${id}:env:${key}`;
+}
+
+function mcpHeaderSecretKey(id: string, key: string): string {
+  return `mcp:${id}:hdr:${key}`;
+}
+
+export function normalizeMcpSecretValues(values: unknown): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  if (!values || typeof values !== 'object' || Array.isArray(values)) return normalized;
+  for (const [key, value] of Object.entries(values as Record<string, unknown>)) {
+    const normalizedKey = key.trim();
+    if (!normalizedKey || typeof value !== 'string') continue;
+    normalized[normalizedKey] = value;
+  }
+  return normalized;
+}
+
+export function normalizeMcpServerWriteParams(
+  params: McpServerWriteParams,
+  id = '__pending__'
+): ResolvedMcpServer {
+  const env = normalizeMcpSecretValues(params.env);
+  const headers = normalizeMcpSecretValues(params.headers);
+  return {
+    id,
+    name: params.name.trim(),
+    transport: params.transport,
+    ...(params.transport === 'stdio' ? { command: (params.command ?? '').trim() } : {}),
+    args: normalizeMcpStringArray(params.args, { trim: false }),
+    envKeys: Object.keys(env).sort((a, b) => a.localeCompare(b)),
+    env,
+    ...(params.transport === 'http' ? { url: (params.url ?? '').trim() } : {}),
+    headerKeys: Object.keys(headers).sort((a, b) => a.localeCompare(b)),
+    headers,
+    toolNames: normalizeMcpStringArray(params.toolNames).sort((a, b) => a.localeCompare(b)),
+  };
+}
+
+export function getMcpServerWriteParamError(
+  params: McpServerWriteParams,
+  existingServers: McpServerConfig[],
+  currentId?: string
+): string | null {
+  const name = params.name.trim();
+  if (!isValidMcpServerName(name)) {
+    return 'MCP server name must match /^[a-z0-9-]{1,32}$/.';
+  }
+  if (!isMcpTransport(params.transport)) {
+    return 'MCP transport must be "stdio" or "http".';
+  }
+  if (existingServers.some((server) => server.name === name && server.id !== currentId)) {
+    return `MCP server name "${name}" already exists.`;
+  }
+  if (params.transport === 'stdio' && !(params.command ?? '').trim()) {
+    return 'MCP stdio server command is required.';
+  }
+  if (params.transport === 'http') {
+    const url = (params.url ?? '').trim();
+    if (!url) return 'MCP HTTP server URL is required.';
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error('invalid protocol');
+      }
+    } catch {
+      return 'MCP HTTP server URL must be a valid http:// or https:// URL.';
+    }
+  }
+  return null;
+}
+
+function assertValidMcpServerParams(
+  params: McpServerWriteParams,
+  existingServers: McpServerConfig[],
+  currentId?: string
+): void {
+  const error = getMcpServerWriteParamError(params, existingServers, currentId);
+  if (error) throw new Error(error);
+}
+
+function buildMcpServerConfig(id: string, params: McpServerWriteParams): McpServerConfig {
+  const resolved = normalizeMcpServerWriteParams(params, id);
+  return {
+    id,
+    name: resolved.name,
+    transport: resolved.transport,
+    ...(resolved.transport === 'stdio' ? { command: resolved.command ?? '' } : {}),
+    args: resolved.args,
+    envKeys: resolved.envKeys,
+    ...(resolved.transport === 'http' ? { url: resolved.url ?? '' } : {}),
+    headerKeys: resolved.headerKeys,
+    toolNames: resolved.toolNames,
+  };
+}
+
+function deleteMcpSecretsForServer(secrets: Record<string, string>, id: string): void {
+  const prefixes = [`mcp:${id}:env:`, `mcp:${id}:hdr:`];
+  for (const key of Object.keys(secrets)) {
+    if (prefixes.some((prefix) => key.startsWith(prefix))) {
+      delete secrets[key];
+    }
+  }
+}
+
+function saveMcpSecrets(id: string, params: McpServerWriteParams): void {
+  const secrets = loadSecrets();
+  deleteMcpSecretsForServer(secrets, id);
+
+  for (const [key, value] of Object.entries(normalizeMcpSecretValues(params.env))) {
+    secrets[mcpEnvSecretKey(id, key)] = value;
+  }
+  for (const [key, value] of Object.entries(normalizeMcpSecretValues(params.headers))) {
+    secrets[mcpHeaderSecretKey(id, key)] = value;
+  }
+
+  saveSecrets(secrets);
 }
 
 export function listModels(): ModelConfig[] {
@@ -306,6 +550,74 @@ export function getActiveModelWithKey(): ModelConfigWithKey | null {
   return { ...active, apiKey: secrets[active.id] ?? '' };
 }
 
+export function listMcpServers(): McpServerConfig[] {
+  return loadSettings().mcpServers;
+}
+
+export function listMcpServerSummaries(): McpServerSummary[] {
+  return loadSettings().mcpServers.map((server) => ({
+    id: server.id,
+    name: server.name,
+    transport: server.transport,
+    toolNames: [...server.toolNames],
+  }));
+}
+
+export function getMcpServerWithSecrets(id: string): ResolvedMcpServer | null {
+  const server = loadSettings().mcpServers.find((entry) => entry.id === id) ?? null;
+  if (!server) return null;
+
+  const secrets = loadSecrets();
+  const env: Record<string, string> = {};
+  for (const key of server.envKeys ?? []) {
+    env[key] = secrets[mcpEnvSecretKey(server.id, key)] ?? '';
+  }
+  const headers: Record<string, string> = {};
+  for (const key of server.headerKeys ?? []) {
+    headers[key] = secrets[mcpHeaderSecretKey(server.id, key)] ?? '';
+  }
+
+  return { ...server, env, headers };
+}
+
+export function createMcpServer(params: McpServerWriteParams): McpServerConfig {
+  const data = loadSettings();
+  assertValidMcpServerParams(params, data.mcpServers);
+  const id = crypto.randomUUID();
+  const server = buildMcpServerConfig(id, params);
+  data.mcpServers.push(server);
+  saveSettings(data);
+  saveMcpSecrets(id, params);
+  return server;
+}
+
+export function updateMcpServer(id: string, params: McpServerWriteParams): McpServerConfig {
+  const data = loadSettings();
+  const idx = data.mcpServers.findIndex((server) => server.id === id);
+  if (idx === -1) {
+    throw new Error(`MCP server "${id}" not found.`);
+  }
+  assertValidMcpServerParams(params, data.mcpServers, id);
+  const server = buildMcpServerConfig(id, params);
+  data.mcpServers[idx] = server;
+  saveSettings(data);
+  saveMcpSecrets(id, params);
+  return server;
+}
+
+export function deleteMcpServer(id: string): void {
+  const data = loadSettings();
+  const idx = data.mcpServers.findIndex((server) => server.id === id);
+  if (idx === -1) return;
+
+  data.mcpServers.splice(idx, 1);
+  saveSettings(data);
+
+  const secrets = loadSecrets();
+  deleteMcpSecretsForServer(secrets, id);
+  saveSecrets(secrets);
+}
+
 export function hasUsableConfiguredModel(): boolean {
   return isUsableModelConfig(getActiveModelWithKey());
 }
@@ -326,6 +638,17 @@ export function getToolSettings(): ToolSettings {
 
 export function getFeedSettings(): FeedSettings {
   return loadSettings().feed;
+}
+
+export function getAutomationSettings(): AutomationSettings {
+  return loadSettings().automation;
+}
+
+export function updateAutomationSettings(params: Partial<AutomationSettings>): AutomationSettings {
+  const data = loadSettings();
+  data.automation = normalizeAutomationSettings({ ...data.automation, ...params });
+  saveSettings(data);
+  return data.automation;
 }
 
 export function updateFeedSettings(params: {

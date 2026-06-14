@@ -64,6 +64,36 @@ describe('protocol', () => {
     });
   });
 
+  it('accepts role configuration with optional model and capability arrays', () => {
+    const parsed = parseClientMessage(JSON.stringify({
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+      modelConfigId: 'model-b',
+      skills: ['review-writing'],
+      mcpServers: [],
+    }));
+
+    expect(parsed).toEqual({
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+      modelConfigId: 'model-b',
+      skills: ['review-writing'],
+      mcpServers: [],
+    });
+  });
+
+  it('rejects role configuration without capability arrays', () => {
+    const parsed = parseClientMessage(JSON.stringify({
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+    }));
+
+    expect(parsed).toBeNull();
+  });
+
   it('rejects legacy consent values', () => {
     expect(parseClientMessage(JSON.stringify({
       type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,

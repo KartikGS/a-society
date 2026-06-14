@@ -1,16 +1,18 @@
-import { IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
-import type { FeedItem } from '../components/ChatInterface';
-import type { GraphMode } from '../components/GraphView';
+import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
 import type {
   ConsentRequest,
+  FeedItem,
   FlowRef,
   FlowRun,
   FlowSummary,
   OperatorEvent,
+  RoleConfigurationPending,
   WorkflowGraph,
-} from '../types';
-import { SYSTEM_ROLE_KEY } from './constants';
-import { toRoleKey } from './roles';
+} from '../types.js';
+import { SYSTEM_ROLE_KEY } from './constants.js';
+import { toRoleKey } from './roles.js';
+
+export type GraphMode = 'flow' | 'improvement';
 
 export interface FlowTab {
   key: string;
@@ -32,6 +34,8 @@ export interface FlowUiState {
   compactingRoles: Record<string, boolean>;
   consentRequests: Record<string, ConsentRequest>;
   latestContextUsageByRole: Record<string, number>;
+  contextWindowByRole: Record<string, number>;
+  roleConfigurations: Record<string, RoleConfigurationPending>;
   hasActiveSession: boolean;
 }
 
@@ -50,6 +54,8 @@ export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     compactingRoles: {},
     consentRequests: {},
     latestContextUsageByRole: {},
+    contextWindowByRole: {},
+    roleConfigurations: {},
     hasActiveSession: false,
   };
 }
@@ -59,8 +65,37 @@ export function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string |
   const targetKey = toRoleKey(role);
   if (!targetKey) return null;
   const match = Object.entries(flowRun.awaitingHumanNodes)
-    .find(([, state]) => state.reason !== 'consent' && toRoleKey(state.role) === targetKey);
+    .find(([, state]) =>
+      state.reason !== AWAITING_HUMAN_REASON.CONSENT &&
+      state.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
+      toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
+}
+
+export function getRoleConfigurationNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
+  if (!flowRun || !role) return null;
+  const targetKey = toRoleKey(role);
+  if (!targetKey) return null;
+  const match = Object.entries(flowRun.awaitingHumanNodes)
+    .find(([, state]) =>
+      state.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
+      toRoleKey(state.role) === targetKey);
+  return match?.[0] ?? null;
+}
+
+export function getAwaitingHandoffNodeIdForRole(
+  flowRun: FlowRun | null,
+  workflow: WorkflowGraph | null,
+  role: string | null
+): string | null {
+  if (!flowRun || !workflow || !role) return null;
+  const targetKey = toRoleKey(role);
+  if (!targetKey) return null;
+  const match = flowRun.awaitingHandoff.find((nodeId) => {
+    const node = workflow.nodes.find((candidate) => candidate.id === nodeId);
+    return toRoleKey(node?.role) === targetKey;
+  });
+  return match ?? null;
 }
 
 export function getImprovementAwaitingRoleName(flowRun: FlowRun | null, role: string | null): string | null {
@@ -70,7 +105,7 @@ export function getImprovementAwaitingRoleName(flowRun: FlowRun | null, role: st
   const awaitingRoles = flowRun.improvementPhase?.awaitingHumanRoles;
   if (!awaitingRoles) return null;
   const match = Object.entries(awaitingRoles).find(
-    ([roleName, state]) => state.reason !== 'consent' && toRoleKey(roleName) === targetKey
+    ([roleName, state]) => state.reason !== AWAITING_HUMAN_REASON.CONSENT && toRoleKey(roleName) === targetKey
   );
   return match?.[0] ?? null;
 }

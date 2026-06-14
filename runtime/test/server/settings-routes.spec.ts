@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { validateModelConfiguration } from '../../src/providers/model-validation.js';
+import { validateMcpServerConfiguration } from '../../src/providers/mcp/validate.js';
 import { registerSettingsRoutes } from '../../src/server/settings-routes.js';
 import * as SettingsStore from '../../src/settings/settings-store.js';
 
@@ -11,12 +12,19 @@ vi.mock('../../src/providers/model-validation.js', () => ({
   validateModelConfiguration: vi.fn(),
 }));
 
+vi.mock('../../src/providers/mcp/validate.js', () => ({
+  validateMcpServerConfiguration: vi.fn(),
+}));
+
 const validateModelConfigurationMock = vi.mocked(validateModelConfiguration);
+const validateMcpServerConfigurationMock = vi.mocked(validateMcpServerConfiguration);
+let workspaceRoot: string;
 
 beforeEach(() => {
   validateModelConfigurationMock.mockReset();
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
-  SettingsStore.configureSettingsStore(tmpDir);
+  validateMcpServerConfigurationMock.mockReset();
+  workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
+  SettingsStore.configureSettingsStore(workspaceRoot);
 });
 
 interface MockResponse {
@@ -41,7 +49,9 @@ function createMockResponse(): MockResponse {
   return response;
 }
 
-function findRouteHandler(app: express.Express, method: 'post' | 'put', routePath: string) {
+type RouteMethod = 'get' | 'post' | 'put' | 'delete';
+
+function findRouteHandler(app: express.Express, method: RouteMethod, routePath: string) {
   const stack = (app as unknown as { _router: { stack: any[] } })._router.stack;
   const layer = stack.find((entry) => entry.route?.path === routePath && entry.route.methods[method]);
   if (!layer) throw new Error(`Route ${method.toUpperCase()} ${routePath} was not registered.`);
@@ -52,13 +62,13 @@ function findRouteHandler(app: express.Express, method: 'post' | 'put', routePat
 }
 
 async function callSettingsRoute(
-  method: 'post' | 'put',
+  method: RouteMethod,
   routePath: string,
-  body: unknown,
+  body: unknown = {},
   params: Record<string, string> = {}
 ): Promise<{ status: number; body: unknown }> {
   const app = express();
-  registerSettingsRoutes(app);
+  registerSettingsRoutes(app, workspaceRoot);
   const response = createMockResponse();
   await findRouteHandler(app, method, routePath)({ body, params }, response);
   return { status: response.statusCode, body: response.body };
@@ -126,5 +136,123 @@ describe('settings routes', () => {
     expect(response.status).toBe(200);
     expect(validateModelConfigurationMock).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-key' }));
     expect(SettingsStore.getModelWithKey(existing.id)?.apiKey).toBe('stored-key');
+  });
+
+  it('imports the full skill folder including bundled scripts', async () => {
+    const sourceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-import-skill-'));
+    fs.mkdirSync(path.join(sourceDir, 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(sourceDir, 'SKILL.md'), `---
+name: review-writing
+description: Helps write reviews.
+---
+
+Run scripts/foo.py when needed.
+`, 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'scripts', 'foo.py'), 'print("ok")\n', 'utf8');
+
+    const imported = await callSettingsRoute('post', '/api/settings/skills/import', { path: sourceDir });
+
+    expect(imported.status).toBe(201);
+    expect(imported.body).toMatchObject({
+      skill: {
+        name: 'review-writing',
+        description: 'Helps write reviews.',
+        skillMdPath: '.a-society/skills/review-writing/SKILL.md',
+      },
+      notice: 'This skill may bundle scripts the agent can run; they execute only through the normal command-permission prompts.',
+    });
+    expect(fs.readFileSync(path.join(workspaceRoot, '.a-society', 'skills', 'review-writing', 'scripts', 'foo.py'), 'utf8'))
+      .toBe('print("ok")\n');
+  });
+
+  it('surfaces malformed skills and returns 404 when deleting a missing skill', async () => {
+    fs.mkdirSync(path.join(workspaceRoot, '.a-society', 'skills', 'broken-skill'), { recursive: true });
+
+    const listed = await callSettingsRoute('get', '/api/settings/skills');
+    expect(listed.body).toEqual([
+      { kind: 'malformed', name: 'broken-skill', reason: 'Missing SKILL.md.' },
+    ]);
+
+    const deleted = await callSettingsRoute('delete', '/api/settings/skills/:name', {}, { name: 'missing-skill' });
+    expect(deleted.status).toBe(404);
+    expect(deleted.body).toMatchObject({ message: 'Skill "missing-skill" not found.' });
+  });
+
+  it('validates MCP server creation before saving discovered tools', async () => {
+    validateMcpServerConfigurationMock.mockResolvedValue({ toolNames: ['create_issue'] });
+
+    const response = await callSettingsRoute('post', '/api/settings/mcp', {
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+      args: ['server.js'],
+      env: { LINEAR_API_KEY: 'secret-key' },
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      name: 'linear',
+      transport: 'stdio',
+      toolNames: ['create_issue'],
+    });
+    expect(validateMcpServerConfigurationMock).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'linear',
+      command: 'node',
+      env: { LINEAR_API_KEY: 'secret-key' },
+    }));
+    const [saved] = SettingsStore.listMcpServerSummaries();
+    expect(saved.toolNames).toEqual(['create_issue']);
+    expect(SettingsStore.getMcpServerWithSecrets(saved.id)?.env).toEqual({ LINEAR_API_KEY: 'secret-key' });
+  });
+
+  it('blocks MCP server save when validation fails', async () => {
+    const timeout = Object.assign(new Error('connect ETIMEDOUT 140.82.112.21:443'), {
+      code: 'ETIMEDOUT',
+      address: '140.82.112.21',
+      port: 443,
+    });
+    validateMcpServerConfigurationMock.mockRejectedValue(new TypeError('fetch failed', {
+      cause: new AggregateError([timeout], ''),
+    }));
+
+    const response = await callSettingsRoute('post', '/api/settings/mcp', {
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toMatchObject({ message: 'fetch failed (connect ETIMEDOUT 140.82.112.21:443)' });
+    expect(SettingsStore.listMcpServerSummaries()).toEqual([]);
+  });
+
+  it('deletes MCP servers', async () => {
+    const server = SettingsStore.createMcpServer({
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+      env: { TOKEN: 'secret' },
+      toolNames: ['search'],
+    });
+
+    const response = await callSettingsRoute('delete', '/api/settings/mcp/:id', {}, { id: server.id });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ ok: true });
+    expect(SettingsStore.listMcpServerSummaries()).toEqual([]);
+    expect(SettingsStore.getMcpServerWithSecrets(server.id)).toBeNull();
+  });
+
+  it('reads and updates automation settings, ignoring invalid values', async () => {
+    const initial = await callSettingsRoute('get', '/api/settings/automation');
+    expect(initial.body).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'manual' });
+
+    const updated = await callSettingsRoute('put', '/api/settings/automation', { skills: 'auto', mcpServers: 'bogus' });
+    expect(updated.status).toBe(200);
+    // skills accepted; the invalid mcpServers value is ignored (stays manual).
+    expect(updated.body).toEqual({ models: 'manual', skills: 'auto', mcpServers: 'manual' });
+
+    const reread = await callSettingsRoute('get', '/api/settings/automation');
+    expect(reread.body).toEqual({ models: 'manual', skills: 'auto', mcpServers: 'manual' });
   });
 });

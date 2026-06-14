@@ -12,6 +12,7 @@ export const CLIENT_MESSAGE_TYPE = {
   FEEDBACK_CONSENT_CHOICE: 'feedback_consent_choice',
   CONSENT_RESPONSE: 'consent_response',
   CONSENT_MODE: 'consent_mode',
+  ROLE_CONFIGURATION: 'role_configuration',
 } as const;
 
 type ValueOf<T> = T[keyof T];
@@ -31,6 +32,24 @@ export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = [
 ] as const;
 
 export const OWNER_BASE_ROLE_ID = 'owner';
+
+export const AWAITING_HUMAN_REASON = {
+  PROMPT_HUMAN: 'prompt-human',
+  AUTONOMOUS_ABORT: 'autonomous-abort',
+  CONSENT: 'consent',
+  CONSENT_DENIED: 'consent-denied',
+  ROLE_CONFIGURATION: 'role-configuration',
+} as const;
+
+export type ProtocolAwaitingHumanReason = ValueOf<typeof AWAITING_HUMAN_REASON>;
+
+export const AWAITING_HUMAN_REASONS = [
+  AWAITING_HUMAN_REASON.PROMPT_HUMAN,
+  AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT,
+  AWAITING_HUMAN_REASON.CONSENT,
+  AWAITING_HUMAN_REASON.CONSENT_DENIED,
+  AWAITING_HUMAN_REASON.ROLE_CONFIGURATION,
+] as const;
 
 export const IMPROVEMENT_CHOICE_MODE = {
   GRAPH_BASED: 'graph-based',

@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import type { OperatorEvent } from '../../src/common/types.js';
 import http from 'node:http';
@@ -92,6 +93,7 @@ async function runTest() {
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
     completedHandoffs: [],
+    visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION
@@ -102,9 +104,6 @@ async function runTest() {
 
   const originalCwd = process.cwd();
   try {
-    const flowRun = SessionStore.loadFlowRun();
-    if (!flowRun) throw new Error("flowRun not loaded");
-
     let serverTurn = 0;
     server.removeAllListeners('request');
     server.on('request', (req, res) => {
@@ -124,6 +123,12 @@ async function runTest() {
         res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Fixed: " + handoffBlock } }] })}\n\n`);
         res.write(`data: [DONE]\n\n`);
         res.end();
+      } else if (serverTurn === 3) {
+        // 'next' node: block immediately so runStoredFlow can be terminated
+        const content = "Ready for review. ```handoff\ntype: prompt-human\n```";
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
+        res.write(`data: [DONE]\n\n`);
+        res.end();
       } else {
         res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "Done." } }] })}\n\n`);
         res.write(`data: [DONE]\n\n`);
@@ -131,9 +136,12 @@ async function runTest() {
       }
     });
 
-    await orchestrator.advanceFlow(flowRun, 'start');
+    await runStoredFlowUntil(
+      orchestrator, workspaceRoot, projectNamespace, flowId,
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['next']
+    );
 
-    const updatedFlow = SessionStore.loadFlowRun()!;
+    const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
     const session = SessionStore.loadRoleSession('start');
     const history = session?.transcriptHistory as any[];
 
@@ -158,7 +166,7 @@ async function runTest() {
     const hasRepairNotice = repairNotice !== undefined;
 
     expect(updatedFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
-    expect(updatedFlow.receivingHandoff['start=>next']).toEqual(['mock.md']);
+    expect(updatedFlow.historyHandoff['start=>next']).toEqual(['mock.md']);
     expect(repairInjected).toBeTruthy();
     expect(canonicalGuidanceInjected).toBeTruthy();
     expect(hasHandoffNotice).toBeTruthy();

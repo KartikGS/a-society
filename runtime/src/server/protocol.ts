@@ -35,7 +35,15 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE; flowRef: FlowRef; mode: ProtocolImprovementChoiceMode }
   | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode };
+  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
+  | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; skills: string[]; mcpServers: string[] };
+
+/** Which configuration dimensions a role-configuration node still needs the operator to pick. */
+export interface RoleConfigurationPending {
+  pendingModel: boolean;
+  pendingSkills: boolean;
+  pendingMcp: boolean;
+}
 
 export type FlowStateMessage = {
   type: 'flow_state';
@@ -44,6 +52,9 @@ export type FlowStateMessage = {
   backwardActive: string[];
   hasActiveSession: boolean;
   contextUsageByRole: Record<string, number>;
+  contextWindowByRole: Record<string, number>;
+  /** Per-node pending dimensions for nodes awaiting role configuration (keyed by node id). */
+  roleConfigurations: Record<string, RoleConfigurationPending>;
 };
 
 export type HistoricalMessage = OperatorFeedMessage;
@@ -143,6 +154,19 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       parsed.type === CLIENT_MESSAGE_TYPE.CONSENT_MODE &&
       hasFlowRef(parsed.flowRef) &&
       isOneOf(parsed.mode, CONSENT_MODES)
+    ) {
+      return parsed as ClientMessage;
+    }
+
+    if (
+      parsed.type === CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION &&
+      hasFlowRef(parsed.flowRef) &&
+      typeof parsed.nodeId === 'string' &&
+      hasOptionalString(parsed, 'modelConfigId') &&
+      Array.isArray(parsed.skills) &&
+      parsed.skills.every((entry) => typeof entry === 'string') &&
+      Array.isArray(parsed.mcpServers) &&
+      parsed.mcpServers.every((entry) => typeof entry === 'string')
     ) {
       return parsed as ClientMessage;
     }

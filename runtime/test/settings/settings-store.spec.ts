@@ -5,12 +5,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   configureSettingsStore,
   createModel,
+  createMcpServer,
+  deleteMcpServer,
+  getAutomationSettings,
   getEnabledWebSearchApiKey,
   getFeedSettings,
   getActiveModelWithKey,
+  updateAutomationSettings,
+  getMcpServerWithSecrets,
   getToolSettings,
+  listMcpServerSummaries,
   listModels,
   updateModel,
+  updateMcpServer,
   updateFeedSettings,
   updateWebSearchToolSettings,
 } from '../../src/settings/settings-store.js';
@@ -112,5 +119,66 @@ describe('settings-store', () => {
     expect(getFeedSettings().historyLimit).toBe(250);
 
     expect(updateFeedSettings({ historyLimit: 50000 })).toEqual({ historyLimit: 10000 });
+  });
+
+  it('defaults automation to manual and updates per dimension', () => {
+    expect(getAutomationSettings()).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'manual' });
+
+    expect(updateAutomationSettings({ mcpServers: 'auto' })).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'auto' });
+    expect(getAutomationSettings()).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'auto' });
+
+    // Unknown values normalize back to manual; other dimensions are preserved.
+    expect(updateAutomationSettings({ skills: 'bogus' as unknown as 'auto' })).toEqual({
+      models: 'manual',
+      skills: 'manual',
+      mcpServers: 'auto',
+    });
+  });
+
+  it('stores MCP server config separately from secrets and cleans secrets on delete', () => {
+    const server = createMcpServer({
+      name: 'linear',
+      transport: 'stdio',
+      command: 'node',
+      args: ['server.js'],
+      env: { LINEAR_API_KEY: 'secret-key' },
+      toolNames: ['create_issue'],
+    });
+
+    expect(listMcpServerSummaries()).toEqual([{
+      id: server.id,
+      name: 'linear',
+      transport: 'stdio',
+      toolNames: ['create_issue'],
+    }]);
+    expect(getMcpServerWithSecrets(server.id)?.env).toEqual({ LINEAR_API_KEY: 'secret-key' });
+
+    const settingsJson = JSON.parse(fs.readFileSync(path.join(tmpDir, '.a-society', 'settings.json'), 'utf8'));
+    expect(JSON.stringify(settingsJson)).not.toContain('secret-key');
+    const secretsJson = JSON.parse(fs.readFileSync(path.join(tmpDir, '.a-society', 'secrets.json'), 'utf8'));
+    expect(secretsJson[`mcp:${server.id}:env:LINEAR_API_KEY`]).toBe('secret-key');
+
+    const updated = updateMcpServer(server.id, {
+      name: 'linear',
+      transport: 'http',
+      url: 'https://mcp.example.com',
+      headers: { Authorization: 'Bearer token' },
+      toolNames: ['search'],
+    });
+    expect(updated.transport).toBe('http');
+    expect(getMcpServerWithSecrets(server.id)?.headers).toEqual({ Authorization: 'Bearer token' });
+
+    deleteMcpServer(server.id);
+    expect(listMcpServerSummaries()).toEqual([]);
+    const cleanedSecretsJson = JSON.parse(fs.readFileSync(path.join(tmpDir, '.a-society', 'secrets.json'), 'utf8'));
+    expect(Object.keys(cleanedSecretsJson).some((key) => key.startsWith(`mcp:${server.id}:`))).toBe(false);
+  });
+
+  it('rejects invalid MCP server names', () => {
+    expect(() => createMcpServer({
+      name: 'Not Valid',
+      transport: 'stdio',
+      command: 'node',
+    })).toThrow(/must match/);
   });
 });

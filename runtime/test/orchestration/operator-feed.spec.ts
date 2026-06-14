@@ -13,6 +13,7 @@ import type { FeedItem, FlowRef, FlowRun, GatewayTurnResult, OperatorEvent, Role
 import { LLMGateway } from '../../src/providers/llm.js';
 import type { ActiveSession } from '../../src/server/runtime-session/types.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { runStoredFlowUntil } from '../integration/orchestrator-test-utils.js';
 
 const tempDirs = new Set<string>();
 
@@ -149,6 +150,82 @@ describe('operator-feed', () => {
     });
   });
 
+  it('skips the awaiting prompt and appends the role configuration result', () => {
+    const { tmpDir, ref } = createFixture();
+    const activeSession = createActiveSession(ref);
+
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: {
+        kind: 'human.awaiting_input',
+        nodeId: 'owner-intake',
+        role: 'owner',
+        reason: 'role-configuration',
+      },
+    }, tmpDir);
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: {
+        kind: 'role.configured',
+        nodeId: 'owner-intake',
+        role: 'owner',
+        modelDisplayName: 'Claude Sonnet',
+        skillNames: ['review-writing', 'doc-editing'],
+        mcpServerNames: [],
+      },
+    }, tmpDir);
+
+    // The awaiting prompt projects no feed item; only the result bubble is appended.
+    const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({
+      type: 'event',
+      label: 'Role Configuration',
+      text: 'Model: Claude Sonnet\nSkills: review-writing, doc-editing\nMCP servers: none',
+    });
+    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
+  });
+
+  it('keeps the auto-selection strip status-only and resolves it to success', () => {
+    const { tmpDir, ref } = createFixture();
+    const activeSession = createActiveSession(ref);
+
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_selection_started', nodeId: 'owner-intake', role: 'owner' },
+    }, tmpDir);
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_configured', nodeId: 'owner-intake', role: 'owner' },
+    }, tmpDir);
+
+    const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({
+      type: 'tool-success',
+      label: 'Role Configuration',
+      text: 'Configured automatically.',
+    });
+  });
+
+  it('marks the auto-selection strip as failed when it falls back', () => {
+    const { tmpDir, ref } = createFixture();
+    const activeSession = createActiveSession(ref);
+
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_selection_started', nodeId: 'owner-intake', role: 'owner' },
+    }, tmpDir);
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_selection_fell_back', nodeId: 'owner-intake', role: 'owner', dimensions: ['skills'], reason: 'network down' },
+    }, tmpDir);
+
+    const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({ type: 'tool-error', label: 'Role Configuration' });
+  });
+
   it('projects activity.tool_call events with a role into tool FeedItems', () => {
     expect(projectMessageToFeedItem(
       {
@@ -164,6 +241,26 @@ describe('operator-feed', () => {
 
     expect(isTransientOperatorEvent(event)).toBe(false);
     expect(getOperatorFeedRoleKey({ type: 'operator_event', event })).toBe('owner');
+  });
+
+  it('projects skipped MCP tool notices into role feed items', () => {
+    const event: OperatorEvent = {
+      kind: 'mcp.tool_unavailable',
+      role: 'owner',
+      nodeId: 'owner-intake',
+      serverName: 'github',
+      toolName: 'x'.repeat(80),
+      reason: 'MCP tool name is too long.',
+    };
+
+    expect(isTransientOperatorEvent(event)).toBe(false);
+    expect(getOperatorFeedRoleKey({ type: 'operator_event', event })).toBe('owner');
+    expect(projectMessageToFeedItem({ type: 'operator_event', event }, 'owner_4')).toEqual({
+      id: 'owner_4',
+      type: 'tool-error',
+      label: 'MCP',
+      text: `${event.serverName}.${event.toolName} skipped: ${event.reason}`,
+    });
   });
 
   it('projects compaction started events into pending role feed items', () => {
@@ -533,10 +630,15 @@ describe('operator-feed', () => {
     };
     SessionStore.saveFlowRun(flowRun, ref, tmpDir);
 
-    vi.spyOn(LLMGateway.prototype, 'executeTurn').mockResolvedValue({
-      text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
-      contextUsage: 68,
-    } satisfies GatewayTurnResult);
+    vi.spyOn(LLMGateway.prototype, 'executeTurn')
+      .mockResolvedValueOnce({
+        text: "Accepted. ```handoff\ntarget_node_id: 'next'\nartifact_path: 'accepted-output.md'\n```",
+        contextUsage: 68,
+      } satisfies GatewayTurnResult)
+      .mockResolvedValue({
+        text: "Ready for review. ```handoff\ntype: prompt-human\n```",
+        contextUsage: 10,
+      } satisfies GatewayTurnResult);
 
     const events: OperatorEvent[] = [];
     const renderer = {
@@ -549,9 +651,14 @@ describe('operator-feed', () => {
       sendError() {},
     };
 
-    await new FlowOrchestrator(renderer).advanceFlow(flowRun, 'start');
+    SessionStore.init(tmpDir);
+    const orchestrator = new FlowOrchestrator(renderer);
+    await runStoredFlowUntil(
+      orchestrator, tmpDir, ref.projectNamespace, ref.flowId,
+      () => !!SessionStore.loadFlowRun(ref, tmpDir)?.awaitingHumanNodes['next']
+    );
 
-    expect(events.map(event => event.kind)).toEqual([
+    expect(events.slice(0, 3).map(event => event.kind)).toEqual([
       'role.active',
       'usage.turn_summary',
       'handoff.applied',

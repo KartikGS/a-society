@@ -42,16 +42,20 @@ function createProvider(reasoning: ModelReasoningConfig = customReasoning): Open
 
 function installFakeClient(
   provider: OpenAICompatibleProvider,
-  chunks: Array<Record<string, unknown>>
+  chunks: Array<Record<string, unknown>>,
+  onRequest?: (request: Record<string, unknown>) => void
 ): void {
   (provider as unknown as { client: unknown }).client = {
     chat: {
       completions: {
-        create: async () => ({
+        create: async (request: Record<string, unknown>) => {
+          onRequest?.(request);
+          return {
           async *[Symbol.asyncIterator]() {
             for (const chunk of chunks) yield chunk;
           },
-        }),
+          };
+        },
       },
     },
   };
@@ -95,6 +99,36 @@ function multiChoiceChunk(choices: Array<{ delta: Record<string, unknown>; finis
 }
 
 describe('OpenAICompatibleProvider', () => {
+  it('passes nested JSON Schema tool parameters through unchanged', async () => {
+    const provider = createProvider();
+    const requests: Record<string, unknown>[] = [];
+    const schema = {
+      type: 'object',
+      properties: {
+        issue: {
+          type: 'object',
+          properties: {
+            priority: { type: 'string', enum: ['low', 'high'] },
+            labels: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+      required: ['issue'],
+    };
+    installFakeClient(provider, [
+      chunk({ content: 'Done.' }),
+    ], (request) => requests.push(request));
+
+    await provider.executeTurn(
+      'system',
+      [{ role: 'user', content: 'Prompt.' }],
+      [{ name: 'mcp__linear__create_issue', description: 'Create issue.', inputSchema: schema }]
+    );
+
+    const tools = requests[0].tools as Array<{ function: { parameters: unknown } }>;
+    expect(tools[0].function.parameters).toBe(schema);
+  });
+
   it('streams custom OpenAI-compatible reasoning deltas into provider reasoning feed events', async () => {
     const provider = createProvider();
     const emitted: OperatorEvent[] = [];

@@ -31,29 +31,55 @@ export function seedTestModelSettings(
     contextWindow?: number;
   }
 ): void {
-  fs.mkdirSync(settingsDir, { recursive: true });
-
-  const model = {
+  seedTestMultiModelSettings(settingsDir, [{
     id: 'test-model',
     displayName: 'Test Model',
-    providerType: 'openai-compatible' as const,
     providerBaseUrl: config.providerBaseUrl,
     modelId: config.modelId ?? 'mock-model',
-    contextWindow: config.contextWindow ?? 0,
+    contextWindow: config.contextWindow,
+    apiKey: config.apiKey,
+    active: true,
+  }]);
+}
+
+export interface SeededTestModel {
+  id: string;
+  providerBaseUrl: string;
+  displayName?: string;
+  modelId?: string;
+  contextWindow?: number;
+  apiKey?: string;
+  active?: boolean;
+}
+
+export function seedTestMultiModelSettings(settingsDir: string, models: SeededTestModel[]): void {
+  fs.mkdirSync(settingsDir, { recursive: true });
+
+  const entries = models.map((model) => ({
+    id: model.id,
+    displayName: model.displayName ?? model.id,
+    providerType: 'openai-compatible' as const,
+    providerBaseUrl: model.providerBaseUrl,
+    modelId: model.modelId ?? model.id,
+    contextWindow: model.contextWindow ?? 0,
     maxOutputTokens: 0,
     reasoning: { mode: 'disabled' },
     supportedInputTypes: [],
-    active: true,
-  };
+    active: model.active ?? false,
+  }));
 
   fs.writeFileSync(
     path.join(settingsDir, 'settings.json'),
-    JSON.stringify({ version: 1, models: [model] }, null, 2),
+    JSON.stringify({ version: 1, models: entries }, null, 2),
     'utf8'
   );
   fs.writeFileSync(
     path.join(settingsDir, 'secrets.json'),
-    JSON.stringify({ [model.id]: config.apiKey ?? 'test-key' }, null, 2),
+    JSON.stringify(
+      Object.fromEntries(models.map((model) => [model.id, model.apiKey ?? 'test-key'])),
+      null,
+      2
+    ),
     'utf8'
   );
 }

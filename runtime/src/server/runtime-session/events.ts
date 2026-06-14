@@ -98,7 +98,8 @@ export function createRuntimeSessionEvents(deps: RuntimeSessionEventsDeps) {
         if (
           message.event.kind === 'handoff.applied' ||
           message.event.kind === 'flow.completed' ||
-          message.event.kind === 'role.active'
+          message.event.kind === 'role.active' ||
+          message.event.kind === 'human.awaiting_input'
         ) {
           setImmediate(() => emitFlowState(session));
         }

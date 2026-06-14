@@ -6,6 +6,7 @@ import type { ConsentGateImpl } from '../../improvement/consent-gate.js';
 import type { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import type { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import type { FlowReadModel } from '../flow-read-model.js';
+import type { McpManager } from '../../providers/mcp/manager.js';
 import type { FlowStateMessage } from '../protocol.js';
 import type { SocketHub } from '../socket-hub.js';
 import type { WebSocketOperatorSink } from '../ws-operator-sink.js';
@@ -23,6 +24,7 @@ export interface ActiveSession {
   finished: boolean;
   task: Promise<void>;
   consentGate: ConsentGateImpl;
+  mcpManagers: Map<string, McpManager>;
   latestContextUsageByRole: Record<string, number>;
   manualCompactionControllers: Map<string, AbortController>;
   manualCompactionSigintHandler: (() => void) | null;

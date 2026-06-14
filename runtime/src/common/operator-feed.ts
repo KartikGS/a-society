@@ -1,5 +1,25 @@
 import type { FeedItem, OperatorEvent, OperatorFeedMessage } from './types.js';
 
+interface SelectionSummary {
+  modelDisplayName?: string;
+  skillNames?: string[];
+  mcpServerNames?: string[];
+}
+
+/** One line per decided dimension, by name; omits dimensions that were not in play. */
+function formatSelectionLines(event: SelectionSummary): string[] {
+  const lines: string[] = [];
+  if (event.modelDisplayName) lines.push(`Model: ${event.modelDisplayName}`);
+  if (event.skillNames) lines.push(`Skills: ${event.skillNames.length > 0 ? event.skillNames.join(', ') : 'none'}`);
+  if (event.mcpServerNames) lines.push(`MCP servers: ${event.mcpServerNames.length > 0 ? event.mcpServerNames.join(', ') : 'none'}`);
+  return lines;
+}
+
+export function roleConfigurationSelectedText(nodeId: string, role: string, event: SelectionSummary): string {
+  const lines = formatSelectionLines(event);
+  return lines.length > 0 ? lines.join('\n') : `${nodeId} (${role}) configured.`;
+}
+
 export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: string): FeedItem | null {
   if (message.type === 'output_text') {
     return {
@@ -65,7 +85,36 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         text: event.summary
       };
     case 'human.awaiting_input':
+      // The interactive banner carries the awaiting-configuration prompt; no feed item.
       return null;
+    case 'role.configured':
+      return {
+        id,
+        type: 'event',
+        label: 'Role Configuration',
+        text: roleConfigurationSelectedText(event.nodeId, event.role, event)
+      };
+    case 'role.auto_selection_started':
+      return {
+        id,
+        type: 'tool',
+        label: 'Role Configuration',
+        text: 'Selecting configuration automatically…'
+      };
+    case 'role.auto_configured':
+      return {
+        id,
+        type: 'tool-success',
+        label: 'Role Configuration',
+        text: 'Configured automatically.'
+      };
+    case 'role.auto_selection_fell_back':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'Role Configuration',
+        text: `Automatic selection unavailable (${event.reason}); awaiting manual selection for: ${event.dimensions.join(', ')}.`
+      };
     case 'human.resumed':
       return null;
     case 'usage.turn_summary':
@@ -90,6 +139,20 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         type: 'tool-success',
         label: 'Compaction',
         text: `${event.nodeId} context compacted (${event.trigger}).`
+      };
+    case 'mcp.server_unavailable':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'MCP',
+        text: `${event.serverName} unavailable: ${event.reason}`
+      };
+    case 'mcp.tool_unavailable':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'MCP',
+        text: `${event.serverName}.${event.toolName} skipped: ${event.reason}`
       };
     case 'provider.reasoning_trace':
       return {

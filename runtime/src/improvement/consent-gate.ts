@@ -52,6 +52,26 @@ export function isAutoAllowedBashCommand(command: string): boolean {
   return false;
 }
 
+function parseMcpToolName(toolName: string): { serverName: string; toolDisplayName: string } | null {
+  if (!toolName.startsWith('mcp__')) return null;
+  const remainder = toolName.slice('mcp__'.length);
+  const separatorIndex = remainder.indexOf('__');
+  if (separatorIndex <= 0 || separatorIndex === remainder.length - 2) return null;
+  return {
+    serverName: remainder.slice(0, separatorIndex),
+    toolDisplayName: remainder.slice(separatorIndex + 2),
+  };
+}
+
+function buildArgsPreview(input: Record<string, unknown> | undefined): string {
+  try {
+    const serialized = JSON.stringify(input ?? {});
+    return serialized.length > 240 ? `${serialized.slice(0, 237)}...` : serialized;
+  } catch {
+    return '[unserializable arguments]';
+  }
+}
+
 function buildConsentRequest(request: ConsentCheckRequest): ConsentRequest | null {
   if (WRITE_TOOLS.has(request.toolName)) {
     return {
@@ -73,11 +93,28 @@ function buildConsentRequest(request: ConsentCheckRequest): ConsentRequest | nul
     };
   }
 
+  const mcpTool = parseMcpToolName(request.toolName);
+  if (mcpTool) {
+    return {
+      kind: 'mcp-tool',
+      toolName: request.toolName,
+      serverName: mcpTool.serverName,
+      toolDisplayName: mcpTool.toolDisplayName,
+      argsPreview: buildArgsPreview(request.input),
+      nodeId: request.nodeId,
+      role: request.role,
+    };
+  }
+
   return null;
 }
 
 function commandKey(request: ConsentRequest): string | undefined {
   return request.kind === 'bash-command' ? normalizeCommand(request.command) : undefined;
+}
+
+function mcpToolKey(request: ConsentRequest): string | undefined {
+  return request.kind === 'mcp-tool' ? request.toolName : undefined;
 }
 
 function requestRoleKey(requestOrRole: ConsentRequest | string | undefined): string {
@@ -180,22 +217,35 @@ export class ConsentGateImpl {
     if (this.state.mode === CONSENT_MODE.FULL_ACCESS) return true;
     if (this.state.mode === CONSENT_MODE.NO_ACCESS) return false;
 
-    // partial-access: file writes always allowed; bash only if previously approved
+    // partial-access: file writes always allowed; bash/MCP only if previously approved
     if (request.kind === 'file-write') return true;
 
-    const key = commandKey(request);
-    return Boolean(key && this.state.bash.allowedCommands[key]);
+    const command = commandKey(request);
+    if (command) return Boolean(this.state.bash.allowedCommands[command]);
+
+    const mcpTool = mcpToolKey(request);
+    return Boolean(mcpTool && this.state.mcp.allowedTools[mcpTool]);
   }
 
   private grantForFlow(request: ConsentRequest): void {
     if (request.kind === 'file-write') return;
 
-    const key = commandKey(request);
-    if (!key) return;
-    this.state.bash.allowedCommands[key] = {
-      command: request.command,
-      grantedAt: new Date().toISOString(),
-    };
+    const command = commandKey(request);
+    if (command && request.kind === 'bash-command') {
+      this.state.bash.allowedCommands[command] = {
+        command: request.command,
+        grantedAt: new Date().toISOString(),
+      };
+      return;
+    }
+
+    const mcpTool = mcpToolKey(request);
+    if (mcpTool) {
+      this.state.mcp.allowedTools[mcpTool] = {
+        toolName: request.toolName,
+        grantedAt: new Date().toISOString(),
+      };
+    }
   }
 
   private resolveGrantedInFlight(decision: ConsentResponseDecision): void {

@@ -11,10 +11,13 @@ import {
 import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import { SessionStore } from '../orchestration/store.js';
+import { resolveRoleModel } from '../orchestration/role-model.js';
+import { resolveRoleMcpManager } from '../orchestration/role-mcp-manager.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { ConsentGate, FlowRun, HandoffResult, ImprovementPhaseState, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import {
+  AWAITING_HUMAN_REASON,
   FEEDBACK_CONSENT_STATUS,
   IMPROVEMENT_CHOICE_MODE,
   OWNER_BASE_ROLE_ID,
@@ -26,6 +29,7 @@ import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../fra
 import { writeImprovementWorkflow } from './improvement-workflow.js';
 import { WakeController } from '../common/wake-controller.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
+import type { McpManager } from '../providers/mcp/manager.js';
 
 const FEEDBACK_ROLE = 'a-society-feedback';
 const RUNTIME_FEEDBACK_SYSTEM_PROMPT = [
@@ -76,7 +80,7 @@ async function saveImprovementPhase(
 async function markImprovementRoleAwaitingAbort(flowRun: FlowRun, roleInstanceId: string): Promise<void> {
   await saveImprovementPhase(flowRun, (p) => {
     if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-    p.awaitingHumanRoles[roleInstanceId] = { reason: 'autonomous-abort' };
+    p.awaitingHumanRoles[roleInstanceId] = { reason: AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT };
   });
 }
 
@@ -101,7 +105,7 @@ function buildUnexpectedSignalRepairMessage(
 
 function describeUnexpectedSignal(result: HandoffResult): string {
   if (result.kind === 'targets') return 'routing handoff';
-  if (result.kind === 'awaiting_human') return 'prompt-human';
+  if (result.kind === 'awaiting_human') return AWAITING_HUMAN_REASON.PROMPT_HUMAN;
   return result.kind;
 }
 
@@ -178,12 +182,14 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   renderer: OperatorRenderSink,
   signal: AbortSignal,
   consentGate?: ConsentGate,
+  mcpManager?: McpManager,
   validateExpectedSignal?: ExpectedSignalValidator<K>,
 ): Promise<ExpectedImprovementSignal<K> | null> {
   let history = session.transcriptHistory as RuntimeMessageParam[];
   const stepLabel = describeExpectedStep(expectedKind);
   const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
+  const roleModel = resolveRoleModel(flowRun.workspaceRoot, flowRef, roleInstanceId);
   const saveSession = () => SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
 
   while (true) {
@@ -198,6 +204,8 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         externalSignal: signal,
         operatorRenderer: renderer,
         consentGate,
+        model: roleModel,
+        mcpManager,
         onConversationMessages: async (messages) => {
           removeAssistantDraftBeforeToolCalls(history, messages);
           appendConversationMessagesToCurrentNode(session, nodeId, messages);
@@ -236,7 +244,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         saveSession();
         await saveImprovementPhase(flowRun, (p) => {
           if (!p.awaitingHumanRoles) p.awaitingHumanRoles = {};
-          p.awaitingHumanRoles[roleInstanceId] = { reason: sessionResult.awaitingHumanReason ?? 'prompt-human' };
+          p.awaitingHumanRoles[roleInstanceId] = { reason: sessionResult.awaitingHumanReason ?? AWAITING_HUMAN_REASON.PROMPT_HUMAN };
         });
         return null;
       }
@@ -321,6 +329,7 @@ async function runMetaAnalysisEntry(
   renderer: OperatorRenderSink,
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
+  mcpManagers?: Map<string, McpManager>,
 ): Promise<void> {
   const roleInstanceId = entry.role;
   const recordFolderPath = flowRun.recordFolderPath;
@@ -432,14 +441,22 @@ async function runMetaAnalysisEntry(
 
     if (!session.systemPrompt) {
       session.systemPrompt = ContextInjectionService.buildContextBundle(
-        flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath
+        flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath, flowRef
       ).bundleContent;
     }
 
+    const mcpManager = await resolveRoleMcpManager({
+      workspaceRoot: flowRun.workspaceRoot,
+      flowRef,
+      roleInstanceId,
+      nodeId,
+      renderer,
+      mcpManagers,
+    });
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleInstanceId, session.systemPrompt, session, 'meta-analysis-complete',
       roleOutputStream, renderer,
-      signal, consentGate,
+      signal, consentGate, mcpManager,
       (r) => {
         const actualFindingsPath = normalizeRepoRelativePath(r.findingsPath, flowRun.workspaceRoot);
         if (actualFindingsPath !== assignedFindingsRepoPath) {
@@ -491,6 +508,7 @@ async function runFeedbackEntry(
   renderer: OperatorRenderSink,
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
+  mcpManagers?: Map<string, McpManager>,
 ): Promise<void> {
   const roleInstanceId = entry.role;
   const recordFolderPath = flowRun.recordFolderPath;
@@ -584,10 +602,18 @@ async function runFeedbackEntry(
       });
     }
 
+    const mcpManager = await resolveRoleMcpManager({
+      workspaceRoot: flowRun.workspaceRoot,
+      flowRef,
+      roleInstanceId,
+      nodeId,
+      renderer,
+      mcpManagers,
+    });
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleInstanceId, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete',
       roleOutputStream, renderer,
-      signal, consentGate,
+      signal, consentGate, mcpManager,
       (r) => {
         const actualArtifactPath = normalizeRepoRelativePath(r.artifactPath, flowRun.workspaceRoot);
         if (actualArtifactPath !== assignedFeedbackRepoPath) {
@@ -681,6 +707,7 @@ async function runMetaAnalysisGraph(
   roleOutputStreamFactory: ((roleInstanceId: string) => NodeJS.WritableStream) | undefined,
   scheduler: ImprovementScheduler,
   consentGate?: ConsentGate,
+  mcpManagers?: Map<string, McpManager>,
 ): Promise<boolean> {
   const flowRef = SessionStore.flowRef(flowRun);
 
@@ -708,7 +735,7 @@ async function runMetaAnalysisGraph(
 
     await Promise.all(runnable.map(async (entry) => {
       const roleOutputStream = roleOutputStreamFactory?.(entry.role);
-      await runMetaAnalysisEntry(freshFlow, entry, roleOutputStream, renderer, scheduler, consentGate);
+      await runMetaAnalysisEntry(freshFlow, entry, roleOutputStream, renderer, scheduler, consentGate, mcpManagers);
     }));
   }
 }
@@ -803,6 +830,7 @@ export class ImprovementOrchestrator {
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleInstanceId: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
+    mcpManagers?: Map<string, McpManager>,
   ): Promise<void> {
     const scheduler = this.improvementScheduler;
     if (!flowRun.improvementPhase) {
@@ -843,7 +871,7 @@ export class ImprovementOrchestrator {
         span.setAttribute('improvement.plan_node_count', plan.entries.length);
 
         const allDone = await runMetaAnalysisGraph(
-          flowRun, plan, renderer, roleOutputStreamFactory, scheduler, consentGate
+          flowRun, plan, renderer, roleOutputStreamFactory, scheduler, consentGate, mcpManagers
         );
 
         if (!allDone) return; // paused for feedback consent
@@ -868,6 +896,7 @@ export class ImprovementOrchestrator {
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleInstanceId: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
+    mcpManagers?: Map<string, McpManager>,
   ): Promise<void> {
     const scheduler = this.improvementScheduler;
     if (!flowRun.improvementPhase) {
@@ -924,7 +953,7 @@ export class ImprovementOrchestrator {
           }
 
           const feedbackRoleOutputStream = roleOutputStreamFactory?.(entry.role);
-          await runFeedbackEntry(freshFlow, entry, assignedFeedbackRepoPath, assignedFeedbackFilePath, feedbackRoleOutputStream, renderer, scheduler, consentGate);
+          await runFeedbackEntry(freshFlow, entry, assignedFeedbackRepoPath, assignedFeedbackFilePath, feedbackRoleOutputStream, renderer, scheduler, consentGate, mcpManagers);
         }
 
         flowRun.status = 'completed';
@@ -949,6 +978,7 @@ export class ImprovementOrchestrator {
     renderer: OperatorRenderSink,
     roleOutputStreamFactory?: (roleInstanceId: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
+    mcpManagers?: Map<string, McpManager>,
   ): Promise<void> {
     const scheduler = this.improvementScheduler;
     const improvementPhase = flowRun.improvementPhase;
@@ -981,7 +1011,7 @@ export class ImprovementOrchestrator {
           !improvementPhase.completedRoles.includes(feedback.role)
         ) {
           await this.runFeedback(
-            flowRun, renderer, roleOutputStreamFactory, consentGate
+            flowRun, renderer, roleOutputStreamFactory, consentGate, mcpManagers
           );
           span.addEvent('store.flow_saved', { stage: 'improvement_completed_via_feedback_resume' });
           return;
@@ -994,7 +1024,7 @@ export class ImprovementOrchestrator {
         });
 
         const allDone = await runMetaAnalysisGraph(
-          flowRun, plan, renderer, roleOutputStreamFactory, scheduler, consentGate
+          flowRun, plan, renderer, roleOutputStreamFactory, scheduler, consentGate, mcpManagers
         );
 
         if (!allDone) return; // paused for feedback consent

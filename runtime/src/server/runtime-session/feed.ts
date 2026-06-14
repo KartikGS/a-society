@@ -63,6 +63,10 @@ function isPendingCompactionItem(item: FeedItem): boolean {
   return item.type === 'tool' && item.label === 'Compaction';
 }
 
+function isPendingAutoSelectionItem(item: FeedItem): boolean {
+  return item.type === 'tool' && item.label === 'Role Configuration';
+}
+
 function applyReasoningTraceToFeed(
   session: ActiveSession,
   history: FeedItem[],
@@ -148,6 +152,28 @@ export function rememberMessage(
       return;
     }
 
+    return;
+  }
+
+  if (
+    message.type === 'operator_event' &&
+    (message.event.kind === 'role.auto_configured' || message.event.kind === 'role.auto_selection_fell_back')
+  ) {
+    const projected = projectMessageToFeedItem(message, 'auto-selection-resolution');
+    const idx = [...history].reverse().findIndex(isPendingAutoSelectionItem);
+    if (idx !== -1 && projected) {
+      const realIdx = history.length - 1 - idx;
+      history[realIdx] = {
+        ...history[realIdx],
+        type: projected.type,
+        label: projected.label,
+        text: projected.text,
+      };
+      session.roleFeedHistory.set(roleKey, history);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      return;
+    }
+    if (projected) appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
     return;
   }
 

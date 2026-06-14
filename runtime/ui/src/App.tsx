@@ -13,9 +13,12 @@ import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import {
   fetchActiveModelContextWindow,
   fetchFlowState,
+  fetchMcpServers as fetchMcpServersApi,
+  fetchModels as fetchModelsApi,
   fetchProjectFlows as fetchProjectFlowsApi,
   fetchProjects as fetchProjectsApi,
   fetchSettingsStatus as fetchSettingsStatusApi,
+  fetchSkills as fetchSkillsApi,
   IncompatibleFlowError,
 } from './app/runtime-api';
 import { handleServerMessage } from './app/server-messages';
@@ -33,9 +36,12 @@ import type {
   ClientMessage,
   FlowRef,
   FlowSummary,
+  McpServerSummary,
+  ModelConfig,
   ProjectDiscovery,
   ServerMessage,
   SettingsStatus,
+  SkillSummary,
 } from './types';
 
 const GraphView = lazy(async () => {
@@ -56,6 +62,9 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState<SettingsStatus | null>(null);
   const [contextWindow, setContextWindow] = useState<number | null>(null);
+  const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
+  const [configuredSkills, setConfiguredSkills] = useState<SkillSummary[]>([]);
+  const [configuredMcpServers, setConfiguredMcpServers] = useState<McpServerSummary[]>([]);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -102,9 +111,37 @@ export function App() {
     }
   }, []);
 
+  const refreshConfiguredModels = useCallback(async (): Promise<void> => {
+    try {
+      setConfiguredModels(await fetchModelsApi());
+    } catch {
+      // Keep the last known model list; the selection card re-renders on the next refresh.
+    }
+  }, []);
+
+  const refreshConfiguredSkills = useCallback(async (): Promise<void> => {
+    try {
+      const results = await fetchSkillsApi();
+      setConfiguredSkills(results
+        .filter((result): result is Extract<typeof result, { kind: 'ok' }> => result.kind === 'ok')
+        .map((result) => result.skill));
+    } catch {
+      // Keep the last known skill list; role configuration validates on submit.
+    }
+  }, []);
+
+  const refreshConfiguredMcpServers = useCallback(async (): Promise<void> => {
+    try {
+      setConfiguredMcpServers(await fetchMcpServersApi());
+    } catch {
+      // Keep the last known MCP server list; role configuration validates on submit.
+    }
+  }, []);
+
   const handleModelsChange = useCallback((): void => {
     void refreshSettingsStatus();
-  }, [refreshSettingsStatus]);
+    void refreshConfiguredModels();
+  }, [refreshConfiguredModels, refreshSettingsStatus]);
 
   const setProjectFlows = useCallback((projectNamespace: string, flows: FlowSummary[]): void => {
     setProjectFlowsByProject((current) => ({ ...current, [projectNamespace]: flows }));
@@ -169,6 +206,8 @@ export function App() {
     viewedRole,
     visibleFeed,
     visibleConsentRequest,
+    roleConfigurationNodeId,
+    roleConfigurationPending,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -181,6 +220,7 @@ export function App() {
     isViewedRoleCompacting,
     composerValue,
     latestContextUsage,
+    viewedRoleContextWindow,
   } = activeView;
 
   const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
@@ -240,6 +280,7 @@ export function App() {
     handleImprovementChoice,
     handleFeedbackConsentChoice,
     handleConsentResponse,
+    handleRoleConfigure,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,
@@ -290,6 +331,39 @@ export function App() {
       .catch(() => { });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchModelsApi()
+      .then((models) => {
+        if (!cancelled) setConfiguredModels(models);
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [roleConfigurationNodeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchSkillsApi()
+      .then((results) => {
+        if (cancelled) return;
+        setConfiguredSkills(results
+          .filter((result): result is Extract<typeof result, { kind: 'ok' }> => result.kind === 'ok')
+          .map((result) => result.skill));
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [roleConfigurationNodeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMcpServersApi()
+      .then((servers) => {
+        if (!cancelled) setConfiguredMcpServers(servers);
+      })
+      .catch(() => { });
+    return () => { cancelled = true; };
+  }, [roleConfigurationNodeId]);
 
   useEffect(() => {
     if (settingsReady && !hasConfiguredModel) {
@@ -443,15 +517,25 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
+                  roleConfiguration={roleConfigurationNodeId ? {
+                    nodeId: roleConfigurationNodeId,
+                    models: configuredModels,
+                    skills: configuredSkills,
+                    mcpServers: configuredMcpServers,
+                    pendingModel: roleConfigurationPending?.pendingModel ?? true,
+                    pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
+                    pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
+                  } : null}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
+                  onRoleConfigure={handleRoleConfigure}
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   isCompactingContext={isViewedRoleCompacting}
-                  contextWindow={contextWindow}
+                  contextWindow={viewedRoleContextWindow ?? contextWindow}
                   latestContextUsage={latestContextUsage}
                 />
               </Panel>
@@ -488,6 +572,8 @@ export function App() {
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
+          onSkillsChange={refreshConfiguredSkills}
+          onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
         />
       )}

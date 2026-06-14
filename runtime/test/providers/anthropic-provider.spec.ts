@@ -87,6 +87,39 @@ function finalMessage(thinking: string): Record<string, unknown> {
 }
 
 describe('AnthropicProvider', () => {
+  it('passes nested JSON Schema tool input_schema through unchanged', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    const schema = {
+      type: 'object',
+      properties: {
+        issue: {
+          type: 'object',
+          properties: {
+            priority: { type: 'string', enum: ['low', 'high'] },
+            labels: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      },
+      required: ['issue'],
+    };
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn(
+      'system',
+      [{ role: 'user', content: 'Prompt.' }],
+      [{ name: 'mcp__linear__create_issue', description: 'Create issue.', inputSchema: schema }]
+    );
+
+    const tools = requests[0].tools as Array<{ input_schema: unknown }>;
+    expect(tools[0].input_schema).toBe(schema);
+  });
+
   it('streams Anthropic thinking summaries into provider reasoning feed events', async () => {
     const provider = new AnthropicProvider('test-key', 'claude-test', {
       maxOutputTokens: 1024,
