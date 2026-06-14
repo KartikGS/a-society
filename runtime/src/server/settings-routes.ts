@@ -195,6 +195,10 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
     res.json(SettingsStore.getFeedSettings());
   });
 
+  app.get('/api/settings/automation', (_req: Request, res: Response) => {
+    res.json(SettingsStore.getAutomationSettings());
+  });
+
   app.get('/api/settings/skills', (_req: Request, res: Response) => {
     res.json(listSkillLoadResults(workspaceRoot));
   });
@@ -394,5 +398,16 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
     } catch (err: any) {
       res.status(400).json({ message: err instanceof Error ? err.message : String(err) });
     }
+  });
+
+  app.put('/api/settings/automation', (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const params: Partial<SettingsStore.AutomationSettings> = {};
+    for (const dimension of ['models', 'skills', 'mcpServers'] as const) {
+      if (body[dimension] === 'auto' || body[dimension] === 'manual') {
+        params[dimension] = body[dimension];
+      }
+    }
+    res.json(SettingsStore.updateAutomationSettings(params));
   });
 }

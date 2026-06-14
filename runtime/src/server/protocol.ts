@@ -38,6 +38,13 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
   | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; skills: string[]; mcpServers: string[] };
 
+/** Which configuration dimensions a role-configuration node still needs the operator to pick. */
+export interface RoleConfigurationPending {
+  pendingModel: boolean;
+  pendingSkills: boolean;
+  pendingMcp: boolean;
+}
+
 export type FlowStateMessage = {
   type: 'flow_state';
   flowRef: FlowRef;
@@ -46,6 +53,8 @@ export type FlowStateMessage = {
   hasActiveSession: boolean;
   contextUsageByRole: Record<string, number>;
   contextWindowByRole: Record<string, number>;
+  /** Per-node pending dimensions for nodes awaiting role configuration (keyed by node id). */
+  roleConfigurations: Record<string, RoleConfigurationPending>;
 };
 
 export type HistoricalMessage = OperatorFeedMessage;

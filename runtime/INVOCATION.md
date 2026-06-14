@@ -47,11 +47,22 @@ Each role instance can be configured once per flow:
 - The first time a role instance is activated in a flow, the runtime suspends that node as awaiting human input with reason `role-configuration` when there is anything for the operator to choose
 - The role configuration banner shows only the subsections that apply: Model when more than one model is configured, Skills when the workspace has at least one valid skill, and MCP servers when servers are configured
 - The operator submits the role configuration once; the selected model applies to that role instance's turns, improvement-phase turns, and compaction turns; selected skills and MCP servers apply to model turns for that role instance, including improvement-phase turns
-- The role feed keeps the wait and result in a single `Role Configuration` item with the selected model name when applicable and counts for selected skills and MCP servers
+- Once the role is fully configured, a `Role Configuration` result feed item shows its complete effective configuration by **name** — the model, skills, and MCP servers it will run with, whether decided manually or automatically. The awaiting prompt is carried by the interactive banner only and produces no feed item of its own
 - Model selection is persisted as `roles/<roleKey>/model.json`; selected optional capabilities are persisted as `roles/<roleKey>/capabilities.json`
 - A node awaiting `role-configuration` does not accept a text reply
 - With exactly one configured model and no skills or MCP servers, no role configuration is requested and the active model is used
 - If a selected model is later deleted or becomes unusable while multiple models remain configured, the role re-prompts at its next activation; if a selected skill or MCP server is later removed, it is dropped at use time without re-prompting
+
+#### Automatic selection
+
+Model, skills, and MCP-server selection can each be switched from manual prompting to automatic selection — independently — via a toggle in the matching Settings tab (`Models`, `Skills`, `MCP`). The mode is global per dimension (it applies to every role instance) and defaults to **manual**, preserving the prompt-based behavior above.
+
+- When a dimension is set to **automatic** and a role instance reaches it undecided, the runtime runs one independent selection turn — like compaction, a system-mode turn on the **active model** — briefed with the role's own workflow-snapshot nodes (their guidance, inputs, work, and outputs) so it can match capabilities to the role's responsibilities, and persists the choice so the manual gate reads that dimension as decided and the node is not suspended for it
+- This runs at most once per role instance per flow: once a dimension is decided, every later activation of that role instance (any of its nodes) reuses the persisted choice without another turn
+- The turn's input is only the dimensions that actually need a decision: models are included only when more than one is configured (a single model is used as-is, with no turn); skills and MCP servers are included only when at least one is configured. If no dimension needs an automatic decision, no turn runs at all
+- Dimensions are independent: e.g. Model and Skills can stay manual while MCP is automatic. The node then suspends for `role-configuration` showing only the manual dimensions, and the operator's submit never overwrites a dimension that was already decided automatically
+- The turn appears in the role feed as a single, always status-only strip — running, then green on success or red if it falls back. The chosen configuration is shown by name in the `Role Configuration` result bubble once the role is fully configured: immediately after the turn in a pure-auto run, or after the operator's manual submit when a manual dimension still follows
+- Failure is two-tier: malformed model output is corrected with a bounded re-prompt; a transport error (network/timeout) or exhausted retries leaves the affected dimensions undecided and falls back to the manual `role-configuration` prompt — automation never blocks a flow on its own failure
 
 Skills are folders at `{workspace}/.a-society/skills/<name>/`, each with a `SKILL.md` (name + description frontmatter, markdown body) and optional bundled resources (`scripts/`, `references/`, `assets/`). The runtime injects only selected skill names, descriptions, and `SKILL.md` paths into the role's system prompt; the agent reads the body and any `references/` on demand with `read_file`, and runs any bundled `scripts/` through the consent-gated `run_command` (bash) tool. The runtime never auto-executes skill scripts — but an imported skill may include runnable code, so import from trusted sources. Skills are imported (not created) in Settings under `Skills`.
 
@@ -264,7 +275,7 @@ Per-flow layout:
 - `roles/<roleKey>/feed.json` — persisted per-role browser feed (`FeedItem[]`) for replay after reconnect or server restart
 - `roles/<roleKey>/transcript.json` — persisted role-instance-scoped session transcript for that role
 - `roles/<roleKey>/model.json` — persisted per-role model selection for that flow (present once the operator has chosen a model for the role)
-- `roles/<roleKey>/capabilities.json` — persisted per-role selected skills and MCP servers for that flow (present once optional capabilities have been offered, including explicit empty selections)
+- `roles/<roleKey>/capabilities.json` — persisted per-role selected skills and MCP servers for that flow, with per-dimension `skillsDecided` / `mcpDecided` provenance so skills and MCP can be resolved independently (manual or automatic); present once either dimension has been decided, including explicit empty selections
 
 Resume behavior:
 

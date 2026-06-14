@@ -13,6 +13,10 @@ export interface RoleConfigurationPrompt {
   models: ModelConfig[];
   skills: SkillSummary[];
   mcpServers: McpServerSummary[];
+  /** Dimensions the operator must still pick; auto-resolved dimensions are not shown. */
+  pendingModel: boolean;
+  pendingSkills: boolean;
+  pendingMcp: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -205,7 +209,9 @@ function RoleConfigurationBanner({
   roleConfiguration: RoleConfigurationPrompt;
   onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
 }) {
-  const showModelSection = roleConfiguration.models.length > 1;
+  const showModelSection = roleConfiguration.pendingModel && roleConfiguration.models.length > 1;
+  const showSkillsSection = roleConfiguration.pendingSkills && roleConfiguration.skills.length > 0;
+  const showMcpSection = roleConfiguration.pendingMcp && roleConfiguration.mcpServers.length > 0;
   const [modelConfigId, setModelConfigId] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedMcpServers, setSelectedMcpServers] = useState<string[]>([]);
@@ -223,7 +229,7 @@ function RoleConfigurationBanner({
   }
 
   const submitDisabled = showModelSection && !modelConfigId;
-  const hasCapabilitySections = roleConfiguration.skills.length > 0 || roleConfiguration.mcpServers.length > 0;
+  const hasCapabilitySections = showSkillsSection || showMcpSection;
 
   return (
     <div className="model-select-banner">
@@ -256,7 +262,7 @@ function RoleConfigurationBanner({
         </section>
       ) : null}
 
-      {roleConfiguration.skills.length > 0 ? (
+      {showSkillsSection ? (
         <section className="role-config-section" aria-label="Skills">
           <h3 className="role-config-section-title">Skills</h3>
           <div className="skill-select-list role-config-options">
@@ -283,7 +289,7 @@ function RoleConfigurationBanner({
         </section>
       ) : null}
 
-      {roleConfiguration.mcpServers.length > 0 ? (
+      {showMcpSection ? (
         <section className="role-config-section" aria-label="MCP">
           <h3 className="role-config-section-title">MCP</h3>
           <div className="skill-select-list role-config-options">

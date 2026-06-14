@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendFeedItem, applyReasoningTraceToFeed, resolveRoleConfigurationFeedItem } from '../../ui/src/app/feed.js';
+import { appendFeedItem, applyReasoningTraceToFeed } from '../../ui/src/app/feed.js';
 import type { FeedItem, OperatorEvent } from '../../ui/src/types.js';
 
 function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }> {
@@ -13,35 +13,6 @@ function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { ki
 }
 
 describe('ui/feed', () => {
-  it('resolves role configuration into the existing prompt item', () => {
-    const feeds: Record<string, FeedItem[]> = {
-      owner: [
-        {
-          id: 'owner_0',
-          type: 'event',
-          label: 'Role Configuration',
-          text: 'owner-intake (owner) is waiting for role configuration. Choose the available options for this role to continue:',
-        },
-      ],
-    };
-
-    const updated = resolveRoleConfigurationFeedItem(feeds, 'owner', {
-      kind: 'human.role_configured',
-      nodeId: 'owner-intake',
-      role: 'owner',
-      modelDisplayName: 'Claude Sonnet',
-      skillCount: 1,
-      mcpServerCount: 0,
-    });
-
-    expect(updated.owner).toEqual([{
-      id: 'owner_0',
-      type: 'event',
-      label: 'Role Configuration',
-      text: 'owner-intake (owner) is waiting for role configuration. Choose the available options for this role to continue:\n\nModel: Claude Sonnet\nSkills: 1 selected\nMCP servers: 0 selected',
-    }]);
-  });
-
   it('starts a new reasoning item after a user message', () => {
     const feeds: Record<string, FeedItem[]> = {
       owner: [

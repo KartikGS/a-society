@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
-import { readCapabilitySelection } from '../../src/orchestration/capability-selection.js';
+import { readCapabilitySelection, saveCapabilityDimension } from '../../src/orchestration/capability-selection.js';
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
@@ -243,13 +243,49 @@ describe('runtime session human input commands', () => {
       expect(readRoleModelSelection(workspaceRoot, ref, 'planner')?.modelConfigId).toBe('model-b');
       expect(historicalMessages).toEqual([]);
       expect(historicalEvents).toEqual([{
-        kind: 'human.role_configured',
+        kind: 'role.configured',
         nodeId: 'plan',
         role: 'planner',
         modelDisplayName: 'Model B',
-        skillCount: 0,
-        mcpServerCount: 0,
       }]);
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('shows the full effective configuration in the result bubble, including auto-decided skills', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-mixed-config-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
+        { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
+        { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', displayName: 'Model B' },
+      ]);
+      writeSkill(workspaceRoot, 'review-writing');
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      // Skills were already decided automatically; only the model stays manual.
+      saveCapabilityDimension(workspaceRoot, ref, 'planner', 'skills', ['review-writing']);
+      const flow = makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
+        },
+      });
+      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+
+      const { commands, errors, historicalEvents } = createCommands(workspaceRoot, () => flow);
+      commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
+
+      expect(errors).toEqual([]);
+      // The bubble carries the complete config: the just-selected model plus the auto skills.
+      expect(historicalEvents).toEqual([expect.objectContaining({
+        kind: 'role.configured',
+        nodeId: 'plan',
+        role: 'planner',
+        modelDisplayName: 'Model B',
+        skillNames: ['review-writing'],
+      })]);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -345,11 +381,10 @@ describe('runtime session human input commands', () => {
       expect(readCapabilitySelection(workspaceRoot, ref, 'planner')?.skills).toEqual(['review-writing']);
       expect(SessionStore.loadRoleSession('planner', ref, workspaceRoot)?.systemPrompt).toBeUndefined();
       expect(historicalEvents).toEqual([expect.objectContaining({
-        kind: 'human.role_configured',
+        kind: 'role.configured',
         nodeId: 'plan',
         role: 'planner',
-        skillCount: 1,
-        mcpServerCount: 0,
+        skillNames: ['review-writing'],
       })]);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });

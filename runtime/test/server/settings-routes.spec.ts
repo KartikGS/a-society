@@ -242,4 +242,17 @@ Run scripts/foo.py when needed.
     expect(SettingsStore.listMcpServerSummaries()).toEqual([]);
     expect(SettingsStore.getMcpServerWithSecrets(server.id)).toBeNull();
   });
+
+  it('reads and updates automation settings, ignoring invalid values', async () => {
+    const initial = await callSettingsRoute('get', '/api/settings/automation');
+    expect(initial.body).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'manual' });
+
+    const updated = await callSettingsRoute('put', '/api/settings/automation', { skills: 'auto', mcpServers: 'bogus' });
+    expect(updated.status).toBe(200);
+    // skills accepted; the invalid mcpServers value is ignored (stays manual).
+    expect(updated.body).toEqual({ models: 'manual', skills: 'auto', mcpServers: 'manual' });
+
+    const reread = await callSettingsRoute('get', '/api/settings/automation');
+    expect(reread.body).toEqual({ models: 'manual', skills: 'auto', mcpServers: 'manual' });
+  });
 });

@@ -52,6 +52,7 @@ describe('socket-hub', () => {
       hasActiveSession: false,
       contextUsageByRole: {},
       contextWindowByRole: {},
+      roleConfigurations: {},
     });
 
     expect(matching.sent).toHaveLength(1);

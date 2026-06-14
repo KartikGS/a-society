@@ -67,6 +67,20 @@ export interface FeedSettings {
   historyLimit: number;
 }
 
+export type SelectionMode = 'auto' | 'manual';
+
+/**
+ * Per-dimension automation mode. `auto` lets the runtime decide the role's
+ * model / skills / MCP servers via an independent selection turn; `manual`
+ * prompts the operator. Each dimension is independent (e.g. manual model,
+ * auto MCP). Defaults to `manual` so behavior is unchanged until opted in.
+ */
+export interface AutomationSettings {
+  models: SelectionMode;
+  skills: SelectionMode;
+  mcpServers: SelectionMode;
+}
+
 export interface ToolSettings {
   webSearch: {
     enabled: boolean;
@@ -80,6 +94,7 @@ interface SettingsData {
   mcpServers: McpServerConfig[];
   tools: StoredToolSettings;
   feed: FeedSettings;
+  automation: AutomationSettings;
 }
 
 interface PersistedModelConfig {
@@ -240,6 +255,19 @@ function normalizeFeedSettings(feed: unknown): FeedSettings {
   };
 }
 
+function normalizeSelectionMode(value: unknown): SelectionMode {
+  return value === 'auto' ? 'auto' : 'manual';
+}
+
+function normalizeAutomationSettings(automation: unknown): AutomationSettings {
+  const raw = automation && typeof automation === 'object' ? automation as Record<string, unknown> : {};
+  return {
+    models: normalizeSelectionMode(raw.models),
+    skills: normalizeSelectionMode(raw.skills),
+    mcpServers: normalizeSelectionMode(raw.mcpServers),
+  };
+}
+
 function loadSettings(): SettingsData {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
@@ -249,6 +277,7 @@ function loadSettings(): SettingsData {
       mcpServers: [],
       tools: normalizeStoredToolSettings(undefined),
       feed: normalizeFeedSettings(undefined),
+      automation: normalizeAutomationSettings(undefined),
     };
   }
   try {
@@ -258,6 +287,7 @@ function loadSettings(): SettingsData {
       mcpServers?: unknown[];
       tools?: PersistedToolSettings;
       feed?: PersistedFeedSettings;
+      automation?: unknown;
     };
     return {
       version: raw.version ?? 1,
@@ -267,6 +297,7 @@ function loadSettings(): SettingsData {
         : [],
       tools: normalizeStoredToolSettings(raw.tools),
       feed: normalizeFeedSettings(raw.feed),
+      automation: normalizeAutomationSettings(raw.automation),
     };
   } catch {
     return {
@@ -275,6 +306,7 @@ function loadSettings(): SettingsData {
       mcpServers: [],
       tools: normalizeStoredToolSettings(undefined),
       feed: normalizeFeedSettings(undefined),
+      automation: normalizeAutomationSettings(undefined),
     };
   }
 }
@@ -606,6 +638,17 @@ export function getToolSettings(): ToolSettings {
 
 export function getFeedSettings(): FeedSettings {
   return loadSettings().feed;
+}
+
+export function getAutomationSettings(): AutomationSettings {
+  return loadSettings().automation;
+}
+
+export function updateAutomationSettings(params: Partial<AutomationSettings>): AutomationSettings {
+  const data = loadSettings();
+  data.automation = normalizeAutomationSettings({ ...data.automation, ...params });
+  saveSettings(data);
+  return data.automation;
 }
 
 export function updateFeedSettings(params: {

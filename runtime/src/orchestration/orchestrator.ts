@@ -5,6 +5,7 @@ import { SessionStore } from './store.js';
 import { HandoffParseError } from './handoff.js';
 import { resolveCapabilityGate } from './capability-selection.js';
 import { resolveRoleModelGate } from './role-model.js';
+import { autoResolveRoleConfiguration, type AutoSelectionResult } from './auto-capability-selection.js';
 import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam, OperatorEvent } from '../common/types.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
@@ -18,7 +19,7 @@ import { AWAITING_HUMAN_REASON, OWNER_BASE_ROLE_ID } from '../common/protocol-co
 import { getActiveNodeIds } from '../common/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import { CANONICAL_WORKFLOW_FILENAME, findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
-import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing, parseHandoffKey, type HandoffKeyParts } from './workflow-graph.js';
+import { WorkflowGraph, allEdgesCovered, getCompletedInboundSources, getOutstandingInboundSources, hasPendingOutgoing, parseHandoffKey, type HandoffKeyParts, type WfNode } from './workflow-graph.js';
 import { upsertAssistantDelta, removeAssistantDraftBeforeToolCalls, upsertCurrentNodeAssistantDelta, appendConversationMessagesToCurrentNode, INTERRUPTED_TURN_CONTINUATION_MESSAGE } from '../common/history.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import type { McpManager } from '../providers/mcp/manager.js';
@@ -213,6 +214,41 @@ export class FlowOrchestrator {
     });
   }
 
+  private async autoResolveRoleConfig(
+    flowRun: FlowRun,
+    ref: FlowRef,
+    roleInstanceId: string,
+    nodeId: string
+  ): Promise<AutoSelectionResult> {
+    let workflowNodes: WfNode[] = [];
+    try {
+      workflowNodes = this.loadWorkflowDocument(flowRun).nodes;
+    } catch {
+      workflowNodes = [];
+    }
+
+    const controller = new AbortController();
+    this.activeTurnControllers.set(nodeId, { role: roleInstanceId, controller });
+    this.ensureSigintHandler();
+    try {
+      return await autoResolveRoleConfiguration({
+        workspaceRoot: flowRun.workspaceRoot,
+        ref,
+        roleInstanceId,
+        nodeId,
+        workflowNodes,
+        renderer: this.renderer,
+        signal: controller.signal,
+      });
+    } finally {
+      const active = this.activeTurnControllers.get(nodeId);
+      if (active?.controller === controller) {
+        this.activeTurnControllers.delete(nodeId);
+      }
+      this.releaseSigintHandlerIfIdle();
+    }
+  }
+
   private async advanceFlow(
     nodeId: string,
     roleInstanceId: string,
@@ -260,13 +296,25 @@ export class FlowOrchestrator {
         span.setAttribute('role_name', roleInstanceId);
         span.setAttribute('session.id', this.roleSessionId(flowRun, roleInstanceId));
         const nodeOutputStream = outputStreamFactory?.(roleInstanceId);
-        const bundleContent = session.systemPrompt!;
 
         const saveRoleSession = (): void => {
           SessionStore.saveRoleSession(session, this.requireFlowRef(), this.requireWorkspaceRoot());
         };
 
         const ref = this.requireFlowRef();
+
+        // Auto-resolve any dimensions whose automation mode is `auto` before the
+        // manual gate is evaluated; resolved dimensions then read as `ready`.
+        const autoSelection = await this.autoResolveRoleConfig(flowRun, ref, roleInstanceId, nodeId);
+        if (autoSelection.skillsResolved) {
+          // Skills are injected into the system prompt; rebuild it now that the
+          // auto-selected skills are persisted, before the role runs.
+          session.systemPrompt = ContextInjectionService.buildContextBundle(
+            flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath, ref
+          ).bundleContent;
+          saveRoleSession();
+        }
+
         const modelGate = resolveRoleModelGate(flowRun.workspaceRoot, ref, roleInstanceId);
         const capabilityGate = resolveCapabilityGate(flowRun.workspaceRoot, ref, roleInstanceId);
         if (modelGate.kind === 'selection-required' || capabilityGate.kind === 'selection-required') {
@@ -277,6 +325,7 @@ export class FlowOrchestrator {
           return;
         }
         const roleModel = modelGate.model;
+        const bundleContent = session.systemPrompt!;
         const mcpManager = await resolveRoleMcpManager({
           workspaceRoot: flowRun.workspaceRoot,
           flowRef: this.requireFlowRef(),

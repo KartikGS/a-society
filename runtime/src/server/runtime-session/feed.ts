@@ -1,5 +1,4 @@
 import { Writable } from 'node:stream';
-import { roleConfigurationPromptText } from '../../common/operator-feed.js';
 import type {
   FeedItem,
   FlowRef,
@@ -64,15 +63,8 @@ function isPendingCompactionItem(item: FeedItem): boolean {
   return item.type === 'tool' && item.label === 'Compaction';
 }
 
-function isRoleConfigurationItemForEvent(
-  item: FeedItem,
-  event: Extract<OperatorEvent, { kind: 'human.role_configured' }>
-): boolean {
-  return (
-    item.type === 'event' &&
-    item.label === 'Role Configuration' &&
-    item.text.startsWith(roleConfigurationPromptText(event.nodeId, event.role))
-  );
+function isPendingAutoSelectionItem(item: FeedItem): boolean {
+  return item.type === 'tool' && item.label === 'Role Configuration';
 }
 
 function applyReasoningTraceToFeed(
@@ -115,35 +107,6 @@ function appendProjectedFeedItem(
   SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
 }
 
-function resolveRoleConfigurationFeedItem(
-  session: ActiveSession,
-  history: FeedItem[],
-  roleKey: string,
-  message: { type: 'operator_event'; event: Extract<OperatorEvent, { kind: 'human.role_configured' }> },
-  workspaceRoot: string
-): void {
-  const projected = projectMessageToFeedItem(message, 'role-configuration-resolution');
-  if (!projected) return;
-
-  const idx = [...history].reverse().findIndex((item) =>
-    isRoleConfigurationItemForEvent(item, message.event)
-  );
-  if (idx === -1) {
-    appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
-    return;
-  }
-
-  const realIdx = history.length - 1 - idx;
-  history[realIdx] = {
-    ...history[realIdx],
-    type: projected.type,
-    label: projected.label,
-    text: projected.text,
-  };
-  session.roleFeedHistory.set(roleKey, history);
-  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
-}
-
 export function rememberMessage(
   session: ActiveSession,
   message: HistoricalMessage,
@@ -170,12 +133,6 @@ export function rememberMessage(
     return;
   }
 
-  if (message.type === 'operator_event' && message.event.kind === 'human.role_configured') {
-    const event = message.event;
-    resolveRoleConfigurationFeedItem(session, history, roleKey, { type: 'operator_event', event }, workspaceRoot);
-    return;
-  }
-
   if (
     message.type === 'operator_event' &&
     (message.event.kind === 'session.compacted' || message.event.kind === 'session.compaction_failed')
@@ -195,6 +152,28 @@ export function rememberMessage(
       return;
     }
 
+    return;
+  }
+
+  if (
+    message.type === 'operator_event' &&
+    (message.event.kind === 'role.auto_configured' || message.event.kind === 'role.auto_selection_fell_back')
+  ) {
+    const projected = projectMessageToFeedItem(message, 'auto-selection-resolution');
+    const idx = [...history].reverse().findIndex(isPendingAutoSelectionItem);
+    if (idx !== -1 && projected) {
+      const realIdx = history.length - 1 - idx;
+      history[realIdx] = {
+        ...history[realIdx],
+        type: projected.type,
+        label: projected.label,
+        text: projected.text,
+      };
+      session.roleFeedHistory.set(roleKey, history);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      return;
+    }
+    if (projected) appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
     return;
   }
 

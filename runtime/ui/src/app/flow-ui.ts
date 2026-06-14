@@ -6,6 +6,7 @@ import type {
   FlowRun,
   FlowSummary,
   OperatorEvent,
+  RoleConfigurationPending,
   WorkflowGraph,
 } from '../types.js';
 import { SYSTEM_ROLE_KEY } from './constants.js';
@@ -34,6 +35,7 @@ export interface FlowUiState {
   consentRequests: Record<string, ConsentRequest>;
   latestContextUsageByRole: Record<string, number>;
   contextWindowByRole: Record<string, number>;
+  roleConfigurations: Record<string, RoleConfigurationPending>;
   hasActiveSession: boolean;
 }
 
@@ -53,6 +55,7 @@ export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     consentRequests: {},
     latestContextUsageByRole: {},
     contextWindowByRole: {},
+    roleConfigurations: {},
     hasActiveSession: false,
   };
 }
