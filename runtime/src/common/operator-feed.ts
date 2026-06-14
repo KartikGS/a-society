@@ -1,20 +1,23 @@
-import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
 import type { FeedItem, OperatorEvent, OperatorFeedMessage } from './types.js';
 
-export function roleConfigurationPromptText(nodeId: string, role: string): string {
-  return `${nodeId} (${role}) is waiting for role configuration. Choose the available options for this role to continue:`;
+interface SelectionSummary {
+  modelDisplayName?: string;
+  skillNames?: string[];
+  mcpServerNames?: string[];
 }
 
-export function roleConfigurationSelectedText(
-  nodeId: string,
-  role: string,
-  event: { modelDisplayName?: string; skillCount: number; mcpServerCount: number }
-): string {
-  const lines = [roleConfigurationPromptText(nodeId, role), ''];
+/** One line per decided dimension, by name; omits dimensions that were not in play. */
+function formatSelectionLines(event: SelectionSummary): string[] {
+  const lines: string[] = [];
   if (event.modelDisplayName) lines.push(`Model: ${event.modelDisplayName}`);
-  lines.push(`Skills: ${event.skillCount} selected`);
-  lines.push(`MCP servers: ${event.mcpServerCount} selected`);
-  return lines.join('\n');
+  if (event.skillNames) lines.push(`Skills: ${event.skillNames.length > 0 ? event.skillNames.join(', ') : 'none'}`);
+  if (event.mcpServerNames) lines.push(`MCP servers: ${event.mcpServerNames.length > 0 ? event.mcpServerNames.join(', ') : 'none'}`);
+  return lines;
+}
+
+export function roleConfigurationSelectedText(nodeId: string, role: string, event: SelectionSummary): string {
+  const lines = formatSelectionLines(event);
+  return lines.length > 0 ? lines.join('\n') : `${nodeId} (${role}) configured.`;
 }
 
 export function operatorMessageToFeedItem(message: OperatorFeedMessage, id: string): FeedItem | null {
@@ -82,21 +85,35 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         text: event.summary
       };
     case 'human.awaiting_input':
-      if (event.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) {
-        return {
-          id,
-          type: 'event',
-          label: 'Role Configuration',
-          text: roleConfigurationPromptText(event.nodeId, event.role)
-        };
-      }
+      // The interactive banner carries the awaiting-configuration prompt; no feed item.
       return null;
-    case 'human.role_configured':
+    case 'role.configured':
       return {
         id,
         type: 'event',
         label: 'Role Configuration',
         text: roleConfigurationSelectedText(event.nodeId, event.role, event)
+      };
+    case 'role.auto_selection_started':
+      return {
+        id,
+        type: 'tool',
+        label: 'Role Configuration',
+        text: 'Selecting configuration automatically…'
+      };
+    case 'role.auto_configured':
+      return {
+        id,
+        type: 'tool-success',
+        label: 'Role Configuration',
+        text: 'Configured automatically.'
+      };
+    case 'role.auto_selection_fell_back':
+      return {
+        id,
+        type: 'tool-error',
+        label: 'Role Configuration',
+        text: `Automatic selection unavailable (${event.reason}); awaiting manual selection for: ${event.dimensions.join(', ')}.`
       };
     case 'human.resumed':
       return null;

@@ -1,7 +1,4 @@
-import {
-  operatorEventToFeedItem,
-  roleConfigurationPromptText,
-} from '../../../src/common/operator-feed.js';
+import { operatorEventToFeedItem } from '../../../src/common/operator-feed.js';
 import type { FeedItem, OperatorEvent } from '../types.js';
 
 export function nextFeedId(): string {
@@ -40,29 +37,16 @@ export function resolveCompactionFeedItem(feeds: Record<string, FeedItem[]>, rol
   return { ...feeds, [role]: updated };
 }
 
-function isRoleConfigurationItemForEvent(
-  item: FeedItem,
-  event: Extract<OperatorEvent, { kind: 'human.role_configured' }>
-): boolean {
-  return (
-    item.type === 'event' &&
-    item.label === 'Role Configuration' &&
-    item.text.startsWith(roleConfigurationPromptText(event.nodeId, event.role))
-  );
-}
-
-export function resolveRoleConfigurationFeedItem(
+export function resolveAutoSelectionFeedItem(
   feeds: Record<string, FeedItem[]>,
   role: string,
-  event: Extract<OperatorEvent, { kind: 'human.role_configured' }>
+  event: Extract<OperatorEvent, { kind: 'role.auto_configured' | 'role.auto_selection_fell_back' }>
 ): Record<string, FeedItem[]> {
   const resolved = formatOperatorEvent(event);
   if (!resolved) return feeds;
 
   const existing = feeds[role] ?? [];
-  const idx = [...existing].reverse().findIndex((item) =>
-    isRoleConfigurationItemForEvent(item, event)
-  );
+  const idx = [...existing].reverse().findIndex((item) => item.type === 'tool' && item.label === 'Role Configuration');
   if (idx === -1) {
     return { ...feeds, [role]: [...existing, resolved] };
   }
@@ -75,6 +59,7 @@ export function resolveRoleConfigurationFeedItem(
   );
   return { ...feeds, [role]: updated };
 }
+
 
 export function appendFeedItem(feeds: Record<string, FeedItem[]>, role: string, item: FeedItem): Record<string, FeedItem[]> {
   const existing = feeds[role] ?? [];

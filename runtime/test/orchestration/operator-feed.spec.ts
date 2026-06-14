@@ -150,7 +150,7 @@ describe('operator-feed', () => {
     });
   });
 
-  it('projects role configuration waits and resolves the persisted item when selected', () => {
+  it('skips the awaiting prompt and appends the role configuration result', () => {
     const { tmpDir, ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
@@ -166,24 +166,64 @@ describe('operator-feed', () => {
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
-        kind: 'human.role_configured',
+        kind: 'role.configured',
         nodeId: 'owner-intake',
         role: 'owner',
         modelDisplayName: 'Claude Sonnet',
-        skillCount: 2,
-        mcpServerCount: 0,
+        skillNames: ['review-writing', 'doc-editing'],
+        mcpServerNames: [],
       },
+    }, tmpDir);
+
+    // The awaiting prompt projects no feed item; only the result bubble is appended.
+    const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({
+      type: 'event',
+      label: 'Role Configuration',
+      text: 'Model: Claude Sonnet\nSkills: review-writing, doc-editing\nMCP servers: none',
+    });
+    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
+  });
+
+  it('keeps the auto-selection strip status-only and resolves it to success', () => {
+    const { tmpDir, ref } = createFixture();
+    const activeSession = createActiveSession(ref);
+
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_selection_started', nodeId: 'owner-intake', role: 'owner' },
+    }, tmpDir);
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_configured', nodeId: 'owner-intake', role: 'owner' },
     }, tmpDir);
 
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
     expect(feed).toHaveLength(1);
-    expect(feed[0]).toEqual({
-      id: 'owner_0',
-      type: 'event',
+    expect(feed[0]).toMatchObject({
+      type: 'tool-success',
       label: 'Role Configuration',
-      text: 'owner-intake (owner) is waiting for role configuration. Choose the available options for this role to continue:\n\nModel: Claude Sonnet\nSkills: 2 selected\nMCP servers: 0 selected',
+      text: 'Configured automatically.',
     });
-    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
+  });
+
+  it('marks the auto-selection strip as failed when it falls back', () => {
+    const { tmpDir, ref } = createFixture();
+    const activeSession = createActiveSession(ref);
+
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_selection_started', nodeId: 'owner-intake', role: 'owner' },
+    }, tmpDir);
+    rememberMessage(activeSession, {
+      type: 'operator_event',
+      event: { kind: 'role.auto_selection_fell_back', nodeId: 'owner-intake', role: 'owner', dimensions: ['skills'], reason: 'network down' },
+    }, tmpDir);
+
+    const feed = activeSession.roleFeedHistory.get('owner') ?? [];
+    expect(feed).toHaveLength(1);
+    expect(feed[0]).toMatchObject({ type: 'tool-error', label: 'Role Configuration' });
   });
 
   it('projects activity.tool_call events with a role into tool FeedItems', () => {

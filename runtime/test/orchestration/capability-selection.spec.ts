@@ -6,6 +6,7 @@ import {
   readCapabilitySelection,
   resolveCapabilityGate,
   resolveEffectiveCapabilities,
+  saveCapabilityDimension,
   saveCapabilitySelection,
 } from '../../src/orchestration/capability-selection.js';
 import { getFlowDir } from '../../src/orchestration/state-paths.js';
@@ -59,6 +60,8 @@ describe('capability selection store', () => {
       expect(readCapabilitySelection(workspaceRoot, REF, 'owner_2')).toEqual({
         skills: [],
         mcpServers: [],
+        skillsDecided: true,
+        mcpDecided: true,
         selectedAt: '2026-06-13T00:00:00.000Z',
       });
       expect(fs.existsSync(path.join(getFlowDir(workspaceRoot, REF), 'roles', 'owner_2', 'capabilities.json'))).toBe(true);
@@ -88,7 +91,7 @@ describe('capability selection store', () => {
     }
   });
 
-  it('treats a malformed selection file as ready but ineffective', () => {
+  it('treats a malformed selection file as undecided and re-enters the gate', () => {
     const workspaceRoot = makeWorkspace('capability-malformed-');
     try {
       writeSkill(workspaceRoot, 'review-writing');
@@ -97,8 +100,44 @@ describe('capability selection store', () => {
       fs.writeFileSync(path.join(roleDir, 'capabilities.json'), 'not json', 'utf8');
 
       expect(readCapabilitySelection(workspaceRoot, REF, 'owner')).toBeNull();
-      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner').kind).toBe('ready');
+      // Consistent with the model gate: an unreadable selection re-prompts rather
+      // than silently proceeding with no capabilities.
+      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner').kind).toBe('selection-required');
       expect(resolveEffectiveCapabilities(workspaceRoot, REF, 'owner').skills).toEqual([]);
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('persists one dimension at a time and keeps the other pending (mixed mode)', () => {
+    const workspaceRoot = makeWorkspace('capability-dimension-');
+    try {
+      writeSkill(workspaceRoot, 'review-writing');
+
+      // Decide skills only; MCP is configured but still pending.
+      // (No MCP servers configured here, so simulate a skills-only decision and
+      // assert the decided/pending provenance directly.)
+      saveCapabilityDimension(workspaceRoot, REF, 'owner', 'skills', ['review-writing'], '2026-06-13T00:00:00.000Z');
+
+      const selection = readCapabilitySelection(workspaceRoot, REF, 'owner');
+      expect(selection).toEqual({
+        skills: ['review-writing'],
+        mcpServers: [],
+        skillsDecided: true,
+        mcpDecided: false,
+        selectedAt: '2026-06-13T00:00:00.000Z',
+      });
+
+      // Skills decided + no MCP configured ⇒ gate is ready.
+      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner').kind).toBe('ready');
+      expect(resolveEffectiveCapabilities(workspaceRoot, REF, 'owner').skills).toEqual(['review-writing']);
+
+      // A later dimension write merges without clobbering the decided skills.
+      saveCapabilityDimension(workspaceRoot, REF, 'owner', 'mcpServers', [], '2026-06-14T00:00:00.000Z');
+      const merged = readCapabilitySelection(workspaceRoot, REF, 'owner');
+      expect(merged?.skills).toEqual(['review-writing']);
+      expect(merged?.skillsDecided).toBe(true);
+      expect(merged?.mcpDecided).toBe(true);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }

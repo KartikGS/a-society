@@ -14,8 +14,10 @@ import { normalizeFeedSettings, normalizeMcpServerSummaries, normalizeMcpServerS
 import type {
   AnthropicEffort,
   AnthropicThinkingDisplay,
+  AutomationSettings,
   FeedSettings,
   InputModality,
+  SelectionMode,
   McpServerSummary,
   ModelConfig,
   ModelReasoningConfig,
@@ -169,6 +171,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   const [feedSettings, setFeedSettings] = useState<FeedSettings | null>(null);
   const [feedForm, setFeedForm] = useState<FeedFormState>(DEFAULT_FEED_FORM);
   const [savingFeed, setSavingFeed] = useState(false);
+  const [automation, setAutomation] = useState<AutomationSettings | null>(null);
   const [skillResults, setSkillResults] = useState<SkillLoadResult[]>([]);
   const [skillForm, setSkillForm] = useState<SkillFormState>(DEFAULT_SKILL_FORM);
   const [savingSkills, setSavingSkills] = useState(false);
@@ -265,12 +268,41 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
       }
     }
 
+    async function fetchAutomation() {
+      try {
+        const res = await fetch('/api/settings/automation');
+        if (!res.ok) throw new Error(await res.text());
+        const raw = await res.json() as Record<string, unknown>;
+        const mode = (value: unknown): SelectionMode => (value === 'auto' ? 'auto' : 'manual');
+        setAutomation({ models: mode(raw.models), skills: mode(raw.skills), mcpServers: mode(raw.mcpServers) });
+      } catch (err) {
+        reportError(err instanceof Error ? err.message : 'Failed to load automation settings.');
+      }
+    }
+
     void fetchModels();
     void fetchTools();
     void fetchFeedSettings();
     void fetchSkills();
     void fetchMcpServers();
+    void fetchAutomation();
   }, [replaceMcpServers, replaceModels, replaceSkillResults, reportError]);
+
+  async function updateAutomation(dimension: keyof AutomationSettings, mode: SelectionMode): Promise<void> {
+    try {
+      const res = await fetch('/api/settings/automation', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [dimension]: mode }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const raw = await res.json() as Record<string, unknown>;
+      const normalize = (value: unknown): SelectionMode => (value === 'auto' ? 'auto' : 'manual');
+      setAutomation({ models: normalize(raw.models), skills: normalize(raw.skills), mcpServers: normalize(raw.mcpServers) });
+    } catch (err) {
+      reportError(err instanceof Error ? err.message : 'Failed to update automation settings.');
+    }
+  }
 
   async function handleActivate(id: string) {
     try {
@@ -698,13 +730,18 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
           <div className="settings-content">
             {activeTab === 'models' ? (
               view === 'list' ? (
-              <ModelList
-                models={models}
-                onAdd={startAdd}
-                onEdit={startEdit}
-                onActivate={handleActivate}
-                onDelete={handleDelete}
-              />
+              <>
+                {automation ? (
+                  <AutomationToggle label="Model" mode={automation.models} onChange={(mode) => updateAutomation('models', mode)} />
+                ) : null}
+                <ModelList
+                  models={models}
+                  onAdd={startAdd}
+                  onEdit={startEdit}
+                  onActivate={handleActivate}
+                  onDelete={handleDelete}
+                />
+              </>
             ) : (
               <AddModelForm
                 form={form}
@@ -736,29 +773,80 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
                 onSubmit={handleSaveFeed}
               />
             ) : activeTab === 'mcp' ? (
-              <McpSettingsPanel
-                servers={mcpServers}
-                form={mcpForm}
-                editingId={editingMcpId}
-                saving={savingMcp}
-                onChange={(updater) => setMcpForm((current) => updater(current))}
-                onSubmit={handleSaveMcpServer}
-                onEdit={handleEditMcpServer}
-                onCancelEdit={handleCancelMcpEdit}
-                onDelete={handleDeleteMcpServer}
-              />
+              <>
+                {automation ? (
+                  <AutomationToggle label="MCP server" mode={automation.mcpServers} onChange={(mode) => updateAutomation('mcpServers', mode)} />
+                ) : null}
+                <McpSettingsPanel
+                  servers={mcpServers}
+                  form={mcpForm}
+                  editingId={editingMcpId}
+                  saving={savingMcp}
+                  onChange={(updater) => setMcpForm((current) => updater(current))}
+                  onSubmit={handleSaveMcpServer}
+                  onEdit={handleEditMcpServer}
+                  onCancelEdit={handleCancelMcpEdit}
+                  onDelete={handleDeleteMcpServer}
+                />
+              </>
             ) : (
-              <SkillsSettingsPanel
-                results={skillResults}
-                form={skillForm}
-                saving={savingSkills}
-                onChange={(updater) => setSkillForm((current) => updater(current))}
-                onImport={handleImportSkill}
-                onDelete={handleDeleteSkill}
-              />
+              <>
+                {automation ? (
+                  <AutomationToggle label="Skill" mode={automation.skills} onChange={(mode) => updateAutomation('skills', mode)} />
+                ) : null}
+                <SkillsSettingsPanel
+                  results={skillResults}
+                  form={skillForm}
+                  saving={savingSkills}
+                  onChange={(updater) => setSkillForm((current) => updater(current))}
+                  onImport={handleImportSkill}
+                  onDelete={handleDeleteSkill}
+                />
+              </>
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function AutomationToggle({
+  label,
+  mode,
+  onChange,
+}: {
+  label: string;
+  mode: SelectionMode;
+  onChange: (mode: SelectionMode) => void;
+}) {
+  return (
+    <div className="automation-toggle">
+      <div className="automation-toggle-text">
+        <span className="automation-toggle-title">{label} selection</span>
+        <span className="automation-toggle-desc">
+          {mode === 'auto'
+            ? 'An agent selects this for each role automatically.'
+            : 'You are prompted to select this for each role.'}
+        </span>
+      </div>
+      <div className="automation-toggle-options" role="group" aria-label={`${label} selection mode`}>
+        <button
+          type="button"
+          className={`automation-toggle-option${mode === 'manual' ? ' automation-toggle-option-active' : ''}`}
+          aria-pressed={mode === 'manual'}
+          onClick={() => onChange('manual')}
+        >
+          Manual
+        </button>
+        <button
+          type="button"
+          className={`automation-toggle-option${mode === 'auto' ? ' automation-toggle-option-active' : ''}`}
+          aria-pressed={mode === 'auto'}
+          onClick={() => onChange('auto')}
+        >
+          Automatic
+        </button>
       </div>
     </div>
   );

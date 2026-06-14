@@ -1,6 +1,6 @@
 import { getActiveNodeIds } from '../../../src/common/flow-state.js';
 import type { GraphMode } from '../components/GraphView';
-import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, WorkflowGraph } from '../types';
+import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, RoleConfigurationPending, WorkflowGraph } from '../types';
 import { DEFAULT_SELECTED_ROLE_KEY, EMPTY_STRINGS, SYSTEM_ROLE_KEY } from './constants';
 import { feedbackConsentCopy } from './feedback-copy';
 import {
@@ -42,6 +42,7 @@ export interface ActiveFlowView {
   visibleFeed: FeedItem[];
   visibleConsentRequest: ConsentRequest | null;
   roleConfigurationNodeId: string | null;
+  roleConfigurationPending: RoleConfigurationPending | null;
   isAwaitingImprovementChoice: boolean;
   isAwaitingFeedbackConsent: boolean;
   feedbackPrompt: ReturnType<typeof feedbackConsentCopy>;
@@ -142,6 +143,9 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const viewedRoleAwaitingNodeId = getAwaitingNodeIdForRole(flowRun, viewedRole);
   const viewedRoleAwaitingHandoffNodeId = getAwaitingHandoffNodeIdForRole(flowRun, workflow, viewedRole);
   const roleConfigurationNodeId = getRoleConfigurationNodeIdForRole(flowRun, viewedRole);
+  const roleConfigurationPending = roleConfigurationNodeId
+    ? activeUi?.roleConfigurations[roleConfigurationNodeId] ?? null
+    : null;
   const improvementInputTargetRole = getImprovementAwaitingRoleName(flowRun, viewedRole);
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
@@ -187,6 +191,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     visibleFeed,
     visibleConsentRequest,
     roleConfigurationNodeId,
+    roleConfigurationPending,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,

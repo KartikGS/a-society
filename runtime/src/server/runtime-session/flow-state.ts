@@ -1,11 +1,13 @@
 import { getActiveNodeIds } from '../../common/flow-state.js';
+import { AWAITING_HUMAN_REASON } from '../../common/protocol-constants.js';
 import type {
   FlowRef,
   FlowRun,
 } from '../../common/types.js';
-import { resolveRoleModel } from '../../orchestration/role-model.js';
+import { resolveCapabilityGate } from '../../orchestration/capability-selection.js';
+import { resolveRoleModel, resolveRoleModelGate } from '../../orchestration/role-model.js';
 import { SessionStore } from '../../orchestration/store.js';
-import type { FlowStateMessage } from '../protocol.js';
+import type { FlowStateMessage, RoleConfigurationPending } from '../protocol.js';
 import { latestContextUsageFromSession } from './feed.js';
 import type { ActiveSession } from './types.js';
 
@@ -43,6 +45,19 @@ export function buildFlowStateMessage(
       })
       .filter((entry): entry is [string, number] => entry !== null)
   );
+  // Pending configuration dimensions per node awaiting role configuration, so the
+  // UI prompts only for dimensions left manual (auto-resolved ones read as decided).
+  const roleConfigurations: Record<string, RoleConfigurationPending> = {};
+  for (const [awaitingNodeId, awaitingState] of Object.entries(flowRun.awaitingHumanNodes)) {
+    if (awaitingState.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) continue;
+    const modelGate = resolveRoleModelGate(workspaceRoot, ref, awaitingState.role);
+    const capabilityGate = resolveCapabilityGate(workspaceRoot, ref, awaitingState.role);
+    roleConfigurations[awaitingNodeId] = {
+      pendingModel: modelGate.kind === 'selection-required',
+      pendingSkills: capabilityGate.kind === 'selection-required' && capabilityGate.pendingSkills,
+      pendingMcp: capabilityGate.kind === 'selection-required' && capabilityGate.pendingMcp,
+    };
+  }
   return {
     type: 'flow_state',
     flowRef: ref,
@@ -51,5 +66,6 @@ export function buildFlowStateMessage(
     hasActiveSession: session !== null && !session.finished,
     contextUsageByRole,
     contextWindowByRole,
+    roleConfigurations,
   };
 }

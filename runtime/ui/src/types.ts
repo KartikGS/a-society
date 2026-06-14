@@ -132,6 +132,20 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
   | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; skills: string[]; mcpServers: string[] };
 
+export interface RoleConfigurationPending {
+  pendingModel: boolean;
+  pendingSkills: boolean;
+  pendingMcp: boolean;
+}
+
+export type SelectionMode = 'auto' | 'manual';
+
+export interface AutomationSettings {
+  models: SelectionMode;
+  skills: SelectionMode;
+  mcpServers: SelectionMode;
+}
+
 export type ServerMessage =
   | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
   | { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> }
@@ -141,7 +155,7 @@ export type ServerMessage =
   | { type: 'response_end'; flowRef: FlowRef; role: string }
   | { type: 'output_text'; flowRef: FlowRef; role: string; text: string }
   | { type: 'input_text'; flowRef: FlowRef; role?: string; text: string }
-  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; contextUsageByRole: Record<string, number>; contextWindowByRole: Record<string, number> }
+  | { type: 'flow_state'; flowRef: FlowRef; flowRun: FlowRun; backwardActive: string[]; hasActiveSession: boolean; contextUsageByRole: Record<string, number>; contextWindowByRole: Record<string, number>; roleConfigurations: Record<string, RoleConfigurationPending> }
   | { type: 'error'; flowRef: FlowRef; message: string }
 ;
 

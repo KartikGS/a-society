@@ -5,11 +5,12 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
-import { saveCapabilitySelection } from '../../src/orchestration/capability-selection.js';
+import { readCapabilitySelection, saveCapabilitySelection } from '../../src/orchestration/capability-selection.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { saveRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { getFlowDir, getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { SessionStore } from '../../src/orchestration/store.js';
+import { configureSettingsStore, updateAutomationSettings } from '../../src/settings/settings-store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { listenOnLocalhost, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
@@ -170,6 +171,105 @@ it('suspends first role activation for role configuration and resumes each role 
     await waitUntil(() => loadFlow().awaitingHumanNodes['next']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
 
     expect(requests.map((request) => request.model)).toEqual(['model-b', 'model-a']);
+  } finally {
+    await SessionStore.updateFlowRun((flow) => {
+      flow.status = 'completed';
+    }, flowRef, workspaceRoot);
+    orchestrator.wake();
+    await runPromise;
+    server.close();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+it('auto-resolves skills without suspending and injects them into the role system prompt', async () => {
+  const requests: Array<{ model: string; system: string }> = [];
+  const server = http.createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as {
+        model: string;
+        messages: Array<{ role: string; content: string }>;
+      };
+      const system = body.messages.find((message) => message.role === 'system')?.content ?? '';
+      requests.push({ model: body.model, system });
+      res.writeHead(200, { 'Content-Type': 'text/event-stream' });
+
+      const content = requests.length === 1
+        // First request is the automatic capability-selection turn.
+        ? JSON.stringify({ skills: ['review-writing'] })
+        // Second request is the actual role turn; park predictably on prompt-human.
+        : 'Working. ```handoff\ntype: prompt-human\n```';
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+  });
+  const port = await listenOnLocalhost(server);
+
+  const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'auto-skill-gate-'));
+  const projectNamespace = 'test-project';
+  const flowId = 'auto-skill-flow';
+  const flowRef = { projectNamespace, flowId };
+
+  seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
+    { id: 'model-a', providerBaseUrl: `http://127.0.0.1:${port}/v1`, active: true },
+  ]);
+  configureSettingsStore(workspaceRoot);
+  updateAutomationSettings({ skills: 'auto' });
+  writeSkill(workspaceRoot, 'review-writing');
+  scaffoldProjectDocs(workspaceRoot, projectNamespace, ['start', 'next']);
+
+  const recordPath = getFlowRecordDir(workspaceRoot, flowRef);
+  fs.mkdirSync(recordPath, { recursive: true });
+  writeWorkflow(recordPath);
+
+  SessionStore.init(workspaceRoot);
+  SessionStore.saveFlowRun({
+    flowId,
+    workspaceRoot,
+    projectNamespace,
+    recordFolderPath: recordPath,
+    runningNodes: ['start'],
+    awaitingHumanNodes: {},
+    pendingHumanInputs: {},
+    completedHandoffs: [],
+    visitedNodeIds: [],
+    receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
+    status: 'running',
+    stateVersion: CURRENT_FLOW_STATE_VERSION
+  });
+
+  const sink = new RecordingOperatorSink();
+  const orchestrator = new FlowOrchestrator(sink);
+  const loadFlow = () => SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+
+  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  try {
+    await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
+
+    // The node never suspended for role configuration — skills were auto-resolved.
+    expect(sink.events.some(
+      (event) => event.kind === 'human.awaiting_input'
+        && event.nodeId === 'start'
+        && event.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION
+    )).toBe(false);
+    expect(sink.events.some((event) => event.kind === 'role.auto_configured' && event.nodeId === 'start')).toBe(true);
+    // Pure-auto run: a final-config bubble carries the chosen skill by name.
+    expect(sink.events).toContainEqual(
+      expect.objectContaining({ kind: 'role.configured', nodeId: 'start', skillNames: ['review-writing'] })
+    );
+
+    // The automatic selection turn ran first, then the actual role turn.
+    expect(requests).toHaveLength(2);
+    expect(requests[0].system).toContain('capability selector');
+    // The role turn's system prompt was rebuilt to include the auto-selected skill.
+    expect(requests[1].system).toContain('review-writing');
+
+    const selection = readCapabilitySelection(workspaceRoot, flowRef, 'start');
+    expect(selection?.skills).toEqual(['review-writing']);
+    expect(selection?.skillsDecided).toBe(true);
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';

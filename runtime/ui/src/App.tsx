@@ -207,6 +207,7 @@ export function App() {
     visibleFeed,
     visibleConsentRequest,
     roleConfigurationNodeId,
+    roleConfigurationPending,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -516,7 +517,15 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
-                  roleConfiguration={roleConfigurationNodeId ? { nodeId: roleConfigurationNodeId, models: configuredModels, skills: configuredSkills, mcpServers: configuredMcpServers } : null}
+                  roleConfiguration={roleConfigurationNodeId ? {
+                    nodeId: roleConfigurationNodeId,
+                    models: configuredModels,
+                    skills: configuredSkills,
+                    mcpServers: configuredMcpServers,
+                    pendingModel: roleConfigurationPending?.pendingModel ?? true,
+                    pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
+                    pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
+                  } : null}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}

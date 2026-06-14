@@ -19,8 +19,9 @@ import type {
 } from '../../common/types.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { listSkills } from '../../framework-services/skills.js';
-import { listMcpServers, saveCapabilitySelection } from '../../orchestration/capability-selection.js';
+import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
+import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
 import { SessionStore } from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
@@ -151,7 +152,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const modelGate = resolveRoleModelGate(workspaceRoot, ref, awaitingState.role);
-    let modelDisplayName: string | undefined;
     let modelSelection: {
       modelConfigId: string;
       displayName: string;
@@ -179,30 +179,18 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         modelId: model.modelId,
         selectedAt: new Date().toISOString(),
       };
-      modelDisplayName = model.displayName;
-    } else if (payload.modelConfigId) {
-      const model = SettingsStore.getModelWithKey(payload.modelConfigId);
-      if (!SettingsStore.isUsableModelConfig(model)) {
-        broadcastToFlow(ref, {
-          type: 'error',
-          flowRef: ref,
-          message: 'The selected model is not usable. Complete its configuration in Settings and select it again.'
-        });
-        return;
-      }
-      modelSelection = {
-        modelConfigId: model.id,
-        displayName: model.displayName,
-        modelId: model.modelId,
-        selectedAt: new Date().toISOString(),
-      };
-      modelDisplayName = model.displayName;
     }
+
+    // Only persist dimensions the gate still has pending; auto-resolved dimensions
+    // are already decided and must not be clobbered by a partial manual submit.
+    const capabilityGate = resolveCapabilityGate(workspaceRoot, ref, awaitingState.role);
+    const pendingSkills = capabilityGate.kind === 'selection-required' && capabilityGate.pendingSkills;
+    const pendingMcp = capabilityGate.kind === 'selection-required' && capabilityGate.pendingMcp;
 
     const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
     const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
-    const selectedSkills = uniqueStrings(payload.skills);
-    const selectedMcpServers = uniqueStrings(payload.mcpServers);
+    const selectedSkills = pendingSkills ? uniqueStrings(payload.skills) : [];
+    const selectedMcpServers = pendingMcp ? uniqueStrings(payload.mcpServers) : [];
     const unknownSkill = selectedSkills.find((name) => !validSkillNames.has(name));
     const unknownServer = selectedMcpServers.find((id) => !validMcpServerIds.has(id));
     if (unknownSkill) {
@@ -218,12 +206,12 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       saveRoleModelSelection(workspaceRoot, ref, awaitingState.role, modelSelection);
     }
 
-    if (validSkillNames.size > 0 || validMcpServerIds.size > 0) {
-      saveCapabilitySelection(workspaceRoot, ref, awaitingState.role, {
-        skills: selectedSkills,
-        mcpServers: selectedMcpServers,
-        selectedAt: new Date().toISOString(),
-      });
+    const capabilitySelectedAt = new Date().toISOString();
+    if (pendingSkills) {
+      saveCapabilityDimension(workspaceRoot, ref, awaitingState.role, 'skills', selectedSkills, capabilitySelectedAt);
+    }
+    if (pendingMcp) {
+      saveCapabilityDimension(workspaceRoot, ref, awaitingState.role, 'mcpServers', selectedMcpServers, capabilitySelectedAt);
     }
 
     if (selectedSkills.length > 0) {
@@ -241,15 +229,15 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       startFlowRunner(session, flowRun.projectNamespace);
     }
 
+    // The result bubble shows the role's complete effective configuration — both the
+    // dimensions just selected manually and any decided automatically beforehand.
     emitHistoricalMessage(session, {
       type: 'operator_event',
       event: {
-        kind: 'human.role_configured',
+        kind: 'role.configured',
         nodeId,
         role: awaitingState.role,
-        modelDisplayName,
-        skillCount: selectedSkills.length,
-        mcpServerCount: selectedMcpServers.length,
+        ...buildRoleConfigurationSummary(workspaceRoot, ref, awaitingState.role),
       },
     });
     session.orchestrator.wake();

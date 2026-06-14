@@ -7,9 +7,11 @@ import {
   createModel,
   createMcpServer,
   deleteMcpServer,
+  getAutomationSettings,
   getEnabledWebSearchApiKey,
   getFeedSettings,
   getActiveModelWithKey,
+  updateAutomationSettings,
   getMcpServerWithSecrets,
   getToolSettings,
   listMcpServerSummaries,
@@ -117,6 +119,20 @@ describe('settings-store', () => {
     expect(getFeedSettings().historyLimit).toBe(250);
 
     expect(updateFeedSettings({ historyLimit: 50000 })).toEqual({ historyLimit: 10000 });
+  });
+
+  it('defaults automation to manual and updates per dimension', () => {
+    expect(getAutomationSettings()).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'manual' });
+
+    expect(updateAutomationSettings({ mcpServers: 'auto' })).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'auto' });
+    expect(getAutomationSettings()).toEqual({ models: 'manual', skills: 'manual', mcpServers: 'auto' });
+
+    // Unknown values normalize back to manual; other dimensions are preserved.
+    expect(updateAutomationSettings({ skills: 'bogus' as unknown as 'auto' })).toEqual({
+      models: 'manual',
+      skills: 'manual',
+      mcpServers: 'auto',
+    });
   });
 
   it('stores MCP server config separately from secrets and cleans secrets on delete', () => {

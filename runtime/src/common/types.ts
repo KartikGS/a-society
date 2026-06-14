@@ -263,7 +263,10 @@ export type OperatorEvent =
   | { kind: 'handoff.applied'; fromNodeId: string; fromRole: string; targets: Array<{ nodeId: string; role: string }> }
   | { kind: 'repair.requested'; scope: 'node' | 'improvement'; code: string; summary: string; role?: string; nodeId?: string }
   | { kind: 'human.awaiting_input'; nodeId: string; role: string; reason: AwaitingHumanReason }
-  | { kind: 'human.role_configured'; nodeId: string; role: string; modelDisplayName?: string; skillCount: number; mcpServerCount: number }
+  | { kind: 'role.configured'; nodeId: string; role: string; modelDisplayName?: string; skillNames?: string[]; mcpServerNames?: string[] }
+  | { kind: 'role.auto_selection_started'; nodeId: string; role: string }
+  | { kind: 'role.auto_configured'; nodeId: string; role: string }
+  | { kind: 'role.auto_selection_fell_back'; nodeId: string; role: string; dimensions: Array<'model' | 'skills' | 'mcp'>; reason: string }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
