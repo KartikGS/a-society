@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import Anthropic from '@anthropic-ai/sdk';
 import type { OperatorEvent, OperatorRenderSink } from '../../src/common/types.js';
 import { AnthropicProvider } from '../../src/providers/anthropic.js';
+import { MAX_NETWORK_RETRIES } from '../../src/providers/retry.js';
 
 class FakeAnthropicStream {
   private handlers: Array<(event: Record<string, unknown>) => void> = [];
@@ -245,5 +247,137 @@ describe('AnthropicProvider', () => {
     expect(assistantMessage).toBeDefined();
     const content = assistantMessage?.content as Array<{ type: string }>;
     expect(content.every((block) => block.type !== 'thinking')).toBe(true);
+  });
+});
+
+class FailingAnthropicStream {
+  on(): FailingAnthropicStream {
+    return this;
+  }
+
+  finalMessage(): Promise<never> {
+    return Promise.reject(new Anthropic.APIConnectionError({ message: 'connection reset' }));
+  }
+}
+
+class EmitThenFailAnthropicStream {
+  private handlers: Array<(event: Record<string, unknown>) => void> = [];
+
+  constructor(private readonly text: string) {}
+
+  on(eventName: string, handler: (event: Record<string, unknown>) => void): EmitThenFailAnthropicStream {
+    if (eventName === 'streamEvent') this.handlers.push(handler);
+    return this;
+  }
+
+  finalMessage(): Promise<never> {
+    for (const handler of this.handlers) handler(textDelta(this.text));
+    return Promise.reject(new Anthropic.APIConnectionError({ message: 'reset mid-stream' }));
+  }
+}
+
+type AnthropicAttempt = 'fail' | { events: Record<string, unknown>[]; final: Record<string, unknown> };
+
+function installSequencedAnthropicClient(provider: AnthropicProvider, attempts: AnthropicAttempt[]): () => number {
+  let calls = 0;
+  (provider as unknown as { client: unknown }).client = {
+    messages: {
+      stream: () => {
+        const attempt = attempts[Math.min(calls, attempts.length - 1)];
+        calls += 1;
+        if (attempt === 'fail') return new FailingAnthropicStream();
+        return new FakeAnthropicStream(attempt.events, attempt.final);
+      },
+    },
+  };
+  return () => calls;
+}
+
+function capturingRenderer(): { renderer: OperatorRenderSink; errors: string[] } {
+  const errors: string[] = [];
+  return {
+    errors,
+    renderer: {
+      emit: () => {},
+      requestSent: () => {},
+      receivingResponse: () => {},
+      responseEnd: () => {},
+      sendError: (message) => errors.push(message),
+    },
+  };
+}
+
+describe('AnthropicProvider network-error retry', () => {
+  function newProvider(): AnthropicProvider {
+    return new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+  }
+
+  it('retries a connection failure, notifies the operator, then succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      const provider = newProvider();
+      const callCount = installSequencedAnthropicClient(provider, [
+        'fail',
+        'fail',
+        { events: [textDelta('Recovered.')], final: finalMessage('') },
+      ]);
+      const { renderer, errors } = capturingRenderer();
+      const promise = provider.executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, {
+        operatorRenderer: renderer,
+      });
+      await vi.runAllTimersAsync();
+      const result = await promise;
+      expect(result).toMatchObject({ type: 'text', text: 'Recovered.' });
+      expect(callCount()).toBe(3);
+      // One toast per retry, carrying the attempt count.
+      expect(errors).toEqual([
+        expect.stringContaining('(1/5)'),
+        expect.stringContaining('(2/5)'),
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('surfaces the error after exhausting the retry budget', async () => {
+    vi.useFakeTimers();
+    try {
+      const provider = newProvider();
+      const callCount = installSequencedAnthropicClient(provider, ['fail']);
+      const settled = provider
+        .executeTurn('system', [{ role: 'user', content: 'Prompt.' }])
+        .then(() => 'resolved', (error: unknown) => error);
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+      expect(outcome).toBeInstanceOf(Anthropic.APIConnectionError);
+      expect(callCount()).toBe(MAX_NETWORK_RETRIES + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry once output has streamed', async () => {
+    const provider = newProvider();
+    let calls = 0;
+    (provider as unknown as { client: unknown }).client = {
+      messages: {
+        stream: () => {
+          calls += 1;
+          return new EmitThenFailAnthropicStream('partial');
+        },
+      },
+    };
+    const streamed: string[] = [];
+    const outcome = await provider
+      .executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, {
+        onAssistantTextDelta: (text) => streamed.push(text),
+      })
+      .then(() => 'resolved', (error: unknown) => error);
+    expect(outcome).toBeInstanceOf(Anthropic.APIConnectionError);
+    expect(calls).toBe(1);
+    expect(streamed).toEqual(['partial']);
   });
 });
