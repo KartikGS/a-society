@@ -1,5 +1,6 @@
 import type { FeedSettings, InputModality, McpServerSummary, ModelConfig, ProviderType, SettingsStatus, SkillLoadResult, SkillSummary, ToolSettings } from './types';
 import { normalizeModelReasoningConfig } from '../../src/common/model-reasoning.js';
+import { normalizePromptCacheTtl } from '../../src/common/prompt-cache.js';
 
 const INPUT_MODALITY_SET = new Set<InputModality>(['image', 'audio', 'video']);
 
@@ -44,6 +45,7 @@ export function normalizeModelConfig(value: unknown): ModelConfig | null {
     contextWindow: normalizeInteger(raw.contextWindow),
     maxOutputTokens: normalizeInteger(raw.maxOutputTokens),
     reasoning: normalizeModelReasoningConfig(raw.reasoning),
+    cacheTtl: normalizePromptCacheTtl(raw.cacheTtl),
     supportedInputTypes: normalizeSupportedInputTypes(raw.supportedInputTypes),
     active: raw.active === true,
   };

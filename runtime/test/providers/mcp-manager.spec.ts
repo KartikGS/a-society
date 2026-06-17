@@ -72,6 +72,31 @@ describe('MCP manager', () => {
     expect(notices[0].reason).toContain('must match');
   });
 
+  it('sorts collected tool definitions by namespaced provider name', () => {
+    const notices: Array<{ serverName: string; toolName?: string; reason: string }> = [];
+    const definitions = collectToolDefinitions({
+      id: 'server-1',
+      name: 'linear',
+      transport: 'http',
+      url: 'https://mcp.example.com',
+      args: [],
+      envKeys: [],
+      env: {},
+      headerKeys: [],
+      headers: {},
+      toolNames: [],
+    }, [
+      { name: 'zeta', inputSchema: { type: 'object' } },
+      { name: 'alpha', inputSchema: { type: 'object' } },
+    ], notices);
+
+    expect(definitions.map((definition) => definition.name)).toEqual([
+      'mcp__linear__alpha',
+      'mcp__linear__zeta',
+    ]);
+    expect(notices).toEqual([]);
+  });
+
   it('namespaces and reverses MCP tool names on the first separator', () => {
     const namespaced = namespaceMcpToolName('linear', 'issue__create');
     expect(namespaced).toBe('mcp__linear__issue__create');

@@ -17,8 +17,9 @@ This document is the standing reference for the coupling surface between A-Socie
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` file format and `copy` source paths | Yes | Scaffolding and runtime health checks |
 | `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |
 | `.a-society/skills/<name>/SKILL.md` frontmatter (`name`, `description`) | Yes | Skill library discovery, role configuration, context injection |
-| MCP `tools/list` and `tools/call` wire formats | Yes | MCP validate-on-save, tool snapshotting, namespaced tool execution |
+| MCP `tools/list` and `tools/call` wire formats, with deterministic namespaced tool ordering | Yes | MCP validate-on-save, tool snapshotting, namespaced tool execution, provider prompt-cache prefix stability |
 | `.a-society/state/<project>/<flow>/roles/<roleKey>/capabilities.json` `mcpServers` field | Yes | Per-flow role configuration and MCP server selection |
+| Provider prompt-cache request and usage fields (`cache_control`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `prompt_tokens_details.cached_tokens`) | Yes | Provider gateway prompt caching and cache observability |
 
 Rows that depend on `a-docs/` content are still standing executable dependencies and require the same co-maintenance discipline as `general/` format changes.
 

@@ -23,6 +23,7 @@ import type {
   ModelReasoningConfig,
   OpenAICompatibleTokenLimitParam,
   OpenAIReasoningEffort,
+  PromptCacheTtl,
   ProviderReasoningDisplay,
   ProviderReasoningReplayPolicy,
   ProviderType,
@@ -48,6 +49,7 @@ interface ModelFormState {
   contextWindow: string;
   maxOutputTokens: string;
   reasoning: ModelReasoningConfig;
+  cacheTtl: PromptCacheTtl;
   customReasoningExtraBodyJson: string;
   supportedInputTypes: InputModality[];
 }
@@ -92,6 +94,7 @@ const DEFAULT_FORM: ModelFormState = {
   contextWindow: '',
   maxOutputTokens: '',
   reasoning: DISABLED_REASONING,
+  cacheTtl: '5m',
   customReasoningExtraBodyJson: '{}',
   supportedInputTypes: [],
 };
@@ -368,6 +371,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
         contextWindow: form.contextWindow ? parseInt(form.contextWindow, 10) : 0,
         maxOutputTokens: form.maxOutputTokens ? parseInt(form.maxOutputTokens, 10) : 0,
         reasoning,
+        cacheTtl: form.cacheTtl,
         supportedInputTypes: form.supportedInputTypes,
       };
       const res = await fetch(isEditing ? `/api/settings/models/${encodeURIComponent(editingModelId!)}` : '/api/settings/models', {
@@ -424,6 +428,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
       contextWindow: model.contextWindow > 0 ? String(model.contextWindow) : '',
       maxOutputTokens: model.maxOutputTokens > 0 ? String(model.maxOutputTokens) : '',
       reasoning: model.reasoning,
+      cacheTtl: model.cacheTtl,
       customReasoningExtraBodyJson: model.reasoning.mode === 'custom-openai-compatible'
         ? formatJsonObject(model.reasoning.request.extraBody)
         : '{}',
@@ -1194,6 +1199,31 @@ function AddModelForm({ form, mode, submitting, onChange, onSubmit, onCancel }: 
             />
           </div>
         </div>
+
+        {form.providerType === 'anthropic' && (
+          <div className="form-fieldset">
+            <span className="form-label">Prompt cache TTL</span>
+            <div className="cache-ttl-options" role="group" aria-label="Anthropic prompt cache TTL">
+              <button
+                type="button"
+                className={`cache-ttl-option${form.cacheTtl === '5m' ? ' cache-ttl-option-active' : ''}`}
+                aria-pressed={form.cacheTtl === '5m'}
+                onClick={() => onChange('cacheTtl', '5m')}
+              >
+                5 min
+              </button>
+              <button
+                type="button"
+                className={`cache-ttl-option${form.cacheTtl === '1h' ? ' cache-ttl-option-active' : ''}`}
+                aria-pressed={form.cacheTtl === '1h'}
+                onClick={() => onChange('cacheTtl', '1h')}
+              >
+                1 hour
+              </button>
+            </div>
+            <p className="form-note">Anthropic charges a higher write rate when a prefix is cached; 1 hour uses the higher long-lived cache write rate.</p>
+          </div>
+        )}
 
         <div className="form-checkboxes">
           <div className="form-fieldset">

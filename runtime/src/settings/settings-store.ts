@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DISABLED_REASONING, normalizeModelReasoningConfig, type ModelReasoningConfig } from '../common/model-reasoning.js';
+import { normalizePromptCacheTtl, type PromptCacheTtl } from '../common/types.js';
 
 export interface ModelConfig {
   id: string;
@@ -12,6 +13,7 @@ export interface ModelConfig {
   contextWindow: number;
   maxOutputTokens: number;
   reasoning: ModelReasoningConfig;
+  cacheTtl: PromptCacheTtl;
   supportedInputTypes: Array<'image' | 'audio' | 'video'>;
   active: boolean;
 }
@@ -106,6 +108,7 @@ interface PersistedModelConfig {
   contextWindow: number;
   maxOutputTokens: number;
   reasoning?: unknown;
+  cacheTtl?: unknown;
   supportedInputTypes?: unknown;
   active: boolean;
 }
@@ -180,6 +183,7 @@ function normalizeModelConfig(model: PersistedModelConfig): ModelConfig {
     contextWindow: model.contextWindow,
     maxOutputTokens: model.maxOutputTokens,
     reasoning: normalizeModelReasoningConfig(model.reasoning ?? DISABLED_REASONING),
+    cacheTtl: normalizePromptCacheTtl(model.cacheTtl),
     supportedInputTypes: normalizeSupportedInputTypes(model.supportedInputTypes),
     active: model.active,
   };
