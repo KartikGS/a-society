@@ -5,7 +5,12 @@ import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
 import { resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from '../framework-services/scaffolding-system.js';
 import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
-import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH } from '../common/runtime-contracts.js';
+import {
+  RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH,
+  A_SOCIETY_CHANGELOG_RELATIVE_PATH,
+  A_DOCS_VERSION_RECORD_RELATIVE_PATH,
+} from '../common/runtime-contracts.js';
+import { readVersionFrontmatter } from '../framework-services/version-comparator.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
 
 export type InitializationMode = 'takeover' | 'greenfield';
@@ -130,6 +135,45 @@ function seedBootstrapContextFiles(projectRoot: string, projectNamespace: string
   );
 }
 
+function buildVersionRecord(version: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  return [
+    '---',
+    `a_society_version: "${version}"`,
+    '---',
+    '',
+    '# A-Society Version Record',
+    '',
+    `This project's \`a-docs/\` conform to A-Society **${version}**.`,
+    '',
+    'The authoritative value is `a_society_version` in the frontmatter above. The',
+    'runtime compares it against the canonical current version (the',
+    '`a_society_version` in A-Society\'s `CHANGELOG.md`) to decide whether an update',
+    'flow is offered for this project. The Owner bumps this version during an update',
+    'flow.',
+    '',
+    '## Applied Updates',
+    '',
+    '| Version After | Date | Notes |',
+    '|---|---|---|',
+    `| ${version} | ${today} | Stamped at initialization. |`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * Overwrites the scaffolded version-record stub with the framework version
+ * current at initialization time, recorded in YAML frontmatter. The version
+ * record is compulsory, so a readable current version must exist.
+ */
+function stampVersionRecord(projectRoot: string, currentVersion: string): void {
+  fs.writeFileSync(
+    path.join(projectRoot, 'a-docs', A_DOCS_VERSION_RECORD_RELATIVE_PATH),
+    buildVersionRecord(currentVersion),
+    'utf8'
+  );
+}
+
 function buildInitializationBrief(
   workspaceRoot: string,
   projectNamespace: string,
@@ -217,6 +261,7 @@ export function bootstrapInitializationFlow(
   const manifestPath = path.join(workspaceRoot, RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH);
   const runtimeInitializationPath = path.join(workspaceRoot, RUNTIME_INITIALIZATION_RELATIVE_PATH);
   const aSocietyGeneralIndexPath = path.join(workspaceRoot, A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH);
+  const changelogPath = path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH);
 
   if (!fs.existsSync(aSocietyRoot)) {
     throw new Error(`A-Society root not found at ${aSocietyRoot}.`);
@@ -229,6 +274,11 @@ export function bootstrapInitializationFlow(
   }
   if (!fs.existsSync(aSocietyGeneralIndexPath)) {
     throw new Error(`A-Society general index not found at ${aSocietyGeneralIndexPath}.`);
+  }
+
+  const currentVersion = readVersionFrontmatter(changelogPath);
+  if (!currentVersion) {
+    throw new Error(`A-Society changelog at ${changelogPath} is missing a readable "a_society_version" frontmatter value.`);
   }
 
   const scaffoldResult = scaffoldFromManifestFile(
@@ -247,6 +297,7 @@ export function bootstrapInitializationFlow(
   }
 
   seedBootstrapContextFiles(projectRoot, namespace);
+  stampVersionRecord(projectRoot, currentVersion);
 
   const flowId = buildFlowId();
   const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace: namespace, flowId });

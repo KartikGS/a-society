@@ -18,6 +18,7 @@ interface ProjectSelectorProps {
   onNewFlow: (projectNamespace: string) => void;
   onDeleteFlow: (flow: FlowSummary) => void;
   onDeleteProject: (project: ProjectSummary) => void;
+  onUpdateProject: (project: ProjectSummary) => void;
   onNewProjectNameChange: (value: string) => void;
   onCreateNew: () => void;
   onOpenSettings: () => void;
@@ -31,6 +32,7 @@ interface ProjectSectionProps {
   deleteDisabled: boolean;
   onSelect: (projectNamespace: string) => void;
   onDelete: (project: ProjectSummary) => void;
+  onUpdate?: (project: ProjectSummary) => void;
   emptyMessage: string;
 }
 
@@ -42,6 +44,7 @@ function ProjectSection(props: ProjectSectionProps) {
         {props.projects.map((project) => {
           const protectedProject = project.folderName === 'a-society';
           const deleteDisabled = props.deleteDisabled || protectedProject;
+          const canUpdate = !!props.onUpdate && !!project.updateAvailable;
           return (
             <div
               key={project.folderName}
@@ -58,6 +61,18 @@ function ProjectSection(props: ProjectSectionProps) {
                 <span className="sidebar-project-name">{project.displayName}</span>
                 <span className="sidebar-project-path">{project.folderName}</span>
               </button>
+              {canUpdate ? (
+                <button
+                  type="button"
+                  className="sidebar-project-update-btn"
+                  disabled={props.selectDisabled}
+                  title={`Update a-docs to A-Society ${project.currentVersion ?? 'latest'}${project.aDocsVersion ? ` (from ${project.aDocsVersion})` : ''}`}
+                  aria-label={`Update project ${project.displayName} to A-Society ${project.currentVersion ?? 'latest'}`}
+                  onClick={() => props.onUpdate?.(project)}
+                >
+                  Update
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="sidebar-project-delete-btn"
@@ -230,6 +245,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           deleteDisabled={props.disabled}
           onSelect={props.onSelectInitialized}
           onDelete={props.onDeleteProject}
+          onUpdate={props.canStartFlows ? props.onUpdateProject : undefined}
           emptyMessage="No initialized projects."
         />
 

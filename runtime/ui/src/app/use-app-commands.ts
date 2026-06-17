@@ -104,6 +104,15 @@ export function useAppCommands(input: UseAppCommandsInput) {
     sendMessage({ type: CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION, projectNamespace });
   }, [ensureConfiguredModel, sendMessage, setNewProjectName, setSelectedProject, setSelectorError]);
 
+  const handleUpdateProject = useCallback((project: ProjectSummary): void => {
+    if (!ensureConfiguredModel()) return;
+    const projectNamespace = project.folderName;
+    setSelectedProject(projectNamespace);
+    setNewProjectName('');
+    setSelectorError(null);
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW, projectNamespace });
+  }, [ensureConfiguredModel, sendMessage, setNewProjectName, setSelectedProject, setSelectorError]);
+
   const handleCreateNewProject = useCallback((): void => {
     const projectNamespace = newProjectName.trim();
     if (!projectNamespace) return;
@@ -362,6 +371,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     handleNewFlow,
     handleDeleteFlow,
     handleDeleteProject,
+    handleUpdateProject,
     handleTabSelect,
     handleCloseTab,
     handleSubmit,

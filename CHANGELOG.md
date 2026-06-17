@@ -1,3 +1,9 @@
+---
+a_society_version: "0.2.0"
+---
+
+<!-- On release, bump a_society_version above to match the newest released section below; the runtime reads it as the canonical current version. -->
+
 # Changelog
 
 All notable changes to A-Society will be documented here.
@@ -5,6 +11,11 @@ All notable changes to A-Society will be documented here.
 ---
 
 ## [Unreleased]
+
+### Runtime
+
+- Framework version tracking: the canonical version is declared in this changelog's `a_society_version` frontmatter, and each initialized project records the version it conforms to in `a-docs/a-society-version.md` frontmatter (stamped at initialization, validated by health checks).
+- Update flow: `GET /api/projects` now reports per-project `updateAvailable`; the project selector shows an Update button when a project is behind, launching an Owner-only update flow that migrates the `a-docs/` to the current version. The optional feedback step runs with an `update` feedback context.
 
 ---
 

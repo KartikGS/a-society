@@ -141,6 +141,9 @@ function feedbackKindFileSegment(flowRun: FlowRun): string {
       ? 'initialization-greenfield'
       : 'initialization-takeover';
   }
+  if (feedbackContext.kind === 'update') {
+    return 'update';
+  }
   return 'flow';
 }
 
@@ -164,6 +167,15 @@ function feedbackContextLines(flowRun: FlowRun): string[] {
       `Flow kind: initialization (${feedbackContext.initializationMode === 'greenfield' ? 'greenfield' : 'takeover'})`
     );
     lines.push('Focus on what the runtime could infer, what required human input, and where initialization guidance caused friction.');
+    return lines;
+  }
+
+  if (feedbackContext.kind === 'update') {
+    const fromTo = feedbackContext.updateFromVersion && feedbackContext.updateToVersion
+      ? ` (${feedbackContext.updateFromVersion} -> ${feedbackContext.updateToVersion})`
+      : '';
+    lines.push(`Flow kind: update${fromTo}`);
+    lines.push('Focus on whether the changelog and general/ delta were clear enough to apply, what the Owner had to infer or could not determine, where update guidance caused friction, and any framework changes that were hard to reconcile with the existing a-docs.');
     return lines;
   }
 

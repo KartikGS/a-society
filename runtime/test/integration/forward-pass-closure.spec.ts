@@ -73,6 +73,7 @@ async function runTest() {
     `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
     `| \`$TEST_PROJECT_OWNER_ROLE\` | \`test-project/a-docs/roles/owner/main.md\` |\n`
   );
+  fs.writeFileSync(path.join(projectADocsPath, 'a-society-version.md'), '---\na_society_version: "0.2.0"\n---\n# A-Society Version Record\n');
   const workflowGraph = `workflow:
   name: test-flow
   nodes:
