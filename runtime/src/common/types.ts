@@ -64,11 +64,13 @@ export interface ConsentState {
   };
 }
 
-export type FeedbackContextKind = 'standard' | 'initialization';
+export type FeedbackContextKind = 'standard' | 'initialization' | 'update';
 
 export interface FeedbackContext {
   kind: FeedbackContextKind;
   initializationMode?: 'takeover' | 'greenfield';
+  updateFromVersion?: string;        // version the project's a-docs were at when an update flow started
+  updateToVersion?: string;          // canonical current version the update targets
 }
 
 export function defaultConsentState(): ConsentState {

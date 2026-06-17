@@ -53,10 +53,10 @@ async function runTest() {
   fs.writeFileSync(path.join(rolesDir, 'end', 'required-readings.yaml'), 'role: end\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_END_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
-    `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
-    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/start/main.md\` |\n` +
-    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/next/main.md\` |\n` +
-    `| \`$TEST_PROJECT_END_ROLE\` | \`test-project/a-docs/roles/end/main.md\` |\n`
+    `| \`$A_SOCIETY_AGENTS\` | \`a-docs/agents.md\` |\n` +
+    `| \`$TEST_PROJECT_START_ROLE\` | \`a-docs/roles/start/main.md\` |\n` +
+    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`a-docs/roles/next/main.md\` |\n` +
+    `| \`$TEST_PROJECT_END_ROLE\` | \`a-docs/roles/end/main.md\` |\n`
   );
   fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
   fs.writeFileSync(path.join(rolesDir, 'next', 'main.md'), "Next Role Doc");

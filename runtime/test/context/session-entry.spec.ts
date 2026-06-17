@@ -37,7 +37,7 @@ function createFixture(): Fixture {
   fs.mkdirSync(path.join(projectRoot, 'a-docs', 'roles', 'owner'), { recursive: true });
   fs.writeFileSync(
     path.join(projectRoot, 'a-docs', 'indexes', 'main.md'),
-    '| `$TEST_NODE_DOC` | `test-project/a-docs/roles/node-doc/main.md` |\n| `$TEST_STARTUP_DOC` | `test-project/a-docs/roles/owner/startup.md` |\n'
+    '| `$TEST_NODE_DOC` | `a-docs/roles/node-doc/main.md` |\n| `$TEST_STARTUP_DOC` | `a-docs/roles/owner/startup.md` |\n'
   );
   fs.writeFileSync(
     path.join(projectRoot, 'a-docs', 'roles', 'node-doc', 'main.md'),

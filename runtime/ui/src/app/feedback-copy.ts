@@ -13,11 +13,14 @@ export function feedbackConsentCopy(flowRun: FlowRun | null): { title: string; b
     };
   }
 
-  if (feedbackContext?.kind === 'update-application') {
+  if (feedbackContext?.kind === 'update') {
+    const versionLabel = feedbackContext.updateFromVersion && feedbackContext.updateToVersion
+      ? ` (${feedbackContext.updateFromVersion} → ${feedbackContext.updateToVersion})`
+      : '';
     return {
       title: 'Generate update-flow feedback?',
       body: `Meta-analysis is complete. If you approve, the feedback agent will spend one more turn writing an upstream report directly to \`${artifactPath}\`.`,
-      details: 'This update-application report should focus on which update guidance applied, where migration guidance was unclear, and what the framework should improve for future update flows. Review or redact the file before sharing it upstream in a manual PR.'
+      details: `This update report${versionLabel} should focus on which update guidance applied, where migration guidance was unclear, and what the framework should improve for future update flows. Review or redact the file before sharing it upstream in a manual PR.`
     };
   }
 

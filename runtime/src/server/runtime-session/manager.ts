@@ -11,6 +11,7 @@ import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import { SessionStore } from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
+import { bootstrapUpdateFlow } from '../../projects/update-bootstrap.js';
 import { initializeDraftFlow } from '../../projects/draft-flow.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
@@ -280,6 +281,24 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     startFlowRunner(session, flowRun.projectNamespace);
   }
 
+  function startUpdateFlow(socket: WebSocket, projectNamespace: string): void {
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
+      return;
+    }
+
+    const { flowRun } = bootstrapUpdateFlow(workspaceRoot, projectNamespace);
+    const flowRef = flowRefFromRun(flowRun);
+    SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
+
+    subscribeSocket(socket, flowRef);
+    sendProjectFlows(socket, projectNamespace);
+
+    const session = createSession(flowRef);
+    emitFlowState(session);
+    startFlowRunner(session, flowRun.projectNamespace);
+  }
+
   async function resumeFlow(socket: WebSocket, ref: FlowRef): Promise<void> {
     let flowRun = readFlowRun(ref);
     if (!flowRun) {
@@ -354,6 +373,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     openFlow,
     startFreshFlow,
     startInitializationFlow,
+    startUpdateFlow,
     resumeFlow,
     handleHumanInput: commands.handleHumanInput,
     handleRoleConfiguration: commands.handleRoleConfiguration,

@@ -274,6 +274,7 @@ export function App() {
     handleNewFlow,
     handleDeleteFlow,
     handleDeleteProject,
+    handleUpdateProject,
     handleTabSelect,
     handleCloseTab,
     handleSubmit,
@@ -455,6 +456,7 @@ export function App() {
             onNewFlow={handleNewFlow}
             onDeleteFlow={handleDeleteFlow}
             onDeleteProject={handleDeleteProject}
+            onUpdateProject={handleUpdateProject}
             onNewProjectNameChange={setNewProjectName}
             onCreateNew={handleCreateNewProject}
             onOpenSettings={() => setSettingsOpen(true)}

@@ -1,9 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  A_SOCIETY_CHANGELOG_RELATIVE_PATH,
+  A_DOCS_VERSION_RECORD_RELATIVE_PATH,
+} from '../common/runtime-contracts.js';
+import { readVersionFrontmatter, evaluateProjectVersion } from '../framework-services/version-comparator.js';
 
 export interface ProjectSummary {
   displayName: string;
   folderName: string;
+  /** Version recorded in the project's a-docs/a-society-version.md frontmatter; null when absent/unreadable. Only populated for initialized projects. */
+  aDocsVersion?: string | null;
+  /** Canonical current framework version from the changelog; null when unreadable. */
+  currentVersion?: string | null;
+  /** True when the current framework version is strictly newer than the project's recorded version. */
+  updateAvailable?: boolean;
 }
 
 export interface ProjectDiscovery {
@@ -14,6 +25,7 @@ export interface ProjectDiscovery {
 export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
   try {
     const entries = fs.readdirSync(workspaceRoot, { withFileTypes: true });
+    const currentVersion = readVersionFrontmatter(path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH));
     const withADocs: ProjectSummary[] = [];
     const withoutADocs: ProjectSummary[] = [];
 
@@ -21,16 +33,25 @@ export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
       if (!entry.isDirectory()) continue;
       if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
 
-      const summary = {
-        displayName: entry.name,
-        folderName: entry.name
-      };
       const aDocsPath = path.join(workspaceRoot, entry.name, 'a-docs');
 
       if (fs.existsSync(aDocsPath) && fs.statSync(aDocsPath).isDirectory()) {
-        withADocs.push(summary);
+        const aDocsVersion = readVersionFrontmatter(
+          path.join(aDocsPath, A_DOCS_VERSION_RECORD_RELATIVE_PATH)
+        );
+        const status = evaluateProjectVersion(aDocsVersion, currentVersion);
+        withADocs.push({
+          displayName: entry.name,
+          folderName: entry.name,
+          aDocsVersion: status.aDocsVersion,
+          currentVersion: status.currentVersion,
+          updateAvailable: status.updateAvailable,
+        });
       } else {
-        withoutADocs.push(summary);
+        withoutADocs.push({
+          displayName: entry.name,
+          folderName: entry.name,
+        });
       }
     }
 

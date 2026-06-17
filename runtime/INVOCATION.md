@@ -94,15 +94,24 @@ The browser UI has two operator modes.
 
 ### 1. Project Selector and Owner Chat
 
-Fresh starts open in the project selector. The selector now has three startup paths:
+Fresh starts open in the project selector. The selector has these startup paths:
 
 - Existing projects with `a-docs/`
 - Existing projects without `a-docs/`
 - Create a new project
+- Update an initialized project whose `a-docs/` are behind the current framework version
 
 Selecting a project with `a-docs/` starts the normal stored Owner draft flow.
 
 Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder under `.a-society/state/<project>/<flow-id>/record/` with a single-node Owner workflow, injects initialization guidance and the A-Society general index as active artifacts, and then runs that stored flow.
+
+### Framework version and the update flow
+
+The canonical current framework version is declared in `CHANGELOG.md` YAML frontmatter (`a_society_version`). Each initialized project records the version its `a-docs/` conform to in `a-docs/a-society-version.md` frontmatter (same key). The version is stamped automatically at initialization and is a compulsory, parseable surface validated by runtime health checks.
+
+`GET /api/projects` reports, per initialized project, its recorded `aDocsVersion`, the `currentVersion`, and `updateAvailable` (true when the current version is strictly newer than the recorded version). When an update is available, the project selector shows an **Update** button next to the project's delete (×) control.
+
+Choosing Update starts an Owner-only update flow. Like initialization, it creates a runtime-owned record folder with a single-node Owner workflow, but it does **not** scaffold or modify the project's `a-docs/`. It injects the runtime update guide, an update brief (recording from/to versions and the changelog), and the A-Society general index. The Owner migrates the `a-docs/` to the target version and bumps `a_society_version` in `a-docs/a-society-version.md`. On forward-pass closure the `a-docs/` are validated like any other flow, and the optional feedback step runs with an `update`-kind feedback context.
 
 The runtime injects `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` with the handoff contract in every managed session. It defines flow record placement, metadata, and writable scope.
 

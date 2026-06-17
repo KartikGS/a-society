@@ -7,7 +7,8 @@ import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../co
 import { validatePaths } from './path-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../context/required-reading.js';
-import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH } from '../common/runtime-contracts.js';
+import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH, A_DOCS_VERSION_RECORD_RELATIVE_PATH } from '../common/runtime-contracts.js';
+import { readVersionFrontmatter, parseVersion } from './version-comparator.js';
 
 export interface RuntimeHealthCheckResult {
   ok: boolean;
@@ -382,6 +383,16 @@ export function runRuntimeHealthChecks(
     }
   }
 
+  const versionRecordPath = path.join(aDocsRoot, A_DOCS_VERSION_RECORD_RELATIVE_PATH);
+  if (isFile(versionRecordPath)) {
+    const recordedVersion = readVersionFrontmatter(versionRecordPath);
+    if (!recordedVersion) {
+      errors.push(`a-docs/${A_DOCS_VERSION_RECORD_RELATIVE_PATH} must declare an "a_society_version" in YAML frontmatter`);
+    } else if (!parseVersion(recordedVersion)) {
+      errors.push(`a-docs/${A_DOCS_VERSION_RECORD_RELATIVE_PATH} has an unparseable a_society_version "${recordedVersion}" (expected a dotted numeric version like "0.2.0")`);
+    }
+  }
+
   if (!isDirectory(rolesRoot)) {
     errors.push(`Required roles folder is missing at ${path.relative(workspaceRoot, rolesRoot)}`);
   }
@@ -414,7 +425,7 @@ export function runRuntimeHealthChecks(
     }
 
     try {
-      const pathResults = validatePaths(indexPath, workspaceRoot);
+      const pathResults = validatePaths(indexPath, projectRoot);
       for (const result of pathResults) {
         if (result.status === 'missing') {
           errors.push(`a-docs/indexes/main.md registers ${result.variable} -> ${result.path}, but that path is missing`);

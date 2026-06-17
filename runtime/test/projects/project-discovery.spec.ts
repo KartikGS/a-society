@@ -41,4 +41,42 @@ describe('project-discovery', () => {
 
     expect(discovery).toEqual({ withADocs: [], withoutADocs: [] });
   });
+
+  it('flags an initialized project that is behind the changelog version', () => {
+    const workspaceRoot = createWorkspace();
+    fs.mkdirSync(path.join(workspaceRoot, 'a-society'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workspaceRoot, 'a-society', 'CHANGELOG.md'),
+      '---\na_society_version: "0.2.0"\n---\n# Changelog\n',
+    );
+    fs.writeFileSync(
+      path.join(workspaceRoot, 'alpha', 'a-docs', 'a-society-version.md'),
+      '---\na_society_version: "0.1.0"\n---\n# Version\n',
+    );
+    fs.writeFileSync(
+      path.join(workspaceRoot, 'gamma', 'a-docs', 'a-society-version.md'),
+      '---\na_society_version: "0.2.0"\n---\n# Version\n',
+    );
+
+    const discovery = discoverProjects(workspaceRoot);
+    const alpha = discovery.withADocs.find((p) => p.folderName === 'alpha');
+    const gamma = discovery.withADocs.find((p) => p.folderName === 'gamma');
+
+    expect(alpha).toMatchObject({ aDocsVersion: '0.1.0', currentVersion: '0.2.0', updateAvailable: true });
+    expect(gamma).toMatchObject({ aDocsVersion: '0.2.0', currentVersion: '0.2.0', updateAvailable: false });
+  });
+
+  it('does not flag projects when the project has no version record', () => {
+    const workspaceRoot = createWorkspace();
+    fs.mkdirSync(path.join(workspaceRoot, 'a-society'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workspaceRoot, 'a-society', 'CHANGELOG.md'),
+      '---\na_society_version: "0.2.0"\n---\n# Changelog\n',
+    );
+
+    const discovery = discoverProjects(workspaceRoot);
+    const alpha = discovery.withADocs.find((p) => p.folderName === 'alpha');
+
+    expect(alpha).toMatchObject({ aDocsVersion: null, currentVersion: '0.2.0', updateAvailable: false });
+  });
 });

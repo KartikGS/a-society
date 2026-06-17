@@ -1,14 +1,18 @@
-# A-Society Version Record
-
-**Baseline Version:** v37.0
-**Initialized:** 2026-05-24
-
+---
+a_society_version: "0.2.0"
 ---
 
-This file records the framework-version baseline for A-Society's own `a-docs/` runtime-health surface. It is not a current-version declaration.
+# A-Society Version Record
+
+This project's `a-docs/` conform to A-Society **0.2.0**.
+
+The authoritative value is `a_society_version` in the frontmatter above. The
+runtime compares it against the canonical current version (the
+`a_society_version` in `CHANGELOG.md`) to decide whether an update flow is
+offered for this project.
 
 ## Applied Updates
 
-| Version After | Update Report | Applied | Notes |
-|---|---|---|---|
-| - | - | - | No updates applied since this self-record was created. |
+| Version After | Date | Notes |
+|---|---|---|
+| 0.2.0 | 2026-06-16 | Migrated from the legacy `vMAJOR.MINOR` baseline scheme to the changelog version scheme; frontmatter is now the authoritative version. |

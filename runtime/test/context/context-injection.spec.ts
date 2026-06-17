@@ -21,7 +21,7 @@ function createWorkspace(): string {
   );
   fs.writeFileSync(
     path.join(projectDir, 'a-docs', 'indexes', 'main.md'),
-    '| `$TEST_AGENTS` | `a-society/a-docs/agents.md` |\n| `$TEST_OWNER_ROLE` | `a-society/a-docs/roles/owner/main.md` |\n'
+    '| `$TEST_AGENTS` | `a-docs/agents.md` |\n| `$TEST_OWNER_ROLE` | `a-docs/roles/owner/main.md` |\n'
   );
   fs.writeFileSync(path.join(projectDir, 'a-docs', 'agents.md'), 'Agent orientation');
   fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner', 'main.md'), 'Owner role doc');

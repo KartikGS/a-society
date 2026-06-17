@@ -48,7 +48,7 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   );
   fs.writeFileSync(
     path.join(indexesRoot, 'main.md'),
-    '| `$TEST_PROJECT_AGENTS` | `test-project/a-docs/agents.md` | Agents entry |\n',
+    '| `$TEST_PROJECT_AGENTS` | `a-docs/agents.md` | Agents entry |\n',
     'utf8'
   );
   fs.writeFileSync(
@@ -67,6 +67,11 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
     'utf8'
   );
   fs.writeFileSync(path.join(improvementRoot, 'meta-analysis.md'), '# Meta Analysis\n', 'utf8');
+  fs.writeFileSync(
+    path.join(aDocsRoot, 'a-society-version.md'),
+    '---\na_society_version: "0.2.0"\n---\n# A-Society Version Record\n',
+    'utf8'
+  );
 
   return { tmpRoot, workspaceRoot, projectNamespace, projectRoot };
 }
@@ -81,6 +86,22 @@ it('passes for a minimal healthy runtime fixture', () => {
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
     expect(result.ok).toBe(true);
     expect(result.errors).toEqual([]);
+  } finally {
+    cleanup(fixture.tmpRoot);
+  }
+});
+
+it('fails when the version record has no parseable a_society_version', () => {
+  const fixture = makeProjectFixture();
+  try {
+    fs.writeFileSync(
+      path.join(fixture.projectRoot, 'a-docs', 'a-society-version.md'),
+      '# A-Society Version Record\n\nNo frontmatter.\n',
+      'utf8'
+    );
+    const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.includes('a_society_version'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
@@ -148,7 +169,7 @@ it('fails when the index points to a missing path', () => {
     fs.rmSync(path.join(fixture.projectRoot, 'a-docs', 'agents.md'), { force: true });
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
     expect(result.ok).toBe(false);
-    expect(result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> test-project/a-docs/agents.md, but that path is missing'))).toBe(true);
+    expect(result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> a-docs/agents.md, but that path is missing'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
@@ -194,7 +215,7 @@ it('fails when a project file is not covered by any ownership surface', () => {
 
 it('repair guidance names the completion signal that must be retried', () => {
   const guidance = buildRuntimeHealthRepairGuidance(
-    ['Required workflow definition is missing at test-project/a-docs/workflow/main.yaml'],
+    ['Required workflow definition is missing at a-docs/workflow/main.yaml'],
     'meta-analysis-complete'
   );
   expect(guidance.operatorSummary).toBe('A-docs runtime health checks failed');
