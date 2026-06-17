@@ -88,6 +88,18 @@ function finalMessage(thinking: string): Record<string, unknown> {
   };
 }
 
+function countCacheControlBlocks(value: unknown): number {
+  if (Array.isArray(value)) {
+    return value.reduce<number>((count, entry) => count + countCacheControlBlocks(entry), 0);
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return (record.cache_control ? 1 : 0) +
+      Object.values(record).reduce<number>((count, entry) => count + countCacheControlBlocks(entry), 0);
+  }
+  return 0;
+}
+
 describe('AnthropicProvider', () => {
   it('passes nested JSON Schema tool input_schema through unchanged', async () => {
     const provider = new AnthropicProvider('test-key', 'claude-test', {
@@ -247,6 +259,112 @@ describe('AnthropicProvider', () => {
     expect(assistantMessage).toBeDefined();
     const content = assistantMessage?.content as Array<{ type: string }>;
     expect(content.every((block) => block.type !== 'thinking')).toBe(true);
+  });
+
+  it('leaves the request shape uncached when cacheTurn is absent', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn(
+      'system',
+      [{ role: 'user', content: 'Prompt.' }]
+    );
+
+    expect(requests[0].system).toBe('system');
+    expect(JSON.stringify(requests[0])).not.toContain('cache_control');
+  });
+
+  it('adds Anthropic cache-control breakpoints when cacheTurn is true', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+      cacheTtl: '1h',
+    });
+    const requests: Record<string, unknown>[] = [];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn(
+      'system',
+      [
+        { role: 'user', content: 'Prompt.' },
+        { role: 'assistant', content: 'Prior answer.' },
+      ],
+      undefined,
+      { cacheTurn: true }
+    );
+
+    const request = requests[0];
+    expect(request.system).toEqual([{
+      type: 'text',
+      text: 'system',
+      cache_control: { type: 'ephemeral', ttl: '1h' },
+    }]);
+    const messages = request.messages as Array<{ content: unknown }>;
+    expect(messages[0]?.content).toBe('Prompt.');
+    const tailContent = messages.at(-1)?.content as Array<Record<string, unknown>>;
+    expect(tailContent.at(-1)).toMatchObject({
+      type: 'text',
+      text: 'Prior answer.',
+      cache_control: { type: 'ephemeral', ttl: '1h' },
+    });
+    expect(countCacheControlBlocks(request)).toBe(2);
+  });
+
+  it('uses only the system breakpoint when cacheTurn is true with no messages', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn('system', [], undefined, { cacheTurn: true });
+
+    expect(requests[0].system).toEqual([{
+      type: 'text',
+      text: 'system',
+      cache_control: { type: 'ephemeral' },
+    }]);
+    expect(requests[0].messages).toEqual([]);
+    expect(countCacheControlBlocks(requests[0])).toBe(1);
+  });
+
+  it('adds one intermediate breakpoint for a large trailing tool round', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    const messages = [
+      {
+        role: 'assistant_tool_calls' as const,
+        calls: [{ id: 'toolu_1', name: 'read_file', input: { path: 'a.md' } }],
+      },
+      ...Array.from({ length: 20 }, (_, index) => ({
+        role: 'tool_result' as const,
+        callId: `toolu_${index + 1}`,
+        toolName: 'read_file',
+        content: `result ${index}`,
+        isError: false,
+      })),
+    ];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn('system', messages, undefined, { cacheTurn: true });
+
+    expect(countCacheControlBlocks(requests[0])).toBe(3);
   });
 });
 

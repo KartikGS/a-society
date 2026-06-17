@@ -90,6 +90,20 @@ class ToolCallThenTextProvider implements LLMProvider {
   }
 }
 
+class RecordingOptionsProvider implements LLMProvider {
+  public optionsSeen: TurnOptions[] = [];
+
+  async executeTurn(
+    _systemPrompt: string,
+    _messages: RuntimeMessageParam[],
+    _tools?: ToolDefinition[],
+    options?: TurnOptions
+  ): Promise<ProviderTurnResult> {
+    this.optionsSeen.push({ ...(options ?? {}) });
+    return { type: 'text', text: 'Done.' };
+  }
+}
+
 class BlockingConsentGate implements ConsentGate {
   public requests: ConsentCheckRequest[] = [];
   private checkedResolve!: () => void;
@@ -155,6 +169,46 @@ describe('LLMGateway', () => {
       'ABORTED'
     );
     expect(error.partialText).toBe('Partial answer without a handoff block');
+  });
+
+  it('defaults prompt caching on for project turns and off for system turns', async () => {
+    const tmpDir = createTempWorkspace();
+    const projectProvider = new RecordingOptionsProvider();
+    const projectGateway = new LLMGateway({
+      mode: 'project',
+      workspaceRoot: tmpDir,
+      flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+      provider: projectProvider,
+    });
+
+    await projectGateway.executeTurn('System prompt', [{ role: 'user', content: 'Hello.' }]);
+
+    const systemProvider = new RecordingOptionsProvider();
+    const systemGateway = new LLMGateway({
+      mode: 'system',
+      workspaceRoot: tmpDir,
+      provider: systemProvider,
+    });
+
+    await systemGateway.executeTurn('System prompt', [{ role: 'user', content: 'Hello.' }]);
+
+    expect(projectProvider.optionsSeen[0]?.cacheTurn).toBe(true);
+    expect(systemProvider.optionsSeen[0]?.cacheTurn).toBe(false);
+  });
+
+  it('lets explicit prompt-cache turn options override the gateway mode default', async () => {
+    const tmpDir = createTempWorkspace();
+    const provider = new RecordingOptionsProvider();
+    const gateway = new LLMGateway({
+      mode: 'project',
+      workspaceRoot: tmpDir,
+      flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+      provider,
+    });
+
+    await gateway.executeTurn('System prompt', [{ role: 'user', content: 'Hello.' }], { cacheTurn: false });
+
+    expect(provider.optionsSeen[0]?.cacheTurn).toBe(false);
   });
 
   it('records tool-call continuation and denial result before consent-denied suspension', async () => {

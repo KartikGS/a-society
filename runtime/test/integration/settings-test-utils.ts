@@ -64,6 +64,7 @@ export function seedTestMultiModelSettings(settingsDir: string, models: SeededTe
     contextWindow: model.contextWindow ?? 0,
     maxOutputTokens: 0,
     reasoning: { mode: 'disabled' },
+    cacheTtl: '5m',
     supportedInputTypes: [],
     active: model.active ?? false,
   }));

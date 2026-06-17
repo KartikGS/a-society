@@ -1,12 +1,16 @@
 import type { AnthropicEffort, ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { PromptCacheTtl } from '../common/types.js';
 import { getCustomOpenAICompatibleReservedBodyKeys } from '../common/model-reasoning.js';
 
 export const DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS = 4096;
 export const DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS = 8192;
+export const ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS = 'gen_ai.usage.cache_read.input_tokens';
+export const ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS = 'gen_ai.usage.cache_creation.input_tokens';
 
 export interface ProviderRuntimeConfig {
   maxOutputTokens?: number;
   reasoning?: ModelReasoningConfig;
+  cacheTtl?: PromptCacheTtl;
 }
 
 export function resolveMaxOutputTokens(value: number | undefined, fallback: number): number {

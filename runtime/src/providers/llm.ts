@@ -39,6 +39,7 @@ function createProvider(model?: ModelConfigWithKey | null): LLMProvider {
   const providerRuntimeConfig = {
     maxOutputTokens: active.maxOutputTokens,
     reasoning: active.reasoning,
+    cacheTtl: active.cacheTtl,
   };
   switch (active.providerType) {
     case 'anthropic':
@@ -73,10 +74,12 @@ export class LLMGateway {
   private webSearchExecutor?: WebSearchExecutor;
   private mcpExecutor?: McpToolExecutor;
   private tools?: ToolDefinition[];
+  private cacheTurnDefault: boolean;
 
   constructor(options: LLMGatewayOptions) {
     const workspaceRoot = path.resolve(options.workspaceRoot);
     configureSettingsStore(workspaceRoot);
+    this.cacheTurnDefault = options.mode === 'project';
 
     if (options.provider) {
       this.provider = options.provider;
@@ -107,6 +110,8 @@ export class LLMGateway {
   ): Promise<GatewayTurnResult> {
     const tracer = TelemetryManager.getTracer();
     const toolsEnabled = !!(this.tools && this.fileExecutor);
+    const cacheTurn = options?.cacheTurn ?? this.cacheTurnDefault;
+    const providerOptions: TurnOptions = { ...(options ?? {}), cacheTurn };
     return tracer.startActiveSpan('llm.gateway.execute_turn', {
       kind: SpanKind.INTERNAL,
       attributes: {
@@ -116,7 +121,7 @@ export class LLMGateway {
     }, async (span) => {
       try {
         if (!this.tools || !this.fileExecutor) {
-          const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
+          const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, providerOptions);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
             return {
@@ -145,7 +150,7 @@ export class LLMGateway {
             throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
           }
 
-          const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+          const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, providerOptions);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
           }

@@ -22,6 +22,7 @@ import type {
   FlowSummary,
   ImprovementPhaseState,
   OperatorEvent,
+  PromptCacheTtl,
 } from '../../src/common/types.js';
 import type {
   CLIENT_MESSAGE_TYPE,
@@ -56,6 +57,7 @@ export type {
   OpenAIReasoningEffort,
   ProviderReasoningDisplay,
   ProviderReasoningReplayPolicy,
+  PromptCacheTtl,
 };
 
 export interface ModelConfig {
@@ -67,6 +69,7 @@ export interface ModelConfig {
   contextWindow: number;
   maxOutputTokens: number;
   reasoning: ModelReasoningConfig;
+  cacheTtl: PromptCacheTtl;
   supportedInputTypes: InputModality[];
   active: boolean;
 }

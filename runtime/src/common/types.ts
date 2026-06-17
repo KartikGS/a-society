@@ -326,9 +326,13 @@ export interface TurnOptions {
   consentGate?: ConsentGate;
   roleInstanceId?: string;
   nodeId?: string;
+  cacheTurn?: boolean;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
 }
+
+export type { PromptCacheTtl } from './prompt-cache.js';
+export { normalizePromptCacheTtl } from './prompt-cache.js';
 
 export interface GatewayTurnResult {
   text: string;

@@ -1,6 +1,7 @@
 import express, { type Express, type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizePromptCacheTtl } from '../common/types.js';
 import {
   isKebabCaseSkillName,
   listSkillLoadResults,
@@ -85,6 +86,7 @@ function parseModelParams(params: any): ParsedModelParams {
       contextWindow: Number(params.contextWindow) || 0,
       maxOutputTokens: Number(params.maxOutputTokens) || 0,
       reasoning,
+      cacheTtl: normalizePromptCacheTtl(params.cacheTtl),
       supportedInputTypes: normalizeSupportedInputTypes(params.supportedInputTypes),
     },
   };

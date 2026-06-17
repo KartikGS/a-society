@@ -37,6 +37,7 @@ The runtime server can start without a model, but runtime work cannot proceed un
 - Provider, model ID, base URL, and API key are configured in Settings
 - Saving a model runs a small sample request before persisting the configuration; validation failures are shown to the operator
 - Anthropic thinking effort can be set to `none` to omit the Anthropic `output_config.effort` request parameter for models that do not support it
+- Anthropic models expose a prompt cache TTL setting: `5m` by default, or `1h` for long-lived cache entries. The setting is persisted on every model but only Anthropic requests use explicit cache controls.
 - The Settings modal stays open until a usable active model exists
 - Environment variables in `.env` no longer select the runtime model
 
@@ -310,6 +311,13 @@ Telemetry behavior is controlled by the following environment variables:
 | `A_SOCIETY_ENVIRONMENT` | `production` | Sets the `deployment.environment` resource attribute |
 
 If telemetry configuration is malformed or the SDK fails to initialize, the runtime warns on `stderr` and continues without exported telemetry.
+
+Provider spans report prompt-cache usage when the provider returns cache counters:
+
+- `gen_ai.usage.cache_read.input_tokens` — input tokens served from provider prompt cache
+- `gen_ai.usage.cache_creation.input_tokens` — input tokens written into provider prompt cache; reported by Anthropic when present
+
+Project-mode role turns opt into prompt caching. System-mode turns such as compaction and automatic capability selection do not write cache by default.
 
 ---
 

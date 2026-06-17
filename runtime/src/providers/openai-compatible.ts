@@ -18,6 +18,7 @@ import {
 import {
   buildOpenAIChatCompletionTokenParams,
   DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
   resolveMaxOutputTokens,
   type ProviderRuntimeConfig
 } from './config.js';
@@ -140,6 +141,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       let contextUsage: number | undefined;
       let inputTokens: number | undefined;
       let outputTokens: number | undefined;
+      let cacheReadInputTokens: number | undefined;
       let outputStarted = false;
 
       try {
@@ -193,6 +195,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           contextUsage = undefined;
           inputTokens = undefined;
           outputTokens = undefined;
+          cacheReadInputTokens = undefined;
 
           renderer?.requestSent(options?.roleInstanceId ?? '', 'openai-compatible', this.model);
 
@@ -216,6 +219,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
             if (chunk.usage) {
               inputTokens = chunk.usage.prompt_tokens ?? undefined;
               outputTokens = chunk.usage.completion_tokens ?? undefined;
+              const cachedTokens = chunk.usage.prompt_tokens_details?.cached_tokens;
+              if (typeof cachedTokens === 'number') {
+                cacheReadInputTokens = cachedTokens;
+              }
               if (inputTokens !== undefined || outputTokens !== undefined) {
                 contextUsage = (inputTokens ?? 0) + (outputTokens ?? 0);
               }
@@ -273,6 +280,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
           if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
           if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
+          if (cacheReadInputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS, cacheReadInputTokens);
           if (finishReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [finishReason]);
 
           if (toolCallAcc.size > 0) {
