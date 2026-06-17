@@ -70,17 +70,52 @@ it('strips backticks from path values', () => {
   }
 });
 
+// --- Project-relative resolution ---
+
+it('resolves project-relative paths under projectRoot', () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-projrel-'));
+  try {
+    const projectRoot = path.join(ws, 'my-project');
+    fs.mkdirSync(path.join(projectRoot, 'a-docs'), { recursive: true });
+    fs.writeFileSync(path.join(projectRoot, 'a-docs', 'agents.md'), '#');
+    const index = path.join(projectRoot, 'a-docs', 'index.md');
+    fs.writeFileSync(index, '| `$AGENTS` | `a-docs/agents.md` | entry |\n');
+
+    const results = validatePaths(index, projectRoot);
+    expect(results.find((r) => r.variable === '$AGENTS')?.status).toBe('ok');
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
+it('does not resolve a path that carries the project-folder prefix', () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'pv-prefixed-'));
+  try {
+    const projectRoot = path.join(ws, 'my-project');
+    fs.mkdirSync(path.join(projectRoot, 'a-docs'), { recursive: true });
+    fs.writeFileSync(path.join(projectRoot, 'a-docs', 'agents.md'), '#');
+    const index = path.join(projectRoot, 'a-docs', 'index.md');
+    // A project-folder prefix is no longer valid; paths must be project-relative.
+    fs.writeFileSync(index, '| `$AGENTS` | `my-project/a-docs/agents.md` | entry |\n');
+
+    const results = validatePaths(index, projectRoot);
+    expect(results.find((r) => r.variable === '$AGENTS')?.status).toBe('missing');
+  } finally {
+    fs.rmSync(ws, { recursive: true, force: true });
+  }
+});
+
 // --- Error handling ---
 
 it('throws on unreadable index file', () => {
   expect(() => validatePaths('/nonexistent/path/index.md', REPO_ROOT)).toThrow(/Cannot read index file/);
 });
 
-it('throws when repoRoot is omitted', () => {
+it('throws when projectRoot is omitted', () => {
   expect(() =>
     // @ts-expect-error intentional wrong-arity call to test runtime guard
     validatePaths(FIXTURE_INDEX)
-  ).toThrow(/repoRoot is required/);
+  ).toThrow(/projectRoot is required/);
 });
 
 // --- Framework state (informational - failures indicate index drift, not tool bugs) ---
@@ -88,7 +123,7 @@ it('throws when repoRoot is omitted', () => {
 function report(indexName: string, indexPath: string): void {
   let results;
   try {
-    results = validatePaths(indexPath, REPO_ROOT);
+    results = validatePaths(indexPath, path.join(REPO_ROOT, 'a-society'));
   } catch (err) {
     console.error(`  ! ${indexName}: failed to parse — ${(err as Error).message}`);
     return;

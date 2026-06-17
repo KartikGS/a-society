@@ -49,7 +49,9 @@ function validateProjectNamespace(projectNamespace: string): string {
 
 function buildBootstrapIndex(projectNamespace: string): string {
   const prefix = sanitizeProjectVariablePrefix(projectNamespace);
-  const projectPath = (relativePath: string) => path.posix.join(projectNamespace, relativePath);
+  // Index paths are project-relative: they are resolved under the project root,
+  // so they stay correct regardless of the folder the project lives in.
+  const projectPath = (relativePath: string) => relativePath;
 
   const rows: Array<{ variable: string; currentPath: string; description: string }> = [
     {
@@ -103,6 +105,8 @@ function buildBootstrapIndex(projectNamespace: string): string {
     '# Project Path Index',
     '',
     'This bootstrap index was created by the runtime to seed initialization. Expand and refine it during initialization.',
+    '',
+    'Paths in this table are **project-relative** — relative to this project\'s root (the folder containing `a-docs/`), not the workspace. Write `a-docs/agents.md`, not `<project>/a-docs/agents.md`.',
     '',
     '| Variable | Current Path | Description |',
     '|---|---|---|',

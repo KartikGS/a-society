@@ -425,7 +425,7 @@ export function runRuntimeHealthChecks(
     }
 
     try {
-      const pathResults = validatePaths(indexPath, workspaceRoot);
+      const pathResults = validatePaths(indexPath, projectRoot);
       for (const result of pathResults) {
         if (result.status === 'missing') {
           errors.push(`a-docs/indexes/main.md registers ${result.variable} -> ${result.path}, but that path is missing`);

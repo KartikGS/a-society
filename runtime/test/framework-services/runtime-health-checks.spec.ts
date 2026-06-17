@@ -48,7 +48,7 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
   );
   fs.writeFileSync(
     path.join(indexesRoot, 'main.md'),
-    '| `$TEST_PROJECT_AGENTS` | `test-project/a-docs/agents.md` | Agents entry |\n',
+    '| `$TEST_PROJECT_AGENTS` | `a-docs/agents.md` | Agents entry |\n',
     'utf8'
   );
   fs.writeFileSync(
@@ -169,7 +169,7 @@ it('fails when the index points to a missing path', () => {
     fs.rmSync(path.join(fixture.projectRoot, 'a-docs', 'agents.md'), { force: true });
     const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
     expect(result.ok).toBe(false);
-    expect(result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> test-project/a-docs/agents.md, but that path is missing'))).toBe(true);
+    expect(result.errors.some((error) => error.includes('registers $TEST_PROJECT_AGENTS -> a-docs/agents.md, but that path is missing'))).toBe(true);
   } finally {
     cleanup(fixture.tmpRoot);
   }
@@ -215,7 +215,7 @@ it('fails when a project file is not covered by any ownership surface', () => {
 
 it('repair guidance names the completion signal that must be retried', () => {
   const guidance = buildRuntimeHealthRepairGuidance(
-    ['Required workflow definition is missing at test-project/a-docs/workflow/main.yaml'],
+    ['Required workflow definition is missing at a-docs/workflow/main.yaml'],
     'meta-analysis-complete'
   );
   expect(guidance.operatorSummary).toBe('A-docs runtime health checks failed');

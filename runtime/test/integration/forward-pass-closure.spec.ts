@@ -70,8 +70,8 @@ async function runTest() {
   fs.writeFileSync(path.join(rolesDir, 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_OWNER_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
-    `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
-    `| \`$TEST_PROJECT_OWNER_ROLE\` | \`test-project/a-docs/roles/owner/main.md\` |\n`
+    `| \`$A_SOCIETY_AGENTS\` | \`a-docs/agents.md\` |\n` +
+    `| \`$TEST_PROJECT_OWNER_ROLE\` | \`a-docs/roles/owner/main.md\` |\n`
   );
   fs.writeFileSync(path.join(projectADocsPath, 'a-society-version.md'), '---\na_society_version: "0.2.0"\n---\n# A-Society Version Record\n');
   const workflowGraph = `workflow:

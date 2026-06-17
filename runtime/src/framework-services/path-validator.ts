@@ -11,13 +11,18 @@ export interface PathValidationResult {
  * Parses a markdown index table and checks whether each registered path exists.
  *
  * Expects the A-Society index table format:
- *   | `$VARIABLE` | /path/to/file | Description |
+ *   | `$VARIABLE` | path/to/file | Description |
  *
  * Section-header rows (e.g. | **Agents** | | |) and separator rows are skipped.
- * Paths are resolved relative to repoRoot.
+ *
+ * Index paths are project-relative and are resolved under `projectRoot` (the
+ * folder that contains the project's `a-docs/`).
  */
-export function validatePaths(indexFilePath: string, repoRoot: string): PathValidationResult[] {
-  if (!repoRoot) throw new Error('repoRoot is required');
+export function validatePaths(
+  indexFilePath: string,
+  projectRoot: string
+): PathValidationResult[] {
+  if (!projectRoot) throw new Error('projectRoot is required');
 
   let content: string;
   try {
@@ -49,8 +54,8 @@ export function validatePaths(indexFilePath: string, repoRoot: string): PathVali
       continue;
     }
 
-    // Paths in the index start with '/' and are relative to repo root
-    const absolutePath = path.join(repoRoot, registeredPath);
+    // Index paths are project-relative.
+    const absolutePath = path.join(projectRoot, registeredPath);
 
     try {
       const exists = fs.existsSync(absolutePath);

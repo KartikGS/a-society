@@ -67,7 +67,7 @@ describe('initialization-bootstrap', () => {
       entry.includes('A-Society general index:')
     );
     expect(generalIndexGuidance).toContain('$GENERAL_OWNER_ROLE');
-    expect(generalIndexGuidance).toContain('a-society/general/roles/owner/main.md');
+    expect(generalIndexGuidance).toContain('general/roles/owner/main.md');
 
     const metadata = readRecordMetadata(result.flowRun.recordFolderPath);
     expect(metadata).toBeTruthy();
