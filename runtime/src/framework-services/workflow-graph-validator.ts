@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../common/role-id.js';
-import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
+import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../../shared/role-id.js';
+import { OWNER_BASE_ROLE_ID } from '../../shared/protocol-constants.js';
 import type { FlowRun } from '../common/types.js';
-import { WorkflowGraph as RuntimeWorkflowGraph, parseHandoffKey } from '../orchestration/workflow-graph.js';
+import { WorkflowGraph as RuntimeWorkflowGraph, parseHandoffKey } from '../../shared/workflow-graph.js';
 
 const REQUIRED_START_NODE_ID = 'owner-intake';
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from './required-reading.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 import type { FlowRef } from '../common/types.js';
 import { resolveEffectiveCapabilities } from '../orchestration/capability-selection.js';
 import { readSkillSummary } from '../framework-services/skills.js';

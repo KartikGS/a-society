@@ -1,5 +1,5 @@
-import { FEEDBACK_CONSENT_DECISION } from '../../../src/common/protocol-constants.js';
-import type { ProtocolFeedbackConsentDecision } from '../../../src/common/protocol-constants.js';
+import { FEEDBACK_CONSENT_DECISION } from '../../../shared/protocol-constants.js';
+import type { ProtocolFeedbackConsentDecision } from '../../../shared/protocol-constants.js';
 
 interface FeedbackConsentModalProps {
   title: string;

@@ -1,7 +1,7 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
-import { flowKey } from '../../src/common/flow-ref.js';
-import { CLIENT_MESSAGE_TYPE, CONSENT_MODE } from '../../src/common/protocol-constants.js';
+import { flowKey } from '../../shared/flow-ref.js';
+import { CLIENT_MESSAGE_TYPE, CONSENT_MODE } from '../../shared/protocol-constants.js';
 import { createActiveFlowView } from './app/active-flow-view';
 import { SETTINGS_REQUIRED_MESSAGE } from './app/constants';
 import {
@@ -454,8 +454,8 @@ export function App() {
             onInitializeExisting={handleExistingInitialization}
             onOpenFlow={handleOpenFlow}
             onNewFlow={handleNewFlow}
-            onDeleteFlow={handleDeleteFlow}
-            onDeleteProject={handleDeleteProject}
+            onDeleteFlow={(flowRef) => { void handleDeleteFlow(flowRef); }}
+            onDeleteProject={(projectNamespace) => { void handleDeleteProject(projectNamespace); }}
             onUpdateProject={handleUpdateProject}
             onNewProjectNameChange={setNewProjectName}
             onCreateNew={handleCreateNewProject}
@@ -574,8 +574,8 @@ export function App() {
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
-          onSkillsChange={refreshConfiguredSkills}
-          onMcpServersChange={refreshConfiguredMcpServers}
+          onSkillsChange={() => { void refreshConfiguredSkills(); }}
+          onMcpServersChange={() => { void refreshConfiguredMcpServers(); }}
           onError={showToast}
         />
       )}

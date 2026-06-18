@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
-} from '../../../src/common/protocol-constants.js';
+} from '../../../shared/protocol-constants.js';
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, McpServerSummary, ModelConfig, SkillSummary } from '../types';
 
 export type { FeedItem };

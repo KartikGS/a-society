@@ -1,5 +1,5 @@
 import type { WebSocket } from 'ws';
-import { flowKey, flowRefFromRun } from '../../common/flow-ref.js';
+import { flowKey, flowRefFromRun } from '../../../shared/flow-ref.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   FeedItem,

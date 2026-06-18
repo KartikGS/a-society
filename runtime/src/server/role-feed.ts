@@ -1,6 +1,6 @@
-import { operatorMessageToFeedItem } from '../common/operator-feed.js';
-import { AWAITING_HUMAN_REASON } from '../common/protocol-constants.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { operatorMessageToFeedItem } from '../../shared/operator-feed.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 import type { FeedItem, OperatorEvent, OperatorFeedMessage } from '../common/types.js';
 
 export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | null {

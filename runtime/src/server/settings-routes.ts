@@ -8,7 +8,7 @@ import {
   parseSkillMarkdownFrontmatter,
   readSkillSummary,
 } from '../framework-services/skills.js';
-import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../common/model-reasoning.js';
+import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { validateModelConfiguration } from '../providers/model-validation.js';
 import { formatMcpError } from '../providers/mcp/errors.js';
 import { validateMcpServerConfiguration } from '../providers/mcp/validate.js';

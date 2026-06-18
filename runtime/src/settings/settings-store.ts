@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { DISABLED_REASONING, normalizeModelReasoningConfig, type ModelReasoningConfig } from '../common/model-reasoning.js';
+import { DISABLED_REASONING, normalizeModelReasoningConfig, type ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { normalizePromptCacheTtl, type PromptCacheTtl } from '../common/types.js';
 
 export interface ModelConfig {

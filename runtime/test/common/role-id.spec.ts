@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRoleIdentity, toKebabCaseRoleId } from '../../src/common/role-id.js';
+import { parseRoleIdentity, toKebabCaseRoleId } from '../../shared/role-id.js';
 
 describe('role-id', () => {
   it('normalizes role names to kebab-case ids', () => {

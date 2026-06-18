@@ -6,7 +6,7 @@ import type {
   OpenAIReasoningEffort,
   ProviderReasoningDisplay,
   ProviderReasoningReplayPolicy,
-} from '../../src/common/model-reasoning.js';
+} from '../../shared/model-reasoning.js';
 import type {
   AwaitingHumanReason,
   ConsentMode,
@@ -23,12 +23,12 @@ import type {
   ImprovementPhaseState,
   OperatorEvent,
   PromptCacheTtl,
-} from '../../src/common/types.js';
+} from '../../shared/types.js';
 import type {
   CLIENT_MESSAGE_TYPE,
   ProtocolFeedbackConsentDecision,
   ProtocolImprovementChoiceMode,
-} from '../../src/common/protocol-constants.js';
+} from '../../shared/protocol-constants.js';
 
 export type {
   AwaitingHumanReason,

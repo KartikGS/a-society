@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
 import { readCapabilitySelection, saveCapabilityDimension } from '../../src/orchestration/capability-selection.js';
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';

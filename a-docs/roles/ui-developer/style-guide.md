@@ -139,7 +139,7 @@ Type-assert JSON responses at the call site: `await response.json() as MyType`.
 
 ## Styling
 
-**Single flat stylesheet.** All styles live in `src/styles.css`. Do not create CSS Modules, styled-components, Tailwind, or per-component CSS files. The flat model keeps specificity predictable and makes the full token set visible at a glance.
+**Area-split stylesheet with one import cascade.** Styles are organized under `src/styles/` as area files, with `src/styles.css` preserved as the single import entry. `base.css` holds design tokens and shared UI chrome; area files such as `chat.css`, `graph.css`, and `settings.css` hold feature-specific selectors. Do not create CSS Modules, styled-components, Tailwind, or per-component CSS files. The area-split model keeps specificity predictable while letting agents read the relevant UI area without scanning the full cascade.
 
 **Custom properties for all design tokens.** Every color, shadow, and font stack that is reused more than once is a CSS custom property on `:root`. Do not hardcode token values inline — consume the variable:
 ```css

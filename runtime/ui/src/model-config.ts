@@ -1,6 +1,6 @@
 import type { FeedSettings, InputModality, McpServerSummary, ModelConfig, ProviderType, SettingsStatus, SkillLoadResult, SkillSummary, ToolSettings } from './types';
-import { normalizeModelReasoningConfig } from '../../src/common/model-reasoning.js';
-import { normalizePromptCacheTtl } from '../../src/common/prompt-cache.js';
+import { normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
+import { normalizePromptCacheTtl } from '../../shared/prompt-cache.js';
 
 const INPUT_MODALITY_SET = new Set<InputModality>(['image', 'audio', 'video']);
 

@@ -1,4 +1,4 @@
-import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../../shared/protocol-constants.js';
 import type {
   ConsentRequest,
   FeedItem,

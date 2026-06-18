@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import yaml from 'js-yaml';
 import { resolveProjectRoot } from '../projects/draft-flow.js';
-import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../common/role-id.js';
+import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../../shared/role-id.js';
 import { validatePaths } from './path-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../context/required-reading.js';

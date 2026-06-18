@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { flowKey } from '../common/flow-ref.js';
+import { flowKey } from '../../shared/flow-ref.js';
 import type { FlowRef } from '../common/types.js';
 import type { ServerMessage } from './protocol.js';
 

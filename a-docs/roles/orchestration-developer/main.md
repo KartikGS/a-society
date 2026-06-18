@@ -57,7 +57,7 @@ The Orchestration Developer does **NOT** own:
 
 Phase-specific support documents for this role are surfaced from the active workflow at the implementation or validation phase where they apply. Follow the workflow's references there rather than pre-loading those documents from this role file.
 
-When you need the standing executable design or coupling context, consult `$A_SOCIETY_EXECUTABLE_PROPOSAL`, `$A_SOCIETY_EXECUTABLE_ADDENDUM`, and `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
+When you need the standing executable design or coupling context, consult `$A_SOCIETY_EXECUTABLE_ARCHITECTURE` and `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 
 ---
 

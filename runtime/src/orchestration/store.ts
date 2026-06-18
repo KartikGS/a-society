@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { flowKey, flowRefFromRun } from '../common/flow-ref.js';
+import { flowKey, flowRefFromRun } from '../../shared/flow-ref.js';
 import { CURRENT_FLOW_STATE_VERSION, normalizeConsentState } from '../common/types.js';
 import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../common/types.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getFlowDir, getProjectStateDir, getStateRoot } from './state-paths.js';
 

@@ -6,7 +6,7 @@ import {
   buildForwardNodeEntryMessage,
   buildImprovementEntryMessage,
 } from '../../src/context/session-entry.js';
-import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
+import { WorkflowGraph } from '../../shared/workflow-graph.js';
 
 interface Fixture {
   tmpDir: string;

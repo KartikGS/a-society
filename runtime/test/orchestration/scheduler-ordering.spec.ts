@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../../src/common/types.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
+import { WorkflowGraph } from '../../shared/workflow-graph.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {

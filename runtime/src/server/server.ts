@@ -4,7 +4,7 @@ import http from 'node:http';
 import { WebSocketServer } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
 import { SessionStore } from '../orchestration/store.js';
-import { CLIENT_MESSAGE_TYPE } from '../common/protocol-constants.js';
+import { CLIENT_MESSAGE_TYPE } from '../../shared/protocol-constants.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import * as SettingsStore from '../settings/settings-store.js';
 import { createFlowReadModel } from './flow-read-model.js';

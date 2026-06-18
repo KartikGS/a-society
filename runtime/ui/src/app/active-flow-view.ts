@@ -1,4 +1,4 @@
-import { getActiveNodeIds } from '../../../src/common/flow-state.js';
+import { getActiveNodeIds } from '../../../shared/flow-state.js';
 import type { GraphMode } from '../components/GraphView';
 import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, RoleConfigurationPending, WorkflowGraph } from '../types';
 import { DEFAULT_SELECTED_ROLE_KEY, EMPTY_STRINGS, SYSTEM_ROLE_KEY } from './constants';

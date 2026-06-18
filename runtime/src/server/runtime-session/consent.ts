@@ -1,6 +1,6 @@
-import { flowKey } from '../../common/flow-ref.js';
-import { AWAITING_HUMAN_REASON, CONSENT_RESPONSE_DECISION } from '../../common/protocol-constants.js';
-import { parseRoleIdentity } from '../../common/role-id.js';
+import { flowKey } from '../../../shared/flow-ref.js';
+import { AWAITING_HUMAN_REASON, CONSENT_RESPONSE_DECISION } from '../../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   ConsentMode,
