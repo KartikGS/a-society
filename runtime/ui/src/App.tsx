@@ -574,8 +574,8 @@ export function App() {
           required={!hasConfiguredModel}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
-          onSkillsChange={() => { void refreshConfiguredSkills(); }}
-          onMcpServersChange={() => { void refreshConfiguredMcpServers(); }}
+          onSkillsChange={refreshConfiguredSkills}
+          onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
         />
       )}

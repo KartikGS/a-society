@@ -36,8 +36,8 @@ interface SettingsModalProps {
   onClose: () => void;
   onError?: (message: string) => void;
   onModelsChange?: () => void;
-  onSkillsChange?: () => void;
-  onMcpServersChange?: () => void;
+  onSkillsChange?: () => void | Promise<void>;
+  onMcpServersChange?: () => void | Promise<void>;
   required?: boolean;
 }
 
@@ -161,12 +161,12 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
   const replaceSkillResults = useCallback((next: SkillLoadResult[]): void => {
     setSkillResults(next);
-    onSkillsChange?.();
+    void onSkillsChange?.();
   }, [onSkillsChange]);
 
   const replaceMcpServers = useCallback((next: McpServerSummary[]): void => {
     setMcpServers(next);
-    onMcpServersChange?.();
+    void onMcpServersChange?.();
   }, [onMcpServersChange]);
 
   useEffect(() => {
@@ -174,7 +174,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
       try {
         const res = await fetch('/api/settings/models');
         if (!res.ok) throw new Error(await res.text());
-        replaceModels(normalizeModelConfigs(await res.json()));
+        setModels(normalizeModelConfigs(await res.json()));
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load models.');
       }
@@ -208,7 +208,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
       try {
         const res = await fetch('/api/settings/skills');
         if (!res.ok) throw new Error(await res.text());
-        replaceSkillResults(normalizeSkillLoadResults(await res.json()));
+        setSkillResults(normalizeSkillLoadResults(await res.json()));
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load skills.');
       }
@@ -218,7 +218,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
       try {
         const res = await fetch('/api/settings/mcp');
         if (!res.ok) throw new Error(await res.text());
-        replaceMcpServers(normalizeMcpServerSummaries(await res.json()));
+        setMcpServers(normalizeMcpServerSummaries(await res.json()));
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load MCP servers.');
       }
@@ -242,7 +242,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
     void fetchSkills();
     void fetchMcpServers();
     void fetchAutomation();
-  }, [replaceMcpServers, replaceModels, replaceSkillResults, reportError]);
+  }, [reportError]);
 
   async function updateAutomation(dimension: keyof AutomationSettings, mode: SelectionMode): Promise<void> {
     try {
