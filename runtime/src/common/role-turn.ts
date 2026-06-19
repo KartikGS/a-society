@@ -6,7 +6,7 @@ import { autoCompactRoleSessionBeforeTurn } from '../orchestration/compaction.js
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
 import { getActiveModelWithKey, type ModelConfigWithKey } from '../settings/settings-store.js';
-import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { McpManager } from '../providers/mcp/manager.js';
 
 function extractFileRefs(content: string): string[] {

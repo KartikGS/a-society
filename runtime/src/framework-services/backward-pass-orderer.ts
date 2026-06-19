@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findWorkflowFilePath, parseWorkflowFile } from '../context/workflow-file.js';
-import { IMPROVEMENT_CHOICE_MODE, OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
-import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { IMPROVEMENT_CHOICE_MODE, OWNER_BASE_ROLE_ID } from '../../shared/protocol-constants.js';
+import type { ProtocolImprovementChoiceMode } from '../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 
 export interface WorkflowNode {
   id: string;

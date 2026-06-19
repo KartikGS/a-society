@@ -1,6 +1,6 @@
-import type { AnthropicEffort, ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { AnthropicEffort, ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import type { PromptCacheTtl } from '../common/types.js';
-import { getCustomOpenAICompatibleReservedBodyKeys } from '../common/model-reasoning.js';
+import { getCustomOpenAICompatibleReservedBodyKeys } from '../../shared/model-reasoning.js';
 
 export const DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS = 4096;
 export const DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS = 8192;

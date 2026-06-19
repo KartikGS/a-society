@@ -1,4 +1,4 @@
-import { parseRoleIdentity } from '../../common/role-id.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
 import type {
   FlowRef,
   FlowRun,

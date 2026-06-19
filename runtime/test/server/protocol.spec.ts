@@ -4,7 +4,7 @@ import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
   FEEDBACK_CONSENT_DECISION,
-} from '../../src/common/protocol-constants.js';
+} from '../../shared/protocol-constants.js';
 import { parseClientMessage } from '../../src/server/protocol.js';
 
 describe('protocol', () => {

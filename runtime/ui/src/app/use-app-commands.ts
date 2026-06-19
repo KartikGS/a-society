@@ -1,14 +1,14 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
-import { flowKey } from '../../../src/common/flow-ref.js';
+import { flowKey } from '../../../shared/flow-ref.js';
 import {
   CLIENT_MESSAGE_TYPE,
   FEEDBACK_CONSENT_DECISION,
   IMPROVEMENT_CHOICE_MODE,
-} from '../../../src/common/protocol-constants.js';
+} from '../../../shared/protocol-constants.js';
 import type {
   ProtocolFeedbackConsentDecision,
   ProtocolImprovementChoiceMode,
-} from '../../../src/common/protocol-constants.js';
+} from '../../../shared/protocol-constants.js';
 import type { GraphMode } from '../components/GraphView';
 import { areWorkflowGraphsEqual } from '../equality';
 import type {

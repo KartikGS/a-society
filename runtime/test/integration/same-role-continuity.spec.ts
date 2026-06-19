@@ -20,7 +20,7 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { ContextInjectionService } from '../../src/context/injection.js';
 import { LLMGateway } from '../../src/providers/llm.js';
-import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';

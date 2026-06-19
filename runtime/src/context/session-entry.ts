@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveVariableFromIndex } from './paths.js';
-import type { WorkflowGraph } from '../orchestration/workflow-graph.js';
+import type { WorkflowGraph } from '../../shared/workflow-graph.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/workflow.md');

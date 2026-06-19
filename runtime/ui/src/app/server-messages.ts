@@ -1,5 +1,5 @@
-import { flowKey } from '../../../src/common/flow-ref.js';
-import { CONSENT_MODE } from '../../../src/common/protocol-constants.js';
+import { flowKey } from '../../../shared/flow-ref.js';
+import { CONSENT_MODE } from '../../../shared/protocol-constants.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality.js';
 import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types.js';
 import { SYSTEM_ROLE_KEY } from './constants.js';

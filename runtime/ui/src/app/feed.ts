@@ -1,4 +1,4 @@
-import { operatorEventToFeedItem } from '../../../src/common/operator-feed.js';
+import { operatorEventToFeedItem } from '../../../shared/operator-feed.js';
 import type { FeedItem, OperatorEvent } from '../types.js';
 
 export function nextFeedId(): string {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import OpenAI from 'openai';
-import type { ModelReasoningConfig } from '../../src/common/model-reasoning.js';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import type { OperatorEvent, OperatorRenderSink, ToolDefinition } from '../../src/common/types.js';
 import { LLMGatewayError } from '../../src/common/types.js';
 import { OpenAICompatibleProvider } from '../../src/providers/openai-compatible.js';

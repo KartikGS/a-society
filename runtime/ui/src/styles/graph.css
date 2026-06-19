@@ -1,0 +1,230 @@
+.graph-panel {
+  padding: 18px;
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.graph-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.graph-header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.graph-meta-plain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.graph-meta-sep {
+  opacity: 0.4;
+}
+
+.graph-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.graph-title-row h2 {
+  margin: 0;
+}
+
+.resume-btn {
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.resume-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.graph-mode-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.graph-mode-tab {
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--ink-soft);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.graph-mode-tab-active {
+  color: var(--ink);
+  border-color: rgba(15, 118, 110, 0.42);
+  background: rgba(15, 118, 110, 0.1);
+}
+
+.graph-mode-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.graph-canvas {
+  flex: 1;
+  min-height: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(34, 49, 63, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.88), rgba(241, 247, 244, 0.8));
+}
+
+.graph-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: var(--ink-soft);
+  border: 1px dashed rgba(34, 49, 63, 0.18);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+/* ReactFlow control button fixes for dark mode */
+.react-flow__controls-button {
+  background-color: var(--surface-strong) !important;
+  fill: var(--ink) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.react-flow__controls-button:hover {
+  background-color: var(--surface) !important;
+}
+
+.react-flow__minimap {
+  background-color: var(--surface-strong) !important;
+}
+.react-flow__minimap-mask {
+  fill: var(--surface) !important;
+}
+
+.legend {
+  align-items: center;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.legend-active {
+  background: var(--node-active);
+}
+
+.legend-awaiting-human {
+  background: var(--node-awaiting-human);
+}
+
+.legend-backward {
+  background: var(--node-backward);
+}
+
+.legend-complete {
+  background: var(--node-complete);
+}
+
+.legend-neutral {
+  background: var(--node-neutral);
+}
+
+.graph-node {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 3px solid var(--node-neutral);
+  box-shadow: 0 4px 16px rgba(34, 49, 63, 0.1);
+  background: var(--bg);
+  text-align: center;
+}
+
+.graph-node-id {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.graph-node-role {
+  color: var(--ink-soft);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  word-break: break-word;
+}
+
+.node-active {
+  border-color: var(--node-active);
+}
+
+.node-awaiting-human {
+  border-color: var(--node-awaiting-human);
+}
+
+.node-backward {
+  border-color: var(--node-backward);
+}
+
+.node-backward-source {
+  border-color: var(--node-backward-source);
+}
+
+.node-completed {
+  border-color: var(--node-complete);
+}
+
+.node-neutral {
+  border-color: var(--node-neutral);
+}
+
+.react-flow__edge-path {
+  stroke: var(--ink) !important;
+  stroke-width: 3 !important;
+  opacity: 0.65;
+}

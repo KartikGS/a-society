@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 
 export function getStateRoot(workspaceRoot = process.cwd()): string {
   return path.join(path.resolve(workspaceRoot), '.a-society', 'state');

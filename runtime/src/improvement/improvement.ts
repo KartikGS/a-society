@@ -21,7 +21,7 @@ import {
   FEEDBACK_CONSENT_STATUS,
   IMPROVEMENT_CHOICE_MODE,
   OWNER_BASE_ROLE_ID,
-} from '../common/protocol-constants.js';
+} from '../../shared/protocol-constants.js';
 import { HandoffParseError } from '../orchestration/handoff.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';

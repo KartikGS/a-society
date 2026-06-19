@@ -18,7 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, expect, it } from 'vitest';
 
-import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import {
   scaffoldFromManifestFile,
 } from '../../src/framework-services/scaffolding-system.js';

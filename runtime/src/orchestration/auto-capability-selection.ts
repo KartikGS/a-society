@@ -16,7 +16,7 @@ import {
 } from './capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection, type RoleModelSelection } from './role-model.js';
 import { buildRoleConfigurationSummary } from './role-configuration-summary.js';
-import type { WfNode } from './workflow-graph.js';
+import type { WfNode } from '../../shared/workflow-graph.js';
 
 /** Max attempts at the selection turn, including format-correction re-prompts. */
 export const MAX_AUTO_SELECTION_ATTEMPTS = 3;

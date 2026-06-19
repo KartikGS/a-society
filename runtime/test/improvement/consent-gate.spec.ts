@@ -7,7 +7,7 @@ import type { ConsentCheckRequest, OperatorEvent } from '../../src/common/types.
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
-} from '../../src/common/protocol-constants.js';
+} from '../../shared/protocol-constants.js';
 import { ConsentGateImpl, isAutoAllowedBashCommand } from '../../src/improvement/consent-gate.js';
 
 function createGate() {

@@ -22,7 +22,7 @@ import {
   resolveMaxOutputTokens,
   type ProviderRuntimeConfig
 } from './config.js';
-import type { ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { withNetworkRetry, isLowLevelNetworkError, formatRetryNotice, MAX_NETWORK_RETRIES } from './retry.js';
 
 export class OpenAICompatibleProvider implements LLMProvider {

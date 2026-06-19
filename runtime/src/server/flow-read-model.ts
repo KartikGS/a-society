@@ -1,4 +1,4 @@
-import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';

@@ -1,5 +1,5 @@
-import { parseRoleIdentity } from '../../common/role-id.js';
-import { AWAITING_HUMAN_REASON } from '../../common/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
+import { AWAITING_HUMAN_REASON } from '../../../shared/protocol-constants.js';
 import type {
   FlowRef,
   FlowRun,

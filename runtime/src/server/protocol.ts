@@ -15,11 +15,11 @@ import {
   FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES,
   IMPROVEMENT_CHOICE_MODES,
   PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES,
-} from '../common/protocol-constants.js';
+} from '../../shared/protocol-constants.js';
 import type {
   ProtocolFeedbackConsentDecision,
   ProtocolImprovementChoiceMode,
-} from '../common/protocol-constants.js';
+} from '../../shared/protocol-constants.js';
 import type { RuntimeServerMessage } from './ws-operator-sink.js';
 
 export type ClientMessage =

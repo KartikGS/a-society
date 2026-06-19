@@ -32,7 +32,7 @@ import type {
   ToolDefinition,
   TurnOptions
 } from '../common/types.js';
-import type { ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import type { PromptCacheTtl } from '../common/types.js';
 
 export class AnthropicProvider implements LLMProvider {

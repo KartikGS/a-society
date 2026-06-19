@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WorkflowGraph, allIncidentEdgesCovered } from '../../src/orchestration/workflow-graph.js';
+import { WorkflowGraph, allIncidentEdgesCovered } from '../../shared/workflow-graph.js';
 
 describe('workflow-graph', () => {
   it('requires every incoming and outgoing handoff for the node to be covered', () => {

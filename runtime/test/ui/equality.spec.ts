@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { areFlowRunsEqual } from '../../ui/src/equality.js';
 import type { ConsentMode, FlowRun } from '../../ui/src/types.js';
-import { CONSENT_MODE } from '../../src/common/protocol-constants.js';
+import { CONSENT_MODE } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 
 function flowWithConsent(mode: ConsentMode): FlowRun {

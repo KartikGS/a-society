@@ -56,11 +56,8 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_UI_DEVELOPER_OWNERSHIP` | `a-docs/roles/ui-developer/ownership.yaml` | A-Society UI Developer ownership file — surfaces the UI Developer is accountable for |
 | `$A_SOCIETY_UI_DEV_IMPL_DISCIPLINE` | `a-docs/roles/ui-developer/implementation-discipline.md` | A-Society UI Developer implementation discipline — UI implementation and server-contract boundary guidance |
 | `$A_SOCIETY_UI_DEV_STYLE_GUIDE` | `a-docs/roles/ui-developer/style-guide.md` | A-Society UI Developer style guide — TypeScript, component, state, CSS, and ReactFlow conventions for runtime/ui/ |
-| `$A_SOCIETY_EXECUTABLE` | `a-docs/executable/main.md` | A-Society executable documentation entry point — orientation to the standing executable-layer doc set |
-| `$A_SOCIETY_EXECUTABLE_OVERVIEW` | `a-docs/executable/overview.md` | Executable-domain startup overview — runtime-root model, capability inventory, and ownership boundary |
-| `$A_SOCIETY_EXECUTABLE_PROPOSAL` | `a-docs/executable/architecture-proposal.md` | Standing executable design reference — runtime-root model, role split, capability inventory, and co-maintenance surfaces |
+| `$A_SOCIETY_EXECUTABLE_ARCHITECTURE` | `a-docs/executable/architecture.md` | Single standing executable architecture reference — runtime topology, TypeScript surfaces, capability inventory, governance, and role boundaries |
 | `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` | `a-docs/executable/general-coupling-map.md` | Standing reference for executable/general coupling — format dependencies per capability and maintained-guidance status |
-| `$A_SOCIETY_EXECUTABLE_ADDENDUM` | `a-docs/executable/architecture-addendum.md` | Executable governance and maintenance rules — placement constraints, ownership boundaries, and extension rules |
 | `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2` | `a-docs/executable/legacy-ta-assessment-phase1-2.md` | Historical TA deviation rulings preserved for legacy framework-service designs carried into the unified executable layer |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `runtime/contracts/handoff.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |

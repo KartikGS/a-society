@@ -1,16 +1,16 @@
-import { flowKey } from '../../common/flow-ref.js';
+import { flowKey } from '../../../shared/flow-ref.js';
 import {
   AWAITING_HUMAN_REASON,
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
   FEEDBACK_CONSENT_DECISION,
   IMPROVEMENT_CHOICE_MODE,
-} from '../../common/protocol-constants.js';
+} from '../../../shared/protocol-constants.js';
 import type {
   ProtocolFeedbackConsentDecision,
   ProtocolImprovementChoiceMode,
-} from '../../common/protocol-constants.js';
-import { parseRoleIdentity } from '../../common/role-id.js';
+} from '../../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
 import type {
   ConsentMode,
   ConsentResponseDecision,

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
-import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import { readCapabilitySelection, saveCapabilitySelection } from '../../src/orchestration/capability-selection.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';

@@ -47,11 +47,13 @@ When you are unsure whether something belongs in `general/` vs another project's
 
 ### `runtime/`
 
-**Purpose:** A-Society's executable layer root — the standing home for operator-facing runtime behavior, orchestration/session management, and permanent executable framework services. The runtime calls LLM APIs directly, provides the operator-facing web server and browser UI surface, and is the surviving umbrella root for executable implementation.
+**Purpose:** A-Society's executable layer root — the standing home for operator-facing runtime behavior, orchestration/session management, browser UI implementation, isomorphic runtime contracts, and permanent executable framework services. The runtime calls LLM APIs directly, provides the operator-facing web server and browser UI surface, and is the surviving umbrella root for executable implementation.
 
 **What belongs here:**
-- TypeScript source files implementing orchestration components (context injection, session management, handoff routing, provider gateways, observability, and similar)
-- TypeScript source files implementing permanent deterministic framework services
+- TypeScript source files under `runtime/src/` implementing server/orchestration components (context injection, session management, handoff routing, provider gateways, observability, and similar)
+- TypeScript source files under `runtime/src/` implementing permanent deterministic framework services
+- React/Vite browser UI implementation under `runtime/ui/`
+- Browser-safe shared TypeScript under `runtime/shared/` when both the server and UI import it
 - Supporting runtime files (`package.json`, state management, `INVOCATION.md`)
 - Runtime-owned contracts injected into managed sessions or runtime-owned phases
 
@@ -60,15 +62,16 @@ When you are unsure whether something belongs in `general/` vs another project's
 - Content any project can take and use directly as documentation — that belongs in `general/`
 - Any content that is documentation rather than executable code
 
-**Principle:** `runtime/` is the standing executable root. The Orchestration Developer owns its operator-facing surface and orchestration behavior; Framework Services Developer-owned executable services land here.
+**Principle:** `runtime/` is the standing executable root. The Orchestration Developer owns its operator-facing server surface and orchestration behavior; Framework Services Developer-owned executable services land under the runtime server tree; UI Developer-owned browser implementation lands under `runtime/ui/`.
 
 **The key test:** Is this part of the standing executable surface A-Society intends to keep? If yes → `runtime/`.
 
 **Internal placement standard:** New runtime work is grouped by runtime capability, not left flat at the root or directly under `src/`.
 
+- `runtime/` is a single npm package. The server, browser UI, and shared TypeScript surface co-deploy and co-version from one package/build setup.
 - `runtime/INVOCATION.md` remains the root operator-facing entry point. Package, build, environment, and installation files may also remain at the runtime root.
 - Runtime-injected contracts, runtime-owned agent/session contracts, runtime-owned flow-record contracts, and runtime-owned scaffold/health contracts belong under `runtime/contracts/`, not as additional root files.
-- `runtime/src/` should contain capability folders rather than a large flat set of peer files. Standard capability folders are:
+- `runtime/src/` contains Node/server executable code in capability folders rather than a large flat set of peer files. Standard capability folders are:
   - `orchestration/` — flow lifecycle, handoff routing, role-turn coordination, and runtime state transitions
   - `context/` — required-reading resolution, node-entry assembly, index/path resolution, and workflow-file context loading
   - `framework-services/` — deterministic framework services such as scaffolding, validation, comparison, and backward-pass ordering
@@ -79,9 +82,11 @@ When you are unsure whether something belongs in `general/` vs another project's
   - `tools/` — model-callable tool executors
   - `observability/` — telemetry, metrics, tracing, and runtime diagnostics
   - `settings/` — persisted runtime/operator settings
-  - `common/` — shared types, role identifiers, and small cross-cutting utilities
+  - `common/` — server-internal shared types, role-turn helpers, runtime contracts, and small cross-cutting utilities that may use Node APIs and are never imported by the UI
+- `runtime/ui/` contains the operator-facing browser UI implementation. It may import UI-local modules and `runtime/shared/`, but not `runtime/src/`.
+- `runtime/shared/` contains browser-safe isomorphic code imported by both `runtime/src/` and `runtime/ui/`. It is a top-level runtime peer, not a nested server folder, and must not import `runtime/src/`, `runtime/ui/`, Node APIs, or DOM globals.
 - Tests should mirror the capability folder structure when a capability has more than one test file.
-- A new top-level folder under `runtime/` or `runtime/src/` requires a real capability boundary. Do not create folders for one-off naming preferences; place the file in the nearest existing capability folder until the category is real.
+- A new top-level folder under `runtime/` or `runtime/src/` requires a real capability boundary. `runtime/ui/` and `runtime/shared/` qualify as standing top-level runtime boundaries; do not create folders for one-off naming preferences, and place new server files in the nearest existing capability folder until the category is real.
 
 ---
 
