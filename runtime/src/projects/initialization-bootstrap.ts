@@ -228,8 +228,7 @@ function buildInitializationWorkflowDocument(
         {
           id: 'owner-intake',
           role: 'owner',
-          'human-collaborative': 'direction',
-          guidance: [
+          work: [
             'Use the runtime workflow contract when creating or updating workflow.yaml for this initialization flow.',
             `Runtime initialization guide:\n\n${initializationGuideContent.trim()}`,
             `Runtime initialization brief:\n\n${initializationBriefContent.trim()}`,
@@ -333,6 +332,7 @@ export function bootstrapInitializationFlow(
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: [],
       completedHandoffs: [],
       receivingHandoff: {},

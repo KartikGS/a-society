@@ -34,7 +34,7 @@ describe('workflow-file', () => {
   nodes:
     - id: owner-intake
       role: owner
-      guidance:
+      work:
         - Use the canonical guidance.
     - id: owner-closure
       role: owner
@@ -58,7 +58,7 @@ describe('workflow-file', () => {
     const workflow = resolveFlowWorkflow(recordDir, tmpDir, projectNamespace);
     const ownerIntake = workflow.nodes.find((node) => node.id === 'owner-intake');
 
-    expect(ownerIntake?.guidance).toEqual(['Use the canonical guidance.']);
+    expect(ownerIntake?.work).toEqual(['Use the canonical guidance.']);
     expect(workflow.name).toBe('record-flow');
     expect(workflow.edges).toEqual([{ from: 'owner-intake', to: 'owner-closure' }]);
   });
@@ -70,7 +70,7 @@ describe('workflow-file', () => {
   nodes:
     - id: owner-intake
       role: owner
-      guidance:
+      work:
         - Use the record guidance.
   edges: []
 `);
@@ -78,7 +78,7 @@ describe('workflow-file', () => {
     const workflow = resolveFlowWorkflow(recordDir, tmpDir, projectNamespace);
     const ownerIntake = workflow.nodes.find((node) => node.id === 'owner-intake');
 
-    expect(ownerIntake?.guidance).toEqual(['Use the record guidance.']);
+    expect(ownerIntake?.work).toEqual(['Use the record guidance.']);
     expect(workflow.name).toBe('record-only-flow');
   });
 });

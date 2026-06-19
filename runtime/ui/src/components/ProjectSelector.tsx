@@ -1,4 +1,5 @@
-import type { FlowSummary, ProjectSummary } from '../types';
+import type { FlowSummary } from '../../../shared/types.js';
+import type { ProjectSummary } from '../../../shared/projects.js';
 
 interface ProjectSelectorProps {
   projectsWithADocs: ProjectSummary[];

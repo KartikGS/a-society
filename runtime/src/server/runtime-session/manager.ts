@@ -376,6 +376,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     startUpdateFlow,
     resumeFlow,
     handleHumanInput: commands.handleHumanInput,
+    handleHandoffApproval: commands.handleHandoffApproval,
     handleRoleConfiguration: commands.handleRoleConfiguration,
     handleImprovementChoice: commands.handleImprovementChoice,
     handleFeedbackConsentChoice: commands.handleFeedbackConsentChoice,

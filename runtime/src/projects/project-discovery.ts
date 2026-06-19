@@ -5,22 +5,9 @@ import {
   A_DOCS_VERSION_RECORD_RELATIVE_PATH,
 } from '../common/runtime-contracts.js';
 import { readVersionFrontmatter, evaluateProjectVersion } from '../framework-services/version-comparator.js';
+import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 
-export interface ProjectSummary {
-  displayName: string;
-  folderName: string;
-  /** Version recorded in the project's a-docs/a-society-version.md frontmatter; null when absent/unreadable. Only populated for initialized projects. */
-  aDocsVersion?: string | null;
-  /** Canonical current framework version from the changelog; null when unreadable. */
-  currentVersion?: string | null;
-  /** True when the current framework version is strictly newer than the project's recorded version. */
-  updateAvailable?: boolean;
-}
-
-export interface ProjectDiscovery {
-  withADocs: ProjectSummary[];
-  withoutADocs: ProjectSummary[];
-}
+export type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 
 export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
   try {

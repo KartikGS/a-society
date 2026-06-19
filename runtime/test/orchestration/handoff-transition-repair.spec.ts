@@ -41,6 +41,7 @@ function createFlowRun(
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},

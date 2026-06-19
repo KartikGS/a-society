@@ -1,3 +1,21 @@
+type ValueOf<T> = T[keyof T];
+
+function protocolValues<const T extends Record<string, string>>(source: T): readonly ValueOf<T>[] {
+  return Object.values(source) as Array<ValueOf<T>>;
+}
+
+function protocolValueSubset<
+  const T extends Record<string, string>,
+  const K extends readonly (keyof T)[]
+>(
+  source: T,
+  keys: K
+): { readonly [Index in keyof K]: K[Index] extends keyof T ? T[K[Index]] : never } {
+  return keys.map((key) => source[key]) as {
+    readonly [Index in keyof K]: K[Index] extends keyof T ? T[K[Index]] : never;
+  };
+}
+
 export const CLIENT_MESSAGE_TYPE = {
   OPEN_FLOW: 'open_flow',
   RESUME_FLOW: 'resume_flow',
@@ -8,6 +26,7 @@ export const CLIENT_MESSAGE_TYPE = {
   STOP_ACTIVE_TURN: 'stop_active_turn',
   COMPACT_CONTEXT: 'compact_context',
   HUMAN_INPUT: 'human_input',
+  HANDOFF_APPROVAL: 'handoff_approval',
   IMPROVEMENT_HUMAN_INPUT: 'improvement_human_input',
   IMPROVEMENT_CHOICE: 'improvement_choice',
   FEEDBACK_CONSENT_CHOICE: 'feedback_consent_choice',
@@ -16,22 +35,22 @@ export const CLIENT_MESSAGE_TYPE = {
   ROLE_CONFIGURATION: 'role_configuration',
 } as const;
 
-type ValueOf<T> = T[keyof T];
-
 export type ClientMessageType = ValueOf<typeof CLIENT_MESSAGE_TYPE>;
 
-export const FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES = [
-  CLIENT_MESSAGE_TYPE.OPEN_FLOW,
-  CLIENT_MESSAGE_TYPE.RESUME_FLOW,
-  CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN,
-] as const;
+export const FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES = protocolValueSubset(
+  CLIENT_MESSAGE_TYPE,
+  ['OPEN_FLOW', 'RESUME_FLOW', 'STOP_ACTIVE_TURN'] as const
+);
 
-export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = [
-  CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW,
-  CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION,
-  CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION,
-  CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW,
-] as const;
+export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = protocolValueSubset(
+  CLIENT_MESSAGE_TYPE,
+  [
+    'START_INITIALIZED_FLOW',
+    'START_TAKEOVER_INITIALIZATION',
+    'START_GREENFIELD_INITIALIZATION',
+    'START_UPDATE_FLOW',
+  ] as const
+);
 
 export const OWNER_BASE_ROLE_ID = 'owner';
 
@@ -41,17 +60,21 @@ export const AWAITING_HUMAN_REASON = {
   CONSENT: 'consent',
   CONSENT_DENIED: 'consent-denied',
   ROLE_CONFIGURATION: 'role-configuration',
+  HANDOFF_APPROVAL: 'handoff-approval',
 } as const;
 
 export type ProtocolAwaitingHumanReason = ValueOf<typeof AWAITING_HUMAN_REASON>;
 
-export const AWAITING_HUMAN_REASONS = [
-  AWAITING_HUMAN_REASON.PROMPT_HUMAN,
-  AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT,
-  AWAITING_HUMAN_REASON.CONSENT,
-  AWAITING_HUMAN_REASON.CONSENT_DENIED,
-  AWAITING_HUMAN_REASON.ROLE_CONFIGURATION,
-] as const;
+export const AWAITING_HUMAN_REASONS = protocolValues(AWAITING_HUMAN_REASON);
+
+export const HANDOFF_APPROVAL_DECISION = {
+  APPROVE: 'approve',
+  DECLINE: 'decline',
+} as const;
+
+export type ProtocolHandoffApprovalDecision = ValueOf<typeof HANDOFF_APPROVAL_DECISION>;
+
+export const HANDOFF_APPROVAL_DECISIONS = protocolValues(HANDOFF_APPROVAL_DECISION);
 
 export const IMPROVEMENT_CHOICE_MODE = {
   GRAPH_BASED: 'graph-based',
@@ -61,11 +84,7 @@ export const IMPROVEMENT_CHOICE_MODE = {
 
 export type ProtocolImprovementChoiceMode = ValueOf<typeof IMPROVEMENT_CHOICE_MODE>;
 
-export const IMPROVEMENT_CHOICE_MODES = [
-  IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
-  IMPROVEMENT_CHOICE_MODE.PARALLEL,
-  IMPROVEMENT_CHOICE_MODE.NONE,
-] as const;
+export const IMPROVEMENT_CHOICE_MODES = protocolValues(IMPROVEMENT_CHOICE_MODE);
 
 export const FEEDBACK_CONSENT_DECISION = {
   GRANTED: 'granted',
@@ -74,10 +93,7 @@ export const FEEDBACK_CONSENT_DECISION = {
 
 export type ProtocolFeedbackConsentDecision = ValueOf<typeof FEEDBACK_CONSENT_DECISION>;
 
-export const FEEDBACK_CONSENT_DECISIONS = [
-  FEEDBACK_CONSENT_DECISION.GRANTED,
-  FEEDBACK_CONSENT_DECISION.DENIED,
-] as const;
+export const FEEDBACK_CONSENT_DECISIONS = protocolValues(FEEDBACK_CONSENT_DECISION);
 
 export const FEEDBACK_CONSENT_STATUS = {
   PENDING: 'pending',
@@ -95,11 +111,7 @@ export const CONSENT_RESPONSE_DECISION = {
 
 export type ProtocolConsentResponseDecision = ValueOf<typeof CONSENT_RESPONSE_DECISION>;
 
-export const CONSENT_RESPONSE_DECISIONS = [
-  CONSENT_RESPONSE_DECISION.ALLOW_ONCE,
-  CONSENT_RESPONSE_DECISION.ALLOW_FLOW,
-  CONSENT_RESPONSE_DECISION.DENY,
-] as const;
+export const CONSENT_RESPONSE_DECISIONS = protocolValues(CONSENT_RESPONSE_DECISION);
 
 export const CONSENT_MODE = {
   NO_ACCESS: 'no-access',
@@ -109,8 +121,4 @@ export const CONSENT_MODE = {
 
 export type ProtocolConsentMode = ValueOf<typeof CONSENT_MODE>;
 
-export const CONSENT_MODES = [
-  CONSENT_MODE.NO_ACCESS,
-  CONSENT_MODE.PARTIAL_ACCESS,
-  CONSENT_MODE.FULL_ACCESS,
-] as const;
+export const CONSENT_MODES = protocolValues(CONSENT_MODE);

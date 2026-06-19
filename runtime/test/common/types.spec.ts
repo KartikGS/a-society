@@ -11,6 +11,7 @@ describe('types', () => {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       completedHandoffs: [],
       visitedNodeIds: [],
       receivingHandoff: {},

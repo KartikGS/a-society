@@ -91,6 +91,7 @@ async function runTest() {
     runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],

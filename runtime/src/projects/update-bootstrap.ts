@@ -60,8 +60,7 @@ function buildUpdateWorkflowDocument(
         {
           id: 'owner-intake',
           role: 'owner',
-          'human-collaborative': 'direction',
-          guidance: [
+          work: [
             'Use the runtime workflow contract when creating or updating workflow.yaml for this update flow.',
             `Runtime update guide:\n\n${updateGuideContent.trim()}`,
             `Runtime update brief:\n\n${updateBriefContent.trim()}`,
@@ -161,6 +160,7 @@ export function bootstrapUpdateFlow(
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: [],
       completedHandoffs: [],
       receivingHandoff: {},

@@ -45,6 +45,7 @@ function seedFlowRun(
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     visitedNodeIds: ['owner-intake'],
     completedHandoffs: [],
     receivingHandoff: {},

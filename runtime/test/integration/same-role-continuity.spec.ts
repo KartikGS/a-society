@@ -58,7 +58,8 @@ fs.writeFileSync(path.join(rolesDir, 'owner', 'main.md'), 'Owner role');
 fs.writeFileSync(path.join(rolesDir, 'ta', 'main.md'), 'TA role');
 fs.writeFileSync(path.join(rolesDir, 'owner', 'ownership.yaml'), 'role: owner\nsurfaces: []\n');
 fs.writeFileSync(path.join(rolesDir, 'ta', 'ownership.yaml'), 'role: ta\nsurfaces: []\n');
-fs.writeFileSync(path.join(indexDir, 'main.md'), '');
+fs.writeFileSync(path.join(namespaceDir, 'a-docs', 'node-entry-reading.md'), 'Node-only required reading content.');
+fs.writeFileSync(path.join(indexDir, 'main.md'), '| `$NODE_ENTRY_READING` | `a-docs/node-entry-reading.md` |\n');
 
 // workflow: owner-intake -> ta -> owner-gate
 const workflow = `workflow:
@@ -84,6 +85,26 @@ const instanceWorkflow = `workflow:
     - id: owner-two
       role: owner_2
   edges: []
+`;
+const firstVisitContextWorkflow = `workflow:
+  name: first-visit-context-flow
+  nodes:
+    - id: owner-intake
+      role: owner
+      human-colab: true
+      required_readings:
+        - $NODE_ENTRY_READING
+      work:
+        - Review workflow.yaml before deciding first visit only work.
+    - id: ta
+      role: ta
+    - id: owner-gate
+      role: owner
+  edges:
+    - from: owner-intake
+      to: ta
+    - from: ta
+      to: owner-gate
 `;
 
 const ownerArtifact1 = path.join(recordDir, '01-owner-brief.md');
@@ -209,6 +230,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
@@ -227,6 +249,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
@@ -285,6 +308,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       completedHandoffs: [],
       status: 'completed',
       stateVersion: '5',
@@ -485,6 +509,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: ['owner-gate'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: ['owner-intake', 'ta'],
       completedHandoffs: ['owner-intake=>ta', 'ta=>owner-gate'],
       receivingHandoff: {
@@ -528,6 +553,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
 
   it('Orchestrator: reopened same-role node keeps prior session and appends reopened packet', async () => {
     resetState();
+    fs.writeFileSync(path.join(recordDir, 'workflow.yaml'), firstVisitContextWorkflow);
 
     SessionStore.saveRoleSession({
       roleName: 'owner',
@@ -544,6 +570,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: ['owner-intake'],
       receivingHandoff: {
         'ta=>owner-intake': [reviewFeedbackArtifactRel]
@@ -580,6 +607,14 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     expect(reopenedMessage.content.includes('Handoffs received:')).toBeTruthy();
     expect(reopenedMessage.content.includes('From successor ta (please take necessary action so the successor can complete its work):')).toBeTruthy();
     expect(reopenedMessage.content.includes('Reviewer requests revision to the Owner brief.')).toBeTruthy();
+    expect(reopenedMessage.content.includes('Node-specific instructions for node owner-intake:')).toBeFalsy();
+    expect(reopenedMessage.content.includes('Node-specific required reading:')).toBeFalsy();
+    expect(reopenedMessage.content.includes('Node-only required reading content.')).toBeFalsy();
+    expect(reopenedMessage.content.includes('Review workflow.yaml before deciding first visit only work.')).toBeFalsy();
+    expect(reopenedMessage.content.includes('Runtime workflow contract:')).toBeFalsy();
+    expect(reopenedMessage.content.includes('A-Society Runtime Workflow Contract')).toBeFalsy();
+    expect(reopenedMessage.content.includes('This is a human-collaborative node.')).toBeFalsy();
+    expect(reopenedMessage.content.includes('Keep the human in the decision loop')).toBeFalsy();
     expect(session!.currentNodeId).toBe('owner-intake');
   });
 
@@ -610,6 +645,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
         'owner-intake': { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN }
       },
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: ['owner-intake', 'ta'],
       completedHandoffs: ['owner-intake=>ta'],
       receivingHandoff: {
@@ -691,6 +727,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: ['owner-intake'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: ['owner-intake', 'owner-gate'],
       receivingHandoff: {
         'ta=>owner-intake': [reviewFeedbackArtifactRel]
@@ -979,6 +1016,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       receivingHandoff: {
         // Insert the later graph node first; graph order should still claim owner-intake.
         'ta=>owner-gate': [path.relative(workspaceRoot, taArtifact)],
@@ -1019,6 +1057,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: ['owner-intake', 'owner-gate'],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });
     SessionStore.saveFlowRun(flowRun);
@@ -1052,6 +1091,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       runningNodes: ['ta'],
       awaitingHumanNodes: { 'owner-intake': { role: 'owner', reason: 'prompt-human' } },
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       completedHandoffs: ['owner-intake=>ta'],
       receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: []
     });

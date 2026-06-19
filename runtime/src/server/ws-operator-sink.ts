@@ -1,11 +1,7 @@
 import type { OperatorEvent, OperatorRenderSink } from '../common/types.js';
+import type { RuntimeServerMessage } from '../../shared/operator-protocol.js';
 
-export type RuntimeServerMessage =
-  | { type: 'operator_event'; event: OperatorEvent }
-  | { type: 'request_sent'; role: string; provider: string; model: string }
-  | { type: 'receiving_response'; role: string }
-  | { type: 'response_end'; role: string }
-  | { type: 'error'; message: string };
+export type { RuntimeServerMessage } from '../../shared/operator-protocol.js';
 
 export class WebSocketOperatorSink implements OperatorRenderSink {
   constructor(private readonly send: (msg: RuntimeServerMessage) => void) {}

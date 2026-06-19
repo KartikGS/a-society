@@ -1,5 +1,5 @@
 import { reasoningLabel } from '../../../../shared/model-reasoning.js';
-import type { InputModality, ModelConfig } from '../../types';
+import type { InputModality, ModelConfig } from '../../../../shared/settings.js';
 
 interface ModelListProps {
   models: ModelConfig[];

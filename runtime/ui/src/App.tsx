@@ -32,17 +32,11 @@ import { ProjectSelector } from './components/ProjectSelector';
 import { SettingsModal } from './components/SettingsModal';
 import { areFlowRunsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
-import type {
-  ClientMessage,
-  FlowRef,
-  FlowSummary,
-  McpServerSummary,
-  ModelConfig,
-  ProjectDiscovery,
-  ServerMessage,
-  SettingsStatus,
-  SkillSummary,
-} from './types';
+import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
+import type { FlowRef, FlowSummary } from '../../shared/types.js';
+import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
+import type { ProjectDiscovery } from '../../shared/projects.js';
+import type { SkillSummary } from '../../shared/skills.js';
 
 const GraphView = lazy(async () => {
   const module = await import('./components/GraphView');
@@ -208,6 +202,8 @@ export function App() {
     visibleConsentRequest,
     roleConfigurationNodeId,
     roleConfigurationPending,
+    handoffApprovalNodeId,
+    handoffApprovalTargets,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -282,6 +278,7 @@ export function App() {
     handleFeedbackConsentChoice,
     handleConsentResponse,
     handleRoleConfigure,
+    handleHandoffApproval,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,
@@ -528,12 +525,17 @@ export function App() {
                     pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
                     pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
                   } : null}
+                  handoffApproval={handoffApprovalNodeId ? {
+                    nodeId: handoffApprovalNodeId,
+                    targets: handoffApprovalTargets ?? [],
+                  } : null}
                   onRoleSelect={handleRoleSelect}
                   onInputChange={handleComposerChange}
                   onSubmit={handleSubmit}
                   onStop={handleStopActiveTurn}
                   onConsentResponse={handleConsentResponse}
                   onRoleConfigure={handleRoleConfigure}
+                  onHandoffApproval={handleHandoffApproval}
                   onConsentModeChange={handleConsentModeChange}
                   onCompactContext={viewedRole ? handleCompactContext : undefined}
                   isCompactingContext={isViewedRoleCompacting}

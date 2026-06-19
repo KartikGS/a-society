@@ -1,9 +1,6 @@
-import type {
-  InputModality,
-  ModelReasoningConfig,
-  PromptCacheTtl,
-  ProviderType,
-} from '../../types';
+import type { ModelReasoningConfig } from '../../../../shared/model-reasoning.js';
+import type { PromptCacheTtl } from '../../../../shared/prompt-cache.js';
+import type { InputModality, ProviderType } from '../../../../shared/settings.js';
 
 export interface ModelFormState {
   displayName: string;

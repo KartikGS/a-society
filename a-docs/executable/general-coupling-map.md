@@ -12,7 +12,7 @@ This document is the standing reference for the coupling surface between A-Socie
 | Element | Dependency | Executable capability |
 |---|---|---|
 | Index table format | Yes | Path validation |
-| Runtime workflow YAML contract (`$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`) | Yes | Workflow graph validation, node-entry injection, active-flow routing, backward-pass planning |
+| Runtime workflow YAML contract (`$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`) | Yes | Workflow graph validation, node-entry injection, active-flow routing, backward-pass planning, `human-colab` operator handoff-approval gate, `await-all-inputs` AND-join scheduling |
 | Runtime records contract (`$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`) | Yes | Draft flow creation, initialization flow creation, file-tool write scoping, backward-pass artifact placement |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` file format and `copy` source paths | Yes | Scaffolding and runtime health checks |
 | `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |

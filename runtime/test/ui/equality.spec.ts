@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { areFlowRunsEqual } from '../../ui/src/equality.js';
-import type { ConsentMode, FlowRun } from '../../ui/src/types.js';
 import { CONSENT_MODE } from '../../shared/protocol-constants.js';
+import type { ConsentMode, FlowRun } from '../../shared/types.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 
 function flowWithConsent(mode: ConsentMode): FlowRun {
@@ -15,6 +15,7 @@ function flowWithConsent(mode: ConsentMode): FlowRun {
       'owner-intake': { role: 'owner', reason: 'prompt-human' },
     },
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {},

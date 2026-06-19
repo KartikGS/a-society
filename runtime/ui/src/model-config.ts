@@ -1,4 +1,5 @@
-import type { FeedSettings, InputModality, McpServerSummary, ModelConfig, ProviderType, SettingsStatus, SkillLoadResult, SkillSummary, ToolSettings } from './types';
+import type { FeedSettings, InputModality, McpServerSummary, ModelConfig, ProviderType, SettingsStatus, ToolSettings } from '../../shared/settings.js';
+import type { SkillLoadResult, SkillSummary } from '../../shared/skills.js';
 import { normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { normalizePromptCacheTtl } from '../../shared/prompt-cache.js';
 

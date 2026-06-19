@@ -33,6 +33,7 @@ describe('flow state message', () => {
         runningNodes: [],
         awaitingHumanNodes: {},
         pendingHumanInputs: {},
+        pendingHandoffApprovals: {},
         visitedNodeIds: [],
         completedHandoffs: [],
         receivingHandoff: {},

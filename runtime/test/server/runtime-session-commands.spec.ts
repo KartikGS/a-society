@@ -22,6 +22,7 @@ function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): F
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},

@@ -4,10 +4,12 @@ import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
   FEEDBACK_CONSENT_DECISION,
+  HANDOFF_APPROVAL_DECISION,
   IMPROVEMENT_CHOICE_MODE,
 } from '../../../shared/protocol-constants.js';
 import type {
   ProtocolFeedbackConsentDecision,
+  ProtocolHandoffApprovalDecision,
   ProtocolImprovementChoiceMode,
 } from '../../../shared/protocol-constants.js';
 import { parseRoleIdentity } from '../../../shared/role-id.js';
@@ -126,6 +128,75 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       role: targetRole,
       text,
     });
+    session.orchestrator.wake();
+    emitFlowState(session);
+  }
+
+  async function handleHandoffApproval(
+    ref: FlowRef,
+    nodeId: string,
+    decision: ProtocolHandoffApprovalDecision,
+  ): Promise<void> {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
+      return;
+    }
+
+    const awaitingState = flowRun.awaitingHumanNodes[nodeId];
+    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting handoff approval.` });
+      return;
+    }
+
+    if (decision === HANDOFF_APPROVAL_DECISION.DECLINE) {
+      // Discard the staged handoff and park the node awaiting plain human input;
+      // the operator drives the next step (typically by sending guidance, which
+      // resumes the role to produce a revised handoff).
+      try {
+        await SessionStore.updateFlowRun((latest) => {
+          const state = latest.awaitingHumanNodes[nodeId];
+          if (!state || state.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL) {
+            throw new Error(`Node '${nodeId}' is no longer awaiting handoff approval.`);
+          }
+          delete latest.pendingHandoffApprovals[nodeId];
+          latest.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
+        }, ref, workspaceRoot);
+      } catch (error: any) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      const declineSession = getOrCreateChoiceSession(ref);
+      emitHistoricalMessage(declineSession, { type: 'input_text', role: awaitingState.role, text: 'Declined handoff' });
+      emitFlowState(declineSession);
+      return;
+    }
+
+    // decision === APPROVE: commit the staged handoff without re-running the role.
+    const pending = flowRun.pendingHandoffApprovals[nodeId];
+    if (!pending || pending.length === 0) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' has no staged handoff to approve.` });
+      return;
+    }
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, missingModelError(ref));
+      return;
+    }
+
+    let session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      session = createSession(ref);
+      startFlowRunner(session, flowRun.projectNamespace);
+    }
+
+    try {
+      await session.orchestrator.applyHandoffAndAdvance(flowRun, nodeId, awaitingState.role, pending, { approved: true });
+    } catch (error: any) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+
+    emitHistoricalMessage(session, { type: 'input_text', role: awaitingState.role, text: 'Approved handoff' });
     session.orchestrator.wake();
     emitFlowState(session);
   }
@@ -619,6 +690,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
   return {
     handleHumanInput,
+    handleHandoffApproval,
     handleRoleConfiguration,
     handleImprovementChoice,
     handleFeedbackConsentChoice,

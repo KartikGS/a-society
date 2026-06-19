@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveVariableFromIndex } from './paths.js';
-import type { WorkflowGraph } from '../../shared/workflow-graph.js';
+import type { WorkflowGraph, WorkflowNode } from '../../shared/workflow-graph.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RUNTIME_WORKFLOW_CONTRACT_PATH = path.resolve(__dirname, '../../contracts/workflow.md');
@@ -18,16 +18,33 @@ export interface ForwardNodeEntryOptions {
     receivingHandoffSnapshot?: Array<{ fromNodeId: string; artifacts: string[] }>;
     staleForwardArtifacts?: Array<{ toNodeId: string; artifacts: string[] }>;
   };
-  includeWorkflowContract?: boolean;
-  nodeContext?: {
-    required_readings?: string[];
-    guidance?: string[];
-    inputs?: string[];
-    work?: string[];
-    outputs?: string[];
-    transitions?: string[];
-    notes?: string[];
-  };
+}
+
+export const HUMAN_COLLABORATIVE_DIRECTIVE =
+  'This is a human-collaborative node. Keep the human in the decision loop: surface the proposed decision before proceeding, ask for explicit human direction or approval, and do not treat this node\'s work as final until that direction or approval is received. When you emit a forward handoff, the runtime will ask the operator to approve it before it proceeds, so make sure the human has had a real chance to confirm or redirect before you hand off.';
+
+function nodeContractMentionsWorkflowAuthority(nodeDef: WorkflowNode | null): boolean {
+  const work = nodeDef?.work;
+  return (
+    Array.isArray(work) &&
+    work.some((item) =>
+      typeof item === 'string' &&
+      /workflow\.yaml|workflow-authority|workflow snapshot|active path/i.test(item)
+    )
+  );
+}
+
+function buildFirstEntryNodeContext(nodeDef: WorkflowNode | null): Pick<WorkflowNode, 'required_readings' | 'work'> | undefined {
+  const requiredReadings = Array.isArray(nodeDef?.required_readings) && nodeDef.required_readings.length > 0
+    ? nodeDef.required_readings
+    : undefined;
+  const work = Array.isArray(nodeDef?.work) && nodeDef.work.length > 0
+    ? nodeDef.work
+    : undefined;
+
+  return requiredReadings || work
+    ? { required_readings: requiredReadings, work }
+    : undefined;
 }
 
 /**
@@ -42,13 +59,23 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     projectNamespace,
     isResume,
     handoffContext,
-    includeWorkflowContract,
-    nodeContext,
   } = opts;
+  const firstNodeVisit = !isResume;
+  const currentNodeDef = firstNodeVisit
+    ? handoffContext?.wf.findNodeByIdOrNull(nodeId) ?? null
+    : null;
+  const humanCollaborative = Boolean(currentNodeDef?.['human-colab']);
+  const includeWorkflowContract = nodeContractMentionsWorkflowAuthority(currentNodeDef);
+  const nodeContext = buildFirstEntryNodeContext(currentNodeDef);
   const lines: string[] = [];
 
   lines.push(`Node ${nodeId} ${isResume ? 'resumed' : 'started'} at: ${new Date().toISOString()}`);
   lines.push('');
+
+  if (humanCollaborative) {
+    lines.push(HUMAN_COLLABORATIVE_DIRECTIVE);
+    lines.push('');
+  }
 
   // Injected only on first node visit when the node contract references workflow authority.
   if (includeWorkflowContract) {
@@ -65,24 +92,16 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
 
   // Injected only on first node visit when the node definition has at least one populated contract field.
   if (nodeContext) {
-    const appendStringList = (heading: string, items?: string[]) => {
-      if (!items || items.length === 0) return;
-      lines.push(heading);
-      for (const item of items) {
-        lines.push(`- ${item}`);
-      }
-      lines.push('');
-    };
-
     lines.push(`Node-specific instructions for node ${nodeId}:`);
     lines.push('');
 
-    appendStringList('Guidance:', nodeContext.guidance);
-    appendStringList('Declared inputs:', nodeContext.inputs);
-    appendStringList('Declared work:', nodeContext.work);
-    appendStringList('Declared outputs:', nodeContext.outputs);
-    appendStringList('Transition notes:', nodeContext.transitions);
-    appendStringList('Node notes:', nodeContext.notes);
+    if (nodeContext.work && nodeContext.work.length > 0) {
+      lines.push('Work:');
+      for (const item of nodeContext.work) {
+        lines.push(`- ${item}`);
+      }
+      lines.push('');
+    }
 
     if (nodeContext.required_readings && nodeContext.required_readings.length > 0) {
       lines.push('Node-specific required reading:');

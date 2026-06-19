@@ -18,22 +18,15 @@ workflow:
   edges:
     - from: owner-intake
       to: curator-phase-1
-      artifact: brief
     - from: curator-phase-1
       to: owner-phase-2
-      artifact: proposal
     - from: owner-phase-2
       to: curator-phase-3-findings
-      artifact: decision
     - from: owner-phase-2
       to: owner-phase-3-findings
-      artifact: decision
     - from: curator-phase-3-findings
       to: curator-phase-3-synthesis
-      artifact: findings
     - from: curator-phase-3-synthesis
       to: owner-close
-      artifact: synthesis
     - from: owner-phase-3-findings
       to: owner-close
-      artifact: review

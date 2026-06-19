@@ -37,6 +37,7 @@ function createFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}):
     runningNodes: ['owner-review'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {},

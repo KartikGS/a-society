@@ -1,4 +1,5 @@
-import type { OperatorEvent, WorkflowGraph } from '../types.js';
+import type { OperatorEvent } from '../../../shared/types.js';
+import type { WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 
 type HandoffAppliedEvent = Extract<OperatorEvent, { kind: 'handoff.applied' }>;
 

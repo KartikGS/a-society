@@ -71,6 +71,7 @@ describe('improvement-streams', () => {
       runningNodes: [],
       awaitingHumanNodes: {},
       pendingHumanInputs: {},
+      pendingHandoffApprovals: {},
       visitedNodeIds: [],
       completedHandoffs: [],
       receivingHandoff: {},

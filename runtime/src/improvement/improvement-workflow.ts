@@ -4,28 +4,24 @@ import yaml from 'js-yaml';
 import type { BackwardPassEntry, BackwardPassPlan } from '../framework-services/backward-pass-orderer.js';
 import { IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import type { ProtocolImprovementChoiceMode } from '../../shared/protocol-constants.js';
+import type { WorkflowDefinition, WorkflowDocument, WorkflowEdge, WorkflowNode } from '../../shared/workflow-graph.js';
 
 export const IMPROVEMENT_WORKFLOW_FILENAME = 'improvement.yaml';
 
-export interface ImprovementWorkflowNode {
-  id: string;
-  role: string;
+export type ImprovementWorkflowNode = WorkflowNode & {
   step_type: BackwardPassEntry['stepType'];
-}
+};
 
-export interface ImprovementWorkflowEdge {
-  from: string;
-  to: string;
-}
+export type ImprovementWorkflowEdge = WorkflowEdge;
 
-export interface ImprovementWorkflowDefinition {
+export interface ImprovementWorkflowDefinition extends WorkflowDefinition {
   name: string;
   summary: string;
   nodes: ImprovementWorkflowNode[];
   edges: ImprovementWorkflowEdge[];
 }
 
-export interface ImprovementWorkflowDocument {
+export interface ImprovementWorkflowDocument extends WorkflowDocument {
   workflow: ImprovementWorkflowDefinition;
 }
 
