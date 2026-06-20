@@ -3,24 +3,20 @@ import { flowKey } from '../../../shared/flow-ref.js';
 import {
   CLIENT_MESSAGE_TYPE,
   FEEDBACK_CONSENT_DECISION,
+  HANDOFF_APPROVAL_DECISION,
   IMPROVEMENT_CHOICE_MODE,
 } from '../../../shared/protocol-constants.js';
 import type {
   ProtocolFeedbackConsentDecision,
+  ProtocolHandoffApprovalDecision,
   ProtocolImprovementChoiceMode,
 } from '../../../shared/protocol-constants.js';
 import type { GraphMode } from '../components/GraphView';
 import { areWorkflowGraphsEqual } from '../equality';
-import type {
-  ClientMessage,
-  ConsentMode,
-  ConsentResponseDecision,
-  FlowRef,
-  FlowSummary,
-  ProjectDiscovery,
-  ProjectSummary,
-  WorkflowGraph,
-} from '../types';
+import type { ClientMessage } from '../../../shared/operator-protocol.js';
+import type { ConsentMode, ConsentResponseDecision, FlowRef, FlowSummary } from '../../../shared/types.js';
+import type { ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
+import type { WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 import type { ActiveFlowView } from './active-flow-view';
 import { SYSTEM_ROLE_KEY } from './constants';
 import { titleForFlow, type FlowTab, type FlowUiState } from './flow-ui';
@@ -299,6 +295,12 @@ export function useAppCommands(input: UseAppCommandsInput) {
     });
   }, [activeTab, sendMessage, visibleConsentRequest]);
 
+  const handleHandoffApproval = useCallback((nodeId: string, decision: ProtocolHandoffApprovalDecision): void => {
+    if (!activeTab) return;
+    if (decision === HANDOFF_APPROVAL_DECISION.APPROVE && !ensureConfiguredModel()) return;
+    sendMessage({ type: CLIENT_MESSAGE_TYPE.HANDOFF_APPROVAL, flowRef: activeTab.ref, nodeId, decision });
+  }, [activeTab, ensureConfiguredModel, sendMessage]);
+
   const handleRoleConfigure = useCallback((nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }): void => {
     if (!activeTab) return;
     sendMessage({
@@ -379,6 +381,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     handleFeedbackConsentChoice,
     handleConsentResponse,
     handleRoleConfigure,
+    handleHandoffApproval,
     handleConsentModeChange,
     handleStopActiveTurn,
     handleCompactContext,

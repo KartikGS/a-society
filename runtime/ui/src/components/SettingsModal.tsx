@@ -21,16 +21,16 @@ import type {
   SkillFormState,
   ToolFormState,
 } from './settings/settings-types';
+import type { ModelReasoningConfig } from '../../../shared/model-reasoning.js';
 import type {
   AutomationSettings,
   FeedSettings,
   SelectionMode,
   McpServerSummary,
   ModelConfig,
-  ModelReasoningConfig,
-  SkillLoadResult,
   ToolSettings,
-} from '../types';
+} from '../../../shared/settings.js';
+import type { SkillLoadResult } from '../../../shared/skills.js';
 
 interface SettingsModalProps {
   onClose: () => void;

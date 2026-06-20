@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createFlowUiState, type FlowUiState } from '../../ui/src/app/flow-ui.js';
 import { handleServerMessage, type ServerMessageHandlers } from '../../ui/src/app/server-messages.js';
-import type { FlowRef } from '../../ui/src/types.js';
+import type { FlowRef } from '../../shared/types.js';
 
 function createHandlers(stateRef: { current: FlowUiState }): ServerMessageHandlers {
   return {

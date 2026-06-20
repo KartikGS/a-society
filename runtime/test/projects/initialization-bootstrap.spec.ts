@@ -57,13 +57,13 @@ describe('initialization-bootstrap', () => {
       id: 'owner-intake',
       role: 'owner',
     });
-    expect(workflowDoc.workflow.nodes[0].guidance).toEqual(expect.arrayContaining([
+    expect(workflowDoc.workflow.nodes[0].work).toEqual(expect.arrayContaining([
       expect.stringContaining('# Runtime Project Initialization'),
       expect.stringContaining('# Runtime Initialization Brief'),
       expect.stringContaining('workflow.yaml'),
       expect.stringContaining('A-Society general index:'),
     ]));
-    const generalIndexGuidance = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    const generalIndexGuidance = workflowDoc.workflow.nodes[0].work.find((entry: string) =>
       entry.includes('A-Society general index:')
     );
     expect(generalIndexGuidance).toContain('$GENERAL_OWNER_ROLE');
@@ -86,7 +86,7 @@ describe('initialization-bootstrap', () => {
     expect(requiredReadings).toContain('$GREENFIELD_PROJECT_INDEX');
     expect(requiredReadings).toContain('$GREENFIELD_PROJECT_OWNER_ROLE');
 
-    const briefContent = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    const briefContent = workflowDoc.workflow.nodes[0].work.find((entry: string) =>
       entry.includes('# Runtime Initialization Brief')
     );
     expect(fs.existsSync(path.join(result.flowRun.recordFolderPath, '00-runtime-initialization-brief.md'))).toBe(false);
@@ -99,8 +99,9 @@ describe('initialization-bootstrap', () => {
     expect(briefContent).not.toContain('## Injected A-Society general index');
     expect(briefContent).not.toContain('## Required outcomes for this initialization flow');
 
+    expect(Array.isArray(workflowDoc.workflow.nodes[0].work)).toBe(true);
+    expect(workflowDoc.workflow.nodes[0].guidance).toBeUndefined();
     expect(workflowDoc.workflow.nodes[0].inputs).toBeUndefined();
-    expect(workflowDoc.workflow.nodes[0].work).toBeUndefined();
     expect(workflowDoc.workflow.nodes[0].outputs).toBeUndefined();
     expect(workflowDoc.workflow.nodes[0].notes).toBeUndefined();
   });
@@ -118,7 +119,7 @@ describe('initialization-bootstrap', () => {
     expect(result.scaffoldResult.created.length).toBeGreaterThan(0);
 
     const workflowDoc = workflowForRecord(result.flowRun.recordFolderPath);
-    const briefContent = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    const briefContent = workflowDoc.workflow.nodes[0].work.find((entry: string) =>
       entry.includes('# Runtime Initialization Brief')
     );
     expect(fs.existsSync(path.join(result.flowRun.recordFolderPath, '00-runtime-initialization-brief.md'))).toBe(false);

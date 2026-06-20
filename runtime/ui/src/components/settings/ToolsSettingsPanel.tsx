@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { ToolSettings } from '../../types';
+import type { ToolSettings } from '../../../../shared/settings.js';
 import type { ToolFormState } from './settings-types';
 
 interface ToolsSettingsPanelProps {

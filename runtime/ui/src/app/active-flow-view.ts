@@ -1,12 +1,15 @@
 import { getActiveNodeIds } from '../../../shared/flow-state.js';
 import type { GraphMode } from '../components/GraphView';
-import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, RoleConfigurationPending, WorkflowGraph } from '../types';
+import type { RoleConfigurationPending } from '../../../shared/operator-protocol.js';
+import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, HandoffTarget } from '../../../shared/types.js';
+import type { WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 import { DEFAULT_SELECTED_ROLE_KEY, EMPTY_STRINGS, SYSTEM_ROLE_KEY } from './constants';
 import { feedbackConsentCopy } from './feedback-copy';
 import {
   collectSelectableRoles,
   getAwaitingHandoffNodeIdForRole,
   getAwaitingNodeIdForRole,
+  getHandoffApprovalNodeIdForRole,
   getImprovementAwaitingRoleName,
   getRoleConfigurationNodeIdForRole,
   hasImprovementGraph,
@@ -43,6 +46,8 @@ export interface ActiveFlowView {
   visibleConsentRequest: ConsentRequest | null;
   roleConfigurationNodeId: string | null;
   roleConfigurationPending: RoleConfigurationPending | null;
+  handoffApprovalNodeId: string | null;
+  handoffApprovalTargets: HandoffTarget[] | null;
   isAwaitingImprovementChoice: boolean;
   isAwaitingFeedbackConsent: boolean;
   feedbackPrompt: ReturnType<typeof feedbackConsentCopy>;
@@ -146,6 +151,10 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const roleConfigurationPending = roleConfigurationNodeId
     ? activeUi?.roleConfigurations[roleConfigurationNodeId] ?? null
     : null;
+  const handoffApprovalNodeId = getHandoffApprovalNodeIdForRole(flowRun, viewedRole);
+  const handoffApprovalTargets = handoffApprovalNodeId
+    ? flowRun?.pendingHandoffApprovals[handoffApprovalNodeId] ?? null
+    : null;
   const improvementInputTargetRole = getImprovementAwaitingRoleName(flowRun, viewedRole);
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
@@ -155,11 +164,13 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const inputDisabled = !hasActiveSession || (!viewedRoleAwaitingNodeId && !viewedRoleAwaitingHandoffNodeId && !improvementInputTargetRole);
   const inputPlaceholder = roleConfigurationNodeId
     ? 'Configure this role to continue.'
-    : !hasActiveSession
-      ? 'Resume the flow to reply.'
-      : !inputDisabled
-        ? 'Reply to the selected role.'
-        : 'Select a role that is awaiting input or handoff.';
+    : handoffApprovalNodeId
+      ? 'Approve or decline the staged handoff to continue.'
+      : !hasActiveSession
+        ? 'Resume the flow to reply.'
+        : !inputDisabled
+          ? 'Reply to the selected role.'
+          : 'Select a role that is awaiting input or handoff.';
   const canStop =
     !!flowRun &&
     hasActiveSession &&
@@ -192,6 +203,8 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     visibleConsentRequest,
     roleConfigurationNodeId,
     roleConfigurationPending,
+    handoffApprovalNodeId,
+    handoffApprovalTargets,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,

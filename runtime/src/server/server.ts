@@ -193,6 +193,18 @@ function buildServer(workspaceRoot: string) {
         return;
       }
 
+      if (message.type === CLIENT_MESSAGE_TYPE.HANDOFF_APPROVAL) {
+        void runtimeSessions.handleHandoffApproval(message.flowRef, message.nodeId, message.decision)
+          .catch((error: any) => {
+            runtimeSessions.sendToSocket(socket, {
+              type: 'error',
+              flowRef: message.flowRef,
+              message: error instanceof Error ? error.message : String(error)
+            });
+          });
+        return;
+      }
+
       void runtimeSessions.handleHumanInput(
         message.flowRef,
         message.text,

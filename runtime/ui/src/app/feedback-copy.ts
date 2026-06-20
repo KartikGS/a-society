@@ -1,4 +1,4 @@
-import type { FlowRun } from '../types';
+import type { FlowRun } from '../../../shared/types.js';
 
 export function feedbackConsentCopy(flowRun: FlowRun | null): { title: string; body: string; details: string } {
   const artifactPath = flowRun?.improvementPhase?.feedbackArtifactPath ?? 'a-society/feedback/';

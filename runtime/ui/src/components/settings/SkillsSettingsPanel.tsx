@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { SkillLoadResult } from '../../types';
+import type { SkillLoadResult } from '../../../../shared/skills.js';
 import type { SkillFormState } from './settings-types';
 
 interface SkillsSettingsPanelProps {

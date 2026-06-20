@@ -38,26 +38,6 @@ type ClaimedRunnableWork = {
 };
 
 
-function nodeContractMentionsWorkflowAuthority(nodeDef: any): boolean {
-  const fields = [
-    nodeDef?.guidance,
-    nodeDef?.inputs,
-    nodeDef?.work,
-    nodeDef?.outputs,
-    nodeDef?.transitions,
-    nodeDef?.notes
-  ];
-
-  return fields.some((value) =>
-    Array.isArray(value) &&
-    value.some((item) =>
-      typeof item === 'string' &&
-      /workflow\.yaml|workflow-authority|workflow snapshot|active path/i.test(item)
-    )
-  );
-}
-
-
 function appendCurrentNodeExchange(session: RoleSession, nodeId: string, message: RuntimeMessageParam): void {
   if (!session.currentNodeContext || session.currentNodeContext.nodeId !== nodeId) {
     session.currentNodeContext = { nodeId, exchanges: [] };
@@ -518,11 +498,11 @@ export class FlowOrchestrator {
               }
 
               // kind === 'targets'
-              span.setAttribute('node.outcome', 'handoff');
               span.setAttribute('handoff.kind', handoffResult.kind);
 
               const handoffs = handoffResult.targets;
               await this.applyHandoffAndAdvance(flowRun, nodeId, roleInstanceId, handoffs);
+              span.setAttribute('node.outcome', 'handoff');
 
               session.transcriptHistory = injectedHistory;
               session.isActive = false;
@@ -590,7 +570,8 @@ export class FlowOrchestrator {
     flowRun: FlowRun,
     nodeId: string,
     fromRole: string,
-    handoffs: HandoffTarget[]
+    handoffs: HandoffTarget[],
+    options: { approved?: boolean } = {}
   ): Promise<void> {
     this.setFlowContext(flowRun);
     if (!fs.existsSync(flowRun.recordFolderPath)) {
@@ -601,11 +582,12 @@ export class FlowOrchestrator {
       );
     }
     let eventTargets: Array<{ nodeId: string; role: string }> = [];
+    let gated = false;
 
     await SessionStore.updateFlowRun((latest) => {
       const wf = this.loadWorkflowDocument(latest);
 
-      wf.findNodeById(nodeId);
+      const sourceNode = wf.findNodeById(nodeId);
       const outgoingEdges = wf.getOutgoingEdges(nodeId);
       const incomingEdges = wf.getIncomingEdges(nodeId);
 
@@ -733,6 +715,19 @@ export class FlowOrchestrator {
         });
       }
 
+      // human-colab gate: validation has passed, but a forward handoff from this node
+      // must be approved by the operator before it commits. Stage the emitted targets and
+      // suspend the node awaiting that decision instead of routing. Backward-only handoffs
+      // are never gated, and an already-approved commit (options.approved) skips the gate.
+      if (Boolean(sourceNode['human-colab']) && forwardTargets.length > 0 && !options.approved) {
+        latest.runningNodes = latest.runningNodes.filter(id => id !== nodeId);
+        latest.awaitingHumanNodes[nodeId] = { role: fromRole, reason: AWAITING_HUMAN_REASON.HANDOFF_APPROVAL };
+        latest.pendingHandoffApprovals[nodeId] = handoffs;
+        latest.status = 'running';
+        gated = true;
+        return;
+      }
+
       this.removeOpenNode(latest, nodeId);
 
       for (const pair of activationPairs) {
@@ -779,6 +774,16 @@ export class FlowOrchestrator {
       ];
       return;
     }, this.requireFlowRef(), this.requireWorkspaceRoot());
+
+    if (gated) {
+      this.renderer.emit({
+        kind: 'human.awaiting_input',
+        nodeId,
+        role: fromRole,
+        reason: AWAITING_HUMAN_REASON.HANDOFF_APPROVAL,
+      });
+      return;
+    }
 
     this.renderer.emit({
       kind: 'handoff.applied',
@@ -891,6 +896,15 @@ export class FlowOrchestrator {
     for (const node of wf.nodes) {
       const nodeId = node.id;
       if (!hasWakeableInboundHandoff(nodeId)) continue;
+      // AND-join: a node flagged await-all-inputs stays unrunnable until every
+      // inbound edge handoff is complete. Received-but-incomplete inbound artifacts
+      // accumulate in receivingHandoff and are delivered together on the eventual run.
+      if (
+        node['await-all-inputs'] &&
+        getOutstandingInboundSources(wf, flowRun.completedHandoffs, nodeId).length > 0
+      ) {
+        continue;
+      }
       const awaitingHumanState = flowRun.awaitingHumanNodes[nodeId];
       const awaitingHumanReplyWithoutQueuedInput =
         awaitingHumanState &&
@@ -996,7 +1010,6 @@ export class FlowOrchestrator {
     const roleInstanceId = currentNodeDef.role;
 
     const firstNodeVisit = !(flowRun.visitedNodeIds ?? []).includes(nodeId);
-    const isVisitedNode = !firstNodeVisit;
 
     const inboundHandoffSnapshot = Object.entries(flowRun.receivingHandoff)
       .map(([key, artifacts]) => {
@@ -1066,20 +1079,6 @@ export class FlowOrchestrator {
       session.currentNodeContext = { nodeId, exchanges: [] };
     }
 
-    const rawNodeContext = firstNodeVisit ? {
-      required_readings: Array.isArray(currentNodeDef.required_readings) ? currentNodeDef.required_readings : undefined,
-      guidance: Array.isArray(currentNodeDef.guidance) ? currentNodeDef.guidance : undefined,
-      inputs: Array.isArray(currentNodeDef.inputs) ? currentNodeDef.inputs : undefined,
-      work: Array.isArray(currentNodeDef.work) ? currentNodeDef.work : undefined,
-      outputs: Array.isArray(currentNodeDef.outputs) ? currentNodeDef.outputs : undefined,
-      transitions: Array.isArray(currentNodeDef.transitions) ? currentNodeDef.transitions : undefined,
-      notes: Array.isArray(currentNodeDef.notes) ? currentNodeDef.notes : undefined,
-    } : undefined;
-    const nodeContext = rawNodeContext && Object.values(rawNodeContext).some(value =>
-      Array.isArray(value) ? value.length > 0 : false
-    ) ? rawNodeContext : undefined;
-    const includeWorkflowContract = firstNodeVisit && nodeContractMentionsWorkflowAuthority(currentNodeDef);
-
     if (resumedFromHuman) {
       appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: humanInput });
     } else if (!sameNodeResume || resumedFromHandoff) {
@@ -1089,8 +1088,6 @@ export class FlowOrchestrator {
         projectNamespace: flowRun.projectNamespace,
         isResume: !firstNodeVisit,
         handoffContext: { wf, completedHandoffs: flowRun.completedHandoffs, receivingHandoffSnapshot, staleForwardArtifacts },
-        includeWorkflowContract,
-        nodeContext,
       });
       appendRuntimeMessage(injectedHistory, session, nodeId, { role: 'user', content: nodeEntryMessage });
     }
@@ -1099,7 +1096,7 @@ export class FlowOrchestrator {
       pendingEmits.push({ kind: 'human.resumed', nodeId, role: roleInstanceId });
     }
 
-    if (!isVisitedNode || !sameNodeResume || resumedFromHandoff) {
+    if (firstNodeVisit || !sameNodeResume || resumedFromHandoff) {
       pendingEmits.push({ kind: 'role.active', nodeId, role: roleInstanceId });
     }
 
@@ -1158,6 +1155,7 @@ export class FlowOrchestrator {
     flowRun.runningNodes = flowRun.runningNodes.filter(id => id !== nodeId);
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
+    delete flowRun.pendingHandoffApprovals[nodeId];
   }
 
   private setFlowContext(flowRun: FlowRun): void {

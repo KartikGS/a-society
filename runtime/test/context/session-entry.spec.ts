@@ -191,37 +191,84 @@ describe('session-entry', () => {
       expect(message).not.toContain('Artifact content here.');
     });
 
-    it('renders node contract fields and node-specific required reading on first entry', () => {
+    it('renders node work and node-specific required reading on first entry', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{
+          id: 'owner-gate',
+          role: 'owner',
+          required_readings: ['$TEST_NODE_DOC'],
+          work: ['Apply the approval tests and decide Approved, Revise, or Rejected.'],
+        }],
+        edges: [],
+      });
+
       const message = buildForwardNodeEntryMessage({
         nodeId: 'owner-gate',
         workspaceRoot: fixture.tmpDir,
         projectNamespace: fixture.projectNamespace,
-        nodeContext: {
-          required_readings: ['$TEST_NODE_DOC'],
-          guidance: ['Use the approved review checklist.'],
-          inputs: ['Curator proposal artifact'],
-          work: ['Apply the approval tests and decide Approved, Revise, or Rejected.'],
-          outputs: ['Owner decision artifact'],
-          transitions: ['Approved -> curator-implementation-registration'],
-          notes: ['Approval is not completion.'],
-        },
+        handoffContext: { wf: workflow, completedHandoffs: [] },
       });
 
       expect(message).toContain('Node-specific instructions for node owner-gate:');
-      expect(message).toContain('Guidance:');
-      expect(message).toContain('Use the approved review checklist.');
-      expect(message).toContain('Declared inputs:');
-      expect(message).toContain('Curator proposal artifact');
+      expect(message).toContain('Work:');
+      expect(message).toContain('Apply the approval tests and decide Approved, Revise, or Rejected.');
       expect(message).toContain('[FILE: $TEST_NODE_DOC');
       expect(message).toContain('Node-specific reading content.');
     });
 
-    it('injects workflow contract when requested', () => {
+    it('injects the human-collaborative directive when the node is flagged', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{
+          id: 'owner-gate',
+          role: 'owner',
+          'human-colab': true,
+          work: ['Decide with the human in the loop.'],
+        }],
+        edges: [],
+      });
+
+      const message = buildForwardNodeEntryMessage({
+        nodeId: 'owner-gate',
+        workspaceRoot: fixture.tmpDir,
+        projectNamespace: fixture.projectNamespace,
+        handoffContext: { wf: workflow, completedHandoffs: [] },
+      });
+      expect(message).toContain('human-collaborative node');
+      expect(message).toContain('Keep the human in the decision loop');
+      expect(message).toContain('surface the proposed decision before proceeding');
+      expect(message).toContain('do not treat this node\'s work as final');
+    });
+
+    it('omits the human-collaborative directive by default', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{ id: 'owner-gate', role: 'owner', work: ['Just do the work.'] }],
+        edges: [],
+      });
+
+      const message = buildForwardNodeEntryMessage({
+        nodeId: 'owner-gate',
+        workspaceRoot: fixture.tmpDir,
+        projectNamespace: fixture.projectNamespace,
+        handoffContext: { wf: workflow, completedHandoffs: [] },
+      });
+      expect(message).not.toContain('human-collaborative node');
+    });
+
+    it('injects workflow contract when node work references workflow authority', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{
+          id: 'owner-intake',
+          role: 'owner',
+          work: ['Create or repair workflow.yaml using the active path.'],
+        }],
+        edges: [],
+      });
+
       const message = buildForwardNodeEntryMessage({
         nodeId: 'owner-intake',
         workspaceRoot: fixture.tmpDir,
         projectNamespace: fixture.projectNamespace,
-        includeWorkflowContract: true,
+        handoffContext: { wf: workflow, completedHandoffs: [] },
       });
 
       expect(message).toContain('Runtime workflow contract:');
@@ -230,14 +277,46 @@ describe('session-entry', () => {
     });
 
     it('omits workflow contract by default', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{ id: 'owner-gate', role: 'owner', work: ['Review the submitted artifact.'] }],
+        edges: [],
+      });
+
       const message = buildForwardNodeEntryMessage({
         nodeId: 'owner-gate',
         workspaceRoot: fixture.tmpDir,
         projectNamespace: fixture.projectNamespace,
+        handoffContext: { wf: workflow, completedHandoffs: [] },
       });
 
       expect(message).not.toContain('Runtime workflow contract:');
       expect(message).not.toContain('A-Society Runtime Workflow Contract');
+    });
+
+    it('omits first-entry node directives on resume', () => {
+      const workflow = new WorkflowGraph({
+        nodes: [{
+          id: 'owner-gate',
+          role: 'owner',
+          'human-colab': true,
+          required_readings: ['$TEST_NODE_DOC'],
+          work: ['Update workflow.yaml with the active path.'],
+        }],
+        edges: [],
+      });
+
+      const message = buildForwardNodeEntryMessage({
+        nodeId: 'owner-gate',
+        workspaceRoot: fixture.tmpDir,
+        projectNamespace: fixture.projectNamespace,
+        isResume: true,
+        handoffContext: { wf: workflow, completedHandoffs: [] },
+      });
+
+      expect(message).not.toContain('human-collaborative node');
+      expect(message).not.toContain('Runtime workflow contract:');
+      expect(message).not.toContain('Node-specific instructions for node owner-gate:');
+      expect(message).not.toContain('Node-specific reading content.');
     });
   });
 

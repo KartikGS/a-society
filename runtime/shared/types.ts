@@ -163,6 +163,13 @@ export interface FlowRun {
   runningNodes: string[];
   awaitingHumanNodes: Record<string, { role: string; reason: AwaitingHumanReason }>;
   pendingHumanInputs: Record<string, { text: string; receivedAt: string }>;
+  /**
+   * Forward handoff(s) staged by a `human-colab` node, held until the operator
+   * approves or declines. Keyed by the emitting node id. Unlike pendingHumanInputs
+   * (which feeds text back into a re-run), this carries the already-decided routing
+   * so an approval commits without re-running the role.
+   */
+  pendingHandoffApprovals: Record<string, HandoffTarget[]>;
   visitedNodeIds: string[];
   completedHandoffs: string[];
   receivingHandoff: Record<string, string[]>;

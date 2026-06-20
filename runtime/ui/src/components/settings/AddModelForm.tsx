@@ -12,14 +12,13 @@ import {
 import type {
   AnthropicEffort,
   AnthropicThinkingDisplay,
-  InputModality,
   ModelReasoningConfig,
   OpenAICompatibleTokenLimitParam,
   OpenAIReasoningEffort,
   ProviderReasoningDisplay,
   ProviderReasoningReplayPolicy,
-  ProviderType,
-} from '../../types';
+} from '../../../../shared/model-reasoning.js';
+import type { InputModality, ProviderType } from '../../../../shared/settings.js';
 import type { EditorView, ModelFormState } from './settings-types';
 
 const INPUT_MODALITY_OPTIONS: Array<{ value: InputModality; label: string }> = [

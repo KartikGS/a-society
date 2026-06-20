@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { McpServerSummary } from '../../types';
+import type { McpServerSummary } from '../../../../shared/settings.js';
 import type { McpFormState } from './settings-types';
 
 interface McpSettingsPanelProps {

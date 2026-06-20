@@ -61,7 +61,7 @@ async function runTest() {
   nodes:
     - id: start
       role: 'start'
-      guidance:
+      work:
         - Use the canonical workflow contract.
     - id: next
       role: 'next'
@@ -92,6 +92,7 @@ async function runTest() {
     runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],

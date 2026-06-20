@@ -1,7 +1,8 @@
 import { flowKey } from '../../../shared/flow-ref.js';
 import { CONSENT_MODE } from '../../../shared/protocol-constants.js';
+import type { ServerMessage } from '../../../shared/operator-protocol.js';
+import type { FlowRef, FlowSummary, OperatorEvent } from '../../../shared/types.js';
 import { areFlowRunsEqual, areStringArraysEqual } from '../equality.js';
-import type { FlowRef, FlowSummary, OperatorEvent, ServerMessage } from '../types.js';
 import { SYSTEM_ROLE_KEY } from './constants.js';
 import { appendFeedItem, applyReasoningTraceToFeed, formatOperatorEvent, nextFeedId, resolveAutoSelectionFeedItem, resolveCompactionFeedItem, resolveToolFeedItem } from './feed.js';
 import {

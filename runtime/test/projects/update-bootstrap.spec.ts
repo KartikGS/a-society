@@ -65,12 +65,12 @@ describe('update-bootstrap', () => {
     const workflowDoc = parseWorkflowFile(path.join(result.flowRun.recordFolderPath, 'workflow.yaml')) as any;
     expect(workflowDoc.workflow.nodes).toHaveLength(1);
     expect(workflowDoc.workflow.nodes[0]).toMatchObject({ id: 'owner-intake', role: 'owner' });
-    expect(workflowDoc.workflow.nodes[0].guidance).toEqual(expect.arrayContaining([
+    expect(workflowDoc.workflow.nodes[0].work).toEqual(expect.arrayContaining([
       expect.stringContaining('# Runtime Project Update'),
       expect.stringContaining('# Runtime Update Brief'),
       expect.stringContaining('A-Society general index:'),
     ]));
-    const brief = workflowDoc.workflow.nodes[0].guidance.find((g: string) => g.includes('# Runtime Update Brief'));
+    const brief = workflowDoc.workflow.nodes[0].work.find((g: string) => g.includes('# Runtime Update Brief'));
     expect(brief).toContain('Version this project conforms to: 0.1.0');
     expect(brief).toContain(`Target version: ${currentVersion()}`);
 

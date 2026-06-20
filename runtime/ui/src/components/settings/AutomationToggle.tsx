@@ -1,4 +1,4 @@
-import type { SelectionMode } from '../../types';
+import type { SelectionMode } from '../../../../shared/settings.js';
 
 interface AutomationToggleProps {
   label: string;

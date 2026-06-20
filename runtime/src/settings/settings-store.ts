@@ -1,47 +1,31 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { DISABLED_REASONING, normalizeModelReasoningConfig, type ModelReasoningConfig } from '../../shared/model-reasoning.js';
-import { normalizePromptCacheTtl, type PromptCacheTtl } from '../common/types.js';
+import { DISABLED_REASONING, normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
+import { normalizePromptCacheTtl } from '../common/types.js';
+import type {
+  AutomationSettings,
+  FeedSettings,
+  McpServerConfig,
+  McpServerSummary,
+  McpTransport,
+  ModelConfig,
+  ModelConfigWithKey,
+  SelectionMode,
+  ToolSettings,
+} from '../../shared/settings.js';
 
-export interface ModelConfig {
-  id: string;
-  displayName: string;
-  providerType: 'anthropic' | 'openai-compatible';
-  providerBaseUrl: string;
-  modelId: string;
-  contextWindow: number;
-  maxOutputTokens: number;
-  reasoning: ModelReasoningConfig;
-  cacheTtl: PromptCacheTtl;
-  supportedInputTypes: Array<'image' | 'audio' | 'video'>;
-  active: boolean;
-}
-
-export interface ModelConfigWithKey extends ModelConfig {
-  apiKey: string;
-}
-
-export type McpTransport = 'stdio' | 'http';
-
-export interface McpServerConfig {
-  id: string;
-  name: string;
-  transport: McpTransport;
-  command?: string;
-  args?: string[];
-  envKeys?: string[];
-  url?: string;
-  headerKeys?: string[];
-  toolNames: string[];
-}
-
-export interface McpServerSummary {
-  id: string;
-  name: string;
-  transport: McpTransport;
-  toolNames: string[];
-}
+export type {
+  AutomationSettings,
+  FeedSettings,
+  McpServerConfig,
+  McpServerSummary,
+  McpTransport,
+  ModelConfig,
+  ModelConfigWithKey,
+  SelectionMode,
+  ToolSettings,
+} from '../../shared/settings.js';
 
 export interface ResolvedMcpServer extends McpServerConfig {
   env: Record<string, string>;
@@ -62,31 +46,6 @@ export interface McpServerWriteParams {
 interface StoredToolSettings {
   webSearch: {
     enabled: boolean;
-  };
-}
-
-export interface FeedSettings {
-  historyLimit: number;
-}
-
-export type SelectionMode = 'auto' | 'manual';
-
-/**
- * Per-dimension automation mode. `auto` lets the runtime decide the role's
- * model / skills / MCP servers via an independent selection turn; `manual`
- * prompts the operator. Each dimension is independent (e.g. manual model,
- * auto MCP). Defaults to `manual` so behavior is unchanged until opted in.
- */
-export interface AutomationSettings {
-  models: SelectionMode;
-  skills: SelectionMode;
-  mcpServers: SelectionMode;
-}
-
-export interface ToolSettings {
-  webSearch: {
-    enabled: boolean;
-    hasApiKey: boolean;
   };
 }
 

@@ -1,14 +1,7 @@
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../../shared/protocol-constants.js';
-import type {
-  ConsentRequest,
-  FeedItem,
-  FlowRef,
-  FlowRun,
-  FlowSummary,
-  OperatorEvent,
-  RoleConfigurationPending,
-  WorkflowGraph,
-} from '../types.js';
+import type { RoleConfigurationPending } from '../../../shared/operator-protocol.js';
+import type { ConsentRequest, FeedItem, FlowRef, FlowRun, FlowSummary, OperatorEvent } from '../../../shared/types.js';
+import type { WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 import { SYSTEM_ROLE_KEY } from './constants.js';
 import { toRoleKey } from './roles.js';
 
@@ -68,6 +61,7 @@ export function getAwaitingNodeIdForRole(flowRun: FlowRun | null, role: string |
     .find(([, state]) =>
       state.reason !== AWAITING_HUMAN_REASON.CONSENT &&
       state.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
+      state.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL &&
       toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
 }
@@ -79,6 +73,17 @@ export function getRoleConfigurationNodeIdForRole(flowRun: FlowRun | null, role:
   const match = Object.entries(flowRun.awaitingHumanNodes)
     .find(([, state]) =>
       state.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
+      toRoleKey(state.role) === targetKey);
+  return match?.[0] ?? null;
+}
+
+export function getHandoffApprovalNodeIdForRole(flowRun: FlowRun | null, role: string | null): string | null {
+  if (!flowRun || !role) return null;
+  const targetKey = toRoleKey(role);
+  if (!targetKey) return null;
+  const match = Object.entries(flowRun.awaitingHumanNodes)
+    .find(([, state]) =>
+      state.reason === AWAITING_HUMAN_REASON.HANDOFF_APPROVAL &&
       toRoleKey(state.role) === targetKey);
   return match?.[0] ?? null;
 }

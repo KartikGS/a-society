@@ -58,15 +58,14 @@ This keeps workflows structurally complete without forcing unnecessary gates int
 
 A workflow is a **graph**: a named set of nodes connected by transitions.
 
-**Node** — an agent performing a task. Every node has a contract with the following fields:
-- **Owner** — which role runs this node
+**Node** — an agent performing a task. A node's authored contract is deliberately small:
+- **Role** — which role runs this node
 - **Required readings** *(when applicable)* — any node-linked support docs the role must load before acting
-- **Inputs** — what the agent receives (the work product arriving on an incoming transition)
-- **Work** — what the agent does (defined by its role and task instructions)
-- **Outputs** — what the agent produces (the work product departing on an outgoing transition)
-- **Transitions** — where the work can go next and what condition causes each outgoing transition to fire
-- **Human-collaborative** *(when applicable)* — the nature of human contribution to this node. Use this field when the human must actively contribute through the assigned agent.
-- **Notes** *(when applicable)* — node-specific cautions, edge cases, or constraints that do not belong in global invariants
+- **Work** — what the agent does at this node, including any node-specific guidance and local cautions
+- **Human-collaborative flag** *(when applicable)* — marks a node where the human must stay in the decision; the runtime injects a collaboration directive and asks the operator to approve the node's forward handoff before it commits
+- **All-inputs flag** *(when applicable)* — marks an AND-join: the node becomes runnable only once every inbound handoff is complete
+
+A node's **inputs**, **outputs**, and **transitions** are *not* authored fields. They are derived from the graph's edges and the live handoff state, and the runtime injects that picture at node entry. Reason in terms of inputs and outputs when *designing* the graph, but express them as edges — not as node text.
 
 **Transition (edge)** — the forward rule by which work moves between nodes. Every transition has a **transition condition**: the criterion that determines when work passes from one node to the next. Runtime workflow graphs are DAGs; do not model clarification or correction by adding a reverse edge from the downstream node back to the upstream node.
 
@@ -119,14 +118,15 @@ The workflow exists because the project decided that completeness requires multi
 A workflow definition should contain only the standing execution data the runtime and roles need:
 
 - **Workflow identity** — name, summary, and any use-when or companion-doc references.
-- **Nodes** — node id, role, node-specific required readings, guidance, inputs, work, outputs, transition notes, and local cautions.
-- **Edges** — source node, target node, and artifact descriptor when useful.
-- **Workflow-level rules** — invariants, escalation rules, session/concurrency rules, and forward-pass closure obligations.
+- **Nodes** — node id, role, node-specific required readings, work (which absorbs node guidance and local cautions), and the optional human-collaborative and all-inputs flags.
+- **Edges** — source node and target node. Inputs, outputs, and transitions are derived from edges, not authored on the node.
 - **Backward-pass declaration** — participating roles and findings destinations. Do not specify traversal ordering locally; the runtime derives ordering from the active flow graph and the project's improvement contracts.
 
-Use `human-collaborative` on a node when the human must actively contribute direction, approval, content, or another named input through the assigned agent. The entry node carries `human-collaborative: direction` because the user's request starts the flow. The assigned agent remains responsible for surfacing context, eliciting the human contribution, and authoring any outgoing artifact in the project's required format.
+Project-wide rules — invariants, escalation paths, authority — belong in the project's standing governance and principles documents, not duplicated into the workflow definition. The workflow definition carries node contracts, topology, and the closure obligations the terminal node must satisfy.
 
-Keep transition summaries lightweight. Artifact formats, status models, and detailed coordination protocols belong in communication or artifact-specific documents, not in the workflow definition. What does belong here is the node-entry cue that activates a support doc: the workflow says when a role must read it.
+Set the human-collaborative flag on a node when the human must stay in the decision: the runtime injects a collaboration directive and asks the operator to approve the node's forward handoff before it commits. Set the all-inputs flag on a convergence node that must wait for every inbound handoff before it runs.
+
+Keep node work lightweight. Artifact formats, status models, and detailed coordination protocols belong in communication or artifact-specific documents, not in the workflow definition. What does belong here is the node-entry cue that activates a support doc: the workflow says when a role must read it.
 
 ---
 
@@ -158,24 +158,21 @@ If an artifact type needs a reusable template or formatting reference, store tha
 ## How to Write One
 
 **Step 1 — Define the nodes.**
-List every node that a unit of work passes through. Derive this list from the touched permanent surfaces and the gates the work actually needs. For each node: name it, assign an owner role, list required readings, define its inputs and outputs, define the work performed there, note whether the node requires human collaboration, and record any node-specific notes. The entry node always carries `human-collaborative: direction`. If a node has no owner, it is not a node — it is a gap.
+List every node that a unit of work passes through. Derive this list from the touched permanent surfaces and the gates the work actually needs. For each node: name it, assign an owner role, list required readings, define the work performed there (folding in any node-specific guidance and cautions), set the human-collaborative flag if the human must stay in the node's decision, and set the all-inputs flag on AND-join nodes that must wait for every inbound handoff. If a node has no owner, it is not a node — it is a gap.
 
-**Step 2 — Define transitions.**
-For each outgoing transition from each node, define: the transition condition (when does the transition fire), the artifact that carries it, what that artifact must contain, and what the receiving role checks before acting.
+**Step 2 — Define transitions as edges.**
+For each handoff, add an edge from the source node to the target node, and define the transition condition (when does the handoff fire), what the carried artifact must contain, and what the receiving role checks before acting. Capture the condition in the source node's work, not as a separate authored node field.
 
-**Step 3 — Write the invariants.**
-What rules apply to all work in this project, regardless of node? Write them as a numbered list with names. Invariants should be few, clear, and non-negotiable.
+**Step 3 — Record project-wide rules where they belong.**
+Invariants, non-negotiables, and escalation triggers are project governance, not workflow-definition fields. Keep them in the project's principles, governance, role, and conflict-resolution documents, and reference them from a node's work when that node must honor a specific rule. The workflow definition stays focused on node contracts and topology.
 
-**Step 4 — Define escalation.**
-Define what causes an agent to stop and ask. The escalation definition should be specific enough that an agent can distinguish "I should escalate" from "I should proceed with a note." Add node-specific escalation notes only when a node truly needs special handling.
-
-**Step 5 — Define the forward pass closure step.**
+**Step 4 — Define the forward pass closure step.**
 Name the closure obligations for this workflow — what the terminal Owner node must confirm and execute before declaring the forward pass closed. Keep the closure rules in the workflow definition itself rather than splitting them into a separate routing surface.
 
-**Step 6 — Identify artifact references.**
+**Step 5 — Identify artifact references.**
 What artifact types does this project produce? For each type that needs a template or governance rules, identify the standing template or guidance surface and link it from the relevant workflow node.
 
-**Step 7 — Cut what does not belong.**
+**Step 6 — Cut what does not belong.**
 A workflow definition that describes role responsibilities, vision, or tool choices in detail has drifted into other documents' territory. Extract those sections and link to the appropriate files. A role document that enumerates node-triggered "before X, read Y" cues has drifted in the other direction; move those cues back into the workflow.
 
 ---
@@ -190,7 +187,7 @@ This instruction defines the reusable model. A mature project should usually ins
 
 ## Modifying an Existing Workflow
 
-When an existing workflow needs to change — adding a new flow type, modifying a node, changing a transition, or adjusting an invariant — do not edit the active workflow definition casually. A workflow modification is a structured operation: it must be proposed, reviewed, and approved before implementation.
+When an existing workflow needs to change — adding a new flow type, modifying a node, changing a transition, or adjusting a node flag — do not edit the active workflow definition casually. A workflow modification is a structured operation: it must be proposed, reviewed, and approved before implementation.
 
 For the complete modification procedure, the single-graph model, evaluative principles, and hard rules: see `$INSTRUCTION_WORKFLOW_MODIFY`.
 
@@ -201,7 +198,7 @@ For the complete modification procedure, the single-graph model, evaluative prin
 - **Process-first, not role-first.** Describe what happens to work, not what roles do. Roles are described in role documents.
 - **One-line summary at the top.** Every workflow definition should carry a one-line summary — typically in the YAML `summary` field — stating what kind of work it processes. The runtime and record surfaces can use this summary as a durable label for the flow.
 - **Node-first structure.** Organize the workflow around named node contracts with explicit outgoing transitions. Number nodes only when order itself carries meaning; do not rely on phase numbering as the primary model.
-- **Named invariants.** Each invariant should have a short name (e.g., "Traceability Invariant") so agents can reference it precisely in transitions and reports.
+- **Named rules.** Give each project rule a short name (e.g., "Traceability Invariant") in your governance docs so agents can cite it precisely in node work and reports.
 - **One canonical graph.** Prefer one canonical workflow definition whose record snapshots activate only the relevant nodes and edges for each flow.
 - **Stable by design.** A workflow document that changes every week is a sign the process has not been decided — not a sign it is being maintained. Decide the process, then write it down.
 
@@ -211,17 +208,17 @@ For the complete modification procedure, the single-graph model, evaluative prin
 
 ### Software project
 - **Nodes**: Requirements (BA) → Technical Planning (Tech Lead) → Implementation (Sub-agents) → Verification (Tech Lead/Coordinator) → Acceptance (BA)
-- **Key invariant**: Feature code is never written by the planning role — it is always delegated.
+- **Key rule**: Feature code is never written by the planning role — it is always delegated.
 - **Key transition**: Planning → Implementation requires a plan artifact; Implementation → Verification requires a completion report.
 
 ### Research project
 - **Nodes**: Question framing → Literature review → Analysis → Synthesis → Output
-- **Key invariant**: No conclusions are drawn without evidence artifacts.
+- **Key rule**: No conclusions are drawn without evidence artifacts.
 - **Key transition**: Each node produces a dated artifact that the next node reads as input.
 
 ### Editorial / writing project
 - **Nodes**: Brief → Draft → Review → Revision → Final
-- **Key invariant**: Reviewer comments are tracked as discrete items, each accepted or rejected explicitly.
+- **Key rule**: Reviewer comments are tracked as discrete items, each accepted or rejected explicitly.
 - **Key transition**: Draft → Review requires a complete draft; Review → Revision requires a marked-up artifact with classified comments.
 
 ---
@@ -232,6 +229,6 @@ For the complete modification procedure, the single-graph model, evaluative prin
 
 **Merged with role documents.** When *process rules* — invariants, transition conditions, escalation paths — are embedded in role documents, they diverge. Each role file holds its own version of the process, updated independently. The assembled process can only be reconstructed by reading every role document in sequence — and even then, the versions may conflict. Role documents should reference the workflow document for process rules; they should not contain them.
 
-**No invariants.** Without explicit invariants, every edge case becomes a negotiation. The first time a constraint is challenged, the team discovers they never actually agreed on it.
+**No agreed rules.** Without explicit, named project rules in governance, every edge case becomes a negotiation. The first time a constraint is challenged, the team discovers they never actually agreed on it.
 
 **Updated reactively.** Workflow documents should be updated when the process is deliberately changed — not after every flow that exposed a gap. Reactive updates produce a patchwork of special cases rather than a coherent process.

@@ -1,5 +1,8 @@
 import { normalizeMcpServerSummaries, normalizeModelConfigs, normalizeSettingsStatus, normalizeSkillLoadResults } from '../model-config';
-import type { FlowRef, FlowRun, FlowSummary, McpServerSummary, ModelConfig, ProjectDiscovery, ProjectSummary, SettingsStatus, SkillLoadResult } from '../types';
+import type { FlowRef, FlowRun, FlowSummary } from '../../../shared/types.js';
+import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../../shared/settings.js';
+import type { ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
+import type { SkillLoadResult } from '../../../shared/skills.js';
 
 export class IncompatibleFlowError extends Error {
   constructor(message: string) {

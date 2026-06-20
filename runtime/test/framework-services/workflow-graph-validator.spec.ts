@@ -23,6 +23,7 @@ function flowState(overrides: Partial<WorkflowStateValidationInput> = {}): Workf
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},
@@ -41,8 +42,8 @@ it('valid graph passes validation', () => {
         { id: 'owner-close', role: 'owner' },
       ],
       edges: [
-        { from: 'owner-intake', to: 'n2', artifact: 'handoff' },
-        { from: 'n2', to: 'owner-close', artifact: 'completion' },
+        { from: 'owner-intake', to: 'n2' },
+        { from: 'n2', to: 'owner-close' },
       ],
     },
   };
@@ -114,11 +115,11 @@ it('runtime workflow contract omits unsupported legacy workflow keys', () => {
   }
 });
 
-it('valid node with human-collaborative passes', () => {
+it('valid node with human-colab and await-all-inputs flags passes', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'owner-intake', role: 'owner', 'human-collaborative': 'direction' }],
+      nodes: [{ id: 'owner-intake', role: 'owner', 'human-colab': true, 'await-all-inputs': false }],
       edges: [],
     },
   };
@@ -154,7 +155,7 @@ it('role ids with leading or trailing whitespace are rejected', () => {
   expect(errors).toContain('workflow.nodes[1].role must not include leading or trailing whitespace');
 });
 
-it('node-level workflow guidance fields pass when well-formed', () => {
+it('node-level required_readings and work fields pass when well-formed', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -163,12 +164,9 @@ it('node-level workflow guidance fields pass when well-formed', () => {
         id: 'owner-intake',
         role: 'owner',
         required_readings: ['$DOC_A'],
-        guidance: ['Use the snapshot.'],
-        inputs: ['Prior artifact'],
-        work: ['Perform the review'],
-        outputs: ['Decision artifact'],
-        transitions: ['Approved -> next-node'],
-        notes: ['First-entry only']
+        work: ['Perform the review', 'Decide the routing'],
+        'human-colab': true,
+        'await-all-inputs': true,
       }],
       edges: [],
     },
@@ -177,54 +175,70 @@ it('node-level workflow guidance fields pass when well-formed', () => {
   expect(errors).toEqual([]);
 });
 
-it('non-string human-collaborative value is rejected', () => {
+it('removed legacy node fields are rejected as invalid keys', () => {
   const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': 42 }],
+      nodes: [{
+        id: 'n1',
+        role: 'role-r',
+        'human-collaborative': 'direction',
+        guidance: ['x'],
+        inputs: ['y'],
+        outputs: ['z'],
+        transitions: ['a'],
+        notes: ['b'],
+      }],
       edges: [],
     },
   };
   const errors = validateGraph(graph);
-  expect(
-    errors.some((e: string) =>
-      e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
-    )
-  ).toBeTruthy();
+  const keysError = errors.find((e: string) => e.includes('invalid keys'));
+  expect(keysError).toBeDefined();
+  for (const removed of ['human-collaborative', 'guidance', 'inputs', 'outputs', 'transitions', 'notes']) {
+    expect(keysError).toContain(removed);
+  }
 });
 
-it('empty or whitespace human-collaborative value is rejected', () => {
-  const emptyValueGraph = {
+it('removed workflow-level invariants and escalation are rejected', () => {
+  const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': '' }],
+      invariants: [{ name: 'X', rule: 'y' }],
+      escalation: [{ situation: 's', escalated_by: 'owner', to: 'human' }],
+      nodes: [{ id: 'owner-intake', role: 'owner' }],
       edges: [],
     },
   };
-  const whitespaceValueGraph = {
+  const errors = validateGraph(graph);
+  expect(errors.some((e: string) => e.includes('workflow contains invalid keys') && e.includes('invariants') && e.includes('escalation'))).toBeTruthy();
+});
+
+it('non-boolean human-colab value is rejected', () => {
+  const graph = {
     workflow: {
       name: 'T',
-      nodes: [{ id: 'n1', role: 'role-r', 'human-collaborative': '   ' }],
+      nodes: [{ id: 'n1', role: 'role-r', 'human-colab': 'yes' }],
       edges: [],
     },
   };
-
-  const emptyErrors = validateGraph(emptyValueGraph);
-  const whitespaceErrors = validateGraph(whitespaceValueGraph);
-
-  expect(
-    emptyErrors.some((e: string) =>
-      e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
-    )
-  ).toBeTruthy();
-  expect(
-    whitespaceErrors.some((e: string) =>
-      e.includes('workflow.nodes[0].human-collaborative must be a non-empty string if present')
-    )
-  ).toBeTruthy();
+  const errors = validateGraph(graph);
+  expect(errors.some((e: string) => e.includes('workflow.nodes[0].human-colab must be a boolean if present'))).toBeTruthy();
 });
 
-it('unknown node keys still fail after allowing human-collaborative', () => {
+it('non-boolean await-all-inputs value is rejected', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [{ id: 'n1', role: 'role-r', 'await-all-inputs': 1 }],
+      edges: [],
+    },
+  };
+  const errors = validateGraph(graph);
+  expect(errors.some((e: string) => e.includes('workflow.nodes[0].await-all-inputs must be a boolean if present'))).toBeTruthy();
+});
+
+it('unknown node keys still fail alongside the accepted flags', () => {
   const graph = {
     workflow: {
       name: 'T',
@@ -232,7 +246,7 @@ it('unknown node keys still fail after allowing human-collaborative', () => {
         {
           id: 'n1',
           role: 'role-r',
-          'human-collaborative': 'decision',
+          'human-colab': true,
           invalid: 'key',
         },
       ],
@@ -243,12 +257,22 @@ it('unknown node keys still fail after allowing human-collaborative', () => {
   expect(errors.some((e: string) => e.includes('invalid keys: invalid'))).toBeTruthy();
 });
 
-it('existing workflow document without human-collaborative remains valid', () => {
-  const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.yaml'));
-  expect(result.valid).toBe(true);
+it('edge artifact key is now rejected', () => {
+  const graph = {
+    workflow: {
+      name: 'T',
+      nodes: [
+        { id: 'owner-intake', role: 'owner' },
+        { id: 'owner-close', role: 'owner' },
+      ],
+      edges: [{ from: 'owner-intake', to: 'owner-close', artifact: 'handoff' }],
+    },
+  };
+  const errors = validateGraph(graph);
+  expect(errors.some((e: string) => e.includes('workflow.edges[0] contains invalid keys: artifact'))).toBeTruthy();
 });
 
-it('valid fixture file passes', () => {
+it('valid fixture file passes (minimal schema)', () => {
   const result = validateWorkflowFile(path.join(FIXTURES, 'workflow-valid.yaml'));
   expect(result.valid).toBe(true);
 });
@@ -619,13 +643,24 @@ it('buildWorkflowRepairGuidance: model repair message mentions all live schema n
   const guidance = buildWorkflowRepairGuidance(errors);
   expect(guidance.modelRepairMessage.includes('id:')).toBeTruthy();
   expect(guidance.modelRepairMessage.includes('role:')).toBeTruthy();
-  expect(guidance.modelRepairMessage.includes('human-collaborative:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('work:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('human-colab:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('await-all-inputs:')).toBeTruthy();
 });
 
-it('buildWorkflowRepairGuidance: model repair message mentions live schema edge keys', () => {
+it('buildWorkflowRepairGuidance: model repair message does not mention removed legacy keys', () => {
+  const errors = ['workflow.name must be a non-empty string'];
+  const guidance = buildWorkflowRepairGuidance(errors);
+  // Leading space so "await-all-inputs:" does not false-match the removed "inputs:" key.
+  for (const removed of [' human-collaborative:', ' guidance:', ' inputs:', ' outputs:', ' transitions:', ' notes:', ' invariants:', ' escalation:']) {
+    expect(guidance.modelRepairMessage.includes(removed), `repair message should not mention removed key ${removed.trim()}`).toBeFalsy();
+  }
+});
+
+it('buildWorkflowRepairGuidance: model repair message mentions live schema edge keys and omits artifact', () => {
   const errors = ['workflow.edges[0].from must be a non-empty string'];
   const guidance = buildWorkflowRepairGuidance(errors);
   expect(guidance.modelRepairMessage.includes('from:')).toBeTruthy();
   expect(guidance.modelRepairMessage.includes('to:')).toBeTruthy();
-  expect(guidance.modelRepairMessage.includes('artifact:')).toBeTruthy();
+  expect(guidance.modelRepairMessage.includes('artifact:')).toBeFalsy();
 });

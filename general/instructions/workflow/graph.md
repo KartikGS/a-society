@@ -52,7 +52,7 @@ The runtime workflow contract is the single source for:
 
 ### Permanent workflow definition
 
-Use the runtime workflow contract's full schema as needed. This is the reusable source that explains the workflow's standing node contracts, invariants, escalation rules, and session model.
+Use the runtime workflow contract's full schema as needed. This is the reusable source that explains the workflow's standing node contracts, behavioral node flags, and session model.
 
 ### Record-folder `workflow.yaml`
 
@@ -71,7 +71,7 @@ Update the permanent YAML definition when:
 - a structural node is added, removed, renamed, or reassigned
 - a handoff path is added, removed, or redirected
 - a node contract changes
-- a workflow-level invariant, escalation rule, or session-model rule changes
+- a node behavioral flag or session-model rule changes
 
 Update the record snapshot when:
 

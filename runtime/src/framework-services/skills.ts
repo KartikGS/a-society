@@ -1,16 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import type { SkillLoadResult, SkillSummary } from '../../shared/skills.js';
 
-export interface SkillSummary {
-  name: string;
-  description: string;
-  skillMdPath: string;
-}
-
-export type SkillLoadResult =
-  | { kind: 'ok'; skill: SkillSummary }
-  | { kind: 'malformed'; name: string; reason: string };
+export type { SkillLoadResult, SkillSummary } from '../../shared/skills.js';
 
 export type SkillFrontmatterResult =
   | { kind: 'ok'; name: string; description: string }
@@ -122,4 +115,3 @@ export function readSkillSummary(workspaceRoot: string, name: string): SkillSumm
   const result = readSkillDirectory(workspaceRoot, name);
   return result.kind === 'ok' ? result.skill : null;
 }
-

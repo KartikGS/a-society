@@ -1,9 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
-import { listSkills, type SkillSummary } from '../framework-services/skills.js';
+import { listSkills } from '../framework-services/skills.js';
 import { configureSettingsStore, listMcpServerSummaries } from '../settings/settings-store.js';
 import { getRoleStateFilePath } from './state-paths.js';
+import type { SkillSummary } from '../../shared/skills.js';
+import type { McpServerSummary } from '../../shared/settings.js';
+
+export type { McpServerSummary } from '../../shared/settings.js';
 
 export interface CapabilitySelection {
   skills: string[];
@@ -22,13 +26,6 @@ export interface EffectiveCapabilities {
   skills: string[];
   mcpServers: string[];
   selectedAt: string;
-}
-
-export interface McpServerSummary {
-  id: string;
-  name: string;
-  transport: 'stdio' | 'http';
-  toolNames: string[];
 }
 
 export type CapabilityGate =

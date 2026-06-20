@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { FeedSettings } from '../../types';
+import type { FeedSettings } from '../../../../shared/settings.js';
 import type { FeedFormState } from './settings-types';
 
 interface FeedSettingsPanelProps {

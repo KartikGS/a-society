@@ -50,6 +50,7 @@ function createBaseFlowRun(workspaceRoot: string, projectNamespace: string, flow
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},

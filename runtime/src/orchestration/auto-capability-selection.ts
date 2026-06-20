@@ -67,10 +67,7 @@ export interface AutoResolveOptions {
 interface RoleNodeContext {
   id: string;
   stepType?: string;
-  guidance: string[];
-  inputs: string[];
   work: string[];
-  outputs: string[];
   requiredReadings: string[];
 }
 
@@ -85,10 +82,7 @@ function buildRoleNodeContexts(workflowNodes: WfNode[], roleInstanceId: string):
     .map((node) => ({
       id: node.id,
       stepType: node.step_type,
-      guidance: asStringArray(node.guidance),
-      inputs: asStringArray(node.inputs),
       work: asStringArray(node.work),
-      outputs: asStringArray(node.outputs),
       requiredReadings: asStringArray(node.required_readings),
     }));
 }
@@ -98,10 +92,7 @@ function formatRoleNodes(roleNodes: RoleNodeContext[]): string[] {
   const lines = ['## What this role does in the workflow (its assigned nodes)'];
   for (const node of roleNodes) {
     lines.push(`### Node ${node.id}${node.stepType ? ` (${node.stepType})` : ''}`);
-    if (node.guidance.length) lines.push(`Guidance: ${node.guidance.join(' ')}`);
-    if (node.inputs.length) lines.push(`Inputs: ${node.inputs.join('; ')}`);
     if (node.work.length) lines.push(`Work: ${node.work.join('; ')}`);
-    if (node.outputs.length) lines.push(`Outputs: ${node.outputs.join('; ')}`);
     if (node.requiredReadings.length) lines.push(`Required readings: ${node.requiredReadings.join(', ')}`);
   }
   lines.push('');
