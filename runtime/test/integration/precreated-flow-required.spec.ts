@@ -10,6 +10,7 @@ import { RecordingOperatorSink } from '../recording-operator-sink.js';
 async function runTest() {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'precreated-flow-required-test-'));
   const workspaceRoot = tmpBase;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.a-society', 'state');
@@ -24,7 +25,6 @@ async function runTest() {
     SessionStore.init();
 
     await expect(orchestrator.runStoredFlow(
-      workspaceRoot,
       projectNamespace,
       'nonexistent-flow'
     )).rejects.toThrow(/No active flow state found\. Create and persist a draft flow before starting orchestration\./);

@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { FlowRef, LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
@@ -18,7 +17,6 @@ export { LLMGatewayError } from '../common/types.js';
 export type LLMGatewayOptions =
   | {
       mode: 'project';
-      workspaceRoot: string;
       flowRef: FlowRef;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
@@ -26,7 +24,6 @@ export type LLMGatewayOptions =
     }
   | {
       mode: 'system';
-      workspaceRoot: string;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
     };
@@ -77,7 +74,6 @@ export class LLMGateway {
   private cacheTurnDefault: boolean;
 
   constructor(options: LLMGatewayOptions) {
-    const workspaceRoot = path.resolve(options.workspaceRoot);
     this.cacheTurnDefault = options.mode === 'project';
 
     if (options.provider) {
@@ -87,8 +83,8 @@ export class LLMGateway {
     }
 
     if (options.mode === 'project') {
-      this.fileExecutor = new FileToolExecutor(workspaceRoot, options.flowRef);
-      this.bashExecutor = new BashToolExecutor(workspaceRoot);
+      this.fileExecutor = new FileToolExecutor(options.flowRef);
+      this.bashExecutor = new BashToolExecutor();
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();
       if (tavilyKey) {

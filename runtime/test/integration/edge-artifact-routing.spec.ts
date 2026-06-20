@@ -21,10 +21,11 @@ function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: s
 async function runTest() {
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'edge-artifact-routing-test-'));
   const workspaceRoot = tmpBase;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const stateDir = path.join(tmpBase, '.a-society', 'state');
   const flowId = 'edge-artifact-flow';
-  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordPath = getFlowRecordDir({ projectNamespace, flowId });
 
   fs.mkdirSync(recordPath, { recursive: true });
   fs.mkdirSync(stateDir, { recursive: true });

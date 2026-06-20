@@ -6,6 +6,7 @@ import type {
   FlowRef,
   FlowRun,
 } from '../../common/types.js';
+import { getWorkspaceRoot } from '../../common/workspace.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
@@ -30,7 +31,7 @@ import type { ActiveSession, RuntimeSessionManagerOptions } from './types.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from '../ws-operator-sink.js';
 
 export function createRuntimeSessionManager(options: RuntimeSessionManagerOptions) {
-  const { workspaceRoot, socketHub, flowReadModel } = options;
+  const { socketHub, flowReadModel } = options;
   const activeSessions = new Map<string, ActiveSession>();
   const readFlowRun = flowReadModel.readFlowRun;
   const resolveWorkflow = flowReadModel.resolveWorkflow;
@@ -75,7 +76,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   function readFlowStateMessage(session: ActiveSession | null, ref: FlowRef) {
-    return buildFlowStateMessage(session, ref, readFlowRun, workspaceRoot);
+    return buildFlowStateMessage(session, ref, readFlowRun);
   }
 
   function sendFlowState(socket: WebSocket, ref: FlowRef): void {
@@ -152,7 +153,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   function startFlowRunner(session: ActiveSession, projectNamespace: string): void {
     void attachSessionTask(session, () =>
       session.orchestrator.runStoredFlow(
-        workspaceRoot,
         projectNamespace,
         session.flowRef.flowId,
         (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
@@ -250,7 +250,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const flowRun = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
+    const flowRun = initializeDraftFlow(projectNamespace, 'owner');
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -268,7 +268,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const { flowRun } = bootstrapInitializationFlow(workspaceRoot, projectNamespace, mode);
+    const { flowRun } = bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode);
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -286,7 +286,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const { flowRun } = bootstrapUpdateFlow(workspaceRoot, projectNamespace);
+    const { flowRun } = bootstrapUpdateFlow(projectNamespace);
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -352,7 +352,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   const commands = createRuntimeSessionCommands({
-    workspaceRoot,
     activeSessions,
     readFlowRun,
     resolveWorkflow,

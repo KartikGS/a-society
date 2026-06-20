@@ -10,7 +10,6 @@ import * as SessionStore from '../../orchestration/store.js';
 export async function compactPersistedRoleContext(options: {
   flowRun: FlowRun;
   flowRef: FlowRef;
-  workspaceRoot: string;
   roleName: string;
   roleInstanceId: string;
   trigger: CompactionTrigger;
@@ -54,7 +53,7 @@ export async function compactPersistedRoleContext(options: {
       operatorRenderer: options.operatorRenderer,
       nodeId,
       exchanges,
-      model: resolveRoleModel(options.workspaceRoot, options.flowRef, options.roleInstanceId),
+      model: resolveRoleModel(options.flowRef, options.roleInstanceId),
     });
   } catch (error) {
     if (options.signal.aborted) {

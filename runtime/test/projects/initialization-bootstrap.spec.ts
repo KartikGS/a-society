@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { bootstrapInitializationFlow } from '../../src/projects/initialization-bootstrap.js';
 import { readRecordMetadata } from '../../src/projects/record-metadata.js';
@@ -16,6 +17,7 @@ function createWorkspace(): string {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-init-bootstrap-'));
   tempDirs.add(tmpDir);
   fs.symlinkSync(frameworkRoot, path.join(tmpDir, 'a-society'), 'dir');
+  setWorkspaceRoot(tmpDir);
   return tmpDir;
 }
 
@@ -29,6 +31,7 @@ describe('initialization-bootstrap', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('creates the greenfield project, scaffolds compulsory files, and creates a single-node Owner flow', () => {
@@ -48,7 +51,7 @@ describe('initialization-bootstrap', () => {
       runningNodes: ['owner-intake'],
       status: 'running',
     });
-    expect(result.flowRun.recordFolderPath).toBe(getFlowRecordDir(workspaceRoot, { projectNamespace: projectName, flowId: result.flowRun.flowId }));
+    expect(result.flowRun.recordFolderPath).toBe(getFlowRecordDir({ projectNamespace: projectName, flowId: result.flowRun.flowId }));
     expect(path.basename(result.flowRun.recordFolderPath)).toBe('record');
 
     const workflowDoc = workflowForRecord(result.flowRun.recordFolderPath);

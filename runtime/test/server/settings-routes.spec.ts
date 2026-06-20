@@ -69,7 +69,7 @@ async function callSettingsRoute(
   params: Record<string, string> = {}
 ): Promise<{ status: number; body: unknown }> {
   const app = express();
-  registerSettingsRoutes(app, workspaceRoot);
+  registerSettingsRoutes(app);
   const response = createMockResponse();
   await findRouteHandler(app, method, routePath)({ body, params }, response);
   return { status: response.statusCode, body: response.body };

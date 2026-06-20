@@ -16,8 +16,7 @@ type ReadFlowRun = (ref: FlowRef) => FlowRun | null;
 export function buildFlowStateMessage(
   session: ActiveSession | null,
   ref: FlowRef,
-  readFlowRun: ReadFlowRun,
-  workspaceRoot: string
+  readFlowRun: ReadFlowRun
 ): FlowStateMessage | null {
   const flowRun = readFlowRun(ref);
   if (!flowRun) return null;
@@ -40,7 +39,7 @@ export function buildFlowStateMessage(
   const contextWindowByRole: Record<string, number> = Object.fromEntries(
     SessionStore.listRoleKeys(ref)
       .map((roleKey) => {
-        const model = resolveRoleModel(workspaceRoot, ref, roleKey);
+        const model = resolveRoleModel(ref, roleKey);
         return model ? [roleKey, model.contextWindow] as const : null;
       })
       .filter((entry): entry is [string, number] => entry !== null)
@@ -50,8 +49,8 @@ export function buildFlowStateMessage(
   const roleConfigurations: Record<string, RoleConfigurationPending> = {};
   for (const [awaitingNodeId, awaitingState] of Object.entries(flowRun.awaitingHumanNodes)) {
     if (awaitingState.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) continue;
-    const modelGate = resolveRoleModelGate(workspaceRoot, ref, awaitingState.role);
-    const capabilityGate = resolveCapabilityGate(workspaceRoot, ref, awaitingState.role);
+    const modelGate = resolveRoleModelGate(ref, awaitingState.role);
+    const capabilityGate = resolveCapabilityGate(ref, awaitingState.role);
     roleConfigurations[awaitingNodeId] = {
       pendingModel: modelGate.kind === 'selection-required',
       pendingSkills: capabilityGate.kind === 'selection-required' && capabilityGate.pendingSkills,

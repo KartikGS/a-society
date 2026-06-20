@@ -17,17 +17,16 @@ export interface RoleConfigurationSummary {
  * MCP server — regardless of whether it was decided manually or automatically.
  */
 export function buildRoleConfigurationSummary(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string
 ): RoleConfigurationSummary {
-  const effective = resolveEffectiveCapabilities(workspaceRoot, ref, roleInstanceId);
+  const effective = resolveEffectiveCapabilities(ref, roleInstanceId);
   const mcpNameById = new Map(listMcpServerSummaries().map((server) => [server.id, server.name]));
   return {
     modelDisplayName: listModels().length > 1
-      ? resolveRoleModel(workspaceRoot, ref, roleInstanceId)?.displayName
+      ? resolveRoleModel(ref, roleInstanceId)?.displayName
       : undefined,
-    skillNames: listSkills(workspaceRoot).length > 0 ? effective.skills : undefined,
+    skillNames: listSkills().length > 0 ? effective.skills : undefined,
     mcpServerNames: listMcpServerSummaries().length > 0
       ? effective.mcpServers.map((id) => mcpNameById.get(id) ?? id)
       : undefined,

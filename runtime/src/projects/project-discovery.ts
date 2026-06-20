@@ -4,12 +4,14 @@ import {
   A_SOCIETY_CHANGELOG_RELATIVE_PATH,
   A_DOCS_VERSION_RECORD_RELATIVE_PATH,
 } from '../common/runtime-contracts.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { readVersionFrontmatter, evaluateProjectVersion } from '../framework-services/version-comparator.js';
 import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 
 export type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 
-export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
+export function discoverProjects(): ProjectDiscovery {
+  const workspaceRoot = getWorkspaceRoot();
   try {
     const entries = fs.readdirSync(workspaceRoot, { withFileTypes: true });
     const currentVersion = readVersionFrontmatter(path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH));

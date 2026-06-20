@@ -46,7 +46,7 @@ describe('flow state message', () => {
 
       // owner selected model-b; curator has role state but no selection and
       // resolves to the active model.
-      saveRoleModelSelection(workspaceRoot, ref, 'owner', {
+      saveRoleModelSelection(ref, 'owner', {
         modelConfigId: 'model-b',
         displayName: 'model-b',
         modelId: 'model-b',
@@ -54,7 +54,7 @@ describe('flow state message', () => {
       });
       SessionStore.saveRoleFeed([], ref, 'curator');
 
-      const message = buildFlowStateMessage(null, ref, () => flow, workspaceRoot);
+      const message = buildFlowStateMessage(null, ref, () => flow);
 
       expect(message?.contextWindowByRole).toEqual({
         owner: 200_000,

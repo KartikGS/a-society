@@ -7,7 +7,7 @@ import { autoResolveRoleConfiguration } from '../../src/orchestration/auto-capab
 import { readCapabilitySelection, resolveCapabilityGate } from '../../src/orchestration/capability-selection.js';
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { createMcpServer, updateAutomationSettings } from '../../src/settings/settings-store.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
@@ -40,9 +40,8 @@ function mockTurn(text: string): void {
   vi.spyOn(LLMGateway.prototype, 'executeTurn').mockImplementation(async (): Promise<GatewayTurnResult> => ({ text }));
 }
 
-function baseOptions(workspaceRoot: string, events: OperatorEvent[], role = 'owner') {
+function baseOptions(events: OperatorEvent[], role = 'owner') {
   return {
-    workspaceRoot,
     ref: REF,
     roleInstanceId: role,
     nodeId: 'owner-review',
@@ -57,6 +56,7 @@ describe('auto capability selection', () => {
     vi.restoreAllMocks();
     for (const dir of tempDirs) fs.rmSync(dir, { recursive: true, force: true });
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('skips the turn entirely when no dimension is in auto mode', async () => {
@@ -67,11 +67,11 @@ describe('auto capability selection', () => {
     const turnSpy = vi.spyOn(LLMGateway.prototype, 'executeTurn');
     const events: OperatorEvent[] = [];
 
-    const result = await autoResolveRoleConfiguration(baseOptions(workspaceRoot, events));
+    const result = await autoResolveRoleConfiguration(baseOptions(events));
 
     expect(result).toEqual({ ran: false, fellBackDimensions: [], skillsResolved: false });
     expect(turnSpy).not.toHaveBeenCalled();
-    expect(readCapabilitySelection(workspaceRoot, REF, 'owner')).toBeNull();
+    expect(readCapabilitySelection(REF, 'owner')).toBeNull();
     expect(events).toEqual([]);
   });
 
@@ -85,10 +85,10 @@ describe('auto capability selection', () => {
     mockTurn(JSON.stringify({ skills: ['review-writing'] }));
     const events: OperatorEvent[] = [];
 
-    const result = await autoResolveRoleConfiguration(baseOptions(workspaceRoot, events));
+    const result = await autoResolveRoleConfiguration(baseOptions(events));
 
     expect(result).toEqual({ ran: true, fellBackDimensions: [], skillsResolved: true });
-    const selection = readCapabilitySelection(workspaceRoot, REF, 'owner');
+    const selection = readCapabilitySelection(REF, 'owner');
     expect(selection?.skills).toEqual(['review-writing']);
     expect(selection?.skillsDecided).toBe(true);
     expect(selection?.mcpDecided).toBe(false);
@@ -117,7 +117,7 @@ describe('auto capability selection', () => {
       { id: 'owner-intake', role: 'owner', work: ['Draft the intake brief'] },
       { id: 'reviewer-pass', role: 'reviewer', work: ['Review the brief'] },
     ];
-    await autoResolveRoleConfiguration({ ...baseOptions(workspaceRoot, [], 'owner'), workflowNodes });
+    await autoResolveRoleConfiguration({ ...baseOptions([], 'owner'), workflowNodes });
 
     expect(userPrompt).toContain('owner-intake');
     expect(userPrompt).toContain('Draft the intake brief');
@@ -135,11 +135,11 @@ describe('auto capability selection', () => {
     updateAutomationSettings({ models: 'auto' });
     mockTurn(JSON.stringify({ modelConfigId: 'model-b' }));
 
-    const result = await autoResolveRoleConfiguration(baseOptions(workspaceRoot, []));
+    const result = await autoResolveRoleConfiguration(baseOptions([]));
 
     expect(result.ran).toBe(true);
     expect(result.skillsResolved).toBe(false);
-    expect(readRoleModelSelection(workspaceRoot, REF, 'owner')?.modelConfigId).toBe('model-b');
+    expect(readRoleModelSelection(REF, 'owner')?.modelConfigId).toBe('model-b');
   });
 
   it('re-prompts to correct malformed output, then succeeds', async () => {
@@ -161,11 +161,11 @@ describe('auto capability selection', () => {
       return { text: JSON.stringify({ skills: ['review-writing'] }) };
     });
 
-    const result = await autoResolveRoleConfiguration(baseOptions(workspaceRoot, []));
+    const result = await autoResolveRoleConfiguration(baseOptions([]));
 
     expect(attempt).toBe(2);
     expect(result.fellBackDimensions).toEqual([]);
-    expect(readCapabilitySelection(workspaceRoot, REF, 'owner')?.skills).toEqual(['review-writing']);
+    expect(readCapabilitySelection(REF, 'owner')?.skills).toEqual(['review-writing']);
   });
 
   it('falls back to manual on a transport error, leaving the dimension undecided', async () => {
@@ -177,11 +177,11 @@ describe('auto capability selection', () => {
     vi.spyOn(LLMGateway.prototype, 'executeTurn').mockRejectedValue(new Error('network down'));
     const events: OperatorEvent[] = [];
 
-    const result = await autoResolveRoleConfiguration(baseOptions(workspaceRoot, events));
+    const result = await autoResolveRoleConfiguration(baseOptions(events));
 
     expect(result.fellBackDimensions).toEqual(['skills']);
     expect(result.skillsResolved).toBe(false);
-    expect(readCapabilitySelection(workspaceRoot, REF, 'owner')).toBeNull();
+    expect(readCapabilitySelection(REF, 'owner')).toBeNull();
     expect(events.some((event) => event.kind === 'role.auto_selection_fell_back')).toBe(true);
   });
 
@@ -193,9 +193,9 @@ describe('auto capability selection', () => {
     updateAutomationSettings({ skills: 'auto' });
     mockTurn(JSON.stringify({ skills: ['review-writing', 'does-not-exist'] }));
 
-    await autoResolveRoleConfiguration(baseOptions(workspaceRoot, []));
+    await autoResolveRoleConfiguration(baseOptions([]));
 
-    expect(readCapabilitySelection(workspaceRoot, REF, 'owner')?.skills).toEqual(['review-writing']);
+    expect(readCapabilitySelection(REF, 'owner')?.skills).toEqual(['review-writing']);
   });
 
   it('resolves only the auto dimension in mixed mode, leaving the manual one pending', async () => {
@@ -208,14 +208,14 @@ describe('auto capability selection', () => {
     mockTurn(JSON.stringify({ skills: ['review-writing'] }));
     const events: OperatorEvent[] = [];
 
-    const result = await autoResolveRoleConfiguration(baseOptions(workspaceRoot, events));
+    const result = await autoResolveRoleConfiguration(baseOptions(events));
 
     expect(result.skillsResolved).toBe(true);
-    const selection = readCapabilitySelection(workspaceRoot, REF, 'owner');
+    const selection = readCapabilitySelection(REF, 'owner');
     expect(selection?.skillsDecided).toBe(true);
     expect(selection?.mcpDecided).toBe(false);
 
-    const gate = resolveCapabilityGate(workspaceRoot, REF, 'owner');
+    const gate = resolveCapabilityGate(REF, 'owner');
     expect(gate.kind).toBe('selection-required');
     if (gate.kind === 'selection-required') {
       expect(gate.pendingSkills).toBe(false);

@@ -106,7 +106,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     if (nodeContext.required_readings && nodeContext.required_readings.length > 0) {
       lines.push('Node-specific required reading:');
       for (const varName of nodeContext.required_readings) {
-        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
+        const resolvedPath = resolveVariableFromIndex(varName, projectNamespace);
         if (resolvedPath && fs.existsSync(resolvedPath)) {
           lines.push(`[FILE: ${varName} (resolved to ${resolvedPath})]`);
           lines.push(fs.readFileSync(resolvedPath, 'utf8'));

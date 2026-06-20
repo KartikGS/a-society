@@ -7,7 +7,7 @@ import { HandoffParseError } from '../../src/orchestration/handoff.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 const tempDirs = new Set<string>();
@@ -33,7 +33,7 @@ function createFlowRun(
   flowId: string,
   overrides: Partial<FlowRun> = {}
 ): FlowRun {
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
   return {
     flowId,
@@ -59,7 +59,7 @@ function setupProject(prefix: string) {
   const workspaceRoot = createWorkspace(prefix);
   const projectNamespace = 'test-project';
   const flowId = 'test-flow';
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
   scaffoldRole(workspaceRoot, projectNamespace, 'owner');
   scaffoldRole(workspaceRoot, projectNamespace, 'curator');
@@ -72,6 +72,7 @@ describe('handoff-transition-repair', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('accepts partial forward handoff and leaves remaining successors unresolved', async () => {

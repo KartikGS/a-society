@@ -6,7 +6,6 @@ import { discoverProjects } from '../projects/project-discovery.js';
 import type { FlowReadModel } from './flow-read-model.js';
 
 type RegisterFlowRoutesOptions = {
-  workspaceRoot: string;
   flowReadModel: FlowReadModel;
   onFlowDeleted(projectNamespace: string): void;
   onProjectDeleted(projectNamespace: string): void;
@@ -44,10 +43,10 @@ function workflowResponse(workflow: any) {
 }
 
 export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOptions): void {
-  const { workspaceRoot, flowReadModel, onFlowDeleted, onProjectDeleted } = options;
+  const { flowReadModel, onFlowDeleted, onProjectDeleted } = options;
 
   app.get('/api/projects', (_req: Request, res: Response) => {
-    res.json(discoverProjects(workspaceRoot));
+    res.json(discoverProjects());
   });
 
   app.get('/api/projects/:projectNamespace/flows', (req: Request, res: Response) => {
@@ -59,12 +58,12 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
     const projectNamespace = routeParam(req.params.projectNamespace);
 
     try {
-      const deletion = deleteProject(workspaceRoot, projectNamespace);
+      const deletion = deleteProject(projectNamespace);
       onProjectDeleted(projectNamespace);
       res.status(200).json({
         ok: true,
         deletion,
-        projects: discoverProjects(workspaceRoot),
+        projects: discoverProjects(),
       });
     } catch (error: any) {
       const statusCode = error instanceof ProjectDeletionError ? error.statusCode : 500;

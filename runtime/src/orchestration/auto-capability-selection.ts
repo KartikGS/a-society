@@ -53,7 +53,6 @@ export interface AutoSelectionResult {
 }
 
 export interface AutoResolveOptions {
-  workspaceRoot: string;
   ref: FlowRef;
   roleInstanceId: string;
   nodeId: string;
@@ -239,7 +238,6 @@ function parseAndValidate(text: string, pending: PendingDimensions, candidates: 
 }
 
 async function runSelectionTurn(options: {
-  workspaceRoot: string;
   roleInstanceId: string;
   nodeId: string;
   renderer: OperatorRenderSink;
@@ -250,7 +248,6 @@ async function runSelectionTurn(options: {
 }): Promise<ParsedSelection | null> {
   const llm = new LLMGateway({
     mode: 'system',
-    workspaceRoot: options.workspaceRoot,
     model: getActiveModelWithKey(),
   });
 
@@ -295,11 +292,11 @@ async function runSelectionTurn(options: {
  *   are left undecided so the existing manual gate parks the node for the operator.
  */
 export async function autoResolveRoleConfiguration(options: AutoResolveOptions): Promise<AutoSelectionResult> {
-  const { workspaceRoot, ref, roleInstanceId, nodeId, renderer, signal } = options;
+  const { ref, roleInstanceId, nodeId, renderer, signal } = options;
   const automation = getAutomationSettings();
 
-  const modelGate = resolveRoleModelGate(workspaceRoot, ref, roleInstanceId);
-  const capabilityGate = resolveCapabilityGate(workspaceRoot, ref, roleInstanceId);
+  const modelGate = resolveRoleModelGate(ref, roleInstanceId);
+  const capabilityGate = resolveCapabilityGate(ref, roleInstanceId);
 
   const pending: PendingDimensions = {
     model: automation.models === 'auto' && modelGate.kind === 'selection-required',
@@ -322,7 +319,7 @@ export async function autoResolveRoleConfiguration(options: AutoResolveOptions):
   renderer.emit({ kind: 'role.auto_selection_started', nodeId, role: roleInstanceId });
 
   try {
-    const selection = await runSelectionTurn({ workspaceRoot, roleInstanceId, nodeId, renderer, signal, pending, candidates, roleNodes });
+    const selection = await runSelectionTurn({ roleInstanceId, nodeId, renderer, signal, pending, candidates, roleNodes });
 
     if (!selection) {
       renderer.emit({
@@ -337,13 +334,13 @@ export async function autoResolveRoleConfiguration(options: AutoResolveOptions):
 
     const selectedAt = new Date().toISOString();
     if (pending.model && selection.model) {
-      saveRoleModelSelection(workspaceRoot, ref, roleInstanceId, { ...selection.model, selectedAt });
+      saveRoleModelSelection(ref, roleInstanceId, { ...selection.model, selectedAt });
     }
     if (pending.skills) {
-      saveCapabilityDimension(workspaceRoot, ref, roleInstanceId, 'skills', selection.skills ?? [], selectedAt);
+      saveCapabilityDimension(ref, roleInstanceId, 'skills', selection.skills ?? [], selectedAt);
     }
     if (pending.mcp) {
-      saveCapabilityDimension(workspaceRoot, ref, roleInstanceId, 'mcpServers', selection.mcpServers ?? [], selectedAt);
+      saveCapabilityDimension(ref, roleInstanceId, 'mcpServers', selection.mcpServers ?? [], selectedAt);
     }
 
     // The strip is always status-only. When this is a pure-auto run (no manual
@@ -352,14 +349,14 @@ export async function autoResolveRoleConfiguration(options: AutoResolveOptions):
     renderer.emit({ kind: 'role.auto_configured', nodeId, role: roleInstanceId });
 
     const manualSelectionFollows =
-      resolveRoleModelGate(workspaceRoot, ref, roleInstanceId).kind === 'selection-required' ||
-      resolveCapabilityGate(workspaceRoot, ref, roleInstanceId).kind === 'selection-required';
+      resolveRoleModelGate(ref, roleInstanceId).kind === 'selection-required' ||
+      resolveCapabilityGate(ref, roleInstanceId).kind === 'selection-required';
     if (!manualSelectionFollows) {
       renderer.emit({
         kind: 'role.configured',
         nodeId,
         role: roleInstanceId,
-        ...buildRoleConfigurationSummary(workspaceRoot, ref, roleInstanceId),
+        ...buildRoleConfigurationSummary(ref, roleInstanceId),
       });
     }
 

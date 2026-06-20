@@ -22,7 +22,7 @@ import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
@@ -41,13 +41,14 @@ describe('improvement-streams', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('emits feedback repair status as an event, not role output stream text', async () => {
     const workspaceRoot = createWorkspace();
     const projectNamespace = 'demo-project';
     const flowId = 'repair-flow';
-    const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+    const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
     const feedbackArtifactPath = 'a-society/feedback/demo-project-flow-repair-flow.md';
     const feedbackArtifactFilePath = path.join(workspaceRoot, feedbackArtifactPath);
 

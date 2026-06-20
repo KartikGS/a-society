@@ -15,8 +15,7 @@ import { registerSettingsRoutes } from './settings-routes.js';
 import { SocketHub } from './socket-hub.js';
 import { registerStaticUi } from './static-ui.js';
 
-function buildServer(workspaceRoot: string) {
-  setWorkspaceRoot(workspaceRoot);
+function buildServer() {
   SessionStore.init();
 
   const app = express();
@@ -24,10 +23,9 @@ function buildServer(workspaceRoot: string) {
   const wss = new WebSocketServer({ server: httpServer });
   const socketHub = new SocketHub();
   const flowReadModel = createFlowReadModel();
-  const runtimeSessions = createRuntimeSessionManager({ workspaceRoot, socketHub, flowReadModel });
+  const runtimeSessions = createRuntimeSessionManager({ socketHub, flowReadModel });
 
   registerFlowRoutes(app, {
-    workspaceRoot,
     flowReadModel,
     onFlowDeleted(projectNamespace) {
       runtimeSessions.refreshProjectFlows(projectNamespace);
@@ -36,7 +34,7 @@ function buildServer(workspaceRoot: string) {
       runtimeSessions.refreshProjectFlows(projectNamespace);
     }
   });
-  registerSettingsRoutes(app, workspaceRoot);
+  registerSettingsRoutes(app);
   registerStaticUi(app);
 
   wss.on('connection', (socket) => {
@@ -70,7 +68,7 @@ function buildServer(workspaceRoot: string) {
       }
 
       if (message.type === CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW) {
-        const projectExists = discoverProjects(workspaceRoot).withADocs.some(
+        const projectExists = discoverProjects().withADocs.some(
           (project) => project.folderName === message.projectNamespace
         );
         if (!projectExists) {
@@ -87,7 +85,7 @@ function buildServer(workspaceRoot: string) {
       }
 
       if (message.type === CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION) {
-        const projectExists = discoverProjects(workspaceRoot).withoutADocs.some(
+        const projectExists = discoverProjects().withoutADocs.some(
           (project) => project.folderName === message.projectNamespace
         );
         if (!projectExists) {
@@ -125,7 +123,7 @@ function buildServer(workspaceRoot: string) {
       }
 
       if (message.type === CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW) {
-        const project = discoverProjects(workspaceRoot).withADocs.find(
+        const project = discoverProjects().withADocs.find(
           (candidate) => candidate.folderName === message.projectNamespace
         );
         if (!project || !project.updateAvailable) {
@@ -228,7 +226,8 @@ function buildServer(workspaceRoot: string) {
 
 export async function startServer(workspaceRoot: string, port: number): Promise<void> {
   TelemetryManager.init();
-  const { httpServer } = buildServer(path.resolve(workspaceRoot));
+  setWorkspaceRoot(path.resolve(workspaceRoot));
+  const { httpServer } = buildServer();
 
   await new Promise<void>((resolve, reject) => {
     const onError = (error: NodeJS.ErrnoException) => {

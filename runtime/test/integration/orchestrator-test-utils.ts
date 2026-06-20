@@ -18,7 +18,7 @@ export async function runStoredFlowUntil(
   predicate: () => boolean
 ): Promise<void> {
   setWorkspaceRoot(workspaceRoot);
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(predicate);
   } finally {

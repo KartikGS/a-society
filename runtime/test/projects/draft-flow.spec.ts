@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { initializeDraftFlow } from '../../src/projects/draft-flow.js';
 import { readRecordMetadata, syncRecordMetadataFromWorkflow } from '../../src/projects/record-metadata.js';
 
@@ -31,14 +31,15 @@ describe('draft-flow', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('creates an opaque-id record folder, record metadata, and single Owner node workflow', () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
 
-    const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
+    const flow = initializeDraftFlow(projectNamespace, 'owner');
 
-    expect(flow.recordFolderPath).toBe(getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: flow.flowId }));
+    expect(flow.recordFolderPath).toBe(getFlowRecordDir({ projectNamespace, flowId: flow.flowId }));
     expect(path.basename(flow.recordFolderPath)).toBe('record');
     expect(path.basename(path.dirname(flow.recordFolderPath))).toBe(flow.flowId);
     expect(flow.runningNodes).toEqual(['owner-intake']);
@@ -62,8 +63,8 @@ describe('draft-flow', () => {
   });
 
   it('seeds name and summary once from workflow.yaml', () => {
-    const workspaceRoot = createWorkspace();
-    const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
+    createWorkspace();
+    const flow = initializeDraftFlow(projectNamespace, 'owner');
     const workflowPath = path.join(flow.recordFolderPath, 'workflow.yaml');
 
     fs.writeFileSync(workflowPath, `workflow:
@@ -94,8 +95,8 @@ describe('draft-flow', () => {
   });
 
   it('keeps the canonical state record folder when loading through SessionStore', () => {
-    const workspaceRoot = createWorkspace();
-    const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
+    createWorkspace();
+    const flow = initializeDraftFlow(projectNamespace, 'owner');
     SessionStore.saveFlowRun(flow);
 
     const loaded = SessionStore.loadFlowRun(SessionStore.flowRef(flow));

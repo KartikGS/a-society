@@ -15,6 +15,7 @@ import { buildRuntimeHealthRepairGuidance, runRuntimeHealthChecks } from '../fra
 import { TelemetryManager } from '../observability/observability.js';
 import { parseRoleIdentity } from '../../shared/role-id.js';
 import { WakeController } from '../common/wake-controller.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { AWAITING_HUMAN_REASON, OWNER_BASE_ROLE_ID } from '../../shared/protocol-constants.js';
 import { getActiveNodeIds } from '../../shared/flow-state.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
@@ -112,7 +113,6 @@ export class FlowOrchestrator {
   }
 
   public async runStoredFlow(
-    workspaceRoot: string,
     projectNamespace: string,
     flowId: string,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
@@ -137,6 +137,7 @@ export class FlowOrchestrator {
           );
         }
 
+        const workspaceRoot = getWorkspaceRoot();
         if (flowRun.workspaceRoot !== workspaceRoot) {
           throw new Error(
             `Persisted flow workspace root mismatch: loaded "${flowRun.workspaceRoot}" but expected "${workspaceRoot}". ` +
@@ -211,7 +212,6 @@ export class FlowOrchestrator {
     this.ensureSigintHandler();
     try {
       return await autoResolveRoleConfiguration({
-        workspaceRoot: flowRun.workspaceRoot,
         ref,
         roleInstanceId,
         nodeId,
@@ -289,13 +289,13 @@ export class FlowOrchestrator {
           // Skills are injected into the system prompt; rebuild it now that the
           // auto-selected skills are persisted, before the role runs.
           session.systemPrompt = ContextInjectionService.buildContextBundle(
-            flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath, ref
+            flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, ref
           ).bundleContent;
           saveRoleSession();
         }
 
-        const modelGate = resolveRoleModelGate(flowRun.workspaceRoot, ref, roleInstanceId);
-        const capabilityGate = resolveCapabilityGate(flowRun.workspaceRoot, ref, roleInstanceId);
+        const modelGate = resolveRoleModelGate(ref, roleInstanceId);
+        const capabilityGate = resolveCapabilityGate(ref, roleInstanceId);
         if (modelGate.kind === 'selection-required' || capabilityGate.kind === 'selection-required') {
           span.setAttribute('node.outcome', 'awaiting_human');
           span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
@@ -306,7 +306,6 @@ export class FlowOrchestrator {
         const roleModel = modelGate.model;
         const bundleContent = session.systemPrompt!;
         const mcpManager = await resolveRoleMcpManager({
-          workspaceRoot: flowRun.workspaceRoot,
           flowRef: this.requireFlowRef(),
           roleInstanceId,
           nodeId,
@@ -323,7 +322,6 @@ export class FlowOrchestrator {
             let sessionResult: RoleTurnResult | null = null;
             try {
               sessionResult = await runRoleTurn({
-                workspaceRoot: flowRun.workspaceRoot,
                 roleInstanceId: roleInstanceId,
                 providedSystemPrompt: bundleContent,
                 flowRef: this.requireFlowRef(),
@@ -958,8 +956,8 @@ export class FlowOrchestrator {
           if (state.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) return false;
           const ref = this.requireFlowRef();
           return (
-            resolveRoleModelGate(flowRun.workspaceRoot, ref, state.role).kind === 'ready' &&
-            resolveCapabilityGate(flowRun.workspaceRoot, ref, state.role).kind === 'ready'
+            resolveRoleModelGate(ref, state.role).kind === 'ready' &&
+            resolveCapabilityGate(ref, state.role).kind === 'ready'
           );
         })
         .map(([nodeId]) => nodeId);
@@ -1059,7 +1057,7 @@ export class FlowOrchestrator {
 
     if (!session.systemPrompt) {
       session.systemPrompt = ContextInjectionService.buildContextBundle(
-        flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath, this.requireFlowRef()
+        flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, this.requireFlowRef()
       ).bundleContent;
     }
 

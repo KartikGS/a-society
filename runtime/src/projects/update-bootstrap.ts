@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { resolveProjectRoot } from './draft-flow.js';
 import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 import {
@@ -19,7 +20,6 @@ const RUNTIME_UPDATE_RELATIVE_PATH = path.join('a-society', 'runtime', 'contract
 const A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH = path.join('a-society', 'index.md');
 
 function buildUpdateBrief(
-  workspaceRoot: string,
   projectNamespace: string,
   projectRoot: string,
   recordFolderPath: string,
@@ -27,6 +27,7 @@ function buildUpdateBrief(
   toVersion: string,
   changelogContent: string
 ): string {
+  const workspaceRoot = getWorkspaceRoot();
   const relativeRecordFolder = path.relative(workspaceRoot, recordFolderPath);
   const lines = [
     '# Runtime Update Brief',
@@ -83,7 +84,6 @@ function buildUpdateWorkflowDocument(
  * the flow.
  */
 export function bootstrapUpdateFlow(
-  workspaceRoot: string,
   projectNamespace: string
 ): UpdateBootstrapResult {
   const namespace = projectNamespace.trim();
@@ -91,7 +91,8 @@ export function bootstrapUpdateFlow(
     throw new Error('Project name is required.');
   }
 
-  const projectRoot = resolveProjectRoot(workspaceRoot, namespace);
+  const workspaceRoot = getWorkspaceRoot();
+  const projectRoot = resolveProjectRoot(namespace);
   const aDocsRoot = path.join(projectRoot, 'a-docs');
   if (!fs.existsSync(aDocsRoot) || !fs.statSync(aDocsRoot).isDirectory()) {
     throw new Error(`Project "${namespace}" has no a-docs/ to update.`);
@@ -125,14 +126,13 @@ export function bootstrapUpdateFlow(
   }
 
   const flowId = buildFlowId();
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace: namespace, flowId });
+  const recordFolderPath = getFlowRecordDir({ projectNamespace: namespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   const updateGuideContent = fs.readFileSync(updateGuidePath, 'utf8');
   const generalIndexContent = fs.readFileSync(generalIndexPath, 'utf8');
   const changelogContent = fs.readFileSync(changelogPath, 'utf8');
   const updateBriefContent = buildUpdateBrief(
-    workspaceRoot,
     namespace,
     projectRoot,
     recordFolderPath,

@@ -8,7 +8,7 @@ import { runRoleTurn } from '../../src/common/role-turn.js';
 import { HandoffParseError } from '../../src/orchestration/handoff.js';
 import { LLMGateway, LLMGatewayError } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 const flowRef = { projectNamespace: 'a-society', flowId: 'role-turn-flow' };
@@ -59,14 +59,14 @@ describe('role-turn', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('returns null for empty history instead of auto-seeding a prompt', async () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
     const gatewaySpy = vi.spyOn(LLMGateway.prototype, 'executeTurn');
 
     const result = await runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,
@@ -78,12 +78,11 @@ describe('role-turn', () => {
   });
 
   it('returns awaiting_human and streams assistant text for prompt-human', async () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
     const { output, chunks } = captureOutput();
     mockGatewayTurn({ text: 'I need clarification. ```handoff\ntype: prompt-human\n```' });
 
     const result = await runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,
@@ -96,7 +95,7 @@ describe('role-turn', () => {
   });
 
   it('returns context usage without emitting a usage event itself', async () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
     const renderer = createRenderer();
     const { output, chunks } = captureOutput();
     mockGatewayTurn({
@@ -105,7 +104,6 @@ describe('role-turn', () => {
     });
 
     const result = await runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,
@@ -123,13 +121,12 @@ describe('role-turn', () => {
   });
 
   it('maps consent denial to awaiting_human with consent-denied reason', async () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
     vi.spyOn(LLMGateway.prototype, 'executeTurn').mockRejectedValue(
       new LLMGatewayError('CONSENT_DENIED', 'Operator denied consent.')
     );
 
     const result = await runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,
@@ -143,7 +140,7 @@ describe('role-turn', () => {
   });
 
   it('does not emit usage events when handoff parsing fails', async () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
     const renderer = createRenderer();
     mockGatewayTurn({
       text: 'I broke the handoff. ```handoff\ntarget_node_id:\n```',
@@ -151,7 +148,6 @@ describe('role-turn', () => {
     });
 
     await expect(runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,
@@ -163,7 +159,7 @@ describe('role-turn', () => {
   });
 
   it('adds output-limit repair guidance to parse failures', async () => {
-    const workspaceRoot = createWorkspace();
+    createWorkspace();
     mockGatewayTurn({
       text: 'I started a large file but did not finish.',
       contextUsage: 8192,
@@ -171,7 +167,6 @@ describe('role-turn', () => {
     });
 
     await expect(runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,

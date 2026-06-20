@@ -31,7 +31,6 @@ export interface ActiveSession {
 }
 
 export type RuntimeSessionManagerOptions = {
-  workspaceRoot: string;
   socketHub: SocketHub;
   flowReadModel: FlowReadModel;
 };

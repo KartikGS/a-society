@@ -1,9 +1,10 @@
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { parseRoleIdentity } from '../../shared/role-id.js';
 
-export function getStateRoot(workspaceRoot = process.cwd()): string {
-  return path.join(path.resolve(workspaceRoot), '.a-society', 'state');
+export function getStateRoot(): string {
+  return path.join(getWorkspaceRoot(), '.a-society', 'state');
 }
 
 export function assertSafeStateSegment(label: string, value: string): string {
@@ -14,33 +15,32 @@ export function assertSafeStateSegment(label: string, value: string): string {
   return trimmed;
 }
 
-export function getProjectStateDir(workspaceRoot: string, projectNamespace: string): string {
+export function getProjectStateDir(projectNamespace: string): string {
   const safeProject = assertSafeStateSegment('project namespace', projectNamespace);
-  return path.join(getStateRoot(workspaceRoot), safeProject);
+  return path.join(getStateRoot(), safeProject);
 }
 
-export function getFlowDir(workspaceRoot: string, ref: FlowRef): string {
+export function getFlowDir(ref: FlowRef): string {
   const safeFlowId = assertSafeStateSegment('flow id', ref.flowId);
-  return path.join(getProjectStateDir(workspaceRoot, ref.projectNamespace), safeFlowId);
+  return path.join(getProjectStateDir(ref.projectNamespace), safeFlowId);
 }
 
-export function getFlowRecordDir(workspaceRoot: string, ref: FlowRef): string {
-  return path.join(getFlowDir(workspaceRoot, ref), 'record');
+export function getFlowRecordDir(ref: FlowRef): string {
+  return path.join(getFlowDir(ref), 'record');
 }
 
-export function getRoleStateDir(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): string {
+export function getRoleStateDir(ref: FlowRef, roleInstanceId: string): string {
   const roleKey = parseRoleIdentity(roleInstanceId).instanceRoleId;
-  return path.join(getFlowDir(workspaceRoot, ref), 'roles', roleKey);
+  return path.join(getFlowDir(ref), 'roles', roleKey);
 }
 
 export function getRoleStateFilePath(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string,
   fileName: string
 ): string {
   return path.join(
-    getRoleStateDir(workspaceRoot, ref, roleInstanceId),
+    getRoleStateDir(ref, roleInstanceId),
     assertSafeStateSegment('role state file name', fileName)
   );
 }

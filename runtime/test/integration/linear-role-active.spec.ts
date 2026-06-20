@@ -31,6 +31,7 @@ async function runTest() {
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-role-active-test-'));
   const workspaceRoot = tmpBase;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.a-society', 'state');
@@ -40,7 +41,7 @@ async function runTest() {
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const flowId = 'test-linear-flow-id';
-  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
   const rolesDir = path.join(projectADocsPath, 'roles');

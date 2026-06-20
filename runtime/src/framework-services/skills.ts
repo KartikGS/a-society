@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import type { SkillLoadResult, SkillSummary } from '../../shared/skills.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 
 export type { SkillLoadResult, SkillSummary } from '../../shared/skills.js';
 
@@ -15,12 +16,12 @@ export function isKebabCaseSkillName(name: string): boolean {
   return SKILL_NAME_PATTERN.test(name);
 }
 
-function skillsRoot(workspaceRoot: string): string {
-  return path.join(path.resolve(workspaceRoot), '.a-society', 'skills');
+function skillsRoot(): string {
+  return path.join(getWorkspaceRoot(), '.a-society', 'skills');
 }
 
-function repoRelative(workspaceRoot: string, filePath: string): string {
-  return path.relative(path.resolve(workspaceRoot), filePath).split(path.sep).join('/');
+function repoRelative(filePath: string): string {
+  return path.relative(getWorkspaceRoot(), filePath).split(path.sep).join('/');
 }
 
 export function parseSkillMarkdownFrontmatter(content: string): SkillFrontmatterResult {
@@ -57,12 +58,12 @@ export function parseSkillMarkdownFrontmatter(content: string): SkillFrontmatter
   return { kind: 'ok', name, description };
 }
 
-function readSkillDirectory(workspaceRoot: string, folderName: string): SkillLoadResult {
+function readSkillDirectory(folderName: string): SkillLoadResult {
   if (!isKebabCaseSkillName(folderName)) {
     return { kind: 'malformed', name: folderName, reason: 'Skill folder name must be kebab-case.' };
   }
 
-  const skillMdPath = path.join(skillsRoot(workspaceRoot), folderName, 'SKILL.md');
+  const skillMdPath = path.join(skillsRoot(), folderName, 'SKILL.md');
   if (!fs.existsSync(skillMdPath)) {
     return { kind: 'malformed', name: folderName, reason: 'Missing SKILL.md.' };
   }
@@ -87,13 +88,13 @@ function readSkillDirectory(workspaceRoot: string, folderName: string): SkillLoa
     skill: {
       name: folderName,
       description: frontmatter.description,
-      skillMdPath: repoRelative(workspaceRoot, skillMdPath),
+      skillMdPath: repoRelative(skillMdPath),
     },
   };
 }
 
-export function listSkillLoadResults(workspaceRoot: string): SkillLoadResult[] {
-  const root = skillsRoot(workspaceRoot);
+export function listSkillLoadResults(): SkillLoadResult[] {
+  const root = skillsRoot();
   if (!fs.existsSync(root)) return [];
 
   const entries = fs.readdirSync(root, { withFileTypes: true })
@@ -101,17 +102,17 @@ export function listSkillLoadResults(workspaceRoot: string): SkillLoadResult[] {
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
-  return entries.map((name) => readSkillDirectory(workspaceRoot, name));
+  return entries.map((name) => readSkillDirectory(name));
 }
 
-export function listSkills(workspaceRoot: string): SkillSummary[] {
-  return listSkillLoadResults(workspaceRoot)
+export function listSkills(): SkillSummary[] {
+  return listSkillLoadResults()
     .filter((result): result is Extract<SkillLoadResult, { kind: 'ok' }> => result.kind === 'ok')
     .map((result) => result.skill);
 }
 
-export function readSkillSummary(workspaceRoot: string, name: string): SkillSummary | null {
+export function readSkillSummary(name: string): SkillSummary | null {
   if (!isKebabCaseSkillName(name)) return null;
-  const result = readSkillDirectory(workspaceRoot, name);
+  const result = readSkillDirectory(name);
   return result.kind === 'ok' ? result.skill : null;
 }

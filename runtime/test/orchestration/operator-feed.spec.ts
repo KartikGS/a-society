@@ -29,7 +29,7 @@ function createFixture(flowId = 'test-flow'): { tmpDir: string; ref: FlowRef } {
   setWorkspaceRoot(tmpDir);
   const projectNamespace = 'test-project';
   const ref = { projectNamespace, flowId };
-  const recordFolderPath = getFlowRecordDir(tmpDir, ref);
+  const recordFolderPath = getFlowRecordDir(ref);
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   const flowRun: FlowRun = {
@@ -608,7 +608,7 @@ describe('operator-feed', () => {
     scaffoldRole(tmpDir, ref.projectNamespace, 'curator');
     scaffoldRole(tmpDir, ref.projectNamespace, 'owner');
 
-    const recordDir = getFlowRecordDir(tmpDir, ref);
+    const recordDir = getFlowRecordDir(ref);
     fs.writeFileSync(
       path.join(recordDir, 'workflow.yaml'),
       'workflow:\n  name: Accepted Handoff Test\n  nodes:\n    - id: start\n      role: curator\n    - id: next\n      role: owner\n  edges:\n    - from: start\n      to: next\n'

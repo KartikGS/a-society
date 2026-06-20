@@ -4,7 +4,7 @@ import path from 'node:path';
  * Process-wide workspace root.
  *
  * The runtime is single-tenant: exactly one workspace root per node process,
- * established once at the entry boundary (`buildServer`, or a test's setup) via
+ * established once at the entry boundary (`startServer`, or a test's setup) via
  * `setWorkspaceRoot`. Workspace-scoped state then reads it through
  * `getWorkspaceRoot()` rather than threading it through call signatures.
  *

@@ -6,14 +6,14 @@ import type { FeedItem, FlowRef, FlowRun, FlowSummary, RoleSession } from '../co
 import { parseRoleIdentity } from '../../shared/role-id.js';
 import { syncRecordMetadataFromWorkflow } from '../projects/record-metadata.js';
 import { getWorkspaceRoot } from '../common/workspace.js';
-import { getFlowDir, getProjectStateDir, getStateRoot } from './state-paths.js';
+import { getFlowDir, getProjectStateDir, getRoleStateDir, getStateRoot } from './state-paths.js';
 
 function getFlowPath(ref: FlowRef): string {
-  return path.join(getFlowDir(getWorkspaceRoot(), ref), 'flow.json');
+  return path.join(getFlowDir(ref), 'flow.json');
 }
 
 function getRoleDir(ref: FlowRef, roleKey: string): string {
-  return path.join(getFlowDir(getWorkspaceRoot(), ref), 'roles', roleKey);
+  return getRoleStateDir(ref, roleKey);
 }
 
 function getRoleTranscriptPath(ref: FlowRef, roleKey: string): string {
@@ -87,7 +87,7 @@ function validateAndHydrateFlow(flow: FlowRun, ref?: FlowRef): FlowRun {
 const flowUpdateLocks = new Map<string, Promise<void>>();
 
 export function init(): void {
-  fs.mkdirSync(getStateRoot(getWorkspaceRoot()), { recursive: true });
+  fs.mkdirSync(getStateRoot(), { recursive: true });
 }
 
 export function flowRef(flow: FlowRun): FlowRef {
@@ -96,7 +96,7 @@ export function flowRef(flow: FlowRun): FlowRef {
 
 export function saveFlowRun(flow: FlowRun, ref: FlowRef = flowRefFromRun(flow)): void {
   init();
-  const flowDir = getFlowDir(getWorkspaceRoot(), ref);
+  const flowDir = getFlowDir(ref);
   fs.mkdirSync(flowDir, { recursive: true });
   const { recordName: _recordName, recordSummary: _recordSummary, ...persisted } = flow;
   fs.writeFileSync(path.join(flowDir, 'flow.json'), JSON.stringify(persisted, null, 2));
@@ -176,7 +176,7 @@ export function saveRoleFeed(items: FeedItem[], ref: FlowRef, roleKey: string): 
 }
 
 export function listRoleKeys(ref: FlowRef): string[] {
-  const rolesDir = path.join(getFlowDir(getWorkspaceRoot(), ref), 'roles');
+  const rolesDir = path.join(getFlowDir(ref), 'roles');
   if (!fs.existsSync(rolesDir)) return [];
   return fs.readdirSync(rolesDir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
@@ -185,7 +185,7 @@ export function listRoleKeys(ref: FlowRef): string[] {
 
 export function loadAllRoleFeeds(ref: FlowRef): Map<string, FeedItem[]> {
   const result = new Map<string, FeedItem[]>();
-  const rolesDir = path.join(getFlowDir(getWorkspaceRoot(), ref), 'roles');
+  const rolesDir = path.join(getFlowDir(ref), 'roles');
   if (!fs.existsSync(rolesDir)) return result;
   for (const entry of fs.readdirSync(rolesDir, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
@@ -207,7 +207,7 @@ export function loadAllRoleFeeds(ref: FlowRef): Map<string, FeedItem[]> {
 export function deleteFlow(ref: FlowRef): void {
   init();
 
-  const flowDir = getFlowDir(getWorkspaceRoot(), ref);
+  const flowDir = getFlowDir(ref);
   if (fs.existsSync(flowDir)) {
     fs.rmSync(flowDir, { recursive: true, force: true });
   }
@@ -215,7 +215,7 @@ export function deleteFlow(ref: FlowRef): void {
 
 export function listFlowSummaries(projectNamespace: string): FlowSummary[] {
   init();
-  const projectDir = getProjectStateDir(getWorkspaceRoot(), projectNamespace);
+  const projectDir = getProjectStateDir(projectNamespace);
   if (!fs.existsSync(projectDir)) return [];
 
   const summaries: FlowSummary[] = [];

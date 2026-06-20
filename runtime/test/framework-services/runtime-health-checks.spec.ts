@@ -8,6 +8,7 @@ import {
   runRuntimeHealthChecks
 } from '../../src/framework-services/runtime-health-checks.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frameworkRoot = path.resolve(__dirname, '../../..');
@@ -15,6 +16,7 @@ const frameworkRoot = path.resolve(__dirname, '../../..');
 function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; projectNamespace: string; projectRoot: string } {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-health-'));
   const workspaceRoot = tmpRoot;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const projectRoot = path.join(workspaceRoot, projectNamespace);
   const aSocietyRoot = path.join(workspaceRoot, 'a-society');
@@ -78,6 +80,7 @@ function makeProjectFixture(): { tmpRoot: string; workspaceRoot: string; project
 
 function cleanup(tmpRoot: string): void {
   fs.rmSync(tmpRoot, { recursive: true, force: true });
+  clearWorkspaceRoot();
 }
 
 it('passes for a minimal healthy runtime fixture', () => {

@@ -21,7 +21,7 @@ import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
@@ -48,7 +48,7 @@ function createBaseFlowRun(workspaceRoot: string, projectNamespace: string, flow
     flowId,
     workspaceRoot,
     projectNamespace,
-    recordFolderPath: getFlowRecordDir(workspaceRoot, { projectNamespace, flowId }),
+    recordFolderPath: getFlowRecordDir({ projectNamespace, flowId }),
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
@@ -87,6 +87,7 @@ describe('improvement lifecycle', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('marks improvement as skipped when no improvement mode is selected', async () => {

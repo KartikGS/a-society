@@ -32,11 +32,10 @@ function createWorkspace(): string {
 }
 
 function buildBundle(role = 'owner') {
-  const workspaceRoot = createWorkspace();
+  createWorkspace();
   return ContextInjectionService.buildContextBundle(
     'a-society',
     role,
-    workspaceRoot,
     '/test/record',
     { projectNamespace: 'a-society', flowId: 'test-flow' }
   );
@@ -99,13 +98,13 @@ description: Helps write reviews.
 Full skill body should not be injected.
 `, 'utf8');
     const ref = { projectNamespace: 'a-society', flowId: 'test-flow' };
-    saveCapabilitySelection(tmpDir, ref, 'owner', {
+    saveCapabilitySelection(ref, 'owner', {
       skills: ['review-writing'],
       mcpServers: [],
       selectedAt: '2026-06-13T00:00:00.000Z',
     });
 
-    const bundle = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir, '/test/record', ref);
+    const bundle = ContextInjectionService.buildContextBundle('a-society', 'owner', '/test/record', ref);
 
     expect(bundle.bundleContent).toContain('--- AVAILABLE SKILLS FOR owner ---');
     expect(bundle.bundleContent).toContain('[SKILL: review-writing] Helps write reviews.');
@@ -132,10 +131,10 @@ Full skill body should not be injected.
   });
 
   it('produces a deterministic hash', () => {
-    const tmpDir = createWorkspace();
+    createWorkspace();
     const ref = { projectNamespace: 'a-society', flowId: 'test-flow' };
-    const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir, '/test/record', ref);
-    const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'owner', tmpDir, '/test/record', ref);
+    const bundle1 = ContextInjectionService.buildContextBundle('a-society', 'owner', '/test/record', ref);
+    const bundle2 = ContextInjectionService.buildContextBundle('a-society', 'owner', '/test/record', ref);
 
     expect(bundle1.contextHash).toBe(bundle2.contextHash);
     expect(bundle1.contextHash.length).toBeGreaterThan(0);

@@ -35,7 +35,6 @@ function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): F
 }
 
 function createCommands(
-  workspaceRoot: string,
   readFlowRun: (ref: FlowRef) => FlowRun | null,
   workflow: unknown = null
 ) {
@@ -44,7 +43,6 @@ function createCommands(
   const historicalEvents: Array<{ kind: string; role?: string; nodeId?: string; modelDisplayName?: string }> = [];
   const activeSessions = new Map<string, any>();
   const commands = createRuntimeSessionCommands({
-    workspaceRoot,
     activeSessions,
     readFlowRun,
     resolveWorkflow: () => workflow,
@@ -106,7 +104,7 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(makeFlowRun(workspaceRoot), ref);
 
-      const { commands, errors } = createCommands(workspaceRoot, () => staleFlow);
+      const { commands, errors } = createCommands(() => staleFlow);
       await commands.handleHumanInput(ref, 'stale human reply', { nodeId: 'owner' });
 
       const latest = SessionStore.loadFlowRun(ref)!;
@@ -134,7 +132,6 @@ describe('runtime session human input commands', () => {
         edges: [],
       };
       const { commands, errors, historicalMessages } = createCommands(
-        workspaceRoot,
         (flowRef) => SessionStore.loadFlowRun(flowRef),
         workflow
       );
@@ -174,7 +171,6 @@ describe('runtime session human input commands', () => {
         edges: [],
       };
       const { commands, errors, historicalMessages } = createCommands(
-        workspaceRoot,
         (flowRef) => SessionStore.loadFlowRun(flowRef),
         workflow
       );
@@ -207,7 +203,7 @@ describe('runtime session human input commands', () => {
         nodes: [{ id: 'owner-review', role: 'owner' }],
         edges: [],
       };
-      const { commands, errors } = createCommands(workspaceRoot, () => staleFlow, workflow);
+      const { commands, errors } = createCommands(() => staleFlow, workflow);
       await commands.handleHumanInput(ref, 'stale await-handoff reply', { role: 'owner' });
 
       const latest = SessionStore.loadFlowRun(ref)!;
@@ -250,7 +246,7 @@ describe('runtime session human input commands', () => {
         },
       }), ref);
 
-      const { commands, errors } = createCommands(workspaceRoot, () => staleFlow);
+      const { commands, errors } = createCommands(() => staleFlow);
       await commands.handleImprovementHumanInput(ref, 'owner', 'stale improvement reply');
 
       const latest = SessionStore.loadFlowRun(ref)!;
@@ -279,11 +275,11 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(flow, ref);
 
-      const { commands, errors, historicalMessages, historicalEvents } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors, historicalMessages, historicalEvents } = createCommands(() => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
 
       expect(errors).toEqual([]);
-      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')?.modelConfigId).toBe('model-b');
+      expect(readRoleModelSelection(ref, 'planner')?.modelConfigId).toBe('model-b');
       expect(historicalMessages).toEqual([]);
       expect(historicalEvents).toEqual([{
         kind: 'role.configured',
@@ -309,7 +305,7 @@ describe('runtime session human input commands', () => {
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       // Skills were already decided automatically; only the model stays manual.
-      saveCapabilityDimension(workspaceRoot, ref, 'planner', 'skills', ['review-writing']);
+      saveCapabilityDimension(ref, 'planner', 'skills', ['review-writing']);
       const flow = makeFlowRun(workspaceRoot, {
         awaitingHumanNodes: {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
@@ -317,7 +313,7 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(flow, ref);
 
-      const { commands, errors, historicalEvents } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors, historicalEvents } = createCommands(() => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
 
       expect(errors).toEqual([]);
@@ -352,11 +348,11 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(flow, ref);
 
-      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors } = createCommands(() => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
 
       expect(errors).toEqual(["Node 'plan' is not awaiting role configuration."]);
-      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
+      expect(readRoleModelSelection(ref, 'planner')).toBeNull();
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -380,11 +376,11 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(flow, ref);
 
-      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors } = createCommands(() => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'missing-model', skills: [], mcpServers: [] });
 
       expect(errors).toEqual(['The selected model is not usable. Complete its configuration in Settings and select it again.']);
-      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
+      expect(readRoleModelSelection(ref, 'planner')).toBeNull();
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -414,14 +410,14 @@ describe('runtime session human input commands', () => {
         systemPrompt: 'Pre-selection prompt without skills.',
       }, ref);
 
-      const { commands, errors, historicalEvents } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors, historicalEvents } = createCommands(() => flow);
       commands.handleRoleConfiguration(ref, 'plan', {
         skills: ['review-writing'],
         mcpServers: [],
       });
 
       expect(errors).toEqual([]);
-      expect(readCapabilitySelection(workspaceRoot, ref, 'planner')?.skills).toEqual(['review-writing']);
+      expect(readCapabilitySelection(ref, 'planner')?.skills).toEqual(['review-writing']);
       expect(SessionStore.loadRoleSession('planner', ref)?.systemPrompt).toBeUndefined();
       expect(historicalEvents).toEqual([expect.objectContaining({
         kind: 'role.configured',
@@ -450,7 +446,7 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(flow, ref);
 
-      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors } = createCommands(() => flow);
       commands.handleRoleConfiguration(ref, 'plan', {
         modelConfigId: 'test-model',
         skills: ['missing-skill'],
@@ -458,8 +454,8 @@ describe('runtime session human input commands', () => {
       });
 
       expect(errors).toEqual(['Unknown skill "missing-skill". Refresh Settings and try again.']);
-      expect(readCapabilitySelection(workspaceRoot, ref, 'planner')).toBeNull();
-      expect(readRoleModelSelection(workspaceRoot, ref, 'planner')).toBeNull();
+      expect(readCapabilitySelection(ref, 'planner')).toBeNull();
+      expect(readRoleModelSelection(ref, 'planner')).toBeNull();
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -481,7 +477,7 @@ describe('runtime session human input commands', () => {
       });
       SessionStore.saveFlowRun(flow, ref);
 
-      const { commands, errors } = createCommands(workspaceRoot, () => flow);
+      const { commands, errors } = createCommands(() => flow);
       await commands.handleHumanInput(ref, 'use the cheap one', { nodeId: 'plan' });
 
       const latest = SessionStore.loadFlowRun(ref)!;

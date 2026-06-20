@@ -23,23 +23,27 @@ import { LLMGateway } from '../../src/providers/llm.js';
 import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 // ---- Harness setup ----
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
-afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+afterAll(() => {
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+  clearWorkspaceRoot();
+});
 const stateDir = path.join(tmpDir, '.a-society', 'state');
 const settingsDir = path.join(tmpDir, '.a-society');
 const projectNamespace = 'test-proj';
 const workspaceRoot = tmpDir;
+setWorkspaceRoot(workspaceRoot);
 const namespaceDir = path.join(workspaceRoot, projectNamespace);
 const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
 const indexDir = path.join(namespaceDir, 'a-docs', 'indexes');
-const recordDir = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: 'test-flow-id' });
-const instanceRecordDir = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: 'instance-flow-id' });
+const recordDir = getFlowRecordDir({ projectNamespace, flowId: 'test-flow-id' });
+const instanceRecordDir = getFlowRecordDir({ projectNamespace, flowId: 'instance-flow-id' });
 
 fs.mkdirSync(rolesDir, { recursive: true });
 fs.mkdirSync(indexDir, { recursive: true });
@@ -175,7 +179,6 @@ function patchLLM(provider: MockProvider): () => void {
   LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
     return original.call(new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace, flowId: 'test-flow-id' },
       provider,
     }), sys, hist, opts);
@@ -211,7 +214,7 @@ async function runStoredFlowUntil(
   predicate: () => boolean
 ): Promise<void> {
   setWorkspaceRoot(workspaceRoot);
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(predicate);
   } finally {
@@ -266,7 +269,6 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const { bundleContent } = ContextInjectionService.buildContextBundle(
       projectNamespace,
       'owner',
-      workspaceRoot,
       recordDir,
       { projectNamespace, flowId: 'same-role-flow' }
     );

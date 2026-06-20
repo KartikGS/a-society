@@ -221,7 +221,6 @@ describe('context-compaction', () => {
     let saveCount = 0;
 
     const result = await runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'owner',
       providedSystemPrompt: 'Role system prompt',
       flowRef: { projectNamespace: 'project', flowId: 'flow' },

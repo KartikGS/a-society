@@ -6,6 +6,7 @@ import { validateGraph } from '../framework-services/workflow-graph-validator.js
 import * as SessionStore from '../orchestration/store.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
 import { CANONICAL_WORKFLOW_FILENAME, canonicalWorkflowDefinitionPath } from '../context/workflow-file.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 
 export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
   {
@@ -110,10 +111,10 @@ export class FileToolExecutor {
   private readonly workflowFilePaths: Set<string>;
   private readonly recordWorkflowPath: string;
 
-  constructor(workspaceRoot: string, flowRef: FlowRef) {
-    this.workspaceRoot = path.resolve(workspaceRoot);
+  constructor(flowRef: FlowRef) {
+    this.workspaceRoot = path.resolve(getWorkspaceRoot());
     this.flowRef = flowRef;
-    const recordFolderPath = getFlowRecordDir(this.workspaceRoot, flowRef);
+    const recordFolderPath = getFlowRecordDir(flowRef);
     this.recordWorkflowPath = path.resolve(recordFolderPath, CANONICAL_WORKFLOW_FILENAME);
     this.writeRoots = [
       path.join(this.workspaceRoot, flowRef.projectNamespace),

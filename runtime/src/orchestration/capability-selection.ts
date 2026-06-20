@@ -39,8 +39,8 @@ export type CapabilityGate =
       pendingMcp: boolean;
     };
 
-function capabilitySelectionPath(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): string {
-  return getRoleStateFilePath(workspaceRoot, ref, roleInstanceId, 'capabilities.json');
+function capabilitySelectionPath(ref: FlowRef, roleInstanceId: string): string {
+  return getRoleStateFilePath(ref, roleInstanceId, 'capabilities.json');
 }
 
 export function listMcpServers(): McpServerSummary[] {
@@ -56,11 +56,10 @@ function normalizeStringArray(value: unknown): string[] {
 }
 
 export function readCapabilitySelection(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string
 ): CapabilitySelection | null {
-  const selectionPath = capabilitySelectionPath(workspaceRoot, ref, roleInstanceId);
+  const selectionPath = capabilitySelectionPath(ref, roleInstanceId);
   if (!fs.existsSync(selectionPath)) return null;
   try {
     const parsed = JSON.parse(fs.readFileSync(selectionPath, 'utf8')) as Record<string, unknown> | null;
@@ -78,12 +77,11 @@ export function readCapabilitySelection(
 }
 
 function writeCapabilitySelection(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string,
   selection: CapabilitySelection
 ): void {
-  const selectionPath = capabilitySelectionPath(workspaceRoot, ref, roleInstanceId);
+  const selectionPath = capabilitySelectionPath(ref, roleInstanceId);
   fs.mkdirSync(path.dirname(selectionPath), { recursive: true });
   fs.writeFileSync(selectionPath, JSON.stringify({
     skills: normalizeStringArray(selection.skills).sort((a, b) => a.localeCompare(b)),
@@ -98,12 +96,11 @@ function writeCapabilitySelection(
  * Persist a complete capability selection with both dimensions decided at once.
  */
 export function saveCapabilitySelection(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string,
   selection: { skills: string[]; mcpServers: string[]; selectedAt: string }
 ): void {
-  writeCapabilitySelection(workspaceRoot, ref, roleInstanceId, {
+  writeCapabilitySelection(ref, roleInstanceId, {
     skills: selection.skills,
     mcpServers: selection.mcpServers,
     skillsDecided: true,
@@ -119,14 +116,13 @@ export function saveCapabilitySelection(
  * manual submits.
  */
 export function saveCapabilityDimension(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string,
   dimension: CapabilityDimension,
   values: string[],
   selectedAt: string = new Date().toISOString()
 ): void {
-  const existing = readCapabilitySelection(workspaceRoot, ref, roleInstanceId);
+  const existing = readCapabilitySelection(ref, roleInstanceId);
   const base: CapabilitySelection = existing ?? {
     skills: [],
     mcpServers: [],
@@ -137,7 +133,7 @@ export function saveCapabilityDimension(
   const next: CapabilitySelection = dimension === 'skills'
     ? { ...base, skills: values, skillsDecided: true, selectedAt }
     : { ...base, mcpServers: values, mcpDecided: true, selectedAt };
-  writeCapabilitySelection(workspaceRoot, ref, roleInstanceId, next);
+  writeCapabilitySelection(ref, roleInstanceId, next);
 }
 
 /**
@@ -147,10 +143,10 @@ export function saveCapabilityDimension(
  * still undecided, and reports which dimensions remain pending so the operator is
  * prompted for those alone (auto-resolved dimensions run before this gate).
  */
-export function resolveCapabilityGate(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): CapabilityGate {
-  const skills = listSkills(workspaceRoot);
+export function resolveCapabilityGate(ref: FlowRef, roleInstanceId: string): CapabilityGate {
+  const skills = listSkills();
   const mcpServers = listMcpServers();
-  const selection = readCapabilitySelection(workspaceRoot, ref, roleInstanceId);
+  const selection = readCapabilitySelection(ref, roleInstanceId);
 
   const pendingSkills = skills.length > 0 && !(selection?.skillsDecided ?? false);
   const pendingMcp = mcpServers.length > 0 && !(selection?.mcpDecided ?? false);
@@ -163,12 +159,11 @@ export function resolveCapabilityGate(workspaceRoot: string, ref: FlowRef, roleI
 }
 
 export function resolveEffectiveCapabilities(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string
 ): EffectiveCapabilities {
-  const selection = readCapabilitySelection(workspaceRoot, ref, roleInstanceId);
-  const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
+  const selection = readCapabilitySelection(ref, roleInstanceId);
+  const validSkillNames = new Set(listSkills().map((skill) => skill.name));
   const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
 
   return {

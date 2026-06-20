@@ -156,7 +156,6 @@ describe('observability', () => {
     ]);
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot,
       flowRef,
       provider,
     });
@@ -267,7 +266,6 @@ describe('observability', () => {
     });
 
     await expect(runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,

@@ -106,7 +106,7 @@ it('suspends first role activation for role configuration and resumes each role 
   ]);
   scaffoldProjectDocs(workspaceRoot, projectNamespace, ['start', 'next']);
 
-  const recordPath = getFlowRecordDir(workspaceRoot, flowRef);
+  const recordPath = getFlowRecordDir(flowRef);
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
@@ -131,7 +131,7 @@ it('suspends first role activation for role configuration and resumes each role 
   const orchestrator = new FlowOrchestrator(sink);
   const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
 
@@ -148,7 +148,7 @@ it('suspends first role activation for role configuration and resumes each role 
       reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION,
     });
 
-    saveRoleModelSelection(workspaceRoot, flowRef, 'start', {
+    saveRoleModelSelection(flowRef, 'start', {
       modelConfigId: 'model-b',
       displayName: 'model-b',
       modelId: 'model-b',
@@ -160,10 +160,10 @@ it('suspends first role activation for role configuration and resumes each role 
 
     expect(requests.map((request) => request.model)).toEqual(['model-b']);
     expect(loadFlow().awaitingHumanNodes['start']).toBeUndefined();
-    expect(fs.existsSync(path.join(getFlowDir(workspaceRoot, flowRef), 'roles', 'start', 'model.json'))).toBe(true);
+    expect(fs.existsSync(path.join(getFlowDir(flowRef), 'roles', 'start', 'model.json'))).toBe(true);
     expect(sink.events.filter((e) => e.kind === 'role.active' && e.nodeId === 'next')).toHaveLength(1);
 
-    saveRoleModelSelection(workspaceRoot, flowRef, 'next', {
+    saveRoleModelSelection(flowRef, 'next', {
       modelConfigId: 'model-a',
       displayName: 'model-a',
       modelId: 'model-a',
@@ -224,7 +224,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
   writeSkill(workspaceRoot, 'review-writing');
   scaffoldProjectDocs(workspaceRoot, projectNamespace, ['start', 'next']);
 
-  const recordPath = getFlowRecordDir(workspaceRoot, flowRef);
+  const recordPath = getFlowRecordDir(flowRef);
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
@@ -249,7 +249,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
   const orchestrator = new FlowOrchestrator(sink);
   const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
 
@@ -271,7 +271,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
     // The role turn's system prompt was rebuilt to include the auto-selected skill.
     expect(requests[1].system).toContain('review-writing');
 
-    const selection = readCapabilitySelection(workspaceRoot, flowRef, 'start');
+    const selection = readCapabilitySelection(flowRef, 'start');
     expect(selection?.skills).toEqual(['review-writing']);
     expect(selection?.skillsDecided).toBe(true);
   } finally {
@@ -313,7 +313,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
     { id: 'model-b', providerBaseUrl: `http://127.0.0.1:${port}/v1` },
   ]);
 
-  const recordPath = getFlowRecordDir(workspaceRoot, flowRef);
+  const recordPath = getFlowRecordDir(flowRef);
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
@@ -343,7 +343,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
     currentNodeId: 'start',
     systemPrompt: 'Test system prompt.',
   }, flowRef);
-  saveRoleModelSelection(workspaceRoot, flowRef, 'start', {
+  saveRoleModelSelection(flowRef, 'start', {
     modelConfigId: 'model-b',
     displayName: 'model-b',
     modelId: 'model-b',
@@ -354,7 +354,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
   const orchestrator = new FlowOrchestrator(sink);
   const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
 
@@ -399,7 +399,7 @@ it('suspends for skills-only role configuration and persists an empty skip selec
   writeSkill(workspaceRoot, 'review-writing');
   scaffoldProjectDocs(workspaceRoot, projectNamespace, ['start', 'next']);
 
-  const recordPath = getFlowRecordDir(workspaceRoot, flowRef);
+  const recordPath = getFlowRecordDir(flowRef);
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
@@ -424,12 +424,12 @@ it('suspends for skills-only role configuration and persists an empty skip selec
   const orchestrator = new FlowOrchestrator(sink);
   const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
     expect(requests).toHaveLength(0);
 
-    saveCapabilitySelection(workspaceRoot, flowRef, 'start', {
+    saveCapabilitySelection(flowRef, 'start', {
       skills: [],
       mcpServers: [],
       selectedAt: new Date().toISOString(),
@@ -438,7 +438,7 @@ it('suspends for skills-only role configuration and persists an empty skip selec
 
     await waitUntil(() => loadFlow().awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.PROMPT_HUMAN);
     expect(requests.map((request) => request.model)).toEqual(['model-a']);
-    expect(fs.existsSync(path.join(getFlowDir(workspaceRoot, flowRef), 'roles', 'start', 'capabilities.json'))).toBe(true);
+    expect(fs.existsSync(path.join(getFlowDir(flowRef), 'roles', 'start', 'capabilities.json'))).toBe(true);
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';

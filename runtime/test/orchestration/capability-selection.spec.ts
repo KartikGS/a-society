@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   readCapabilitySelection,
   resolveCapabilityGate,
@@ -10,7 +10,7 @@ import {
   saveCapabilitySelection,
 } from '../../src/orchestration/capability-selection.js';
 import { getFlowDir } from '../../src/orchestration/state-paths.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const REF = { projectNamespace: 'test-project', flowId: 'test-flow' };
 
@@ -33,12 +33,16 @@ Body.
 }
 
 describe('capability selection store', () => {
+  afterEach(() => {
+    clearWorkspaceRoot();
+  });
+
   it('requires selection when valid skills exist and no selection file is present', () => {
     const workspaceRoot = makeWorkspace('capability-gate-');
     try {
       writeSkill(workspaceRoot, 'review-writing');
 
-      const gate = resolveCapabilityGate(workspaceRoot, REF, 'owner_2');
+      const gate = resolveCapabilityGate(REF, 'owner_2');
       expect(gate.kind).toBe('selection-required');
       if (gate.kind === 'selection-required') {
         expect(gate.skills.map((skill) => skill.name)).toEqual(['review-writing']);
@@ -53,21 +57,21 @@ describe('capability selection store', () => {
     const workspaceRoot = makeWorkspace('capability-empty-');
     try {
       writeSkill(workspaceRoot, 'review-writing');
-      saveCapabilitySelection(workspaceRoot, REF, 'owner_2', {
+      saveCapabilitySelection(REF, 'owner_2', {
         skills: [],
         mcpServers: [],
         selectedAt: '2026-06-13T00:00:00.000Z',
       });
 
-      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner_2').kind).toBe('ready');
-      expect(readCapabilitySelection(workspaceRoot, REF, 'owner_2')).toEqual({
+      expect(resolveCapabilityGate(REF, 'owner_2').kind).toBe('ready');
+      expect(readCapabilitySelection(REF, 'owner_2')).toEqual({
         skills: [],
         mcpServers: [],
         skillsDecided: true,
         mcpDecided: true,
         selectedAt: '2026-06-13T00:00:00.000Z',
       });
-      expect(fs.existsSync(path.join(getFlowDir(workspaceRoot, REF), 'roles', 'owner_2', 'capabilities.json'))).toBe(true);
+      expect(fs.existsSync(path.join(getFlowDir(REF), 'roles', 'owner_2', 'capabilities.json'))).toBe(true);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -77,14 +81,14 @@ describe('capability selection store', () => {
     const workspaceRoot = makeWorkspace('capability-stale-');
     try {
       writeSkill(workspaceRoot, 'still-present');
-      saveCapabilitySelection(workspaceRoot, REF, 'owner', {
+      saveCapabilitySelection(REF, 'owner', {
         skills: ['deleted-skill', 'still-present'],
         mcpServers: ['deleted-server'],
         selectedAt: '2026-06-13T00:00:00.000Z',
       });
 
-      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner').kind).toBe('ready');
-      expect(resolveEffectiveCapabilities(workspaceRoot, REF, 'owner')).toEqual({
+      expect(resolveCapabilityGate(REF, 'owner').kind).toBe('ready');
+      expect(resolveEffectiveCapabilities(REF, 'owner')).toEqual({
         skills: ['still-present'],
         mcpServers: [],
         selectedAt: '2026-06-13T00:00:00.000Z',
@@ -98,15 +102,15 @@ describe('capability selection store', () => {
     const workspaceRoot = makeWorkspace('capability-malformed-');
     try {
       writeSkill(workspaceRoot, 'review-writing');
-      const roleDir = path.join(getFlowDir(workspaceRoot, REF), 'roles', 'owner');
+      const roleDir = path.join(getFlowDir(REF), 'roles', 'owner');
       fs.mkdirSync(roleDir, { recursive: true });
       fs.writeFileSync(path.join(roleDir, 'capabilities.json'), 'not json', 'utf8');
 
-      expect(readCapabilitySelection(workspaceRoot, REF, 'owner')).toBeNull();
+      expect(readCapabilitySelection(REF, 'owner')).toBeNull();
       // Consistent with the model gate: an unreadable selection re-prompts rather
       // than silently proceeding with no capabilities.
-      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner').kind).toBe('selection-required');
-      expect(resolveEffectiveCapabilities(workspaceRoot, REF, 'owner').skills).toEqual([]);
+      expect(resolveCapabilityGate(REF, 'owner').kind).toBe('selection-required');
+      expect(resolveEffectiveCapabilities(REF, 'owner').skills).toEqual([]);
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
@@ -120,9 +124,9 @@ describe('capability selection store', () => {
       // Decide skills only; MCP is configured but still pending.
       // (No MCP servers configured here, so simulate a skills-only decision and
       // assert the decided/pending provenance directly.)
-      saveCapabilityDimension(workspaceRoot, REF, 'owner', 'skills', ['review-writing'], '2026-06-13T00:00:00.000Z');
+      saveCapabilityDimension(REF, 'owner', 'skills', ['review-writing'], '2026-06-13T00:00:00.000Z');
 
-      const selection = readCapabilitySelection(workspaceRoot, REF, 'owner');
+      const selection = readCapabilitySelection(REF, 'owner');
       expect(selection).toEqual({
         skills: ['review-writing'],
         mcpServers: [],
@@ -132,12 +136,12 @@ describe('capability selection store', () => {
       });
 
       // Skills decided + no MCP configured ⇒ gate is ready.
-      expect(resolveCapabilityGate(workspaceRoot, REF, 'owner').kind).toBe('ready');
-      expect(resolveEffectiveCapabilities(workspaceRoot, REF, 'owner').skills).toEqual(['review-writing']);
+      expect(resolveCapabilityGate(REF, 'owner').kind).toBe('ready');
+      expect(resolveEffectiveCapabilities(REF, 'owner').skills).toEqual(['review-writing']);
 
       // A later dimension write merges without clobbering the decided skills.
-      saveCapabilityDimension(workspaceRoot, REF, 'owner', 'mcpServers', [], '2026-06-14T00:00:00.000Z');
-      const merged = readCapabilitySelection(workspaceRoot, REF, 'owner');
+      saveCapabilityDimension(REF, 'owner', 'mcpServers', [], '2026-06-14T00:00:00.000Z');
+      const merged = readCapabilitySelection(REF, 'owner');
       expect(merged?.skills).toEqual(['review-writing']);
       expect(merged?.skillsDecided).toBe(true);
       expect(merged?.mcpDecided).toBe(true);
@@ -146,4 +150,3 @@ describe('capability selection store', () => {
     }
   });
 });
-

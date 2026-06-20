@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { bootstrapUpdateFlow } from '../../src/projects/update-bootstrap.js';
 import { readVersionFrontmatter } from '../../src/framework-services/version-comparator.js';
@@ -22,6 +23,7 @@ function createWorkspace(): string {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-update-bootstrap-'));
   tempDirs.add(tmpDir);
   fs.symlinkSync(frameworkRoot, path.join(tmpDir, 'a-society'), 'dir');
+  setWorkspaceRoot(tmpDir);
   return tmpDir;
 }
 
@@ -39,6 +41,7 @@ describe('update-bootstrap', () => {
   afterEach(() => {
     for (const dir of tempDirs) fs.rmSync(dir, { recursive: true, force: true });
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('creates an Owner-only update flow with update context and update feedback context', () => {
@@ -46,7 +49,7 @@ describe('update-bootstrap', () => {
     const projectName = 'behind-project';
     const projectRoot = createInitializedProject(workspaceRoot, projectName, '0.1.0');
 
-    const result = bootstrapUpdateFlow(workspaceRoot, projectName);
+    const result = bootstrapUpdateFlow(projectName);
 
     expect(result.flowRun).toMatchObject({
       projectNamespace: projectName,
@@ -59,7 +62,7 @@ describe('update-bootstrap', () => {
       updateToVersion: currentVersion(),
     });
     expect(result.flowRun.recordFolderPath).toBe(
-      getFlowRecordDir(workspaceRoot, { projectNamespace: projectName, flowId: result.flowRun.flowId }),
+      getFlowRecordDir({ projectNamespace: projectName, flowId: result.flowRun.flowId }),
     );
 
     const workflowDoc = parseWorkflowFile(path.join(result.flowRun.recordFolderPath, 'workflow.yaml')) as any;
@@ -82,13 +85,13 @@ describe('update-bootstrap', () => {
     const workspaceRoot = createWorkspace();
     createInitializedProject(workspaceRoot, 'current-project', currentVersion());
 
-    expect(() => bootstrapUpdateFlow(workspaceRoot, 'current-project')).toThrow(/already up to date/);
+    expect(() => bootstrapUpdateFlow('current-project')).toThrow(/already up to date/);
   });
 
   it('refuses to start when the project has no a-docs', () => {
     const workspaceRoot = createWorkspace();
     fs.mkdirSync(path.join(workspaceRoot, 'bare-project'), { recursive: true });
 
-    expect(() => bootstrapUpdateFlow(workspaceRoot, 'bare-project')).toThrow(/no a-docs/);
+    expect(() => bootstrapUpdateFlow('bare-project')).toThrow(/no a-docs/);
   });
 });

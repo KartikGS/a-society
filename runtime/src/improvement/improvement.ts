@@ -201,13 +201,12 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   const stepLabel = describeExpectedStep(expectedKind);
   const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
-  const roleModel = resolveRoleModel(flowRun.workspaceRoot, flowRef, roleInstanceId);
+  const roleModel = resolveRoleModel(flowRef, roleInstanceId);
   const saveSession = () => SessionStore.saveRoleSession(session, flowRef);
 
   while (true) {
     try {
       const sessionResult = await runRoleTurn({
-        workspaceRoot: flowRun.workspaceRoot,
         roleInstanceId,
         providedSystemPrompt: bundleContent,
         flowRef,
@@ -453,12 +452,11 @@ async function runMetaAnalysisEntry(
 
     if (!session.systemPrompt) {
       session.systemPrompt = ContextInjectionService.buildContextBundle(
-        flowRun.projectNamespace, roleInstanceId, flowRun.workspaceRoot, flowRun.recordFolderPath, flowRef
+        flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, flowRef
       ).bundleContent;
     }
 
     const mcpManager = await resolveRoleMcpManager({
-      workspaceRoot: flowRun.workspaceRoot,
       flowRef,
       roleInstanceId,
       nodeId,
@@ -615,7 +613,6 @@ async function runFeedbackEntry(
     }
 
     const mcpManager = await resolveRoleMcpManager({
-      workspaceRoot: flowRun.workspaceRoot,
       flowRef,
       roleInstanceId,
       nodeId,
