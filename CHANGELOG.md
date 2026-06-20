@@ -15,6 +15,7 @@ All notable changes to A-Society will be documented here.
 ### Library
 
 - File path indexes are now **project-relative**: index path cells are relative to the project root (the folder containing `a-docs/`), not the workspace. Projects must rewrite their `a-docs/indexes/main.md` (and any general index) path cells to drop the project-folder prefix — e.g. `my-project/a-docs/agents.md` becomes `a-docs/agents.md` — and add a note that paths are project-relative. The runtime resolves paths under the project namespace, which keeps indexes correct across git worktrees and renamed project folders.
+- Workflow node schema reduced to what the runtime acts on. Removed the authored node keys `invariants`, `escalation`, `inputs`, and `outputs`. Added two optional boolean flags: `human-colab` (the human stays in the decision — the node's forward handoff is staged for operator approval) and `await-all-inputs` (strict AND-join — the runtime holds the node until every inbound edge's handoff completes). Unknown node keys fails validation, so projects must strip the dropped keys from `a-docs/workflow/main.yaml`.
 
 ### Runtime
 
