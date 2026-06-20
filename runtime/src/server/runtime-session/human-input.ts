@@ -73,10 +73,19 @@ export function resolveHumanInputTarget(
     const matches = targets.filter((candidate) =>
       candidate.role && parseRoleIdentity(candidate.role).instanceRoleId === roleKey
     );
-    if (matches.length === 1) return matches[0];
     if (matches.length === 0) {
       throw new Error(`Role '${target.role}' is not accepting human input.`);
     }
+    if (matches.length === 1) return matches[0];
+    // Multiple nodes of this role are accepting input at once — e.g. one parked in
+    // awaitingHumanNodes waiting on a reply while another sits in awaitingHandoff.
+    // Prefer the node explicitly awaiting a human reply; the operator's text is for it.
+    // Only stay ambiguous if even that preference narrows to more than one node.
+    const awaitingReply = matches.filter((candidate) => {
+      const state = flowRun.awaitingHumanNodes[candidate.nodeId];
+      return state !== undefined && isAwaitingHumanReply(state.reason);
+    });
+    if (awaitingReply.length === 1) return awaitingReply[0];
     throw new Error(`Role '${target.role}' has multiple nodes accepting human input. Specify nodeId.`);
   }
 

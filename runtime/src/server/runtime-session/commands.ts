@@ -149,6 +149,20 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
+    // A handoff decision must drive an already-live session forward — it must not spin up
+    // a fresh one. Creating a session here would resume only this node and silently strand
+    // any other nodes that were interrupted (e.g. by a runtime restart). Resuming the flow
+    // is the sole path that restores the full running set, so require it first.
+    const session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'This flow has no active session. Resume the flow before approving or declining the handoff.',
+      });
+      return;
+    }
+
     if (decision === HANDOFF_APPROVAL_DECISION.DECLINE) {
       // Discard the staged handoff and park the node awaiting plain human input;
       // the operator drives the next step (typically by sending guidance, which
@@ -166,9 +180,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
         return;
       }
-      const declineSession = getOrCreateChoiceSession(ref);
-      emitHistoricalMessage(declineSession, { type: 'input_text', role: awaitingState.role, text: 'Declined handoff' });
-      emitFlowState(declineSession);
+      emitFlowState(session);
       return;
     }
 
@@ -183,12 +195,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    let session = activeSessions.get(flowKey(ref));
-    if (!session || session.finished) {
-      session = createSession(ref);
-      startFlowRunner(session, flowRun.projectNamespace);
-    }
-
     try {
       await session.orchestrator.applyHandoffAndAdvance(flowRun, nodeId, awaitingState.role, pending, { approved: true });
     } catch (error: any) {
@@ -196,7 +202,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    emitHistoricalMessage(session, { type: 'input_text', role: awaitingState.role, text: 'Approved handoff' });
     session.orchestrator.wake();
     emitFlowState(session);
   }
@@ -607,11 +612,23 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const activeSession = activeSessions.get(flowKey(ref));
+    // Manual compaction operates on a live role within an active session; it must not
+    // spin up a throwaway session. With no active session the operator must resume the
+    // flow first (the sole path that restores the running set).
+    const session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'This flow has no active session. Resume the flow before compacting a role.',
+      });
+      return;
+    }
+
     if (
-      activeSession?.orchestrator.hasActiveTurn({ roleInstanceId }) ||
-      activeSession?.improvementOrchestrator.hasActiveTurn(roleInstanceId) ||
-      (activeSession ? hasActiveManualCompaction(activeSession, roleInstanceId) : false)
+      session.orchestrator.hasActiveTurn({ roleInstanceId }) ||
+      session.improvementOrchestrator.hasActiveTurn(roleInstanceId) ||
+      hasActiveManualCompaction(session, roleInstanceId)
     ) {
       broadcastToFlow(ref, {
         type: 'operator_event',
@@ -631,8 +648,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const createdForCompaction = !activeSession || activeSession.finished;
-    const session = getOrCreateChoiceSession(ref);
     const controller = new AbortController();
     session.manualCompactionControllers.set(roleInstanceId, controller);
     ensureManualCompactionSigintHandler(session);
@@ -649,9 +664,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     })
       .then((result) => {
         if (!result.compacted) {
-          if (createdForCompaction) {
-            session.finished = true;
-          }
           if (result.aborted) {
             emitFlowState(session);
             return;
@@ -664,15 +676,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           return;
         }
         session.latestContextUsageByRole[roleInstanceId] = 0;
-        if (createdForCompaction) {
-          session.finished = true;
-        }
         emitFlowState(session);
       })
       .catch((error: any) => {
-        if (createdForCompaction) {
-          session.finished = true;
-        }
         broadcastToFlow(ref, {
           type: 'error',
           flowRef: ref,

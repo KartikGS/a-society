@@ -185,7 +185,7 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     }
 
     if (notSentToNodeIds.length > 0) {
-      lines.push('Handoffs not yet sent to:');
+      lines.push('Handoffs not yet sent to (an earlier forward handoff stops counting once that node returns a backward handoff, so a node you already handed off to can reappear here):');
       for (const id of notSentToNodeIds) lines.push(`- ${id}`);
       lines.push('');
     }

@@ -149,6 +149,47 @@ describe('runtime session human input commands', () => {
     }
   });
 
+  it('prefers the awaiting-human node over an awaiting-handoff node when a role is ambiguous', async () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-ambiguous-role-input-'));
+    try {
+      configureSettingsStore(workspaceRoot);
+      seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+      SessionStore.init(workspaceRoot);
+
+      const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+      // Same role, two instances accepting input at once: ui-developer_2 parked on a
+      // denied consent (awaiting a human reply) and ui-developer_1 awaiting a handoff.
+      SessionStore.saveFlowRun(makeFlowRun(workspaceRoot, {
+        awaitingHumanNodes: {
+          'ui-developer_2': { role: 'ui-developer', reason: AWAITING_HUMAN_REASON.CONSENT_DENIED },
+        },
+        awaitingHandoff: ['ui-developer_1'],
+      }), ref, workspaceRoot);
+
+      const workflow = {
+        nodes: [
+          { id: 'ui-developer_1', role: 'ui-developer' },
+          { id: 'ui-developer_2', role: 'ui-developer' },
+        ],
+        edges: [],
+      };
+      const { commands, errors, historicalMessages } = createCommands(
+        workspaceRoot,
+        (flowRef) => SessionStore.loadFlowRun(flowRef, workspaceRoot),
+        workflow
+      );
+      await commands.handleHumanInput(ref, 'here is the guidance', { role: 'ui-developer' });
+
+      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      expect(errors).toEqual([]);
+      expect(latest.pendingHumanInputs['ui-developer_2']?.text).toBe('here is the guidance');
+      expect(latest.pendingHumanInputs['ui-developer_1']).toBeUndefined();
+      expect(historicalMessages).toEqual([{ role: 'ui-developer', text: 'here is the guidance' }]);
+    } finally {
+      fs.rmSync(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
   it('does not queue awaiting-handoff human input when the latest flow no longer awaits handoff', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-stale-await-handoff-input-'));
     try {
