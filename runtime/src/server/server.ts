@@ -3,7 +3,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
-import { SessionStore } from '../orchestration/store.js';
+import * as SessionStore from '../orchestration/store.js';
 import { CLIENT_MESSAGE_TYPE } from '../../shared/protocol-constants.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import { setWorkspaceRoot } from '../common/workspace.js';
@@ -17,13 +17,13 @@ import { registerStaticUi } from './static-ui.js';
 
 function buildServer(workspaceRoot: string) {
   setWorkspaceRoot(workspaceRoot);
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
 
   const app = express();
   const httpServer = http.createServer(app);
   const wss = new WebSocketServer({ server: httpServer });
   const socketHub = new SocketHub();
-  const flowReadModel = createFlowReadModel(workspaceRoot);
+  const flowReadModel = createFlowReadModel();
   const runtimeSessions = createRuntimeSessionManager({ workspaceRoot, socketHub, flowReadModel });
 
   registerFlowRoutes(app, {

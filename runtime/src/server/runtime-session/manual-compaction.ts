@@ -5,7 +5,7 @@ import {
   type RoleSessionCompactionResult,
 } from '../../orchestration/compaction.js';
 import { resolveRoleModel } from '../../orchestration/role-model.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 
 export async function compactPersistedRoleContext(options: {
   flowRun: FlowRun;
@@ -19,8 +19,7 @@ export async function compactPersistedRoleContext(options: {
 }): Promise<RoleSessionCompactionResult> {
   const session = SessionStore.loadRoleSession(
     options.roleInstanceId,
-    options.flowRef,
-    options.workspaceRoot
+    options.flowRef
   );
   if (!session) {
     const reason = `No persisted session found for role "${options.roleName}".`;
@@ -88,7 +87,7 @@ export async function compactPersistedRoleContext(options: {
     return result;
   }
 
-  SessionStore.saveRoleSession(session, options.flowRef, options.workspaceRoot);
+  SessionStore.saveRoleSession(session, options.flowRef);
   options.operatorRenderer.emit({
     kind: 'session.compacted',
     role: options.roleName,

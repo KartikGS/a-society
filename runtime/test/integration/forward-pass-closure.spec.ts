@@ -1,5 +1,5 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -95,7 +95,7 @@ async function runTest() {
   fs.writeFileSync(closureArtifactPath, "Forward pass closure artifact.");
 
   setWorkspaceRoot(workspaceRoot);
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -148,7 +148,7 @@ async function runTest() {
 
     expect(assistantOut.includes('Enter 1, 2, or 3:')).toBeFalsy();
 
-    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     expect(finalFlow.status).toBe('awaiting_improvement_choice');
     expect(finalFlow.improvementPhase?.status).toBe('awaiting_choice');
     expect(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase)).toBeTruthy();

@@ -1,6 +1,6 @@
 import { type Express, type Request, type Response } from 'express';
 import type { FlowRef, FlowRun } from '../common/types.js';
-import { SessionStore } from '../orchestration/store.js';
+import * as SessionStore from '../orchestration/store.js';
 import { deleteProject, ProjectDeletionError } from '../projects/project-deletion.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import type { FlowReadModel } from './flow-read-model.js';
@@ -52,7 +52,7 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
 
   app.get('/api/projects/:projectNamespace/flows', (req: Request, res: Response) => {
     const projectNamespace = routeParam(req.params.projectNamespace);
-    res.json(SessionStore.listFlowSummaries(workspaceRoot, projectNamespace));
+    res.json(SessionStore.listFlowSummaries(projectNamespace));
   });
 
   app.delete('/api/projects/:projectNamespace', (req: Request, res: Response) => {
@@ -120,7 +120,7 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
   app.delete('/api/flows/:projectNamespace/:flowId', (req: Request, res: Response) => {
     const ref = flowRefFromParams(req);
 
-    SessionStore.deleteFlow(ref, workspaceRoot);
+    SessionStore.deleteFlow(ref);
     onFlowDeleted(ref.projectNamespace);
 
     res.status(200).json({ ok: true });

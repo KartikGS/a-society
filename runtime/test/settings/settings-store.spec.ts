@@ -20,7 +20,7 @@ import {
   updateFeedSettings,
   updateWebSearchToolSettings,
 } from '../../src/settings/settings-store.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 let tmpDir: string;
 
@@ -45,7 +45,7 @@ describe('settings-store', () => {
   });
 
   afterEach(() => {
-    setWorkspaceRoot(process.cwd());
+    clearWorkspaceRoot();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 

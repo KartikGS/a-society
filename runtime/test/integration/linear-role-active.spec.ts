@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
@@ -82,7 +83,8 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -134,7 +136,7 @@ async function runTest() {
   try {
     await runStoredFlowUntil(
       orchestrator, workspaceRoot, projectNamespace, flowId,
-      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['end']
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId })?.awaitingHumanNodes['end']
     );
 
     const nextRoleActiveCount = sink.events.filter(
@@ -142,7 +144,7 @@ async function runTest() {
     ).length;
 
     expect(nextRoleActiveCount).toBe(1);
-    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     expect(finalFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
     expect(finalFlow.historyHandoff['start=>next']).toEqual(['start-output.md']);
     expect(finalFlow.completedHandoffs.includes('next=>end')).toBeTruthy();

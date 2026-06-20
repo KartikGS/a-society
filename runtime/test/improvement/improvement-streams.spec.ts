@@ -19,7 +19,7 @@ import type {
 import { deterministicFindingsFilePath } from '../../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 import { setWorkspaceRoot } from '../../src/common/workspace.js';
@@ -97,7 +97,7 @@ describe('improvement-streams', () => {
     };
 
     const flowRef = SessionStore.flowRef(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, flowRef);
 
     const invalidHandoffText = 'Feedback malformed. ```handoff\n - target_node_id: feedback\n  - artifact_path: broken.md\n```';
     const validHandoffText = `Feedback complete. \`\`\`handoff\ntype: backward-pass-complete\nartifact_path: ${feedbackArtifactPath}\n\`\`\``;
@@ -142,7 +142,7 @@ describe('improvement-streams', () => {
       renderer,
       roleOutputFactory
     );
-    const finalFlowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot);
+    const finalFlowRun = SessionStore.loadFlowRun(flowRef);
 
     expect(repairEvents).toEqual(expect.arrayContaining([
       expect.objectContaining({

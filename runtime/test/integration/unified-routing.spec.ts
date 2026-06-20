@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import type { OperatorEvent } from '../../src/common/types.js';
@@ -83,7 +84,8 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -139,11 +141,11 @@ async function runTest() {
 
     await runStoredFlowUntil(
       orchestrator, workspaceRoot, projectNamespace, flowId,
-      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['next']
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId })?.awaitingHumanNodes['next']
     );
 
-    const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
-    const session = SessionStore.loadRoleSession('start', { projectNamespace, flowId }, workspaceRoot);
+    const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
+    const session = SessionStore.loadRoleSession('start', { projectNamespace, flowId });
     const history = session?.transcriptHistory as any[];
 
     // The repair message injected into history is the model-facing repair message

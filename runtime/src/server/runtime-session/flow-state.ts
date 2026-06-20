@@ -6,7 +6,7 @@ import type {
 } from '../../common/types.js';
 import { resolveCapabilityGate } from '../../orchestration/capability-selection.js';
 import { resolveRoleModel, resolveRoleModelGate } from '../../orchestration/role-model.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import type { FlowStateMessage, RoleConfigurationPending } from '../protocol.js';
 import { latestContextUsageFromSession } from './feed.js';
 import type { ActiveSession } from './types.js';
@@ -27,9 +27,9 @@ export function buildFlowStateMessage(
   const contextUsageByRole: Record<string, number> = session
     ? { ...session.latestContextUsageByRole }
     : Object.fromEntries(
-        SessionStore.listRoleKeys(ref, workspaceRoot)
+        SessionStore.listRoleKeys(ref)
           .map((roleKey) => {
-            const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+            const roleSession = SessionStore.loadRoleSession(roleKey, ref);
             const contextUsage = latestContextUsageFromSession(roleSession);
             return contextUsage != null ? [roleKey, contextUsage] as const : null;
           })
@@ -38,7 +38,7 @@ export function buildFlowStateMessage(
   // Context window of the model each role actually runs on: its persisted
   // per-flow selection when usable, otherwise the active model.
   const contextWindowByRole: Record<string, number> = Object.fromEntries(
-    SessionStore.listRoleKeys(ref, workspaceRoot)
+    SessionStore.listRoleKeys(ref)
       .map((roleKey) => {
         const model = resolveRoleModel(workspaceRoot, ref, roleKey);
         return model ? [roleKey, model.contextWindow] as const : null;

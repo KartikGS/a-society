@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import type { FlowRef, FlowRun } from '../../src/common/types.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { FileToolExecutor } from '../../src/tools/file-executor.js';
 
 const PROJECT_NAMESPACE = 'project';
@@ -35,6 +36,7 @@ function seedFlowRun(
   ref = flowRef(),
   overrides: Partial<FlowRun> = {}
 ): FlowRun {
+  setWorkspaceRoot(workspaceRoot);
   const recordFolderPath = getFlowRecordDir(workspaceRoot, ref);
   fs.mkdirSync(recordFolderPath, { recursive: true });
   const flowRun: FlowRun = {
@@ -55,7 +57,7 @@ function seedFlowRun(
     stateVersion: CURRENT_FLOW_STATE_VERSION,
     ...overrides,
   };
-  SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
+  SessionStore.saveFlowRun(flowRun, ref);
   return flowRun;
 }
 

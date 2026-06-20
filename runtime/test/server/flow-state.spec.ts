@@ -4,14 +4,14 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../../src/common/types.js';
 import { saveRoleModelSelection } from '../../src/orchestration/role-model.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { buildFlowStateMessage } from '../../src/server/runtime-session/flow-state.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
 describe('flow state message', () => {
   afterEach(() => {
-    setWorkspaceRoot(process.cwd());
+    clearWorkspaceRoot();
   });
 
   it('reports each role context window from its resolved per-flow model', () => {
@@ -22,7 +22,7 @@ describe('flow state message', () => {
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', contextWindow: 10_000, active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', contextWindow: 200_000 },
       ]);
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow: FlowRun = {
@@ -42,7 +42,7 @@ describe('flow state message', () => {
         status: 'running',
         stateVersion: CURRENT_FLOW_STATE_VERSION,
       };
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       // owner selected model-b; curator has role state but no selection and
       // resolves to the active model.
@@ -52,7 +52,7 @@ describe('flow state message', () => {
         modelId: 'model-b',
         selectedAt: new Date().toISOString(),
       });
-      SessionStore.saveRoleFeed([], ref, 'curator', workspaceRoot);
+      SessionStore.saveRoleFeed([], ref, 'curator');
 
       const message = buildFlowStateMessage(null, ref, () => flow, workspaceRoot);
 

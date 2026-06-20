@@ -3,12 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import { rememberMessage } from '../../src/server/runtime-session/feed.js';
 import { updateFeedSettings } from '../../src/settings/settings-store.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import type { FeedItem, FlowRef, FlowRun, GatewayTurnResult, OperatorEvent, RoleSession } from '../../src/common/types.js';
 import { LLMGateway } from '../../src/providers/llm.js';
@@ -26,6 +26,7 @@ function createTempDir(prefix: string): string {
 
 function createFixture(flowId = 'test-flow'): { tmpDir: string; ref: FlowRef } {
   const tmpDir = createTempDir('a-society-operator-feed-');
+  setWorkspaceRoot(tmpDir);
   const projectNamespace = 'test-project';
   const ref = { projectNamespace, flowId };
   const recordFolderPath = getFlowRecordDir(tmpDir, ref);
@@ -49,7 +50,7 @@ function createFixture(flowId = 'test-flow'): { tmpDir: string; ref: FlowRef } {
     stateVersion: CURRENT_FLOW_STATE_VERSION,
   };
 
-  SessionStore.saveFlowRun(flowRun, ref, tmpDir);
+  SessionStore.saveFlowRun(flowRun, ref);
   return { tmpDir, ref };
 }
 
@@ -72,7 +73,7 @@ function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: s
 describe('operator-feed', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    setWorkspaceRoot(process.cwd());
+    clearWorkspaceRoot();
     for (const dir of tempDirs) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -80,7 +81,7 @@ describe('operator-feed', () => {
   });
 
   it('persists FeedItem entries separately from role transcript history', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const roleFeed: FeedItem[] = [
       { id: 'owner_0', type: 'assistant', label: 'Assistant', text: 'Visible assistant text.' },
       { id: 'owner_1', type: 'user', label: 'You', text: 'Visible operator reply.' },
@@ -93,37 +94,37 @@ describe('operator-feed', () => {
       currentNodeId: 'owner-intake',
     };
 
-    SessionStore.saveRoleFeed(roleFeed, ref, 'owner', tmpDir);
-    SessionStore.saveRoleSession(roleSession, ref, tmpDir);
+    SessionStore.saveRoleFeed(roleFeed, ref, 'owner');
+    SessionStore.saveRoleSession(roleSession, ref);
 
-    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(roleFeed);
-    expect(SessionStore.loadRoleSession('owner', ref, tmpDir)?.transcriptHistory).toEqual(roleSession.transcriptHistory);
+    expect(SessionStore.loadRoleFeed(ref, 'owner')).toEqual(roleFeed);
+    expect(SessionStore.loadRoleSession('owner', ref)?.transcriptHistory).toEqual(roleSession.transcriptHistory);
   });
 
   it('loads all role feeds keyed by role', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const roleFeed: FeedItem[] = [
       { id: 'owner_0', type: 'assistant', label: 'Assistant', text: 'Visible assistant text.' },
       { id: 'owner_1', type: 'user', label: 'You', text: 'Visible operator reply.' },
     ];
 
-    SessionStore.saveRoleFeed(roleFeed, ref, 'owner', tmpDir);
+    SessionStore.saveRoleFeed(roleFeed, ref, 'owner');
 
-    const allFeeds = SessionStore.loadAllRoleFeeds(ref, tmpDir);
+    const allFeeds = SessionStore.loadAllRoleFeeds(ref);
     expect(allFeeds.has('owner')).toBe(true);
     expect(allFeeds.get('owner')).toHaveLength(2);
   });
 
   it('round-trips FeedItem arrays through saveRoleFeed and loadRoleFeed', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const items: FeedItem[] = [
       { id: 'curator_1_0', type: 'assistant', label: 'Assistant', text: 'hello' },
       { id: 'curator_1_1', type: 'user', label: 'You', text: 'user reply' },
     ];
 
-    SessionStore.saveRoleFeed(items, ref, 'curator_1', tmpDir);
+    SessionStore.saveRoleFeed(items, ref, 'curator_1');
 
-    expect(SessionStore.loadRoleFeed(ref, 'curator_1', tmpDir)).toEqual(items);
+    expect(SessionStore.loadRoleFeed(ref, 'curator_1')).toEqual(items);
   });
 
   it('treats repair requested events with a role as role-feed historical events', () => {
@@ -153,7 +154,7 @@ describe('operator-feed', () => {
   });
 
   it('skips the awaiting prompt and appends the role configuration result', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
@@ -164,7 +165,7 @@ describe('operator-feed', () => {
         role: 'owner',
         reason: 'role-configuration',
       },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
@@ -175,7 +176,7 @@ describe('operator-feed', () => {
         skillNames: ['review-writing', 'doc-editing'],
         mcpServerNames: [],
       },
-    }, tmpDir);
+    });
 
     // The awaiting prompt projects no feed item; only the result bubble is appended.
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
@@ -185,21 +186,21 @@ describe('operator-feed', () => {
       label: 'Role Configuration',
       text: 'Model: Claude Sonnet\nSkills: review-writing, doc-editing\nMCP servers: none',
     });
-    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
+    expect(SessionStore.loadRoleFeed(ref, 'owner')).toEqual(feed);
   });
 
   it('keeps the auto-selection strip status-only and resolves it to success', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'role.auto_selection_started', nodeId: 'owner-intake', role: 'owner' },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'role.auto_configured', nodeId: 'owner-intake', role: 'owner' },
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
     expect(feed).toHaveLength(1);
@@ -211,17 +212,17 @@ describe('operator-feed', () => {
   });
 
   it('marks the auto-selection strip as failed when it falls back', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'role.auto_selection_started', nodeId: 'owner-intake', role: 'owner' },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'role.auto_selection_fell_back', nodeId: 'owner-intake', role: 'owner', dimensions: ['skills'], reason: 'network down' },
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
     expect(feed).toHaveLength(1);
@@ -279,17 +280,17 @@ describe('operator-feed', () => {
   });
 
   it('resolves a persisted pending compaction item on completion', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'session.compaction_started', role: 'owner', trigger: 'manual' },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'session.compacted', role: 'owner', nodeId: 'owner-intake', trigger: 'manual', archiveId: 'archive-1' },
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
     expect(feed).toHaveLength(1);
@@ -298,21 +299,21 @@ describe('operator-feed', () => {
       label: 'Compaction',
       text: 'owner-intake context compacted (manual).',
     });
-    expect(SessionStore.loadRoleFeed(ref, 'owner', tmpDir)).toEqual(feed);
+    expect(SessionStore.loadRoleFeed(ref, 'owner')).toEqual(feed);
   });
 
   it('resolves a persisted pending compaction item as an error on failure', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'session.compaction_started', role: 'owner', trigger: 'auto' },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: { kind: 'session.compaction_failed', role: 'owner', trigger: 'auto', reason: 'Context compaction aborted by operator.' },
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
     expect(feed).toHaveLength(1);
@@ -324,7 +325,7 @@ describe('operator-feed', () => {
   });
 
   it('does not store compaction failure events without a pending item', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
@@ -335,7 +336,7 @@ describe('operator-feed', () => {
         trigger: 'manual',
         reason: 'Context cannot be compacted while that role is actively receiving a model response.',
       },
-    }, tmpDir);
+    });
 
     expect(activeSession.roleFeedHistory.has('reviewer')).toBe(false);
   });
@@ -359,14 +360,14 @@ describe('operator-feed', () => {
   });
 
   it('creates a separate reasoning feed item after assistant text', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'output_text',
       role: 'owner',
       text: 'Visible answer.',
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
@@ -376,7 +377,7 @@ describe('operator-feed', () => {
         text: 'Reasoning detail.',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner') ?? [];
     expect(feed).toHaveLength(2);
@@ -391,7 +392,7 @@ describe('operator-feed', () => {
   });
 
   it('creates a reasoning feed item when no assistant text exists', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
@@ -403,7 +404,7 @@ describe('operator-feed', () => {
         text: 'Only reasoning detail.',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
 
     expect(activeSession.roleFeedHistory.get('owner_2') ?? []).toEqual([{
       id: 'owner_2_0',
@@ -415,19 +416,19 @@ describe('operator-feed', () => {
   });
 
   it('starts a new reasoning feed item after a user message', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'output_text',
       role: 'owner_3',
       text: 'Previous answer.',
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'input_text',
       role: 'owner_3',
       text: 'Next prompt.',
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
@@ -437,7 +438,7 @@ describe('operator-feed', () => {
         text: 'New turn reasoning.',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner_3') ?? [];
     expect(feed.map((item) => item.type)).toEqual(['assistant', 'user', 'reasoning']);
@@ -451,7 +452,7 @@ describe('operator-feed', () => {
   });
 
   it('appends provider reasoning trace text to the latest reasoning feed item', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
@@ -463,7 +464,7 @@ describe('operator-feed', () => {
         text: 'Reasoning A. ',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
@@ -473,7 +474,7 @@ describe('operator-feed', () => {
         text: 'Reasoning B.',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
 
     expect(activeSession.roleFeedHistory.get('owner_4') ?? []).toEqual([{
       id: 'owner_4_0',
@@ -485,14 +486,14 @@ describe('operator-feed', () => {
   });
 
   it('preserves chronological feed item order around assistant text and reasoning traces', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const activeSession = createActiveSession(ref);
 
     rememberMessage(activeSession, {
       type: 'output_text',
       role: 'owner_6',
       text: 'Assistant text A. ',
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
@@ -502,12 +503,12 @@ describe('operator-feed', () => {
         text: 'Reasoning R1. ',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'output_text',
       role: 'owner_6',
       text: 'Assistant text B. ',
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'operator_event',
       event: {
@@ -517,12 +518,12 @@ describe('operator-feed', () => {
         text: 'Reasoning R2. ',
         display: 'collapsed',
       },
-    }, tmpDir);
+    });
     rememberMessage(activeSession, {
       type: 'output_text',
       role: 'owner_6',
       text: 'Assistant text C.',
-    }, tmpDir);
+    });
 
     const feed = activeSession.roleFeedHistory.get('owner_6') ?? [];
     expect(feed.map((item) => item.type)).toEqual([
@@ -542,7 +543,7 @@ describe('operator-feed', () => {
   });
 
   it('prunes role feed history using configured feed settings', () => {
-    const { tmpDir, ref } = createFixture();
+    const { ref } = createFixture();
     const settingsDir = createTempDir('a-society-feed-settings-');
     setWorkspaceRoot(settingsDir);
     updateFeedSettings({ historyLimit: 50 });
@@ -553,7 +554,7 @@ describe('operator-feed', () => {
         type: 'input_text',
         role: 'owner_5',
         text: `message ${i}`,
-      }, tmpDir);
+      });
     }
 
     const feed = activeSession.roleFeedHistory.get('owner_5') ?? [];
@@ -631,7 +632,7 @@ describe('operator-feed', () => {
       status: 'running',
       stateVersion: CURRENT_FLOW_STATE_VERSION,
     };
-    SessionStore.saveFlowRun(flowRun, ref, tmpDir);
+    SessionStore.saveFlowRun(flowRun, ref);
 
     vi.spyOn(LLMGateway.prototype, 'executeTurn')
       .mockResolvedValueOnce({
@@ -654,11 +655,11 @@ describe('operator-feed', () => {
       sendError() {},
     };
 
-    SessionStore.init(tmpDir);
+    SessionStore.init();
     const orchestrator = new FlowOrchestrator(renderer);
     await runStoredFlowUntil(
       orchestrator, tmpDir, ref.projectNamespace, ref.flowId,
-      () => !!SessionStore.loadFlowRun(ref, tmpDir)?.awaitingHumanNodes['next']
+      () => !!SessionStore.loadFlowRun(ref)?.awaitingHumanNodes['next']
     );
 
     expect(events.slice(0, 3).map(event => event.kind)).toEqual([
@@ -671,6 +672,6 @@ describe('operator-feed', () => {
       role: 'curator',
       contextUsage: 68,
     });
-    expect(SessionStore.loadRoleSession('curator', ref, tmpDir)?.latestContextUsage).toBe(68);
+    expect(SessionStore.loadRoleSession('curator', ref)?.latestContextUsage).toBe(68);
   });
 });

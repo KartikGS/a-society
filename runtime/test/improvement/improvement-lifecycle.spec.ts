@@ -18,7 +18,7 @@ import type {
 import { deterministicFindingsFilePath } from '../../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
 import { setWorkspaceRoot } from '../../src/common/workspace.js';
@@ -95,7 +95,7 @@ describe('improvement lifecycle', () => {
     fs.mkdirSync(flowRun.recordFolderPath, { recursive: true });
 
     ImprovementOrchestrator.markAwaitingChoice(flowRun);
-    SessionStore.saveFlowRun(flowRun, SessionStore.flowRef(flowRun), workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, SessionStore.flowRef(flowRun));
 
     await ImprovementOrchestrator.skipImprovement(flowRun);
 
@@ -144,7 +144,7 @@ describe('improvement lifecycle', () => {
     };
 
     const flowRef = SessionStore.flowRef(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, flowRef);
 
     const promptHumanText = 'Need clarification. ```handoff\ntype: prompt-human\n```';
     const completeText = `Feedback complete. \`\`\`handoff\ntype: backward-pass-complete\nartifact_path: ${feedbackArtifactPath}\n\`\`\``;
@@ -173,11 +173,11 @@ describe('improvement lifecycle', () => {
     const feedbackPromise = improvementOrchestrator.runFeedback(flowRun, renderer);
 
     await waitUntil(() => {
-      const pausedFlow = SessionStore.loadFlowRun(flowRef, workspaceRoot);
+      const pausedFlow = SessionStore.loadFlowRun(flowRef);
       return pausedFlow?.improvementPhase?.awaitingHumanRoles?.['a-society-feedback']?.reason === 'prompt-human';
     });
 
-    const pausedFlow = SessionStore.loadFlowRun(flowRef, workspaceRoot);
+    const pausedFlow = SessionStore.loadFlowRun(flowRef);
     expect(pausedFlow?.status).toBe('running');
     expect(pausedFlow?.improvementPhase?.status).toBe('running');
     expect(pausedFlow?.improvementPhase?.runningRoles).toContain('a-society-feedback');
@@ -194,11 +194,11 @@ describe('improvement lifecycle', () => {
           receivedAt: '2026-06-07T00:00:00.000Z',
         },
       };
-    }, flowRef, workspaceRoot);
+    }, flowRef);
     improvementOrchestrator.wake();
 
     await feedbackPromise;
-    const finalFlow = SessionStore.loadFlowRun(flowRef, workspaceRoot);
+    const finalFlow = SessionStore.loadFlowRun(flowRef);
 
     expect(finalFlow?.status).toBe('completed');
     expect(finalFlow?.improvementPhase).toMatchObject({

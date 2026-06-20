@@ -1,4 +1,4 @@
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import type { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 
@@ -24,7 +24,7 @@ export async function runStoredFlowUntil(
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
-    }, { projectNamespace, flowId }, workspaceRoot);
+    }, { projectNamespace, flowId });
     orchestrator.wake();
     await runPromise;
   }

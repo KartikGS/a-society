@@ -4,7 +4,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -59,7 +60,8 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   const flowRun = {
     flowId,
     workspaceRoot,
@@ -89,7 +91,7 @@ async function runTest() {
     ])
   ]);
 
-  const updated = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), workspaceRoot)!;
+  const updated = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun))!;
   expect(['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k))).toBeTruthy();
   expect(updated.receivingHandoff['producer=>branch-a']).toEqual([producerToARel]);
   expect(

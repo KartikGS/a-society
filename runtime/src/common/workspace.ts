@@ -26,3 +26,13 @@ export function getWorkspaceRoot(): string {
   }
   return workspaceRoot;
 }
+
+/**
+ * Reset to the unconfigured state so a subsequent `getWorkspaceRoot()` throws.
+ * Intended for test teardown: a test that then touches workspace-scoped state
+ * without establishing its own root fails loudly instead of silently inheriting
+ * a stale root (e.g. the repo's cwd, which would pollute the working tree).
+ */
+export function clearWorkspaceRoot(): void {
+  workspaceRoot = null;
+}

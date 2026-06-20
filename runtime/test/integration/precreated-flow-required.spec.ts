@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 async function runTest() {
@@ -19,7 +20,8 @@ async function runTest() {
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   try {
-    SessionStore.init(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
+    SessionStore.init();
 
     await expect(orchestrator.runStoredFlow(
       workspaceRoot,

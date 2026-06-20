@@ -24,7 +24,7 @@ import { listSkills } from '../../framework-services/skills.js';
 import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
 import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
 import type { HistoricalMessage, ServerMessage } from '../protocol.js';
@@ -106,7 +106,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           text,
           receivedAt: new Date().toISOString(),
         };
-      }, ref, workspaceRoot);
+      }, ref);
     } catch (error: any) {
       broadcastToFlow(ref, {
         type: 'error',
@@ -175,7 +175,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           }
           delete latest.pendingHandoffApprovals[nodeId];
           latest.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
-        }, ref, workspaceRoot);
+        }, ref);
       } catch (error: any) {
         broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
         return;
@@ -292,10 +292,10 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     if (selectedSkills.length > 0) {
       const roleKey = parseRoleIdentity(awaitingState.role).instanceRoleId;
-      const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+      const roleSession = SessionStore.loadRoleSession(roleKey, ref);
       if (roleSession) {
         delete roleSession.systemPrompt;
-        SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
+        SessionStore.saveRoleSession(roleSession, ref);
       }
     }
 
@@ -574,7 +574,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         }
         if (!latest.improvementPhase.pendingHumanInputs) latest.improvementPhase.pendingHumanInputs = {};
         latest.improvementPhase.pendingHumanInputs[roleInstanceId] = { text, receivedAt: new Date().toISOString() };
-      }, ref, workspaceRoot);
+      }, ref);
     } catch (error: any) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
       return;

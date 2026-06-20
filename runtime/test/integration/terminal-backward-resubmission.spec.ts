@@ -4,7 +4,8 @@ import path from 'node:path';
 import { expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -51,7 +52,8 @@ async function runTest() {
   const reviewFeedbackRelPath = path.relative(workspaceRoot, reviewFeedbackPath);
   const flowRef = { projectNamespace, flowId };
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId: flowRef.flowId,
     workspaceRoot,
@@ -66,7 +68,7 @@ async function runTest() {
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
     status: 'running',
     stateVersion: CURRENT_FLOW_STATE_VERSION,
-  }, flowRef, workspaceRoot);
+  }, flowRef);
 
   SessionStore.saveRoleSession({
     roleName: 'curator',
@@ -74,21 +76,21 @@ async function runTest() {
     transcriptHistory: [{ role: 'user', content: 'stale proposal session' }],
     isActive: false,
     currentNodeId: 'proposal',
-  }, flowRef, workspaceRoot);
+  }, flowRef);
 
-  const flowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+  const flowRun = SessionStore.loadFlowRun(flowRef)!;
   const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
   await orchestrator.applyHandoffAndAdvance(flowRun, 'review', 'owner', [
     { target_node_id: 'proposal', artifact_path: reviewFeedbackRelPath },
   ]);
 
-  const updated = SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+  const updated = SessionStore.loadFlowRun(flowRef)!;
 
   expect(updated.receivingHandoff['review=>proposal']).toEqual([reviewFeedbackRelPath]);
   expect(updated.awaitingHandoff.includes('review')).toBeTruthy();
   expect(updated.completedHandoffs.includes('proposal=>review')).toBeFalsy();
-  const reopenedSession = SessionStore.loadRoleSession('curator', flowRef, workspaceRoot);
+  const reopenedSession = SessionStore.loadRoleSession('curator', flowRef);
   expect(reopenedSession).toBeTruthy();
   expect(reopenedSession!.currentNodeId).toBe('proposal');
   expect((reopenedSession!.transcriptHistory[0] as any).content).toBe('stale proposal session');

@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
@@ -56,7 +57,8 @@ async function setupFixture(port: number) {
       to: end
 `);
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -98,12 +100,12 @@ it('gates a human-colab node forward handoff and commits it on approval', async 
   try {
     await runStoredFlowUntil(
       orchestrator, workspaceRoot, projectNamespace, flowId,
-      () => SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)
+      () => SessionStore.loadFlowRun({ projectNamespace, flowId })
         ?.awaitingHumanNodes['start']?.reason === AWAITING_HUMAN_REASON.HANDOFF_APPROVAL
     );
 
     // Gated: handoff staged, not committed.
-    const gated = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    const gated = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     expect(gated.awaitingHumanNodes['start']?.reason).toBe(AWAITING_HUMAN_REASON.HANDOFF_APPROVAL);
     expect(gated.pendingHandoffApprovals['start']).toEqual([
       { target_node_id: 'end', artifact_path: 'start-output.md' },
@@ -116,7 +118,7 @@ it('gates a human-colab node forward handoff and commits it on approval', async 
     const pending = gated.pendingHandoffApprovals['start'];
     await orchestrator.applyHandoffAndAdvance(gated, 'start', 'start', pending, { approved: true });
 
-    const committed = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    const committed = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     expect(committed.completedHandoffs).toContain('start=>end');
     expect(committed.historyHandoff['start=>end']).toEqual(['start-output.md']);
     expect(committed.pendingHandoffApprovals['start']).toBeUndefined();

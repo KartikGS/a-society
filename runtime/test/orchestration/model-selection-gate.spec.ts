@@ -9,7 +9,7 @@ import { readCapabilitySelection, saveCapabilitySelection } from '../../src/orch
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { saveRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { getFlowDir, getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { updateAutomationSettings } from '../../src/settings/settings-store.js';
 import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -110,7 +110,7 @@ it('suspends first role activation for role configuration and resumes each role 
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -129,7 +129,7 @@ it('suspends first role activation for role configuration and resumes each role 
 
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
-  const loadFlow = () => SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+  const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
@@ -177,7 +177,7 @@ it('suspends first role activation for role configuration and resumes each role 
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
-    }, flowRef, workspaceRoot);
+    }, flowRef);
     orchestrator.wake();
     await runPromise;
     server.close();
@@ -228,7 +228,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -247,7 +247,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
 
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
-  const loadFlow = () => SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+  const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
@@ -277,7 +277,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
-    }, flowRef, workspaceRoot);
+    }, flowRef);
     orchestrator.wake();
     await runPromise;
     server.close();
@@ -317,7 +317,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
   // Persisted shape left behind by a suspension: node already visited and
   // entered (session exists), no running claim, awaiting role configuration.
   SessionStore.saveFlowRun({
@@ -342,7 +342,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
     isActive: true,
     currentNodeId: 'start',
     systemPrompt: 'Test system prompt.',
-  }, flowRef, workspaceRoot);
+  }, flowRef);
   saveRoleModelSelection(workspaceRoot, flowRef, 'start', {
     modelConfigId: 'model-b',
     displayName: 'model-b',
@@ -352,7 +352,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
 
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
-  const loadFlow = () => SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+  const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
@@ -362,7 +362,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
-    }, flowRef, workspaceRoot);
+    }, flowRef);
     orchestrator.wake();
     await runPromise;
     server.close();
@@ -403,7 +403,7 @@ it('suspends for skills-only role configuration and persists an empty skip selec
   fs.mkdirSync(recordPath, { recursive: true });
   writeWorkflow(recordPath);
 
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -422,7 +422,7 @@ it('suspends for skills-only role configuration and persists an empty skip selec
 
   const sink = new RecordingOperatorSink();
   const orchestrator = new FlowOrchestrator(sink);
-  const loadFlow = () => SessionStore.loadFlowRun(flowRef, workspaceRoot)!;
+  const loadFlow = () => SessionStore.loadFlowRun(flowRef)!;
 
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
@@ -442,7 +442,7 @@ it('suspends for skills-only role configuration and persists an empty skip selec
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
-    }, flowRef, workspaceRoot);
+    }, flowRef);
     orchestrator.wake();
     await runPromise;
     server.close();

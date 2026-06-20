@@ -10,7 +10,7 @@ import {
 } from '../framework-services/backward-pass-orderer.js';
 import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
-import { SessionStore } from '../orchestration/store.js';
+import * as SessionStore from '../orchestration/store.js';
 import { resolveRoleModel } from '../orchestration/role-model.js';
 import { resolveRoleMcpManager } from '../orchestration/role-mcp-manager.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
@@ -74,7 +74,7 @@ async function saveImprovementPhase(
     if (!latest.improvementPhase) return;
     mutate(latest.improvementPhase);
     latest.status = flowRun.status;
-  }, SessionStore.flowRef(flowRun), flowRun.workspaceRoot);
+  }, SessionStore.flowRef(flowRun));
 }
 
 async function markImprovementRoleAwaitingAbort(flowRun: FlowRun, roleInstanceId: string): Promise<void> {
@@ -202,7 +202,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
   const roleModel = resolveRoleModel(flowRun.workspaceRoot, flowRef, roleInstanceId);
-  const saveSession = () => SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+  const saveSession = () => SessionStore.saveRoleSession(session, flowRef);
 
   while (true) {
     try {
@@ -371,7 +371,7 @@ async function runMetaAnalysisEntry(
     let session: RoleSession;
 
     if (isRunning) {
-      const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef);
       if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
       session = loaded;
       session.isActive = true;
@@ -398,10 +398,10 @@ async function runMetaAnalysisEntry(
           appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
         }
       }
-      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+      SessionStore.saveRoleSession(session, flowRef);
     } else {
       // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
-      const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef);
       const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
 
       if (existing && lastMsg?.role === 'user') {
@@ -443,7 +443,7 @@ async function runMetaAnalysisEntry(
         appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
       }
 
-      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+      SessionStore.saveRoleSession(session, flowRef);
       await saveImprovementPhase(flowRun, (p) => {
         if (!p.runningRoles.includes(roleInstanceId)) {
           p.runningRoles = [...p.runningRoles, roleInstanceId];
@@ -544,7 +544,7 @@ async function runFeedbackEntry(
     let session: RoleSession;
 
     if (isRunning) {
-      const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      const loaded = SessionStore.loadRoleSession(roleInstanceId, flowRef);
       if (!loaded) throw new Error(`[improvement] ${roleInstanceId} is in runningRoles but no session found on disk.`);
       session = loaded;
       session.isActive = true;
@@ -570,10 +570,10 @@ async function runFeedbackEntry(
           appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: INTERRUPTED_TURN_CONTINUATION_MESSAGE }]);
         }
       }
-      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+      SessionStore.saveRoleSession(session, flowRef);
     } else {
       // Defense: session may already exist with context injected if we crashed between inject and runningRoles save
-      const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef, flowRun.workspaceRoot);
+      const existing = SessionStore.loadRoleSession(roleInstanceId, flowRef);
       const lastMsg = existing ? (existing.transcriptHistory as RuntimeMessageParam[]).at(-1) : null;
 
       if (existing && lastMsg?.role === 'user') {
@@ -606,7 +606,7 @@ async function runFeedbackEntry(
         appendConversationMessagesToCurrentNode(session, nodeId, [{ role: 'user', content: userMessage }]);
       }
 
-      SessionStore.saveRoleSession(session, flowRef, flowRun.workspaceRoot);
+      SessionStore.saveRoleSession(session, flowRef);
       await saveImprovementPhase(flowRun, (p) => {
         if (!p.runningRoles.includes(roleInstanceId)) {
           p.runningRoles = [...p.runningRoles, roleInstanceId];
@@ -724,7 +724,7 @@ async function runMetaAnalysisGraph(
   const flowRef = SessionStore.flowRef(flowRun);
 
   while (true) {
-    const freshFlow = SessionStore.loadFlowRun(flowRef, flowRun.workspaceRoot)!;
+    const freshFlow = SessionStore.loadFlowRun(flowRef)!;
     const phase = freshFlow.improvementPhase!;
 
     if (allMetaEntriesComplete(plan, phase)) {
@@ -951,7 +951,7 @@ export class ImprovementOrchestrator {
         // Feedback is a single terminal node after all meta-analysis findings are complete.
         const flowRef = SessionStore.flowRef(flowRun);
         while (true) {
-          const freshFlow = SessionStore.loadFlowRun(flowRef, flowRun.workspaceRoot)!;
+          const freshFlow = SessionStore.loadFlowRun(flowRef)!;
           const phase = freshFlow.improvementPhase!;
 
           if (phase.completedRoles.includes(entry.role)) break;

@@ -4,7 +4,8 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { initializeDraftFlow } from '../../src/projects/draft-flow.js';
 import { readRecordMetadata, syncRecordMetadataFromWorkflow } from '../../src/projects/record-metadata.js';
 
@@ -19,7 +20,8 @@ function createWorkspace(): string {
   fs.mkdirSync(path.join(projectRoot, 'a-docs', 'indexes'), { recursive: true });
   fs.writeFileSync(path.join(projectRoot, 'a-docs', 'roles', 'owner', 'required-readings.yaml'), 'role: owner\nrequired_readings: []\n');
   fs.writeFileSync(path.join(projectRoot, 'a-docs', 'indexes', 'main.md'), '');
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   return workspaceRoot;
 }
 
@@ -96,7 +98,7 @@ describe('draft-flow', () => {
     const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
     SessionStore.saveFlowRun(flow);
 
-    const loaded = SessionStore.loadFlowRun(SessionStore.flowRef(flow), workspaceRoot);
+    const loaded = SessionStore.loadFlowRun(SessionStore.flowRef(flow));
 
     expect(loaded?.recordFolderPath).toBe(flow.recordFolderPath);
   });

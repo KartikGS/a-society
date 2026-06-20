@@ -6,9 +6,9 @@ import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../shared/pro
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
 import { readCapabilitySelection, saveCapabilityDimension } from '../../src/orchestration/capability-selection.js';
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
-import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
 function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): FlowRun {
@@ -88,7 +88,7 @@ Body.
 
 describe('runtime session human input commands', () => {
   afterEach(() => {
-    setWorkspaceRoot(process.cwd());
+    clearWorkspaceRoot();
   });
 
   it('does not queue forward human input when the latest flow no longer has an awaiting node', async () => {
@@ -96,7 +96,7 @@ describe('runtime session human input commands', () => {
     try {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const staleFlow = makeFlowRun(workspaceRoot, {
@@ -104,12 +104,12 @@ describe('runtime session human input commands', () => {
           owner: { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
         },
       });
-      SessionStore.saveFlowRun(makeFlowRun(workspaceRoot), ref, workspaceRoot);
+      SessionStore.saveFlowRun(makeFlowRun(workspaceRoot), ref);
 
       const { commands, errors } = createCommands(workspaceRoot, () => staleFlow);
       await commands.handleHumanInput(ref, 'stale human reply', { nodeId: 'owner' });
 
-      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      const latest = SessionStore.loadFlowRun(ref)!;
       expect(latest.pendingHumanInputs).toEqual({});
       expect(errors).toEqual(["Node 'owner' is not accepting human input."]);
     } finally {
@@ -122,12 +122,12 @@ describe('runtime session human input commands', () => {
     try {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       SessionStore.saveFlowRun(makeFlowRun(workspaceRoot, {
         awaitingHandoff: ['owner-review'],
-      }), ref, workspaceRoot);
+      }), ref);
 
       const workflow = {
         nodes: [{ id: 'owner-review', role: 'owner' }],
@@ -135,12 +135,12 @@ describe('runtime session human input commands', () => {
       };
       const { commands, errors, historicalMessages } = createCommands(
         workspaceRoot,
-        (flowRef) => SessionStore.loadFlowRun(flowRef, workspaceRoot),
+        (flowRef) => SessionStore.loadFlowRun(flowRef),
         workflow
       );
       await commands.handleHumanInput(ref, 'continue without that handoff', { role: 'owner' });
 
-      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      const latest = SessionStore.loadFlowRun(ref)!;
       expect(errors).toEqual([]);
       expect(latest.pendingHumanInputs['owner-review']?.text).toBe('continue without that handoff');
       expect(historicalMessages).toEqual([{ role: 'owner', text: 'continue without that handoff' }]);
@@ -154,7 +154,7 @@ describe('runtime session human input commands', () => {
     try {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       // Same role, two instances accepting input at once: ui-developer_2 parked on a
@@ -164,7 +164,7 @@ describe('runtime session human input commands', () => {
           'ui-developer_2': { role: 'ui-developer', reason: AWAITING_HUMAN_REASON.CONSENT_DENIED },
         },
         awaitingHandoff: ['ui-developer_1'],
-      }), ref, workspaceRoot);
+      }), ref);
 
       const workflow = {
         nodes: [
@@ -175,12 +175,12 @@ describe('runtime session human input commands', () => {
       };
       const { commands, errors, historicalMessages } = createCommands(
         workspaceRoot,
-        (flowRef) => SessionStore.loadFlowRun(flowRef, workspaceRoot),
+        (flowRef) => SessionStore.loadFlowRun(flowRef),
         workflow
       );
       await commands.handleHumanInput(ref, 'here is the guidance', { role: 'ui-developer' });
 
-      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      const latest = SessionStore.loadFlowRun(ref)!;
       expect(errors).toEqual([]);
       expect(latest.pendingHumanInputs['ui-developer_2']?.text).toBe('here is the guidance');
       expect(latest.pendingHumanInputs['ui-developer_1']).toBeUndefined();
@@ -195,13 +195,13 @@ describe('runtime session human input commands', () => {
     try {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const staleFlow = makeFlowRun(workspaceRoot, {
         awaitingHandoff: ['owner-review'],
       });
-      SessionStore.saveFlowRun(makeFlowRun(workspaceRoot), ref, workspaceRoot);
+      SessionStore.saveFlowRun(makeFlowRun(workspaceRoot), ref);
 
       const workflow = {
         nodes: [{ id: 'owner-review', role: 'owner' }],
@@ -210,7 +210,7 @@ describe('runtime session human input commands', () => {
       const { commands, errors } = createCommands(workspaceRoot, () => staleFlow, workflow);
       await commands.handleHumanInput(ref, 'stale await-handoff reply', { role: 'owner' });
 
-      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      const latest = SessionStore.loadFlowRun(ref)!;
       expect(latest.pendingHumanInputs).toEqual({});
       expect(errors).toEqual(["Role 'owner' is not accepting human input."]);
     } finally {
@@ -221,7 +221,8 @@ describe('runtime session human input commands', () => {
   it('does not queue improvement human input when the latest role is no longer awaiting', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-improvement-input-'));
     try {
-      SessionStore.init(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const staleFlow = makeFlowRun(workspaceRoot, {
@@ -247,12 +248,12 @@ describe('runtime session human input commands', () => {
           pendingHumanInputs: {},
           findingsProduced: {},
         },
-      }), ref, workspaceRoot);
+      }), ref);
 
       const { commands, errors } = createCommands(workspaceRoot, () => staleFlow);
       await commands.handleImprovementHumanInput(ref, 'owner', 'stale improvement reply');
 
-      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      const latest = SessionStore.loadFlowRun(ref)!;
       expect(latest.improvementPhase?.pendingHumanInputs).toEqual({});
       expect(errors).toEqual(['Role "owner" is no longer awaiting human input in the improvement phase.']);
     } finally {
@@ -268,7 +269,7 @@ describe('runtime session human input commands', () => {
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', displayName: 'Model B' },
       ]);
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
@@ -276,7 +277,7 @@ describe('runtime session human input commands', () => {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       const { commands, errors, historicalMessages, historicalEvents } = createCommands(workspaceRoot, () => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
@@ -304,7 +305,7 @@ describe('runtime session human input commands', () => {
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', displayName: 'Model B' },
       ]);
       writeSkill(workspaceRoot, 'review-writing');
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       // Skills were already decided automatically; only the model stays manual.
@@ -314,7 +315,7 @@ describe('runtime session human input commands', () => {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       const { commands, errors, historicalEvents } = createCommands(workspaceRoot, () => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
@@ -341,7 +342,7 @@ describe('runtime session human input commands', () => {
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1' },
       ]);
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
@@ -349,7 +350,7 @@ describe('runtime session human input commands', () => {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       const { commands, errors } = createCommands(workspaceRoot, () => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'model-b', skills: [], mcpServers: [] });
@@ -369,7 +370,7 @@ describe('runtime session human input commands', () => {
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1' },
       ]);
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
@@ -377,7 +378,7 @@ describe('runtime session human input commands', () => {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       const { commands, errors } = createCommands(workspaceRoot, () => flow);
       commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'missing-model', skills: [], mcpServers: [] });
@@ -395,7 +396,7 @@ describe('runtime session human input commands', () => {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       writeSkill(workspaceRoot, 'review-writing');
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
@@ -403,7 +404,7 @@ describe('runtime session human input commands', () => {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
       SessionStore.saveRoleSession({
         roleName: 'planner',
         logicalSessionId: 'test-flow__planner',
@@ -411,7 +412,7 @@ describe('runtime session human input commands', () => {
         isActive: true,
         currentNodeId: 'plan',
         systemPrompt: 'Pre-selection prompt without skills.',
-      }, ref, workspaceRoot);
+      }, ref);
 
       const { commands, errors, historicalEvents } = createCommands(workspaceRoot, () => flow);
       commands.handleRoleConfiguration(ref, 'plan', {
@@ -421,7 +422,7 @@ describe('runtime session human input commands', () => {
 
       expect(errors).toEqual([]);
       expect(readCapabilitySelection(workspaceRoot, ref, 'planner')?.skills).toEqual(['review-writing']);
-      expect(SessionStore.loadRoleSession('planner', ref, workspaceRoot)?.systemPrompt).toBeUndefined();
+      expect(SessionStore.loadRoleSession('planner', ref)?.systemPrompt).toBeUndefined();
       expect(historicalEvents).toEqual([expect.objectContaining({
         kind: 'role.configured',
         nodeId: 'plan',
@@ -439,7 +440,7 @@ describe('runtime session human input commands', () => {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       writeSkill(workspaceRoot, 'review-writing');
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
@@ -447,7 +448,7 @@ describe('runtime session human input commands', () => {
           plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       const { commands, errors } = createCommands(workspaceRoot, () => flow);
       commands.handleRoleConfiguration(ref, 'plan', {
@@ -469,7 +470,7 @@ describe('runtime session human input commands', () => {
     try {
       setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
-      SessionStore.init(workspaceRoot);
+      SessionStore.init();
 
       const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
       const flow = makeFlowRun(workspaceRoot, {
@@ -478,12 +479,12 @@ describe('runtime session human input commands', () => {
           review: { role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN },
         },
       });
-      SessionStore.saveFlowRun(flow, ref, workspaceRoot);
+      SessionStore.saveFlowRun(flow, ref);
 
       const { commands, errors } = createCommands(workspaceRoot, () => flow);
       await commands.handleHumanInput(ref, 'use the cheap one', { nodeId: 'plan' });
 
-      const latest = SessionStore.loadFlowRun(ref, workspaceRoot)!;
+      const latest = SessionStore.loadFlowRun(ref)!;
       expect(latest.pendingHumanInputs).toEqual({});
       expect(errors).toEqual(["Node 'plan' is awaiting role configuration, not a text reply."]);
     } finally {

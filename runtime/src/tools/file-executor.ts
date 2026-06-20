@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import yaml from 'js-yaml';
 import type { FlowRef, FlowRun, ToolDefinition, ToolCall } from '../common/types.js';
 import { validateGraph } from '../framework-services/workflow-graph-validator.js';
-import { SessionStore } from '../orchestration/store.js';
+import * as SessionStore from '../orchestration/store.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
 import { CANONICAL_WORKFLOW_FILENAME, canonicalWorkflowDefinitionPath } from '../context/workflow-file.js';
 
@@ -140,7 +140,7 @@ export class FileToolExecutor {
     let flowState: FlowRun | null = null;
     if (this.recordWorkflowPath === resolvedPath) {
       try {
-        flowState = SessionStore.loadFlowRun(this.flowRef, this.workspaceRoot);
+        flowState = SessionStore.loadFlowRun(this.flowRef);
       } catch (err) {
         return [`Cannot load latest flow state for workflow validation: ${(err as Error).message}`];
       }

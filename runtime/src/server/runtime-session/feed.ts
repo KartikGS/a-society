@@ -5,7 +5,7 @@ import type {
   OperatorEvent,
   RoleSession,
 } from '../../common/types.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import { getFeedSettings } from '../../settings/settings-store.js';
 import type { HistoricalMessage } from '../protocol.js';
 import { getOperatorFeedRoleKey, projectMessageToFeedItem } from '../role-feed.js';
@@ -45,13 +45,12 @@ export function latestContextUsageFromSession(session: RoleSession | null): numb
 
 export function loadLatestContextUsageByRole(
   flowRef: FlowRef,
-  roleFeedHistory: Map<string, FeedItem[]>,
-  workspaceRoot: string
+  roleFeedHistory: Map<string, FeedItem[]>
 ): Record<string, number> {
   return Object.fromEntries(
     Array.from(roleFeedHistory.keys())
       .map((roleKey) => {
-        const session = SessionStore.loadRoleSession(roleKey, flowRef, workspaceRoot);
+        const session = SessionStore.loadRoleSession(roleKey, flowRef);
         const contextUsage = latestContextUsageFromSession(session);
         return contextUsage != null ? [roleKey, contextUsage] as const : null;
       })
@@ -71,8 +70,7 @@ function applyReasoningTraceToFeed(
   session: ActiveSession,
   history: FeedItem[],
   roleKey: string,
-  event: Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }>,
-  workspaceRoot: string
+  event: Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }>
 ): void {
   const previous = history[history.length - 1];
   if (previous?.type === 'reasoning') {
@@ -87,15 +85,14 @@ function applyReasoningTraceToFeed(
 
   pruneFeedHistory(history);
   session.roleFeedHistory.set(roleKey, history);
-  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+  SessionStore.saveRoleFeed(history, session.flowRef, roleKey);
 }
 
 function appendProjectedFeedItem(
   session: ActiveSession,
   history: FeedItem[],
   roleKey: string,
-  message: HistoricalMessage,
-  workspaceRoot: string
+  message: HistoricalMessage
 ): void {
   const id = nextFeedItemId(session, roleKey);
   const item = projectMessageToFeedItem(message, id);
@@ -104,20 +101,19 @@ function appendProjectedFeedItem(
   history.push(item);
   pruneFeedHistory(history);
   session.roleFeedHistory.set(roleKey, history);
-  SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+  SessionStore.saveRoleFeed(history, session.flowRef, roleKey);
 }
 
 export function rememberMessage(
   session: ActiveSession,
-  message: HistoricalMessage,
-  workspaceRoot: string
+  message: HistoricalMessage
 ): void {
   const roleKey = getOperatorFeedRoleKey(message);
   if (!roleKey) return;
   const history = session.roleFeedHistory.get(roleKey) ?? [];
 
   if (message.type === 'operator_event' && message.event.kind === 'provider.reasoning_trace') {
-    applyReasoningTraceToFeed(session, history, roleKey, message.event, workspaceRoot);
+    applyReasoningTraceToFeed(session, history, roleKey, message.event);
     return;
   }
 
@@ -128,7 +124,7 @@ export function rememberMessage(
       const realIdx = history.length - 1 - idx;
       history[realIdx] = { ...history[realIdx], type: isError ? 'tool-error' : 'tool-success' };
       session.roleFeedHistory.set(roleKey, history);
-      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey);
     }
     return;
   }
@@ -148,7 +144,7 @@ export function rememberMessage(
         text: projected.text,
       };
       session.roleFeedHistory.set(roleKey, history);
-      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey);
       return;
     }
 
@@ -170,10 +166,10 @@ export function rememberMessage(
         text: projected.text,
       };
       session.roleFeedHistory.set(roleKey, history);
-      SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+      SessionStore.saveRoleFeed(history, session.flowRef, roleKey);
       return;
     }
-    if (projected) appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
+    if (projected) appendProjectedFeedItem(session, history, roleKey, message);
     return;
   }
 
@@ -181,11 +177,11 @@ export function rememberMessage(
   if (previous?.type === 'assistant' && message.type === 'output_text') {
     history[history.length - 1] = { ...previous, text: previous.text + message.text };
     session.roleFeedHistory.set(roleKey, history);
-    SessionStore.saveRoleFeed(history, session.flowRef, roleKey, workspaceRoot);
+    SessionStore.saveRoleFeed(history, session.flowRef, roleKey);
     return;
   }
 
-  appendProjectedFeedItem(session, history, roleKey, message, workspaceRoot);
+  appendProjectedFeedItem(session, history, roleKey, message);
 }
 
 export function createRoleOutputStream(
