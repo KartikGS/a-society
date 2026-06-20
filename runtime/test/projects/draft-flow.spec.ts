@@ -96,7 +96,7 @@ describe('draft-flow', () => {
     const flow = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
     SessionStore.saveFlowRun(flow);
 
-    const loaded = SessionStore.loadFlowRun();
+    const loaded = SessionStore.loadFlowRun(SessionStore.flowRef(flow), workspaceRoot);
 
     expect(loaded?.recordFolderPath).toBe(flow.recordFolderPath);
   });

@@ -89,7 +89,7 @@ async function runTest() {
     ])
   ]);
 
-  const updated = SessionStore.loadFlowRun()!;
+  const updated = SessionStore.loadFlowRun(SessionStore.flowRef(flowRun), workspaceRoot)!;
   expect(['producer=>branch-a', 'producer=>branch-b', 'branch-c=>branch-b'].every(k => updated.completedHandoffs.includes(k))).toBeTruthy();
   expect(updated.receivingHandoff['producer=>branch-a']).toEqual([producerToARel]);
   expect(

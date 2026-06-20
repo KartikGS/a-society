@@ -146,7 +146,7 @@ async function runTest() {
 
     expect(assistantOut.includes('Enter 1, 2, or 3:')).toBeFalsy();
 
-    const finalFlow = SessionStore.loadFlowRun()!;
+    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
     expect(finalFlow.status).toBe('awaiting_improvement_choice');
     expect(finalFlow.improvementPhase?.status).toBe('awaiting_choice');
     expect(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase)).toBeTruthy();

@@ -23,7 +23,8 @@ async function runTest() {
 
     await expect(orchestrator.runStoredFlow(
       workspaceRoot,
-      projectNamespace
+      projectNamespace,
+      'nonexistent-flow'
     )).rejects.toThrow(/No active flow state found\. Create and persist a draft flow before starting orchestration\./);
   } finally {
     fs.rmSync(tmpBase, { recursive: true, force: true });

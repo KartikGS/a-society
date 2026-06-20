@@ -85,22 +85,15 @@ function validateAndHydrateFlow(flow: FlowRun, workspaceRoot: string, ref?: Flow
 
 export class SessionStore {
   private static defaultWorkspaceRoot = process.cwd();
-  private static currentFlowRef: FlowRef | null = null;
   private static flowUpdateLocks = new Map<string, Promise<void>>();
 
   static configure(workspaceRoot: string): void {
     SessionStore.defaultWorkspaceRoot = path.resolve(workspaceRoot);
   }
 
-  static init(workspaceRoot = SessionStore.defaultWorkspaceRoot, ref?: FlowRef): void {
+  static init(workspaceRoot = SessionStore.defaultWorkspaceRoot): void {
     SessionStore.configure(workspaceRoot);
     fs.mkdirSync(getStateRoot(workspaceRoot), { recursive: true });
-    if (ref) {
-      fs.mkdirSync(getFlowDir(workspaceRoot, ref), { recursive: true });
-      SessionStore.currentFlowRef = ref;
-    } else if (SessionStore.currentFlowRef && !fs.existsSync(getFlowPath(workspaceRoot, SessionStore.currentFlowRef))) {
-      SessionStore.currentFlowRef = null;
-    }
   }
 
   static flowRef(flow: FlowRun): FlowRef {
@@ -113,20 +106,14 @@ export class SessionStore {
     fs.mkdirSync(flowDir, { recursive: true });
     const { recordName: _recordName, recordSummary: _recordSummary, ...persisted } = flow;
     fs.writeFileSync(path.join(flowDir, 'flow.json'), JSON.stringify(persisted, null, 2));
-    SessionStore.currentFlowRef = ref;
   }
 
   static async updateFlowRun(
     mutator: (flow: FlowRun) => FlowRun | void | Promise<FlowRun | void>,
-    ref: FlowRef | null = SessionStore.currentFlowRef,
+    ref: FlowRef,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
   ): Promise<FlowRun> {
-    const resolvedRef = ref ?? SessionStore.currentFlowRef;
-    if (!resolvedRef) {
-      throw new Error('No active flow reference found.');
-    }
-
-    const key = `${path.resolve(workspaceRoot)}::${flowKey(resolvedRef)}`;
+    const key = `${path.resolve(workspaceRoot)}::${flowKey(ref)}`;
     const previous = SessionStore.flowUpdateLocks.get(key) ?? Promise.resolve();
     let release!: () => void;
     SessionStore.flowUpdateLocks.set(key, new Promise<void>((resolve) => {
@@ -135,48 +122,34 @@ export class SessionStore {
 
     await previous;
     try {
-      const flow = SessionStore.loadFlowRun(resolvedRef, workspaceRoot);
+      const flow = SessionStore.loadFlowRun(ref, workspaceRoot);
       if (!flow) {
         throw new Error('No active flow state found.');
       }
 
       const mutated = await mutator(flow);
       const nextFlow = mutated ?? flow;
-      SessionStore.saveFlowRun(nextFlow, resolvedRef, workspaceRoot);
+      SessionStore.saveFlowRun(nextFlow, ref, workspaceRoot);
       return nextFlow;
     } finally {
       release();
     }
   }
 
-  static loadFlowRun(ref?: FlowRef | null, workspaceRoot = SessionStore.defaultWorkspaceRoot): FlowRun | null {
+  static loadFlowRun(ref: FlowRef, workspaceRoot = SessionStore.defaultWorkspaceRoot): FlowRun | null {
     SessionStore.init(workspaceRoot);
 
-    if (ref) {
-      const flowPath = getFlowPath(workspaceRoot, ref);
-      if (!fs.existsSync(flowPath)) return null;
-      const flow = JSON.parse(fs.readFileSync(flowPath, 'utf8')) as FlowRun;
-      SessionStore.currentFlowRef = ref;
-      return validateAndHydrateFlow(flow, workspaceRoot, ref);
-    }
-
-    if (SessionStore.currentFlowRef) {
-      const flowPath = getFlowPath(workspaceRoot, SessionStore.currentFlowRef);
-      if (fs.existsSync(flowPath)) {
-        return SessionStore.loadFlowRun(SessionStore.currentFlowRef, workspaceRoot);
-      }
-    }
-
-    const single = SessionStore.findSingleFlowRef(workspaceRoot);
-    return single ? SessionStore.loadFlowRun(single, workspaceRoot) : null;
+    const flowPath = getFlowPath(workspaceRoot, ref);
+    if (!fs.existsSync(flowPath)) return null;
+    const flow = JSON.parse(fs.readFileSync(flowPath, 'utf8')) as FlowRun;
+    return validateAndHydrateFlow(flow, workspaceRoot, ref);
   }
 
   static saveRoleSession(
     session: RoleSession,
-    ref: FlowRef | null = SessionStore.currentFlowRef,
+    ref: FlowRef,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
   ): void {
-    if (!ref) return;
     const roleKey = parseRoleIdentity(session.roleName).instanceRoleId;
     const dir = getRoleDir(workspaceRoot, ref, roleKey);
     fs.mkdirSync(dir, { recursive: true });
@@ -185,10 +158,9 @@ export class SessionStore {
 
   static loadRoleSession(
     roleKey: string,
-    ref: FlowRef | null = SessionStore.currentFlowRef,
+    ref: FlowRef,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
   ): RoleSession | null {
-    if (!ref) return null;
     const transcriptPath = getRoleTranscriptPath(workspaceRoot, ref, roleKey);
     if (!fs.existsSync(transcriptPath)) return null;
     return JSON.parse(fs.readFileSync(transcriptPath, 'utf8')) as RoleSession;
@@ -196,10 +168,9 @@ export class SessionStore {
 
   static deleteRoleSession(
     roleKey: string,
-    ref: FlowRef | null = SessionStore.currentFlowRef,
+    ref: FlowRef,
     workspaceRoot = SessionStore.defaultWorkspaceRoot,
   ): void {
-    if (!ref) return;
     const transcriptPath = getRoleTranscriptPath(workspaceRoot, ref, roleKey);
     if (fs.existsSync(transcriptPath)) {
       fs.unlinkSync(transcriptPath);
@@ -274,13 +245,6 @@ export class SessionStore {
     if (fs.existsSync(flowDir)) {
       fs.rmSync(flowDir, { recursive: true, force: true });
     }
-
-    if (
-      SessionStore.currentFlowRef?.projectNamespace === ref.projectNamespace &&
-      SessionStore.currentFlowRef?.flowId === ref.flowId
-    ) {
-      SessionStore.currentFlowRef = null;
-    }
   }
 
   static listFlowSummaries(workspaceRoot: string, projectNamespace: string): FlowSummary[] {
@@ -340,26 +304,5 @@ export class SessionStore {
 
     summaries.sort((left, right) => (right.updatedAt ?? '').localeCompare(left.updatedAt ?? ''));
     return summaries;
-  }
-
-  private static findSingleFlowRef(workspaceRoot: string): FlowRef | null {
-    const stateRoot = getStateRoot(workspaceRoot);
-    if (!fs.existsSync(stateRoot)) return null;
-
-    const refs: FlowRef[] = [];
-    for (const projectEntry of fs.readdirSync(stateRoot, { withFileTypes: true })) {
-      if (!projectEntry.isDirectory()) continue;
-      const projectNamespace = projectEntry.name;
-      const projectDir = path.join(stateRoot, projectNamespace);
-      for (const flowEntry of fs.readdirSync(projectDir, { withFileTypes: true })) {
-        if (!flowEntry.isDirectory()) continue;
-        const ref = { projectNamespace, flowId: flowEntry.name };
-        if (fs.existsSync(getFlowPath(workspaceRoot, ref))) {
-          refs.push(ref);
-        }
-      }
-    }
-
-    return refs.length === 1 ? refs[0] : null;
   }
 }

@@ -143,7 +143,7 @@ async function runTest() {
     );
 
     const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
-    const session = SessionStore.loadRoleSession('start');
+    const session = SessionStore.loadRoleSession('start', { projectNamespace, flowId }, workspaceRoot);
     const history = session?.transcriptHistory as any[];
 
     // The repair message injected into history is the model-facing repair message

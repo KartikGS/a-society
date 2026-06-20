@@ -114,7 +114,7 @@ export class FlowOrchestrator {
   public async runStoredFlow(
     workspaceRoot: string,
     projectNamespace: string,
-    flowId?: string,
+    flowId: string,
     outputStreamFactory?: (role: string) => NodeJS.WritableStream,
     consentGate?: ConsentGate,
     mcpManagers?: Map<string, McpManager>
@@ -125,8 +125,7 @@ export class FlowOrchestrator {
     return tracer.startActiveSpan('flow.run', { kind: SpanKind.INTERNAL }, async (rootSpan) => {
       try {
         SessionStore.init(workspaceRoot);
-        const requestedRef = flowId ? { projectNamespace, flowId } : undefined;
-        let flowRun = SessionStore.loadFlowRun(requestedRef, workspaceRoot);
+        let flowRun = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot);
 
         rootSpan.addEvent('flow.started', { 'flow.resumed': flowRun !== null });
         rootSpan.setAttribute('flow.id', 'pending');
