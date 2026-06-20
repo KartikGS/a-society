@@ -1,4 +1,4 @@
-import express, { type Express } from 'express';
+import express from 'express';
 import path from 'node:path';
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
@@ -6,7 +6,7 @@ import { TelemetryManager } from '../observability/observability.js';
 import { SessionStore } from '../orchestration/store.js';
 import { CLIENT_MESSAGE_TYPE } from '../../shared/protocol-constants.js';
 import { discoverProjects } from '../projects/project-discovery.js';
-import * as SettingsStore from '../settings/settings-store.js';
+import { setWorkspaceRoot } from '../common/workspace.js';
 import { createFlowReadModel } from './flow-read-model.js';
 import { registerFlowRoutes } from './flow-routes.js';
 import { parseClientMessage } from './protocol.js';
@@ -16,8 +16,8 @@ import { SocketHub } from './socket-hub.js';
 import { registerStaticUi } from './static-ui.js';
 
 function buildServer(workspaceRoot: string) {
+  setWorkspaceRoot(workspaceRoot);
   SessionStore.init(workspaceRoot);
-  SettingsStore.configureSettingsStore(workspaceRoot);
 
   const app = express();
   const httpServer = http.createServer(app);
@@ -224,11 +224,6 @@ function buildServer(workspaceRoot: string) {
   });
 
   return { app, httpServer, wss };
-}
-
-export function createServer(workspaceRoot: string): { app: Express; wss: WebSocketServer } {
-  const { app, wss } = buildServer(path.resolve(workspaceRoot));
-  return { app, wss };
 }
 
 export async function startServer(workspaceRoot: string, port: number): Promise<void> {

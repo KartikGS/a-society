@@ -23,6 +23,7 @@ import { LLMGateway } from '../../src/providers/llm.js';
 import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
@@ -209,6 +210,7 @@ async function runStoredFlowUntil(
   flowId: string,
   predicate: () => boolean
 ): Promise<void> {
+  setWorkspaceRoot(workspaceRoot);
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
     await waitUntil(predicate);
@@ -260,6 +262,7 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
 }
 
 it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
+    setWorkspaceRoot(workspaceRoot);
     const { bundleContent } = ContextInjectionService.buildContextBundle(
       projectNamespace,
       'owner',

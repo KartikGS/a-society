@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { DISABLED_REASONING, normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { normalizePromptCacheTtl } from '../common/types.js';
 import type {
@@ -90,14 +91,8 @@ export const MAX_FEED_HISTORY_LIMIT = 10000;
 const WEB_SEARCH_SECRET_KEY = '__tool_web_search_tavily_api_key';
 const MCP_SERVER_NAME_PATTERN = /^[a-z0-9-]{1,32}$/;
 
-let defaultWorkspaceRoot = process.cwd();
-
-export function configureSettingsStore(workspaceRoot: string): void {
-  defaultWorkspaceRoot = path.resolve(workspaceRoot);
-}
-
 function getSettingsDir(): string {
-  return path.join(defaultWorkspaceRoot, '.a-society');
+  return path.join(getWorkspaceRoot(), '.a-society');
 }
 
 function getSettingsPath(): string {

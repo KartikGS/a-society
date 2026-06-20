@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { expect, it } from 'vitest';
 import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
@@ -93,6 +94,7 @@ async function runTest() {
   const closureArtifactPath = path.join(recordPath, 'closure-artifact.md');
   fs.writeFileSync(closureArtifactPath, "Forward pass closure artifact.");
 
+  setWorkspaceRoot(workspaceRoot);
   SessionStore.init(workspaceRoot);
   SessionStore.saveFlowRun({
     flowId,

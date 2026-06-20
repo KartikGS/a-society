@@ -8,7 +8,7 @@ import { readCapabilitySelection, saveCapabilityDimension } from '../../src/orch
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
-import { configureSettingsStore } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
 function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): FlowRun {
@@ -88,13 +88,13 @@ Body.
 
 describe('runtime session human input commands', () => {
   afterEach(() => {
-    configureSettingsStore(process.cwd());
+    setWorkspaceRoot(process.cwd());
   });
 
   it('does not queue forward human input when the latest flow no longer has an awaiting node', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-human-input-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       SessionStore.init(workspaceRoot);
 
@@ -120,7 +120,7 @@ describe('runtime session human input commands', () => {
   it('queues human input for an awaiting-handoff node resolved by role', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-await-handoff-input-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       SessionStore.init(workspaceRoot);
 
@@ -152,7 +152,7 @@ describe('runtime session human input commands', () => {
   it('prefers the awaiting-human node over an awaiting-handoff node when a role is ambiguous', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-ambiguous-role-input-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       SessionStore.init(workspaceRoot);
 
@@ -193,7 +193,7 @@ describe('runtime session human input commands', () => {
   it('does not queue awaiting-handoff human input when the latest flow no longer awaits handoff', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-stale-await-handoff-input-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       SessionStore.init(workspaceRoot);
 
@@ -263,7 +263,7 @@ describe('runtime session human input commands', () => {
   it('persists role configuration for an awaiting node and marks it in the role feed', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', displayName: 'Model B' },
@@ -298,7 +298,7 @@ describe('runtime session human input commands', () => {
   it('shows the full effective configuration in the result bubble, including auto-decided skills', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-mixed-config-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', displayName: 'Model B' },
@@ -336,7 +336,7 @@ describe('runtime session human input commands', () => {
   it('rejects role configuration for a node that is not awaiting it', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-stale-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1' },
@@ -364,7 +364,7 @@ describe('runtime session human input commands', () => {
   it('rejects role configuration that references an unknown model', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-unknown-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1' },
@@ -392,7 +392,7 @@ describe('runtime session human input commands', () => {
   it('persists selected skills and clears the pre-selection system prompt', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-role-config-skills-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       writeSkill(workspaceRoot, 'review-writing');
       SessionStore.init(workspaceRoot);
@@ -436,7 +436,7 @@ describe('runtime session human input commands', () => {
   it('rejects role configuration with an unknown skill', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-role-config-unknown-skill-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       writeSkill(workspaceRoot, 'review-writing');
       SessionStore.init(workspaceRoot);
@@ -467,7 +467,7 @@ describe('runtime session human input commands', () => {
   it('refuses a text reply targeted at a node awaiting role configuration', async () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-model-selection-text-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
       SessionStore.init(workspaceRoot);
 

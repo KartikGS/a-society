@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ContextInjectionService } from '../../src/context/injection.js';
 import { saveCapabilitySelection } from '../../src/orchestration/capability-selection.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
@@ -26,6 +27,7 @@ function createWorkspace(): string {
   fs.writeFileSync(path.join(projectDir, 'a-docs', 'agents.md'), 'Agent orientation');
   fs.writeFileSync(path.join(projectDir, 'a-docs', 'roles', 'owner', 'main.md'), 'Owner role doc');
   fs.writeFileSync(path.join(projectDir, 'artifact.md'), 'Artifact body');
+  setWorkspaceRoot(tmpDir);
   return tmpDir;
 }
 

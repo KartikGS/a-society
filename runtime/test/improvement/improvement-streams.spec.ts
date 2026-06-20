@@ -22,6 +22,7 @@ import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
@@ -29,6 +30,7 @@ function createWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-improvement-streams-'));
   tempDirs.add(dir);
   seedTestModelSettings(path.join(dir, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+  setWorkspaceRoot(dir);
   return dir;
 }
 

@@ -2,7 +2,6 @@ import { LLMGateway } from '../providers/llm.js';
 import type { FlowRef, OperatorRenderSink, RuntimeMessageParam } from '../common/types.js';
 import type { SkillSummary } from '../framework-services/skills.js';
 import {
-  configureSettingsStore,
   getActiveModelWithKey,
   getAutomationSettings,
   getModelWithKey,
@@ -297,7 +296,6 @@ async function runSelectionTurn(options: {
  */
 export async function autoResolveRoleConfiguration(options: AutoResolveOptions): Promise<AutoSelectionResult> {
   const { workspaceRoot, ref, roleInstanceId, nodeId, renderer, signal } = options;
-  configureSettingsStore(workspaceRoot);
   const automation = getAutomationSettings();
 
   const modelGate = resolveRoleModelGate(workspaceRoot, ref, roleInstanceId);

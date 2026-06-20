@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  configureSettingsStore,
   createModel,
   createMcpServer,
   deleteMcpServer,
@@ -21,6 +20,7 @@ import {
   updateFeedSettings,
   updateWebSearchToolSettings,
 } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 let tmpDir: string;
 
@@ -41,11 +41,11 @@ function createWorkspaceModel(apiKey = 'workspace-key') {
 describe('settings-store', () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-store-'));
-    configureSettingsStore(tmpDir);
+    setWorkspaceRoot(tmpDir);
   });
 
   afterEach(() => {
-    configureSettingsStore(process.cwd());
+    setWorkspaceRoot(process.cwd());
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 

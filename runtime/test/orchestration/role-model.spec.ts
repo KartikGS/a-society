@@ -9,14 +9,14 @@ import {
   saveRoleModelSelection,
 } from '../../src/orchestration/role-model.js';
 import { getFlowDir } from '../../src/orchestration/state-paths.js';
-import { configureSettingsStore } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
 const REF = { projectNamespace: 'test-project', flowId: 'test-flow' };
 
 function makeWorkspace(prefix: string): string {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  configureSettingsStore(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
   return workspaceRoot;
 }
 
@@ -35,7 +35,7 @@ function selection(modelConfigId: string) {
 
 describe('role model selection store', () => {
   afterEach(() => {
-    configureSettingsStore(process.cwd());
+    setWorkspaceRoot(process.cwd());
   });
 
   it('round-trips a selection in the role state folder for the flow', () => {

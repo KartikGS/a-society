@@ -7,6 +7,7 @@ import { validateModelConfiguration } from '../../src/providers/model-validation
 import { validateMcpServerConfiguration } from '../../src/providers/mcp/validate.js';
 import { registerSettingsRoutes } from '../../src/server/settings-routes.js';
 import * as SettingsStore from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 vi.mock('../../src/providers/model-validation.js', () => ({
   validateModelConfiguration: vi.fn(),
@@ -24,7 +25,7 @@ beforeEach(() => {
   validateModelConfigurationMock.mockReset();
   validateMcpServerConfigurationMock.mockReset();
   workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
-  SettingsStore.configureSettingsStore(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
 });
 
 interface MockResponse {

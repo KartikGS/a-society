@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
 import {
-  configureSettingsStore,
   getActiveModelWithKey,
   getModelWithKey,
   isUsableModelConfig,
@@ -73,7 +72,6 @@ function selectedUsableModel(workspaceRoot: string, ref: FlowRef, roleInstanceId
  * no longer usable) re-enters the gate instead of silently falling back.
  */
 export function resolveRoleModelGate(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): RoleModelGate {
-  configureSettingsStore(workspaceRoot);
   const selected = selectedUsableModel(workspaceRoot, ref, roleInstanceId);
   if (selected) return { kind: 'ready', model: selected };
 
@@ -90,6 +88,5 @@ export function resolveRoleModelGate(workspaceRoot: string, ref: FlowRef, roleIn
  * usable, otherwise the active model.
  */
 export function resolveRoleModel(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): ModelConfigWithKey | null {
-  configureSettingsStore(workspaceRoot);
   return selectedUsableModel(workspaceRoot, ref, roleInstanceId) ?? getActiveModelWithKey();
 }

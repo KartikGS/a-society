@@ -9,7 +9,7 @@ import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-sea
 import { McpToolExecutor } from '../tools/mcp-executor.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
+import { getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
 import type { McpManager } from './mcp/manager.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
@@ -78,7 +78,6 @@ export class LLMGateway {
 
   constructor(options: LLMGatewayOptions) {
     const workspaceRoot = path.resolve(options.workspaceRoot);
-    configureSettingsStore(workspaceRoot);
     this.cacheTurnDefault = options.mode === 'project';
 
     if (options.provider) {

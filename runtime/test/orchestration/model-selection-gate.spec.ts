@@ -10,7 +10,8 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { saveRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { getFlowDir, getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { SessionStore } from '../../src/orchestration/store.js';
-import { configureSettingsStore, updateAutomationSettings } from '../../src/settings/settings-store.js';
+import { updateAutomationSettings } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import { listenOnLocalhost, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
@@ -94,6 +95,7 @@ it('suspends first role activation for role configuration and resumes each role 
   const port = await listenOnLocalhost(server);
 
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'model-selection-gate-'));
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const flowId = 'model-selection-flow';
   const flowRef = { projectNamespace, flowId };
@@ -217,7 +219,7 @@ it('auto-resolves skills without suspending and injects them into the role syste
   seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
     { id: 'model-a', providerBaseUrl: `http://127.0.0.1:${port}/v1`, active: true },
   ]);
-  configureSettingsStore(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
   updateAutomationSettings({ skills: 'auto' });
   writeSkill(workspaceRoot, 'review-writing');
   scaffoldProjectDocs(workspaceRoot, projectNamespace, ['start', 'next']);
@@ -301,6 +303,7 @@ it('claims a persisted model-selection wait on cold resume once a selection exis
   const port = await listenOnLocalhost(server);
 
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'model-selection-resume-'));
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const flowId = 'model-selection-resume-flow';
   const flowRef = { projectNamespace, flowId };
@@ -385,6 +388,7 @@ it('suspends for skills-only role configuration and persists an empty skip selec
   const port = await listenOnLocalhost(server);
 
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'skills-only-role-config-'));
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const flowId = 'skills-only-flow';
   const flowRef = { projectNamespace, flowId };

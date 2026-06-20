@@ -7,7 +7,8 @@ import { SessionStore } from '../../src/orchestration/store.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { getOperatorFeedRoleKey, isTransientOperatorEvent, projectMessageToFeedItem } from '../../src/server/role-feed.js';
 import { rememberMessage } from '../../src/server/runtime-session/feed.js';
-import { configureSettingsStore, updateFeedSettings } from '../../src/settings/settings-store.js';
+import { updateFeedSettings } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import type { FeedItem, FlowRef, FlowRun, GatewayTurnResult, OperatorEvent, RoleSession } from '../../src/common/types.js';
 import { LLMGateway } from '../../src/providers/llm.js';
@@ -71,7 +72,7 @@ function scaffoldRole(workspaceRoot: string, projectNamespace: string, roleId: s
 describe('operator-feed', () => {
   afterEach(() => {
     vi.restoreAllMocks();
-    configureSettingsStore(process.cwd());
+    setWorkspaceRoot(process.cwd());
     for (const dir of tempDirs) {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -543,7 +544,7 @@ describe('operator-feed', () => {
   it('prunes role feed history using configured feed settings', () => {
     const { tmpDir, ref } = createFixture();
     const settingsDir = createTempDir('a-society-feed-settings-');
-    configureSettingsStore(settingsDir);
+    setWorkspaceRoot(settingsDir);
     updateFeedSettings({ historyLimit: 50 });
     const activeSession = createActiveSession(ref);
 

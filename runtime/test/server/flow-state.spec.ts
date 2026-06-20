@@ -6,18 +6,18 @@ import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../../src/common/types
 import { saveRoleModelSelection } from '../../src/orchestration/role-model.js';
 import { SessionStore } from '../../src/orchestration/store.js';
 import { buildFlowStateMessage } from '../../src/server/runtime-session/flow-state.js';
-import { configureSettingsStore } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
 describe('flow state message', () => {
   afterEach(() => {
-    configureSettingsStore(process.cwd());
+    setWorkspaceRoot(process.cwd());
   });
 
   it('reports each role context window from its resolved per-flow model', () => {
     const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'flow-state-windows-'));
     try {
-      configureSettingsStore(workspaceRoot);
+      setWorkspaceRoot(workspaceRoot);
       seedTestMultiModelSettings(path.join(workspaceRoot, '.a-society'), [
         { id: 'model-a', providerBaseUrl: 'http://127.0.0.1:1/v1', contextWindow: 10_000, active: true },
         { id: 'model-b', providerBaseUrl: 'http://127.0.0.1:1/v1', contextWindow: 200_000 },

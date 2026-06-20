@@ -10,11 +10,14 @@ import {
   saveCapabilitySelection,
 } from '../../src/orchestration/capability-selection.js';
 import { getFlowDir } from '../../src/orchestration/state-paths.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const REF = { projectNamespace: 'test-project', flowId: 'test-flow' };
 
 function makeWorkspace(prefix: string): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  setWorkspaceRoot(dir);
+  return dir;
 }
 
 function writeSkill(workspaceRoot: string, name: string): void {

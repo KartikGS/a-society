@@ -1,4 +1,5 @@
 import { SessionStore } from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import type { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 2_000): Promise<void> {
@@ -16,6 +17,7 @@ export async function runStoredFlowUntil(
   flowId: string,
   predicate: () => boolean
 ): Promise<void> {
+  setWorkspaceRoot(workspaceRoot);
   const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
   try {
     await waitUntil(predicate);

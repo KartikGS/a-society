@@ -6,7 +6,8 @@ import type { GatewayTurnResult, OperatorEvent, OperatorRenderSink, RuntimeMessa
 import { autoResolveRoleConfiguration } from '../../src/orchestration/auto-capability-selection.js';
 import { readCapabilitySelection, resolveCapabilityGate } from '../../src/orchestration/capability-selection.js';
 import { readRoleModelSelection } from '../../src/orchestration/role-model.js';
-import { configureSettingsStore, createMcpServer, updateAutomationSettings } from '../../src/settings/settings-store.js';
+import { createMcpServer, updateAutomationSettings } from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
 
@@ -62,6 +63,7 @@ describe('auto capability selection', () => {
     const workspaceRoot = makeWorkspace();
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
+    setWorkspaceRoot(workspaceRoot);
     const turnSpy = vi.spyOn(LLMGateway.prototype, 'executeTurn');
     const events: OperatorEvent[] = [];
 
@@ -78,7 +80,7 @@ describe('auto capability selection', () => {
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
     writeSkill(workspaceRoot, 'doc-editing', 'Edit docs.');
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     updateAutomationSettings({ skills: 'auto' });
     mockTurn(JSON.stringify({ skills: ['review-writing'] }));
     const events: OperatorEvent[] = [];
@@ -99,7 +101,7 @@ describe('auto capability selection', () => {
     const workspaceRoot = makeWorkspace();
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     updateAutomationSettings({ skills: 'auto' });
 
     let userPrompt = '';
@@ -129,7 +131,7 @@ describe('auto capability selection', () => {
       { id: 'model-a', displayName: 'Model A', providerBaseUrl: 'http://127.0.0.1:1/v1', active: true },
       { id: 'model-b', displayName: 'Model B', providerBaseUrl: 'http://127.0.0.1:1/v1' },
     ]);
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     updateAutomationSettings({ models: 'auto' });
     mockTurn(JSON.stringify({ modelConfigId: 'model-b' }));
 
@@ -144,7 +146,7 @@ describe('auto capability selection', () => {
     const workspaceRoot = makeWorkspace();
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     updateAutomationSettings({ skills: 'auto' });
 
     let attempt = 0;
@@ -170,7 +172,7 @@ describe('auto capability selection', () => {
     const workspaceRoot = makeWorkspace();
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     updateAutomationSettings({ skills: 'auto' });
     vi.spyOn(LLMGateway.prototype, 'executeTurn').mockRejectedValue(new Error('network down'));
     const events: OperatorEvent[] = [];
@@ -187,7 +189,7 @@ describe('auto capability selection', () => {
     const workspaceRoot = makeWorkspace();
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     updateAutomationSettings({ skills: 'auto' });
     mockTurn(JSON.stringify({ skills: ['review-writing', 'does-not-exist'] }));
 
@@ -200,7 +202,7 @@ describe('auto capability selection', () => {
     const workspaceRoot = makeWorkspace();
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
     writeSkill(workspaceRoot, 'review-writing', 'Write reviews.');
-    configureSettingsStore(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
     createMcpServer({ name: 'my-server', transport: 'http', url: 'http://127.0.0.1:1/mcp', toolNames: ['do_thing'] });
     updateAutomationSettings({ skills: 'auto', mcpServers: 'manual' });
     mockTurn(JSON.stringify({ skills: ['review-writing'] }));

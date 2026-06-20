@@ -8,6 +8,7 @@ import { runRoleTurn } from '../../src/common/role-turn.js';
 import { HandoffParseError } from '../../src/orchestration/handoff.js';
 import { LLMGateway, LLMGatewayError } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 const flowRef = { projectNamespace: 'a-society', flowId: 'role-turn-flow' };
@@ -16,6 +17,7 @@ function createWorkspace(): string {
   const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-role-turn-'));
   tempDirs.add(workspaceRoot);
   seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+  setWorkspaceRoot(workspaceRoot);
   return workspaceRoot;
 }
 

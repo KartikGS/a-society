@@ -14,6 +14,7 @@ import { HandoffParseError } from '../../src/orchestration/handoff.js';
 import { TelemetryManager } from '../../src/observability/observability.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { AnthropicProvider } from '../../src/providers/anthropic.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { OpenAICompatibleProvider } from '../../src/providers/openai-compatible.js';
 import {
   ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS,
@@ -121,6 +122,7 @@ describe('observability', () => {
     await setupTestTelemetry();
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-observability-'));
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+    setWorkspaceRoot(workspaceRoot);
   });
 
   beforeEach(() => {

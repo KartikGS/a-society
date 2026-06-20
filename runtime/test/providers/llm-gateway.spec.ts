@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { LLMGateway, LLMGatewayError } from '../../src/providers/llm.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { CONSENT_CHECK_RESULT, defaultConsentState } from '../../src/common/types.js';
 import type {
   ConsentCheckRequest,
@@ -132,7 +133,9 @@ class BlockingConsentGate implements ConsentGate {
 }
 
 function createTempWorkspace(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  setWorkspaceRoot(dir);
+  return dir;
 }
 
 async function expectGatewayError(

@@ -1,6 +1,6 @@
 import type { FlowRef } from '../common/types.js';
 import { listSkills } from '../framework-services/skills.js';
-import { configureSettingsStore, listMcpServerSummaries, listModels } from '../settings/settings-store.js';
+import { listMcpServerSummaries, listModels } from '../settings/settings-store.js';
 import { resolveEffectiveCapabilities } from './capability-selection.js';
 import { resolveRoleModel } from './role-model.js';
 
@@ -21,7 +21,6 @@ export function buildRoleConfigurationSummary(
   ref: FlowRef,
   roleInstanceId: string
 ): RoleConfigurationSummary {
-  configureSettingsStore(workspaceRoot);
   const effective = resolveEffectiveCapabilities(workspaceRoot, ref, roleInstanceId);
   const mcpNameById = new Map(listMcpServerSummaries().map((server) => [server.id, server.name]));
   return {

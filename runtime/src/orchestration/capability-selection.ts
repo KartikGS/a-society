@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
 import { listSkills } from '../framework-services/skills.js';
-import { configureSettingsStore, listMcpServerSummaries } from '../settings/settings-store.js';
+import { listMcpServerSummaries } from '../settings/settings-store.js';
 import { getRoleStateFilePath } from './state-paths.js';
 import type { SkillSummary } from '../../shared/skills.js';
 import type { McpServerSummary } from '../../shared/settings.js';
@@ -43,10 +43,7 @@ function capabilitySelectionPath(workspaceRoot: string, ref: FlowRef, roleInstan
   return getRoleStateFilePath(workspaceRoot, ref, roleInstanceId, 'capabilities.json');
 }
 
-export function listMcpServers(workspaceRoot?: string): McpServerSummary[] {
-  if (workspaceRoot) {
-    configureSettingsStore(workspaceRoot);
-  }
+export function listMcpServers(): McpServerSummary[] {
   return listMcpServerSummaries();
 }
 
@@ -152,7 +149,7 @@ export function saveCapabilityDimension(
  */
 export function resolveCapabilityGate(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): CapabilityGate {
   const skills = listSkills(workspaceRoot);
-  const mcpServers = listMcpServers(workspaceRoot);
+  const mcpServers = listMcpServers();
   const selection = readCapabilitySelection(workspaceRoot, ref, roleInstanceId);
 
   const pendingSkills = skills.length > 0 && !(selection?.skillsDecided ?? false);
@@ -172,7 +169,7 @@ export function resolveEffectiveCapabilities(
 ): EffectiveCapabilities {
   const selection = readCapabilitySelection(workspaceRoot, ref, roleInstanceId);
   const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
-  const validMcpServerIds = new Set(listMcpServers(workspaceRoot).map((server) => server.id));
+  const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
 
   return {
     skills: (selection?.skills ?? [])
