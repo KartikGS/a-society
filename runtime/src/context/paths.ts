@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { getWorkspaceRoot } from '../common/workspace.js';
 
 /**
  * Resolves a framework variable (e.g., "$A_SOCIETY_AGENTS")
@@ -13,9 +14,9 @@ import path from 'node:path';
  */
 export function resolveVariableFromIndex(
   variable: string,
-  workspaceRoot: string,
   projectNamespace: string
 ): string | null {
+  const workspaceRoot = getWorkspaceRoot();
   const generalIndex = path.join(workspaceRoot, projectNamespace, 'index.md');
   const internalIndex = path.join(workspaceRoot, projectNamespace, 'a-docs', 'indexes', 'main.md');
 

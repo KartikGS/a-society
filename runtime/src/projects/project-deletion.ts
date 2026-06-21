@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { assertSafeStateSegment, getProjectStateDir } from '../orchestration/state-paths.js';
 
 const FRAMEWORK_PROJECT_NAMESPACE = 'a-society';
@@ -37,11 +38,11 @@ function ensureDirectoryIfPresent(label: string, dirPath: string): boolean {
   return true;
 }
 
-export function deleteProject(workspaceRoot: string, projectNamespace: string): DeleteProjectResult {
+export function deleteProject(projectNamespace: string): DeleteProjectResult {
   const safeProject = validateProjectNamespaceForDeletion(projectNamespace);
-  const resolvedWorkspaceRoot = path.resolve(workspaceRoot);
+  const resolvedWorkspaceRoot = getWorkspaceRoot();
   const projectRoot = path.join(resolvedWorkspaceRoot, safeProject);
-  const stateProjectRoot = getProjectStateDir(resolvedWorkspaceRoot, safeProject);
+  const stateProjectRoot = getProjectStateDir(safeProject);
 
   const removedProjectRoot = ensureDirectoryIfPresent('Project folder', projectRoot);
   const removedStateProjectRoot = ensureDirectoryIfPresent('Project state folder', stateProjectRoot);

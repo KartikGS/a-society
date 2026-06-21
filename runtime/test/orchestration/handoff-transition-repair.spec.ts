@@ -6,7 +6,8 @@ import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../../src/common/types
 import { HandoffParseError } from '../../src/orchestration/handoff.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 const tempDirs = new Set<string>();
@@ -14,6 +15,7 @@ const tempDirs = new Set<string>();
 function createWorkspace(prefix: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tempDirs.add(dir);
+  setWorkspaceRoot(dir);
   return dir;
 }
 
@@ -31,7 +33,7 @@ function createFlowRun(
   flowId: string,
   overrides: Partial<FlowRun> = {}
 ): FlowRun {
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
   return {
     flowId,
@@ -57,7 +59,7 @@ function setupProject(prefix: string) {
   const workspaceRoot = createWorkspace(prefix);
   const projectNamespace = 'test-project';
   const flowId = 'test-flow';
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
   scaffoldRole(workspaceRoot, projectNamespace, 'owner');
   scaffoldRole(workspaceRoot, projectNamespace, 'curator');
@@ -70,6 +72,7 @@ describe('handoff-transition-repair', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('accepts partial forward handoff and leaves remaining successors unresolved', async () => {
@@ -96,7 +99,7 @@ describe('handoff-transition-repair', () => {
       runningNodes: ['owner-intake'],
       visitedNodeIds: ['owner-intake'],
     });
-    SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, ref);
 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     await orchestrator.applyHandoffAndAdvance(flowRun, 'owner-intake', 'owner', [
@@ -106,7 +109,7 @@ describe('handoff-transition-repair', () => {
       },
     ]);
 
-    const updated = SessionStore.loadFlowRun(ref, workspaceRoot);
+    const updated = SessionStore.loadFlowRun(ref);
     expect(updated?.receivingHandoff['owner-intake=>branch-a']).toEqual([path.relative(workspaceRoot, artifactPath)]);
     expect(updated?.completedHandoffs).toContain('owner-intake=>branch-a');
     expect(updated?.completedHandoffs).not.toContain('owner-intake=>branch-b');
@@ -130,7 +133,7 @@ describe('handoff-transition-repair', () => {
       runningNodes: ['owner-intake'],
       visitedNodeIds: ['owner-intake'],
     });
-    SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, ref);
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
 
     let error: unknown;
@@ -191,7 +194,7 @@ describe('handoff-transition-repair', () => {
         'source-b=>current': ['source-b.md'],
       },
     });
-    SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, ref);
 
     const sink = new RecordingOperatorSink();
     const orchestrator = new FlowOrchestrator(sink);
@@ -206,7 +209,7 @@ describe('handoff-transition-repair', () => {
       },
     ]);
 
-    const updated = SessionStore.loadFlowRun(ref, workspaceRoot);
+    const updated = SessionStore.loadFlowRun(ref);
     expect(updated?.receivingHandoff['current=>sink']).toEqual([path.relative(workspaceRoot, forwardArtifact)]);
     expect(updated?.receivingHandoff['current=>source-b']).toEqual([path.relative(workspaceRoot, backwardArtifact)]);
     expect(updated?.completedHandoffs).toContain('current=>sink');

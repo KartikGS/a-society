@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { FlowRef, LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
@@ -9,7 +8,7 @@ import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-sea
 import { McpToolExecutor } from '../tools/mcp-executor.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
+import { getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
 import type { McpManager } from './mcp/manager.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
@@ -18,7 +17,6 @@ export { LLMGatewayError } from '../common/types.js';
 export type LLMGatewayOptions =
   | {
       mode: 'project';
-      workspaceRoot: string;
       flowRef: FlowRef;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
@@ -26,7 +24,6 @@ export type LLMGatewayOptions =
     }
   | {
       mode: 'system';
-      workspaceRoot: string;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
     };
@@ -77,8 +74,6 @@ export class LLMGateway {
   private cacheTurnDefault: boolean;
 
   constructor(options: LLMGatewayOptions) {
-    const workspaceRoot = path.resolve(options.workspaceRoot);
-    configureSettingsStore(workspaceRoot);
     this.cacheTurnDefault = options.mode === 'project';
 
     if (options.provider) {
@@ -88,8 +83,8 @@ export class LLMGateway {
     }
 
     if (options.mode === 'project') {
-      this.fileExecutor = new FileToolExecutor(workspaceRoot, options.flowRef);
-      this.bashExecutor = new BashToolExecutor(workspaceRoot);
+      this.fileExecutor = new FileToolExecutor(options.flowRef);
+      this.bashExecutor = new BashToolExecutor();
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();
       if (tavilyKey) {

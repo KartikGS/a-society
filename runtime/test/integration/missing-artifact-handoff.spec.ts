@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import type { OperatorEvent } from '../../src/common/types.js';
@@ -24,6 +25,7 @@ async function runTest() {
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'missing-artifact-handoff-test-'));
   const workspaceRoot = tmpBase;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.a-society', 'state');
@@ -33,7 +35,7 @@ async function runTest() {
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const flowId = 'test-missing-artifact-flow-id';
-  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
   const rolesDir = path.join(projectADocsPath, 'roles');
@@ -67,7 +69,8 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -112,10 +115,10 @@ async function runTest() {
   try {
     await runStoredFlowUntil(
       orchestrator, workspaceRoot, projectNamespace, flowId,
-      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['next']
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId })?.awaitingHumanNodes['next']
     );
 
-    const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    const updatedFlow = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     const repairNotice = sink.events.find(
       (e): e is Extract<OperatorEvent, { kind: 'repair.requested' }> => e.kind === 'repair.requested' && e.scope === 'node'
     );

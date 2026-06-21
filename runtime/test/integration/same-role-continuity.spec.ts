@@ -17,28 +17,33 @@ import path from 'node:path';
 import { afterAll, expect, it } from 'vitest';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { ContextInjectionService } from '../../src/context/injection.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { FlowRun, ProviderTurnResult, RuntimeMessageParam, ToolDefinition, LLMProvider, TurnOptions } from '../../src/common/types.js';
 import { seedTestModelSettings } from './settings-test-utils.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 // ---- Harness setup ----
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-same-role-'));
-afterAll(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+afterAll(() => {
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+  clearWorkspaceRoot();
+});
 const stateDir = path.join(tmpDir, '.a-society', 'state');
 const settingsDir = path.join(tmpDir, '.a-society');
 const projectNamespace = 'test-proj';
 const workspaceRoot = tmpDir;
+setWorkspaceRoot(workspaceRoot);
 const namespaceDir = path.join(workspaceRoot, projectNamespace);
 const rolesDir = path.join(namespaceDir, 'a-docs', 'roles');
 const indexDir = path.join(namespaceDir, 'a-docs', 'indexes');
-const recordDir = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: 'test-flow-id' });
-const instanceRecordDir = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId: 'instance-flow-id' });
+const recordDir = getFlowRecordDir({ projectNamespace, flowId: 'test-flow-id' });
+const instanceRecordDir = getFlowRecordDir({ projectNamespace, flowId: 'instance-flow-id' });
 
 fs.mkdirSync(rolesDir, { recursive: true });
 fs.mkdirSync(indexDir, { recursive: true });
@@ -133,7 +138,7 @@ function resetState() {
   fs.rmSync(stateDir, { recursive: true, force: true });
   fs.mkdirSync(stateDir, { recursive: true });
   seedRecordFixtures();
-  SessionStore.init(workspaceRoot);
+  SessionStore.init();
 }
 
 // ---- Mock LLM provider ----
@@ -174,7 +179,6 @@ function patchLLM(provider: MockProvider): () => void {
   LLMGateway.prototype.executeTurn = async function(sys, hist, opts) {
     return original.call(new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace, flowId: 'test-flow-id' },
       provider,
     }), sys, hist, opts);
@@ -209,13 +213,14 @@ async function runStoredFlowUntil(
   flowId: string,
   predicate: () => boolean
 ): Promise<void> {
-  const runPromise = orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId);
+  setWorkspaceRoot(workspaceRoot);
+  const runPromise = orchestrator.runStoredFlow(projectNamespace, flowId);
   try {
     await waitUntil(predicate);
   } finally {
     await SessionStore.updateFlowRun((flow) => {
       flow.status = 'completed';
-    }, flowRef(flowId), workspaceRoot);
+    }, flowRef(flowId));
     orchestrator.wake();
     await runPromise;
   }
@@ -260,10 +265,10 @@ function makeInstanceFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
 }
 
 it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', async () => {
+    setWorkspaceRoot(workspaceRoot);
     const { bundleContent } = ContextInjectionService.buildContextBundle(
       projectNamespace,
       'owner',
-      workspaceRoot,
       recordDir,
       { projectNamespace, flowId: 'same-role-flow' }
     );
@@ -287,9 +292,9 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       transcriptHistory: priorHistory,
       isActive: true,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
-    const loadedSession = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    const loadedSession = SessionStore.loadRoleSession('owner', flowRef());
     expect(loadedSession !== null).toBeTruthy();
     expect(loadedSession!.logicalSessionId).toBe(sessionId);
     expect(loadedSession!.transcriptHistory.length).toBe(2);
@@ -317,10 +322,10 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     fs.mkdirSync(v5FlowDir, { recursive: true });
     fs.writeFileSync(path.join(v5FlowDir, 'flow.json'), JSON.stringify(v5Flow, null, 2));
 
-    expect(() => SessionStore.loadFlowRun(flowRef('v5-flow'), workspaceRoot))
+    expect(() => SessionStore.loadFlowRun(flowRef('v5-flow')))
       .toThrow(new RegExp(`only supports flow state version "${CURRENT_FLOW_STATE_VERSION}"`));
 
-    expect(SessionStore.listFlowSummaries(workspaceRoot, projectNamespace)).toEqual([{
+    expect(SessionStore.listFlowSummaries(projectNamespace)).toEqual([{
         projectNamespace,
         flowId: 'v5-flow',
         status: 'completed',
@@ -344,7 +349,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const unpatch = patchLLM(new MockProvider([
       (_messages, options) => {
         streamMockText(options, 'Partial paid output');
-        const liveSession = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+        const liveSession = SessionStore.loadRoleSession('owner', flowRef());
         const liveHistory = liveSession?.transcriptHistory as RuntimeMessageParam[] | undefined;
         partialObserved = liveHistory?.some(message =>
           message.role === 'assistant' && message.content === 'Partial paid output'
@@ -357,14 +362,14 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
-        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+        !!SessionStore.loadFlowRun(flowRef())?.awaitingHumanNodes['owner-intake']
       );
     } finally {
       unpatch();
     }
 
     expect(partialObserved).toBeTruthy();
-    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    const session = SessionStore.loadRoleSession('owner', flowRef());
     expect(session !== null).toBeTruthy();
     const lastMessage = session!.transcriptHistory[session!.transcriptHistory.length - 1] as Extract<RuntimeMessageParam, { role: 'assistant' }>;
     expect(lastMessage.role).toBe('assistant');
@@ -383,7 +388,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: true,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       awaitingHumanNodes: {
@@ -407,7 +412,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(sink);
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef());
         return Boolean(
           updated &&
           Object.keys(updated.pendingHumanInputs).length === 0 &&
@@ -418,8 +423,8 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
-    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun(flowRef())!;
+    const session = SessionStore.loadRoleSession('owner', flowRef())!;
     expect(updated.pendingHumanInputs).toEqual({});
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
     expect(
@@ -444,7 +449,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: true,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       runningNodes: ['owner-intake'],
@@ -466,7 +471,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(sink);
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
-        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+        !!SessionStore.loadFlowRun(flowRef())?.awaitingHumanNodes['owner-intake']
       );
     } finally {
       unpatch();
@@ -503,7 +508,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: false,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       runningNodes: ['owner-gate'],
@@ -530,13 +535,13 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
-        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-gate']
+        !!SessionStore.loadFlowRun(flowRef())?.awaitingHumanNodes['owner-gate']
       );
     } finally {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    const session = SessionStore.loadRoleSession('owner', flowRef());
     expect(session !== null).toBeTruthy();
     expect((session!.transcriptHistory[0] as any).content).toBe('owner-intake entry message');
 
@@ -564,7 +569,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: false,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       runningNodes: ['owner-intake'],
@@ -590,13 +595,13 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
-        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+        !!SessionStore.loadFlowRun(flowRef())?.awaitingHumanNodes['owner-intake']
       );
     } finally {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    const session = SessionStore.loadRoleSession('owner', flowRef());
     expect(session !== null).toBeTruthy();
 
     const reopenedMessage = (session!.transcriptHistory as any[])
@@ -637,7 +642,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       },
       isActive: true,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       runningNodes: [],
@@ -667,7 +672,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(sink);
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef());
         return Boolean(
           updated &&
           !updated.receivingHandoff['ta=>owner-intake'] &&
@@ -678,7 +683,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun(flowRef())!;
     expect(updated.receivingHandoff['ta=>owner-intake']).toBeUndefined();
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
     expect(
@@ -686,7 +691,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       'handoff wake should emit a fresh role.active activation'
     ).toBeTruthy();
 
-    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    const session = SessionStore.loadRoleSession('owner', flowRef());
     expect(session !== null).toBeTruthy();
     expect(
       session!.currentNodeContext?.exchanges.some(message =>
@@ -721,7 +726,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: false,
       currentNodeId: 'owner-gate'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       runningNodes: ['owner-intake'],
@@ -748,13 +753,13 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(sink);
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
-        !!SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.awaitingHumanNodes['owner-intake']
+        !!SessionStore.loadFlowRun(flowRef())?.awaitingHumanNodes['owner-intake']
       );
     } finally {
       unpatch();
     }
 
-    const session = SessionStore.loadRoleSession('owner', flowRef(), workspaceRoot);
+    const session = SessionStore.loadRoleSession('owner', flowRef());
     expect(session !== null).toBeTruthy();
 
     const reopenedMessage = (session!.transcriptHistory as any[])
@@ -787,7 +792,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'));
         return Boolean(updated?.awaitingHumanNodes['owner-one'] && updated?.awaitingHumanNodes['owner-two']);
       });
     } finally {
@@ -796,13 +801,11 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
 
     const ownerOneSession = SessionStore.loadRoleSession(
       'owner_1',
-      flowRef('instance-flow-id'),
-      workspaceRoot
+      flowRef('instance-flow-id')
     );
     const ownerTwoSession = SessionStore.loadRoleSession(
       'owner_2',
-      flowRef('instance-flow-id'),
-      workspaceRoot
+      flowRef('instance-flow-id')
     );
 
     expect(ownerOneSession !== null).toBeTruthy();
@@ -828,7 +831,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: true,
       currentNodeId: 'owner-one'
-    }, flowRef('instance-flow-id'), workspaceRoot);
+    }, flowRef('instance-flow-id'));
     SessionStore.saveRoleSession({
       roleName: 'owner_2',
       logicalSessionId: ownerInstanceSessionId(2),
@@ -838,7 +841,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       ],
       isActive: true,
       currentNodeId: 'owner-two'
-    }, flowRef('instance-flow-id'), workspaceRoot);
+    }, flowRef('instance-flow-id'));
 
     const flowRun = makeInstanceFlowRun({
       awaitingHumanNodes: {
@@ -862,7 +865,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(sink);
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'));
         return Boolean(
           updated &&
           Object.keys(updated.pendingHumanInputs).length === 0 &&
@@ -880,7 +883,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       .sort();
     expect(resumedNodeIds).toEqual(['owner-one', 'owner-two']);
 
-    const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'), workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun(flowRef('instance-flow-id'))!;
     expect(updated.pendingHumanInputs).toEqual({});
     expect(updated.awaitingHumanNodes['owner-one']).toBeTruthy();
     expect(updated.awaitingHumanNodes['owner-two']).toBeTruthy();
@@ -912,7 +915,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef());
         return Boolean(
           updated &&
           !updated.awaitingHandoff.includes('owner-intake') &&
@@ -923,7 +926,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun(flowRef())!;
     expect(updated.awaitingHandoff.includes('owner-intake')).toBeFalsy();
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
   });
@@ -947,7 +950,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       },
       isActive: false,
       currentNodeId: 'owner-intake'
-    }, flowRef(), workspaceRoot);
+    }, flowRef());
 
     const flowRun = makeFlowRun({
       runningNodes: [],
@@ -988,7 +991,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef());
         return Boolean(
           updated &&
           modelCallCount > 0 &&
@@ -1000,7 +1003,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun(flowRef())!;
     expect(updated.pendingHumanInputs).toEqual({});
     expect(updated.awaitingHandoff.includes('owner-intake')).toBeFalsy();
     expect(modelCallCount).toBeGreaterThan(0);
@@ -1037,14 +1040,14 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot);
+        const updated = SessionStore.loadFlowRun(flowRef());
         return Boolean(updated && updated.awaitingHumanNodes['owner-intake']);
       });
     } finally {
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun(flowRef(), workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun(flowRef())!;
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
     expect(updated.runningNodes.includes('owner-gate')).toBeFalsy();
     expect(updated.receivingHandoff['ta=>owner-gate']).toEqual([path.relative(workspaceRoot, taArtifact)]);
@@ -1069,7 +1072,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(new RecordingOperatorSink());
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () => {
-        const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot);
+        const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId });
         return Boolean(
           updated &&
           updated.awaitingHumanNodes['owner-intake']
@@ -1079,7 +1082,7 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId })!;
     expect(updated.runningNodes.includes('owner-gate')).toBeFalsy();
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();
   });
@@ -1106,13 +1109,13 @@ it('Context bundle uses RUNTIME-LOADED framing, not MANDATORY CONTEXT LOADING', 
     const orchestrator = new FlowOrchestrator(sink);
     try {
       await runStoredFlowUntil(orchestrator, flowRun.flowId, () =>
-        SessionStore.loadFlowRun(flowRef(), workspaceRoot)?.completedHandoffs.includes('ta=>owner-gate') ?? false
+        SessionStore.loadFlowRun(flowRef())?.completedHandoffs.includes('ta=>owner-gate') ?? false
       );
     } finally {
       unpatch();
     }
 
-    const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId }, workspaceRoot)!;
+    const updated = SessionStore.loadFlowRun({ projectNamespace, flowId: flowRun.flowId })!;
     expect(updated.completedHandoffs.includes('ta=>owner-gate')).toBeTruthy();
     expect(updated.receivingHandoff['ta=>owner-gate']).toEqual([handoffArtifact]);
     expect(updated.awaitingHumanNodes['owner-intake']).toBeTruthy();

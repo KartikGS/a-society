@@ -212,7 +212,6 @@ async function executeSessionTurn(
 }
 
 interface RunRoleTurnBaseInput {
-  workspaceRoot: string;
   roleInstanceId: string;
   providedSystemPrompt: string;
   flowRef: FlowRef;
@@ -249,7 +248,6 @@ export type RunRoleTurnInput = RunRoleTurnBaseInput & (
 );
 
 export async function runRoleTurn({
-  workspaceRoot,
   roleInstanceId,
   providedSystemPrompt,
   flowRef,
@@ -273,7 +271,6 @@ export async function runRoleTurn({
   const systemPrompt = providedSystemPrompt;
   const llm = new LLMGateway({
     mode: 'project',
-    workspaceRoot,
     flowRef,
     model,
     mcpManager,

@@ -6,6 +6,7 @@ import {
   buildForwardNodeEntryMessage,
   buildImprovementEntryMessage,
 } from '../../src/context/session-entry.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { WorkflowGraph } from '../../shared/workflow-graph.js';
 
 interface Fixture {
@@ -68,10 +69,12 @@ function createFixture(): Fixture {
 describe('session-entry', () => {
   beforeEach(() => {
     fixture = createFixture();
+    setWorkspaceRoot(fixture.tmpDir);
   });
 
   afterEach(() => {
     fs.rmSync(fixture.tmpDir, { recursive: true, force: true });
+    clearWorkspaceRoot();
   });
 
   describe('buildForwardNodeEntryMessage', () => {

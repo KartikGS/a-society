@@ -153,7 +153,6 @@ export async function compactRoleSession(options: {
 
   const llm = new LLMGateway({
     mode: 'system',
-    workspaceRoot: options.flowRun.workspaceRoot,
     model: options.model,
   });
   let result: GatewayTurnResult;

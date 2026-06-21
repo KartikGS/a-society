@@ -19,9 +19,10 @@ import type {
 import { deterministicFindingsFilePath } from '../../src/framework-services/backward-pass-orderer.js';
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
@@ -29,6 +30,7 @@ function createWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-improvement-streams-'));
   tempDirs.add(dir);
   seedTestModelSettings(path.join(dir, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+  setWorkspaceRoot(dir);
   return dir;
 }
 
@@ -39,13 +41,14 @@ describe('improvement-streams', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('emits feedback repair status as an event, not role output stream text', async () => {
     const workspaceRoot = createWorkspace();
     const projectNamespace = 'demo-project';
     const flowId = 'repair-flow';
-    const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+    const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
     const feedbackArtifactPath = 'a-society/feedback/demo-project-flow-repair-flow.md';
     const feedbackArtifactFilePath = path.join(workspaceRoot, feedbackArtifactPath);
 
@@ -95,7 +98,7 @@ describe('improvement-streams', () => {
     };
 
     const flowRef = SessionStore.flowRef(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, flowRef);
 
     const invalidHandoffText = 'Feedback malformed. ```handoff\n - target_node_id: feedback\n  - artifact_path: broken.md\n```';
     const validHandoffText = `Feedback complete. \`\`\`handoff\ntype: backward-pass-complete\nartifact_path: ${feedbackArtifactPath}\n\`\`\``;
@@ -140,7 +143,7 @@ describe('improvement-streams', () => {
       renderer,
       roleOutputFactory
     );
-    const finalFlowRun = SessionStore.loadFlowRun(flowRef, workspaceRoot);
+    const finalFlowRun = SessionStore.loadFlowRun(flowRef);
 
     expect(repairEvents).toEqual(expect.arrayContaining([
       expect.objectContaining({

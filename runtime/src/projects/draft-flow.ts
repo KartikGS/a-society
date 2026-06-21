@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
 
-export function resolveProjectRoot(workspaceRoot: string, projectNamespace: string): string {
-  return path.join(workspaceRoot, projectNamespace);
+export function resolveProjectRoot(projectNamespace: string): string {
+  return path.join(getWorkspaceRoot(), projectNamespace);
 }
 
 export function buildDraftWorkflowDocument(roleName: string): string {
@@ -36,12 +37,12 @@ export function buildDraftWorkflowDocument(roleName: string): string {
 }
 
 export function initializeDraftFlow(
-  workspaceRoot: string,
   projectNamespace: string,
   roleName: string
 ): FlowRun {
   const flowId = buildFlowId();
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const workspaceRoot = getWorkspaceRoot();
+  const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   fs.writeFileSync(

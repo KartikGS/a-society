@@ -5,7 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CURRENT_FLOW_STATE_VERSION } from '../../src/common/types.js';
 import type { FlowRef, FlowRun } from '../../src/common/types.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { FileToolExecutor } from '../../src/tools/file-executor.js';
 
 const PROJECT_NAMESPACE = 'project';
@@ -14,6 +15,7 @@ const tempDirs = new Set<string>();
 function makeTempWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'file-executor-test-'));
   tempDirs.add(dir);
+  setWorkspaceRoot(dir);
   return dir;
 }
 
@@ -23,7 +25,7 @@ function flowRef(flowId = 'flow-1', projectNamespace = PROJECT_NAMESPACE): FlowR
 
 function makeExecutor(workspaceRoot: string, ref = flowRef()): FileToolExecutor {
   fs.mkdirSync(path.join(workspaceRoot, ref.projectNamespace), { recursive: true });
-  return new FileToolExecutor(workspaceRoot, ref);
+  return new FileToolExecutor(ref);
 }
 
 function projectPath(relativePath: string, projectNamespace = PROJECT_NAMESPACE): string {
@@ -35,7 +37,8 @@ function seedFlowRun(
   ref = flowRef(),
   overrides: Partial<FlowRun> = {}
 ): FlowRun {
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, ref);
+  setWorkspaceRoot(workspaceRoot);
+  const recordFolderPath = getFlowRecordDir(ref);
   fs.mkdirSync(recordFolderPath, { recursive: true });
   const flowRun: FlowRun = {
     flowId: ref.flowId,
@@ -55,7 +58,7 @@ function seedFlowRun(
     stateVersion: CURRENT_FLOW_STATE_VERSION,
     ...overrides,
   };
-  SessionStore.saveFlowRun(flowRun, ref, workspaceRoot);
+  SessionStore.saveFlowRun(flowRun, ref);
   return flowRun;
 }
 
@@ -65,6 +68,7 @@ describe('file-executor', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   describe('read_file', () => {
@@ -343,7 +347,7 @@ describe('file-executor', () => {
       const ref = flowRef('flow-1', 'my-project');
       const projectDir = path.join(workspace, ref.projectNamespace);
       const feedbackDir = path.join(workspace, 'a-society', 'feedback');
-      const recordFolderPath = getFlowRecordDir(workspace, ref);
+      const recordFolderPath = getFlowRecordDir(ref);
       fs.mkdirSync(projectDir, { recursive: true });
       fs.mkdirSync(feedbackDir, { recursive: true });
       fs.mkdirSync(recordFolderPath, { recursive: true });
@@ -434,7 +438,7 @@ describe('file-executor', () => {
     it('rejects record workflow writes that remove live flow-state nodes', async () => {
       const workspace = makeTempWorkspace();
       const ref = flowRef();
-      const recordWorkflowPath = path.join(getFlowRecordDir(workspace, ref), 'workflow.yaml');
+      const recordWorkflowPath = path.join(getFlowRecordDir(ref), 'workflow.yaml');
       seedFlowRun(workspace, ref, { runningNodes: ['curator-work'] });
       const executor = makeExecutor(workspace, ref);
       const ownerOnlyWorkflow = 'workflow:\n  name: T\n  nodes:\n    - id: owner-intake\n      role: owner\n  edges: []\n';

@@ -24,7 +24,7 @@ import { listSkills } from '../../framework-services/skills.js';
 import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
 import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
 import type { HistoricalMessage, ServerMessage } from '../protocol.js';
@@ -39,7 +39,6 @@ import { compactPersistedRoleContext } from './manual-compaction.js';
 import type { ActiveSession } from './types.js';
 
 type RuntimeSessionCommandsDeps = {
-  workspaceRoot: string;
   activeSessions: Map<string, ActiveSession>;
   readFlowRun: (ref: FlowRef) => FlowRun | null;
   resolveWorkflow: FlowReadModel['resolveWorkflow'];
@@ -61,7 +60,6 @@ export interface RoleConfigurationPayload {
 
 export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
   const {
-    workspaceRoot,
     activeSessions,
     readFlowRun,
     resolveWorkflow,
@@ -106,7 +104,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           text,
           receivedAt: new Date().toISOString(),
         };
-      }, ref, workspaceRoot);
+      }, ref);
     } catch (error: any) {
       broadcastToFlow(ref, {
         type: 'error',
@@ -175,7 +173,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           }
           delete latest.pendingHandoffApprovals[nodeId];
           latest.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
-        }, ref, workspaceRoot);
+        }, ref);
       } catch (error: any) {
         broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
         return;
@@ -227,7 +225,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const modelGate = resolveRoleModelGate(workspaceRoot, ref, awaitingState.role);
+    const modelGate = resolveRoleModelGate(ref, awaitingState.role);
     let modelSelection: {
       modelConfigId: string;
       displayName: string;
@@ -259,11 +257,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     // Only persist dimensions the gate still has pending; auto-resolved dimensions
     // are already decided and must not be clobbered by a partial manual submit.
-    const capabilityGate = resolveCapabilityGate(workspaceRoot, ref, awaitingState.role);
+    const capabilityGate = resolveCapabilityGate(ref, awaitingState.role);
     const pendingSkills = capabilityGate.kind === 'selection-required' && capabilityGate.pendingSkills;
     const pendingMcp = capabilityGate.kind === 'selection-required' && capabilityGate.pendingMcp;
 
-    const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
+    const validSkillNames = new Set(listSkills().map((skill) => skill.name));
     const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
     const selectedSkills = pendingSkills ? uniqueStrings(payload.skills) : [];
     const selectedMcpServers = pendingMcp ? uniqueStrings(payload.mcpServers) : [];
@@ -279,23 +277,23 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     if (modelSelection) {
-      saveRoleModelSelection(workspaceRoot, ref, awaitingState.role, modelSelection);
+      saveRoleModelSelection(ref, awaitingState.role, modelSelection);
     }
 
     const capabilitySelectedAt = new Date().toISOString();
     if (pendingSkills) {
-      saveCapabilityDimension(workspaceRoot, ref, awaitingState.role, 'skills', selectedSkills, capabilitySelectedAt);
+      saveCapabilityDimension(ref, awaitingState.role, 'skills', selectedSkills, capabilitySelectedAt);
     }
     if (pendingMcp) {
-      saveCapabilityDimension(workspaceRoot, ref, awaitingState.role, 'mcpServers', selectedMcpServers, capabilitySelectedAt);
+      saveCapabilityDimension(ref, awaitingState.role, 'mcpServers', selectedMcpServers, capabilitySelectedAt);
     }
 
     if (selectedSkills.length > 0) {
       const roleKey = parseRoleIdentity(awaitingState.role).instanceRoleId;
-      const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+      const roleSession = SessionStore.loadRoleSession(roleKey, ref);
       if (roleSession) {
         delete roleSession.systemPrompt;
-        SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
+        SessionStore.saveRoleSession(roleSession, ref);
       }
     }
 
@@ -313,7 +311,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         kind: 'role.configured',
         nodeId,
         role: awaitingState.role,
-        ...buildRoleConfigurationSummary(workspaceRoot, ref, awaitingState.role),
+        ...buildRoleConfigurationSummary(ref, awaitingState.role),
       },
     });
     session.orchestrator.wake();
@@ -574,7 +572,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         }
         if (!latest.improvementPhase.pendingHumanInputs) latest.improvementPhase.pendingHumanInputs = {};
         latest.improvementPhase.pendingHumanInputs[roleInstanceId] = { text, receivedAt: new Date().toISOString() };
-      }, ref, workspaceRoot);
+      }, ref);
     } catch (error: any) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
       return;
@@ -655,7 +653,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     void compactPersistedRoleContext({
       flowRun,
       flowRef: ref,
-      workspaceRoot,
       roleName,
       roleInstanceId,
       trigger: 'manual',

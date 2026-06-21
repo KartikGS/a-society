@@ -1,5 +1,5 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { PassThrough } from 'node:stream';
 import { expect, it } from 'vitest';
 import { listenOnLocalhost, seedTestModelSettings } from './settings-test-utils.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
@@ -38,6 +39,7 @@ async function runTest() {
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'forward-pass-closure-test-'));
   const workspaceRoot = tmpBase;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.a-society', 'state');
@@ -58,7 +60,7 @@ async function runTest() {
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const flowId = 'test-fpc-flow-id';
-  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
   const rolesDir = path.join(projectADocsPath, 'roles');
@@ -93,7 +95,8 @@ async function runTest() {
   const closureArtifactPath = path.join(recordPath, 'closure-artifact.md');
   fs.writeFileSync(closureArtifactPath, "Forward pass closure artifact.");
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -134,7 +137,7 @@ async function runTest() {
   });
 
   try {
-    await orchestrator.runStoredFlow(workspaceRoot, projectNamespace, flowId, () => outputStream);
+    await orchestrator.runStoredFlow(projectNamespace, flowId, () => outputStream);
 
     const assistantOut = outputChunks.join('');
 
@@ -146,7 +149,7 @@ async function runTest() {
 
     expect(assistantOut.includes('Enter 1, 2, or 3:')).toBeFalsy();
 
-    const finalFlow = SessionStore.loadFlowRun()!;
+    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     expect(finalFlow.status).toBe('awaiting_improvement_choice');
     expect(finalFlow.improvementPhase?.status).toBe('awaiting_choice');
     expect(finalFlow.improvementPhase && !('forwardPassClosure' in finalFlow.improvementPhase)).toBeTruthy();

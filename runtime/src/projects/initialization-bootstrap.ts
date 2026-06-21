@@ -247,7 +247,7 @@ export function bootstrapInitializationFlow(
   mode: InitializationMode
 ): InitializationBootstrapResult {
   const namespace = validateProjectNamespace(projectNamespace);
-  const projectRoot = resolveProjectRoot(workspaceRoot, namespace);
+  const projectRoot = resolveProjectRoot(namespace);
 
   if (mode === 'greenfield') {
     if (fs.existsSync(projectRoot)) {
@@ -303,7 +303,7 @@ export function bootstrapInitializationFlow(
   stampVersionRecord(projectRoot, currentVersion);
 
   const flowId = buildFlowId();
-  const recordFolderPath = getFlowRecordDir(workspaceRoot, { projectNamespace: namespace, flowId });
+  const recordFolderPath = getFlowRecordDir({ projectNamespace: namespace, flowId });
   fs.mkdirSync(recordFolderPath, { recursive: true });
 
   const initializationGuideContent = fs.readFileSync(runtimeInitializationPath, 'utf8');

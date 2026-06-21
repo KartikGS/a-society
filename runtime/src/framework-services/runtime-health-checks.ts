@@ -363,7 +363,7 @@ export function runRuntimeHealthChecks(
   projectNamespace: string
 ): RuntimeHealthCheckResult {
   const errors: string[] = [];
-  const projectRoot = resolveProjectRoot(workspaceRoot, projectNamespace);
+  const projectRoot = resolveProjectRoot(projectNamespace);
   const aDocsRoot = path.join(projectRoot, 'a-docs');
   const rolesRoot = path.join(aDocsRoot, 'roles');
   const improvementRoot = path.join(aDocsRoot, 'improvement');

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FlowRef } from '../common/types.js';
 import {
-  configureSettingsStore,
   getActiveModelWithKey,
   getModelWithKey,
   isUsableModelConfig,
@@ -23,16 +22,15 @@ export type RoleModelGate =
   | { kind: 'ready'; model: ModelConfigWithKey | null }
   | { kind: 'selection-required'; options: ModelConfig[] };
 
-function roleModelSelectionPath(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): string {
-  return getRoleStateFilePath(workspaceRoot, ref, roleInstanceId, 'model.json');
+function roleModelSelectionPath(ref: FlowRef, roleInstanceId: string): string {
+  return getRoleStateFilePath(ref, roleInstanceId, 'model.json');
 }
 
 export function readRoleModelSelection(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string
 ): RoleModelSelection | null {
-  const selectionPath = roleModelSelectionPath(workspaceRoot, ref, roleInstanceId);
+  const selectionPath = roleModelSelectionPath(ref, roleInstanceId);
   if (!fs.existsSync(selectionPath)) return null;
   try {
     const parsed = JSON.parse(fs.readFileSync(selectionPath, 'utf8')) as Partial<RoleModelSelection> | null;
@@ -49,18 +47,17 @@ export function readRoleModelSelection(
 }
 
 export function saveRoleModelSelection(
-  workspaceRoot: string,
   ref: FlowRef,
   roleInstanceId: string,
   selection: RoleModelSelection
 ): void {
-  const selectionPath = roleModelSelectionPath(workspaceRoot, ref, roleInstanceId);
+  const selectionPath = roleModelSelectionPath(ref, roleInstanceId);
   fs.mkdirSync(path.dirname(selectionPath), { recursive: true });
   fs.writeFileSync(selectionPath, JSON.stringify(selection, null, 2));
 }
 
-function selectedUsableModel(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): ModelConfigWithKey | null {
-  const selection = readRoleModelSelection(workspaceRoot, ref, roleInstanceId);
+function selectedUsableModel(ref: FlowRef, roleInstanceId: string): ModelConfigWithKey | null {
+  const selection = readRoleModelSelection(ref, roleInstanceId);
   if (!selection) return null;
   const model = getModelWithKey(selection.modelConfigId);
   return isUsableModelConfig(model) ? model : null;
@@ -72,9 +69,8 @@ function selectedUsableModel(workspaceRoot: string, ref: FlowRef, roleInstanceId
  * usable persisted selection for the flow. A stale selection (model deleted or
  * no longer usable) re-enters the gate instead of silently falling back.
  */
-export function resolveRoleModelGate(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): RoleModelGate {
-  configureSettingsStore(workspaceRoot);
-  const selected = selectedUsableModel(workspaceRoot, ref, roleInstanceId);
+export function resolveRoleModelGate(ref: FlowRef, roleInstanceId: string): RoleModelGate {
+  const selected = selectedUsableModel(ref, roleInstanceId);
   if (selected) return { kind: 'ready', model: selected };
 
   const configuredModels = listModels();
@@ -89,7 +85,6 @@ export function resolveRoleModelGate(workspaceRoot: string, ref: FlowRef, roleIn
  * state (improvement phase, compaction): the role's selected model when
  * usable, otherwise the active model.
  */
-export function resolveRoleModel(workspaceRoot: string, ref: FlowRef, roleInstanceId: string): ModelConfigWithKey | null {
-  configureSettingsStore(workspaceRoot);
-  return selectedUsableModel(workspaceRoot, ref, roleInstanceId) ?? getActiveModelWithKey();
+export function resolveRoleModel(ref: FlowRef, roleInstanceId: string): ModelConfigWithKey | null {
+  return selectedUsableModel(ref, roleInstanceId) ?? getActiveModelWithKey();
 }

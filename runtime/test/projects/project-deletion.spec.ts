@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { deleteProject, ProjectDeletionError } from '../../src/projects/project-deletion.js';
 
 const tempDirs = new Set<string>();
@@ -18,10 +19,12 @@ describe('project-deletion', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('removes the project folder and project state folder', () => {
     const workspaceRoot = makeWorkspace();
+    setWorkspaceRoot(workspaceRoot);
     const projectRoot = path.join(workspaceRoot, 'demo-project');
     const stateProjectRoot = path.join(workspaceRoot, '.a-society', 'state', 'demo-project');
     const siblingStateRoot = path.join(workspaceRoot, '.a-society', 'state', 'other-project');
@@ -29,7 +32,7 @@ describe('project-deletion', () => {
     fs.mkdirSync(path.join(stateProjectRoot, 'flow-1', 'record'), { recursive: true });
     fs.mkdirSync(siblingStateRoot, { recursive: true });
 
-    const result = deleteProject(workspaceRoot, 'demo-project');
+    const result = deleteProject('demo-project');
 
     expect(result).toMatchObject({
       removedProjectRoot: true,
@@ -42,10 +45,11 @@ describe('project-deletion', () => {
 
   it('removes state even when the project folder is already gone', () => {
     const workspaceRoot = makeWorkspace();
+    setWorkspaceRoot(workspaceRoot);
     const stateProjectRoot = path.join(workspaceRoot, '.a-society', 'state', 'state-only');
     fs.mkdirSync(path.join(stateProjectRoot, 'flow-1'), { recursive: true });
 
-    const result = deleteProject(workspaceRoot, 'state-only');
+    const result = deleteProject('state-only');
 
     expect(result).toMatchObject({
       removedProjectRoot: false,
@@ -56,12 +60,13 @@ describe('project-deletion', () => {
 
   it('refuses the A-Society framework folder', () => {
     const workspaceRoot = makeWorkspace();
+    setWorkspaceRoot(workspaceRoot);
     const frameworkRoot = path.join(workspaceRoot, 'a-society');
     fs.mkdirSync(path.join(frameworkRoot, 'runtime'), { recursive: true });
 
     let error: unknown;
     try {
-      deleteProject(workspaceRoot, 'a-society');
+      deleteProject('a-society');
     } catch (caught) {
       error = caught;
     }
@@ -72,7 +77,8 @@ describe('project-deletion', () => {
 
   it('rejects path separators', () => {
     const workspaceRoot = makeWorkspace();
+    setWorkspaceRoot(workspaceRoot);
 
-    expect(() => deleteProject(workspaceRoot, '../demo')).toThrow(/Invalid project namespace/);
+    expect(() => deleteProject('../demo')).toThrow(/Invalid project namespace/);
   });
 });
