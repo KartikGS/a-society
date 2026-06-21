@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { resolveFlowWorkflow } from '../../src/context/workflow-file.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 
 const tempDirs = new Set<string>();
@@ -11,8 +12,9 @@ const projectNamespace = 'test-project';
 function createFixture() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-workflow-file-'));
   tempDirs.add(tmpDir);
+  setWorkspaceRoot(tmpDir);
   const projectDir = path.join(tmpDir, projectNamespace);
-  const recordDir = getFlowRecordDir(tmpDir, { projectNamespace, flowId: 'test-flow' });
+  const recordDir = getFlowRecordDir({ projectNamespace, flowId: 'test-flow' });
   const workflowDir = path.join(projectDir, 'a-docs', 'workflow');
   fs.mkdirSync(recordDir, { recursive: true });
   fs.mkdirSync(workflowDir, { recursive: true });
@@ -25,6 +27,7 @@ describe('workflow-file', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('merges canonical node contracts into a minimal record snapshot', () => {
@@ -34,7 +37,7 @@ describe('workflow-file', () => {
   nodes:
     - id: owner-intake
       role: owner
-      guidance:
+      work:
         - Use the canonical guidance.
     - id: owner-closure
       role: owner
@@ -58,7 +61,7 @@ describe('workflow-file', () => {
     const workflow = resolveFlowWorkflow(recordDir, tmpDir, projectNamespace);
     const ownerIntake = workflow.nodes.find((node) => node.id === 'owner-intake');
 
-    expect(ownerIntake?.guidance).toEqual(['Use the canonical guidance.']);
+    expect(ownerIntake?.work).toEqual(['Use the canonical guidance.']);
     expect(workflow.name).toBe('record-flow');
     expect(workflow.edges).toEqual([{ from: 'owner-intake', to: 'owner-closure' }]);
   });
@@ -70,7 +73,7 @@ describe('workflow-file', () => {
   nodes:
     - id: owner-intake
       role: owner
-      guidance:
+      work:
         - Use the record guidance.
   edges: []
 `);
@@ -78,7 +81,7 @@ describe('workflow-file', () => {
     const workflow = resolveFlowWorkflow(recordDir, tmpDir, projectNamespace);
     const ownerIntake = workflow.nodes.find((node) => node.id === 'owner-intake');
 
-    expect(ownerIntake?.guidance).toEqual(['Use the record guidance.']);
+    expect(ownerIntake?.work).toEqual(['Use the record guidance.']);
     expect(workflow.name).toBe('record-only-flow');
   });
 });

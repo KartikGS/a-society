@@ -1,4 +1,4 @@
-import type { FlowRef } from '../types';
+import type { FlowRef } from '../../../shared/types.js';
 
 export function parseUrlFlowRef(): FlowRef | null {
   const pathMatch = window.location.pathname.match(/^\/projects\/([^/]+)\/flows\/([^/]+)$/);

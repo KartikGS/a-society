@@ -1,37 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import type { WorkflowDefinition, WorkflowDocument, WorkflowNode } from '../../shared/workflow-graph.js';
 
 export const CANONICAL_WORKFLOW_FILENAME = 'workflow.yaml';
 const PROJECT_WORKFLOW_RELATIVE_PATH = path.join('a-docs', 'workflow', 'main.yaml');
-
-export interface WorkflowNode {
-  id: string;
-  role?: string;
-  'human-collaborative'?: string;
-  required_readings?: string[];
-  guidance?: string[];
-  inputs?: string[];
-  work?: string[];
-  outputs?: string[];
-  transitions?: string[];
-  notes?: string[];
-}
-
-export interface WorkflowEdge {
-  from: string;
-  to: string;
-  artifact?: string;
-}
-
-export interface WorkflowDefinition {
-  name?: string;
-  summary?: string;
-  invariants?: Array<{ name: string; rule: string }>;
-  escalation?: Array<{ situation: string; escalated_by: string; to: string }>;
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
-}
 
 export function findWorkflowFilePath(recordFolderPath: string): string | null {
   const candidatePath = path.join(recordFolderPath, CANONICAL_WORKFLOW_FILENAME);
@@ -50,7 +23,7 @@ export function canonicalWorkflowDefinitionPath(
   return path.join(workspaceRoot, projectNamespace, PROJECT_WORKFLOW_RELATIVE_PATH);
 }
 
-function isWorkflowDefinition(value: unknown): value is { workflow: WorkflowDefinition } {
+function isWorkflowDefinition(value: unknown): value is WorkflowDocument {
   return Boolean(
     value &&
     typeof value === 'object' &&

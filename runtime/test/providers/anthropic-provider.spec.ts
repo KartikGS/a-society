@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import Anthropic from '@anthropic-ai/sdk';
 import type { OperatorEvent, OperatorRenderSink } from '../../src/common/types.js';
 import { AnthropicProvider } from '../../src/providers/anthropic.js';
+import { MAX_NETWORK_RETRIES } from '../../src/providers/retry.js';
 
 class FakeAnthropicStream {
   private handlers: Array<(event: Record<string, unknown>) => void> = [];
@@ -84,6 +86,18 @@ function finalMessage(thinking: string): Record<string, unknown> {
       { type: 'text', text: 'Done.' },
     ],
   };
+}
+
+function countCacheControlBlocks(value: unknown): number {
+  if (Array.isArray(value)) {
+    return value.reduce<number>((count, entry) => count + countCacheControlBlocks(entry), 0);
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return (record.cache_control ? 1 : 0) +
+      Object.values(record).reduce<number>((count, entry) => count + countCacheControlBlocks(entry), 0);
+  }
+  return 0;
 }
 
 describe('AnthropicProvider', () => {
@@ -245,5 +259,243 @@ describe('AnthropicProvider', () => {
     expect(assistantMessage).toBeDefined();
     const content = assistantMessage?.content as Array<{ type: string }>;
     expect(content.every((block) => block.type !== 'thinking')).toBe(true);
+  });
+
+  it('leaves the request shape uncached when cacheTurn is absent', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn(
+      'system',
+      [{ role: 'user', content: 'Prompt.' }]
+    );
+
+    expect(requests[0].system).toBe('system');
+    expect(JSON.stringify(requests[0])).not.toContain('cache_control');
+  });
+
+  it('adds Anthropic cache-control breakpoints when cacheTurn is true', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+      cacheTtl: '1h',
+    });
+    const requests: Record<string, unknown>[] = [];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn(
+      'system',
+      [
+        { role: 'user', content: 'Prompt.' },
+        { role: 'assistant', content: 'Prior answer.' },
+      ],
+      undefined,
+      { cacheTurn: true }
+    );
+
+    const request = requests[0];
+    expect(request.system).toEqual([{
+      type: 'text',
+      text: 'system',
+      cache_control: { type: 'ephemeral', ttl: '1h' },
+    }]);
+    const messages = request.messages as Array<{ content: unknown }>;
+    expect(messages[0]?.content).toBe('Prompt.');
+    const tailContent = messages.at(-1)?.content as Array<Record<string, unknown>>;
+    expect(tailContent.at(-1)).toMatchObject({
+      type: 'text',
+      text: 'Prior answer.',
+      cache_control: { type: 'ephemeral', ttl: '1h' },
+    });
+    expect(countCacheControlBlocks(request)).toBe(2);
+  });
+
+  it('uses only the system breakpoint when cacheTurn is true with no messages', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn('system', [], undefined, { cacheTurn: true });
+
+    expect(requests[0].system).toEqual([{
+      type: 'text',
+      text: 'system',
+      cache_control: { type: 'ephemeral' },
+    }]);
+    expect(requests[0].messages).toEqual([]);
+    expect(countCacheControlBlocks(requests[0])).toBe(1);
+  });
+
+  it('adds one intermediate breakpoint for a large trailing tool round', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    const requests: Record<string, unknown>[] = [];
+    const messages = [
+      {
+        role: 'assistant_tool_calls' as const,
+        calls: [{ id: 'toolu_1', name: 'read_file', input: { path: 'a.md' } }],
+      },
+      ...Array.from({ length: 20 }, (_, index) => ({
+        role: 'tool_result' as const,
+        callId: `toolu_${index + 1}`,
+        toolName: 'read_file',
+        content: `result ${index}`,
+        isError: false,
+      })),
+    ];
+    installFakeClient(provider, [
+      textDelta('Done.'),
+    ], finalMessage(''), (request) => requests.push(request));
+
+    await provider.executeTurn('system', messages, undefined, { cacheTurn: true });
+
+    expect(countCacheControlBlocks(requests[0])).toBe(3);
+  });
+});
+
+class FailingAnthropicStream {
+  on(): FailingAnthropicStream {
+    return this;
+  }
+
+  finalMessage(): Promise<never> {
+    return Promise.reject(new Anthropic.APIConnectionError({ message: 'connection reset' }));
+  }
+}
+
+class EmitThenFailAnthropicStream {
+  private handlers: Array<(event: Record<string, unknown>) => void> = [];
+
+  constructor(private readonly text: string) {}
+
+  on(eventName: string, handler: (event: Record<string, unknown>) => void): EmitThenFailAnthropicStream {
+    if (eventName === 'streamEvent') this.handlers.push(handler);
+    return this;
+  }
+
+  finalMessage(): Promise<never> {
+    for (const handler of this.handlers) handler(textDelta(this.text));
+    return Promise.reject(new Anthropic.APIConnectionError({ message: 'reset mid-stream' }));
+  }
+}
+
+type AnthropicAttempt = 'fail' | { events: Record<string, unknown>[]; final: Record<string, unknown> };
+
+function installSequencedAnthropicClient(provider: AnthropicProvider, attempts: AnthropicAttempt[]): () => number {
+  let calls = 0;
+  (provider as unknown as { client: unknown }).client = {
+    messages: {
+      stream: () => {
+        const attempt = attempts[Math.min(calls, attempts.length - 1)];
+        calls += 1;
+        if (attempt === 'fail') return new FailingAnthropicStream();
+        return new FakeAnthropicStream(attempt.events, attempt.final);
+      },
+    },
+  };
+  return () => calls;
+}
+
+function capturingRenderer(): { renderer: OperatorRenderSink; errors: string[] } {
+  const errors: string[] = [];
+  return {
+    errors,
+    renderer: {
+      emit: () => {},
+      requestSent: () => {},
+      receivingResponse: () => {},
+      responseEnd: () => {},
+      sendError: (message) => errors.push(message),
+    },
+  };
+}
+
+describe('AnthropicProvider network-error retry', () => {
+  function newProvider(): AnthropicProvider {
+    return new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+  }
+
+  it('retries a connection failure, notifies the operator, then succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      const provider = newProvider();
+      const callCount = installSequencedAnthropicClient(provider, [
+        'fail',
+        'fail',
+        { events: [textDelta('Recovered.')], final: finalMessage('') },
+      ]);
+      const { renderer, errors } = capturingRenderer();
+      const promise = provider.executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, {
+        operatorRenderer: renderer,
+      });
+      await vi.runAllTimersAsync();
+      const result = await promise;
+      expect(result).toMatchObject({ type: 'text', text: 'Recovered.' });
+      expect(callCount()).toBe(3);
+      // One toast per retry, carrying the attempt count.
+      expect(errors).toEqual([
+        expect.stringContaining('(1/5)'),
+        expect.stringContaining('(2/5)'),
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('surfaces the error after exhausting the retry budget', async () => {
+    vi.useFakeTimers();
+    try {
+      const provider = newProvider();
+      const callCount = installSequencedAnthropicClient(provider, ['fail']);
+      const settled = provider
+        .executeTurn('system', [{ role: 'user', content: 'Prompt.' }])
+        .then(() => 'resolved', (error: unknown) => error);
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+      expect(outcome).toBeInstanceOf(Anthropic.APIConnectionError);
+      expect(callCount()).toBe(MAX_NETWORK_RETRIES + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry once output has streamed', async () => {
+    const provider = newProvider();
+    let calls = 0;
+    (provider as unknown as { client: unknown }).client = {
+      messages: {
+        stream: () => {
+          calls += 1;
+          return new EmitThenFailAnthropicStream('partial');
+        },
+      },
+    };
+    const streamed: string[] = [];
+    const outcome = await provider
+      .executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, {
+        onAssistantTextDelta: (text) => streamed.push(text),
+      })
+      .then(() => 'resolved', (error: unknown) => error);
+    expect(outcome).toBeInstanceOf(Anthropic.APIConnectionError);
+    expect(calls).toBe(1);
+    expect(streamed).toEqual(['partial']);
   });
 });

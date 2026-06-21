@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { FlowRef, LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
@@ -9,7 +8,7 @@ import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-sea
 import { McpToolExecutor } from '../tools/mcp-executor.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
-import { configureSettingsStore, getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
+import { getActiveModelWithKey, getEnabledWebSearchApiKey, MODEL_CONFIGURATION_REQUIRED_MESSAGE, type ModelConfigWithKey } from '../settings/settings-store.js';
 import type { McpManager } from './mcp/manager.js';
 
 export type { RuntimeMessageParam, ToolDefinition, ToolCall };
@@ -18,7 +17,6 @@ export { LLMGatewayError } from '../common/types.js';
 export type LLMGatewayOptions =
   | {
       mode: 'project';
-      workspaceRoot: string;
       flowRef: FlowRef;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
@@ -26,7 +24,6 @@ export type LLMGatewayOptions =
     }
   | {
       mode: 'system';
-      workspaceRoot: string;
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
     };
@@ -39,6 +36,7 @@ function createProvider(model?: ModelConfigWithKey | null): LLMProvider {
   const providerRuntimeConfig = {
     maxOutputTokens: active.maxOutputTokens,
     reasoning: active.reasoning,
+    cacheTtl: active.cacheTtl,
   };
   switch (active.providerType) {
     case 'anthropic':
@@ -73,10 +71,10 @@ export class LLMGateway {
   private webSearchExecutor?: WebSearchExecutor;
   private mcpExecutor?: McpToolExecutor;
   private tools?: ToolDefinition[];
+  private cacheTurnDefault: boolean;
 
   constructor(options: LLMGatewayOptions) {
-    const workspaceRoot = path.resolve(options.workspaceRoot);
-    configureSettingsStore(workspaceRoot);
+    this.cacheTurnDefault = options.mode === 'project';
 
     if (options.provider) {
       this.provider = options.provider;
@@ -85,8 +83,8 @@ export class LLMGateway {
     }
 
     if (options.mode === 'project') {
-      this.fileExecutor = new FileToolExecutor(workspaceRoot, options.flowRef);
-      this.bashExecutor = new BashToolExecutor(workspaceRoot);
+      this.fileExecutor = new FileToolExecutor(options.flowRef);
+      this.bashExecutor = new BashToolExecutor();
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();
       if (tavilyKey) {
@@ -107,6 +105,8 @@ export class LLMGateway {
   ): Promise<GatewayTurnResult> {
     const tracer = TelemetryManager.getTracer();
     const toolsEnabled = !!(this.tools && this.fileExecutor);
+    const cacheTurn = options?.cacheTurn ?? this.cacheTurnDefault;
+    const providerOptions: TurnOptions = { ...(options ?? {}), cacheTurn };
     return tracer.startActiveSpan('llm.gateway.execute_turn', {
       kind: SpanKind.INTERNAL,
       attributes: {
@@ -116,7 +116,7 @@ export class LLMGateway {
     }, async (span) => {
       try {
         if (!this.tools || !this.fileExecutor) {
-          const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, options);
+          const result = await this.provider.executeTurn(systemPrompt, messageHistory, undefined, providerOptions);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
             return {
@@ -145,7 +145,7 @@ export class LLMGateway {
             throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
           }
 
-          const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, options);
+          const result = await this.provider.executeTurn(systemPrompt, messages, this.tools, providerOptions);
           if (result.type === 'text') {
             throwIfAborted(options?.signal, result.text);
           }

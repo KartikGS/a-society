@@ -4,7 +4,6 @@ import { getMcpServerWithSecrets } from '../settings/settings-store.js';
 import { resolveEffectiveCapabilities } from './capability-selection.js';
 
 interface ResolveRoleMcpManagerOptions {
-  workspaceRoot: string;
   flowRef: FlowRef;
   roleInstanceId: string;
   nodeId: string;
@@ -13,7 +12,6 @@ interface ResolveRoleMcpManagerOptions {
 }
 
 export async function resolveRoleMcpManager({
-  workspaceRoot,
   flowRef,
   roleInstanceId,
   nodeId,
@@ -22,7 +20,7 @@ export async function resolveRoleMcpManager({
 }: ResolveRoleMcpManagerOptions): Promise<McpManager | undefined> {
   if (!mcpManagers) return undefined;
 
-  const capabilities = resolveEffectiveCapabilities(workspaceRoot, flowRef, roleInstanceId);
+  const capabilities = resolveEffectiveCapabilities(flowRef, roleInstanceId);
   if (capabilities.mcpServers.length === 0) return undefined;
 
   const servers = capabilities.mcpServers

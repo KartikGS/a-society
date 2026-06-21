@@ -58,17 +58,17 @@ The Owner modifies the workflow. The human may direct the change or offer input 
 
 Classify the modification:
 
-- **Add a branch:** a new route or optional node path entering the graph from the Owner node. Define the new nodes and edges from Owner through to the Owner exit node, including all handoffs, roles, and invariants.
-- **Modify a node:** a phase's input, output, owner, or human-collaborative designation changes. Define what the node looks like before and after. Identify which edges are affected.
+- **Add a branch:** a new route or optional node path entering the graph from the Owner node. Define the new nodes and edges from Owner through to the Owner exit node, including all handoffs and roles.
+- **Modify a node:** a node's role, work, or behavioral flags (human-colab, await-all-inputs) change. Define what the node looks like before and after. Identify which edges are affected.
 - **Modify an edge:** a handoff's transition condition, artifact format, or forward route changes. Identify the upstream and downstream nodes. Confirm no node contract is broken.
 - **Remove a node or edge:** the most structurally significant operation. Before removing, verify that no hard rule is violated — especially Hard Rule 2 (authorization remains explicit and any needed second perspective is still present) and Hard Rule 3 (each remaining node is owned by exactly one role). Document why the removal is safe.
-- **Modify a structural rule:** an invariant or escalation rule changes. Justify the change against all five principles explicitly — invariants are the non-negotiable layer of the workflow and require the highest scrutiny.
+- **Modify a structural rule:** a closure obligation or session/concurrency rule changes. Justify the change against all five principles explicitly — these are the non-negotiable layer of the workflow and require the highest scrutiny. (Project-wide invariants and escalation paths live in governance, principles, and role documents, not the workflow definition; change them there and update any node work that cites them.)
 
 ### Step 2 — Draft the modified graph
 
 Write out the modified workflow structure:
 
-- For any new or changed node: define the full node contract — input, owner, output, and human-collaborative field (if applicable).
+- For any new or changed node: define the full node contract — role, work, and behavioral flags (human-colab, await-all-inputs) if applicable.
 - For any new or changed edge: define the transition condition and the artifact carried.
 - If new roles are added: confirm their role document exists in the project before implementing.
 - If the workflow has a machine-readable graph representation (see `$INSTRUCTION_WORKFLOW_GRAPH`): draft the updated YAML alongside the written definition change. The written workflow definition and the machine-readable graph must remain in sync.

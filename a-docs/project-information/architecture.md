@@ -10,7 +10,7 @@ A-Society has three primary standing layers, each with a distinct role:
 - **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing web server / browser UI surface, and is the surviving umbrella executable layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
-Detailed executable architecture, capability inventory, and implementation ownership boundaries live under `$A_SOCIETY_EXECUTABLE`, starting with `$A_SOCIETY_EXECUTABLE_OVERVIEW`.
+Detailed executable architecture, capability inventory, and implementation ownership boundaries live in `$A_SOCIETY_EXECUTABLE_ARCHITECTURE`.
 
 Two indexes govern path resolution:
 

@@ -126,6 +126,6 @@ files:
   # Version record
 
   - path: a-society-version.md
-    description: "A-Society version record - tracks which framework version this project was initialized at and which update reports have been applied"
+    description: "A-Society version record - declares which framework version this project's a-docs conform to, in YAML frontmatter (a_society_version); stamped at initialization, bumped by the Owner during an update flow"
     scaffold: stub
     source_path: general/instructions/a-society-version-record.md

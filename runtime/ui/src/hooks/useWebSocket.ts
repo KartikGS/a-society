@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ClientMessage, ServerMessage } from '../types';
+import type { ClientMessage, ServerMessage } from '../../../shared/operator-protocol.js';
 
 interface UseWebSocketOptions {
   onMessage: (message: ServerMessage) => void;

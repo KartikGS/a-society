@@ -3,8 +3,12 @@ import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
-} from '../../../src/common/protocol-constants.js';
-import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, McpServerSummary, ModelConfig, SkillSummary } from '../types';
+  HANDOFF_APPROVAL_DECISION,
+} from '../../../shared/protocol-constants.js';
+import type { ProtocolHandoffApprovalDecision } from '../../../shared/protocol-constants.js';
+import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, HandoffTarget } from '../../../shared/types.js';
+import type { McpServerSummary, ModelConfig } from '../../../shared/settings.js';
+import type { SkillSummary } from '../../../shared/skills.js';
 
 export type { FeedItem };
 
@@ -17,6 +21,11 @@ export interface RoleConfigurationPrompt {
   pendingModel: boolean;
   pendingSkills: boolean;
   pendingMcp: boolean;
+}
+
+export interface HandoffApprovalPrompt {
+  nodeId: string;
+  targets: HandoffTarget[];
 }
 
 interface ChatInterfaceProps {
@@ -35,6 +44,7 @@ interface ChatInterfaceProps {
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
   roleConfiguration?: RoleConfigurationPrompt | null;
+  handoffApproval?: HandoffApprovalPrompt | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
   onRoleSelect?: (role: string) => void;
@@ -43,6 +53,7 @@ interface ChatInterfaceProps {
   onStop?: () => void;
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
   onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
+  onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
   isCompactingContext?: boolean;
@@ -340,6 +351,42 @@ function RoleConfigurationBanner({
   );
 }
 
+function HandoffApprovalBanner({
+  handoffApproval,
+  onHandoffApproval,
+}: {
+  handoffApproval: HandoffApprovalPrompt;
+  onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+}) {
+  const targetLabel = handoffApproval.targets.map((target) => target.target_node_id).join(', ');
+  return (
+    <div className="consent-banner">
+      <div className="consent-banner-body">
+        <span className="consent-banner-tool">Proceed with handoff{targetLabel ? ` to ${targetLabel}` : ''}?</span>
+        <span className="consent-banner-desc">
+          This is a human-collaborative node. Approve to commit the handoff, or decline to keep working with the role.
+        </span>
+      </div>
+      <div className="consent-banner-actions">
+        <button
+          type="button"
+          className="consent-btn consent-btn-allow"
+          onClick={() => onHandoffApproval?.(handoffApproval.nodeId, HANDOFF_APPROVAL_DECISION.APPROVE)}
+        >
+          Approve handoff
+        </button>
+        <button
+          type="button"
+          className="consent-btn consent-btn-deny"
+          onClick={() => onHandoffApproval?.(handoffApproval.nodeId, HANDOFF_APPROVAL_DECISION.DECLINE)}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ContextRing({
   contextWindow,
   contextUsage,
@@ -505,6 +552,14 @@ export function ChatInterface(props: ChatInterfaceProps) {
               key={props.roleConfiguration.nodeId}
               roleConfiguration={props.roleConfiguration}
               onRoleConfigure={props.onRoleConfigure}
+            />
+          ) : null}
+
+          {props.handoffApproval ? (
+            <HandoffApprovalBanner
+              key={props.handoffApproval.nodeId}
+              handoffApproval={props.handoffApproval}
+              onHandoffApproval={props.onHandoffApproval}
             />
           ) : null}
 

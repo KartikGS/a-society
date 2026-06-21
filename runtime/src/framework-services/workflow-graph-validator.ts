@@ -1,55 +1,43 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../common/role-id.js';
-import { OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
+import { parseRoleIdentity, REQUIRED_ROLE_FILES } from '../../shared/role-id.js';
+import { OWNER_BASE_ROLE_ID } from '../../shared/protocol-constants.js';
 import type { FlowRun } from '../common/types.js';
-import { WorkflowGraph as RuntimeWorkflowGraph, parseHandoffKey } from '../orchestration/workflow-graph.js';
+import {
+  WORKFLOW_EDGE_KEYS,
+  WORKFLOW_NODE_BOOLEAN_KEYS,
+  WORKFLOW_NODE_KEYS,
+  WORKFLOW_NODE_STRING_ARRAY_KEYS,
+  WorkflowGraph as RuntimeWorkflowGraph,
+  parseHandoffKey,
+} from '../../shared/workflow-graph.js';
+import type {
+  WorkflowDefinition,
+  WorkflowDocument as SharedWorkflowDocument,
+  WorkflowEdge,
+  WorkflowNode,
+} from '../../shared/workflow-graph.js';
 
 const REQUIRED_START_NODE_ID = 'owner-intake';
+const WORKFLOW_NODE_KEY_SET: ReadonlySet<string> = new Set(WORKFLOW_NODE_KEYS);
+const WORKFLOW_EDGE_KEY_SET: ReadonlySet<string> = new Set(WORKFLOW_EDGE_KEYS);
 
 export type WorkflowStateValidationInput = Pick<
   FlowRun,
   | 'runningNodes'
   | 'awaitingHumanNodes'
   | 'pendingHumanInputs'
+  | 'pendingHandoffApprovals'
   | 'visitedNodeIds'
   | 'completedHandoffs'
   | 'receivingHandoff'
   | 'awaitingHandoff'
 >;
 
-export interface WorkflowNode {
-  id: string;
-  role: string;
-  'human-collaborative'?: string;
-  required_readings?: string[];
-  guidance?: string[];
-  inputs?: string[];
-  work?: string[];
-  outputs?: string[];
-  transitions?: string[];
-  notes?: string[];
-}
-
-export interface WorkflowEdge {
-  from: string;
-  to: string;
-  artifact?: string;
-}
-
-export interface WorkflowGraph {
-  name: string;
-  summary?: string;
-  invariants?: Array<{ name: string; rule: string }>;
-  escalation?: Array<{ situation: string; escalated_by: string; to: string }>;
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
-}
-
-export interface WorkflowDocument {
-  workflow: WorkflowGraph;
-}
+export type { WorkflowEdge, WorkflowNode };
+export type WorkflowGraph = WorkflowDefinition;
+export type WorkflowDocument = SharedWorkflowDocument;
 
 export interface ValidationResult {
   valid: boolean;
@@ -89,6 +77,7 @@ function validateGraphAgainstFlowState(
   for (const nodeId of flowState.runningNodes ?? []) addNodeReference(nodeId, 'runningNodes');
   for (const nodeId of Object.keys(flowState.awaitingHumanNodes ?? {})) addNodeReference(nodeId, 'awaitingHumanNodes');
   for (const nodeId of Object.keys(flowState.pendingHumanInputs ?? {})) addNodeReference(nodeId, 'pendingHumanInputs');
+  for (const nodeId of Object.keys(flowState.pendingHandoffApprovals)) addNodeReference(nodeId, 'pendingHandoffApprovals');
   for (const nodeId of flowState.visitedNodeIds ?? []) addNodeReference(nodeId, 'visitedNodeIds');
   for (const nodeId of flowState.awaitingHandoff ?? []) addNodeReference(nodeId, 'awaitingHandoff');
 
@@ -234,8 +223,6 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
   const invalidWorkflowKeys = workflowKeys.filter((key) =>
     key !== 'name' &&
     key !== 'summary' &&
-    key !== 'invariants' &&
-    key !== 'escalation' &&
     key !== 'nodes' &&
     key !== 'edges'
   );
@@ -245,47 +232,6 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
 
   if ('summary' in wf && (typeof wf.summary !== 'string' || wf.summary.trim() === '')) {
     errors.push('workflow.summary must be a non-empty string if present');
-  }
-
-  if ('invariants' in wf) {
-    if (!Array.isArray(wf.invariants)) {
-      errors.push('workflow.invariants must be an array if present');
-    } else {
-      wf.invariants.forEach((item: any, i: number) => {
-        if (!item || typeof item !== 'object') {
-          errors.push(`workflow.invariants[${i}] must be an object`);
-          return;
-        }
-        if (typeof item.name !== 'string' || item.name.trim() === '') {
-          errors.push(`workflow.invariants[${i}].name must be a non-empty string`);
-        }
-        if (typeof item.rule !== 'string' || item.rule.trim() === '') {
-          errors.push(`workflow.invariants[${i}].rule must be a non-empty string`);
-        }
-      });
-    }
-  }
-
-  if ('escalation' in wf) {
-    if (!Array.isArray(wf.escalation)) {
-      errors.push('workflow.escalation must be an array if present');
-    } else {
-      wf.escalation.forEach((item: any, i: number) => {
-        if (!item || typeof item !== 'object') {
-          errors.push(`workflow.escalation[${i}] must be an object`);
-          return;
-        }
-        if (typeof item.situation !== 'string' || item.situation.trim() === '') {
-          errors.push(`workflow.escalation[${i}].situation must be a non-empty string`);
-        }
-        if (typeof item.escalated_by !== 'string' || item.escalated_by.trim() === '') {
-          errors.push(`workflow.escalation[${i}].escalated_by must be a non-empty string`);
-        }
-        if (typeof item.to !== 'string' || item.to.trim() === '') {
-          errors.push(`workflow.escalation[${i}].to must be a non-empty string`);
-        }
-      });
-    }
   }
 
   // workflow.name
@@ -306,18 +252,7 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
       }
       
       const keys = Object.keys(node);
-      const invalidKeys = keys.filter((k) =>
-        k !== 'id' &&
-        k !== 'role' &&
-        k !== 'human-collaborative' &&
-        k !== 'required_readings' &&
-        k !== 'guidance' &&
-        k !== 'inputs' &&
-        k !== 'work' &&
-        k !== 'outputs' &&
-        k !== 'transitions' &&
-        k !== 'notes'
-      );
+      const invalidKeys = keys.filter((k) => !WORKFLOW_NODE_KEY_SET.has(k));
       if (invalidKeys.length > 0) {
         errors.push(`workflow.nodes[${i}] contains invalid keys: ${invalidKeys.join(', ')}`);
       }
@@ -356,23 +291,14 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
           }
         }
       }
-      if ('human-collaborative' in node) {
-        if (
-          typeof node['human-collaborative'] !== 'string' ||
-          node['human-collaborative'].trim() === ''
-        ) {
-          errors.push(
-            `workflow.nodes[${i}].human-collaborative must be a non-empty string if present`
-          );
+      for (const key of WORKFLOW_NODE_BOOLEAN_KEYS) {
+        if (key in node && typeof node[key] !== 'boolean') {
+          errors.push(`workflow.nodes[${i}].${key} must be a boolean if present`);
         }
       }
-      validateOptionalStringArray(node.required_readings, `workflow.nodes[${i}].required_readings`);
-      validateOptionalStringArray(node.guidance, `workflow.nodes[${i}].guidance`);
-      validateOptionalStringArray(node.inputs, `workflow.nodes[${i}].inputs`);
-      validateOptionalStringArray(node.work, `workflow.nodes[${i}].work`);
-      validateOptionalStringArray(node.outputs, `workflow.nodes[${i}].outputs`);
-      validateOptionalStringArray(node.transitions, `workflow.nodes[${i}].transitions`);
-      validateOptionalStringArray(node.notes, `workflow.nodes[${i}].notes`);
+      for (const key of WORKFLOW_NODE_STRING_ARRAY_KEYS) {
+        validateOptionalStringArray(node[key], `workflow.nodes[${i}].${key}`);
+      }
     });
 
     if (typeof wf.nodes[0]?.id === 'string' && wf.nodes[0].id !== REQUIRED_START_NODE_ID) {
@@ -390,7 +316,7 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
         }
 
         const keys = Object.keys(edge);
-        const invalidKeys = keys.filter((k) => k !== 'from' && k !== 'to' && k !== 'artifact');
+        const invalidKeys = keys.filter((k) => !WORKFLOW_EDGE_KEY_SET.has(k));
         if (invalidKeys.length > 0) {
           errors.push(`workflow.edges[${i}] contains invalid keys: ${invalidKeys.join(', ')}`);
         }
@@ -404,9 +330,6 @@ export function validateGraph(doc: unknown, rolesDir?: string, flowState: Workfl
           errors.push(`workflow.edges[${i}].to must be a non-empty string`);
         } else if (!nodeIds.has(edge.to)) {
           errors.push(`workflow.edges[${i}].to "${edge.to}" does not match any node id`);
-        }
-        if ('artifact' in edge && typeof edge.artifact !== 'string') {
-          errors.push(`workflow.edges[${i}].artifact must be a string if present`);
         }
       });
     }
@@ -490,27 +413,14 @@ export function buildWorkflowRepairGuidance(errors: string[]): WorkflowRepairGui
     `      role: owner                   # first node role is required\n` +
     `    - id: <string>\n` +
     `      role: <role-instance-id>      # lowercase kebab-case, optional _N suffix\n` +
-    `      human-collaborative: <string>  # optional\n` +
     `      required_readings:\n` +
     `        - $VARIABLE_NAME             # optional\n` +
-    `      guidance:\n` +
-    `        - <string>                   # optional\n` +
-    `      inputs: [<string>]             # optional\n` +
     `      work: [<string>]               # optional\n` +
-    `      outputs: [<string>]            # optional\n` +
-    `      transitions: [<string>]        # optional\n` +
-    `      notes: [<string>]              # optional\n` +
+    `      human-colab: <boolean>         # optional; confirm with operator before forward handoff\n` +
+    `      await-all-inputs: <boolean>    # optional; only run once all inbound handoffs complete\n` +
     `  edges:\n` +
     `    - from: <node-id>\n` +
     `      to: <node-id>\n` +
-    `      artifact: <string>  # optional\n` +
-    `  invariants:\n` +
-    `    - name: <string>               # optional\n` +
-    `      rule: <string>\n` +
-    `  escalation:\n` +
-    `    - situation: <string>          # optional\n` +
-    `      escalated_by: <string>\n` +
-    `      to: <string>\n` +
     `Please fix workflow.yaml with this schema and restate your handoff.`;
   return { operatorSummary, modelRepairMessage };
 }

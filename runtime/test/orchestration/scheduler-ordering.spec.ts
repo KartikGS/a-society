@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AWAITING_HUMAN_REASON } from '../../src/common/protocol-constants.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../../src/common/types.js';
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { WorkflowGraph } from '../../src/orchestration/workflow-graph.js';
+import { WorkflowGraph } from '../../shared/workflow-graph.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
@@ -14,6 +14,7 @@ function makeFlowRun(overrides: Partial<FlowRun> = {}): FlowRun {
     runningNodes: [],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     visitedNodeIds: [],
     completedHandoffs: [],
     receivingHandoff: {},
@@ -143,6 +144,64 @@ describe('scheduler-ordering', () => {
     });
 
     expect(deriveRunnableNodeIds(flowRun, workflow)).toEqual([]);
+  });
+
+  it('await-all-inputs holds an AND-join until every inbound handoff is complete', () => {
+    const workflow = new WorkflowGraph({
+      nodes: [
+        { id: 'a', role: 'a' },
+        { id: 'b', role: 'b' },
+        { id: 'j', role: 'joiner', 'await-all-inputs': true },
+      ],
+      edges: [
+        { from: 'a', to: 'j' },
+        { from: 'b', to: 'j' },
+      ],
+    });
+    const partial = makeFlowRun({
+      completedHandoffs: ['a=>j'],
+      receivingHandoff: { 'a=>j': ['a.md'] },
+    });
+    // One inbound delivered, the other (b=>j) still outstanding — node stays unrunnable.
+    expect(deriveRunnableNodeIds(partial, workflow)).toEqual([]);
+  });
+
+  it('await-all-inputs runs the AND-join once all inbound handoffs are complete', () => {
+    const workflow = new WorkflowGraph({
+      nodes: [
+        { id: 'a', role: 'a' },
+        { id: 'b', role: 'b' },
+        { id: 'j', role: 'joiner', 'await-all-inputs': true },
+      ],
+      edges: [
+        { from: 'a', to: 'j' },
+        { from: 'b', to: 'j' },
+      ],
+    });
+    const complete = makeFlowRun({
+      completedHandoffs: ['a=>j', 'b=>j'],
+      receivingHandoff: { 'a=>j': ['a.md'], 'b=>j': ['b.md'] },
+    });
+    expect(deriveRunnableNodeIds(complete, workflow)).toEqual(['j']);
+  });
+
+  it('without await-all-inputs a join wakes on the first inbound handoff (OR-join default)', () => {
+    const workflow = new WorkflowGraph({
+      nodes: [
+        { id: 'a', role: 'a' },
+        { id: 'b', role: 'b' },
+        { id: 'j', role: 'joiner' },
+      ],
+      edges: [
+        { from: 'a', to: 'j' },
+        { from: 'b', to: 'j' },
+      ],
+    });
+    const partial = makeFlowRun({
+      completedHandoffs: ['a=>j'],
+      receivingHandoff: { 'a=>j': ['a.md'] },
+    });
+    expect(deriveRunnableNodeIds(partial, workflow)).toEqual(['j']);
   });
 
   it('does not wake non-prompt awaiting-human reasons from inbound handoff', () => {

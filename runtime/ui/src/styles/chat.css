@@ -1,0 +1,101 @@
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(34, 49, 63, 0.08);
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.status-pill-wait {
+  background: rgba(255, 237, 213, 0.82);
+  color: #9a3412;
+}
+
+.status-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 49, 63, 0.12);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.status-action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.status-action-stop {
+  border-color: rgba(187, 62, 3, 0.22);
+  background: rgba(255, 237, 213, 0.92);
+  color: #9a3412;
+}
+
+.role-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-self: flex-start;
+}
+
+.role-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.role-tab:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+}
+
+.role-tab-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.role-tab-live {
+  border-color: var(--accent);
+}
+
+.role-tab-active.role-tab-live {
+  background: var(--accent);
+}
+
+.role-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.7;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}

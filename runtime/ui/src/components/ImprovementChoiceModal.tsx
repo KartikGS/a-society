@@ -1,6 +1,6 @@
-import { IMPROVEMENT_CHOICE_MODE } from '../../../src/common/protocol-constants.js';
-import type { ProtocolImprovementChoiceMode } from '../../../src/common/protocol-constants.js';
-import type { FlowRun } from '../types';
+import { IMPROVEMENT_CHOICE_MODE } from '../../../shared/protocol-constants.js';
+import type { ProtocolImprovementChoiceMode } from '../../../shared/protocol-constants.js';
+import type { FlowRun } from '../../../shared/types.js';
 
 interface ImprovementChoiceModalProps {
   flowRun: FlowRun | null;

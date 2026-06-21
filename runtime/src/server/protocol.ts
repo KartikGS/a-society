@@ -1,74 +1,25 @@
-import type {
-  ConsentMode,
-  ConsentResponseDecision,
-  FeedItem,
-  FlowRef,
-  FlowRun,
-  FlowSummary,
-  OperatorFeedMessage,
-} from '../common/types.js';
+import type { FlowRef } from '../common/types.js';
 import {
   CLIENT_MESSAGE_TYPE,
   CONSENT_MODES,
   CONSENT_RESPONSE_DECISIONS,
   FEEDBACK_CONSENT_DECISIONS,
   FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES,
+  HANDOFF_APPROVAL_DECISIONS,
   IMPROVEMENT_CHOICE_MODES,
   PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES,
-} from '../common/protocol-constants.js';
-import type {
-  ProtocolFeedbackConsentDecision,
-  ProtocolImprovementChoiceMode,
-} from '../common/protocol-constants.js';
-import type { RuntimeServerMessage } from './ws-operator-sink.js';
+} from '../../shared/protocol-constants.js';
+import type { ClientMessage } from '../../shared/operator-protocol.js';
 
-export type ClientMessage =
-  | { type: typeof CLIENT_MESSAGE_TYPE.OPEN_FLOW; flowRef: FlowRef }
-  | { type: typeof CLIENT_MESSAGE_TYPE.RESUME_FLOW; flowRef: FlowRef }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN; flowRef: FlowRef; nodeId?: string; role?: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT; flowRef: FlowRef; role: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.HUMAN_INPUT; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_HUMAN_INPUT; flowRef: FlowRef; role: string; text: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE; flowRef: FlowRef; mode: ProtocolImprovementChoiceMode }
-  | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
-  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
-  | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; skills: string[]; mcpServers: string[] };
-
-/** Which configuration dimensions a role-configuration node still needs the operator to pick. */
-export interface RoleConfigurationPending {
-  pendingModel: boolean;
-  pendingSkills: boolean;
-  pendingMcp: boolean;
-}
-
-export type FlowStateMessage = {
-  type: 'flow_state';
-  flowRef: FlowRef;
-  flowRun: FlowRun;
-  backwardActive: string[];
-  hasActiveSession: boolean;
-  contextUsageByRole: Record<string, number>;
-  contextWindowByRole: Record<string, number>;
-  /** Per-node pending dimensions for nodes awaiting role configuration (keyed by node id). */
-  roleConfigurations: Record<string, RoleConfigurationPending>;
-};
-
-export type HistoricalMessage = OperatorFeedMessage;
-
-export type FlowScopedHistoricalMessage = HistoricalMessage & { flowRef: FlowRef };
-
-export type FeedReplayMessage = { type: 'feed_replay'; flowRef: FlowRef; roleFeeds: Record<string, FeedItem[]> };
-
-export type ServerMessage =
-  | { type: 'flow_summaries'; projectNamespace: string; flows: FlowSummary[] }
-  | FeedReplayMessage
-  | FlowStateMessage
-  | FlowScopedHistoricalMessage
-  | (RuntimeServerMessage & { flowRef: FlowRef });
+export type {
+  ClientMessage,
+  FeedReplayMessage,
+  FlowScopedHistoricalMessage,
+  FlowStateMessage,
+  HistoricalMessage,
+  RoleConfigurationPending,
+  ServerMessage,
+} from '../../shared/operator-protocol.js';
 
 export function hasFlowRef(value: unknown): value is FlowRef {
   return (
@@ -116,6 +67,13 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       typeof parsed.text === 'string' &&
       hasOptionalString(parsed, 'nodeId') &&
       hasOptionalString(parsed, 'role')
+    ) return parsed as ClientMessage;
+
+    if (
+      parsed.type === CLIENT_MESSAGE_TYPE.HANDOFF_APPROVAL &&
+      hasFlowRef(parsed.flowRef) &&
+      typeof parsed.nodeId === 'string' &&
+      isOneOf(parsed.decision, HANDOFF_APPROVAL_DECISIONS)
     ) return parsed as ClientMessage;
 
     if (

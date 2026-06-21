@@ -1,4 +1,5 @@
-import type { FlowRun, WorkflowGraph } from './types.js';
+import type { FlowRun } from '../../shared/types.js';
+import type { WorkflowDefinition as WorkflowGraph } from '../../shared/workflow-graph.js';
 
 export function areStringArraysEqual(left?: string[], right?: string[]): boolean {
   if (left === right) return true;
@@ -75,6 +76,31 @@ function arePendingHumanInputMapsEqual(
     if (!(key in right)) return false;
     if (left[key].text !== right[key].text) return false;
     if (left[key].receivedAt !== right[key].receivedAt) return false;
+  }
+
+  return true;
+}
+
+function arePendingHandoffApprovalMapsEqual(
+  left: FlowRun['pendingHandoffApprovals'],
+  right: FlowRun['pendingHandoffApprovals']
+): boolean {
+  const leftMap = left ?? {};
+  const rightMap = right ?? {};
+  const leftKeys = Object.keys(leftMap);
+  const rightKeys = Object.keys(rightMap);
+
+  if (leftKeys.length !== rightKeys.length) return false;
+
+  for (const key of leftKeys) {
+    if (!(key in rightMap)) return false;
+    const leftTargets = leftMap[key];
+    const rightTargets = rightMap[key];
+    if (leftTargets.length !== rightTargets.length) return false;
+    for (let index = 0; index < leftTargets.length; index += 1) {
+      if (leftTargets[index].target_node_id !== rightTargets[index].target_node_id) return false;
+      if (leftTargets[index].artifact_path !== rightTargets[index].artifact_path) return false;
+    }
   }
 
   return true;
@@ -161,6 +187,7 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areStringArraysEqual(left.runningNodes, right.runningNodes) &&
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
     arePendingHumanInputMapsEqual(left.pendingHumanInputs, right.pendingHumanInputs) &&
+    arePendingHandoffApprovalMapsEqual(left.pendingHandoffApprovals, right.pendingHandoffApprovals) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     areStringArrayMapsEqual(left.receivingHandoff, right.receivingHandoff) &&

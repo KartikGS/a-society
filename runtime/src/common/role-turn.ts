@@ -6,7 +6,7 @@ import { autoCompactRoleSessionBeforeTurn } from '../orchestration/compaction.js
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
 import { getActiveModelWithKey, type ModelConfigWithKey } from '../settings/settings-store.js';
-import { AWAITING_HUMAN_REASON } from './protocol-constants.js';
+import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { McpManager } from '../providers/mcp/manager.js';
 
 function extractFileRefs(content: string): string[] {
@@ -212,7 +212,6 @@ async function executeSessionTurn(
 }
 
 interface RunRoleTurnBaseInput {
-  workspaceRoot: string;
   roleInstanceId: string;
   providedSystemPrompt: string;
   flowRef: FlowRef;
@@ -249,7 +248,6 @@ export type RunRoleTurnInput = RunRoleTurnBaseInput & (
 );
 
 export async function runRoleTurn({
-  workspaceRoot,
   roleInstanceId,
   providedSystemPrompt,
   flowRef,
@@ -273,7 +271,6 @@ export async function runRoleTurn({
   const systemPrompt = providedSystemPrompt;
   const llm = new LLMGateway({
     mode: 'project',
-    workspaceRoot,
     flowRef,
     model,
     mcpManager,

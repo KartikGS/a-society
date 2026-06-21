@@ -1,5 +1,6 @@
 import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
-import { SessionStore } from '../../src/orchestration/store.js';
+import * as SessionStore from '../../src/orchestration/store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 import { runStoredFlowUntil } from './orchestrator-test-utils.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 import http from 'node:http';
@@ -30,6 +31,7 @@ async function runTest() {
 
   const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'linear-role-active-test-'));
   const workspaceRoot = tmpBase;
+  setWorkspaceRoot(workspaceRoot);
   const projectNamespace = 'test-project';
   const testDir = path.join(workspaceRoot, projectNamespace);
   const testStateDir = path.join(tmpBase, '.a-society', 'state');
@@ -39,7 +41,7 @@ async function runTest() {
   seedTestModelSettings(testSettingsDir, { providerBaseUrl: `http://127.0.0.1:${port}/v1` });
 
   const flowId = 'test-linear-flow-id';
-  const recordPath = getFlowRecordDir(workspaceRoot, { projectNamespace, flowId });
+  const recordPath = getFlowRecordDir({ projectNamespace, flowId });
   fs.mkdirSync(recordPath, { recursive: true });
   const projectADocsPath = path.join(testDir, 'a-docs');
   const rolesDir = path.join(projectADocsPath, 'roles');
@@ -53,10 +55,10 @@ async function runTest() {
   fs.writeFileSync(path.join(rolesDir, 'end', 'required-readings.yaml'), 'role: end\nrequired_readings:\n  - $A_SOCIETY_AGENTS\n  - $TEST_PROJECT_END_ROLE\n');
   fs.writeFileSync(path.join(projectADocsPath, 'agents.md'), "Hello Agents");
   fs.writeFileSync(path.join(projectADocsPath, 'indexes', 'main.md'),
-    `| \`$A_SOCIETY_AGENTS\` | \`test-project/a-docs/agents.md\` |\n` +
-    `| \`$TEST_PROJECT_START_ROLE\` | \`test-project/a-docs/roles/start/main.md\` |\n` +
-    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`test-project/a-docs/roles/next/main.md\` |\n` +
-    `| \`$TEST_PROJECT_END_ROLE\` | \`test-project/a-docs/roles/end/main.md\` |\n`
+    `| \`$A_SOCIETY_AGENTS\` | \`a-docs/agents.md\` |\n` +
+    `| \`$TEST_PROJECT_START_ROLE\` | \`a-docs/roles/start/main.md\` |\n` +
+    `| \`$TEST_PROJECT_NEXT_ROLE\` | \`a-docs/roles/next/main.md\` |\n` +
+    `| \`$TEST_PROJECT_END_ROLE\` | \`a-docs/roles/end/main.md\` |\n`
   );
   fs.writeFileSync(path.join(rolesDir, 'start', 'main.md'), "Start Role Doc");
   fs.writeFileSync(path.join(rolesDir, 'next', 'main.md'), "Next Role Doc");
@@ -82,7 +84,8 @@ async function runTest() {
 `;
   fs.writeFileSync(path.join(recordPath, 'workflow.yaml'), workflowGraph);
 
-  SessionStore.init(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
+  SessionStore.init();
   SessionStore.saveFlowRun({
     flowId,
     workspaceRoot,
@@ -91,6 +94,7 @@ async function runTest() {
     runningNodes: ['start'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {}, historyHandoff: {}, awaitingHandoff: [],
@@ -133,7 +137,7 @@ async function runTest() {
   try {
     await runStoredFlowUntil(
       orchestrator, workspaceRoot, projectNamespace, flowId,
-      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)?.awaitingHumanNodes['end']
+      () => !!SessionStore.loadFlowRun({ projectNamespace, flowId })?.awaitingHumanNodes['end']
     );
 
     const nextRoleActiveCount = sink.events.filter(
@@ -141,7 +145,7 @@ async function runTest() {
     ).length;
 
     expect(nextRoleActiveCount).toBe(1);
-    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId }, workspaceRoot)!;
+    const finalFlow = SessionStore.loadFlowRun({ projectNamespace, flowId })!;
     expect(finalFlow.completedHandoffs.includes('start=>next')).toBeTruthy();
     expect(finalFlow.historyHandoff['start=>next']).toEqual(['start-output.md']);
     expect(finalFlow.completedHandoffs.includes('next=>end')).toBeTruthy();

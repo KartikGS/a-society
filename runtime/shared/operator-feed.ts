@@ -85,7 +85,6 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
         text: event.summary
       };
     case 'human.awaiting_input':
-      // The interactive banner carries the awaiting-configuration prompt; no feed item.
       return null;
     case 'role.configured':
       return {

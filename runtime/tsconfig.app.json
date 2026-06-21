@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": "./dist/app",
+    "tsBuildInfoFile": "./dist/tsconfig.app.tsbuildinfo",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["vite/client"]
+  },
+  "include": ["ui/src/**/*"],
+  "references": [
+    { "path": "./tsconfig.shared.json" }
+  ]
+}

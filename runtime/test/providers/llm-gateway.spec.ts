@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { LLMGateway, LLMGatewayError } from '../../src/providers/llm.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { CONSENT_CHECK_RESULT, defaultConsentState } from '../../src/common/types.js';
 import type {
   ConsentCheckRequest,
@@ -90,6 +91,20 @@ class ToolCallThenTextProvider implements LLMProvider {
   }
 }
 
+class RecordingOptionsProvider implements LLMProvider {
+  public optionsSeen: TurnOptions[] = [];
+
+  async executeTurn(
+    _systemPrompt: string,
+    _messages: RuntimeMessageParam[],
+    _tools?: ToolDefinition[],
+    options?: TurnOptions
+  ): Promise<ProviderTurnResult> {
+    this.optionsSeen.push({ ...(options ?? {}) });
+    return { type: 'text', text: 'Done.' };
+  }
+}
+
 class BlockingConsentGate implements ConsentGate {
   public requests: ConsentCheckRequest[] = [];
   private checkedResolve!: () => void;
@@ -117,8 +132,13 @@ class BlockingConsentGate implements ConsentGate {
   getInFlightRequests(): ConsentRequest[] { return []; }
 }
 
+const tempDirs = new Set<string>();
+
 function createTempWorkspace(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-llm-gateway-'));
+  tempDirs.add(dir);
+  setWorkspaceRoot(dir);
+  return dir;
 }
 
 async function expectGatewayError(
@@ -137,12 +157,19 @@ async function expectGatewayError(
 }
 
 describe('LLMGateway', () => {
+  afterEach(() => {
+    for (const dir of tempDirs) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+    tempDirs.clear();
+    clearWorkspaceRoot();
+  });
+
   it('treats a late abort after streamed text returns as aborted', async () => {
-    const tmpDir = createTempWorkspace();
+    createTempWorkspace();
     const controller = new AbortController();
     const gateway = new LLMGateway({
       mode: 'system',
-      workspaceRoot: tmpDir,
       provider: new LateAbortTextProvider(() => controller.abort()),
     });
 
@@ -157,12 +184,48 @@ describe('LLMGateway', () => {
     expect(error.partialText).toBe('Partial answer without a handoff block');
   });
 
+  it('defaults prompt caching on for project turns and off for system turns', async () => {
+    createTempWorkspace();
+    const projectProvider = new RecordingOptionsProvider();
+    const projectGateway = new LLMGateway({
+      mode: 'project',
+      flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+      provider: projectProvider,
+    });
+
+    await projectGateway.executeTurn('System prompt', [{ role: 'user', content: 'Hello.' }]);
+
+    const systemProvider = new RecordingOptionsProvider();
+    const systemGateway = new LLMGateway({
+      mode: 'system',
+      provider: systemProvider,
+    });
+
+    await systemGateway.executeTurn('System prompt', [{ role: 'user', content: 'Hello.' }]);
+
+    expect(projectProvider.optionsSeen[0]?.cacheTurn).toBe(true);
+    expect(systemProvider.optionsSeen[0]?.cacheTurn).toBe(false);
+  });
+
+  it('lets explicit prompt-cache turn options override the gateway mode default', async () => {
+    createTempWorkspace();
+    const provider = new RecordingOptionsProvider();
+    const gateway = new LLMGateway({
+      mode: 'project',
+      flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+      provider,
+    });
+
+    await gateway.executeTurn('System prompt', [{ role: 'user', content: 'Hello.' }], { cacheTurn: false });
+
+    expect(provider.optionsSeen[0]?.cacheTurn).toBe(false);
+  });
+
   it('records tool-call continuation and denial result before consent-denied suspension', async () => {
-    const tmpDir = createTempWorkspace();
+    createTempWorkspace();
     const provider = new ToolCallThenTextProvider('demo-project/plan.md');
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider,
     });
@@ -208,11 +271,10 @@ describe('LLMGateway', () => {
   });
 
   it('keeps the attempted tool call in history after a late abort from streamed tool-call text', async () => {
-    const tmpDir = createTempWorkspace();
+    createTempWorkspace();
     const controller = new AbortController();
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider: new LateAbortToolCallProvider(() => controller.abort()),
     });
@@ -240,7 +302,6 @@ describe('LLMGateway', () => {
     const provider = new ToolCallThenTextProvider('a-society/feedback/demo-flow.md', '# Feedback\n');
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider,
     });
@@ -262,7 +323,6 @@ describe('LLMGateway', () => {
     const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/record/01-note.md', '# Note\n');
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider,
     });
@@ -283,7 +343,6 @@ describe('LLMGateway', () => {
     const provider = new ToolCallThenTextProvider('.a-society/state/demo-project/flow-1/flow.json', '{}');
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider,
     });
@@ -304,7 +363,6 @@ describe('LLMGateway', () => {
     const provider = new ToolCallThenTextProvider('other-project/file.md', 'nope');
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot: tmpDir,
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider,
     });

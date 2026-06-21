@@ -6,8 +6,8 @@ import {
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
-} from '../common/protocol-constants.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+} from '../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 import type {
   ConsentCheckRequest,
   ConsentCheckResult,

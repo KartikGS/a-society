@@ -1,45 +1,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { DISABLED_REASONING, normalizeModelReasoningConfig, type ModelReasoningConfig } from '../common/model-reasoning.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
+import { DISABLED_REASONING, normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
+import { normalizePromptCacheTtl } from '../common/types.js';
+import type {
+  AutomationSettings,
+  FeedSettings,
+  McpServerConfig,
+  McpServerSummary,
+  McpTransport,
+  ModelConfig,
+  ModelConfigWithKey,
+  SelectionMode,
+  ToolSettings,
+} from '../../shared/settings.js';
 
-export interface ModelConfig {
-  id: string;
-  displayName: string;
-  providerType: 'anthropic' | 'openai-compatible';
-  providerBaseUrl: string;
-  modelId: string;
-  contextWindow: number;
-  maxOutputTokens: number;
-  reasoning: ModelReasoningConfig;
-  supportedInputTypes: Array<'image' | 'audio' | 'video'>;
-  active: boolean;
-}
-
-export interface ModelConfigWithKey extends ModelConfig {
-  apiKey: string;
-}
-
-export type McpTransport = 'stdio' | 'http';
-
-export interface McpServerConfig {
-  id: string;
-  name: string;
-  transport: McpTransport;
-  command?: string;
-  args?: string[];
-  envKeys?: string[];
-  url?: string;
-  headerKeys?: string[];
-  toolNames: string[];
-}
-
-export interface McpServerSummary {
-  id: string;
-  name: string;
-  transport: McpTransport;
-  toolNames: string[];
-}
+export type {
+  AutomationSettings,
+  FeedSettings,
+  McpServerConfig,
+  McpServerSummary,
+  McpTransport,
+  ModelConfig,
+  ModelConfigWithKey,
+  SelectionMode,
+  ToolSettings,
+} from '../../shared/settings.js';
 
 export interface ResolvedMcpServer extends McpServerConfig {
   env: Record<string, string>;
@@ -63,31 +50,6 @@ interface StoredToolSettings {
   };
 }
 
-export interface FeedSettings {
-  historyLimit: number;
-}
-
-export type SelectionMode = 'auto' | 'manual';
-
-/**
- * Per-dimension automation mode. `auto` lets the runtime decide the role's
- * model / skills / MCP servers via an independent selection turn; `manual`
- * prompts the operator. Each dimension is independent (e.g. manual model,
- * auto MCP). Defaults to `manual` so behavior is unchanged until opted in.
- */
-export interface AutomationSettings {
-  models: SelectionMode;
-  skills: SelectionMode;
-  mcpServers: SelectionMode;
-}
-
-export interface ToolSettings {
-  webSearch: {
-    enabled: boolean;
-    hasApiKey: boolean;
-  };
-}
-
 interface SettingsData {
   version: number;
   models: ModelConfig[];
@@ -106,6 +68,7 @@ interface PersistedModelConfig {
   contextWindow: number;
   maxOutputTokens: number;
   reasoning?: unknown;
+  cacheTtl?: unknown;
   supportedInputTypes?: unknown;
   active: boolean;
 }
@@ -128,14 +91,8 @@ export const MAX_FEED_HISTORY_LIMIT = 10000;
 const WEB_SEARCH_SECRET_KEY = '__tool_web_search_tavily_api_key';
 const MCP_SERVER_NAME_PATTERN = /^[a-z0-9-]{1,32}$/;
 
-let defaultWorkspaceRoot = process.cwd();
-
-export function configureSettingsStore(workspaceRoot: string): void {
-  defaultWorkspaceRoot = path.resolve(workspaceRoot);
-}
-
 function getSettingsDir(): string {
-  return path.join(defaultWorkspaceRoot, '.a-society');
+  return path.join(getWorkspaceRoot(), '.a-society');
 }
 
 function getSettingsPath(): string {
@@ -180,6 +137,7 @@ function normalizeModelConfig(model: PersistedModelConfig): ModelConfig {
     contextWindow: model.contextWindow,
     maxOutputTokens: model.maxOutputTokens,
     reasoning: normalizeModelReasoningConfig(model.reasoning ?? DISABLED_REASONING),
+    cacheTtl: normalizePromptCacheTtl(model.cacheTtl),
     supportedInputTypes: normalizeSupportedInputTypes(model.supportedInputTypes),
     active: model.active,
   };

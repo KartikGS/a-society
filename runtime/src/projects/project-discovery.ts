@@ -1,19 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  A_SOCIETY_CHANGELOG_RELATIVE_PATH,
+  A_DOCS_VERSION_RECORD_RELATIVE_PATH,
+} from '../common/runtime-contracts.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
+import { readVersionFrontmatter, evaluateProjectVersion } from '../framework-services/version-comparator.js';
+import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 
-export interface ProjectSummary {
-  displayName: string;
-  folderName: string;
-}
+export type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 
-export interface ProjectDiscovery {
-  withADocs: ProjectSummary[];
-  withoutADocs: ProjectSummary[];
-}
-
-export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
+export function discoverProjects(): ProjectDiscovery {
+  const workspaceRoot = getWorkspaceRoot();
   try {
     const entries = fs.readdirSync(workspaceRoot, { withFileTypes: true });
+    const currentVersion = readVersionFrontmatter(path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH));
     const withADocs: ProjectSummary[] = [];
     const withoutADocs: ProjectSummary[] = [];
 
@@ -21,16 +22,25 @@ export function discoverProjects(workspaceRoot: string): ProjectDiscovery {
       if (!entry.isDirectory()) continue;
       if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
 
-      const summary = {
-        displayName: entry.name,
-        folderName: entry.name
-      };
       const aDocsPath = path.join(workspaceRoot, entry.name, 'a-docs');
 
       if (fs.existsSync(aDocsPath) && fs.statSync(aDocsPath).isDirectory()) {
-        withADocs.push(summary);
+        const aDocsVersion = readVersionFrontmatter(
+          path.join(aDocsPath, A_DOCS_VERSION_RECORD_RELATIVE_PATH)
+        );
+        const status = evaluateProjectVersion(aDocsVersion, currentVersion);
+        withADocs.push({
+          displayName: entry.name,
+          folderName: entry.name,
+          aDocsVersion: status.aDocsVersion,
+          currentVersion: status.currentVersion,
+          updateAvailable: status.updateAvailable,
+        });
       } else {
-        withoutADocs.push(summary);
+        withoutADocs.push({
+          displayName: entry.name,
+          folderName: entry.name,
+        });
       }
     }
 

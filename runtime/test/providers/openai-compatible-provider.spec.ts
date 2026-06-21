@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import type { ModelReasoningConfig } from '../../src/common/model-reasoning.js';
+import { describe, expect, it, vi } from 'vitest';
+import OpenAI from 'openai';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import type { OperatorEvent, OperatorRenderSink, ToolDefinition } from '../../src/common/types.js';
+import { LLMGatewayError } from '../../src/common/types.js';
 import { OpenAICompatibleProvider } from '../../src/providers/openai-compatible.js';
+import { MAX_NETWORK_RETRIES } from '../../src/providers/retry.js';
 
 const customReasoning: ModelReasoningConfig = {
   mode: 'custom-openai-compatible',
@@ -311,5 +314,112 @@ describe('OpenAICompatibleProvider', () => {
     );
 
     expect(emitted).toEqual([]);
+  });
+});
+
+type OpenAIAttempt = 'fail' | Array<Record<string, unknown>>;
+
+function installSequencedOpenAIClient(provider: OpenAICompatibleProvider, attempts: OpenAIAttempt[]): () => number {
+  let calls = 0;
+  (provider as unknown as { client: unknown }).client = {
+    chat: {
+      completions: {
+        create: async () => {
+          const attempt = attempts[Math.min(calls, attempts.length - 1)];
+          calls += 1;
+          if (attempt === 'fail') throw new OpenAI.APIConnectionError({ message: 'connection refused' });
+          const chunks = attempt;
+          return {
+            async *[Symbol.asyncIterator]() {
+              for (const c of chunks) yield c;
+            },
+          };
+        },
+      },
+    },
+  };
+  return () => calls;
+}
+
+function capturingRenderer(): { renderer: OperatorRenderSink; errors: string[] } {
+  const errors: string[] = [];
+  return {
+    errors,
+    renderer: {
+      emit: () => {},
+      requestSent: () => {},
+      receivingResponse: () => {},
+      responseEnd: () => {},
+      sendError: (message) => errors.push(message),
+    },
+  };
+}
+
+describe('OpenAICompatibleProvider network-error retry', () => {
+  it('retries a connection failure, notifies the operator, then succeeds', async () => {
+    vi.useFakeTimers();
+    try {
+      const provider = createProvider();
+      const callCount = installSequencedOpenAIClient(provider, ['fail', [chunk({ content: 'Recovered.' })]]);
+      const { renderer, errors } = capturingRenderer();
+      const promise = provider.executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, {
+        operatorRenderer: renderer,
+      });
+      await vi.runAllTimersAsync();
+      const result = await promise;
+      expect(result).toMatchObject({ type: 'text', text: 'Recovered.' });
+      expect(callCount()).toBe(2);
+      expect(errors).toEqual([expect.stringContaining('(1/5)')]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('surfaces the error after exhausting the retry budget', async () => {
+    vi.useFakeTimers();
+    try {
+      const provider = createProvider();
+      const callCount = installSequencedOpenAIClient(provider, ['fail']);
+      const settled = provider
+        .executeTurn('system', [{ role: 'user', content: 'Prompt.' }])
+        .then(() => 'resolved', (error: unknown) => error);
+      await vi.runAllTimersAsync();
+      const outcome = await settled;
+      // The provider maps an exhausted connection error onto its typed gateway error.
+      expect(outcome).toBeInstanceOf(LLMGatewayError);
+      expect((outcome as LLMGatewayError).type).toBe('RATE_LIMIT');
+      expect(callCount()).toBe(MAX_NETWORK_RETRIES + 1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry once output has streamed', async () => {
+    const provider = createProvider();
+    let calls = 0;
+    (provider as unknown as { client: unknown }).client = {
+      chat: {
+        completions: {
+          create: async () => {
+            calls += 1;
+            return {
+              async *[Symbol.asyncIterator]() {
+                yield chunk({ content: 'partial' });
+                throw new OpenAI.APIConnectionError({ message: 'reset mid-stream' });
+              },
+            };
+          },
+        },
+      },
+    };
+    const streamed: string[] = [];
+    const outcome = await provider
+      .executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, {
+        onAssistantTextDelta: (text) => streamed.push(text),
+      })
+      .then(() => 'resolved', (error: unknown) => error);
+    expect(outcome).toBeInstanceOf(LLMGatewayError);
+    expect(calls).toBe(1);
+    expect(streamed).toEqual(['partial']);
   });
 });

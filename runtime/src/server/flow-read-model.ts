@@ -1,12 +1,12 @@
-import { IMPROVEMENT_CHOICE_MODE } from '../common/protocol-constants.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import { findWorkflowFilePath, resolveFlowWorkflow } from '../context/workflow-file.js';
 import { readImprovementWorkflow } from '../improvement/improvement-workflow.js';
-import { SessionStore } from '../orchestration/store.js';
+import * as SessionStore from '../orchestration/store.js';
 
-export function createFlowReadModel(workspaceRoot: string) {
+export function createFlowReadModel() {
   function readFlowRun(ref: FlowRef): FlowRun | null {
-    return SessionStore.loadFlowRun(ref, workspaceRoot);
+    return SessionStore.loadFlowRun(ref);
   }
 
   function resolveWorkflow(flowRun: FlowRun | null): any | null {

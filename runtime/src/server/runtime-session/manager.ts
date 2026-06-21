@@ -1,16 +1,18 @@
 import type { WebSocket } from 'ws';
-import { flowKey, flowRefFromRun } from '../../common/flow-ref.js';
+import { flowKey, flowRefFromRun } from '../../../shared/flow-ref.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   FeedItem,
   FlowRef,
   FlowRun,
 } from '../../common/types.js';
+import { getWorkspaceRoot } from '../../common/workspace.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
+import { bootstrapUpdateFlow } from '../../projects/update-bootstrap.js';
 import { initializeDraftFlow } from '../../projects/draft-flow.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
@@ -29,7 +31,7 @@ import type { ActiveSession, RuntimeSessionManagerOptions } from './types.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from '../ws-operator-sink.js';
 
 export function createRuntimeSessionManager(options: RuntimeSessionManagerOptions) {
-  const { workspaceRoot, socketHub, flowReadModel } = options;
+  const { socketHub, flowReadModel } = options;
   const activeSessions = new Map<string, ActiveSession>();
   const readFlowRun = flowReadModel.readFlowRun;
   const resolveWorkflow = flowReadModel.resolveWorkflow;
@@ -46,7 +48,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     sendToSocket(socket, {
       type: 'flow_summaries',
       projectNamespace,
-      flows: SessionStore.listFlowSummaries(workspaceRoot, projectNamespace),
+      flows: SessionStore.listFlowSummaries(projectNamespace),
     });
   }
 
@@ -65,7 +67,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   function emitHistoricalMessage(session: ActiveSession, message: HistoricalMessage): void {
-    rememberMessage(session, message, workspaceRoot);
+    rememberMessage(session, message);
     broadcastToFlow(session.flowRef, { ...message, flowRef: session.flowRef } as FlowScopedHistoricalMessage);
   }
 
@@ -74,7 +76,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   function readFlowStateMessage(session: ActiveSession | null, ref: FlowRef) {
-    return buildFlowStateMessage(session, ref, readFlowRun, workspaceRoot);
+    return buildFlowStateMessage(session, ref, readFlowRun);
   }
 
   function sendFlowState(socket: WebSocket, ref: FlowRef): void {
@@ -95,7 +97,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   const consent = createRuntimeSessionConsent({
-    workspaceRoot,
     activeSessions,
     emitFlowState,
     readFlowStateMessage,
@@ -122,9 +123,9 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     const initialConsentState = normalizeConsentState(readFlowRun(flowRef)?.consentState ?? defaultConsentState());
     const consentGate = new ConsentGateImpl(initialConsentState, sink);
 
-    const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef, workspaceRoot);
+    const roleFeedHistory = SessionStore.loadAllRoleFeeds(flowRef);
     const roleFeedSequence = recoverRoleFeedSequence(roleFeedHistory);
-    const latestContextUsageByRole = loadLatestContextUsageByRole(flowRef, roleFeedHistory, workspaceRoot);
+    const latestContextUsageByRole = loadLatestContextUsageByRole(flowRef, roleFeedHistory);
 
     session = {
       flowRef,
@@ -152,7 +153,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   function startFlowRunner(session: ActiveSession, projectNamespace: string): void {
     void attachSessionTask(session, () =>
       session.orchestrator.runStoredFlow(
-        workspaceRoot,
         projectNamespace,
         session.flowRef.flowId,
         (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
@@ -198,7 +198,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
 
   function replaySessionState(socket: WebSocket, ref: FlowRef): void {
     const session = activeSessions.get(flowKey(ref));
-    const feedHistory = session?.roleFeedHistory ?? SessionStore.loadAllRoleFeeds(ref, workspaceRoot);
+    const feedHistory = session?.roleFeedHistory ?? SessionStore.loadAllRoleFeeds(ref);
 
     const roleFeeds: Record<string, FeedItem[]> = {};
     for (const [roleKey, items] of feedHistory) {
@@ -250,9 +250,9 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const flowRun = initializeDraftFlow(workspaceRoot, projectNamespace, 'owner');
+    const flowRun = initializeDraftFlow(projectNamespace, 'owner');
     const flowRef = flowRefFromRun(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, flowRef);
 
     subscribeSocket(socket, flowRef);
     sendProjectFlows(socket, projectNamespace);
@@ -268,9 +268,27 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const { flowRun } = bootstrapInitializationFlow(workspaceRoot, projectNamespace, mode);
+    const { flowRun } = bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode);
     const flowRef = flowRefFromRun(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef, workspaceRoot);
+    SessionStore.saveFlowRun(flowRun, flowRef);
+
+    subscribeSocket(socket, flowRef);
+    sendProjectFlows(socket, projectNamespace);
+
+    const session = createSession(flowRef);
+    emitFlowState(session);
+    startFlowRunner(session, flowRun.projectNamespace);
+  }
+
+  function startUpdateFlow(socket: WebSocket, projectNamespace: string): void {
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
+      return;
+    }
+
+    const { flowRun } = bootstrapUpdateFlow(projectNamespace);
+    const flowRef = flowRefFromRun(flowRun);
+    SessionStore.saveFlowRun(flowRun, flowRef);
 
     subscribeSocket(socket, flowRef);
     sendProjectFlows(socket, projectNamespace);
@@ -305,7 +323,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    const normalizedFlowRun = await normalizeStaleConsentWaits(ref, readFlowRun, workspaceRoot);
+    const normalizedFlowRun = await normalizeStaleConsentWaits(ref, readFlowRun);
     if (normalizedFlowRun) {
       flowRun = normalizedFlowRun;
     }
@@ -334,7 +352,6 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   const commands = createRuntimeSessionCommands({
-    workspaceRoot,
     activeSessions,
     readFlowRun,
     resolveWorkflow,
@@ -354,8 +371,10 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     openFlow,
     startFreshFlow,
     startInitializationFlow,
+    startUpdateFlow,
     resumeFlow,
     handleHumanInput: commands.handleHumanInput,
+    handleHandoffApproval: commands.handleHandoffApproval,
     handleRoleConfiguration: commands.handleRoleConfiguration,
     handleImprovementChoice: commands.handleImprovementChoice,
     handleFeedbackConsentChoice: commands.handleFeedbackConsentChoice,

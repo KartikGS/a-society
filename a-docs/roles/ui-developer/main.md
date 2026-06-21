@@ -62,7 +62,7 @@ At implementation phases the workflow loads:
 - `$A_SOCIETY_UI_DEV_IMPL_DISCIPLINE` — completion-report obligations, escalation rules, and boundary discipline
 - `$A_SOCIETY_UI_DEV_STYLE_GUIDE` — TypeScript, component, state, CSS, and ReactFlow conventions for `runtime/ui/`
 
-When you need the standing executable design or coupling context, consult `$A_SOCIETY_EXECUTABLE_PROPOSAL`, `$A_SOCIETY_EXECUTABLE_ADDENDUM`, and `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
+When you need the standing executable design or coupling context, consult `$A_SOCIETY_EXECUTABLE_ARCHITECTURE` and `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 
 ---
 

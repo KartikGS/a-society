@@ -1,10 +1,9 @@
-import { parseRoleIdentity } from '../../common/role-id.js';
-import { AWAITING_HUMAN_REASON } from '../../common/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
+import { AWAITING_HUMAN_REASON } from '../../../shared/protocol-constants.js';
+import type { WorkflowDefinition } from '../../../shared/workflow-graph.js';
 import type { FlowRun } from '../../common/types.js';
 
-type WorkflowLike = {
-  nodes?: Array<{ id?: unknown; role?: unknown }>;
-};
+type WorkflowLike = Pick<WorkflowDefinition, 'nodes'>;
 
 interface ResolvedHumanInputTarget {
   nodeId: string;
@@ -12,7 +11,9 @@ interface ResolvedHumanInputTarget {
 }
 
 export function isAwaitingHumanReply(reason: FlowRun['awaitingHumanNodes'][string]['reason']): boolean {
-  return reason !== AWAITING_HUMAN_REASON.CONSENT && reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION;
+  return reason !== AWAITING_HUMAN_REASON.CONSENT &&
+    reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION &&
+    reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL;
 }
 
 function workflowRoleForNode(workflow: WorkflowLike | null | undefined, nodeId: string): string | undefined {
@@ -54,7 +55,9 @@ export function resolveHumanInputTarget(
       if (!isAwaitingHumanReply(awaitingState.reason)) {
         const waitKind = awaitingState.reason === AWAITING_HUMAN_REASON.ROLE_CONFIGURATION
           ? 'role configuration'
-          : 'consent';
+          : awaitingState.reason === AWAITING_HUMAN_REASON.HANDOFF_APPROVAL
+            ? 'handoff approval'
+            : 'consent';
         throw new Error(`Node '${target.nodeId}' is awaiting ${waitKind}, not a text reply.`);
       }
       return { nodeId: target.nodeId, role: awaitingState.role };
@@ -70,10 +73,19 @@ export function resolveHumanInputTarget(
     const matches = targets.filter((candidate) =>
       candidate.role && parseRoleIdentity(candidate.role).instanceRoleId === roleKey
     );
-    if (matches.length === 1) return matches[0];
     if (matches.length === 0) {
       throw new Error(`Role '${target.role}' is not accepting human input.`);
     }
+    if (matches.length === 1) return matches[0];
+    // Multiple nodes of this role are accepting input at once — e.g. one parked in
+    // awaitingHumanNodes waiting on a reply while another sits in awaitingHandoff.
+    // Prefer the node explicitly awaiting a human reply; the operator's text is for it.
+    // Only stay ambiguous if even that preference narrows to more than one node.
+    const awaitingReply = matches.filter((candidate) => {
+      const state = flowRun.awaitingHumanNodes[candidate.nodeId];
+      return state !== undefined && isAwaitingHumanReply(state.reason);
+    });
+    if (awaitingReply.length === 1) return awaitingReply[0];
     throw new Error(`Role '${target.role}' has multiple nodes accepting human input. Specify nodeId.`);
   }
 

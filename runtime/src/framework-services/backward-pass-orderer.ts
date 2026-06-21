@@ -1,36 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { findWorkflowFilePath, parseWorkflowFile } from '../context/workflow-file.js';
-import { IMPROVEMENT_CHOICE_MODE, OWNER_BASE_ROLE_ID } from '../common/protocol-constants.js';
-import type { ProtocolImprovementChoiceMode } from '../common/protocol-constants.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { IMPROVEMENT_CHOICE_MODE, OWNER_BASE_ROLE_ID } from '../../shared/protocol-constants.js';
+import type { ProtocolImprovementChoiceMode } from '../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
+import type { WorkflowDocument, WorkflowEdge, WorkflowNode } from '../../shared/workflow-graph.js';
 
-export interface WorkflowNode {
-  id: string;
-  role: string;
-  'human-collaborative'?: string;
-  required_readings?: string[];
-  guidance?: string[];
-  inputs?: string[];
-  work?: string[];
-  outputs?: string[];
-  transitions?: string[];
-  notes?: string[];
-}
-
-export interface WorkflowEdge {
-  from: string;
-  to: string;
-  artifact?: string;
-}
-
-export interface RecordWorkflowFrontmatter {
-  workflow: {
-    name?: string;
-    nodes: WorkflowNode[];
-    edges: WorkflowEdge[];
-  };
-}
+export type { WorkflowEdge, WorkflowNode };
+export type RecordWorkflowFrontmatter = WorkflowDocument;
 
 export interface BackwardPassEntry {
   role: string;
@@ -101,32 +78,7 @@ export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFron
       throw new Error(`workflow.nodes[${index}].role must be a non-empty string`);
     }
 
-    return {
-      id,
-      role,
-      'human-collaborative': typeof nodeObj['human-collaborative'] === 'string' ? nodeObj['human-collaborative'] : undefined,
-      required_readings: Array.isArray(nodeObj.required_readings)
-        ? nodeObj.required_readings.filter((value): value is string => typeof value === 'string')
-        : undefined,
-      guidance: Array.isArray(nodeObj.guidance)
-        ? nodeObj.guidance.filter((value): value is string => typeof value === 'string')
-        : undefined,
-      inputs: Array.isArray(nodeObj.inputs)
-        ? nodeObj.inputs.filter((value): value is string => typeof value === 'string')
-        : undefined,
-      work: Array.isArray(nodeObj.work)
-        ? nodeObj.work.filter((value): value is string => typeof value === 'string')
-        : undefined,
-      outputs: Array.isArray(nodeObj.outputs)
-        ? nodeObj.outputs.filter((value): value is string => typeof value === 'string')
-        : undefined,
-      transitions: Array.isArray(nodeObj.transitions)
-        ? nodeObj.transitions.filter((value): value is string => typeof value === 'string')
-        : undefined,
-      notes: Array.isArray(nodeObj.notes)
-        ? nodeObj.notes.filter((value): value is string => typeof value === 'string')
-        : undefined,
-    };
+    return { id, role };
   });
 
   const rawEdges = workflowObj.edges ?? [];
@@ -151,11 +103,7 @@ export function parseRecordWorkflowFrontmatter(doc: unknown): RecordWorkflowFron
       throw new Error(`workflow.edges[${index}].to must be a non-empty string`);
     }
 
-    return {
-      from,
-      to,
-      artifact: typeof edgeObj.artifact === 'string' ? edgeObj.artifact : undefined,
-    };
+    return { from, to };
   });
 
   return {

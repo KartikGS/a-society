@@ -1,7 +1,7 @@
-import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { LLMGatewayError } from '../common/types.js';
 import type { ToolDefinition, ToolCall } from '../common/types.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 
 const TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_BYTES = 100_000;
@@ -69,12 +69,6 @@ export const BASH_TOOL_DEFINITIONS: ToolDefinition[] = [
 ];
 
 export class BashToolExecutor {
-  private readonly workspaceRoot: string;
-
-  constructor(workspaceRoot: string) {
-    this.workspaceRoot = path.resolve(workspaceRoot);
-  }
-
   canHandle(name: string): boolean {
     return name === 'run_command';
   }
@@ -108,7 +102,7 @@ export class BashToolExecutor {
     const { cleanEnv, strippedValues } = sanitizeEnv(process.env);
     return new Promise((resolve, reject) => {
       const child = spawn('bash', ['-c', command], {
-        cwd: this.workspaceRoot,
+        cwd: getWorkspaceRoot(),
         env: cleanEnv,
         stdio: ['ignore', 'pipe', 'pipe']
       });

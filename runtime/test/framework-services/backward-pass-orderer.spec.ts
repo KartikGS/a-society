@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, it } from 'vitest';
-import { IMPROVEMENT_CHOICE_MODE } from '../../src/common/protocol-constants.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import {
   buildBackwardPassPlan,
   deterministicFindingsFilePath,

@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  configureSettingsStore,
   createModel,
   createMcpServer,
   deleteMcpServer,
@@ -21,6 +20,7 @@ import {
   updateFeedSettings,
   updateWebSearchToolSettings,
 } from '../../src/settings/settings-store.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 let tmpDir: string;
 
@@ -33,6 +33,7 @@ function createWorkspaceModel(apiKey = 'workspace-key') {
     contextWindow: 0,
     maxOutputTokens: 0,
     reasoning: { mode: 'disabled' },
+    cacheTtl: '5m',
     supportedInputTypes: [],
   }, apiKey);
 }
@@ -40,11 +41,11 @@ function createWorkspaceModel(apiKey = 'workspace-key') {
 describe('settings-store', () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-store-'));
-    configureSettingsStore(tmpDir);
+    setWorkspaceRoot(tmpDir);
   });
 
   afterEach(() => {
-    configureSettingsStore(process.cwd());
+    clearWorkspaceRoot();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -68,15 +69,39 @@ describe('settings-store', () => {
       contextWindow: 64000,
       maxOutputTokens: 4096,
       reasoning: { mode: 'openai-chat', effort: 'medium' },
+      cacheTtl: '1h',
       supportedInputTypes: ['image', 'audio'],
     });
 
     expect(updated).toMatchObject({
       displayName: 'Workspace Model Updated',
       modelId: 'workspace-model-v2',
+      cacheTtl: '1h',
       supportedInputTypes: ['image', 'audio'],
     });
     expect(getActiveModelWithKey()?.apiKey).toBe('workspace-key');
+  });
+
+  it('defaults invalid persisted prompt cache TTL values to five minutes', () => {
+    fs.mkdirSync(path.join(tmpDir, '.a-society'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.a-society', 'settings.json'), JSON.stringify({
+      version: 1,
+      models: [{
+        id: 'bad-cache-ttl',
+        displayName: 'Bad TTL',
+        providerType: 'anthropic',
+        providerBaseUrl: '',
+        modelId: 'claude-test',
+        contextWindow: 0,
+        maxOutputTokens: 0,
+        reasoning: { mode: 'disabled' },
+        cacheTtl: '30m',
+        supportedInputTypes: [],
+        active: true,
+      }],
+    }), 'utf8');
+
+    expect(listModels()[0]?.cacheTtl).toBe('5m');
   });
 
   it('stores the Tavily web search key in secrets and only enables when configured', () => {

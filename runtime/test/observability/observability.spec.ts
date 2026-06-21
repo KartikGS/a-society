@@ -13,6 +13,13 @@ import { runRoleTurn } from '../../src/common/role-turn.js';
 import { HandoffParseError } from '../../src/orchestration/handoff.js';
 import { TelemetryManager } from '../../src/observability/observability.js';
 import { LLMGateway } from '../../src/providers/llm.js';
+import { AnthropicProvider } from '../../src/providers/anthropic.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { OpenAICompatibleProvider } from '../../src/providers/openai-compatible.js';
+import {
+  ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
+} from '../../src/providers/config.js';
 import {
   clearTestMetrics,
   clearTestSpans,
@@ -63,6 +70,50 @@ class TelemetryProvider implements LLMProvider {
   }
 }
 
+class FakeAnthropicStream {
+  private handlers: Array<(event: Record<string, unknown>) => void> = [];
+
+  constructor(private readonly finalResponse: Record<string, unknown>) {}
+
+  on(eventName: string, handler: (event: Record<string, unknown>) => void): FakeAnthropicStream {
+    if (eventName === 'streamEvent') this.handlers.push(handler);
+    return this;
+  }
+
+  async finalMessage(): Promise<Record<string, unknown>> {
+    for (const handler of this.handlers) {
+      handler({
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'text_delta', text: 'Done.' },
+      });
+    }
+    return this.finalResponse;
+  }
+}
+
+function installFakeAnthropicClient(provider: AnthropicProvider, finalResponse: Record<string, unknown>): void {
+  (provider as unknown as { client: unknown }).client = {
+    messages: {
+      stream: () => new FakeAnthropicStream(finalResponse),
+    },
+  };
+}
+
+function installFakeOpenAIClient(provider: OpenAICompatibleProvider, chunks: Array<Record<string, unknown>>): void {
+  (provider as unknown as { client: unknown }).client = {
+    chat: {
+      completions: {
+        create: async () => ({
+          async *[Symbol.asyncIterator]() {
+            for (const chunk of chunks) yield chunk;
+          },
+        }),
+      },
+    },
+  };
+}
+
 describe('observability', () => {
   let workspaceRoot = '';
   const flowRef = { projectNamespace: 'a-society', flowId: 'observability-flow' };
@@ -71,6 +122,7 @@ describe('observability', () => {
     await setupTestTelemetry();
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-observability-'));
     seedTestModelSettings(path.join(workspaceRoot, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+    setWorkspaceRoot(workspaceRoot);
   });
 
   beforeEach(() => {
@@ -104,7 +156,6 @@ describe('observability', () => {
     ]);
     const gateway = new LLMGateway({
       mode: 'project',
-      workspaceRoot,
       flowRef,
       provider,
     });
@@ -128,13 +179,93 @@ describe('observability', () => {
     });
   });
 
+  it('records Anthropic prompt-cache usage attributes from the provider span', async () => {
+    const provider = new AnthropicProvider('test-key', 'claude-test', {
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    installFakeAnthropicClient(provider, {
+      usage: {
+        input_tokens: 111,
+        output_tokens: 7,
+        cache_read_input_tokens: 23,
+        cache_creation_input_tokens: 47,
+      },
+      stop_reason: 'end_turn',
+      content: [{ type: 'text', text: 'Done.' }],
+    });
+
+    await provider.executeTurn('system', [{ role: 'user', content: 'Prompt.' }], undefined, { cacheTurn: true });
+    await flushTestTelemetry();
+
+    const span = getSpan('chat anthropic');
+    expect(span.attributes).toMatchObject({
+      'gen_ai.usage.input_tokens': 111,
+      'gen_ai.usage.output_tokens': 7,
+      [ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS]: 23,
+      [ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS]: 47,
+    });
+  });
+
+  it('records OpenAI-compatible cached input tokens when the provider reports them', async () => {
+    const provider = new OpenAICompatibleProvider({
+      baseURL: 'https://example.invalid/v1',
+      apiKey: 'test-key',
+      model: 'openai-compatible-test',
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    installFakeOpenAIClient(provider, [
+      { choices: [{ delta: { content: 'Done.' }, finish_reason: null }] },
+      {
+        choices: [],
+        usage: {
+          prompt_tokens: 111,
+          completion_tokens: 7,
+          prompt_tokens_details: { cached_tokens: 23 },
+        },
+      },
+    ]);
+
+    await provider.executeTurn('system', [{ role: 'user', content: 'Prompt.' }]);
+    await flushTestTelemetry();
+
+    const span = getSpan('chat openai');
+    expect(span.attributes).toMatchObject({
+      'gen_ai.usage.input_tokens': 111,
+      'gen_ai.usage.output_tokens': 7,
+      [ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS]: 23,
+    });
+    expect(span.attributes).not.toHaveProperty(ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS);
+  });
+
+  it('omits OpenAI-compatible cache attributes when cached-token usage is absent', async () => {
+    clearTestSpans();
+    const provider = new OpenAICompatibleProvider({
+      baseURL: 'https://example.invalid/v1',
+      apiKey: 'test-key',
+      model: 'openai-compatible-test',
+      maxOutputTokens: 1024,
+      reasoning: { mode: 'disabled' },
+    });
+    installFakeOpenAIClient(provider, [
+      { choices: [{ delta: { content: 'Done.' }, finish_reason: null }] },
+      { choices: [], usage: { prompt_tokens: 111, completion_tokens: 7 } },
+    ]);
+
+    await provider.executeTurn('system', [{ role: 'user', content: 'Prompt.' }]);
+    await flushTestTelemetry();
+
+    const span = getSpan('chat openai');
+    expect(span.attributes).not.toHaveProperty(ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS);
+  });
+
   it('records role-turn handoff parse failures as metrics', async () => {
     vi.spyOn(LLMGateway.prototype, 'executeTurn').mockResolvedValue({
       text: 'I broke the handoff. ```handoff\ntarget_node_id:\n```',
     });
 
     await expect(runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'curator',
       providedSystemPrompt: 'System prompt',
       flowRef,

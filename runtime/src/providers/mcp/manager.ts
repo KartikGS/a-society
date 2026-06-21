@@ -70,6 +70,12 @@ function toToolDefinition(server: ResolvedMcpServer, tool: Tool): ToolDefinition
   };
 }
 
+function compareToolDefinitions(a: ToolDefinition, b: ToolDefinition): number {
+  if (a.name < b.name) return -1;
+  if (a.name > b.name) return 1;
+  return 0;
+}
+
 export function collectToolDefinitions(
   server: ResolvedMcpServer,
   tools: Tool[],
@@ -87,7 +93,7 @@ export function collectToolDefinitions(
       });
     }
   }
-  return definitions;
+  return definitions.sort(compareToolDefinitions);
 }
 
 function stringifyMcpContentBlock(block: CallToolResult['content'][number]): string {
@@ -152,7 +158,9 @@ export class SdkMcpManager implements McpManager {
   }
 
   listTools(): ToolDefinition[] {
-    return Array.from(this.connectionsByServerName.values()).flatMap((connection) => connection.tools);
+    return Array.from(this.connectionsByServerName.values())
+      .flatMap((connection) => connection.tools)
+      .sort(compareToolDefinitions);
   }
 
   async callTool(

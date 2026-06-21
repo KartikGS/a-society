@@ -1,11 +1,11 @@
-import { parseRoleIdentity } from '../../common/role-id.js';
-import { AWAITING_HUMAN_REASON } from '../../common/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
+import { AWAITING_HUMAN_REASON } from '../../../shared/protocol-constants.js';
 import type {
   FlowRef,
   FlowRun,
   RuntimeMessageParam,
 } from '../../common/types.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 
 const STALE_CONSENT_TOOL_RESULT =
   'Consent prompt was no longer available after runtime resume. The node is paused for operator guidance.';
@@ -28,9 +28,9 @@ function appendStaleConsentToolResults(messages: RuntimeMessageParam[]): boolean
   return last.calls.length > 0;
 }
 
-function repairStaleConsentTranscript(ref: FlowRef, nodeId: string, role: string, workspaceRoot: string): void {
+function repairStaleConsentTranscript(ref: FlowRef, nodeId: string, role: string): void {
   const roleKey = parseRoleIdentity(role).instanceRoleId;
-  const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+  const roleSession = SessionStore.loadRoleSession(roleKey, ref);
   if (!roleSession) return;
 
   let changed = appendStaleConsentToolResults(roleSession.transcriptHistory as RuntimeMessageParam[]);
@@ -38,14 +38,13 @@ function repairStaleConsentTranscript(ref: FlowRef, nodeId: string, role: string
     changed = appendStaleConsentToolResults(roleSession.currentNodeContext.exchanges) || changed;
   }
   if (changed) {
-    SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
+    SessionStore.saveRoleSession(roleSession, ref);
   }
 }
 
 export async function normalizeStaleConsentWaits(
   ref: FlowRef,
-  readFlowRun: ReadFlowRun,
-  workspaceRoot: string
+  readFlowRun: ReadFlowRun
 ): Promise<FlowRun | null> {
   const flowRun = readFlowRun(ref);
   if (!flowRun) return null;
@@ -55,7 +54,7 @@ export async function normalizeStaleConsentWaits(
   if (staleConsentNodes.length === 0) return flowRun;
 
   for (const [nodeId, state] of staleConsentNodes) {
-    repairStaleConsentTranscript(ref, nodeId, state.role, workspaceRoot);
+    repairStaleConsentTranscript(ref, nodeId, state.role);
   }
 
   return SessionStore.updateFlowRun((flow) => {
@@ -64,5 +63,5 @@ export async function normalizeStaleConsentWaits(
         flow.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.CONSENT_DENIED };
       }
     }
-  }, ref, workspaceRoot);
+  }, ref);
 }

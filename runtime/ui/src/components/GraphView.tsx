@@ -9,11 +9,11 @@ import {
   type Edge,
   type Node
 } from '@xyflow/react';
-import { getActiveNodeIds } from '../../../src/common/flow-state.js';
-import { WorkflowGraph as RuntimeWorkflowGraph, allIncidentEdgesCovered } from '../../../src/orchestration/workflow-graph.js';
+import { getActiveNodeIds } from '../../../shared/flow-state.js';
+import { WorkflowGraph as RuntimeWorkflowGraph, allIncidentEdgesCovered, type WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
+import type { FlowRef, FlowRun } from '../../../shared/types.js';
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
 import { toRoleKey } from '../app/roles';
-import type { FlowRef, FlowRun, WorkflowGraph } from '../types';
 
 export type GraphMode = 'flow' | 'improvement';
 

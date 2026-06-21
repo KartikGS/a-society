@@ -1,6 +1,6 @@
-import { flowKey } from '../../common/flow-ref.js';
-import { AWAITING_HUMAN_REASON, CONSENT_RESPONSE_DECISION } from '../../common/protocol-constants.js';
-import { parseRoleIdentity } from '../../common/role-id.js';
+import { flowKey } from '../../../shared/flow-ref.js';
+import { AWAITING_HUMAN_REASON, CONSENT_RESPONSE_DECISION } from '../../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   ConsentMode,
@@ -8,12 +8,11 @@ import type {
   ConsentResponseDecision,
   FlowRef,
 } from '../../common/types.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import type { FlowStateMessage, ServerMessage } from '../protocol.js';
 import type { ActiveSession } from './types.js';
 
 type RuntimeSessionConsentDeps = {
-  workspaceRoot: string;
   activeSessions: Map<string, ActiveSession>;
   emitFlowState: (session: ActiveSession) => void;
   readFlowStateMessage: (session: ActiveSession | null, ref: FlowRef) => FlowStateMessage | null;
@@ -22,7 +21,6 @@ type RuntimeSessionConsentDeps = {
 
 export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
   const {
-    workspaceRoot,
     activeSessions,
     emitFlowState,
     readFlowStateMessage,
@@ -40,7 +38,7 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
       flow.runningNodes = flow.runningNodes.filter((id) => id !== request.nodeId);
       flow.awaitingHumanNodes[request.nodeId] = { role: request.role, reason: AWAITING_HUMAN_REASON.CONSENT };
       flow.status = 'running';
-    }, session.flowRef, workspaceRoot);
+    }, session.flowRef);
     emitFlowState(session);
   }
 
@@ -77,14 +75,14 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
         flow.runningNodes.push(request.nodeId);
       }
       flow.status = 'running';
-    }, session.flowRef, workspaceRoot);
+    }, session.flowRef);
     emitFlowState(session);
   }
 
   function persistActiveSessionConsentState(session: ActiveSession): void {
     void SessionStore.updateFlowRun((flow) => {
       flow.consentState = session.consentGate.getState();
-    }, session.flowRef, workspaceRoot).then(() => emitFlowState(session));
+    }, session.flowRef).then(() => emitFlowState(session));
   }
 
   function persistInactiveConsentMode(ref: FlowRef, mode: ConsentMode): void {
@@ -94,7 +92,7 @@ export function createRuntimeSessionConsent(deps: RuntimeSessionConsentDeps) {
       }
       flow.consentState = normalizeConsentState(flow.consentState);
       flow.consentState.mode = mode;
-    }, ref, workspaceRoot).then(() => {
+    }, ref).then(() => {
       const msg = readFlowStateMessage(activeSessions.get(flowKey(ref)) ?? null, ref);
       if (msg) broadcastToFlow(ref, msg);
     });

@@ -1,12 +1,11 @@
 import { type Express, type Request, type Response } from 'express';
 import type { FlowRef, FlowRun } from '../common/types.js';
-import { SessionStore } from '../orchestration/store.js';
+import * as SessionStore from '../orchestration/store.js';
 import { deleteProject, ProjectDeletionError } from '../projects/project-deletion.js';
 import { discoverProjects } from '../projects/project-discovery.js';
 import type { FlowReadModel } from './flow-read-model.js';
 
 type RegisterFlowRoutesOptions = {
-  workspaceRoot: string;
   flowReadModel: FlowReadModel;
   onFlowDeleted(projectNamespace: string): void;
   onProjectDeleted(projectNamespace: string): void;
@@ -44,27 +43,27 @@ function workflowResponse(workflow: any) {
 }
 
 export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOptions): void {
-  const { workspaceRoot, flowReadModel, onFlowDeleted, onProjectDeleted } = options;
+  const { flowReadModel, onFlowDeleted, onProjectDeleted } = options;
 
   app.get('/api/projects', (_req: Request, res: Response) => {
-    res.json(discoverProjects(workspaceRoot));
+    res.json(discoverProjects());
   });
 
   app.get('/api/projects/:projectNamespace/flows', (req: Request, res: Response) => {
     const projectNamespace = routeParam(req.params.projectNamespace);
-    res.json(SessionStore.listFlowSummaries(workspaceRoot, projectNamespace));
+    res.json(SessionStore.listFlowSummaries(projectNamespace));
   });
 
   app.delete('/api/projects/:projectNamespace', (req: Request, res: Response) => {
     const projectNamespace = routeParam(req.params.projectNamespace);
 
     try {
-      const deletion = deleteProject(workspaceRoot, projectNamespace);
+      const deletion = deleteProject(projectNamespace);
       onProjectDeleted(projectNamespace);
       res.status(200).json({
         ok: true,
         deletion,
-        projects: discoverProjects(workspaceRoot),
+        projects: discoverProjects(),
       });
     } catch (error: any) {
       const statusCode = error instanceof ProjectDeletionError ? error.statusCode : 500;
@@ -120,7 +119,7 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
   app.delete('/api/flows/:projectNamespace/:flowId', (req: Request, res: Response) => {
     const ref = flowRefFromParams(req);
 
-    SessionStore.deleteFlow(ref, workspaceRoot);
+    SessionStore.deleteFlow(ref);
     onFlowDeleted(ref.projectNamespace);
 
     res.status(200).json({ ok: true });

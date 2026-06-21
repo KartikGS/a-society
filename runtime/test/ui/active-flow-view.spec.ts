@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isBackwardHandoffSource } from '../../ui/src/app/handoff-source.js';
-import type { OperatorEvent, WorkflowGraph } from '../../ui/src/types.js';
+import type { OperatorEvent } from '../../shared/types.js';
+import type { WorkflowDefinition as WorkflowGraph } from '../../shared/workflow-graph.js';
 
 describe('active flow graph source styling', () => {
   it('does not mark a partially fanned-out forward source as a backward source', () => {

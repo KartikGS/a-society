@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { buildRoleContext } from './registry.js';
 import { resolveVariableFromIndex } from './paths.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from './required-reading.js';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
 import type { FlowRef } from '../common/types.js';
 import { resolveEffectiveCapabilities } from '../orchestration/capability-selection.js';
 import { readSkillSummary } from '../framework-services/skills.js';
@@ -35,7 +35,6 @@ export class ContextInjectionService {
   static buildContextBundle(
     projectNamespace: string,
     roleInstanceId: string,
-    workspaceRoot: string,
     recordFolderPath: string,
     flowRef: FlowRef
   ): ContextBundleResult {
@@ -63,7 +62,7 @@ export class ContextInjectionService {
     }
 
     // 1. Resolve and inject required reading
-    const roleEntry = buildRoleContext(projectNamespace, roleInstanceId, workspaceRoot);
+    const roleEntry = buildRoleContext(projectNamespace, roleInstanceId);
 
     if (roleEntry) {
       bundle += `--- RUNTIME-LOADED REQUIRED READING FOR ${roleIdentity.instanceRoleId} IN ${projectNamespace} ---\n`;
@@ -75,7 +74,7 @@ export class ContextInjectionService {
         if (RUNTIME_MANAGED_REQUIRED_READING_VARIABLES.has(varName)) {
           continue;
         }
-        const resolvedPath = resolveVariableFromIndex(varName, workspaceRoot, projectNamespace);
+        const resolvedPath = resolveVariableFromIndex(varName, projectNamespace);
         if (resolvedPath && fs.existsSync(resolvedPath)) {
           const content = fs.readFileSync(resolvedPath, 'utf8');
           bundle += `\n[FILE: ${varName} (resolved to ${resolvedPath})]\n`;
@@ -88,9 +87,9 @@ export class ContextInjectionService {
       bundle += `--- UNKNOWN ROLE: ${roleIdentity.instanceRoleId} IN ${projectNamespace}. No required reading available. ---\n\n`;
     }
 
-    const capabilities = resolveEffectiveCapabilities(workspaceRoot, flowRef, roleInstanceId);
+    const capabilities = resolveEffectiveCapabilities(flowRef, roleInstanceId);
     const selectedSkills = capabilities.skills
-      .map((name) => readSkillSummary(workspaceRoot, name))
+      .map((name) => readSkillSummary(name))
       .filter((skill): skill is NonNullable<typeof skill> => skill !== null)
       .sort((a, b) => a.name.localeCompare(b.name));
 

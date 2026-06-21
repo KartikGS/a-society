@@ -18,10 +18,12 @@ import {
 import {
   buildOpenAIChatCompletionTokenParams,
   DEFAULT_OPENAI_COMPATIBLE_MAX_OUTPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
   resolveMaxOutputTokens,
   type ProviderRuntimeConfig
 } from './config.js';
-import type { ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
+import { withNetworkRetry, isLowLevelNetworkError, formatRetryNotice, MAX_NETWORK_RETRIES } from './retry.js';
 
 export class OpenAICompatibleProvider implements LLMProvider {
   private client: OpenAI;
@@ -30,7 +32,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
   private reasoning?: ModelReasoningConfig;
 
   constructor(config: { baseURL: string; apiKey: string; model: string } & ProviderRuntimeConfig) {
-    this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey });
+    // Retries are owned by withNetworkRetry; disable the SDK's own retry layer so the
+    // backoff/max-attempt count are the single source of truth and each retry can be
+    // surfaced to the operator.
+    this.client = new OpenAI({ baseURL: config.baseURL, apiKey: config.apiKey, maxRetries: 0 });
     this.model = config.model;
     this.maxOutputTokens = resolveMaxOutputTokens(
       config.maxOutputTokens,
@@ -136,10 +141,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
       let contextUsage: number | undefined;
       let inputTokens: number | undefined;
       let outputTokens: number | undefined;
+      let cacheReadInputTokens: number | undefined;
+      let outputStarted = false;
 
       try {
-        renderer?.requestSent(options?.roleInstanceId ?? '', 'openai-compatible', this.model);
-
         const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
           {
             role: 'system' as const,
@@ -181,113 +186,148 @@ export class OpenAICompatibleProvider implements LLMProvider {
             }))
           : undefined;
 
-        const stream = await (this.client.chat.completions.create({
-          model: this.model,
-          messages: openAIMessages,
-          stream: true,
-          stream_options: { include_usage: true },
-          ...buildOpenAIChatCompletionTokenParams(this.reasoning, this.maxOutputTokens),
-          ...(nativeTools ? { tools: nativeTools } : {})
-        } as any, { signal: options?.signal }) as any);
+        // Establish and consume the stream under network-error retry. A failure that
+        // happens before any output is streamed is retried with exponential backoff;
+        // once output has started (outputStarted), retrying would duplicate it, so the
+        // failure is surfaced instead.
+        return await withNetworkRetry<ProviderTurnResult>(async () => {
+          fullText = '';
+          contextUsage = undefined;
+          inputTokens = undefined;
+          outputTokens = undefined;
+          cacheReadInputTokens = undefined;
 
-        renderer?.receivingResponse(options?.roleInstanceId ?? '');
+          renderer?.requestSent(options?.roleInstanceId ?? '', 'openai-compatible', this.model);
 
-        let finishReason: string | null = null;
-        const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
-        let reasoningTrace = '';
-        const trace = this.customReasoningTraceConfig();
+          const stream = await (this.client.chat.completions.create({
+            model: this.model,
+            messages: openAIMessages,
+            stream: true,
+            stream_options: { include_usage: true },
+            ...buildOpenAIChatCompletionTokenParams(this.reasoning, this.maxOutputTokens),
+            ...(nativeTools ? { tools: nativeTools } : {})
+          } as any, { signal: options?.signal }) as any);
 
-        for await (const chunk of stream) {
-          if (chunk.usage) {
-            inputTokens = chunk.usage.prompt_tokens ?? undefined;
-            outputTokens = chunk.usage.completion_tokens ?? undefined;
-            if (inputTokens !== undefined || outputTokens !== undefined) {
-              contextUsage = (inputTokens ?? 0) + (outputTokens ?? 0);
-            }
-          }
-          if (!chunk.choices.length) continue;
+          renderer?.receivingResponse(options?.roleInstanceId ?? '');
 
-          for (const choice of chunk.choices) {
-            if (!choice) continue;
-            if (choice.finish_reason) finishReason = choice.finish_reason;
-            const delta = choice.delta;
-            const payload = delta ?? choice.message;
-            if (!payload) continue;
-            const rawContent = this.readStringField(payload, 'content');
-            if (rawContent) {
-              const content = delta
-                ? rawContent
-                : this.cumulativeStringDelta(rawContent, fullText);
-              if (content) {
-                outputStream?.write(content);
-                options?.onAssistantTextDelta?.(content);
-                fullText += content;
+          let finishReason: string | null = null;
+          const toolCallAcc = new Map<number, { id: string; name: string; args: string }>();
+          let reasoningTrace = '';
+          const trace = this.customReasoningTraceConfig();
+
+          for await (const chunk of stream) {
+            if (chunk.usage) {
+              inputTokens = chunk.usage.prompt_tokens ?? undefined;
+              outputTokens = chunk.usage.completion_tokens ?? undefined;
+              const cachedTokens = chunk.usage.prompt_tokens_details?.cached_tokens;
+              if (typeof cachedTokens === 'number') {
+                cacheReadInputTokens = cachedTokens;
+              }
+              if (inputTokens !== undefined || outputTokens !== undefined) {
+                contextUsage = (inputTokens ?? 0) + (outputTokens ?? 0);
               }
             }
-            const rawReasoningDelta = this.readStringPath(payload, trace?.responseDeltaField);
-            const reasoningDelta = delta
-              ? rawReasoningDelta
-              : this.cumulativeStringDelta(rawReasoningDelta, reasoningTrace);
-            if (reasoningDelta) {
-              reasoningTrace += reasoningDelta;
-              this.emitReasoningTrace(reasoningDelta, options);
-            }
-            const toolCalls = (payload as { tool_calls?: Array<{
-              index: number;
-              id?: string;
-              function?: { name?: string; arguments?: string };
-            }> }).tool_calls;
-            if (Array.isArray(toolCalls)) {
-              for (const tc of toolCalls) {
-                if (!toolCallAcc.has(tc.index)) {
-                  toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
-                  if (tc.id || tc.function?.name) {
-                    span.addEvent('provider.tool_call_received', { 'tool.name': tc.function?.name, 'tool.id': tc.id });
-                  }
+            if (!chunk.choices.length) continue;
+
+            for (const choice of chunk.choices) {
+              if (!choice) continue;
+              if (choice.finish_reason) finishReason = choice.finish_reason;
+              const delta = choice.delta;
+              const payload = delta ?? choice.message;
+              if (!payload) continue;
+              const rawContent = this.readStringField(payload, 'content');
+              if (rawContent) {
+                const content = delta
+                  ? rawContent
+                  : this.cumulativeStringDelta(rawContent, fullText);
+                if (content) {
+                  outputStarted = true;
+                  outputStream?.write(content);
+                  options?.onAssistantTextDelta?.(content);
+                  fullText += content;
                 }
-                const acc = toolCallAcc.get(tc.index)!;
-                if (tc.id) acc.id = tc.id;
-                if (tc.function?.name) acc.name = acc.name || tc.function.name;
-                if (tc.function?.arguments) acc.args += tc.function.arguments;
+              }
+              const rawReasoningDelta = this.readStringPath(payload, trace?.responseDeltaField);
+              const reasoningDelta = delta
+                ? rawReasoningDelta
+                : this.cumulativeStringDelta(rawReasoningDelta, reasoningTrace);
+              if (reasoningDelta) {
+                outputStarted = true;
+                reasoningTrace += reasoningDelta;
+                this.emitReasoningTrace(reasoningDelta, options);
+              }
+              const toolCalls = (payload as { tool_calls?: Array<{
+                index: number;
+                id?: string;
+                function?: { name?: string; arguments?: string };
+              }> }).tool_calls;
+              if (Array.isArray(toolCalls)) {
+                for (const tc of toolCalls) {
+                  if (!toolCallAcc.has(tc.index)) {
+                    toolCallAcc.set(tc.index, { id: '', name: '', args: '' });
+                    if (tc.id || tc.function?.name) {
+                      span.addEvent('provider.tool_call_received', { 'tool.name': tc.function?.name, 'tool.id': tc.id });
+                    }
+                  }
+                  const acc = toolCallAcc.get(tc.index)!;
+                  if (tc.id) acc.id = tc.id;
+                  if (tc.function?.name) acc.name = acc.name || tc.function.name;
+                  if (tc.function?.arguments) acc.args += tc.function.arguments;
+                }
               }
             }
           }
-        }
 
-        if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
-        if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
-        if (finishReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [finishReason]);
+          if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
+          if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
+          if (cacheReadInputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS, cacheReadInputTokens);
+          if (finishReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [finishReason]);
 
-        if (toolCallAcc.size > 0) {
-          const calls = Array.from(toolCallAcc.values()).map(acc => {
-            let input: Record<string, unknown>;
-            let parseError: string | undefined;
-            try { input = JSON.parse(acc.args); }
-            catch { input = {}; parseError = acc.args; }
-            return { id: acc.id, name: acc.name, input, parseError };
-          });
-          span.setAttribute('provider.result_type', 'tool_calls');
-          return {
-            type: 'tool_calls' as const,
-            calls,
-            continuationMessages: [{
-              role: 'assistant_tool_calls' as const,
+          if (toolCallAcc.size > 0) {
+            const calls = Array.from(toolCallAcc.values()).map(acc => {
+              let input: Record<string, unknown>;
+              let parseError: string | undefined;
+              try { input = JSON.parse(acc.args); }
+              catch { input = {}; parseError = acc.args; }
+              return { id: acc.id, name: acc.name, input, parseError };
+            });
+            span.setAttribute('provider.result_type', 'tool_calls');
+            return {
+              type: 'tool_calls' as const,
               calls,
-              text: fullText || undefined,
-              providerReasoning: this.buildProviderReasoningBlocks(reasoningTrace),
-            }],
+              continuationMessages: [{
+                role: 'assistant_tool_calls' as const,
+                calls,
+                text: fullText || undefined,
+                providerReasoning: this.buildProviderReasoningBlocks(reasoningTrace),
+              }],
+              contextUsage,
+              ...(finishReason ? { finishReason } : {}),
+            };
+          }
+
+          span.setAttribute('provider.result_type', 'text');
+          return {
+            type: 'text' as const,
+            text: fullText,
             contextUsage,
             ...(finishReason ? { finishReason } : {}),
           };
-        }
-
-        span.setAttribute('provider.result_type', 'text');
-        return {
-          type: 'text' as const,
-          text: fullText,
-          contextUsage,
-          ...(finishReason ? { finishReason } : {}),
-        };
+        }, {
+          signal: options?.signal,
+          maxRetries: MAX_NETWORK_RETRIES,
+          isRetryable: (err) => err instanceof OpenAI.APIConnectionError || isLowLevelNetworkError(err),
+          canRetry: () => !outputStarted,
+          onRetry: ({ attempt, delayMs, error: retryError }) => {
+            renderer?.sendError(formatRetryNotice(attempt, delayMs));
+            span.addEvent('provider.network_retry', {
+              'retry.attempt': attempt,
+              'retry.max': MAX_NETWORK_RETRIES,
+              'retry.delay_ms': delayMs,
+              'error.message': retryError instanceof Error ? retryError.message : String(retryError),
+            });
+          },
+        });
       } catch (err: any) {
         if (err instanceof OpenAI.APIUserAbortError || options?.signal?.aborted) {
           span.addEvent('provider.aborted');

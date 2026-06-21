@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/server/startup.ts",
+    "typecheck": "tsc -b",
     "build:ui": "vite build",
-    "build": "tsc && npm run build:ui",
+    "build": "npm run typecheck && npm run build:ui",
     "lint": "eslint .",
-    "check": "npm run lint && npm run build && npm test",
+    "check": "npm run lint && npm run typecheck && npm run build:ui && npm test",
     "test": "vitest run --config vitest.config.ts"
   },
   "engines": {

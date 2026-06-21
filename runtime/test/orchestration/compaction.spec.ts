@@ -8,6 +8,7 @@ import type { FlowRun, GatewayTurnResult, OperatorRenderSink, RoleSession, Runti
 import { compactRoleSession, shouldAutoCompact } from '../../src/orchestration/compaction.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
@@ -15,6 +16,7 @@ function createTempWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-compaction-'));
   tempDirs.add(dir);
   seedTestModelSettings(path.join(dir, '.a-society'), { providerBaseUrl: 'http://127.0.0.1:1/v1' });
+  setWorkspaceRoot(dir);
   return dir;
 }
 
@@ -37,6 +39,7 @@ function createFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}):
     runningNodes: ['owner-review'],
     awaitingHumanNodes: {},
     pendingHumanInputs: {},
+    pendingHandoffApprovals: {},
     completedHandoffs: [],
     visitedNodeIds: [],
     receivingHandoff: {},
@@ -218,7 +221,6 @@ describe('context-compaction', () => {
     let saveCount = 0;
 
     const result = await runRoleTurn({
-      workspaceRoot,
       roleInstanceId: 'owner',
       providedSystemPrompt: 'Role system prompt',
       flowRef: { projectNamespace: 'project', flowId: 'flow' },

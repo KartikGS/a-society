@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import { parseRoleIdentity } from '../common/role-id.js';
+import { parseRoleIdentity } from '../../shared/role-id.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 
 export interface RoleContextEntry {
   requiredReadingVariables: string[];
@@ -21,10 +22,10 @@ export interface RoleContextEntry {
  */
 export function buildRoleContext(
   projectNamespace: string,
-  roleInstanceId: string,
-  workspaceRoot: string
+  roleInstanceId: string
 ): RoleContextEntry | null {
   const baseRoleId = parseRoleIdentity(roleInstanceId).baseRoleId;
+  const workspaceRoot = getWorkspaceRoot();
   const roleYamlPath = path.join(
     workspaceRoot,
     projectNamespace,

@@ -5,10 +5,12 @@
 A file path index is a single table that maps variable names to the current locations of key files in a project. It is the only place in the project where file paths are declared as facts. Everywhere else, files are referenced by their variable name.
 
 ```
-| Variable           | Current Path                         | Description          |
-|--------------------|--------------------------------------|----------------------|
-| $TOOLING_STANDARD  | project/docs/tooling/standard.md       | Canonical tool rules   |
+| Variable           | Current Path                  | Description          |
+|--------------------|-------------------------------|----------------------|
+| $TOOLING_STANDARD  | docs/tooling/standard.md       | Canonical tool rules   |
 ```
+
+Paths are **project-relative** — relative to the project root (the folder that contains `a-docs/`), not the workspace. Write `docs/tooling/standard.md`, not `<project>/docs/tooling/standard.md`. The runtime resolves each path under the project namespace, so the index stays correct even when the project lives in a different folder (for example, a git worktree). Add a one-line note at the top of the index telling agents the paths are project-relative.
 
 When a file moves, one cell in this table changes. Every reference throughout the project — in every document, in every agent session — resolves correctly through the variable. Nothing else needs updating.
 
@@ -72,13 +74,13 @@ Copy these rules into the project's index at initialization. They govern how the
 - **Three columns only:** Variable, Current Path, Description. Do not add columns.
 - **One row per file.** Flat registry — no grouping or nesting.
 - **Description is one clause.** Enough to identify the file's purpose without opening it.
-- **Paths must be repo-relative and must not begin with `/`.** Write `project/a-docs/agents.md`, not `/project/a-docs/agents.md` and not a machine-specific absolute path. Strip any machine-specific prefix from file operation outputs before writing.
+- **Paths must be project-relative and must not begin with `/`.** Write `a-docs/agents.md` (relative to the project root that holds `a-docs/`), not `<project>/a-docs/agents.md`, not `/a-docs/agents.md`, and not a machine-specific absolute path. Strip any machine-specific or project-folder prefix from file operation outputs before writing.
 - **Variable names must reflect what the file is, not where it lives.** A name tied to a path breaks when the file moves.
 
 **Usage:**
-- **Always reference by variable name, never by path.** Write `$TOOLING_STANDARD`, not `project/docs/tooling/standard.md`. The path lives in one place: the index.
+- **Always reference by variable name, never by path.** Write `$TOOLING_STANDARD`, not `docs/tooling/standard.md`. The path lives in one place: the index.
 - **Always resolve through the index.** Do not assume a path from a prior session is still correct — look it up.
-- **For files not in the index,** use the repo-relative path directly. Do not invent an unregistered `$VARIABLE_NAME` — an invented variable resolves to nothing and gives the appearance of indirection without the benefit.
+- **For files not in the index,** use the project-relative path directly. Do not invent an unregistered `$VARIABLE_NAME` — an invented variable resolves to nothing and gives the appearance of indirection without the benefit.
 
 **Moving a file:**
 - Update only the **Path** cell. Variable names must not change — a renamed variable breaks every document that references it.

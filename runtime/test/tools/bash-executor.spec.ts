@@ -3,18 +3,20 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BashToolExecutor } from '../../src/tools/bash-executor.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const tempDirs = new Set<string>();
 
 function makeTempWorkspace(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bash-executor-test-'));
   tempDirs.add(dir);
+  setWorkspaceRoot(dir);
   return dir;
 }
 
 function makeExecutor(): { workspaceRoot: string; executor: BashToolExecutor } {
   const workspaceRoot = makeTempWorkspace();
-  return { workspaceRoot, executor: new BashToolExecutor(workspaceRoot) };
+  return { workspaceRoot, executor: new BashToolExecutor() };
 }
 
 describe('bash-executor', () => {
@@ -29,6 +31,7 @@ describe('bash-executor', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   describe('run_command', () => {

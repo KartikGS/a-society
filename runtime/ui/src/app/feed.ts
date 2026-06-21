@@ -1,5 +1,5 @@
-import { operatorEventToFeedItem } from '../../../src/common/operator-feed.js';
-import type { FeedItem, OperatorEvent } from '../types.js';
+import { operatorEventToFeedItem } from '../../../shared/operator-feed.js';
+import type { FeedItem, OperatorEvent } from '../../../shared/types.js';
 
 export function nextFeedId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;

@@ -1,4 +1,4 @@
-import type { ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { LLMGatewayError, type LLMProvider } from '../common/types.js';
 import { AnthropicProvider } from './anthropic.js';
 import { OpenAICompatibleProvider } from './openai-compatible.js';

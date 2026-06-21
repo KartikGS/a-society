@@ -7,6 +7,7 @@ import { validateModelConfiguration } from '../../src/providers/model-validation
 import { validateMcpServerConfiguration } from '../../src/providers/mcp/validate.js';
 import { registerSettingsRoutes } from '../../src/server/settings-routes.js';
 import * as SettingsStore from '../../src/settings/settings-store.js';
+import { setWorkspaceRoot } from '../../src/common/workspace.js';
 
 vi.mock('../../src/providers/model-validation.js', () => ({
   validateModelConfiguration: vi.fn(),
@@ -24,7 +25,7 @@ beforeEach(() => {
   validateModelConfigurationMock.mockReset();
   validateMcpServerConfigurationMock.mockReset();
   workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-settings-routes-'));
-  SettingsStore.configureSettingsStore(workspaceRoot);
+  setWorkspaceRoot(workspaceRoot);
 });
 
 interface MockResponse {
@@ -68,7 +69,7 @@ async function callSettingsRoute(
   params: Record<string, string> = {}
 ): Promise<{ status: number; body: unknown }> {
   const app = express();
-  registerSettingsRoutes(app, workspaceRoot);
+  registerSettingsRoutes(app);
   const response = createMockResponse();
   await findRouteHandler(app, method, routePath)({ body, params }, response);
   return { status: response.statusCode, body: response.body };
@@ -84,6 +85,7 @@ function modelPayload(overrides: Record<string, unknown> = {}): Record<string, u
     contextWindow: 200000,
     maxOutputTokens: 4096,
     reasoning: { mode: 'disabled' },
+    cacheTtl: '5m',
     supportedInputTypes: [],
     ...overrides,
   };
@@ -115,6 +117,7 @@ describe('settings routes', () => {
       contextWindow: 0,
       maxOutputTokens: 0,
       reasoning: { mode: 'disabled' },
+      cacheTtl: '5m',
       supportedInputTypes: [],
     }, 'stored-key');
 
@@ -136,6 +139,17 @@ describe('settings routes', () => {
     expect(response.status).toBe(200);
     expect(validateModelConfigurationMock).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-key' }));
     expect(SettingsStore.getModelWithKey(existing.id)?.apiKey).toBe('stored-key');
+  });
+
+  it('persists Anthropic prompt cache TTL while validating the model', async () => {
+    validateModelConfigurationMock.mockResolvedValue(undefined);
+
+    const response = await callSettingsRoute('post', '/api/settings/models', modelPayload({ cacheTtl: '1h' }));
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({ cacheTtl: '1h' });
+    expect(validateModelConfigurationMock).toHaveBeenCalledWith(expect.not.objectContaining({ cacheTtl: expect.anything() }));
+    expect(SettingsStore.listModels()[0]?.cacheTtl).toBe('1h');
   });
 
   it('imports the full skill folder including bundled scripts', async () => {

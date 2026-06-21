@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
+import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { bootstrapInitializationFlow } from '../../src/projects/initialization-bootstrap.js';
 import { readRecordMetadata } from '../../src/projects/record-metadata.js';
@@ -16,6 +17,7 @@ function createWorkspace(): string {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-init-bootstrap-'));
   tempDirs.add(tmpDir);
   fs.symlinkSync(frameworkRoot, path.join(tmpDir, 'a-society'), 'dir');
+  setWorkspaceRoot(tmpDir);
   return tmpDir;
 }
 
@@ -29,6 +31,7 @@ describe('initialization-bootstrap', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
     tempDirs.clear();
+    clearWorkspaceRoot();
   });
 
   it('creates the greenfield project, scaffolds compulsory files, and creates a single-node Owner flow', () => {
@@ -48,7 +51,7 @@ describe('initialization-bootstrap', () => {
       runningNodes: ['owner-intake'],
       status: 'running',
     });
-    expect(result.flowRun.recordFolderPath).toBe(getFlowRecordDir(workspaceRoot, { projectNamespace: projectName, flowId: result.flowRun.flowId }));
+    expect(result.flowRun.recordFolderPath).toBe(getFlowRecordDir({ projectNamespace: projectName, flowId: result.flowRun.flowId }));
     expect(path.basename(result.flowRun.recordFolderPath)).toBe('record');
 
     const workflowDoc = workflowForRecord(result.flowRun.recordFolderPath);
@@ -57,17 +60,17 @@ describe('initialization-bootstrap', () => {
       id: 'owner-intake',
       role: 'owner',
     });
-    expect(workflowDoc.workflow.nodes[0].guidance).toEqual(expect.arrayContaining([
+    expect(workflowDoc.workflow.nodes[0].work).toEqual(expect.arrayContaining([
       expect.stringContaining('# Runtime Project Initialization'),
       expect.stringContaining('# Runtime Initialization Brief'),
       expect.stringContaining('workflow.yaml'),
       expect.stringContaining('A-Society general index:'),
     ]));
-    const generalIndexGuidance = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    const generalIndexGuidance = workflowDoc.workflow.nodes[0].work.find((entry: string) =>
       entry.includes('A-Society general index:')
     );
     expect(generalIndexGuidance).toContain('$GENERAL_OWNER_ROLE');
-    expect(generalIndexGuidance).toContain('a-society/general/roles/owner/main.md');
+    expect(generalIndexGuidance).toContain('general/roles/owner/main.md');
 
     const metadata = readRecordMetadata(result.flowRun.recordFolderPath);
     expect(metadata).toBeTruthy();
@@ -86,7 +89,7 @@ describe('initialization-bootstrap', () => {
     expect(requiredReadings).toContain('$GREENFIELD_PROJECT_INDEX');
     expect(requiredReadings).toContain('$GREENFIELD_PROJECT_OWNER_ROLE');
 
-    const briefContent = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    const briefContent = workflowDoc.workflow.nodes[0].work.find((entry: string) =>
       entry.includes('# Runtime Initialization Brief')
     );
     expect(fs.existsSync(path.join(result.flowRun.recordFolderPath, '00-runtime-initialization-brief.md'))).toBe(false);
@@ -99,8 +102,9 @@ describe('initialization-bootstrap', () => {
     expect(briefContent).not.toContain('## Injected A-Society general index');
     expect(briefContent).not.toContain('## Required outcomes for this initialization flow');
 
+    expect(Array.isArray(workflowDoc.workflow.nodes[0].work)).toBe(true);
+    expect(workflowDoc.workflow.nodes[0].guidance).toBeUndefined();
     expect(workflowDoc.workflow.nodes[0].inputs).toBeUndefined();
-    expect(workflowDoc.workflow.nodes[0].work).toBeUndefined();
     expect(workflowDoc.workflow.nodes[0].outputs).toBeUndefined();
     expect(workflowDoc.workflow.nodes[0].notes).toBeUndefined();
   });
@@ -118,7 +122,7 @@ describe('initialization-bootstrap', () => {
     expect(result.scaffoldResult.created.length).toBeGreaterThan(0);
 
     const workflowDoc = workflowForRecord(result.flowRun.recordFolderPath);
-    const briefContent = workflowDoc.workflow.nodes[0].guidance.find((entry: string) =>
+    const briefContent = workflowDoc.workflow.nodes[0].work.find((entry: string) =>
       entry.includes('# Runtime Initialization Brief')
     );
     expect(fs.existsSync(path.join(result.flowRun.recordFolderPath, '00-runtime-initialization-brief.md'))).toBe(false);

@@ -37,6 +37,7 @@ The runtime server can start without a model, but runtime work cannot proceed un
 - Provider, model ID, base URL, and API key are configured in Settings
 - Saving a model runs a small sample request before persisting the configuration; validation failures are shown to the operator
 - Anthropic thinking effort can be set to `none` to omit the Anthropic `output_config.effort` request parameter for models that do not support it
+- Anthropic models expose a prompt cache TTL setting: `5m` by default, or `1h` for long-lived cache entries. The setting is persisted on every model but only Anthropic requests use explicit cache controls.
 - The Settings modal stays open until a usable active model exists
 - Environment variables in `.env` no longer select the runtime model
 
@@ -94,15 +95,24 @@ The browser UI has two operator modes.
 
 ### 1. Project Selector and Owner Chat
 
-Fresh starts open in the project selector. The selector now has three startup paths:
+Fresh starts open in the project selector. The selector has these startup paths:
 
 - Existing projects with `a-docs/`
 - Existing projects without `a-docs/`
 - Create a new project
+- Update an initialized project whose `a-docs/` are behind the current framework version
 
 Selecting a project with `a-docs/` starts the normal stored Owner draft flow.
 
 Selecting a project without `a-docs/` or creating a new project runs scaffold first, creates a runtime-owned initialization record folder under `.a-society/state/<project>/<flow-id>/record/` with a single-node Owner workflow, injects initialization guidance and the A-Society general index as active artifacts, and then runs that stored flow.
+
+### Framework version and the update flow
+
+The canonical current framework version is declared in `CHANGELOG.md` YAML frontmatter (`a_society_version`). Each initialized project records the version its `a-docs/` conform to in `a-docs/a-society-version.md` frontmatter (same key). The version is stamped automatically at initialization and is a compulsory, parseable surface validated by runtime health checks.
+
+`GET /api/projects` reports, per initialized project, its recorded `aDocsVersion`, the `currentVersion`, and `updateAvailable` (true when the current version is strictly newer than the recorded version). When an update is available, the project selector shows an **Update** button next to the project's delete (×) control.
+
+Choosing Update starts an Owner-only update flow. Like initialization, it creates a runtime-owned record folder with a single-node Owner workflow, but it does **not** scaffold or modify the project's `a-docs/`. It injects the runtime update guide, an update brief (recording from/to versions and the changelog), and the A-Society general index. The Owner migrates the `a-docs/` to the target version and bumps `a_society_version` in `a-docs/a-society-version.md`. On forward-pass closure the `a-docs/` are validated like any other flow, and the optional feedback step runs with an `update`-kind feedback context.
 
 The runtime injects `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` with the handoff contract in every managed session. It defines flow record placement, metadata, and writable scope.
 
@@ -301,6 +311,13 @@ Telemetry behavior is controlled by the following environment variables:
 | `A_SOCIETY_ENVIRONMENT` | `production` | Sets the `deployment.environment` resource attribute |
 
 If telemetry configuration is malformed or the SDK fails to initialize, the runtime warns on `stderr` and continues without exported telemetry.
+
+Provider spans report prompt-cache usage when the provider returns cache counters:
+
+- `gen_ai.usage.cache_read.input_tokens` — input tokens served from provider prompt cache
+- `gen_ai.usage.cache_creation.input_tokens` — input tokens written into provider prompt cache; reported by Anthropic when present
+
+Project-mode role turns opt into prompt caching. System-mode turns such as compaction and automatic capability selection do not write cache by default.
 
 ---
 

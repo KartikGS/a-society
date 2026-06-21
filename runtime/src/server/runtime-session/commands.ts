@@ -1,16 +1,18 @@
-import { flowKey } from '../../common/flow-ref.js';
+import { flowKey } from '../../../shared/flow-ref.js';
 import {
   AWAITING_HUMAN_REASON,
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
   FEEDBACK_CONSENT_DECISION,
+  HANDOFF_APPROVAL_DECISION,
   IMPROVEMENT_CHOICE_MODE,
-} from '../../common/protocol-constants.js';
+} from '../../../shared/protocol-constants.js';
 import type {
   ProtocolFeedbackConsentDecision,
+  ProtocolHandoffApprovalDecision,
   ProtocolImprovementChoiceMode,
-} from '../../common/protocol-constants.js';
-import { parseRoleIdentity } from '../../common/role-id.js';
+} from '../../../shared/protocol-constants.js';
+import { parseRoleIdentity } from '../../../shared/role-id.js';
 import type {
   ConsentMode,
   ConsentResponseDecision,
@@ -22,7 +24,7 @@ import { listSkills } from '../../framework-services/skills.js';
 import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
 import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
-import { SessionStore } from '../../orchestration/store.js';
+import * as SessionStore from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowReadModel } from '../flow-read-model.js';
 import type { HistoricalMessage, ServerMessage } from '../protocol.js';
@@ -37,7 +39,6 @@ import { compactPersistedRoleContext } from './manual-compaction.js';
 import type { ActiveSession } from './types.js';
 
 type RuntimeSessionCommandsDeps = {
-  workspaceRoot: string;
   activeSessions: Map<string, ActiveSession>;
   readFlowRun: (ref: FlowRef) => FlowRun | null;
   resolveWorkflow: FlowReadModel['resolveWorkflow'];
@@ -59,7 +60,6 @@ export interface RoleConfigurationPayload {
 
 export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
   const {
-    workspaceRoot,
     activeSessions,
     readFlowRun,
     resolveWorkflow,
@@ -104,7 +104,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           text,
           receivedAt: new Date().toISOString(),
         };
-      }, ref, workspaceRoot);
+      }, ref);
     } catch (error: any) {
       broadcastToFlow(ref, {
         type: 'error',
@@ -130,6 +130,80 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitFlowState(session);
   }
 
+  async function handleHandoffApproval(
+    ref: FlowRef,
+    nodeId: string,
+    decision: ProtocolHandoffApprovalDecision,
+  ): Promise<void> {
+    const flowRun = readFlowRun(ref);
+    if (!flowRun) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Flow "${flowKey(ref)}" was not found.` });
+      return;
+    }
+
+    const awaitingState = flowRun.awaitingHumanNodes[nodeId];
+    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting handoff approval.` });
+      return;
+    }
+
+    // A handoff decision must drive an already-live session forward — it must not spin up
+    // a fresh one. Creating a session here would resume only this node and silently strand
+    // any other nodes that were interrupted (e.g. by a runtime restart). Resuming the flow
+    // is the sole path that restores the full running set, so require it first.
+    const session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'This flow has no active session. Resume the flow before approving or declining the handoff.',
+      });
+      return;
+    }
+
+    if (decision === HANDOFF_APPROVAL_DECISION.DECLINE) {
+      // Discard the staged handoff and park the node awaiting plain human input;
+      // the operator drives the next step (typically by sending guidance, which
+      // resumes the role to produce a revised handoff).
+      try {
+        await SessionStore.updateFlowRun((latest) => {
+          const state = latest.awaitingHumanNodes[nodeId];
+          if (!state || state.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL) {
+            throw new Error(`Node '${nodeId}' is no longer awaiting handoff approval.`);
+          }
+          delete latest.pendingHandoffApprovals[nodeId];
+          latest.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
+        }, ref);
+      } catch (error: any) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      emitFlowState(session);
+      return;
+    }
+
+    // decision === APPROVE: commit the staged handoff without re-running the role.
+    const pending = flowRun.pendingHandoffApprovals[nodeId];
+    if (!pending || pending.length === 0) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' has no staged handoff to approve.` });
+      return;
+    }
+    if (!SettingsStore.hasUsableConfiguredModel()) {
+      broadcastToFlow(ref, missingModelError(ref));
+      return;
+    }
+
+    try {
+      await session.orchestrator.applyHandoffAndAdvance(flowRun, nodeId, awaitingState.role, pending, { approved: true });
+    } catch (error: any) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+
+    session.orchestrator.wake();
+    emitFlowState(session);
+  }
+
   function uniqueStrings(values: string[]): string[] {
     return values
       .filter((value) => typeof value === 'string' && value.trim() !== '')
@@ -151,7 +225,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const modelGate = resolveRoleModelGate(workspaceRoot, ref, awaitingState.role);
+    const modelGate = resolveRoleModelGate(ref, awaitingState.role);
     let modelSelection: {
       modelConfigId: string;
       displayName: string;
@@ -183,11 +257,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     // Only persist dimensions the gate still has pending; auto-resolved dimensions
     // are already decided and must not be clobbered by a partial manual submit.
-    const capabilityGate = resolveCapabilityGate(workspaceRoot, ref, awaitingState.role);
+    const capabilityGate = resolveCapabilityGate(ref, awaitingState.role);
     const pendingSkills = capabilityGate.kind === 'selection-required' && capabilityGate.pendingSkills;
     const pendingMcp = capabilityGate.kind === 'selection-required' && capabilityGate.pendingMcp;
 
-    const validSkillNames = new Set(listSkills(workspaceRoot).map((skill) => skill.name));
+    const validSkillNames = new Set(listSkills().map((skill) => skill.name));
     const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
     const selectedSkills = pendingSkills ? uniqueStrings(payload.skills) : [];
     const selectedMcpServers = pendingMcp ? uniqueStrings(payload.mcpServers) : [];
@@ -203,23 +277,23 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     if (modelSelection) {
-      saveRoleModelSelection(workspaceRoot, ref, awaitingState.role, modelSelection);
+      saveRoleModelSelection(ref, awaitingState.role, modelSelection);
     }
 
     const capabilitySelectedAt = new Date().toISOString();
     if (pendingSkills) {
-      saveCapabilityDimension(workspaceRoot, ref, awaitingState.role, 'skills', selectedSkills, capabilitySelectedAt);
+      saveCapabilityDimension(ref, awaitingState.role, 'skills', selectedSkills, capabilitySelectedAt);
     }
     if (pendingMcp) {
-      saveCapabilityDimension(workspaceRoot, ref, awaitingState.role, 'mcpServers', selectedMcpServers, capabilitySelectedAt);
+      saveCapabilityDimension(ref, awaitingState.role, 'mcpServers', selectedMcpServers, capabilitySelectedAt);
     }
 
     if (selectedSkills.length > 0) {
       const roleKey = parseRoleIdentity(awaitingState.role).instanceRoleId;
-      const roleSession = SessionStore.loadRoleSession(roleKey, ref, workspaceRoot);
+      const roleSession = SessionStore.loadRoleSession(roleKey, ref);
       if (roleSession) {
         delete roleSession.systemPrompt;
-        SessionStore.saveRoleSession(roleSession, ref, workspaceRoot);
+        SessionStore.saveRoleSession(roleSession, ref);
       }
     }
 
@@ -237,7 +311,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         kind: 'role.configured',
         nodeId,
         role: awaitingState.role,
-        ...buildRoleConfigurationSummary(workspaceRoot, ref, awaitingState.role),
+        ...buildRoleConfigurationSummary(ref, awaitingState.role),
       },
     });
     session.orchestrator.wake();
@@ -498,7 +572,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         }
         if (!latest.improvementPhase.pendingHumanInputs) latest.improvementPhase.pendingHumanInputs = {};
         latest.improvementPhase.pendingHumanInputs[roleInstanceId] = { text, receivedAt: new Date().toISOString() };
-      }, ref, workspaceRoot);
+      }, ref);
     } catch (error: any) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
       return;
@@ -536,11 +610,23 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const activeSession = activeSessions.get(flowKey(ref));
+    // Manual compaction operates on a live role within an active session; it must not
+    // spin up a throwaway session. With no active session the operator must resume the
+    // flow first (the sole path that restores the running set).
+    const session = activeSessions.get(flowKey(ref));
+    if (!session || session.finished) {
+      broadcastToFlow(ref, {
+        type: 'error',
+        flowRef: ref,
+        message: 'This flow has no active session. Resume the flow before compacting a role.',
+      });
+      return;
+    }
+
     if (
-      activeSession?.orchestrator.hasActiveTurn({ roleInstanceId }) ||
-      activeSession?.improvementOrchestrator.hasActiveTurn(roleInstanceId) ||
-      (activeSession ? hasActiveManualCompaction(activeSession, roleInstanceId) : false)
+      session.orchestrator.hasActiveTurn({ roleInstanceId }) ||
+      session.improvementOrchestrator.hasActiveTurn(roleInstanceId) ||
+      hasActiveManualCompaction(session, roleInstanceId)
     ) {
       broadcastToFlow(ref, {
         type: 'operator_event',
@@ -560,8 +646,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    const createdForCompaction = !activeSession || activeSession.finished;
-    const session = getOrCreateChoiceSession(ref);
     const controller = new AbortController();
     session.manualCompactionControllers.set(roleInstanceId, controller);
     ensureManualCompactionSigintHandler(session);
@@ -569,7 +653,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     void compactPersistedRoleContext({
       flowRun,
       flowRef: ref,
-      workspaceRoot,
       roleName,
       roleInstanceId,
       trigger: 'manual',
@@ -578,9 +661,6 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     })
       .then((result) => {
         if (!result.compacted) {
-          if (createdForCompaction) {
-            session.finished = true;
-          }
           if (result.aborted) {
             emitFlowState(session);
             return;
@@ -593,15 +673,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           return;
         }
         session.latestContextUsageByRole[roleInstanceId] = 0;
-        if (createdForCompaction) {
-          session.finished = true;
-        }
         emitFlowState(session);
       })
       .catch((error: any) => {
-        if (createdForCompaction) {
-          session.finished = true;
-        }
         broadcastToFlow(ref, {
           type: 'error',
           flowRef: ref,
@@ -619,6 +693,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
   return {
     handleHumanInput,
+    handleHandoffApproval,
     handleRoleConfiguration,
     handleImprovementChoice,
     handleFeedbackConsentChoice,

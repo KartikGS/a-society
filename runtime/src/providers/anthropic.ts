@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { LLMGatewayError } from '../common/types.js';
+import { withNetworkRetry, isLowLevelNetworkError, formatRetryNotice, MAX_NETWORK_RETRIES } from './retry.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { SpanStatusCode, SpanKind } from '@opentelemetry/api';
 import {
@@ -17,6 +18,8 @@ import {
 import {
   buildAnthropicReasoningParams,
   DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS,
+  ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS,
   resolveMaxOutputTokens,
   type ProviderRuntimeConfig
 } from './config.js';
@@ -29,22 +32,99 @@ import type {
   ToolDefinition,
   TurnOptions
 } from '../common/types.js';
-import type { ModelReasoningConfig } from '../common/model-reasoning.js';
+import type { ModelReasoningConfig } from '../../shared/model-reasoning.js';
+import type { PromptCacheTtl } from '../common/types.js';
 
 export class AnthropicProvider implements LLMProvider {
   private client: Anthropic;
   private model: string;
   private maxOutputTokens: number;
   private reasoning?: ModelReasoningConfig;
+  private cacheTtl: PromptCacheTtl;
 
   constructor(apiKey: string, model: string, config: ProviderRuntimeConfig = {}) {
-    this.client = new Anthropic({ apiKey });
+    // Retries are owned by withNetworkRetry; disable the SDK's own retry layer so the
+    // backoff/max-attempt count are the single source of truth and each retry can be
+    // surfaced to the operator.
+    this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
     this.maxOutputTokens = resolveMaxOutputTokens(
       config.maxOutputTokens,
       DEFAULT_ANTHROPIC_MAX_OUTPUT_TOKENS
     );
     this.reasoning = config.reasoning;
+    this.cacheTtl = config.cacheTtl ?? '5m';
+  }
+
+  private promptCacheControl(): Record<string, string> {
+    return this.cacheTtl === '1h'
+      ? { type: 'ephemeral', ttl: '1h' }
+      : { type: 'ephemeral' };
+  }
+
+  private buildSystemPromptParam(systemPrompt: string, cacheTurn: boolean): string | Array<Record<string, unknown>> {
+    if (!cacheTurn) return systemPrompt;
+    return [{
+      type: 'text',
+      text: systemPrompt,
+      cache_control: this.promptCacheControl(),
+    }];
+  }
+
+  private normalizeMessageContentForCache(message: Record<string, unknown>): Array<Record<string, unknown>> | null {
+    const content = message.content;
+    if (typeof content === 'string') {
+      const blocks = [{ type: 'text', text: content }];
+      message.content = blocks;
+      return blocks;
+    }
+    if (Array.isArray(content)) {
+      return content.filter((block): block is Record<string, unknown> =>
+        !!block && typeof block === 'object' && !Array.isArray(block)
+      );
+    }
+    return null;
+  }
+
+  private trailingToolRoundBlocks(anthropicMessages: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+    const blocks: Array<Record<string, unknown>> = [];
+    let inTrailingToolRound = false;
+
+    for (const message of anthropicMessages) {
+      const content = Array.isArray(message.content)
+        ? message.content.filter((block): block is Record<string, unknown> =>
+            !!block && typeof block === 'object' && !Array.isArray(block)
+          )
+        : [];
+      if (message.role === 'assistant' && content.some((block) => block.type === 'tool_use')) {
+        inTrailingToolRound = true;
+        blocks.length = 0;
+      }
+      if (inTrailingToolRound) {
+        blocks.push(...content);
+      }
+    }
+
+    return blocks;
+  }
+
+  private applyPromptCacheBreakpoints(anthropicMessages: Array<Record<string, unknown>>, cacheTurn: boolean): void {
+    if (!cacheTurn || anthropicMessages.length === 0) return;
+
+    const lastMessage = anthropicMessages[anthropicMessages.length - 1];
+    const lastContent = this.normalizeMessageContentForCache(lastMessage);
+    const tailBlock = lastContent?.[lastContent.length - 1];
+    if (!tailBlock) return;
+
+    tailBlock.cache_control = this.promptCacheControl();
+
+    const trailingBlocks = this.trailingToolRoundBlocks(anthropicMessages);
+    if (trailingBlocks.length <= 18) return;
+
+    const intermediateBlock = trailingBlocks[Math.max(0, trailingBlocks.length - 16)];
+    if (intermediateBlock && intermediateBlock !== tailBlock) {
+      intermediateBlock.cache_control = this.promptCacheControl();
+    }
   }
 
   private formatAnthropicReasoningBlocks(blocks: ProviderReasoningBlock[] | undefined): any[] {
@@ -132,10 +212,10 @@ export class AnthropicProvider implements LLMProvider {
       const outputStream = options?.outputStream;
       let fullText = '';
       let thinkingSummary = '';
+      let outputStarted = false;
 
       try {
-        renderer?.requestSent(options?.roleInstanceId ?? '', 'anthropic', this.model);
-
+        const cacheTurn = options?.cacheTurn === true;
         const anthropicMessages: any[] = messages.map(msg => {
           if (msg.role === 'user') return { role: 'user', content: msg.content };
           if (msg.role === 'assistant') return { role: 'assistant', content: msg.content };
@@ -163,99 +243,130 @@ export class AnthropicProvider implements LLMProvider {
           }
           return { role: 'user', content: (msg as any).content };
         });
+        this.applyPromptCacheBreakpoints(anthropicMessages, cacheTurn);
 
-        const stream = this.client.messages.stream({
-          max_tokens: this.maxOutputTokens,
-          system: systemPrompt,
-          messages: anthropicMessages,
-          model: this.model,
-          tools: tools?.map(t => ({
-            name: t.name,
-            description: t.description,
-            input_schema: t.inputSchema
-          })),
-          ...buildAnthropicReasoningParams(this.reasoning, this.maxOutputTokens),
-        } as any, {
-          signal: options?.signal
-        });
+        // Establish and consume the stream under network-error retry. A failure that
+        // happens before any output is streamed is retried with exponential backoff;
+        // once output has started (outputStarted), retrying would duplicate it, so the
+        // failure is surfaced instead.
+        return await withNetworkRetry<ProviderTurnResult>(async () => {
+          fullText = '';
+          thinkingSummary = '';
+          const toolUseBlocks = new Map<number, { id: string, name: string, inputJson: string }>();
 
-        const toolUseBlocks = new Map<number, { id: string, name: string, inputJson: string }>();
+          renderer?.requestSent(options?.roleInstanceId ?? '', 'anthropic', this.model);
 
-        renderer?.receivingResponse(options?.roleInstanceId ?? '');
-
-        stream.on('streamEvent', (event) => {
-          if (event.type === 'content_block_start') {
-            const chunk = event as any;
-            const block = chunk.content_block as any;
-            if (block.type === 'tool_use') {
-              toolUseBlocks.set(chunk.index, { id: block.id, name: block.name, inputJson: '' });
-              span.addEvent('provider.tool_use_block_received', { 'tool.name': block.name, 'tool.id': block.id });
-            }
-          } else if (event.type === 'content_block_delta') {
-            const chunk = event as any;
-            const delta = chunk.delta as any;
-            if (delta.type === 'text_delta') {
-              outputStream?.write(delta.text);
-              options?.onAssistantTextDelta?.(delta.text);
-              fullText += delta.text;
-            } else if (delta.type === 'thinking_delta') {
-              thinkingSummary += delta.thinking;
-              this.emitAnthropicThinkingSummary(delta.thinking, options);
-            } else if (delta.type === 'input_json_delta') {
-              const block = toolUseBlocks.get(chunk.index);
-              if (block) block.inputJson += delta.partial_json;
-            }
-          }
-        });
-
-        const finalMsg = await stream.finalMessage();
-
-        const inputTokens = finalMsg.usage?.input_tokens;
-        const outputTokens = finalMsg.usage?.output_tokens;
-        const stopReason = finalMsg.stop_reason;
-
-        const contextUsage = (inputTokens !== undefined || outputTokens !== undefined)
-          ? (inputTokens ?? 0) + (outputTokens ?? 0)
-          : undefined;
-
-        if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
-        if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
-        if (stopReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [stopReason]);
-
-        if (thinkingSummary === '') {
-          thinkingSummary = this.readableAnthropicThinkingSummary(finalMsg.content as any[]);
-          this.emitAnthropicThinkingSummary(thinkingSummary, options);
-        }
-
-        if (toolUseBlocks.size > 0) {
-          const providerReasoning = this.extractAnthropicReasoningBlocks(finalMsg.content as any[]);
-          const calls = Array.from(toolUseBlocks.values()).map(b => {
-            let input: any = {};
-            try { input = JSON.parse(b.inputJson); } catch (_e) { /* ignore */ }
-            return { id: b.id, name: b.name, input };
+          const stream = this.client.messages.stream({
+            max_tokens: this.maxOutputTokens,
+            system: this.buildSystemPromptParam(systemPrompt, cacheTurn),
+            messages: anthropicMessages,
+            model: this.model,
+            tools: tools?.map(t => ({
+              name: t.name,
+              description: t.description,
+              input_schema: t.inputSchema
+            })),
+            ...buildAnthropicReasoningParams(this.reasoning, this.maxOutputTokens),
+          } as any, {
+            signal: options?.signal
           });
-          span.setAttribute('provider.result_type', 'tool_calls');
-          return {
-            type: 'tool_calls' as const,
-            calls,
-            continuationMessages: [{
-              role: 'assistant_tool_calls' as const,
+
+          renderer?.receivingResponse(options?.roleInstanceId ?? '');
+
+          stream.on('streamEvent', (event) => {
+            if (event.type === 'content_block_start') {
+              const chunk = event as any;
+              const block = chunk.content_block as any;
+              if (block.type === 'tool_use') {
+                toolUseBlocks.set(chunk.index, { id: block.id, name: block.name, inputJson: '' });
+                span.addEvent('provider.tool_use_block_received', { 'tool.name': block.name, 'tool.id': block.id });
+              }
+            } else if (event.type === 'content_block_delta') {
+              const chunk = event as any;
+              const delta = chunk.delta as any;
+              if (delta.type === 'text_delta') {
+                outputStarted = true;
+                outputStream?.write(delta.text);
+                options?.onAssistantTextDelta?.(delta.text);
+                fullText += delta.text;
+              } else if (delta.type === 'thinking_delta') {
+                outputStarted = true;
+                thinkingSummary += delta.thinking;
+                this.emitAnthropicThinkingSummary(delta.thinking, options);
+              } else if (delta.type === 'input_json_delta') {
+                const block = toolUseBlocks.get(chunk.index);
+                if (block) block.inputJson += delta.partial_json;
+              }
+            }
+          });
+
+          const finalMsg = await stream.finalMessage();
+
+          const inputTokens = finalMsg.usage?.input_tokens;
+          const outputTokens = finalMsg.usage?.output_tokens;
+          const cacheReadInputTokens = finalMsg.usage?.cache_read_input_tokens;
+          const cacheCreationInputTokens = finalMsg.usage?.cache_creation_input_tokens;
+          const stopReason = finalMsg.stop_reason;
+
+          const contextUsage = (inputTokens !== undefined || outputTokens !== undefined)
+            ? (inputTokens ?? 0) + (outputTokens ?? 0)
+            : undefined;
+
+          if (inputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_INPUT_TOKENS, inputTokens);
+          if (outputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_OUTPUT_TOKENS, outputTokens);
+          if (cacheReadInputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_CACHE_READ_INPUT_TOKENS, cacheReadInputTokens);
+          if (cacheCreationInputTokens !== undefined) span.setAttribute(ATTR_GEN_AI_USAGE_CACHE_CREATION_INPUT_TOKENS, cacheCreationInputTokens);
+          if (stopReason) span.setAttribute(ATTR_GEN_AI_RESPONSE_FINISH_REASONS, [stopReason]);
+
+          if (thinkingSummary === '') {
+            thinkingSummary = this.readableAnthropicThinkingSummary(finalMsg.content as any[]);
+            this.emitAnthropicThinkingSummary(thinkingSummary, options);
+          }
+
+          if (toolUseBlocks.size > 0) {
+            const providerReasoning = this.extractAnthropicReasoningBlocks(finalMsg.content as any[]);
+            const calls = Array.from(toolUseBlocks.values()).map(b => {
+              let input: any = {};
+              try { input = JSON.parse(b.inputJson); } catch (_e) { /* ignore */ }
+              return { id: b.id, name: b.name, input };
+            });
+            span.setAttribute('provider.result_type', 'tool_calls');
+            return {
+              type: 'tool_calls' as const,
               calls,
-              text: fullText || undefined,
-              providerReasoning: providerReasoning.length > 0 ? providerReasoning : undefined,
-            }],
+              continuationMessages: [{
+                role: 'assistant_tool_calls' as const,
+                calls,
+                text: fullText || undefined,
+                providerReasoning: providerReasoning.length > 0 ? providerReasoning : undefined,
+              }],
+              contextUsage,
+              ...(stopReason ? { finishReason: stopReason } : {}),
+            };
+          }
+
+          span.setAttribute('provider.result_type', 'text');
+          return {
+            type: 'text' as const,
+            text: fullText,
             contextUsage,
             ...(stopReason ? { finishReason: stopReason } : {}),
           };
-        }
-
-        span.setAttribute('provider.result_type', 'text');
-        return {
-          type: 'text' as const,
-          text: fullText,
-          contextUsage,
-          ...(stopReason ? { finishReason: stopReason } : {}),
-        };
+        }, {
+          signal: options?.signal,
+          maxRetries: MAX_NETWORK_RETRIES,
+          isRetryable: (err) => err instanceof Anthropic.APIConnectionError || isLowLevelNetworkError(err),
+          canRetry: () => !outputStarted,
+          onRetry: ({ attempt, delayMs, error: retryError }) => {
+            renderer?.sendError(formatRetryNotice(attempt, delayMs));
+            span.addEvent('provider.network_retry', {
+              'retry.attempt': attempt,
+              'retry.max': MAX_NETWORK_RETRIES,
+              'retry.delay_ms': delayMs,
+              'error.message': retryError instanceof Error ? retryError.message : String(retryError),
+            });
+          },
+        });
 
       } catch (error: any) {
         if (error.name === 'AbortError' || error.type === 'aborted' || options?.signal?.aborted) {

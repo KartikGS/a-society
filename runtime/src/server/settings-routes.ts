@@ -1,13 +1,15 @@
 import express, { type Express, type Request, type Response } from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizePromptCacheTtl } from '../common/types.js';
+import { getWorkspaceRoot } from '../common/workspace.js';
 import {
   isKebabCaseSkillName,
   listSkillLoadResults,
   parseSkillMarkdownFrontmatter,
   readSkillSummary,
 } from '../framework-services/skills.js';
-import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../common/model-reasoning.js';
+import { getCustomOpenAICompatibleReservedBodyKeys, isReasoningCompatibleWithProvider, normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { validateModelConfiguration } from '../providers/model-validation.js';
 import { formatMcpError } from '../providers/mcp/errors.js';
 import { validateMcpServerConfiguration } from '../providers/mcp/validate.js';
@@ -85,6 +87,7 @@ function parseModelParams(params: any): ParsedModelParams {
       contextWindow: Number(params.contextWindow) || 0,
       maxOutputTokens: Number(params.maxOutputTokens) || 0,
       reasoning,
+      cacheTtl: normalizePromptCacheTtl(params.cacheTtl),
       supportedInputTypes: normalizeSupportedInputTypes(params.supportedInputTypes),
     },
   };
@@ -109,12 +112,12 @@ async function validateModelRouteConfiguration(
   }
 }
 
-function skillsRoot(workspaceRoot: string): string {
-  return path.join(path.resolve(workspaceRoot), '.a-society', 'skills');
+function skillsRoot(): string {
+  return path.join(getWorkspaceRoot(), '.a-society', 'skills');
 }
 
-function skillDir(workspaceRoot: string, name: string): string {
-  return path.join(skillsRoot(workspaceRoot), name);
+function skillDir(name: string): string {
+  return path.join(skillsRoot(), name);
 }
 
 function copySkillDirectory(sourceDir: string, targetDir: string): void {
@@ -168,7 +171,7 @@ function parseMcpServerParams(
   };
 }
 
-export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd()): void {
+export function registerSettingsRoutes(app: Express): void {
   app.use(express.json());
 
   app.get('/api/settings/models', (_req: Request, res: Response) => {
@@ -200,7 +203,7 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
   });
 
   app.get('/api/settings/skills', (_req: Request, res: Response) => {
-    res.json(listSkillLoadResults(workspaceRoot));
+    res.json(listSkillLoadResults());
   });
 
   app.post('/api/settings/skills/import', (req: Request, res: Response) => {
@@ -224,26 +227,26 @@ export function registerSettingsRoutes(app: Express, workspaceRoot = process.cwd
       res.status(400).json({ message: frontmatter.reason });
       return;
     }
-    if (fs.existsSync(skillDir(workspaceRoot, frontmatter.name))) {
+    if (fs.existsSync(skillDir(frontmatter.name))) {
       res.status(400).json({ message: `Skill "${frontmatter.name}" already exists.` });
       return;
     }
 
-    const targetDir = skillDir(workspaceRoot, frontmatter.name);
+    const targetDir = skillDir(frontmatter.name);
     copySkillDirectory(sourcePath, targetDir);
     res.status(201).json({
-      skill: readSkillSummary(workspaceRoot, frontmatter.name),
+      skill: readSkillSummary(frontmatter.name),
       notice: 'This skill may bundle scripts the agent can run; they execute only through the normal command-permission prompts.',
     });
   });
 
   app.delete('/api/settings/skills/:name', (req: Request, res: Response) => {
     const name = Array.isArray(req.params.name) ? req.params.name[0] : req.params.name;
-    if (!isKebabCaseSkillName(name) || !fs.existsSync(skillDir(workspaceRoot, name))) {
+    if (!isKebabCaseSkillName(name) || !fs.existsSync(skillDir(name))) {
       res.status(404).json({ message: `Skill "${name}" not found.` });
       return;
     }
-    fs.rmSync(skillDir(workspaceRoot, name), { recursive: true, force: true });
+    fs.rmSync(skillDir(name), { recursive: true, force: true });
     res.json({ ok: true });
   });
 

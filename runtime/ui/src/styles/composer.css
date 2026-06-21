@@ -1,0 +1,221 @@
+.composer {
+  margin-top: auto;
+}
+
+.composer-shell {
+  position: relative;
+}
+
+.composer textarea {
+  display: block;
+  resize: none;
+  overflow: hidden;
+  min-height: 52px;
+  max-height: 220px;
+  width: 100%;
+  padding: 14px 64px 14px 16px;
+  border: 1px solid rgba(34, 49, 63, 0.14);
+  border-radius: 18px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.composer textarea:focus {
+  border-color: rgba(15, 118, 110, 0.4);
+  outline: none;
+}
+
+.composer textarea:disabled {
+  opacity: 0.6;
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+}
+
+.composer-footer .consent-mode-select {
+  margin-left: auto;
+}
+
+.composer-btn {
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.composer-btn-send {
+  border: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: white;
+}
+
+.composer-btn-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.composer-btn-stop {
+  border: 1px solid rgba(187, 62, 3, 0.22);
+  background: rgba(255, 237, 213, 0.92);
+  color: #9a3412;
+}
+
+.composer-btn-stop:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.composer-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: white;
+  cursor: pointer;
+}
+
+.composer-action svg {
+  width: 20px;
+  height: 20px;
+}
+
+.composer-action-stop {
+  background: linear-gradient(135deg, rgba(255, 237, 213, 0.98), rgba(255, 219, 172, 0.98));
+  color: #9a3412;
+  border: 1px solid rgba(187, 62, 3, 0.18);
+}
+
+.composer-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.composer-area {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.composer-area .composer {
+  margin-top: 0;
+}
+
+.consent-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  background: rgba(255, 247, 237, 0.96);
+  border: 1px solid rgba(187, 62, 3, 0.18);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.consent-banner-body {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.consent-banner-tool {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.consent-banner-desc {
+  display: block;
+}
+
+.consent-banner-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: stretch;
+  max-width: min(360px, 48%);
+}
+
+.consent-btn {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.consent-btn-allow {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent-deep);
+}
+
+.consent-btn-allow:hover {
+  background: var(--accent-deep);
+}
+
+.consent-btn-allow-flow {
+  background: white;
+  color: var(--accent-deep);
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+.consent-btn-allow-flow:hover {
+  background: rgba(13, 148, 136, 0.08);
+}
+
+.consent-btn-deny {
+  background: transparent;
+  color: #9a3412;
+  border-color: rgba(187, 62, 3, 0.3);
+}
+
+.consent-btn-deny:hover {
+  background: rgba(187, 62, 3, 0.06);
+}
+
+.consent-mode-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 3px 22px 3px 8px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  background:
+    var(--surface-strong)
+    var(--select-chevron)
+    no-repeat right 6px center / 8px 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color-scheme: light dark;
+  cursor: pointer;
+}
+
+.consent-mode-select option,
+.form-select option {
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+.consent-mode-select:focus {
+  outline: none;
+  border-color: rgba(15, 118, 110, 0.4);
+}

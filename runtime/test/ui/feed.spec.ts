@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { appendFeedItem, applyReasoningTraceToFeed } from '../../ui/src/app/feed.js';
-import type { FeedItem, OperatorEvent } from '../../ui/src/types.js';
+import type { FeedItem, OperatorEvent } from '../../shared/types.js';
 
 function reasoningTrace(role: string, text: string): Extract<OperatorEvent, { kind: 'provider.reasoning_trace' }> {
   return {
