@@ -53,6 +53,7 @@ Each role instance can be configured once per flow:
 - A node awaiting `role-configuration` does not accept a text reply
 - With exactly one configured model and no skills or MCP servers, no role configuration is requested and the active model is used
 - If a selected model is later deleted or becomes unusable while multiple models remain configured, the role re-prompts at its next activation; if a selected skill or MCP server is later removed, it is dropped at use time without re-prompting
+- When project-level settings configure a role's model, skills, or MCP servers, those are written as the flow's selection before this prompt is evaluated, suppressing the prompt for the configured dimensions (see [Project-level settings](#project-level-settings))
 
 #### Automatic selection
 
@@ -110,7 +111,7 @@ Selecting a project without `a-docs/` or creating a new project runs scaffold fi
 
 The canonical current framework version is declared in `CHANGELOG.md` YAML frontmatter (`a_society_version`). Each initialized project records the version its `a-docs/` conform to in `a-docs/a-society-version.md` frontmatter (same key). The version is stamped automatically at initialization and is a compulsory, parseable surface validated by runtime health checks.
 
-`GET /api/projects` reports, per initialized project, its recorded `aDocsVersion`, the `currentVersion`, and `updateAvailable` (true when the current version is strictly newer than the recorded version). When an update is available, the project selector shows an **Update** button next to the project's delete (×) control.
+`GET /api/projects` reports, per initialized project, its recorded `aDocsVersion`, the `currentVersion`, and `updateAvailable` (true when the current version is strictly newer than the recorded version). When an update is available, the project selector shows an **Update** button next to the project's settings (⋮) control.
 
 Choosing Update starts an Owner-only update flow. Like initialization, it creates a runtime-owned record folder with a single-node Owner workflow, but it does **not** scaffold or modify the project's `a-docs/`. It injects the runtime update guide, an update brief (recording from/to versions and the changelog), and the A-Society general index. The Owner migrates the `a-docs/` to the target version and bumps `a_society_version` in `a-docs/a-society-version.md`. On forward-pass closure the `a-docs/` are validated like any other flow, and the optional feedback step runs with an `update`-kind feedback context.
 
@@ -132,6 +133,15 @@ The UI switches to graph mode on the first `role.active` operator event. `role.a
 - Human replies are routed to the role/node chat that requested input
 
 When a project has existing flow state, the client lists the project's saved flows in the left pane. Selecting a flow opens it as an in-app tab and scopes the URL to that active tab.
+
+### Project-level settings
+
+Each initialized project in the selector has a settings (⋮) control that opens a **project settings** modal (titled with the project name). A master **Enable project settings** toggle gates everything below; when off, the project behaves exactly as the per-flow defaults. Settings persist to `{workspace}/.a-society/state/<project>/settings.json`.
+
+- **Roles** — per role, choose a default Model and optionally fix Skills and MCP servers. A configured dimension is written as each flow's selection for that role before the activation gate, so the per-flow role-configuration prompt is suppressed for it; dimensions left unset fall back to the manual/automatic gate. Model/skill/MCP references are re-validated at use time and dropped if the underlying entry is removed.
+- **Permission → Tools** — choose the project permission level (No / Partial / Full access) and edit the allowed bash commands. These seed each new flow's `consentState` at creation. While enabled, the chat-footer mode dropdown and the consent prompt's `Allow … for this project` button also write back to the project, so future flows inherit the change.
+- **Permission → Improvement · Feedback** — preset the improvement mode (No improvement / Graph-based / Parallel) and feedback (Yes / No). When set, the matching end-of-flow gate is applied automatically and its modal is skipped; `Ask each flow` keeps the prompt. Graph/parallel improvement and feedback generation still require a usable model and fall back to the prompt when none is configured.
+- **Delete project** lives at the bottom of this modal; the per-row delete (×) is removed for initialized projects (uninitialized projects keep it).
 
 The active tab is mirrored in the URL as `/projects/:projectNamespace/flows/:flowId`. Switching tabs updates that route; loading the route reopens that flow. The UI also accepts the older `?project=...&flow=...` form for compatibility and rewrites it to the route form after a flow is selected.
 
@@ -183,6 +193,8 @@ Bash commands prompt with the exact command and offer `Allow`, `Allow <command> 
 MCP tool calls prompt by default with `<server> · <tool>` and an argument preview. `Allow this tool for this flow` stores a per-tool grant under `consentState.mcp.allowedTools`; MCP read-only hints are not auto-allowed.
 
 Permission state is stored on the active `FlowRun` as `consentState` in `flow.json`.
+
+When project-level settings are enabled, this mode and the granted bash commands are seeded from the project at flow creation, the footer's mode dropdown writes the project default, and the consent prompt's allow button reads `Allow … for this project` and persists the grant to the project (see [Project-level settings](#project-level-settings)).
 
 ---
 
@@ -278,6 +290,8 @@ When the runtime is waiting for human input, the UI keeps the current flow state
 - Settings directory: `{workspace}/.a-society`
 
 The runtime persists flow state and role sessions under `{workspace}/.a-society/state/{projectNamespace}/{flowId}/`.
+
+Per-project: `{workspace}/.a-society/state/{projectNamespace}/settings.json` — project-level settings (per-role model/skill/MCP defaults, permission seed, improvement/feedback defaults), applied to new flows only while its `enabled` flag is set.
 
 Per-flow layout:
 

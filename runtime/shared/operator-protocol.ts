@@ -57,6 +57,8 @@ export type FlowStateMessage = {
   contextWindowByRole: Record<string, number>;
   /** Per-node pending dimensions for nodes awaiting role configuration (keyed by node id). */
   roleConfigurations: Record<string, RoleConfigurationPending>;
+  /** Whether project-level settings are enabled for this flow's project. */
+  projectSettingsEnabled: boolean;
 };
 
 export type HistoricalMessage = OperatorFeedMessage;

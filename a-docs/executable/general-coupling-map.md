@@ -19,6 +19,8 @@ This document is the standing reference for the coupling surface between A-Socie
 | `.a-society/skills/<name>/SKILL.md` frontmatter (`name`, `description`) | Yes | Skill library discovery, role configuration, context injection |
 | MCP `tools/list` and `tools/call` wire formats, with deterministic namespaced tool ordering | Yes | MCP validate-on-save, tool snapshotting, namespaced tool execution, provider prompt-cache prefix stability |
 | `.a-society/state/<project>/<flow>/roles/<roleKey>/capabilities.json` `mcpServers` field | Yes | Per-flow role configuration and MCP server selection |
+| `a-docs/roles/<role-id>/` folder convention (a role is a directory containing `main.md`) | Yes | Project-settings role discovery |
+| `.a-society/state/<project>/settings.json` schema (defined in `runtime/shared/project-settings.ts`) | Yes | Project-settings role defaults, tool-permission seeding and write-back, improvement/feedback auto-apply |
 | Provider prompt-cache request and usage fields (`cache_control`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `prompt_tokens_details.cached_tokens`) | Yes | Provider gateway prompt caching and cache observability |
 
 Rows that depend on `a-docs/` content are still standing executable dependencies and require the same co-maintenance discipline as `general/` format changes.

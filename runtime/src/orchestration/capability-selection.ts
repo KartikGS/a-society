@@ -4,6 +4,7 @@ import type { FlowRef } from '../common/types.js';
 import { listSkills } from '../framework-services/skills.js';
 import { listMcpServerSummaries } from '../settings/settings-store.js';
 import { getRoleStateFilePath } from './state-paths.js';
+import { normalizeStringList } from '../../shared/strings.js';
 import type { SkillSummary } from '../../shared/skills.js';
 import type { McpServerSummary } from '../../shared/settings.js';
 
@@ -47,14 +48,6 @@ export function listMcpServers(): McpServerSummary[] {
   return listMcpServerSummaries();
 }
 
-function normalizeStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
-    .map((entry) => entry.trim())
-    .filter((entry, index, entries) => entries.indexOf(entry) === index);
-}
-
 export function readCapabilitySelection(
   ref: FlowRef,
   roleInstanceId: string
@@ -65,8 +58,8 @@ export function readCapabilitySelection(
     const parsed = JSON.parse(fs.readFileSync(selectionPath, 'utf8')) as Record<string, unknown> | null;
     if (!parsed || typeof parsed !== 'object') return null;
     return {
-      skills: normalizeStringArray(parsed.skills),
-      mcpServers: normalizeStringArray(parsed.mcpServers),
+      skills: normalizeStringList(parsed.skills),
+      mcpServers: normalizeStringList(parsed.mcpServers),
       skillsDecided: parsed.skillsDecided === true,
       mcpDecided: parsed.mcpDecided === true,
       selectedAt: typeof parsed.selectedAt === 'string' ? parsed.selectedAt : new Date(0).toISOString(),
@@ -84,8 +77,8 @@ function writeCapabilitySelection(
   const selectionPath = capabilitySelectionPath(ref, roleInstanceId);
   fs.mkdirSync(path.dirname(selectionPath), { recursive: true });
   fs.writeFileSync(selectionPath, JSON.stringify({
-    skills: normalizeStringArray(selection.skills).sort((a, b) => a.localeCompare(b)),
-    mcpServers: normalizeStringArray(selection.mcpServers).sort((a, b) => a.localeCompare(b)),
+    skills: normalizeStringList(selection.skills).sort((a, b) => a.localeCompare(b)),
+    mcpServers: normalizeStringList(selection.mcpServers).sort((a, b) => a.localeCompare(b)),
     skillsDecided: selection.skillsDecided,
     mcpDecided: selection.mcpDecided,
     selectedAt: selection.selectedAt,
