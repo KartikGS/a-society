@@ -7,6 +7,7 @@ import type {
 import { resolveCapabilityGate } from '../../orchestration/capability-selection.js';
 import { resolveRoleModel, resolveRoleModelGate } from '../../orchestration/role-model.js';
 import * as SessionStore from '../../orchestration/store.js';
+import { isProjectSettingsEnabled } from '../../projects/project-settings-store.js';
 import type { FlowStateMessage, RoleConfigurationPending } from '../protocol.js';
 import { latestContextUsageFromSession } from './feed.js';
 import type { ActiveSession } from './types.js';
@@ -66,5 +67,6 @@ export function buildFlowStateMessage(
     contextUsageByRole,
     contextWindowByRole,
     roleConfigurations,
+    projectSettingsEnabled: isProjectSettingsEnabled(ref.projectNamespace),
   };
 }
