@@ -51,7 +51,6 @@ interface StoredToolSettings {
 }
 
 interface SettingsData {
-  version: number;
   models: ModelConfig[];
   mcpServers: McpServerConfig[];
   tools: StoredToolSettings;
@@ -230,7 +229,6 @@ function loadSettings(): SettingsData {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
     return {
-      version: 1,
       models: [],
       mcpServers: [],
       tools: normalizeStoredToolSettings(undefined),
@@ -240,7 +238,6 @@ function loadSettings(): SettingsData {
   }
   try {
     const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as {
-      version?: number;
       models?: PersistedModelConfig[];
       mcpServers?: unknown[];
       tools?: PersistedToolSettings;
@@ -248,7 +245,6 @@ function loadSettings(): SettingsData {
       automation?: unknown;
     };
     return {
-      version: raw.version ?? 1,
       models: Array.isArray(raw.models) ? raw.models.map(normalizeModelConfig) : [],
       mcpServers: Array.isArray(raw.mcpServers)
         ? raw.mcpServers.map(normalizeMcpServerConfig).filter((entry): entry is McpServerConfig => entry !== null)
@@ -259,7 +255,6 @@ function loadSettings(): SettingsData {
     };
   } catch {
     return {
-      version: 1,
       models: [],
       mcpServers: [],
       tools: normalizeStoredToolSettings(undefined),

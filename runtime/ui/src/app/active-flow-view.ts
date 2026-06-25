@@ -63,6 +63,7 @@ export interface ActiveFlowView {
   composerValue: string;
   latestContextUsage: number | null;
   viewedRoleContextWindow: number | null;
+  projectSettingsEnabled: boolean;
 }
 
 function resolveInputTargetRole(
@@ -220,5 +221,6 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     composerValue: activeUi?.composerValue ?? '',
     latestContextUsage,
     viewedRoleContextWindow,
+    projectSettingsEnabled: activeUi?.projectSettingsEnabled ?? false,
   };
 }
