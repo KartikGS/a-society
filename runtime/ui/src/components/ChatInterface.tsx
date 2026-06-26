@@ -43,6 +43,7 @@ interface ChatInterfaceProps {
   activeRoles?: string[];
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
+  projectSettingsEnabled?: boolean;
   roleConfiguration?: RoleConfigurationPrompt | null;
   handoffApproval?: HandoffApprovalPrompt | null;
   contextWindow?: number | null;
@@ -80,14 +81,15 @@ function consentToolLabel(request: ConsentRequest): string {
   return request.toolName;
 }
 
-function consentAllowFlowLabel(request: ConsentRequest): string {
+function consentAllowFlowLabel(request: ConsentRequest, projectSettingsEnabled: boolean): string {
+  const scope = projectSettingsEnabled ? 'this project' : 'this flow';
   if (request.kind === 'file-write') {
-    return 'Allow all edits this flow';
+    return `Allow all edits for ${scope}`;
   }
   if (request.kind === 'mcp-tool') {
-    return 'Allow this tool for this flow';
+    return `Allow this tool for ${scope}`;
   }
-  return 'Allow this command for this flow';
+  return `Allow this command for ${scope}`;
 }
 
 type MarkdownSegment =
@@ -586,7 +588,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   className="consent-btn consent-btn-allow-flow"
                   onClick={() => props.onConsentResponse?.(CONSENT_RESPONSE_DECISION.ALLOW_FLOW)}
                 >
-                  {consentAllowFlowLabel(props.consentRequest)}
+                  {consentAllowFlowLabel(props.consentRequest, props.projectSettingsEnabled ?? false)}
                 </button>
                 <button
                   type="button"
@@ -653,7 +655,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
               className="consent-mode-select"
               value={props.consentMode ?? CONSENT_MODE.NO_ACCESS}
               onChange={(e) => props.onConsentModeChange?.(e.target.value as ConsentMode)}
-              title="Tool permission mode for this flow"
+              title={props.projectSettingsEnabled ? 'Tool permission mode for this project' : 'Tool permission mode for this flow'}
             >
               <option value={CONSENT_MODE.NO_ACCESS}>No Access</option>
               <option value={CONSENT_MODE.PARTIAL_ACCESS}>Partial Access</option>
