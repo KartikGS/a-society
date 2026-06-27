@@ -12,6 +12,10 @@ All notable changes to A-Society will be documented here.
 
 ## [Unreleased]
 
+### Runtime
+
+- Project settings: per-project defaults that seed new flows — per-role model/skills/MCP, tool permission level and commands, improvement type, and feedback. Set via the ⋮ menu on initialized projects; per-flow choices override.
+
 ---
 
 ## [0.3.0] — 2026-06-21
