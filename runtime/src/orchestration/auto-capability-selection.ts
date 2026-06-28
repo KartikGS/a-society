@@ -15,6 +15,7 @@ import {
 } from './capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection, type RoleModelSelection } from './role-model.js';
 import { buildRoleConfigurationSummary } from './role-configuration-summary.js';
+import { normalizeStringList } from '../../shared/strings.js';
 import type { WfNode } from '../../shared/workflow-graph.js';
 
 /** Max attempts at the selection turn, including format-correction re-prompts. */
@@ -95,14 +96,6 @@ function formatRoleNodes(roleNodes: RoleNodeContext[]): string[] {
   }
   lines.push('');
   return lines;
-}
-
-function uniqueStrings(values: unknown): string[] {
-  if (!Array.isArray(values)) return [];
-  return values
-    .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
-    .map((value) => value.trim())
-    .filter((value, index, entries) => entries.indexOf(value) === index);
 }
 
 function listPendingDimensions(dims: PendingDimensions): AutoDimension[] {
@@ -215,7 +208,7 @@ function parseAndValidate(text: string, pending: PendingDimensions, candidates: 
       return { ok: false, reason: '"skills" must be an array of skill names' };
     }
     const validSkillNames = new Set(candidates.skills.map((skill) => skill.name));
-    selection.skills = uniqueStrings(obj.skills).filter((name) => validSkillNames.has(name));
+    selection.skills = normalizeStringList(obj.skills).filter((name) => validSkillNames.has(name));
   }
 
   if (pending.mcp) {
@@ -228,7 +221,7 @@ function parseAndValidate(text: string, pending: PendingDimensions, candidates: 
       idByKey.set(server.id, server.id);
       idByKey.set(server.name, server.id);
     }
-    selection.mcpServers = uniqueStrings(obj.mcpServers)
+    selection.mcpServers = normalizeStringList(obj.mcpServers)
       .map((key) => idByKey.get(key))
       .filter((id): id is string => id !== undefined)
       .filter((id, index, ids) => ids.indexOf(id) === index);

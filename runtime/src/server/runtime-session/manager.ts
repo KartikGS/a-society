@@ -1,5 +1,6 @@
 import type { WebSocket } from 'ws';
 import { flowKey, flowRefFromRun } from '../../../shared/flow-ref.js';
+import { IMPROVEMENT_CHOICE_MODE } from '../../../shared/protocol-constants.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   FeedItem,
@@ -14,6 +15,7 @@ import * as SessionStore from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
 import { bootstrapUpdateFlow } from '../../projects/update-bootstrap.js';
 import { initializeDraftFlow } from '../../projects/draft-flow.js';
+import { buildSeededConsentState, loadProjectSettings } from '../../projects/project-settings-store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
 import { createRuntimeSessionCommands } from './commands.js';
@@ -151,15 +153,72 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
   }
 
   function startFlowRunner(session: ActiveSession, projectNamespace: string): void {
-    void attachSessionTask(session, () =>
-      session.orchestrator.runStoredFlow(
+    void attachSessionTask(session, async () => {
+      await session.orchestrator.runStoredFlow(
         projectNamespace,
         session.flowRef.flowId,
         (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
         session.consentGate,
         session.mcpManagers
-      )
-    ).catch(() => {});
+      );
+      await autoAdvanceProjectGates(session);
+    }).catch(() => {});
+  }
+
+  /**
+   * Auto-apply project-level improvement and feedback defaults so the end-of-flow
+   * gates skip their modals. No-op when project settings are disabled or the
+   * relevant default is unset. Graph/parallel improvement and feedback generation
+   * require a usable model; when none is configured this returns early and the
+   * existing manual modal takes over.
+   */
+  async function autoAdvanceProjectGates(session: ActiveSession): Promise<void> {
+    const ref = session.flowRef;
+    const settings = loadProjectSettings(session.projectNamespace);
+    if (!settings.enabled) return;
+
+    const improvementFlow = readFlowRun(ref);
+    if (improvementFlow?.status === 'awaiting_improvement_choice' && settings.improvement) {
+      const mode = settings.improvement;
+      if (mode === IMPROVEMENT_CHOICE_MODE.NONE) {
+        emitHistoricalMessage(session, { type: 'input_text', text: 'No improvement' });
+        await ImprovementOrchestrator.skipImprovement(improvementFlow);
+        session.sink.emit({ kind: 'flow.completed' });
+      } else if (SettingsStore.hasUsableConfiguredModel()) {
+        emitHistoricalMessage(session, {
+          type: 'input_text',
+          text: mode === IMPROVEMENT_CHOICE_MODE.GRAPH_BASED ? 'Graph-based improvement' : 'Parallel improvement',
+        });
+        await session.improvementOrchestrator.runImprovement(
+          improvementFlow,
+          mode,
+          session.sink,
+          (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
+          session.consentGate,
+          session.mcpManagers,
+        );
+      } else {
+        return;
+      }
+    }
+
+    const feedbackFlow = readFlowRun(ref);
+    if (feedbackFlow?.status === 'awaiting_feedback_consent' && settings.feedback !== undefined) {
+      if (settings.feedback === false) {
+        emitHistoricalMessage(session, { type: 'input_text', text: 'Skip upstream feedback' });
+        await ImprovementOrchestrator.skipFeedback(feedbackFlow);
+        session.sink.emit({ kind: 'flow.completed' });
+      } else if (SettingsStore.hasUsableConfiguredModel()) {
+        emitHistoricalMessage(session, { type: 'input_text', text: 'Generate upstream feedback' });
+        await session.improvementOrchestrator.runFeedback(
+          feedbackFlow,
+          session.sink,
+          (role) => createRoleOutputStream(session, role, emitHistoricalMessage),
+          session.consentGate,
+          session.mcpManagers,
+        );
+      }
+    }
   }
 
   async function closeSessionMcpManagers(session: ActiveSession): Promise<void> {
@@ -251,6 +310,8 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     }
 
     const flowRun = initializeDraftFlow(projectNamespace, 'owner');
+    const seededConsent = buildSeededConsentState(projectNamespace);
+    if (seededConsent) flowRun.consentState = seededConsent;
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -269,6 +330,8 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     }
 
     const { flowRun } = bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode);
+    const seededConsent = buildSeededConsentState(flowRun.projectNamespace);
+    if (seededConsent) flowRun.consentState = seededConsent;
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -287,6 +350,8 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     }
 
     const { flowRun } = bootstrapUpdateFlow(projectNamespace);
+    const seededConsent = buildSeededConsentState(flowRun.projectNamespace);
+    if (seededConsent) flowRun.consentState = seededConsent;
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -314,6 +379,19 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     }
 
     if (flowRun.status !== 'running') {
+      // A flow parked at an end-of-flow gate auto-advances on resume when the
+      // project preconfigures that decision; otherwise the operator's modal shows.
+      // autoAdvanceProjectGates itself no-ops when the default is unset and falls
+      // back to the modal when a model is required but none is usable.
+      if (
+        (flowRun.status === 'awaiting_improvement_choice' || flowRun.status === 'awaiting_feedback_consent') &&
+        loadProjectSettings(ref.projectNamespace).enabled
+      ) {
+        const gateSession = createSession(ref);
+        sendFlowState(socket, ref);
+        void attachSessionTask(gateSession, () => autoAdvanceProjectGates(gateSession)).catch(() => {});
+        return;
+      }
       sendFlowState(socket, ref);
       return;
     }
@@ -342,6 +420,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
           session.consentGate,
           session.mcpManagers,
         );
+        await autoAdvanceProjectGates(session);
         if (readFlowRun(ref)?.status === 'completed') {
           session.sink.emit({ kind: 'flow.completed' });
         }

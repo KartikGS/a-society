@@ -2,6 +2,8 @@ import { normalizeMcpServerSummaries, normalizeModelConfigs, normalizeSettingsSt
 import type { FlowRef, FlowRun, FlowSummary } from '../../../shared/types.js';
 import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../../shared/settings.js';
 import type { ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
+import type { ProjectSettings } from '../../../shared/project-settings.js';
+import { normalizeProjectSettings } from '../../../shared/project-settings.js';
 import type { SkillLoadResult } from '../../../shared/skills.js';
 
 export class IncompatibleFlowError extends Error {
@@ -119,6 +121,37 @@ export async function deleteFlow(flow: FlowSummary): Promise<void> {
   if (!response.ok) {
     throw new Error(await responseText(response));
   }
+}
+
+export async function fetchProjectRoles(projectNamespace: string): Promise<string[]> {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/roles`);
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  return await response.json() as string[];
+}
+
+export async function fetchProjectSettings(projectNamespace: string): Promise<ProjectSettings> {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/settings`);
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  return normalizeProjectSettings(await response.json());
+}
+
+export async function saveProjectSettings(
+  projectNamespace: string,
+  settings: ProjectSettings,
+): Promise<ProjectSettings> {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  return normalizeProjectSettings(await response.json());
 }
 
 export async function deleteProject(project: ProjectSummary): Promise<ProjectDiscovery> {

@@ -306,6 +306,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
           latestContextUsageByRole: { ...state.latestContextUsageByRole, ...message.contextUsageByRole },
           contextWindowByRole: message.contextWindowByRole,
           roleConfigurations: message.roleConfigurations,
+          projectSettingsEnabled: message.projectSettingsEnabled,
         };
       });
       handlers.refreshProjectFlows(message.flowRef.projectNamespace);

@@ -1,0 +1,136 @@
+/* Project settings entry button in the sidebar (⋮) */
+.sidebar-project-settings-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.72;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.sidebar-project-settings-btn:hover {
+  background: var(--surface);
+  color: var(--ink);
+  opacity: 1;
+}
+
+/* Project settings modal */
+.project-settings-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.project-settings-enable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.project-settings-enable input {
+  cursor: pointer;
+}
+
+.settings-nav-group-title {
+  margin: 14px 0 4px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.settings-nav-group-title:first-child {
+  margin-top: 0;
+}
+
+.settings-nav-empty {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.project-settings-panel,
+.project-role-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.project-settings-heading {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.project-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-dimension-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.project-dimension-toggle input {
+  cursor: pointer;
+}
+
+.settings-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.project-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(220, 38, 38);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.project-delete-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.project-delete-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

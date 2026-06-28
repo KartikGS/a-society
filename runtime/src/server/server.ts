@@ -11,6 +11,7 @@ import { createFlowReadModel } from './flow-read-model.js';
 import { registerFlowRoutes } from './flow-routes.js';
 import { parseClientMessage } from './protocol.js';
 import { createRuntimeSessionManager } from './runtime-session/manager.js';
+import { registerProjectSettingsRoutes } from './project-settings-routes.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { SocketHub } from './socket-hub.js';
 import { registerStaticUi } from './static-ui.js';
@@ -35,6 +36,7 @@ function buildServer() {
     }
   });
   registerSettingsRoutes(app);
+  registerProjectSettingsRoutes(app);
   registerStaticUi(app);
 
   wss.on('connection', (socket) => {

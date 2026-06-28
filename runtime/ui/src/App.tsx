@@ -29,13 +29,14 @@ import { FeedbackConsentModal } from './components/FeedbackConsentModal';
 import { FlowTabs } from './components/FlowTabs';
 import { ImprovementChoiceModal } from './components/ImprovementChoiceModal';
 import { ProjectSelector } from './components/ProjectSelector';
+import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
 import { areFlowRunsEqual } from './equality';
 import { useWebSocket } from './hooks/useWebSocket';
 import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
 import type { FlowRef, FlowSummary } from '../../shared/types.js';
 import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
-import type { ProjectDiscovery } from '../../shared/projects.js';
+import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 import type { SkillSummary } from '../../shared/skills.js';
 
 const GraphView = lazy(async () => {
@@ -54,6 +55,7 @@ export function App() {
   const lastSubscribedConnectionId = useRef(0);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [projectSettingsTarget, setProjectSettingsTarget] = useState<ProjectSummary | null>(null);
   const [settingsStatus, setSettingsStatus] = useState<SettingsStatus | null>(null);
   const [contextWindow, setContextWindow] = useState<number | null>(null);
   const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
@@ -217,6 +219,7 @@ export function App() {
     composerValue,
     latestContextUsage,
     viewedRoleContextWindow,
+    projectSettingsEnabled,
   } = activeView;
 
   const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
@@ -454,6 +457,7 @@ export function App() {
             onDeleteFlow={(flowRef) => { void handleDeleteFlow(flowRef); }}
             onDeleteProject={(projectNamespace) => { void handleDeleteProject(projectNamespace); }}
             onUpdateProject={handleUpdateProject}
+            onOpenProjectSettings={setProjectSettingsTarget}
             onNewProjectNameChange={setNewProjectName}
             onCreateNew={handleCreateNewProject}
             onOpenSettings={() => setSettingsOpen(true)}
@@ -516,6 +520,7 @@ export function App() {
                   activeRoles={activeRoles}
                   consentRequest={visibleConsentRequest}
                   consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
+                  projectSettingsEnabled={projectSettingsEnabled}
                   roleConfiguration={roleConfigurationNodeId ? {
                     nodeId: roleConfigurationNodeId,
                     models: configuredModels,
@@ -579,6 +584,21 @@ export function App() {
           onSkillsChange={refreshConfiguredSkills}
           onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
+        />
+      )}
+
+      {projectSettingsTarget && (
+        <ProjectSettingsModal
+          projectNamespace={projectSettingsTarget.folderName}
+          displayName={projectSettingsTarget.displayName}
+          deletable={projectSettingsTarget.folderName !== 'a-society'}
+          onClose={() => setProjectSettingsTarget(null)}
+          onError={showToast}
+          onDeleteProject={() => {
+            const target = projectSettingsTarget;
+            setProjectSettingsTarget(null);
+            void handleDeleteProject(target);
+          }}
         />
       )}
     </main>
