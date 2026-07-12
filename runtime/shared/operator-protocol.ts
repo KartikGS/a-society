@@ -18,10 +18,6 @@ import type {
 export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.OPEN_FLOW; flowRef: FlowRef }
   | { type: typeof CLIENT_MESSAGE_TYPE.RESUME_FLOW; flowRef: FlowRef }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW; projectNamespace: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN; flowRef: FlowRef; nodeId?: string; role?: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT; flowRef: FlowRef; role: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.HUMAN_INPUT; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
