@@ -5,7 +5,6 @@ import { WebSocketServer } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
 import * as SessionStore from '../orchestration/store.js';
 import { CLIENT_MESSAGE_TYPE } from '../../shared/protocol-constants.js';
-import { discoverProjects } from '../projects/project-discovery.js';
 import { setWorkspaceRoot } from '../common/workspace.js';
 import { createFlowReadModel } from './flow-read-model.js';
 import { registerFlowRoutes } from './flow-routes.js';
@@ -28,6 +27,11 @@ function buildServer() {
 
   registerFlowRoutes(app, {
     flowReadModel,
+    flowCreation: {
+      createInitializedFlow: runtimeSessions.createInitializedFlow,
+      createInitializationFlow: runtimeSessions.createInitializationFlow,
+      createUpdateFlow: runtimeSessions.createUpdateFlow,
+    },
     onFlowDeleted(projectNamespace) {
       runtimeSessions.refreshProjectFlows(projectNamespace);
     },
@@ -66,86 +70,6 @@ function buildServer() {
             message: error instanceof Error ? error.message : String(error)
           });
         });
-        return;
-      }
-
-      if (message.type === CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW) {
-        const projectExists = discoverProjects().withADocs.some(
-          (project) => project.folderName === message.projectNamespace
-        );
-        if (!projectExists) {
-          runtimeSessions.sendToSocket(socket, {
-            type: 'error',
-            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
-            message: `Project "${message.projectNamespace}" with a-docs was not found in the workspace.`
-          });
-          return;
-        }
-
-        runtimeSessions.startFreshFlow(socket, message.projectNamespace);
-        return;
-      }
-
-      if (message.type === CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION) {
-        const projectExists = discoverProjects().withoutADocs.some(
-          (project) => project.folderName === message.projectNamespace
-        );
-        if (!projectExists) {
-          runtimeSessions.sendToSocket(socket, {
-            type: 'error',
-            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
-            message: `Project "${message.projectNamespace}" without a-docs was not found in the workspace.`
-          });
-          return;
-        }
-
-        try {
-          runtimeSessions.startInitializationFlow(socket, message.projectNamespace, 'takeover');
-        } catch (error: any) {
-          runtimeSessions.sendToSocket(socket, {
-            type: 'error',
-            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
-            message: error instanceof Error ? error.message : String(error)
-          });
-        }
-        return;
-      }
-
-      if (message.type === CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION) {
-        try {
-          runtimeSessions.startInitializationFlow(socket, message.projectNamespace, 'greenfield');
-        } catch (error: any) {
-          runtimeSessions.sendToSocket(socket, {
-            type: 'error',
-            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
-            message: error instanceof Error ? error.message : String(error)
-          });
-        }
-        return;
-      }
-
-      if (message.type === CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW) {
-        const project = discoverProjects().withADocs.find(
-          (candidate) => candidate.folderName === message.projectNamespace
-        );
-        if (!project || !project.updateAvailable) {
-          runtimeSessions.sendToSocket(socket, {
-            type: 'error',
-            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
-            message: `Project "${message.projectNamespace}" has no available update.`
-          });
-          return;
-        }
-
-        try {
-          runtimeSessions.startUpdateFlow(socket, message.projectNamespace);
-        } catch (error: any) {
-          runtimeSessions.sendToSocket(socket, {
-            type: 'error',
-            flowRef: { projectNamespace: message.projectNamespace, flowId: '__new__' },
-            message: error instanceof Error ? error.message : String(error)
-          });
-        }
         return;
       }
 
