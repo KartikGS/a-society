@@ -18,10 +18,6 @@ import type {
 export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.OPEN_FLOW; flowRef: FlowRef }
   | { type: typeof CLIENT_MESSAGE_TYPE.RESUME_FLOW; flowRef: FlowRef }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION; projectNamespace: string }
-  | { type: typeof CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW; projectNamespace: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.STOP_ACTIVE_TURN; flowRef: FlowRef; nodeId?: string; role?: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT; flowRef: FlowRef; role: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.HUMAN_INPUT; flowRef: FlowRef; text: string; nodeId?: string; role?: string }
@@ -57,6 +53,8 @@ export type FlowStateMessage = {
   contextWindowByRole: Record<string, number>;
   /** Per-node pending dimensions for nodes awaiting role configuration (keyed by node id). */
   roleConfigurations: Record<string, RoleConfigurationPending>;
+  /** Whether project-level settings are enabled for this flow's project. */
+  projectSettingsEnabled: boolean;
 };
 
 export type HistoricalMessage = OperatorFeedMessage;

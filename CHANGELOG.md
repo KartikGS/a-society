@@ -1,5 +1,5 @@
 ---
-a_society_version: "0.3.0"
+a_society_version: "0.3.1"
 ---
 
 <!-- On release, bump a_society_version above to match the newest released section below; the runtime reads it as the canonical current version. -->
@@ -10,7 +10,12 @@ All notable changes to A-Society will be documented here.
 
 ---
 
-## [Unreleased]
+## [0.3.1] — 2026-07-19
+
+### Runtime
+
+- Project settings: per-project defaults that seed new flows — per-role model/skills/MCP, tool permission level and commands, improvement type, and feedback. Set via the ⋮ menu on initialized projects; per-flow choices override.
+- Flow creation is now a REST call — `POST /api/projects/:projectNamespace/flows` with a `mode` of `initialized`, `takeover`, `greenfield`, or `update` — replacing the WebSocket `start_*` messages. This restores symmetry with flow/project deletion and gives creation proper HTTP failure semantics (400 invalid mode, 404 missing project, 409 no usable model / no available update).
 
 ---
 

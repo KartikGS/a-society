@@ -7,7 +7,6 @@ import {
   FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES,
   HANDOFF_APPROVAL_DECISIONS,
   IMPROVEMENT_CHOICE_MODES,
-  PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES,
 } from '../../shared/protocol-constants.js';
 import type { ClientMessage } from '../../shared/operator-protocol.js';
 
@@ -52,10 +51,6 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       hasOptionalString(parsed, 'nodeId') &&
       hasOptionalString(parsed, 'role')
     ) return parsed as ClientMessage;
-
-    if (isOneOf(parsed.type, PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES) && typeof parsed.projectNamespace === 'string') {
-      return parsed as ClientMessage;
-    }
 
     if (parsed.type === CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT && hasFlowRef(parsed.flowRef) && typeof parsed.role === 'string') {
       return parsed as ClientMessage;

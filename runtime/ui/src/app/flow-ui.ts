@@ -30,6 +30,7 @@ export interface FlowUiState {
   contextWindowByRole: Record<string, number>;
   roleConfigurations: Record<string, RoleConfigurationPending>;
   hasActiveSession: boolean;
+  projectSettingsEnabled: boolean;
 }
 
 export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
@@ -50,6 +51,7 @@ export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     contextWindowByRole: {},
     roleConfigurations: {},
     hasActiveSession: false,
+    projectSettingsEnabled: false,
   };
 }
 

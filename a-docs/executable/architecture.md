@@ -71,7 +71,7 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Role | Owns |
 |---|---|
 | Framework Services Developer | Deterministic executable framework services and their internal implementation details |
-| Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration, the operator-facing server surface (HTTP/WebSocket protocol and operator backend), observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
+| Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration, the operator-facing server surface (HTTP/WebSocket protocol and operator backend), project-level settings (per-project role/permission/improvement defaults), observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
 | UI Developer | Operator-facing browser UI implementation under `runtime/ui/` (consumes the server/WebSocket contract; does not modify `runtime/src/`) |
 | Curator | Standing executable docs, coupling references, indexes, and verification of operator-facing references |
 
@@ -100,6 +100,7 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Provider gateway | Direct LLM-provider interaction and error normalization |
 | Handoff interpretation | Parsing and validating machine-readable handoff blocks |
 | Observability | Telemetry, runtime metrics, and diagnostics for executable behavior |
+| Project settings | Per-project defaults for role configuration (model/skills/MCP), tool-permission seeding, and improvement/feedback gate pre-decisions; applied with precedence over the per-flow gates, with consent write-back |
 
 ---
 
@@ -137,6 +138,7 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 - the index table format used by path validation
 - the runtime workflow YAML contract used by workflow graph validation, node-entry injection, active-flow routing, and backward-pass planning
 - the per-role `required-readings.yaml` schema used by runtime context injection
+- the `a-docs/roles/<role-id>/` folder convention (a role is a directory containing `main.md`) used by project-settings role discovery
 
 These dependencies and their guidance status are tracked in `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 

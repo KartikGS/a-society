@@ -13,12 +13,18 @@ import type {
   ProtocolImprovementChoiceMode,
 } from '../../../shared/protocol-constants.js';
 import { parseRoleIdentity } from '../../../shared/role-id.js';
+import { normalizeStringList } from '../../../shared/strings.js';
 import type {
   ConsentMode,
+  ConsentRequest,
   ConsentResponseDecision,
   FlowRef,
   FlowRun,
 } from '../../common/types.js';
+import {
+  recordProjectConsentGrant,
+  setProjectPermissionMode,
+} from '../../projects/project-settings-store.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { listSkills } from '../../framework-services/skills.js';
 import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
@@ -205,11 +211,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
   }
 
   function uniqueStrings(values: string[]): string[] {
-    return values
-      .filter((value) => typeof value === 'string' && value.trim() !== '')
-      .map((value) => value.trim())
-      .filter((value, index, entries) => entries.indexOf(value) === index)
-      .sort((a, b) => a.localeCompare(b));
+    return normalizeStringList(values).sort((a, b) => a.localeCompare(b));
   }
 
   function handleRoleConfiguration(ref: FlowRef, nodeId: string, payload: RoleConfigurationPayload): void {
@@ -494,10 +496,32 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'No active session for consent response.' });
       return;
     }
+
+    // Capture the request being granted before responding clears it, so an
+    // "Allow for this project" decision can be mirrored into project settings.
+    let grantedRequest: ConsentRequest | undefined;
+    if (decision === CONSENT_RESPONSE_DECISION.ALLOW_FLOW) {
+      const roleInstanceId = parseRoleIdentity(role).instanceRoleId;
+      grantedRequest = session.consentGate
+        .getInFlightRequests()
+        .find((request) => parseRoleIdentity(request.role).instanceRoleId === roleInstanceId);
+    }
+
     session.consentGate.respond(decision, role);
+
+    if (decision === CONSENT_RESPONSE_DECISION.ALLOW_FLOW && grantedRequest) {
+      recordProjectConsentGrant(ref.projectNamespace, {
+        command: grantedRequest.kind === 'bash-command' ? grantedRequest.command : undefined,
+        toolName: grantedRequest.kind === 'mcp-tool' ? grantedRequest.toolName : undefined,
+      });
+    }
   }
 
   function handleConsentMode(ref: FlowRef, mode: ConsentMode): void {
+    // Mirror the mode into project settings (no-op when project settings are
+    // disabled) so the feed dropdown also drives the project default.
+    setProjectPermissionMode(ref.projectNamespace, mode);
+
     const session = activeSessions.get(flowKey(ref));
     if (session && !session.finished) {
       const inFlightRequests = session.consentGate.getInFlightRequests();

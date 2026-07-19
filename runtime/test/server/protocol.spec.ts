@@ -20,18 +20,6 @@ describe('protocol', () => {
     });
   });
 
-  it('accepts greenfield initialization by project namespace', () => {
-    const parsed = parseClientMessage(JSON.stringify({
-      type: CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION,
-      projectNamespace: 'new-demo',
-    }));
-
-    expect(parsed).toEqual({
-      type: CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION,
-      projectNamespace: 'new-demo',
-    });
-  });
-
   it('accepts current consent decisions and modes', () => {
     const consentResponse = parseClientMessage(JSON.stringify({
       type: CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE,
@@ -116,10 +104,10 @@ describe('protocol', () => {
     }))).toBeNull();
   });
 
-  it('rejects legacy greenfield projectName field', () => {
+  it('rejects the removed greenfield initialization message type', () => {
     const parsed = parseClientMessage(JSON.stringify({
-      type: CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION,
-      projectName: 'new-demo',
+      type: 'start_greenfield_initialization',
+      projectNamespace: 'new-demo',
     }));
 
     expect(parsed).toBeNull();

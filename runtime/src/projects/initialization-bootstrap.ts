@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRun } from '../common/types.js';
+import type { InitializationMode } from '../../shared/projects.js';
 import { resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from '../framework-services/scaffolding-system.js';
 import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
@@ -12,8 +13,6 @@ import {
 } from '../common/runtime-contracts.js';
 import { readVersionFrontmatter } from '../framework-services/version-comparator.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
-
-export type InitializationMode = 'takeover' | 'greenfield';
 
 export interface InitializationBootstrapResult {
   flowRun: FlowRun;

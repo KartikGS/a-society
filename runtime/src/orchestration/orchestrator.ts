@@ -3,9 +3,21 @@ import path from 'node:path';
 import { ContextInjectionService } from '../context/injection.js';
 import * as SessionStore from './store.js';
 import { HandoffParseError } from './handoff.js';
-import { resolveCapabilityGate } from './capability-selection.js';
-import { resolveRoleModelGate } from './role-model.js';
+import {
+  listMcpServers,
+  readCapabilitySelection,
+  resolveCapabilityGate,
+  saveCapabilityDimension,
+} from './capability-selection.js';
+import {
+  readRoleModelSelection,
+  resolveRoleModelGate,
+  saveRoleModelSelection,
+} from './role-model.js';
 import { autoResolveRoleConfiguration, type AutoSelectionResult } from './auto-capability-selection.js';
+import { getProjectRoleDefaults } from '../projects/project-settings-store.js';
+import { getModelWithKey, isUsableModelConfig } from '../settings/settings-store.js';
+import { listSkills } from '../framework-services/skills.js';
 import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam, OperatorEvent } from '../common/types.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
@@ -194,6 +206,64 @@ export class FlowOrchestrator {
     });
   }
 
+  /**
+   * Apply project-level role defaults (model / skills / MCP) before the auto and
+   * manual selection gates run. A configured project default is persisted as this
+   * flow's selection for any dimension not already decided, so the gate reads it as
+   * `ready` and the operator is not prompted. Dimensions with no project default are
+   * left untouched and fall through to the existing automation/manual behavior.
+   */
+  private applyProjectRoleDefaults(
+    flowRun: FlowRun,
+    ref: FlowRef,
+    roleInstanceId: string
+  ): { skillsResolved: boolean } {
+    const baseRoleId = parseRoleIdentity(roleInstanceId).baseRoleId;
+    const defaults = getProjectRoleDefaults(flowRun.projectNamespace, baseRoleId);
+    if (!defaults) return { skillsResolved: false };
+
+    if (defaults.modelConfigId && !readRoleModelSelection(ref, roleInstanceId)) {
+      const model = getModelWithKey(defaults.modelConfigId);
+      if (isUsableModelConfig(model)) {
+        saveRoleModelSelection(ref, roleInstanceId, {
+          modelConfigId: model.id,
+          displayName: model.displayName,
+          modelId: model.modelId,
+          selectedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    const selection = readCapabilitySelection(ref, roleInstanceId);
+    const selectedAt = new Date().toISOString();
+    let skillsResolved = false;
+
+    if (defaults.skills !== undefined && !(selection?.skillsDecided ?? false)) {
+      const validSkillNames = new Set(listSkills().map((skill) => skill.name));
+      saveCapabilityDimension(
+        ref,
+        roleInstanceId,
+        'skills',
+        defaults.skills.filter((name) => validSkillNames.has(name)),
+        selectedAt
+      );
+      skillsResolved = true;
+    }
+
+    if (defaults.mcpServers !== undefined && !(selection?.mcpDecided ?? false)) {
+      const validMcpServerIds = new Set(listMcpServers().map((server) => server.id));
+      saveCapabilityDimension(
+        ref,
+        roleInstanceId,
+        'mcpServers',
+        defaults.mcpServers.filter((id) => validMcpServerIds.has(id)),
+        selectedAt
+      );
+    }
+
+    return { skillsResolved };
+  }
+
   private async autoResolveRoleConfig(
     flowRun: FlowRun,
     ref: FlowRef,
@@ -282,10 +352,13 @@ export class FlowOrchestrator {
 
         const ref = this.requireFlowRef();
 
-        // Auto-resolve any dimensions whose automation mode is `auto` before the
-        // manual gate is evaluated; resolved dimensions then read as `ready`.
+        // Project-level role defaults take precedence over automation and the
+        // manual gate: persist any configured dimension as this flow's selection.
+        const projectDefaults = this.applyProjectRoleDefaults(flowRun, ref, roleInstanceId);
+        // Auto-resolve any remaining dimensions whose automation mode is `auto`
+        // before the manual gate is evaluated; resolved dimensions then read as `ready`.
         const autoSelection = await this.autoResolveRoleConfig(flowRun, ref, roleInstanceId, nodeId);
-        if (autoSelection.skillsResolved) {
+        if (projectDefaults.skillsResolved || autoSelection.skillsResolved) {
           // Skills are injected into the system prompt; rebuild it now that the
           // auto-selected skills are persisted, before the role runs.
           session.systemPrompt = ContextInjectionService.buildContextBundle(

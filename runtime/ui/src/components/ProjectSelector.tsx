@@ -20,6 +20,7 @@ interface ProjectSelectorProps {
   onDeleteFlow: (flow: FlowSummary) => void;
   onDeleteProject: (project: ProjectSummary) => void;
   onUpdateProject: (project: ProjectSummary) => void;
+  onOpenProjectSettings: (project: ProjectSummary) => void;
   onNewProjectNameChange: (value: string) => void;
   onCreateNew: () => void;
   onOpenSettings: () => void;
@@ -34,6 +35,8 @@ interface ProjectSectionProps {
   onSelect: (projectNamespace: string) => void;
   onDelete: (project: ProjectSummary) => void;
   onUpdate?: (project: ProjectSummary) => void;
+  /** When provided, rows show a project-settings (⋮) button instead of the delete (×) button. */
+  onOpenProjectSettings?: (project: ProjectSummary) => void;
   emptyMessage: string;
 }
 
@@ -74,16 +77,28 @@ function ProjectSection(props: ProjectSectionProps) {
                   Update
                 </button>
               ) : null}
-              <button
-                type="button"
-                className="sidebar-project-delete-btn"
-                disabled={deleteDisabled}
-                title={protectedProject ? 'The A-Society framework project cannot be deleted here.' : 'Delete project'}
-                aria-label={`Delete project ${project.displayName}`}
-                onClick={() => props.onDelete(project)}
-              >
-                ×
-              </button>
+              {props.onOpenProjectSettings ? (
+                <button
+                  type="button"
+                  className="sidebar-project-settings-btn"
+                  title="Project settings"
+                  aria-label={`Project settings for ${project.displayName}`}
+                  onClick={() => props.onOpenProjectSettings?.(project)}
+                >
+                  ⋮
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="sidebar-project-delete-btn"
+                  disabled={deleteDisabled}
+                  title={protectedProject ? 'The A-Society framework project cannot be deleted here.' : 'Delete project'}
+                  aria-label={`Delete project ${project.displayName}`}
+                  onClick={() => props.onDelete(project)}
+                >
+                  ×
+                </button>
+              )}
             </div>
           );
         })}
@@ -247,6 +262,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
           onSelect={props.onSelectInitialized}
           onDelete={props.onDeleteProject}
           onUpdate={props.canStartFlows ? props.onUpdateProject : undefined}
+          onOpenProjectSettings={props.onOpenProjectSettings}
           emptyMessage="No initialized projects."
         />
 

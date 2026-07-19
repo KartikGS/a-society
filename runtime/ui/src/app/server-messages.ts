@@ -306,6 +306,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
           latestContextUsageByRole: { ...state.latestContextUsageByRole, ...message.contextUsageByRole },
           contextWindowByRole: message.contextWindowByRole,
           roleConfigurations: message.roleConfigurations,
+          projectSettingsEnabled: message.projectSettingsEnabled,
         };
       });
       handlers.refreshProjectFlows(message.flowRef.projectNamespace);
@@ -313,7 +314,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
     case 'error':
       handlers.updateFlowUi(key, (state) => ({ ...state, stopRequestedRoles: {}, compactingRoles: {} }));
       handlers.showToast(message.message);
-      if (message.flowRef.flowId === '__new__' || message.flowRef.flowId === '__system__') {
+      if (message.flowRef.flowId === '__system__') {
         handlers.setSelectorError(message.message);
       }
       return;
