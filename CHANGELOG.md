@@ -1,5 +1,5 @@
 ---
-a_society_version: "0.3.0"
+a_society_version: "0.3.1"
 ---
 
 <!-- On release, bump a_society_version above to match the newest released section below; the runtime reads it as the canonical current version. -->
@@ -10,7 +10,7 @@ All notable changes to A-Society will be documented here.
 
 ---
 
-## [Unreleased]
+## [0.3.1] — 2026-07-19
 
 ### Runtime
 
