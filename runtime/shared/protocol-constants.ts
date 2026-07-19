@@ -19,10 +19,6 @@ function protocolValueSubset<
 export const CLIENT_MESSAGE_TYPE = {
   OPEN_FLOW: 'open_flow',
   RESUME_FLOW: 'resume_flow',
-  START_INITIALIZED_FLOW: 'start_initialized_flow',
-  START_TAKEOVER_INITIALIZATION: 'start_takeover_initialization',
-  START_GREENFIELD_INITIALIZATION: 'start_greenfield_initialization',
-  START_UPDATE_FLOW: 'start_update_flow',
   STOP_ACTIVE_TURN: 'stop_active_turn',
   COMPACT_CONTEXT: 'compact_context',
   HUMAN_INPUT: 'human_input',
@@ -40,16 +36,6 @@ export type ClientMessageType = ValueOf<typeof CLIENT_MESSAGE_TYPE>;
 export const FLOW_REF_ONLY_CLIENT_MESSAGE_TYPES = protocolValueSubset(
   CLIENT_MESSAGE_TYPE,
   ['OPEN_FLOW', 'RESUME_FLOW', 'STOP_ACTIVE_TURN'] as const
-);
-
-export const PROJECT_NAMESPACE_CLIENT_MESSAGE_TYPES = protocolValueSubset(
-  CLIENT_MESSAGE_TYPE,
-  [
-    'START_INITIALIZED_FLOW',
-    'START_TAKEOVER_INITIALIZATION',
-    'START_GREENFIELD_INITIALIZATION',
-    'START_UPDATE_FLOW',
-  ] as const
 );
 
 export const OWNER_BASE_ROLE_ID = 'owner';

@@ -12,6 +12,9 @@ import type {
 import type {
   ProviderReasoningDisplay,
 } from './model-reasoning.js';
+import type {
+  InitializationMode,
+} from './projects.js';
 
 export type FlowStatus =
   | 'running'
@@ -67,7 +70,7 @@ export type FeedbackContextKind = 'standard' | 'initialization' | 'update';
 
 export interface FeedbackContext {
   kind: FeedbackContextKind;
-  initializationMode?: 'takeover' | 'greenfield';
+  initializationMode?: InitializationMode;
   updateFromVersion?: string;
   updateToVersion?: string;
 }

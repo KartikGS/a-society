@@ -1,7 +1,7 @@
 import { normalizeMcpServerSummaries, normalizeModelConfigs, normalizeSettingsStatus, normalizeSkillLoadResults } from '../model-config';
 import type { FlowRef, FlowRun, FlowSummary } from '../../../shared/types.js';
 import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../../shared/settings.js';
-import type { ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
+import type { FlowCreationMode, ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
 import type { ProjectSettings } from '../../../shared/project-settings.js';
 import { normalizeProjectSettings } from '../../../shared/project-settings.js';
 import type { SkillLoadResult } from '../../../shared/skills.js';
@@ -84,6 +84,19 @@ export async function fetchProjectFlows(projectNamespace: string): Promise<FlowS
   }
 
   return await response.json() as FlowSummary[];
+}
+
+export async function createFlow(projectNamespace: string, mode: FlowCreationMode): Promise<FlowRef> {
+  const response = await fetch(`/api/projects/${encodeURIComponent(projectNamespace)}/flows`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
+  });
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  const payload = await response.json() as { flowRef: FlowRef };
+  return payload.flowRef;
 }
 
 export async function fetchProjects(): Promise<ProjectDiscovery> {

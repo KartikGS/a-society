@@ -15,13 +15,13 @@ import type { GraphMode } from '../components/GraphView';
 import { areWorkflowGraphsEqual } from '../equality';
 import type { ClientMessage } from '../../../shared/operator-protocol.js';
 import type { ConsentMode, ConsentResponseDecision, FlowRef, FlowSummary } from '../../../shared/types.js';
-import type { ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
+import type { FlowCreationMode, ProjectDiscovery, ProjectSummary } from '../../../shared/projects.js';
 import type { WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 import type { ActiveFlowView } from './active-flow-view';
 import { SYSTEM_ROLE_KEY } from './constants';
 import { titleForFlow, type FlowTab, type FlowUiState } from './flow-ui';
 import { writeUrlFlowRef } from './routing';
-import { deleteFlow as deleteFlowApi, deleteProject as deleteProjectApi } from './runtime-api';
+import { createFlow as createFlowApi, deleteFlow as deleteFlowApi, deleteProject as deleteProjectApi } from './runtime-api';
 
 type FlowUiUpdater = (state: FlowUiState) => FlowUiState;
 
@@ -92,13 +92,27 @@ export function useAppCommands(input: UseAppCommandsInput) {
     }
   }, [refreshProjectFlows, refreshProjects, setNewProjectName, setSelectedProject, setSelectorError]);
 
+  // Fire-and-forget flow creation. Kept as a stable void-returning callback so the
+  // handlers below (and the props they feed) preserve referential identity across renders.
+  const createFlow = useCallback((projectNamespace: string, mode: FlowCreationMode): void => {
+    void (async () => {
+      try {
+        const flowRef = await createFlowApi(projectNamespace, mode);
+        openFlow(flowRef);
+        void refreshProjectFlows(flowRef.projectNamespace);
+      } catch (err) {
+        setSelectorError(err instanceof Error ? err.message : 'Failed to create flow.');
+      }
+    })();
+  }, [openFlow, refreshProjectFlows, setSelectorError]);
+
   const handleExistingInitialization = useCallback((projectNamespace: string): void => {
     if (!ensureConfiguredModel()) return;
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
-    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_TAKEOVER_INITIALIZATION, projectNamespace });
-  }, [ensureConfiguredModel, sendMessage, setNewProjectName, setSelectedProject, setSelectorError]);
+    createFlow(projectNamespace, 'takeover');
+  }, [createFlow, ensureConfiguredModel, setNewProjectName, setSelectedProject, setSelectorError]);
 
   const handleUpdateProject = useCallback((project: ProjectSummary): void => {
     if (!ensureConfiguredModel()) return;
@@ -106,8 +120,8 @@ export function useAppCommands(input: UseAppCommandsInput) {
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
-    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_UPDATE_FLOW, projectNamespace });
-  }, [ensureConfiguredModel, sendMessage, setNewProjectName, setSelectedProject, setSelectorError]);
+    createFlow(projectNamespace, 'update');
+  }, [createFlow, ensureConfiguredModel, setNewProjectName, setSelectedProject, setSelectorError]);
 
   const handleCreateNewProject = useCallback((): void => {
     const projectNamespace = newProjectName.trim();
@@ -116,8 +130,8 @@ export function useAppCommands(input: UseAppCommandsInput) {
 
     setSelectedProject(projectNamespace);
     setSelectorError(null);
-    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_GREENFIELD_INITIALIZATION, projectNamespace });
-  }, [ensureConfiguredModel, newProjectName, sendMessage, setSelectedProject, setSelectorError]);
+    createFlow(projectNamespace, 'greenfield');
+  }, [createFlow, ensureConfiguredModel, newProjectName, setSelectedProject, setSelectorError]);
 
   const handleOpenFlow = useCallback((flow: FlowSummary): void => {
     openFlow({ projectNamespace: flow.projectNamespace, flowId: flow.flowId }, titleForFlow(flow));
@@ -126,8 +140,8 @@ export function useAppCommands(input: UseAppCommandsInput) {
   const handleNewFlow = useCallback((projectNamespace: string): void => {
     if (!ensureConfiguredModel()) return;
     setSelectorError(null);
-    sendMessage({ type: CLIENT_MESSAGE_TYPE.START_INITIALIZED_FLOW, projectNamespace });
-  }, [ensureConfiguredModel, sendMessage, setSelectorError]);
+    createFlow(projectNamespace, 'initialized');
+  }, [createFlow, ensureConfiguredModel, setSelectorError]);
 
   const handleDeleteFlow = useCallback(async (flow: FlowSummary): Promise<void> => {
     const label = flow.recordName ?? flow.flowId;

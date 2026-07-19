@@ -1,6 +1,7 @@
 import type { WebSocket } from 'ws';
 import { flowKey, flowRefFromRun } from '../../../shared/flow-ref.js';
 import { IMPROVEMENT_CHOICE_MODE } from '../../../shared/protocol-constants.js';
+import type { InitializationMode } from '../../../shared/projects.js';
 import { defaultConsentState, normalizeConsentState } from '../../common/types.js';
 import type {
   FeedItem,
@@ -14,6 +15,7 @@ import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import * as SessionStore from '../../orchestration/store.js';
 import { bootstrapInitializationFlow } from '../../projects/initialization-bootstrap.js';
 import { bootstrapUpdateFlow } from '../../projects/update-bootstrap.js';
+import { discoverProjects } from '../../projects/project-discovery.js';
 import { initializeDraftFlow } from '../../projects/draft-flow.js';
 import { buildSeededConsentState, loadProjectSettings } from '../../projects/project-settings-store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
@@ -31,6 +33,14 @@ import { buildFlowStateMessage } from './flow-state.js';
 import { normalizeStaleConsentWaits } from './stale-consent.js';
 import type { ActiveSession, RuntimeSessionManagerOptions } from './types.js';
 import { WebSocketOperatorSink, type RuntimeServerMessage } from '../ws-operator-sink.js';
+
+/** Thrown by the flow-creation functions; carries the HTTP status the route should map it to. */
+export class FlowCreationError extends Error {
+  constructor(readonly statusCode: number, message: string) {
+    super(message);
+    this.name = 'FlowCreationError';
+  }
+}
 
 export function createRuntimeSessionManager(options: RuntimeSessionManagerOptions) {
   const { socketHub, flowReadModel } = options;
@@ -303,64 +313,62 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     replaySessionState(socket, ref);
   }
 
-  function startFreshFlow(socket: WebSocket, projectNamespace: string): void {
+  function assertUsableConfiguredModel(): void {
     if (!SettingsStore.hasUsableConfiguredModel()) {
-      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
-      return;
+      throw new FlowCreationError(409, SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE);
     }
-
-    const flowRun = initializeDraftFlow(projectNamespace, 'owner');
-    const seededConsent = buildSeededConsentState(projectNamespace);
-    if (seededConsent) flowRun.consentState = seededConsent;
-    const flowRef = flowRefFromRun(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef);
-
-    subscribeSocket(socket, flowRef);
-    sendProjectFlows(socket, projectNamespace);
-
-    const session = createSession(flowRef);
-    emitFlowState(session);
-    startFlowRunner(session, projectNamespace);
   }
 
-  function startInitializationFlow(socket: WebSocket, projectNamespace: string, mode: 'takeover' | 'greenfield'): void {
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
-      return;
-    }
-
-    const { flowRun } = bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode);
+  function launchCreatedFlow(flowRun: FlowRun): FlowRef {
     const seededConsent = buildSeededConsentState(flowRun.projectNamespace);
     if (seededConsent) flowRun.consentState = seededConsent;
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
-    subscribeSocket(socket, flowRef);
-    sendProjectFlows(socket, projectNamespace);
+    refreshProjectFlows(flowRun.projectNamespace);
 
     const session = createSession(flowRef);
     emitFlowState(session);
     startFlowRunner(session, flowRun.projectNamespace);
+    return flowRef;
   }
 
-  function startUpdateFlow(socket: WebSocket, projectNamespace: string): void {
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      sendToSocket(socket, missingModelError({ projectNamespace, flowId: '__new__' }));
-      return;
+  function createInitializedFlow(projectNamespace: string): FlowRef {
+    const projectExists = discoverProjects().withADocs.some(
+      (project) => project.folderName === projectNamespace
+    );
+    if (!projectExists) {
+      throw new FlowCreationError(404, `Project "${projectNamespace}" with a-docs was not found in the workspace.`);
     }
+    assertUsableConfiguredModel();
 
-    const { flowRun } = bootstrapUpdateFlow(projectNamespace);
-    const seededConsent = buildSeededConsentState(flowRun.projectNamespace);
-    if (seededConsent) flowRun.consentState = seededConsent;
-    const flowRef = flowRefFromRun(flowRun);
-    SessionStore.saveFlowRun(flowRun, flowRef);
+    return launchCreatedFlow(initializeDraftFlow(projectNamespace, 'owner'));
+  }
 
-    subscribeSocket(socket, flowRef);
-    sendProjectFlows(socket, projectNamespace);
+  function createInitializationFlow(projectNamespace: string, mode: InitializationMode): FlowRef {
+    if (mode === 'takeover') {
+      const projectExists = discoverProjects().withoutADocs.some(
+        (project) => project.folderName === projectNamespace
+      );
+      if (!projectExists) {
+        throw new FlowCreationError(404, `Project "${projectNamespace}" without a-docs was not found in the workspace.`);
+      }
+    }
+    assertUsableConfiguredModel();
 
-    const session = createSession(flowRef);
-    emitFlowState(session);
-    startFlowRunner(session, flowRun.projectNamespace);
+    return launchCreatedFlow(bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode).flowRun);
+  }
+
+  function createUpdateFlow(projectNamespace: string): FlowRef {
+    const project = discoverProjects().withADocs.find(
+      (candidate) => candidate.folderName === projectNamespace
+    );
+    if (!project || !project.updateAvailable) {
+      throw new FlowCreationError(409, `Project "${projectNamespace}" has no available update.`);
+    }
+    assertUsableConfiguredModel();
+
+    return launchCreatedFlow(bootstrapUpdateFlow(projectNamespace).flowRun);
   }
 
   async function resumeFlow(socket: WebSocket, ref: FlowRef): Promise<void> {
@@ -448,9 +456,9 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     sendToSocket,
     refreshProjectFlows,
     openFlow,
-    startFreshFlow,
-    startInitializationFlow,
-    startUpdateFlow,
+    createInitializedFlow,
+    createInitializationFlow,
+    createUpdateFlow,
     resumeFlow,
     handleHumanInput: commands.handleHumanInput,
     handleHandoffApproval: commands.handleHandoffApproval,

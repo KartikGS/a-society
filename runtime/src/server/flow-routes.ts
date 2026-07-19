@@ -1,15 +1,47 @@
-import { type Express, type Request, type Response } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
+import { FLOW_CREATION_MODE, FLOW_CREATION_MODES, INITIALIZATION_MODE, type FlowCreationMode, type InitializationMode } from '../../shared/projects.js';
 import type { FlowRef, FlowRun } from '../common/types.js';
 import * as SessionStore from '../orchestration/store.js';
 import { deleteProject, ProjectDeletionError } from '../projects/project-deletion.js';
 import { discoverProjects } from '../projects/project-discovery.js';
+import { FlowCreationError } from './runtime-session/manager.js';
 import type { FlowReadModel } from './flow-read-model.js';
+
+type FlowCreationHandlers = {
+  createInitializedFlow(projectNamespace: string): FlowRef;
+  createInitializationFlow(projectNamespace: string, mode: InitializationMode): FlowRef;
+  createUpdateFlow(projectNamespace: string): FlowRef;
+};
 
 type RegisterFlowRoutesOptions = {
   flowReadModel: FlowReadModel;
+  flowCreation: FlowCreationHandlers;
   onFlowDeleted(projectNamespace: string): void;
   onProjectDeleted(projectNamespace: string): void;
 };
+
+function parseFlowCreationMode(value: unknown): FlowCreationMode | null {
+  return (FLOW_CREATION_MODES as readonly string[]).includes(value as string)
+    ? (value as FlowCreationMode)
+    : null;
+}
+
+function createFlowForMode(
+  flowCreation: FlowCreationHandlers,
+  projectNamespace: string,
+  mode: FlowCreationMode,
+): FlowRef {
+  switch (mode) {
+    case FLOW_CREATION_MODE.INITIALIZED:
+      return flowCreation.createInitializedFlow(projectNamespace);
+    case FLOW_CREATION_MODE.TAKEOVER:
+      return flowCreation.createInitializationFlow(projectNamespace, INITIALIZATION_MODE.TAKEOVER);
+    case FLOW_CREATION_MODE.GREENFIELD:
+      return flowCreation.createInitializationFlow(projectNamespace, INITIALIZATION_MODE.GREENFIELD);
+    case FLOW_CREATION_MODE.UPDATE:
+      return flowCreation.createUpdateFlow(projectNamespace);
+  }
+}
 
 function routeParam(value: string | string[]): string {
   return Array.isArray(value) ? value[0] : value;
@@ -43,7 +75,7 @@ function workflowResponse(workflow: any) {
 }
 
 export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOptions): void {
-  const { flowReadModel, onFlowDeleted, onProjectDeleted } = options;
+  const { flowReadModel, flowCreation, onFlowDeleted, onProjectDeleted } = options;
 
   app.get('/api/projects', (_req: Request, res: Response) => {
     res.json(discoverProjects());
@@ -52,6 +84,26 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
   app.get('/api/projects/:projectNamespace/flows', (req: Request, res: Response) => {
     const projectNamespace = routeParam(req.params.projectNamespace);
     res.json(SessionStore.listFlowSummaries(projectNamespace));
+  });
+
+  app.post('/api/projects/:projectNamespace/flows', express.json(), (req: Request, res: Response) => {
+    const projectNamespace = routeParam(req.params.projectNamespace);
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const mode = parseFlowCreationMode(body.mode);
+    if (!mode) {
+      res.status(400).json({ message: 'Invalid flow creation mode.' });
+      return;
+    }
+
+    try {
+      const flowRef = createFlowForMode(flowCreation, projectNamespace, mode);
+      res.status(201).json({ flowRef });
+    } catch (error: any) {
+      const statusCode = error instanceof FlowCreationError ? error.statusCode : 500;
+      res.status(statusCode).json({
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 
   app.delete('/api/projects/:projectNamespace', (req: Request, res: Response) => {
