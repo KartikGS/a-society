@@ -1,13 +1,15 @@
 import js from '@eslint/js';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 const nodeTsFiles = ['src/**/*.ts', 'test/**/*.ts'];
 const browserTsFiles = ['ui/src/**/*.{ts,tsx}'];
+const uiComponentTestFiles = ['test/ui/components/**/*.{ts,tsx}'];
 const sharedTsFiles = ['shared/**/*.ts'];
 const configFiles = ['eslint.config.js', 'vite.config.ts'];
-const lintedTsFiles = [...nodeTsFiles, ...browserTsFiles, ...sharedTsFiles, 'vite.config.ts'];
+const lintedTsFiles = [...nodeTsFiles, ...browserTsFiles, ...uiComponentTestFiles, ...sharedTsFiles, 'vite.config.ts'];
 
 const scopeToFiles = (configs, files) =>
   configs.map((config) => ({
@@ -103,10 +105,15 @@ export default tseslint.config(
       }
     },
     plugins: {
-      'react-hooks': reactHooks
+      'react-hooks': reactHooks,
+      'jsx-a11y': jsxA11y
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      ...jsxA11y.flatConfigs.recommended.rules,
+      // Checkbox rows nest their text two spans deep (name + description); the
+      // wrapping <label> is the control's label, the linter just needs the depth.
+      'jsx-a11y/label-has-associated-control': ['error', { depth: 3 }],
       '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
@@ -126,6 +133,35 @@ export default tseslint.config(
           }
         ]
       }]
+    }
+  },
+  {
+    files: uiComponentTestFiles,
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.test-ui.json',
+        tsconfigRootDir: import.meta.dirname,
+        ecmaFeatures: {
+          jsx: true
+        }
+      },
+      globals: {
+        ...globals.es2022,
+        ...globals.browser
+      }
+    },
+    rules: {
+      '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          varsIgnorePattern: '^_'
+        }
+      ]
     }
   },
   {

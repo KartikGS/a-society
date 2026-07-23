@@ -94,6 +94,17 @@ If the runtime is launched from a sandboxed command environment without network 
 
 The browser UI has two operator modes.
 
+### Operator UI shell
+
+Shell behavior common to both modes:
+
+- **Theme** — a Light / Dark / System control sits in the sidebar dock next to Settings. The preference persists in the browser (`localStorage`); System follows the OS theme live. The page is stamped before first paint, so there is no theme flash on load.
+- **Layout** — the sidebar/graph/chat panes are resizable with minimum widths, and the layout persists across reloads in the browser. Below 1100px the graph and chat stack vertically; below 720px the project sidebar becomes an overlay drawer opened from the workspace toolbar.
+- **Connection** — when the WebSocket to the runtime drops, a "Reconnecting to runtime…" pill appears top-center and controls disable until the socket reconnects (automatic, 1 s retry).
+- **Notifications** — errors and settings-save confirmations appear as stacked toasts (top-right); errors persist longer and can be dismissed.
+- **Confirmations** — destructive actions (deleting flows, models, skills, MCP servers) confirm in an in-app dialog. **Deleting a project requires typing the project folder name** before the confirm button enables.
+- **Chat rendering** — assistant markdown supports GFM tables, strikethrough, and task lists with syntax-highlighted code blocks; links in agent output open in a new tab so the console is never navigated away.
+
 ### 1. Project Selector and Owner Chat
 
 Fresh starts open in the project selector. The selector has these startup paths:
@@ -141,7 +152,7 @@ Each initialized project in the selector has a settings (⋮) control that opens
 - **Roles** — per role, choose a default Model and optionally fix Skills and MCP servers. A configured dimension is written as each flow's selection for that role before the activation gate, so the per-flow role-configuration prompt is suppressed for it; dimensions left unset fall back to the manual/automatic gate. Model/skill/MCP references are re-validated at use time and dropped if the underlying entry is removed.
 - **Permission → Tools** — choose the project permission level (No / Partial / Full access) and edit the allowed bash commands. These seed each new flow's `consentState` at creation. While enabled, the chat-footer mode dropdown and the consent prompt's `Allow … for this project` button also write back to the project, so future flows inherit the change.
 - **Permission → Improvement · Feedback** — preset the improvement mode (No improvement / Graph-based / Parallel) and feedback (Yes / No). When set, the matching end-of-flow gate is applied automatically and its modal is skipped; `Ask each flow` keeps the prompt. Graph/parallel improvement and feedback generation still require a usable model and fall back to the prompt when none is configured.
-- **Delete project** lives at the bottom of this modal; the per-row delete (×) is removed for initialized projects (uninitialized projects keep it).
+- **Delete project** lives at the bottom of this modal; the per-row delete (×) is removed for initialized projects (uninitialized projects keep it). Deletion asks the operator to type the project folder name in the confirmation dialog before it proceeds.
 
 The active tab is mirrored in the URL as `/projects/:projectNamespace/flows/:flowId`. Switching tabs updates that route; loading the route reopens that flow. The UI also accepts the older `?project=...&flow=...` form for compatibility and rewrites it to the route form after a flow is selected.
 

@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "color-no-invalid-hex": true,
+    "no-duplicate-selectors": true
+  },
+  "overrides": [
+    {
+      "files": ["ui/src/styles/!(base).css", "ui/src/styles.css"],
+      "rules": {
+        "color-no-hex": [true, { "message": "Raw colors belong in base.css tokens; consume var(--token) here." }],
+        "color-named": ["never", { "message": "Raw colors belong in base.css tokens; consume var(--token) here." }],
+        "function-disallowed-list": [
+          ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color-mix", "light-dark"],
+          { "message": "Raw colors belong in base.css tokens; consume var(--token) here." }
+        ]
+      }
+    }
+  ]
+}

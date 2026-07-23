@@ -38,18 +38,20 @@ Root-level files: `runtime/INVOCATION.md` (operator entry), package/build/enviro
 
 ## 3. TypeScript Surfaces & Build/Typecheck Gates
 
-Three compile surfaces are governed by a TypeScript **solution** file `runtime/tsconfig.json` (project references only):
+Four compile surfaces are governed by a TypeScript **solution** file `runtime/tsconfig.json` (project references only):
 
 | Project | Config | Resolution / libs | Includes |
 |---|---|---|---|
-| Server | `runtime/tsconfig.node.json` | NodeNext, Node globals | `src/`, `test/` |
+| Server | `runtime/tsconfig.node.json` | NodeNext, Node globals | `src/`, `test/` (excluding `test/ui/components/`) |
 | Browser UI | `runtime/tsconfig.app.json` | Bundler, `react-jsx`, DOM libs | `ui/src/` |
 | Shared | `runtime/tsconfig.shared.json` | **pure ES2022 — no DOM, no Node types** | `shared/` |
+| UI component tests | `runtime/tsconfig.test-ui.json` | Bundler, `react-jsx`, DOM libs (jsdom at run time) | `test/ui/components/` |
 
-The node and app projects both reference the shared project. Compiling `runtime/shared/` without DOM or Node libraries makes browser-safety **structural**: a `node:*` import or a `document` reference in shared code fails to compile, independent of any lint rule.
+The node and app projects both reference the shared project; the test-ui project references shared and app. Compiling `runtime/shared/` without DOM or Node libraries makes browser-safety **structural**: a `node:*` import or a `document` reference in shared code fails to compile, independent of any lint rule.
 
-- `npm run check` runs `tsc -b`, so **all three surfaces are typecheck-gated**; `npm run build` typechecks before `vite build`.
-- ESLint is **type-aware for both server and UI** — browser files reference `tsconfig.app.json` so type-aware rules (e.g., no-floating-promises) reach `ui/src/`.
+- `npm run check` runs `eslint` → `stylelint` (`lint:css`) → `tsc -b` → `vite build` → `vitest`, so **all four surfaces are typecheck-gated** and the styling token rule is lint-gated; `npm run build` typechecks before `vite build`.
+- ESLint is **type-aware for both server and UI** — browser files reference `tsconfig.app.json` so type-aware rules (e.g., no-floating-promises) reach `ui/src/`; component-test files reference `tsconfig.test-ui.json`. Browser files additionally run `eslint-plugin-jsx-a11y` (recommended rules), making baseline accessibility structural.
+- **Stylelint gates the token system.** `runtime/.stylelintrc.json` forbids raw color values (hex, named colors, color functions) in every stylesheet except `ui/src/styles/base.css`, making the single-source token rule (§8) structural rather than instructional.
 - **Bundling never typechecks.** Vite (`root: ui`) bundles the UI via esbuild, which strips types. Type safety is the `tsc -b` gate's responsibility, never the bundler's.
 
 ---
@@ -116,8 +118,11 @@ The browser backend lives under `runtime/src/server/`.
 
 ## 8. Styling Model
 
-- UI styles live under `runtime/ui/src/styles/` as **area files** — `base.css` (design tokens + UI chrome) plus per-area files such as `chat.css`, `feed.css`, `composer.css`, `role-config.css`, `workspace.css`, `graph.css`, and `settings.css` — combined through a single `@import` entry. One cascade is preserved, specificity stays predictable, and an agent working a UI feature reads only the relevant area file rather than the full stylesheet.
-- The authority for design tokens, palette, typography, class naming, radius/motion, and breakpoints is the UI Developer `style-guide.md`. The style guide governs *content*; this document governs *file organization* (area-split with a single import cascade).
+- UI styles live under `runtime/ui/src/styles/` as **area files** — `base.css` (design tokens + shared UI chrome) plus per-area files such as `chat.css`, `feed.css`, `composer.css`, `role-config.css`, `workspace.css`, `graph.css`, `settings.css`, `project-settings.css`, `toast.css`, and `responsive.css` — combined through a single `@import` entry. One cascade is preserved, specificity stays predictable, and an agent working a UI feature reads only the relevant area file rather than the full stylesheet.
+- **Raw color values exist only in `base.css`.** All other stylesheets consume semantic tokens via `var(--token)`; the rule is enforced by the stylelint gate (§3). The dark theme is a single `:root[data-theme="dark"]` token-redefinition block in `base.css` — per-selector dark overrides in area files are a structural mistake.
+- **Theme resolution is JS-owned.** A pre-paint script in `ui/index.html` stamps `data-theme` on `<html>` (localStorage preference falling back to `prefers-color-scheme`); the `useTheme` hook and the sidebar `ThemeToggle` (Light/Dark/System) keep it in sync. Stylesheets never branch on `prefers-color-scheme` directly.
+- **Fonts are bundled**, not fetched: `@fontsource` packages imported in `ui/src/main.tsx` and emitted by Vite, so the UI renders identically offline and across platforms. No font/asset CDNs.
+- The authority for design tokens, palette, typography, class naming, radius/motion, breakpoints, dialogs, and iconography is the UI Developer `style-guide.md`. The style guide governs *content*; this document governs *file organization and enforcement* (area-split, single import cascade, token gate).
 
 ---
 
@@ -154,7 +159,7 @@ These dependencies and their guidance status are tracked in `$A_SOCIETY_EXECUTAB
 - `runtime/src/` is organized by executable capability, not a flat file list. Standard capability folders: `orchestration/`, `context/`, `framework-services/`, `improvement/`, `projects/`, `server/`, `providers/`, `tools/`, `observability/`, `settings/`, `common/`.
 - Within `runtime/src/server/`, `server.ts` remains a composition layer for HTTP/WebSocket setup, route registration, socket-message parsing, and delegation. Do not re-accumulate runtime session lifecycle, command handling, event routing, or consent transitions in `server.ts`.
 - Cohesive server subdomains may use nested folders under `runtime/src/server/`; the standing runtime-session subdomain belongs under `runtime/src/server/runtime-session/`.
-- Source tests mirror capability folders when a capability has more than one test file.
+- Source tests mirror capability folders when a capability has more than one test file. UI logic specs live in `runtime/test/ui/` (node environment); UI component specs live in `runtime/test/ui/components/` (jsdom, Testing Library + axe), typechecked by the test-ui project (§3).
 - A new top-level folder under `runtime/` or `runtime/src/` requires a real capability boundary. `runtime/ui/` and `runtime/shared/` qualify as such boundaries; do not create folders for one-off naming preferences.
 - Root contracts and flat `runtime/src/` files are not valid placement for new work; use the capability folders and `runtime/contracts/`.
 
