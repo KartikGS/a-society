@@ -1,5 +1,5 @@
 ---
-a_society_version: "0.3.1"
+a_society_version: "0.3.2"
 ---
 
 <!-- On release, bump a_society_version above to match the newest released section below; the runtime reads it as the canonical current version. -->
@@ -7,6 +7,15 @@ a_society_version: "0.3.1"
 # Changelog
 
 All notable changes to A-Society will be documented here.
+
+---
+
+## [0.3.2] — 2026-09-19
+
+### Runtime
+
+- Operator UI refresh: Light/Dark/System theme toggle, panel sizes that persist and stack on narrow screens, in-app confirmation dialogs, GFM tables and syntax-highlighted code in agent output, and stacked toasts. Deleting a project now asks you to type its name to confirm. No flow, protocol, or state changes.
+- UI styling moved to a semantic token system with a lint gate (`npm run lint:css`), and fonts are bundled instead of system-dependent. The UI Developer style guide was rewritten to match.
 
 ---
 

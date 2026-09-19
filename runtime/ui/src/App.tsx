@@ -1,5 +1,11 @@
+import { PanelLeft, X } from 'lucide-react';
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Panel, Group as PanelGroup, Separator as PanelResizeHandle } from 'react-resizable-panels';
+import {
+  Panel,
+  Group as PanelGroup,
+  Separator as PanelResizeHandle,
+  useDefaultLayout,
+} from 'react-resizable-panels';
 import { flowKey } from '../../shared/flow-ref.js';
 import { CLIENT_MESSAGE_TYPE, CONSENT_MODE } from '../../shared/protocol-constants.js';
 import { createActiveFlowView } from './app/active-flow-view';
@@ -25,6 +31,7 @@ import { handleServerMessage } from './app/server-messages';
 import { useAppCommands } from './app/use-app-commands';
 import { ChatInterface } from './components/ChatInterface';
 import { EmptyGraphPanel } from './components/EmptyGraphPanel';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { FeedbackConsentModal } from './components/FeedbackConsentModal';
 import { FlowTabs } from './components/FlowTabs';
 import { ImprovementChoiceModal } from './components/ImprovementChoiceModal';
@@ -32,6 +39,8 @@ import { ProjectSelector } from './components/ProjectSelector';
 import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
 import { areFlowRunsEqual } from './equality';
+import { useConfirm } from './hooks/useConfirm';
+import { useViewport } from './hooks/useViewport';
 import { useWebSocket } from './hooks/useWebSocket';
 import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
 import type { FlowRef, FlowSummary } from '../../shared/types.js';
@@ -45,6 +54,16 @@ const GraphView = lazy(async () => {
 });
 
 const ERROR_TOAST_DURATION_MS = 12_000;
+const SUCCESS_TOAST_DURATION_MS = 4_000;
+const MAX_VISIBLE_TOASTS = 4;
+
+type ToastTone = 'error' | 'success';
+
+interface Toast {
+  id: number;
+  message: string;
+  tone: ToastTone;
+}
 
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -69,14 +88,29 @@ export function App() {
   const [tabs, setTabs] = useState<FlowTab[]>([]);
   const [activeTabKey, setActiveTabKey] = useState<string | null>(initialFlowRef ? flowKey(initialFlowRef) : null);
   const [flowUiByKey, setFlowUiByKey] = useState<Record<string, FlowUiState>>({});
-  const [errorToast, setErrorToast] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const toastIdRef = useRef(0);
+
+  const viewport = useViewport();
+  const { confirm, confirmElement } = useConfirm();
+
+  const dismissToast = useCallback((id: number): void => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  const notify = useCallback((message: string, tone: ToastTone = 'error'): void => {
+    const id = ++toastIdRef.current;
+    setToasts((current) => [...current.slice(-(MAX_VISIBLE_TOASTS - 1)), { id, message, tone }]);
+    window.setTimeout(
+      () => dismissToast(id),
+      tone === 'error' ? ERROR_TOAST_DURATION_MS : SUCCESS_TOAST_DURATION_MS,
+    );
+  }, [dismissToast]);
 
   const showToast = useCallback((message: string): void => {
-    if (toastTimerRef.current !== null) clearTimeout(toastTimerRef.current);
-    setErrorToast(message);
-    toastTimerRef.current = setTimeout(() => setErrorToast(null), ERROR_TOAST_DURATION_MS);
-  }, []);
+    notify(message, 'error');
+  }, [notify]);
 
   const updateFlowUi = useCallback((key: string, updater: (state: FlowUiState) => FlowUiState): void => {
     setFlowUiByKey((current) => {
@@ -237,6 +271,7 @@ export function App() {
     activeTabKey,
     selectedProject,
     newProjectName,
+    confirm,
     ensureConfiguredModel,
     ensureTab,
     refreshProjects,
@@ -254,6 +289,7 @@ export function App() {
   }), [
     activeTabKey,
     activeView,
+    confirm,
     ensureConfiguredModel,
     ensureTab,
     newProjectName,
@@ -321,7 +357,6 @@ export function App() {
       });
     return () => { cancelled = true; };
   }, []);
-
 
   useEffect(() => {
     let cancelled = false;
@@ -434,124 +469,199 @@ export function App() {
     };
   }, [socket.status, activeTab, hasActiveFlowState, updateFlowUi, showToast]);
 
+  const [prevViewport, setPrevViewport] = useState(viewport);
+  if (prevViewport !== viewport) {
+    setPrevViewport(viewport);
+    if (viewport !== 'narrow' && drawerOpen) setDrawerOpen(false);
+  }
+
+  const sidebarVisible = viewport !== 'narrow';
+  const showToolbar = tabs.length > 0 || !sidebarVisible;
+
+  const mainLayout = useDefaultLayout({
+    id: 'a-society-layout-main',
+    storage: window.localStorage,
+    panelIds: sidebarVisible ? ['sidebar', 'workspace'] : ['workspace'],
+  });
+  const centerLayout = useDefaultLayout({
+    id: 'a-society-layout-center',
+    storage: window.localStorage,
+    panelIds: ['graph', 'chat'],
+  });
+
+  const sidebarContent = (
+    <ErrorBoundary label="project sidebar">
+      <ProjectSelector
+        projectsWithADocs={projects.withADocs}
+        projectsWithoutADocs={projects.withoutADocs}
+        selectedProject={selectedProject}
+        selectedFlowId={activeTab?.ref.flowId ?? null}
+        projectFlows={projectFlows}
+        newProjectName={newProjectName}
+        errorMessage={selectorError}
+        disabled={socket.status !== 'open'}
+        canStartFlows={socket.status === 'open' && hasConfiguredModel}
+        settingsReady={settingsReady}
+        settingsConfigured={hasConfiguredModel}
+        onSelectInitialized={handleProjectSelect}
+        onInitializeExisting={handleExistingInitialization}
+        onOpenFlow={handleOpenFlow}
+        onNewFlow={handleNewFlow}
+        onDeleteFlow={(flowRef) => { void handleDeleteFlow(flowRef); }}
+        onDeleteProject={(projectNamespace) => { void handleDeleteProject(projectNamespace); }}
+        onUpdateProject={handleUpdateProject}
+        onOpenProjectSettings={setProjectSettingsTarget}
+        onNewProjectNameChange={setNewProjectName}
+        onCreateNew={handleCreateNewProject}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
+    </ErrorBoundary>
+  );
+
   return (
     <main className="app-shell">
-      <PanelGroup orientation="horizontal">
-        <Panel defaultSize={15} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: '1px solid var(--border)' }}>
-          <ProjectSelector
-            projectsWithADocs={projects.withADocs}
-            projectsWithoutADocs={projects.withoutADocs}
-            selectedProject={selectedProject}
-            selectedFlowId={activeTab?.ref.flowId ?? null}
-            projectFlows={projectFlows}
-            newProjectName={newProjectName}
-            errorMessage={selectorError}
-            disabled={socket.status !== 'open'}
-            canStartFlows={socket.status === 'open' && hasConfiguredModel}
-            settingsReady={settingsReady}
-            settingsConfigured={hasConfiguredModel}
-            onSelectInitialized={handleProjectSelect}
-            onInitializeExisting={handleExistingInitialization}
-            onOpenFlow={handleOpenFlow}
-            onNewFlow={handleNewFlow}
-            onDeleteFlow={(flowRef) => { void handleDeleteFlow(flowRef); }}
-            onDeleteProject={(projectNamespace) => { void handleDeleteProject(projectNamespace); }}
-            onUpdateProject={handleUpdateProject}
-            onOpenProjectSettings={setProjectSettingsTarget}
-            onNewProjectNameChange={setNewProjectName}
-            onCreateNew={handleCreateNewProject}
-            onOpenSettings={() => setSettingsOpen(true)}
-          />
-        </Panel>
+      {socket.status !== 'open' ? (
+        <div className="connection-pill" role="status">
+          <span className="connection-pill-dot" aria-hidden="true" />
+          Reconnecting to runtime…
+        </div>
+      ) : null}
 
-        <PanelResizeHandle className="resize-handle" />
+      <PanelGroup
+        orientation="horizontal"
+        defaultLayout={mainLayout.defaultLayout}
+        onLayoutChanged={mainLayout.onLayoutChanged}
+      >
+        {sidebarVisible ? (
+          <>
+            <Panel id="sidebar" className="workspace-pane workspace-sidebar-pane" defaultSize="18%" minSize={220}>
+              {sidebarContent}
+            </Panel>
+            <PanelResizeHandle className="resize-handle" />
+          </>
+        ) : null}
 
-        <Panel defaultSize={85} style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}>
+        <Panel id="workspace" className="workspace-pane" defaultSize="82%">
+          {showToolbar ? (
+            <div className="workspace-toolbar">
+              {!sidebarVisible ? (
+                <button
+                  type="button"
+                  className="drawer-toggle-btn"
+                  aria-label="Open project sidebar"
+                  onClick={() => setDrawerOpen(true)}
+                >
+                  <PanelLeft aria-hidden="true" />
+                </button>
+              ) : null}
+              <FlowTabs
+                tabs={tabs}
+                activeTabKey={activeTabKey}
+                onSelect={handleTabSelect}
+                onClose={handleCloseTab}
+              />
+            </div>
+          ) : null}
 
-          <FlowTabs
-            tabs={tabs}
-            activeTabKey={activeTabKey}
-            onSelect={handleTabSelect}
-            onClose={handleCloseTab}
-          />
-
-          <div className="workspace-grid-wrapper" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-            <PanelGroup orientation="horizontal">
-              <Panel defaultSize={60} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                {flowRun && activeTab ? (
-                  <Suspense fallback={<section className="panel center-panel graph-panel" style={{ flex: 1 }}><div className="graph-empty">Loading graph...</div></section>}>
-                    <GraphView
-                      flowRun={flowRun}
-                      flowRef={activeTab.ref}
-                      graphMode={graphMode}
-                      improvementAvailable={improvementGraphAvailable}
-                      backwardActive={backwardActive}
-                      backwardSources={backwardSources}
-                      recordFolderPath={flowRun.recordFolderPath}
-                      showResume={flowRun.status === 'running' && !hasActiveSession}
-                      onResume={handleResumeFlow}
-                      onNodeClick={handleGraphNodeClick}
-                      onGraphModeChange={handleGraphModeChange}
-                      onWorkflowLoaded={handleWorkflowLoaded}
-                    />
-                  </Suspense>
-                ) : <EmptyGraphPanel selectedProject={selectedProject} />}
+          <div className="workspace-grid-wrapper">
+            <PanelGroup
+              orientation={viewport === 'wide' ? 'horizontal' : 'vertical'}
+              defaultLayout={centerLayout.defaultLayout}
+              onLayoutChanged={centerLayout.onLayoutChanged}
+            >
+              <Panel id="graph" className="workspace-pane" defaultSize="60%" minSize={200}>
+                <ErrorBoundary label="workflow graph">
+                  {flowRun && activeTab ? (
+                    <Suspense fallback={<section className="panel graph-panel"><div className="graph-empty">Loading graph...</div></section>}>
+                      <GraphView
+                        flowRun={flowRun}
+                        flowRef={activeTab.ref}
+                        graphMode={graphMode}
+                        improvementAvailable={improvementGraphAvailable}
+                        backwardActive={backwardActive}
+                        backwardSources={backwardSources}
+                        recordFolderPath={flowRun.recordFolderPath}
+                        showResume={flowRun.status === 'running' && !hasActiveSession}
+                        onResume={handleResumeFlow}
+                        onNodeClick={handleGraphNodeClick}
+                        onGraphModeChange={handleGraphModeChange}
+                        onWorkflowLoaded={handleWorkflowLoaded}
+                      />
+                    </Suspense>
+                  ) : <EmptyGraphPanel selectedProject={selectedProject} />}
+                </ErrorBoundary>
               </Panel>
 
               <PanelResizeHandle className="resize-handle" />
 
-              <Panel defaultSize={40} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <ChatInterface
-                  subtitle={
-                    flowRun
-                      ? 'Select a role to view its conversation.'
-                      : 'Open or create a flow to start the runtime conversation.'
-                  }
-                  messages={visibleFeed}
-                  waitingLabel={visibleWaitLabel}
-                  inputValue={composerValue}
-                  inputDisabled={inputDisabled}
-                  placeholder={inputPlaceholder}
-                  showComposer={true}
-                  canStop={canStopViewedRole}
-                  stopRequested={stopRequestedForViewedRole}
-                  roles={roles}
-                  selectedRole={viewedRole ?? undefined}
-                  activeRoles={activeRoles}
-                  consentRequest={visibleConsentRequest}
-                  consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
-                  projectSettingsEnabled={projectSettingsEnabled}
-                  roleConfiguration={roleConfigurationNodeId ? {
-                    nodeId: roleConfigurationNodeId,
-                    models: configuredModels,
-                    skills: configuredSkills,
-                    mcpServers: configuredMcpServers,
-                    pendingModel: roleConfigurationPending?.pendingModel ?? true,
-                    pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
-                    pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
-                  } : null}
-                  handoffApproval={handoffApprovalNodeId ? {
-                    nodeId: handoffApprovalNodeId,
-                    targets: handoffApprovalTargets ?? [],
-                  } : null}
-                  onRoleSelect={handleRoleSelect}
-                  onInputChange={handleComposerChange}
-                  onSubmit={handleSubmit}
-                  onStop={handleStopActiveTurn}
-                  onConsentResponse={handleConsentResponse}
-                  onRoleConfigure={handleRoleConfigure}
-                  onHandoffApproval={handleHandoffApproval}
-                  onConsentModeChange={handleConsentModeChange}
-                  onCompactContext={viewedRole ? handleCompactContext : undefined}
-                  isCompactingContext={isViewedRoleCompacting}
-                  contextWindow={viewedRoleContextWindow ?? contextWindow}
-                  latestContextUsage={latestContextUsage}
-                />
+              <Panel id="chat" className="workspace-pane" defaultSize="40%" minSize={200}>
+                <ErrorBoundary label="role chat">
+                  <ChatInterface
+                    subtitle={
+                      flowRun
+                        ? 'Select a role to view its conversation.'
+                        : 'Open or create a flow to start the runtime conversation.'
+                    }
+                    messages={visibleFeed}
+                    waitingLabel={visibleWaitLabel}
+                    inputValue={composerValue}
+                    inputDisabled={inputDisabled}
+                    placeholder={inputPlaceholder}
+                    showComposer={true}
+                    canStop={canStopViewedRole}
+                    stopRequested={stopRequestedForViewedRole}
+                    roles={roles}
+                    selectedRole={viewedRole ?? undefined}
+                    activeRoles={activeRoles}
+                    consentRequest={visibleConsentRequest}
+                    consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
+                    projectSettingsEnabled={projectSettingsEnabled}
+                    roleConfiguration={roleConfigurationNodeId ? {
+                      nodeId: roleConfigurationNodeId,
+                      models: configuredModels,
+                      skills: configuredSkills,
+                      mcpServers: configuredMcpServers,
+                      pendingModel: roleConfigurationPending?.pendingModel ?? true,
+                      pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
+                      pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
+                    } : null}
+                    handoffApproval={handoffApprovalNodeId ? {
+                      nodeId: handoffApprovalNodeId,
+                      targets: handoffApprovalTargets ?? [],
+                    } : null}
+                    onRoleSelect={handleRoleSelect}
+                    onInputChange={handleComposerChange}
+                    onSubmit={handleSubmit}
+                    onStop={handleStopActiveTurn}
+                    onConsentResponse={handleConsentResponse}
+                    onRoleConfigure={handleRoleConfigure}
+                    onHandoffApproval={handleHandoffApproval}
+                    onConsentModeChange={handleConsentModeChange}
+                    onCompactContext={viewedRole ? handleCompactContext : undefined}
+                    isCompactingContext={isViewedRoleCompacting}
+                    contextWindow={viewedRoleContextWindow ?? contextWindow}
+                    latestContextUsage={latestContextUsage}
+                  />
+                </ErrorBoundary>
               </Panel>
             </PanelGroup>
           </div>
         </Panel>
       </PanelGroup>
+
+      {!sidebarVisible && drawerOpen ? (
+        <>
+          <button
+            type="button"
+            className="drawer-backdrop"
+            aria-label="Close project sidebar"
+            onClick={() => setDrawerOpen(false)}
+          />
+          <aside className="sidebar-drawer">
+            {sidebarContent}
+          </aside>
+        </>
+      ) : null}
 
       {isAwaitingImprovementChoice ? (
         <ImprovementChoiceModal
@@ -569,12 +679,27 @@ export function App() {
         />
       ) : null}
 
-      {errorToast && (
-        <div className="error-toast" role="alert">
-          <span className="error-toast-message">{errorToast}</span>
-          <button className="error-toast-dismiss" onClick={() => setErrorToast(null)}>×</button>
+      {toasts.length > 0 ? (
+        <div className="toast-stack">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`toast toast-${toast.tone}`}
+              role={toast.tone === 'error' ? 'alert' : 'status'}
+            >
+              <span className="toast-message">{toast.message}</span>
+              <button
+                type="button"
+                className="toast-dismiss"
+                aria-label="Dismiss notification"
+                onClick={() => dismissToast(toast.id)}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          ))}
         </div>
-      )}
+      ) : null}
 
       {settingsOpen && (
         <SettingsModal
@@ -584,6 +709,7 @@ export function App() {
           onSkillsChange={refreshConfiguredSkills}
           onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
+          onSuccess={(message) => notify(message, 'success')}
         />
       )}
 
@@ -601,6 +727,8 @@ export function App() {
           }}
         />
       )}
+
+      {confirmElement}
     </main>
   );
 }

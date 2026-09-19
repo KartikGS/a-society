@@ -13,6 +13,7 @@ import { getActiveNodeIds } from '../../../shared/flow-state.js';
 import { WorkflowGraph as RuntimeWorkflowGraph, allIncidentEdgesCovered, type WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 import type { FlowRef, FlowRun } from '../../../shared/types.js';
 import { areStringArraysEqual, areWorkflowGraphsEqual } from '../equality';
+import { fetchWorkflowGraph } from '../app/runtime-api';
 import { toRoleKey } from '../app/roles';
 
 export type GraphMode = 'flow' | 'improvement';
@@ -171,20 +172,15 @@ function GraphViewComponent({
     onWorkflowLoadedRef.current = onWorkflowLoaded;
   }, [onWorkflowLoaded]);
 
+  const { projectNamespace, flowId } = flowRef;
+
   useEffect(() => {
     let cancelled = false;
     workflowRef.current = null;
 
     const loadWorkflow = async () => {
       try {
-        const graphEndpoint = graphMode === 'improvement' ? 'improvement-workflow' : 'workflow';
-        const response = await fetch(
-          `/api/flows/${encodeURIComponent(flowRef.projectNamespace)}/${encodeURIComponent(flowRef.flowId)}/${graphEndpoint}`
-        );
-        if (!response.ok) {
-          throw new Error(await response.text());
-        }
-        const graph = await response.json() as WorkflowGraph;
+        const graph = await fetchWorkflowGraph({ projectNamespace, flowId }, graphMode);
         if (cancelled) return;
         if (!areWorkflowGraphsEqual(workflowRef.current, graph)) {
           workflowRef.current = graph;
@@ -216,7 +212,7 @@ function GraphViewComponent({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [flowRef.projectNamespace, flowRef.flowId, graphMode, recordFolderPath]);
+  }, [projectNamespace, flowId, graphMode, recordFolderPath]);
 
   const visibleWorkflow = loadedGraphMode === graphMode ? workflow : null;
   const visibleError = error?.mode === graphMode ? error.message : null;
@@ -258,10 +254,11 @@ function GraphViewComponent({
           </p>
         </div>
         <div className="graph-header-actions">
-          <div className="graph-mode-tabs" aria-label="Graph view">
+          <div className="graph-mode-tabs" role="group" aria-label="Graph view">
             <button
               type="button"
               className={`graph-mode-tab${graphMode === 'flow' ? ' graph-mode-tab-active' : ''}`}
+              aria-pressed={graphMode === 'flow'}
               onClick={() => onGraphModeChange('flow')}
             >
               Flow
@@ -269,6 +266,7 @@ function GraphViewComponent({
             <button
               type="button"
               className={`graph-mode-tab${graphMode === 'improvement' ? ' graph-mode-tab-active' : ''}`}
+              aria-pressed={graphMode === 'improvement'}
               disabled={!improvementAvailable}
               onClick={() => onGraphModeChange('improvement')}
             >
@@ -276,11 +274,11 @@ function GraphViewComponent({
             </button>
           </div>
           <div className="legend">
-            <span><i className="legend-swatch legend-active" /> Active</span>
-            <span><i className="legend-swatch legend-awaiting-human" /> Awaiting Human</span>
-            {graphMode === 'flow' ? <span><i className="legend-swatch legend-backward" /> Backward</span> : null}
-            <span><i className="legend-swatch legend-complete" /> Complete</span>
-            <span><i className="legend-swatch legend-neutral" /> Pending</span>
+            <span><span className="legend-swatch legend-active" aria-hidden="true" /> Active</span>
+            <span><span className="legend-swatch legend-awaiting-human" aria-hidden="true" /> Awaiting Human</span>
+            {graphMode === 'flow' ? <span><span className="legend-swatch legend-backward" aria-hidden="true" /> Backward</span> : null}
+            <span><span className="legend-swatch legend-complete" aria-hidden="true" /> Complete</span>
+            <span><span className="legend-swatch legend-neutral" aria-hidden="true" /> Pending</span>
           </div>
         </div>
       </div>

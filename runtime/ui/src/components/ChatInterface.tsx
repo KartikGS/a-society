@@ -1,10 +1,11 @@
+import { ArrowDown, Send, Square } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
   HANDOFF_APPROVAL_DECISION,
 } from '../../../shared/protocol-constants.js';
+import { FeedMessage } from './FeedMessage';
 import type { ProtocolHandoffApprovalDecision } from '../../../shared/protocol-constants.js';
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, HandoffTarget } from '../../../shared/types.js';
 import type { McpServerSummary, ModelConfig } from '../../../shared/settings.js';
@@ -60,10 +61,6 @@ interface ChatInterfaceProps {
   isCompactingContext?: boolean;
 }
 
-function normalizeAssistantMarkdown(text: string): string {
-  return text.replace(/\$?\\(?:rightarrow|to)\$?/g, '→');
-}
-
 function consentPromptTitle(request: ConsentRequest): string {
   if (request.kind === 'file-write') {
     return `Allow write ${request.path}?`;
@@ -90,129 +87,6 @@ function consentAllowFlowLabel(request: ConsentRequest, projectSettingsEnabled: 
     return `Allow this tool for ${scope}`;
   }
   return `Allow this command for ${scope}`;
-}
-
-type MarkdownSegment =
-  | { kind: 'markdown'; text: string }
-  | { kind: 'table'; headers: string[]; rows: string[][] };
-
-function splitTableRow(line: string): string[] | null {
-  const trimmed = line.trim();
-  if (!trimmed.includes('|')) return null;
-
-  const withoutLeading = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
-  const withoutTrailing = withoutLeading.endsWith('|') ? withoutLeading.slice(0, -1) : withoutLeading;
-  const cells = withoutTrailing.split('|').map((cell) => cell.trim());
-  return cells.length >= 2 ? cells : null;
-}
-
-function isTableSeparator(cells: string[]): boolean {
-  return cells.length >= 2 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, '')));
-}
-
-function splitMarkdownTables(text: string): MarkdownSegment[] {
-  const normalized = normalizeAssistantMarkdown(text);
-  const lines = normalized.split(/\r?\n/);
-  const segments: MarkdownSegment[] = [];
-  const pending: string[] = [];
-
-  const flushPending = () => {
-    if (pending.length === 0) return;
-    segments.push({ kind: 'markdown', text: pending.join('\n') });
-    pending.length = 0;
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const headerCells = splitTableRow(lines[i]);
-    const separatorCells = i + 1 < lines.length ? splitTableRow(lines[i + 1]) : null;
-
-    if (headerCells && separatorCells && isTableSeparator(separatorCells)) {
-      flushPending();
-      const rows: string[][] = [];
-      i += 2;
-
-      while (i < lines.length) {
-        const rowCells = splitTableRow(lines[i]);
-        if (!rowCells) break;
-        rows.push(rowCells);
-        i++;
-      }
-
-      i--;
-      segments.push({ kind: 'table', headers: headerCells, rows });
-    } else {
-      pending.push(lines[i]);
-    }
-  }
-
-  flushPending();
-  return segments;
-}
-
-function renderAssistantMarkdown(text: string) {
-  return splitMarkdownTables(text).map((segment, index) => {
-    if (segment.kind === 'markdown') {
-      return <ReactMarkdown key={index}>{segment.text}</ReactMarkdown>;
-    }
-
-    return (
-      <div className="feed-table-wrap" key={index}>
-        <table>
-          <thead>
-            <tr>
-              {segment.headers.map((header, headerIndex) => (
-                <th key={headerIndex}>
-                  <ReactMarkdown>{header}</ReactMarkdown>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {segment.rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {segment.headers.map((_, cellIndex) => (
-                  <td key={cellIndex}>
-                    <ReactMarkdown>{row[cellIndex] ?? ''}</ReactMarkdown>
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  });
-}
-
-function renderReasoningFeedItem(message: FeedItem) {
-  return (
-    <details
-      className="feed-reasoning"
-      open={message.reasoningDisplay === 'expanded'}
-    >
-      <summary>{message.label}</summary>
-      <pre>{message.text}</pre>
-    </details>
-  );
-}
-
-function SendIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path
-        d="M3.4 16.6 17 10 3.4 3.4l.2 5.1 8.2 1.5-8.2 1.5-.2 5.1Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
-function StopIcon() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <rect x="5" y="5" width="10" height="10" rx="2.5" fill="currentColor" />
-    </svg>
-  );
 }
 
 function RoleConfigurationBanner({
@@ -262,6 +136,7 @@ function RoleConfigurationBanner({
                 <button
                   type="button"
                   className={`model-select-option${modelConfigId === model.id ? ' model-select-option-selected' : ''}`}
+                  aria-pressed={modelConfigId === model.id}
                   onClick={() => setModelConfigId(model.id)}
                 >
                   <span className="model-select-option-name">{model.displayName}</span>
@@ -441,6 +316,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const shouldAutoScrollRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   const handleFeedScroll = useCallback(() => {
     const element = feedRef.current;
@@ -449,6 +325,15 @@ export function ChatInterface(props: ChatInterfaceProps) {
     const distanceFromBottom =
       element.scrollHeight - element.scrollTop - element.clientHeight;
     shouldAutoScrollRef.current = distanceFromBottom < 48;
+    setShowJumpToLatest(distanceFromBottom >= 48);
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    const element = feedRef.current;
+    if (!element) return;
+    shouldAutoScrollRef.current = true;
+    element.scrollTop = element.scrollHeight;
+    setShowJumpToLatest(false);
   }, []);
 
   useLayoutEffect(() => {
@@ -472,7 +357,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
     const nextHeight = Math.min(Math.max(element.scrollHeight, 52), 220);
     element.style.height = `${nextHeight}px`;
     element.style.overflowY = element.scrollHeight > 220 ? 'auto' : 'hidden';
-    
+
     if (element.selectionStart === props.inputValue.length) {
       element.scrollTop = element.scrollHeight;
     } else {
@@ -492,59 +377,47 @@ export function ChatInterface(props: ChatInterfaceProps) {
       </div>
 
       {props.roles && props.roles.length > 0 ? (
-        <div className="role-tabs">
+        <div className="role-tabs" role="group" aria-label="Conversation roles">
           {props.roles.map((role) => (
             <button
               key={role}
               className={`role-tab${props.selectedRole === role ? ' role-tab-active' : ''}${props.activeRoles?.includes(role) ? ' role-tab-live' : ''}`}
+              aria-pressed={props.selectedRole === role}
               onClick={() => props.onRoleSelect?.(role)}
               type="button"
             >
               {role}
-              {props.activeRoles?.includes(role) ? <span className="role-tab-dot" /> : null}
+              {props.activeRoles?.includes(role) ? <span className="role-tab-dot" aria-hidden="true" /> : null}
             </button>
           ))}
         </div>
       ) : null}
 
-      <div
-        className={`feed${props.messages.length > 0 ? ' feed-has-messages' : ''}`}
-        ref={feedRef}
-        onScroll={handleFeedScroll}
-      >
-        {props.messages.length === 0 ? (
-          <div className="feed-empty">
-            Waiting for runtime output.
-          </div>
-        ) : (
-          props.messages.map((message) => (
-            <article key={message.id} className={`feed-item feed-item-${message.type}`}>
-              {message.type === 'reasoning' ? (
-                renderReasoningFeedItem(message)
-              ) : message.type === 'repair' || message.type === 'activation' || message.type === 'handoff' || message.type === 'resume' || message.type === 'tool' || message.type === 'tool-success' || message.type === 'tool-error' ? (
-                <div className={`feed-compact-line feed-compact-${message.type}`}>
-                  <span className="feed-compact-label">{message.label}</span>
-                  <span className="feed-compact-text">{message.text}</span>
-                </div>
-              ) : (
-                <>
-                  <p className="feed-label">{message.label}</p>
-                  {message.type === 'assistant' ? (
-                    <div className="feed-markdown">
-                      {renderAssistantMarkdown(message.text)}
-                    </div>
-                  ) : message.type === 'user' ? (
-                    <div className="feed-user-text">
-                      {message.text}
-                    </div>
-                  ) : (
-                    <pre className="feed-text">{message.text}</pre>
-                  )}
-                </>
-              )}
-            </article>
-          ))
-        )}
+      <div className="feed-shell">
+        <div
+          className={`feed${props.messages.length > 0 ? ' feed-has-messages' : ''}`}
+          ref={feedRef}
+          onScroll={handleFeedScroll}
+          role="log"
+          aria-live="polite"
+          aria-label="Runtime conversation"
+        >
+          {props.messages.length === 0 ? (
+            <div className="feed-empty">
+              Waiting for runtime output.
+            </div>
+          ) : (
+            props.messages.map((message) => (
+              <FeedMessage key={message.id} message={message} />
+            ))
+          )}
+        </div>
+        {showJumpToLatest && props.messages.length > 0 ? (
+          <button type="button" className="feed-jump-btn" onClick={jumpToLatest}>
+            <ArrowDown aria-hidden="true" />
+            Jump to latest
+          </button>
+        ) : null}
       </div>
 
       {props.showComposer ? (
@@ -616,6 +489,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 onChange={(event) => props.onInputChange(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
+                    if (event.nativeEvent.isComposing) return;
                     event.preventDefault();
                     if (props.canStop) return;
                     if (!props.inputDisabled && props.inputValue.trim().length > 0) {
@@ -625,6 +499,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 }}
                 disabled={props.inputDisabled}
                 placeholder={props.placeholder}
+                aria-label="Message to the active role"
                 rows={1}
               />
               {showActionButton ? (
@@ -636,7 +511,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
                   aria-label={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
                   title={props.canStop ? (props.stopRequested ? 'Stopping response' : 'Stop response') : 'Send reply'}
                 >
-                  {props.canStop ? <StopIcon /> : <SendIcon />}
+                  {props.canStop ? <Square aria-hidden="true" /> : <Send aria-hidden="true" />}
                 </button>
               ) : null}
             </div>
@@ -655,6 +530,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
               className="consent-mode-select"
               value={props.consentMode ?? CONSENT_MODE.NO_ACCESS}
               onChange={(e) => props.onConsentModeChange?.(e.target.value as ConsentMode)}
+              aria-label={props.projectSettingsEnabled ? 'Tool permission mode for this project' : 'Tool permission mode for this flow'}
               title={props.projectSettingsEnabled ? 'Tool permission mode for this project' : 'Tool permission mode for this flow'}
             >
               <option value={CONSENT_MODE.NO_ACCESS}>No Access</option>

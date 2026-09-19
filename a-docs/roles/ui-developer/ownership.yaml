@@ -4,3 +4,7 @@ surfaces:
     scope: "UI Developer role truth, support-doc truth, startup-context file, and ownership file"
   - path: runtime/ui/
     scope: "Operator-facing browser UI implementation truth"
+  - path: runtime/test/ui/
+    scope: "Operator UI verification truth — logic specs (node) and component specs (jsdom, Testing Library + axe)"
+  - path: runtime/.stylelintrc.json
+    scope: "UI styling token-gate configuration — enforces the style guide's raw-colors-only-in-base.css rule"
