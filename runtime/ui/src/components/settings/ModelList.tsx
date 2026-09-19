@@ -1,3 +1,4 @@
+import { SquarePen, Trash2 } from 'lucide-react';
 import { reasoningLabel } from '../../../../shared/model-reasoning.js';
 import type { InputModality, ModelConfig } from '../../../../shared/settings.js';
 
@@ -73,28 +74,16 @@ export function ModelList({ models, onAdd, onEdit, onActivate, onDelete }: Model
                   aria-label={`Edit ${model.displayName}`}
                   title={`Edit ${model.displayName}`}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 20h4.75L19 9.75 14.25 5 4 15.25V20Z" />
-                    <path d="M13.5 5.75 18.25 10.5" />
-                  </svg>
+                  <SquarePen aria-hidden="true" />
                 </button>
                 <button
                   type="button"
                   className="model-action-icon-btn model-delete-btn"
-                  onClick={() => {
-                    if (window.confirm(`Delete "${model.displayName}"?`)) onDelete(model.id);
-                  }}
+                  onClick={() => onDelete(model.id)}
                   aria-label={`Delete ${model.displayName}`}
                   title={`Delete ${model.displayName}`}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 7.5h14" />
-                    <path d="M9.5 7.5V5.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25V7.5" />
-                    <path d="M8 10.5v6.25" />
-                    <path d="M12 10.5v6.25" />
-                    <path d="M16 10.5v6.25" />
-                    <path d="M6.75 7.5 7.5 19c.04.83.73 1.5 1.56 1.5h5.88c.83 0 1.52-.67 1.56-1.5l.75-11.5" />
-                  </svg>
+                  <Trash2 aria-hidden="true" />
                 </button>
               </div>
             </li>

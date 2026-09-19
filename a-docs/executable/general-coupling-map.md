@@ -22,6 +22,7 @@ This document is the standing reference for the coupling surface between A-Socie
 | `a-docs/roles/<role-id>/` folder convention (a role is a directory containing `main.md`) | Yes | Project-settings role discovery |
 | `.a-society/state/<project>/settings.json` schema (defined in `runtime/shared/project-settings.ts`) | Yes | Project-settings role defaults, tool-permission seeding and write-back, improvement/feedback auto-apply |
 | Provider prompt-cache request and usage fields (`cache_control`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `prompt_tokens_details.cached_tokens`) | Yes | Provider gateway prompt caching and cache observability |
+| `$A_SOCIETY_UI_DEV_STYLE_GUIDE` token rule and token vocabulary (raw colors only in `runtime/ui/src/styles/base.css`; dark theme as a `data-theme` token swap) | Yes | UI styling gate (`npm run lint:css` via `runtime/.stylelintrc.json`) and operator-UI theming; the guide's token table and the `base.css` token set must change together |
 
 Rows that depend on `a-docs/` content are still standing executable dependencies and require the same co-maintenance discipline as `general/` format changes.
 

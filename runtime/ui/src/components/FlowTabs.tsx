@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import type { FlowTab } from '../app/flow-ui';
 
 interface FlowTabsProps {
@@ -21,6 +22,7 @@ export function FlowTabs({ tabs, activeTabKey, onSelect, onClose }: FlowTabsProp
           <button
             type="button"
             className="flow-tab-click-area"
+            aria-current={tab.key === activeTabKey ? 'true' : undefined}
             onClick={() => onSelect(tab)}
           >
             <span className="flow-tab-title">{tab.title}</span>
@@ -30,9 +32,10 @@ export function FlowTabs({ tabs, activeTabKey, onSelect, onClose }: FlowTabsProp
             type="button"
             className="flow-tab-close-btn"
             title="Close tab"
+            aria-label={`Close ${tab.title}`}
             onClick={() => onClose(tab)}
           >
-            x
+            <X aria-hidden="true" />
           </button>
         </div>
       ))}

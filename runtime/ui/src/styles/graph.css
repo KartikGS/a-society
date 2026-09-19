@@ -14,6 +14,12 @@
   align-items: flex-start;
 }
 
+.graph-panel-header h2 {
+  margin: 0;
+  font-family: "Iowan Old Style", "Source Serif 4", "Palatino Linotype", serif;
+  line-height: 1.04;
+}
+
 .graph-header-actions {
   display: flex;
   flex-direction: column;
@@ -24,6 +30,7 @@
 .graph-meta-plain {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   color: var(--ink-soft);
   font-size: 13px;
@@ -37,10 +44,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.graph-title-row h2 {
-  margin: 0;
 }
 
 .resume-btn {
@@ -57,7 +60,7 @@
 
 .resume-btn:hover {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 
 .graph-mode-tabs {
@@ -80,8 +83,8 @@
 
 .graph-mode-tab-active {
   color: var(--ink);
-  border-color: rgba(15, 118, 110, 0.42);
-  background: rgba(15, 118, 110, 0.1);
+  border-color: var(--accent-focus);
+  background: var(--accent-soft);
 }
 
 .graph-mode-tab:disabled {
@@ -94,9 +97,8 @@
   min-height: 0;
   border-radius: 24px;
   overflow: hidden;
-  border: 1px solid rgba(34, 49, 63, 0.08);
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.88), rgba(241, 247, 244, 0.8));
+  border: 1px solid var(--border-soft);
+  background: radial-gradient(circle at top, var(--canvas-glow), var(--canvas-base));
 }
 
 .graph-empty {
@@ -104,29 +106,30 @@
   place-items: center;
   min-height: 180px;
   color: var(--ink-soft);
-  border: 1px dashed rgba(34, 49, 63, 0.18);
+  border: 1px dashed var(--border-strong);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.52);
+  background: var(--surface);
 }
 
-/* ReactFlow control button fixes for dark mode */
-.react-flow__controls-button {
-  background-color: var(--surface-strong) !important;
-  fill: var(--ink) !important;
-  border-bottom: 1px solid var(--border) !important;
-}
-.react-flow__controls-button:hover {
-  background-color: var(--surface) !important;
-}
-
-.react-flow__minimap {
-  background-color: var(--surface-strong) !important;
-}
-.react-flow__minimap-mask {
-  fill: var(--surface) !important;
+/* ReactFlow theming via its public CSS variables (no !important overrides). */
+.graph-canvas .react-flow {
+  --xy-edge-stroke: var(--edge);
+  --xy-edge-stroke-width: 2;
+  --xy-controls-button-background-color: var(--surface-strong);
+  --xy-controls-button-background-color-hover: var(--surface);
+  --xy-controls-button-color: var(--ink);
+  --xy-controls-button-border-color: var(--border);
+  --xy-controls-box-shadow: var(--shadow-pop);
+  --xy-minimap-background-color: var(--surface-strong);
+  --xy-minimap-mask-background-color: var(--surface);
+  --xy-background-pattern-dots-color: var(--border-strong);
+  --xy-attribution-background-color: transparent;
 }
 
 .legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
   align-items: center;
 }
 
@@ -135,7 +138,7 @@
   align-items: center;
   gap: 8px;
   color: var(--ink-soft);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .legend-swatch {
@@ -177,7 +180,7 @@
   box-sizing: border-box;
   border-radius: 50%;
   border: 3px solid var(--node-neutral);
-  box-shadow: 0 4px 16px rgba(34, 49, 63, 0.1);
+  box-shadow: var(--shadow-node);
   background: var(--bg);
   text-align: center;
 }
@@ -221,10 +224,4 @@
 
 .node-neutral {
   border-color: var(--node-neutral);
-}
-
-.react-flow__edge-path {
-  stroke: var(--ink) !important;
-  stroke-width: 3 !important;
-  opacity: 0.65;
 }

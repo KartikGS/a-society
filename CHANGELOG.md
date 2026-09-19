@@ -10,6 +10,15 @@ All notable changes to A-Society will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Runtime
+
+- Operator UI refresh: Light/Dark/System theme toggle, panel sizes that persist and stack on narrow screens, in-app confirmation dialogs, GFM tables and syntax-highlighted code in agent output, and stacked toasts. Deleting a project now asks you to type its name to confirm. No flow, protocol, or state changes.
+- UI styling moved to a semantic token system with a lint gate (`npm run lint:css`), and fonts are bundled instead of system-dependent. The UI Developer style guide was rewritten to match.
+
+---
+
 ## [0.3.1] — 2026-07-19
 
 ### Runtime

@@ -1,10 +1,28 @@
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  background: rgba(34, 49, 63, 0.4);
+/*
+ * Native <dialog>-based modals, rendered in the browser top layer.
+ *
+ * Dialogs carry no padding of their own: `.modal-inner` fills the dialog box so
+ * every click inside the visible panel targets the inner element, leaving the
+ * dialog itself as a backdrop-only click target (see Modal.tsx).
+ */
+.modal-dialog {
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  box-shadow: var(--shadow-modal);
+  padding: 0;
+  max-width: 520px;
+  width: calc(100vw - 48px);
+  animation: slideUp 200ms ease;
+}
+
+.modal-dialog > .modal-inner {
+  padding: 32px;
+}
+
+.modal-dialog::backdrop {
+  background: var(--backdrop);
   backdrop-filter: blur(6px);
   animation: fadeIn 180ms ease;
 }
@@ -14,25 +32,14 @@
   to { opacity: 1; }
 }
 
-.modal-panel {
-  background: var(--surface-strong);
-  border: 1px solid var(--border);
-  border-radius: 28px;
-  box-shadow: 0 32px 80px rgba(34, 49, 63, 0.18);
-  padding: 32px;
-  max-width: 520px;
-  width: calc(100vw - 48px);
-  animation: slideUp 200ms ease;
-}
-
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.modal-panel h2 {
+.modal-dialog h2 {
   margin: 8px 0 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+  font-family: "Iowan Old Style", "Source Serif 4", "Palatino Linotype", serif;
 }
 
 .modal-copy {
@@ -52,20 +59,20 @@
   text-align: left;
   padding: 16px 18px;
   border-radius: 18px;
-  border: 1px solid rgba(15, 118, 110, 0.22);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(227, 242, 237, 0.88));
+  border: 1px solid var(--accent-border);
+  background: var(--accent-surface);
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
 .modal-choice:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.1);
+  box-shadow: var(--shadow-pop);
 }
 
 .modal-choice-neutral {
   border-color: var(--border);
-  background: rgba(249, 250, 251, 0.92);
+  background: var(--surface-muted);
 }
 
 .modal-choice-label {
@@ -77,4 +84,53 @@
   font-size: 13px;
   color: var(--ink-soft);
   line-height: 1.4;
+}
+
+/* Confirm dialog */
+.confirm-dialog {
+  max-width: 440px;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.confirm-dialog-input {
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.confirm-dialog-input:focus {
+  outline: none;
+  border-color: var(--accent-focus);
+}
+
+.confirm-btn-danger {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--danger-border);
+  background: var(--danger);
+  color: var(--on-danger);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirm-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirm-btn-danger:hover:not(:disabled) {
+  filter: brightness(0.94);
 }

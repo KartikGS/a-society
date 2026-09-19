@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import type React from 'react';
 import type { SkillLoadResult } from '../../../../shared/skills.js';
 import type { SkillFormState } from './settings-types';
@@ -53,20 +54,11 @@ export function SkillsSettingsPanel({
                   type="button"
                   className="model-action-icon-btn model-delete-btn"
                   disabled={saving}
-                  onClick={() => {
-                    if (window.confirm(`Delete "${skill.name}"?`)) onDelete(skill.name);
-                  }}
+                  onClick={() => onDelete(skill.name)}
                   aria-label={`Delete ${skill.name}`}
                   title={`Delete ${skill.name}`}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5 7.5h14" />
-                    <path d="M9.5 7.5V5.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25V7.5" />
-                    <path d="M8 10.5v6.25" />
-                    <path d="M12 10.5v6.25" />
-                    <path d="M16 10.5v6.25" />
-                    <path d="M6.75 7.5 7.5 19c.04.83.73 1.5 1.56 1.5h5.88c.83 0 1.52-.67 1.56-1.5l.75-11.5" />
-                  </svg>
+                  <Trash2 aria-hidden="true" />
                 </button>
               </div>
             </li>

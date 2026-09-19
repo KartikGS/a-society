@@ -11,6 +11,7 @@ import type {
   ProtocolHandoffApprovalDecision,
   ProtocolImprovementChoiceMode,
 } from '../../../shared/protocol-constants.js';
+import type { ConfirmOptions } from '../components/ConfirmDialog';
 import type { GraphMode } from '../components/GraphView';
 import { areWorkflowGraphsEqual } from '../equality';
 import type { ClientMessage } from '../../../shared/operator-protocol.js';
@@ -30,6 +31,7 @@ interface UseAppCommandsInput {
   activeTabKey: string | null;
   selectedProject: string | null;
   newProjectName: string;
+  confirm: (options: ConfirmOptions) => Promise<boolean>;
   ensureConfiguredModel: () => boolean;
   ensureTab: (ref: FlowRef, title: string) => void;
   refreshProjects: () => Promise<void>;
@@ -49,6 +51,7 @@ interface UseAppCommandsInput {
 export function useAppCommands(input: UseAppCommandsInput) {
   const {
     activeTabKey,
+    confirm,
     ensureConfiguredModel,
     ensureTab,
     newProjectName,
@@ -145,7 +148,12 @@ export function useAppCommands(input: UseAppCommandsInput) {
 
   const handleDeleteFlow = useCallback(async (flow: FlowSummary): Promise<void> => {
     const label = flow.recordName ?? flow.flowId;
-    if (!window.confirm(`Delete "${label}" and all its artifacts? This cannot be undone.`)) return;
+    const confirmed = await confirm({
+      title: `Delete "${label}"?`,
+      body: 'The flow record and all its artifacts are removed. This cannot be undone.',
+      confirmLabel: 'Delete flow',
+    });
+    if (!confirmed) return;
 
     try {
       await deleteFlowApi(flow);
@@ -166,11 +174,17 @@ export function useAppCommands(input: UseAppCommandsInput) {
     } catch (err) {
       setSelectorError(err instanceof Error ? err.message : 'Failed to delete flow.');
     }
-  }, [activeTabKey, refreshProjectFlows, setActiveTabKey, setFlowUiByKey, setSelectorError, setTabs]);
+  }, [activeTabKey, confirm, refreshProjectFlows, setActiveTabKey, setFlowUiByKey, setSelectorError, setTabs]);
 
   const handleDeleteProject = useCallback(async (project: ProjectSummary): Promise<void> => {
     const projectNamespace = project.folderName;
-    if (!window.confirm(`Delete project "${project.displayName}", its folder, and all runtime state? This cannot be undone.`)) return;
+    const confirmed = await confirm({
+      title: `Delete project "${project.displayName}"?`,
+      body: 'The project folder and all runtime state for it are permanently removed. This cannot be undone.',
+      confirmLabel: 'Delete project',
+      typeToConfirm: project.folderName,
+    });
+    if (!confirmed) return;
 
     try {
       const nextProjects = await deleteProjectApi(project);
@@ -216,6 +230,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
     }
   }, [
     activeTabKey,
+    confirm,
     selectedProject,
     setActiveTabKey,
     setFlowUiByKey,

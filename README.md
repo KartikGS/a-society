@@ -40,9 +40,10 @@
 |---|---|---|---|
 | `a-docs/` is designed to preserve roles, rules, indexes, and standing project truth across sessions. | The runtime aims to route work through explicit roles, handoffs, records, and closure checks. | After a flow, a backward pass turns what happened into findings that improve the project's own docs. | With your consent, the same findings can be distilled into a report that improves A-Society's reusable templates. |
 
-https://github.com/user-attachments/assets/48d3b1db-baa9-4598-9b81-3c8d0dc8fd5a
 
-https://github.com/user-attachments/assets/70431d7a-44de-4137-9187-4cd5824a31b7
+
+https://github.com/user-attachments/assets/167ea30a-ee58-4f80-b7f4-a5e765a7523b
+
 
 ---
 

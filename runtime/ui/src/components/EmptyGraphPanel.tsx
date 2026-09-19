@@ -4,7 +4,7 @@ interface EmptyGraphPanelProps {
 
 export function EmptyGraphPanel({ selectedProject }: EmptyGraphPanelProps) {
   return (
-    <section className="panel center-panel graph-panel" style={{ flex: 1 }}>
+    <section className="panel graph-panel">
       <div className="graph-panel-header">
         <div>
           <p className="eyebrow">Workflow Graph</p>

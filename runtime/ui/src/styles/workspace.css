@@ -1,32 +1,62 @@
-.workspace-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 360px;
-  gap: 0;
+.workspace-grid-wrapper {
+  display: flex;
   flex: 1;
   min-height: 0;
 }
 
+.workspace-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace-sidebar-pane {
+  border-right: 1px solid var(--border);
+}
+
 .resize-handle {
-  width: 4px;
-  background: transparent;
-  cursor: col-resize;
-  transition: background 0.2s ease;
   flex-shrink: 0;
   position: relative;
-  z-index: 10;
+  z-index: var(--z-handle);
+  background: transparent;
+  transition: background 200ms ease;
+}
+
+/* A separator between side-by-side panels is a vertical bar, and vice versa. */
+.resize-handle[aria-orientation="vertical"] {
+  width: 4px;
+}
+
+.resize-handle[aria-orientation="horizontal"] {
+  height: 4px;
 }
 
 .resize-handle:hover,
-.resize-handle[data-resize-handle-active] {
+.resize-handle[data-separator="hover"],
+.resize-handle[data-separator="active"],
+.resize-handle[data-separator="focus"] {
   background: var(--accent);
+}
+
+.workspace-toolbar {
+  display: flex;
+  align-items: center;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-toolbar .flow-tab-strip {
+  flex: 1;
+  background: transparent;
+  border-bottom: 0;
 }
 
 .flow-tab-strip {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-panel);
   display: flex;
+  align-items: center;
   gap: 4px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -46,19 +76,20 @@
   border-radius: 4px 4px 0 0;
   border: 1px solid var(--border);
   border-bottom: none;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--surface-inset);
   color: var(--ink-soft);
   transition: background 150ms ease;
 }
 
 .flow-tab:hover:not([data-active="true"]) {
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--surface-hover);
 }
 
 .flow-tab[data-active="true"] {
   background: var(--surface-strong);
   border-color: var(--border);
   border-bottom: 1px solid var(--surface-strong);
+  box-shadow: inset 0 2px 0 var(--accent);
   color: var(--ink);
   margin-bottom: -1px;
 }
@@ -105,43 +136,88 @@
   border: none;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 15px;
-  line-height: 1;
   cursor: pointer;
   opacity: 0.72;
   border-radius: 999px;
   transition: background 150ms ease, color 150ms ease;
 }
 
+.flow-tab-close-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 .flow-tab-close-btn:hover {
-  background: rgba(220, 38, 38, 0.12);
-  color: rgb(220, 38, 38);
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
-.sidebar-stack {
-  display: grid;
-  gap: 20px;
-}
-
-.header-meta {
-  margin-left: auto;
-  justify-content: flex-end;
-}
-
-.chat-subtitle {
-  margin: 0;
-}
-
-.chat-subtitle-row {
-  display: flex;
+.connection-pill {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-width: 0;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow-pop);
 }
 
-.chat-wait-pill {
-  flex: 0 0 auto;
-  padding: 5px 9px;
-  font-size: 12px;
+.connection-pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.pane-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+  min-height: 180px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.pane-error-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.pane-error-message {
+  margin: 0;
+  max-width: 420px;
+  font-size: 13px;
+  font-family: "IBM Plex Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+.pane-error-retry {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pane-error-retry:hover {
+  background: var(--accent-soft);
 }

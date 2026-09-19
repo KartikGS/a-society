@@ -1,4 +1,4 @@
-/* Project settings entry button in the sidebar (⋮) */
+/* Project settings entry button in the sidebar */
 .sidebar-project-settings-btn {
   flex-shrink: 0;
   display: flex;
@@ -10,11 +10,14 @@
   border-radius: 999px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 18px;
-  line-height: 1;
   cursor: pointer;
   opacity: 0.72;
   transition: background 150ms ease, color 150ms ease;
+}
+
+.sidebar-project-settings-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 .sidebar-project-settings-btn:hover {
@@ -79,7 +82,7 @@
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  font-family: "Iowan Old Style", "Palatino Linotype", serif;
+  font-family: "Iowan Old Style", "Source Serif 4", "Palatino Linotype", serif;
 }
 
 .project-section-head {
@@ -116,10 +119,10 @@
   align-items: center;
   height: 34px;
   padding: 0 16px;
-  border: 1px solid rgba(220, 38, 38, 0.4);
+  border: 1px solid var(--danger-border);
   border-radius: 999px;
   background: transparent;
-  color: rgb(220, 38, 38);
+  color: var(--danger);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -127,7 +130,7 @@
 }
 
 .project-delete-btn:hover {
-  background: rgba(220, 38, 38, 0.1);
+  background: var(--danger-soft);
 }
 
 .project-delete-btn:disabled {
