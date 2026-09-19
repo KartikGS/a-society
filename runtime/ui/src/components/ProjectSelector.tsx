@@ -1,5 +1,7 @@
+import { ChevronLeft, EllipsisVertical, Settings, X } from 'lucide-react';
 import type { FlowSummary } from '../../../shared/types.js';
 import type { ProjectSummary } from '../../../shared/projects.js';
+import { ThemeToggle } from './ThemeToggle';
 
 interface ProjectSelectorProps {
   projectsWithADocs: ProjectSummary[];
@@ -85,7 +87,7 @@ function ProjectSection(props: ProjectSectionProps) {
                   aria-label={`Project settings for ${project.displayName}`}
                   onClick={() => props.onOpenProjectSettings?.(project)}
                 >
-                  ⋮
+                  <EllipsisVertical aria-hidden="true" />
                 </button>
               ) : (
                 <button
@@ -96,7 +98,7 @@ function ProjectSection(props: ProjectSectionProps) {
                   aria-label={`Delete project ${project.displayName}`}
                   onClick={() => props.onDelete(project)}
                 >
-                  ×
+                  <X aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -162,9 +164,10 @@ function FlowList(props: {
               className="sidebar-flow-delete-btn"
               disabled={props.disabled}
               title="Delete record"
+              aria-label={`Delete record ${flow.recordName ?? flow.flowId}`}
               onClick={() => props.onDeleteFlow(flow)}
             >
-              ×
+              <X aria-hidden="true" />
             </button>
           </div>
           );
@@ -198,10 +201,7 @@ function SettingsAccess(props: {
       aria-label={label}
       title={label}
     >
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M10.325 4.317a1.724 1.724 0 0 1 3.35 0l.186.796a1.724 1.724 0 0 0 2.573 1.066l.705-.403a1.724 1.724 0 0 1 2.35.63l.42.727a1.724 1.724 0 0 1-.63 2.35l-.705.403a1.724 1.724 0 0 0 0 2.988l.705.403a1.724 1.724 0 0 1 .63 2.35l-.42.727a1.724 1.724 0 0 1-2.35.63l-.705-.403a1.724 1.724 0 0 0-2.573 1.066l-.186.796a1.724 1.724 0 0 1-3.35 0l-.186-.796a1.724 1.724 0 0 0-2.573-1.066l-.705.403a1.724 1.724 0 0 1-2.35-.63l-.42-.727a1.724 1.724 0 0 1 .63-2.35l.705-.403a1.724 1.724 0 0 0 0-2.988l-.705-.403a1.724 1.724 0 0 1-.63-2.35l.42-.727a1.724 1.724 0 0 1 2.35-.63l.705.403a1.724 1.724 0 0 0 2.573-1.066l.186-.796Z" />
-        <path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z" />
-      </svg>
+      <Settings aria-hidden="true" />
     </button>
   );
 }
@@ -209,14 +209,15 @@ function SettingsAccess(props: {
 export function ProjectSelector(props: ProjectSelectorProps) {
   if (props.selectedProject) {
     return (
-      <aside className="panel sidebar-panel" style={{ flex: 1, minHeight: 0 }}>
-        <div className="sidebar-header" style={{ marginBottom: 0 }}>
+      <aside className="panel sidebar-panel">
+        <div className="sidebar-header">
           <button
             type="button"
-            className="sidebar-mini-btn"
+            className="sidebar-mini-btn sidebar-back-btn"
             onClick={() => props.onSelectInitialized(null)}
           >
-            &larr; Back to Projects
+            <ChevronLeft aria-hidden="true" />
+            Back to Projects
           </button>
         </div>
         <div className="sidebar-content">
@@ -233,6 +234,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
         </div>
         <div className="sidebar-footer sidebar-footer-compact">
           <div className="sidebar-settings-dock">
+            <ThemeToggle />
             <SettingsAccess
               ready={props.settingsReady}
               configured={props.settingsConfigured}
@@ -245,7 +247,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
   }
 
   return (
-    <aside className="panel sidebar-panel" style={{ flex: 1, minHeight: 0 }}>
+    <aside className="panel sidebar-panel">
       {props.errorMessage ? (
         <div className="sidebar-error">
           <p>{props.errorMessage}</p>
@@ -307,6 +309,7 @@ export function ProjectSelector(props: ProjectSelectorProps) {
         </div>
 
         <div className="sidebar-settings-dock">
+          <ThemeToggle />
           <SettingsAccess
             ready={props.settingsReady}
             configured={props.settingsConfigured}

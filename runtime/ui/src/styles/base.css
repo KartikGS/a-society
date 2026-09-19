@@ -1,24 +1,203 @@
+/*
+ * Design tokens — the ONLY file allowed to contain raw color values.
+ * Every other stylesheet consumes tokens via var(). Enforced by stylelint.
+ *
+ * Theming: the runtime always stamps data-theme="light" | "dark" on <html>
+ * (pre-paint script in index.html + ThemeToggle). The dark theme is a token
+ * redefinition only — never add per-selector dark overrides in area files.
+ */
+
 :root {
   color-scheme: light;
+
+  /* Base palette */
   --bg: #f4efe6;
   --bg-accent: #dcefe8;
+  --page-bg: var(--bg);
   --surface: rgba(255, 251, 245, 0.88);
   --surface-strong: #fffdf9;
+  --surface-raised: rgba(255, 255, 255, 0.7);
+  --surface-muted: rgba(249, 250, 251, 0.92);
+  --surface-hover: rgba(255, 255, 255, 0.6);
+  --surface-active: #ffffff;
+  --surface-selected: #ffffff;
+  --surface-inset: rgba(0, 0, 0, 0.04);
+  --backdrop: rgba(34, 49, 63, 0.45);
+
+  /* Lines */
   --border: rgba(42, 54, 68, 0.12);
+  --border-soft: rgba(42, 54, 68, 0.08);
+  --border-strong: rgba(42, 54, 68, 0.18);
+  --edge: rgba(34, 49, 63, 0.5);
+
+  /* Text */
   --ink: #22313f;
   --ink-soft: rgba(34, 49, 63, 0.72);
+
+  /* Accent (primary interactive) */
   --accent: #0f766e;
   --accent-deep: #0b5f58;
+  --on-accent: #ffffff;
+  --accent-faint: rgba(15, 118, 110, 0.05);
+  --accent-soft: rgba(15, 118, 110, 0.09);
+  --accent-soft-strong: rgba(15, 118, 110, 0.13);
+  --accent-border: rgba(15, 118, 110, 0.3);
+  --accent-border-soft: rgba(15, 118, 110, 0.14);
+  --accent-focus: rgba(15, 118, 110, 0.45);
+  --accent-surface: rgba(240, 253, 250, 0.95);
+
+  /* Status: success */
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.1);
+  --success-ink: #15803d;
+
+  /* Status: danger */
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.1);
+  --danger-ink: #991b1b;
+  --danger-border: rgba(220, 38, 38, 0.35);
+  --on-danger: #ffffff;
+
+  /* Status: warning (errors, pending tools, stop affordances) */
   --warning: #bb3e03;
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2322313f' opacity='.55'/%3E%3C/svg%3E");
+  --warning-soft: rgba(255, 237, 213, 0.9);
+  --warning-faint: rgba(187, 62, 3, 0.06);
+  --warning-ink: #9a3412;
+  --warning-border: rgba(187, 62, 3, 0.25);
+
+  /* Status: info (user messages, active nodes) */
+  --info: #3b82f6;
+  --info-deep: #2563eb;
+  --on-info: #ffffff;
+  --on-info-soft: rgba(255, 255, 255, 0.78);
+  --info-border: rgba(37, 99, 235, 0.18);
+
+  /* Code & mono surfaces */
+  --code-bg: rgba(34, 49, 63, 0.06);
+  --syn-keyword: #cf222e;
+  --syn-title: #8250df;
+  --syn-string: #0a3069;
+  --syn-comment: #6e7781;
+  --syn-constant: #0550ae;
+  --syn-attr: #953800;
+
+  /* Workflow nodes */
   --node-active: #3b82f6;
   --node-awaiting-human: #d97706;
   --node-backward: #d9485f;
   --node-backward-source: #72777f;
   --node-complete: #2f855a;
   --node-neutral: #94a3b8;
+
+  /* Graph canvas */
+  --canvas-glow: rgba(255, 255, 255, 0.88);
+  --canvas-base: rgba(241, 247, 244, 0.8);
+
+  /* Controls */
+  --control-track: rgba(148, 163, 184, 0.32);
+  --control-thumb: #ffffff;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2322313f' opacity='.55'/%3E%3C/svg%3E");
+
+  /* Shadows */
   --shadow: 0 24px 60px rgba(67, 48, 24, 0.08);
+  --shadow-panel: none;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.2);
+  --shadow-pop: 0 8px 24px rgba(34, 49, 63, 0.16);
+  --shadow-modal: 0 32px 80px rgba(34, 49, 63, 0.18);
+  --shadow-node: 0 4px 16px rgba(34, 49, 63, 0.1);
+  --shadow-selected: 0 4px 12px rgba(15, 118, 110, 0.08);
+
+  /* Layering (modals/dialogs use the native top layer, not z-index) */
+  --z-panel: 1;
+  --z-handle: 10;
+  --z-tooltip: 60;
+  --z-drawer: 80;
+  --z-toast: 1000;
+
   font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0f1115;
+  --bg-accent: #161b22;
+  --page-bg:
+    radial-gradient(circle at top left, rgba(45, 212, 191, 0.15), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 24%),
+    linear-gradient(160deg, #0f1115 0%, #0d0f12 48%, #0a0c0f 100%);
+  --surface: rgba(22, 27, 34, 0.65);
+  --surface-strong: #1c2128;
+  --surface-raised: rgba(33, 38, 45, 0.72);
+  --surface-muted: rgba(22, 27, 34, 0.92);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-active: rgba(255, 255, 255, 0.08);
+  --surface-selected: rgba(45, 212, 191, 0.1);
+  --surface-inset: rgba(255, 255, 255, 0.05);
+  --backdrop: rgba(0, 0, 0, 0.55);
+
+  --border: rgba(205, 217, 229, 0.1);
+  --border-soft: rgba(205, 217, 229, 0.08);
+  --border-strong: rgba(205, 217, 229, 0.16);
+  --edge: rgba(205, 217, 229, 0.5);
+
+  --ink: #cdd9e5;
+  --ink-soft: rgba(205, 217, 229, 0.65);
+
+  --accent: #2dd4bf;
+  --accent-deep: #14b8a6;
+  --on-accent: #0b1220;
+  --accent-faint: rgba(45, 212, 191, 0.06);
+  --accent-soft: rgba(45, 212, 191, 0.1);
+  --accent-soft-strong: rgba(45, 212, 191, 0.14);
+  --accent-border: rgba(45, 212, 191, 0.3);
+  --accent-border-soft: rgba(45, 212, 191, 0.15);
+  --accent-focus: rgba(45, 212, 191, 0.45);
+  --accent-surface: rgba(45, 212, 191, 0.08);
+
+  --success: #4ade80;
+  --success-soft: rgba(74, 222, 128, 0.12);
+  --success-ink: #bbf7d0;
+
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --danger-ink: #fecaca;
+  --danger-border: rgba(248, 113, 113, 0.35);
+  --on-danger: #1c2128;
+
+  --warning: #fb923c;
+  --warning-soft: rgba(251, 146, 60, 0.12);
+  --warning-faint: rgba(251, 146, 60, 0.08);
+  --warning-ink: #fed7aa;
+  --warning-border: rgba(251, 146, 60, 0.3);
+
+  --code-bg: rgba(205, 217, 229, 0.07);
+  --syn-keyword: #ff7b72;
+  --syn-title: #d2a8ff;
+  --syn-string: #a5d6ff;
+  --syn-comment: #8b949e;
+  --syn-constant: #79c0ff;
+  --syn-attr: #ffa657;
+
+  --node-awaiting-human: #f59e0b;
+  --node-backward: #f43f5e;
+  --node-backward-source: #9ca3af;
+  --node-complete: #22c55e;
+  --node-neutral: #475569;
+
+  --canvas-glow: rgba(22, 27, 34, 0.8);
+  --canvas-base: rgba(15, 17, 21, 0.9);
+
+  --control-track: rgba(148, 163, 184, 0.25);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23cdd9e5' opacity='.7'/%3E%3C/svg%3E");
+
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  --shadow-panel: 0 12px 32px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 32px 80px rgba(0, 0, 0, 0.5);
+  --shadow-node: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --shadow-selected: none;
 }
 
 * {
@@ -35,13 +214,28 @@ body,
 }
 
 body {
-  background: var(--bg);
+  background: var(--page-bg);
   color: var(--ink);
 }
 
 button,
 textarea {
   font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .app-shell {
@@ -51,38 +245,6 @@ textarea {
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-}
-
-
-
-.app-header {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  justify-content: flex-end;
-  gap: 24px;
-  align-items: center;
-  padding: 10px 20px;
-  margin: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.app-header h1,
-.panel-header h1,
-.panel-header h2 {
-  margin: 0;
-  font-family: "Iowan Old Style", "Palatino Linotype", serif;
-  line-height: 1.04;
-}
-
-.header-meta,
-.status-row,
-.graph-meta,
-.legend {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .eyebrow {
@@ -95,15 +257,11 @@ textarea {
 
 .panel {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-panel);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0;
-  box-shadow: none;
-}
-
-.panel-header {
-  margin-bottom: 18px;
+  box-shadow: var(--shadow-panel);
 }
 
 .panel-copy {
@@ -112,7 +270,6 @@ textarea {
   line-height: 1.5;
 }
 
-.selector-panel,
 .chat-panel {
   padding: 18px;
 }
@@ -123,10 +280,12 @@ textarea {
   flex-direction: column;
   gap: 16px;
   padding: 16px;
+  flex: 1;
+  min-height: 0;
 }
 
 .sidebar-header {
-  margin-bottom: 8px;
+  margin-bottom: 0;
 }
 
 .sidebar-content {
@@ -160,8 +319,8 @@ textarea {
   padding: 5px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.78);
-  color: #000;
+  background: var(--surface-raised);
+  color: var(--ink);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -178,7 +337,6 @@ textarea {
   gap: 6px;
 }
 
-.sidebar-project-item,
 .sidebar-project-row {
   display: flex;
   align-items: center;
@@ -194,24 +352,17 @@ textarea {
   transition: background 150ms ease, border-color 150ms ease;
 }
 
-.sidebar-project-item:hover:not(:disabled),
 .sidebar-project-row:hover:not([data-disabled="true"]),
 .sidebar-flow-row:hover:not([data-disabled="true"]) {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(34, 49, 63, 0.08);
+  background: var(--surface-hover);
+  border-color: var(--border-soft);
 }
 
-.sidebar-project-item[data-active="true"],
 .sidebar-project-row[data-active="true"],
 .sidebar-flow-row[data-active="true"] {
-  background: white;
+  background: var(--surface-selected);
   border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.08);
-}
-
-.sidebar-project-item:disabled {
-  opacity: 0.6;
-  cursor: wait;
+  box-shadow: var(--shadow-selected);
 }
 
 .sidebar-project-row[data-disabled="true"] {
@@ -263,6 +414,19 @@ textarea {
   font-style: italic;
 }
 
+.sidebar-error {
+  padding: 10px 14px;
+  border: 1px solid var(--warning-border);
+  border-radius: 12px;
+  background: var(--warning-soft);
+  color: var(--warning-ink);
+  font-size: 13px;
+}
+
+.sidebar-error p {
+  margin: 0;
+}
+
 .sidebar-flow-row {
   display: flex;
   align-items: center;
@@ -292,8 +456,6 @@ textarea {
   border-radius: 999px;
   background: transparent;
   color: var(--ink-soft);
-  font-size: 16px;
-  line-height: 1;
   cursor: pointer;
   opacity: 0.72;
   transition: background 150ms ease, color 150ms ease;
@@ -301,15 +463,33 @@ textarea {
 
 .sidebar-project-delete-btn:hover,
 .sidebar-flow-delete-btn:hover {
-  background: rgba(220, 38, 38, 0.12);
+  background: var(--danger-soft);
   border-color: transparent;
-  color: rgb(220, 38, 38);
+  color: var(--danger);
 }
 
 .sidebar-project-delete-btn:disabled,
 .sidebar-flow-delete-btn:disabled {
   opacity: 0.36;
   cursor: not-allowed;
+}
+
+.sidebar-project-delete-btn svg,
+.sidebar-flow-delete-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-back-btn svg {
+  width: 14px;
+  height: 14px;
+  margin-left: -4px;
 }
 
 .sidebar-project-update-btn {
@@ -332,7 +512,7 @@ textarea {
 
 .sidebar-project-update-btn:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .sidebar-project-update-btn:disabled {
@@ -374,6 +554,8 @@ textarea {
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--ink);
   font-size: 14px;
 }
 
@@ -382,7 +564,7 @@ textarea {
   border-radius: 8px;
   border: 0;
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -397,6 +579,8 @@ textarea {
 .sidebar-settings-dock {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding-top: 2px;
 }
@@ -420,17 +604,48 @@ textarea {
 
 .sidebar-settings-icon-btn:hover {
   transform: translateY(-1px);
-  background: rgba(15, 118, 110, 0.12);
-  border-color: rgba(15, 118, 110, 0.32);
+  background: var(--accent-soft-strong);
+  border-color: var(--accent-border);
   color: var(--accent);
 }
 
 .sidebar-settings-icon-btn svg {
   width: 22px;
   height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
+.theme-toggle-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.theme-toggle-option:hover {
+  color: var(--ink);
+  background: var(--surface-hover);
+}
+
+.theme-toggle-option[aria-pressed="true"] {
+  background: var(--accent-soft-strong);
+  color: var(--accent);
+}
+
+.theme-toggle-option svg {
+  width: 16px;
+  height: 16px;
 }

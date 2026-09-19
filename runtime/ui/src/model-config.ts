@@ -165,3 +165,25 @@ export function normalizeMcpServerSummaries(value: unknown): McpServerSummary[] 
     .map((entry) => normalizeMcpServerSummary(entry))
     .filter((entry): entry is McpServerSummary => entry !== null);
 }
+
+export interface McpServerConfig extends McpServerSummary {
+  command?: string;
+  args?: string[];
+  envKeys?: string[];
+  url?: string;
+  headerKeys?: string[];
+}
+
+export function normalizeMcpServerConfig(value: unknown): McpServerConfig | null {
+  const summary = normalizeMcpServerSummary(value);
+  if (!summary || !value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  return {
+    ...summary,
+    command: typeof raw.command === 'string' ? raw.command : undefined,
+    args: Array.isArray(raw.args) ? raw.args.filter((entry): entry is string => typeof entry === 'string') : [],
+    envKeys: Array.isArray(raw.envKeys) ? raw.envKeys.filter((entry): entry is string => typeof entry === 'string') : [],
+    url: typeof raw.url === 'string' ? raw.url : undefined,
+    headerKeys: Array.isArray(raw.headerKeys) ? raw.headerKeys.filter((entry): entry is string => typeof entry === 'string') : [],
+  };
+}

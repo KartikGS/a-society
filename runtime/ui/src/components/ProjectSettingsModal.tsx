@@ -1,9 +1,10 @@
-import type React from 'react';
+import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CONSENT_MODE,
   IMPROVEMENT_CHOICE_MODE,
 } from '../../../shared/protocol-constants.js';
+import { Modal } from './Modal';
 import type { ProtocolConsentMode, ProtocolImprovementChoiceMode } from '../../../shared/protocol-constants.js';
 import type {
   ProjectRoleSettings,
@@ -63,7 +64,6 @@ export function ProjectSettingsModal({
   const [selection, setSelection] = useState<NavSelection>({ kind: 'tools' });
   const [commandsText, setCommandsText] = useState('');
   const commandsInitialized = useRef(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
 
   const reportError = useCallback((message: string): void => onError(message), [onError]);
 
@@ -122,18 +122,13 @@ export function ProjectSettingsModal({
     persist({ ...settings, roles: { ...settings.roles, [roleId]: cleaned } });
   }, [persist, settings]);
 
-  function handleOverlayClick(event: React.MouseEvent): void {
-    if (event.target === overlayRef.current) onClose();
-  }
-
   const activeRoleId = useMemo(
     () => (selection.kind === 'role' && roles.includes(selection.roleId) ? selection.roleId : null),
     [roles, selection],
   );
 
   return (
-    <div className="modal-overlay settings-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      <div className="settings-modal project-settings-modal" role="dialog" aria-modal="true" aria-label={`${displayName} settings`}>
+    <Modal className="settings-modal" ariaLabel={`${displayName} settings`} onClose={onClose}>
         <div className="settings-modal-header">
           <div className="project-settings-title-row">
             <h2 className="settings-modal-title">{displayName}</h2>
@@ -147,7 +142,9 @@ export function ProjectSettingsModal({
               <span>Enable project settings</span>
             </label>
           </div>
-          <button type="button" className="settings-close-btn" onClick={onClose} aria-label="Close project settings">×</button>
+          <button type="button" className="settings-close-btn" onClick={onClose} aria-label="Close project settings">
+            <X aria-hidden="true" />
+          </button>
         </div>
 
         <div className="settings-modal-body">
@@ -245,8 +242,7 @@ export function ProjectSettingsModal({
             Delete project
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

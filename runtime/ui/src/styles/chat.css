@@ -12,38 +12,15 @@
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(34, 49, 63, 0.08);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-soft);
   color: var(--ink-soft);
   font-size: 14px;
 }
 
 .status-pill-wait {
-  background: rgba(255, 237, 213, 0.82);
-  color: #9a3412;
-}
-
-.status-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(34, 49, 63, 0.12);
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.status-action:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-.status-action-stop {
-  border-color: rgba(187, 62, 3, 0.22);
-  background: rgba(255, 237, 213, 0.92);
-  color: #9a3412;
+  background: var(--warning-soft);
+  color: var(--warning-ink);
 }
 
 .role-tabs {
@@ -60,7 +37,7 @@
   padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-hover);
   color: var(--ink-soft);
   font-size: 13px;
   cursor: pointer;
@@ -68,22 +45,19 @@
 }
 
 .role-tab:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-active);
   color: var(--ink);
 }
 
-.role-tab-active {
+.role-tab-active,
+.role-tab-active:hover {
   background: var(--accent);
   border-color: var(--accent);
-  color: white;
+  color: var(--on-accent);
 }
 
 .role-tab-live {
   border-color: var(--accent);
-}
-
-.role-tab-active.role-tab-live {
-  background: var(--accent);
 }
 
 .role-tab-dot {

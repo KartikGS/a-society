@@ -1,9 +1,30 @@
+import { X } from 'lucide-react';
 import type React from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   DISABLED_REASONING,
 } from '../../../shared/model-reasoning.js';
-import { normalizeFeedSettings, normalizeMcpServerSummaries, normalizeMcpServerSummary, normalizeModelConfig, normalizeModelConfigs, normalizeSkillLoadResults, normalizeToolSettings } from '../model-config';
+import { useConfirm } from '../hooks/useConfirm';
+import { Modal } from './Modal';
+import {
+  activateModel as activateModelApi,
+  deleteMcpServer as deleteMcpServerApi,
+  deleteModel as deleteModelApi,
+  deleteSkill as deleteSkillApi,
+  fetchAutomationSettings,
+  fetchFeedSettings as fetchFeedSettingsApi,
+  fetchMcpServer as fetchMcpServerApi,
+  fetchMcpServers as fetchMcpServersApi,
+  fetchModels as fetchModelsApi,
+  fetchSkills as fetchSkillsApi,
+  fetchToolSettings as fetchToolSettingsApi,
+  importSkill as importSkillApi,
+  saveFeedSettings as saveFeedSettingsApi,
+  saveMcpServer as saveMcpServerApi,
+  saveModel as saveModelApi,
+  saveWebSearchSettings,
+  updateAutomationSettings,
+} from '../app/runtime-api';
 import {
   AddModelForm,
   AutomationToggle,
@@ -35,18 +56,11 @@ import type { SkillLoadResult } from '../../../shared/skills.js';
 interface SettingsModalProps {
   onClose: () => void;
   onError?: (message: string) => void;
+  onSuccess?: (message: string) => void;
   onModelsChange?: () => void;
   onSkillsChange?: () => void | Promise<void>;
   onMcpServersChange?: () => void | Promise<void>;
   required?: boolean;
-}
-
-interface McpServerConfig extends McpServerSummary {
-  command?: string;
-  args?: string[];
-  envKeys?: string[];
-  url?: string;
-  headerKeys?: string[];
 }
 
 const DEFAULT_FORM: ModelFormState = {
@@ -98,23 +112,9 @@ function parseJsonObject(value: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-function normalizeMcpServerConfig(value: unknown): McpServerConfig | null {
-  const summary = normalizeMcpServerSummary(value);
-  if (!summary || !value || typeof value !== 'object') return null;
-  const raw = value as Record<string, unknown>;
-  return {
-    ...summary,
-    command: typeof raw.command === 'string' ? raw.command : undefined,
-    args: Array.isArray(raw.args) ? raw.args.filter((entry): entry is string => typeof entry === 'string') : [],
-    envKeys: Array.isArray(raw.envKeys) ? raw.envKeys.filter((entry): entry is string => typeof entry === 'string') : [],
-    url: typeof raw.url === 'string' ? raw.url : undefined,
-    headerKeys: Array.isArray(raw.headerKeys) ? raw.headerKeys.filter((entry): entry is string => typeof entry === 'string') : [],
-  };
-}
-
 type SettingsTab = 'models' | 'tools' | 'feed' | 'mcp' | 'skills';
 
-export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange, onMcpServersChange, required = false }: SettingsModalProps) {
+export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onSkillsChange, onMcpServersChange, required = false }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
   const [view, setView] = useState<EditorView>('list');
   const [models, setModels] = useState<ModelConfig[]>([]);
@@ -135,7 +135,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   const [mcpForm, setMcpForm] = useState<McpFormState>(DEFAULT_MCP_FORM);
   const [savingMcp, setSavingMcp] = useState(false);
   const [editingMcpId, setEditingMcpId] = useState<string | null>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const { confirm, confirmElement } = useConfirm();
 
   const reportError = useCallback((message: string): void => {
     onError?.(message);
@@ -170,91 +170,65 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   }, [onMcpServersChange]);
 
   useEffect(() => {
-    async function fetchModels() {
+    async function loadModels() {
       try {
-        const res = await fetch('/api/settings/models');
-        if (!res.ok) throw new Error(await res.text());
-        setModels(normalizeModelConfigs(await res.json()));
+        setModels(await fetchModelsApi());
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load models.');
       }
     }
 
-    async function fetchTools() {
+    async function loadTools() {
       try {
-        const res = await fetch('/api/settings/tools');
-        if (!res.ok) throw new Error(await res.text());
-        const next = normalizeToolSettings(await res.json());
-        if (!next) throw new Error('Failed to load tool settings.');
-        replaceToolSettings(next);
+        replaceToolSettings(await fetchToolSettingsApi());
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load tool settings.');
       }
     }
 
-    async function fetchFeedSettings() {
+    async function loadFeedSettings() {
       try {
-        const res = await fetch('/api/settings/feed');
-        if (!res.ok) throw new Error(await res.text());
-        const next = normalizeFeedSettings(await res.json());
-        if (!next) throw new Error('Failed to load feed settings.');
-        replaceFeedSettings(next);
+        replaceFeedSettings(await fetchFeedSettingsApi());
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load feed settings.');
       }
     }
 
-    async function fetchSkills() {
+    async function loadSkills() {
       try {
-        const res = await fetch('/api/settings/skills');
-        if (!res.ok) throw new Error(await res.text());
-        setSkillResults(normalizeSkillLoadResults(await res.json()));
+        setSkillResults(await fetchSkillsApi());
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load skills.');
       }
     }
 
-    async function fetchMcpServers() {
+    async function loadMcpServers() {
       try {
-        const res = await fetch('/api/settings/mcp');
-        if (!res.ok) throw new Error(await res.text());
-        setMcpServers(normalizeMcpServerSummaries(await res.json()));
+        setMcpServers(await fetchMcpServersApi());
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load MCP servers.');
       }
     }
 
-    async function fetchAutomation() {
+    async function loadAutomation() {
       try {
-        const res = await fetch('/api/settings/automation');
-        if (!res.ok) throw new Error(await res.text());
-        const raw = await res.json() as Record<string, unknown>;
-        const mode = (value: unknown): SelectionMode => (value === 'auto' ? 'auto' : 'manual');
-        setAutomation({ models: mode(raw.models), skills: mode(raw.skills), mcpServers: mode(raw.mcpServers) });
+        setAutomation(await fetchAutomationSettings());
       } catch (err) {
         reportError(err instanceof Error ? err.message : 'Failed to load automation settings.');
       }
     }
 
-    void fetchModels();
-    void fetchTools();
-    void fetchFeedSettings();
-    void fetchSkills();
-    void fetchMcpServers();
-    void fetchAutomation();
+    void loadModels();
+    void loadTools();
+    void loadFeedSettings();
+    void loadSkills();
+    void loadMcpServers();
+    void loadAutomation();
   }, [reportError]);
 
   async function updateAutomation(dimension: keyof AutomationSettings, mode: SelectionMode): Promise<void> {
     try {
-      const res = await fetch('/api/settings/automation', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [dimension]: mode }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const raw = await res.json() as Record<string, unknown>;
-      const normalize = (value: unknown): SelectionMode => (value === 'auto' ? 'auto' : 'manual');
-      setAutomation({ models: normalize(raw.models), skills: normalize(raw.skills), mcpServers: normalize(raw.mcpServers) });
+      setAutomation(await updateAutomationSettings({ [dimension]: mode }));
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to update automation settings.');
     }
@@ -262,9 +236,9 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
   async function handleActivate(id: string) {
     try {
-      const res = await fetch(`/api/settings/models/${encodeURIComponent(id)}/activate`, { method: 'POST' });
-      if (!res.ok) throw new Error(await res.text());
+      await activateModelApi(id);
       replaceModels(models.map((m) => ({ ...m, active: m.id === id })));
+      onSuccess?.('Active model updated.');
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to activate model.');
     }
@@ -272,8 +246,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/settings/models/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(await res.text());
+      await deleteModelApi(id);
       const next = models.filter((m) => m.id !== id);
       if (models.find((m) => m.id === id)?.active && next.length > 0) {
         next[0] = { ...next[0], active: true };
@@ -327,22 +300,11 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
         cacheTtl: form.cacheTtl,
         supportedInputTypes: form.supportedInputTypes,
       };
-      const res = await fetch(isEditing ? `/api/settings/models/${encodeURIComponent(editingModelId!)}` : '/api/settings/models', {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const body = await res.json() as { message?: string };
-        throw new Error(body.message ?? (isEditing ? 'Failed to update model.' : 'Failed to create model.'));
-      }
-      const saved = normalizeModelConfig(await res.json());
-      if (!saved) {
-        throw new Error('Server returned an invalid model configuration.');
-      }
+      const saved = await saveModelApi(payload, isEditing ? editingModelId : null);
       replaceModels(isEditing
         ? models.map((model) => model.id === saved.id ? saved : model)
         : models.concat(saved));
+      onSuccess?.(isEditing ? 'Model updated.' : 'Model added.');
       setForm(DEFAULT_FORM);
       setEditingModelId(null);
       setView('list');
@@ -352,10 +314,6 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
     } finally {
       setSubmitting(false);
     }
-  }
-
-  function handleOverlayClick(e: React.MouseEvent) {
-    if (!required && e.target === overlayRef.current) onClose();
   }
 
   function setField<K extends keyof ModelFormState>(key: K, value: ModelFormState[K]) {
@@ -395,21 +353,11 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
     try {
       setSavingTools(true);
-      const response = await fetch('/api/settings/tools/web-search', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          enabled: toolForm.webSearchEnabled,
-          apiKey: toolForm.tavilyApiKey.trim(),
-        }),
-      });
-      if (!response.ok) {
-        const body = await response.json() as { message?: string };
-        throw new Error(body.message ?? 'Failed to save tool settings.');
-      }
-      const next = normalizeToolSettings(await response.json());
-      if (!next) throw new Error('Server returned invalid tool settings.');
-      replaceToolSettings(next);
+      replaceToolSettings(await saveWebSearchSettings({
+        enabled: toolForm.webSearchEnabled,
+        apiKey: toolForm.tavilyApiKey.trim(),
+      }));
+      onSuccess?.('Tool settings saved.');
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to save tool settings.');
     } finally {
@@ -422,20 +370,10 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
     try {
       setSavingFeed(true);
-      const response = await fetch('/api/settings/feed', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          historyLimit: feedForm.historyLimit ? parseInt(feedForm.historyLimit, 10) : 0,
-        }),
-      });
-      if (!response.ok) {
-        const body = await response.json() as { message?: string };
-        throw new Error(body.message ?? 'Failed to save feed settings.');
-      }
-      const next = normalizeFeedSettings(await response.json());
-      if (!next) throw new Error('Server returned invalid feed settings.');
-      replaceFeedSettings(next);
+      replaceFeedSettings(await saveFeedSettingsApi(
+        feedForm.historyLimit ? parseInt(feedForm.historyLimit, 10) : 0,
+      ));
+      onSuccess?.('Feed settings saved.');
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to save feed settings.');
     } finally {
@@ -444,11 +382,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   }
 
   async function refreshSkills(): Promise<void> {
-    const response = await fetch('/api/settings/skills');
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
-    replaceSkillResults(normalizeSkillLoadResults(await response.json()));
+    replaceSkillResults(await fetchSkillsApi());
   }
 
   async function handleImportSkill(e: React.FormEvent) {
@@ -458,18 +392,11 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
     try {
       setSavingSkills(true);
-      const response = await fetch('/api/settings/skills/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: importPath }),
-      });
-      const body = await response.json().catch(() => null) as { message?: string; notice?: string | null } | null;
-      if (!response.ok) {
-        throw new Error(body?.message ?? 'Failed to import skill.');
-      }
-      if (body?.notice) reportError(body.notice);
+      const notice = await importSkillApi(importPath);
+      if (notice) reportError(notice);
       setSkillForm((current) => ({ ...current, importPath: '' }));
       await refreshSkills();
+      onSuccess?.('Skill imported.');
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to import skill.');
     } finally {
@@ -480,11 +407,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   async function handleDeleteSkill(name: string) {
     try {
       setSavingSkills(true);
-      const response = await fetch(`/api/settings/skills/${encodeURIComponent(name)}`, { method: 'DELETE' });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { message?: string } | null;
-        throw new Error(body?.message ?? 'Failed to delete skill.');
-      }
+      await deleteSkillApi(name);
       await refreshSkills();
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to delete skill.');
@@ -528,11 +451,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   }
 
   async function refreshMcpServers(): Promise<void> {
-    const response = await fetch('/api/settings/mcp');
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
-    replaceMcpServers(normalizeMcpServerSummaries(await response.json()));
+    replaceMcpServers(await fetchMcpServersApi());
   }
 
   async function handleSaveMcpServer(e: React.FormEvent) {
@@ -559,16 +478,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
         url: mcpForm.url.trim(),
         headers: parseMcpKeyValueText(mcpForm.headersText, { label: 'header', allowColonSeparator: true }),
       };
-      const response = await fetch(isEditing ? `/api/settings/mcp/${encodeURIComponent(editingMcpId)}` : '/api/settings/mcp', {
-        method: isEditing ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const body = await response.json().catch(() => null) as { message?: string } | null;
-      if (!response.ok) {
-        throw new Error(body?.message ?? 'Failed to save MCP server.');
-      }
-      const saved = normalizeMcpServerSummary(body);
+      const saved = await saveMcpServerApi(payload, editingMcpId);
       if (saved) {
         replaceMcpServers(isEditing
           ? mcpServers.map((server) => server.id === saved.id ? saved : server)
@@ -578,6 +488,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
       }
       setMcpForm(DEFAULT_MCP_FORM);
       setEditingMcpId(null);
+      onSuccess?.(isEditing ? 'MCP server updated.' : 'MCP server added.');
     } catch (err) {
       reportError(err instanceof Error ? err.message : 'Failed to save MCP server.');
     } finally {
@@ -588,13 +499,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   async function handleEditMcpServer(id: string): Promise<void> {
     try {
       setSavingMcp(true);
-      const response = await fetch(`/api/settings/mcp/${encodeURIComponent(id)}`);
-      const body = await response.json().catch(() => null) as { message?: string } | null;
-      if (!response.ok) {
-        throw new Error(body?.message ?? 'Failed to load MCP server.');
-      }
-      const server = normalizeMcpServerConfig(body);
-      if (!server) throw new Error('Server returned invalid MCP configuration.');
+      const server = await fetchMcpServerApi(id);
       setEditingMcpId(server.id);
       setMcpForm({
         name: server.name,
@@ -620,11 +525,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
   async function handleDeleteMcpServer(id: string) {
     try {
       setSavingMcp(true);
-      const response = await fetch(`/api/settings/mcp/${encodeURIComponent(id)}`, { method: 'DELETE' });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { message?: string } | null;
-        throw new Error(body?.message ?? 'Failed to delete MCP server.');
-      }
+      await deleteMcpServerApi(id);
       await refreshMcpServers();
       if (editingMcpId === id) handleCancelMcpEdit();
     } catch (err) {
@@ -636,13 +537,49 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
 
   const canEnableWebSearch = (toolSettings?.webSearch.hasApiKey ?? false) || toolForm.tavilyApiKey.trim() !== '';
 
+  function confirmDeleteModel(id: string): void {
+    const model = models.find((entry) => entry.id === id);
+    void (async () => {
+      const confirmed = await confirm({
+        title: `Delete "${model?.displayName ?? id}"?`,
+        body: 'The model configuration and its stored API key are removed from the runtime.',
+        confirmLabel: 'Delete model',
+      });
+      if (confirmed) await handleDelete(id);
+    })();
+  }
+
+  function confirmDeleteSkill(name: string): void {
+    void (async () => {
+      const confirmed = await confirm({
+        title: `Delete "${name}"?`,
+        body: 'The imported skill folder is removed from the runtime.',
+        confirmLabel: 'Delete skill',
+      });
+      if (confirmed) await handleDeleteSkill(name);
+    })();
+  }
+
+  function confirmDeleteMcpServer(id: string): void {
+    const server = mcpServers.find((entry) => entry.id === id);
+    void (async () => {
+      const confirmed = await confirm({
+        title: `Delete "${server?.name ?? id}"?`,
+        body: 'The MCP server configuration is removed from the runtime.',
+        confirmLabel: 'Delete server',
+      });
+      if (confirmed) await handleDeleteMcpServer(id);
+    })();
+  }
+
   return (
-    <div className="modal-overlay settings-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      <div className="settings-modal" role="dialog" aria-modal="true" aria-label="Settings">
+    <Modal className="settings-modal" ariaLabel="Settings" required={required} onClose={onClose}>
         <div className="settings-modal-header">
           <h2 className="settings-modal-title">Settings</h2>
           {!required ? (
-            <button type="button" className="settings-close-btn" onClick={onClose} aria-label="Close settings">×</button>
+            <button type="button" className="settings-close-btn" onClick={onClose} aria-label="Close settings">
+              <X aria-hidden="true" />
+            </button>
           ) : null}
         </div>
 
@@ -697,7 +634,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
                   onAdd={startAdd}
                   onEdit={startEdit}
                   onActivate={(id) => { void handleActivate(id); }}
-                  onDelete={(id) => { void handleDelete(id); }}
+                  onDelete={confirmDeleteModel}
                 />
               </>
             ) : (
@@ -744,7 +681,7 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
                   onSubmit={(event) => { void handleSaveMcpServer(event); }}
                   onEdit={(id) => { void handleEditMcpServer(id); }}
                   onCancelEdit={handleCancelMcpEdit}
-                  onDelete={(id) => { void handleDeleteMcpServer(id); }}
+                  onDelete={confirmDeleteMcpServer}
                 />
               </>
             ) : (
@@ -758,13 +695,13 @@ export function SettingsModal({ onClose, onError, onModelsChange, onSkillsChange
                   saving={savingSkills}
                   onChange={(updater) => setSkillForm((current) => updater(current))}
                   onImport={(event) => { void handleImportSkill(event); }}
-                  onDelete={(name) => { void handleDeleteSkill(name); }}
+                  onDelete={confirmDeleteSkill}
                 />
               </>
             )}
           </div>
         </div>
-      </div>
-    </div>
+        {confirmElement}
+    </Modal>
   );
 }
