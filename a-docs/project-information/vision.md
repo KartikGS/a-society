@@ -20,7 +20,7 @@ The framework is:
 - **Project-portable** — it can sit beside many kinds of projects without being embedded inside them.
 - **Domain-flexible after setup** — once the harness is installed and initialized, it can support software, writing, legal, research, design, and other forms of project work.
 - **Technically honest** — today's setup and operation require a technical operator or a technical environment. A-Society should not pretend that every project owner can install it unaided.
-- **Agent-adaptable** — it is not conceptually bound to one model or agent platform. Any agent that can read structured context, follow contracts, and work through a role can benefit from it.
+- **Agent-adaptable** — it is not conceptually bound to one model or agent platform. Any agent that can read structured context, follow contracts, and work through a role can benefit from it. In practice the runtime can drive role turns either through LLM APIs or through a supported coding agent the operator already uses.
 - **Learning across projects** — feedback from real flows improves general templates, project-type templates, runtime behavior, and future initialization defaults.
 
 ---
@@ -120,7 +120,7 @@ Like any project using this framework, A-Society also maintains its own `a-docs/
 
 A-Society is a **standalone repository** that users pull alongside their projects. It is not embedded inside a project — it is a peer to it.
 
-A project adopting the framework places its work in its own folder and starts the A-Society runtime in the workspace. The runtime either opens an existing project flow or, when the project lacks `a-docs/`, scaffolds the compulsory files and starts an Owner initialization flow. The Owner reads the project, asks targeted questions, and fills the scaffolded `a-docs/` surfaces — the project's instantiation of the framework, containing the agents.md, roles, indexes, and project-specific documentation that agents need to operate. The human reviews and approves before the project is considered ready.
+A project adopting the framework places its work in its own folder and starts the A-Society runtime in the workspace. The operator either configures an LLM API model or selects a supported coding agent they already have installed (agent mode); orchestration, records, and handoffs behave the same either way. The runtime either opens an existing project flow or, when the project lacks `a-docs/`, scaffolds the compulsory files and starts an Owner initialization flow. The Owner reads the project, asks targeted questions, and fills the scaffolded `a-docs/` surfaces — the project's instantiation of the framework, containing the agents.md, roles, indexes, and project-specific documentation that agents need to operate. The human reviews and approves before the project is considered ready.
 
 The result is a clean separation at the filesystem level:
 

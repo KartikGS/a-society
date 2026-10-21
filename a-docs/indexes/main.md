@@ -58,6 +58,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_UI_DEV_STYLE_GUIDE` | `a-docs/roles/ui-developer/style-guide.md` | A-Society UI Developer style guide — TypeScript, component, state, CSS, and ReactFlow conventions for runtime/ui/ |
 | `$A_SOCIETY_EXECUTABLE_ARCHITECTURE` | `a-docs/executable/architecture.md` | Single standing executable architecture reference — runtime topology, TypeScript surfaces, capability inventory, governance, and role boundaries |
 | `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` | `a-docs/executable/general-coupling-map.md` | Standing reference for executable/general coupling — format dependencies per capability and maintained-guidance status |
+| `$A_SOCIETY_EXECUTABLE_HOST_AGENTS` | `a-docs/executable/host-agents.md` | Host coding agent capability matrix for agent mode — required core, declared capabilities, restrictions, and terms-of-use facts per supported host |
 | `$A_SOCIETY_EXECUTABLE_LEGACY_TA_ASSESSMENT_PHASE1_2` | `a-docs/executable/legacy-ta-assessment-phase1-2.md` | Historical TA deviation rulings preserved for legacy framework-service designs carried into the unified executable layer |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | `runtime/INVOCATION.md` | Sole default operator-facing executable reference — runtime commands, runtime signals, operator output model, state location, and telemetry configuration |
 | `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT` | `runtime/contracts/handoff.md` | Runtime-owned machine-readable handoff contract — injected by the runtime into every managed session |
