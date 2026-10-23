@@ -8,7 +8,10 @@ This document is the single standing design reference for A-Society's executable
 
 - `runtime/` is the standing executable root. All standing executable implementation belongs under it.
 - `runtime/INVOCATION.md` is the sole default operator-facing executable reference.
-- The runtime calls LLM APIs directly and provides the operator-facing web server and browser UI.
+- The runtime provides the operator-facing web server and browser UI, and runs each role turn through one of two **turn backends**:
+  - **API** — the runtime calls LLM APIs directly and runs its own tool loop (provider gateway).
+  - **Host agent** (agent mode) — a supported host coding agent the operator already uses runs the turn headlessly, with its own tools, model, permissions, and compaction, resumed by conversation id (host agent gateway).
+- A flow's backend is fixed when the flow is created. Everything above a role turn — context injection, handoff interpretation, scheduling, human gates, closure, backward-pass planning — is shared by both backends.
 - The executable layer has two standing capability families:
   - deterministic framework services
   - orchestration and operator-facing runtime behavior
@@ -73,7 +76,7 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Role | Owns |
 |---|---|
 | Framework Services Developer | Deterministic executable framework services and their internal implementation details |
-| Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration, the operator-facing server surface (HTTP/WebSocket protocol and operator backend), project-level settings (per-project role/permission/improvement defaults), observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
+| Orchestration Developer | Session lifecycle, context injection, handoff routing, provider integration (including host-agent adapters), the operator-facing server surface (HTTP/WebSocket protocol and operator backend), project-level settings (per-project role/permission/improvement defaults), observability, and `$A_SOCIETY_RUNTIME_INVOCATION` |
 | UI Developer | Operator-facing browser UI implementation under `runtime/ui/` (consumes the server/WebSocket contract; does not modify `runtime/src/`) |
 | Curator | Standing executable docs, coupling references, indexes, and verification of operator-facing references |
 
@@ -100,6 +103,7 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Context injection | Required-reading resolution and turn-context assembly |
 | Session store | Durable runtime state, session persistence, and status tracking |
 | Provider gateway | Direct LLM-provider interaction and error normalization |
+| Host agent gateway | Headless role-turn execution on a supported host coding agent: adapter registry and version gate, per-turn permission flags, conversation continuity, stream-event mapping, and error normalization into the provider gateway's error types |
 | Handoff interpretation | Parsing and validating machine-readable handoff blocks |
 | Observability | Telemetry, runtime metrics, and diagnostics for executable behavior |
 | Project settings | Per-project defaults for role configuration (model/skills/MCP), tool-permission seeding, and improvement/feedback gate pre-decisions; applied with precedence over the per-flow gates, with consent write-back |
@@ -147,6 +151,8 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 
 These dependencies and their guidance status are tracked in `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 
+The host agent gateway also depends on an external contract: each supported host CLI's headless flags and output schema. That dependency is version-ranged in each adapter (the runtime refuses a host version outside its tested range) and evidenced in `$A_SOCIETY_EXECUTABLE_HOST_AGENTS`; it is not a documentation coupling and does not appear in the coupling map.
+
 ---
 
 ## 11. Placement Rules
@@ -156,7 +162,7 @@ These dependencies and their guidance status are tracked in `$A_SOCIETY_EXECUTAB
 - Isomorphic code used by both server and UI belongs in `runtime/shared/`, not nested under `runtime/src/` or `runtime/ui/`. Server-internal cross-cutting code stays under `runtime/src/common/`.
 - Standing executable design and coupling references live under `a-docs/executable/`.
 - `runtime/INVOCATION.md` is the root operator-facing entry point; additional runtime-owned agent/session contracts belong under `runtime/contracts/`.
-- `runtime/src/` is organized by executable capability, not a flat file list. Standard capability folders: `orchestration/`, `context/`, `framework-services/`, `improvement/`, `projects/`, `server/`, `providers/`, `tools/`, `observability/`, `settings/`, `common/`.
+- `runtime/src/` is organized by executable capability, not a flat file list. Standard capability folders: `orchestration/`, `context/`, `framework-services/`, `improvement/`, `projects/`, `server/`, `providers/`, `tools/`, `observability/`, `settings/`, `common/`. Host-agent adapters live under `runtime/src/providers/host-agents/`, one subfolder per host.
 - Within `runtime/src/server/`, `server.ts` remains a composition layer for HTTP/WebSocket setup, route registration, socket-message parsing, and delegation. Do not re-accumulate runtime session lifecycle, command handling, event routing, or consent transitions in `server.ts`.
 - Cohesive server subdomains may use nested folders under `runtime/src/server/`; the standing runtime-session subdomain belongs under `runtime/src/server/runtime-session/`.
 - Source tests mirror capability folders when a capability has more than one test file. UI logic specs live in `runtime/test/ui/` (node environment); UI component specs live in `runtime/test/ui/components/` (jsdom, Testing Library + axe), typechecked by the test-ui project (§3).
@@ -203,6 +209,7 @@ When a flow adds a new standing executable capability or changes the executable 
 ## Standing References
 
 - `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` — maintained executable/documentation coupling surface
+- `$A_SOCIETY_EXECUTABLE_HOST_AGENTS` — host coding agent capability matrix for the host agent gateway
 - `$A_SOCIETY_RUNTIME_INVOCATION` — operator-facing runtime behavior reference
 - `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` — runtime-owned workflow YAML schema and node-entry injection contract
 - `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT` — runtime-owned flow record placement, metadata, and writable-scope contract
