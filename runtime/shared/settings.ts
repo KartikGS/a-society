@@ -2,6 +2,8 @@ import type { ModelReasoningConfig } from './model-reasoning.js';
 import type { PromptCacheTtl } from './prompt-cache.js';
 
 export type ProviderType = 'anthropic' | 'openai-compatible';
+/** Host coding agents that agent mode can run role turns on. */
+export type HostAgentId = 'claude-code';
 export type InputModality = 'image' | 'audio' | 'video';
 
 export interface ModelConfig {
