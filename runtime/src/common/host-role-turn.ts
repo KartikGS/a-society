@@ -53,6 +53,8 @@ export interface HostTurnContext {
   recordFolderPath: string;
   /** Extra writable folders for this session only (the feedback folder). */
   extraWritableDirs?: string[];
+  /** Scope reported on repair events: forward-pass node or backward-pass improvement. */
+  repairScope?: 'node' | 'improvement';
 }
 
 export interface HostTurnExecutorInput {
@@ -384,7 +386,7 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
       if (workflowErrors.length > 0) {
         operatorRenderer?.emit({
           kind: 'repair.requested',
-          scope: 'node',
+          scope: context.repairScope ?? 'node',
           code: 'workflow_validation',
           summary: 'Workflow file left invalid after the turn',
           role: roleInstanceId,
