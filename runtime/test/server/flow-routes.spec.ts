@@ -10,7 +10,7 @@ import { createFlowReadModel } from '../../src/server/flow-read-model.js';
 import { registerFlowRoutes } from '../../src/server/flow-routes.js';
 import { createRuntimeSessionManager, FlowCreationError } from '../../src/server/runtime-session/manager.js';
 import { SocketHub } from '../../src/server/socket-hub.js';
-import { MODEL_CONFIGURATION_REQUIRED_MESSAGE } from '../../src/settings/settings-store.js';
+import { MODEL_CONFIGURATION_REQUIRED_MESSAGE, updateAgentModeSettings } from '../../src/settings/settings-store.js';
 
 interface MockResponse {
   statusCode: number;
@@ -50,16 +50,16 @@ function findPostFlowsHandler(app: express.Express) {
 // mapping against fake creation functions, not production bootstrap paths.
 describe('flow creation route mapping', () => {
   type FlowCreation = {
-    createInitializedFlow: (projectNamespace: string) => FlowRef;
-    createInitializationFlow: (projectNamespace: string, mode: InitializationMode) => FlowRef;
-    createUpdateFlow: (projectNamespace: string) => FlowRef;
+    createInitializedFlow: (projectNamespace: string) => Promise<FlowRef>;
+    createInitializationFlow: (projectNamespace: string, mode: InitializationMode) => Promise<FlowRef>;
+    createUpdateFlow: (projectNamespace: string) => Promise<FlowRef>;
   };
 
   function makeFlowCreation(overrides: Partial<FlowCreation> = {}) {
     return {
-      createInitializedFlow: vi.fn((ns: string): FlowRef => ({ projectNamespace: ns, flowId: 'flow-initialized' })),
-      createInitializationFlow: vi.fn((ns: string, mode: InitializationMode): FlowRef => ({ projectNamespace: ns, flowId: `flow-${mode}` })),
-      createUpdateFlow: vi.fn((ns: string): FlowRef => ({ projectNamespace: ns, flowId: 'flow-update' })),
+      createInitializedFlow: vi.fn(async (ns: string): Promise<FlowRef> => ({ projectNamespace: ns, flowId: 'flow-initialized' })),
+      createInitializationFlow: vi.fn(async (ns: string, mode: InitializationMode): Promise<FlowRef> => ({ projectNamespace: ns, flowId: `flow-${mode}` })),
+      createUpdateFlow: vi.fn(async (ns: string): Promise<FlowRef> => ({ projectNamespace: ns, flowId: 'flow-update' })),
       ...overrides,
     };
   }
@@ -99,7 +99,7 @@ describe('flow creation route mapping', () => {
 
   it('returns 201 with the flowRef the creation function produced', async () => {
     const flowRef: FlowRef = { projectNamespace: 'demo', flowId: 'flow-xyz' };
-    const flowCreation = makeFlowCreation({ createInitializedFlow: vi.fn(() => flowRef) });
+    const flowCreation = makeFlowCreation({ createInitializedFlow: vi.fn(async () => flowRef) });
 
     const response = await callCreateFlow(flowCreation, { mode: 'initialized' });
 
@@ -164,10 +164,10 @@ describe('flow creation manager preconditions', () => {
     return createRuntimeSessionManager({ socketHub: new SocketHub(), flowReadModel: createFlowReadModel() });
   }
 
-  function expectFlowCreationError(run: () => unknown, statusCode: number, message: string): void {
+  async function expectFlowCreationError(run: () => Promise<unknown>, statusCode: number, message: string): Promise<void> {
     let caught: unknown;
     try {
-      run();
+      await run();
     } catch (error) {
       caught = error;
     }
@@ -176,48 +176,60 @@ describe('flow creation manager preconditions', () => {
     expect((caught as FlowCreationError).message).toBe(message);
   }
 
-  it('throws 404 when the initialized project has no a-docs in the workspace', () => {
+  it('throws 404 when the initialized project has no a-docs in the workspace', async () => {
     const manager = createManager();
-    expectFlowCreationError(
+    await expectFlowCreationError(
       () => manager.createInitializedFlow('missing'),
       404,
       'Project "missing" with a-docs was not found in the workspace.'
     );
   });
 
-  it('throws 404 when the takeover project is not present without a-docs', () => {
+  it('throws 404 when the takeover project is not present without a-docs', async () => {
     const manager = createManager();
-    expectFlowCreationError(
+    await expectFlowCreationError(
       () => manager.createInitializationFlow('missing', 'takeover'),
       404,
       'Project "missing" without a-docs was not found in the workspace.'
     );
   });
 
-  it('throws 409 when the update project has no available update', () => {
+  it('throws 409 when the update project has no available update', async () => {
     const manager = createManager();
-    expectFlowCreationError(
+    await expectFlowCreationError(
       () => manager.createUpdateFlow('missing'),
       409,
       'Project "missing" has no available update.'
     );
   });
 
-  it('throws 409 when no usable model is configured after the precondition passes', () => {
+  it('throws 409 when no usable model is configured after the precondition passes', async () => {
     fs.mkdirSync(path.join(workspaceRoot, 'demo', 'a-docs'), { recursive: true });
     const manager = createManager();
-    expectFlowCreationError(
+    await expectFlowCreationError(
       () => manager.createInitializedFlow('demo'),
       409,
       MODEL_CONFIGURATION_REQUIRED_MESSAGE
     );
   });
 
-  it('checks the precondition before the missing-model guard (precondition error wins)', () => {
+  it('throws 409 with the host readiness reason when agent mode is not ready', async () => {
+    fs.mkdirSync(path.join(workspaceRoot, 'demo', 'a-docs'), { recursive: true });
+    const missing = path.join(workspaceRoot, 'no-claude');
+    updateAgentModeSettings({ mode: 'host', hostAgentId: 'claude-code', executablePath: missing });
+    const manager = createManager();
+    await expectFlowCreationError(
+      () => manager.createInitializedFlow('demo'),
+      409,
+      `Agent mode is set to Claude Code, but it is not ready: not installed at ${missing}.`
+    );
+  });
+
+  it('checks the precondition before the missing-model guard (precondition error wins)', async () => {
     // 'demo' has no a-docs folder and no model is configured: the 404 precondition
     // must win over the 409 missing-model status, proving the check order.
     const manager = createManager();
-    expectFlowCreationError(
+    await expectFlowCreationError(
       () => manager.createInitializedFlow('demo'),
       404,
       'Project "demo" with a-docs was not found in the workspace.'

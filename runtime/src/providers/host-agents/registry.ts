@@ -1,20 +1,17 @@
+import { isHostAgentId, type HostAgentId } from '../../../shared/settings.js';
 import { ClaudeCodeAdapter } from './claude-code/adapter.js';
 import { HostAgentError } from './types.js';
-import type { HostAgentAdapter, HostAgentId, HostProbe } from './types.js';
+import type { HostAgentAdapter, HostProbe } from './types.js';
 import { assertSupportedVersion, getCachedProbe } from './version.js';
 
-const adapters = new Map<string, HostAgentAdapter>([['claude-code', new ClaudeCodeAdapter()]]);
+const adapters = new Map<HostAgentId, HostAgentAdapter>([['claude-code', new ClaudeCodeAdapter()]]);
 
 export function listHostAgents(): HostAgentAdapter[] {
   return [...adapters.values()];
 }
 
-export function isHostAgentId(id: string): id is HostAgentId {
-  return adapters.has(id);
-}
-
 export function getHostAgent(id: string): HostAgentAdapter {
-  const adapter = adapters.get(id);
+  const adapter = isHostAgentId(id) ? adapters.get(id) : undefined;
   if (!adapter) throw new HostAgentError('UNSUPPORTED_HOST', `Unsupported host agent: ${id}`);
   return adapter;
 }

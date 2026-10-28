@@ -37,7 +37,7 @@ function request(overrides: Partial<HostTurnRequest> = {}): HostTurnRequest {
     message: 'Begin.',
     cwd: tmp,
     extraWritableDirs: [],
-    permissions: { mode: 'read-only', allowedCommands: [], allowedMcpTools: [], readOnlyRoots: [] },
+    permissions: { mode: 'read-only', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: [] },
     model: null,
     ...overrides,
   };

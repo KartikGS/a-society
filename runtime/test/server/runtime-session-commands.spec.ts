@@ -10,6 +10,7 @@ import * as SessionStore from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
 import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
+import { getTurnBackendReadiness, resolveTurnBackend } from '../../src/settings/turn-backend.js';
 
 function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): FlowRun {
   const flowId = overrides.flowId ?? 'test-flow';
@@ -65,7 +66,11 @@ function createCommands(
     broadcastToFlow: (_ref, message) => {
       if (message.type === 'error') errors.push(message.message);
     },
-    missingModelError: (ref) => ({ type: 'error', flowRef: ref, message: 'missing model' }),
+    turnBackendRefusal: async (ref, flowRun) => (
+      (await getTurnBackendReadiness(resolveTurnBackend(flowRun))).ready
+        ? null
+        : { type: 'error', flowRef: ref, message: 'missing model' }
+    ),
     consent: {} as any,
   });
 

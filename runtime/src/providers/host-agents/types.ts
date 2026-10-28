@@ -28,6 +28,8 @@ export interface HostProbe {
 
 export interface HostPermissionProfile {
   mode: 'read-only' | 'edits' | 'edits-and-commands';
+  /** Absolute files the operator granted for writing when `mode` does not already allow edits. */
+  allowedWritePaths: string[];
   /** Exact commands the operator granted. */
   allowedCommands: string[];
   /** Fully qualified MCP tool names (mcp__server__tool). */

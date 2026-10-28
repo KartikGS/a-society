@@ -32,6 +32,8 @@ import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestratio
 import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
 import * as SessionStore from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
+import { resolveTurnBackend } from '../../settings/turn-backend.js';
+
 import type { FlowReadModel } from '../flow-read-model.js';
 import type { HistoricalMessage, ServerMessage } from '../protocol.js';
 import type { RuntimeSessionConsent } from './consent.js';
@@ -44,6 +46,9 @@ import {
 import { compactPersistedRoleContext } from './manual-compaction.js';
 import type { ActiveSession } from './types.js';
 
+export const HOST_COMPACTION_UNSUPPORTED_MESSAGE =
+  'This role runs on a host agent, which manages its own context compaction.';
+
 type RuntimeSessionCommandsDeps = {
   activeSessions: Map<string, ActiveSession>;
   readFlowRun: (ref: FlowRef) => FlowRun | null;
@@ -54,7 +59,8 @@ type RuntimeSessionCommandsDeps = {
   emitHistoricalMessage: (session: ActiveSession, message: HistoricalMessage) => void;
   emitFlowState: (session: ActiveSession) => void;
   broadcastToFlow: (ref: FlowRef, message: ServerMessage) => void;
-  missingModelError: (ref: FlowRef) => ServerMessage;
+  /** Null when the flow's pinned turn backend is ready; otherwise the refusal to broadcast. */
+  turnBackendRefusal: (ref: FlowRef, flowRun: FlowRun) => Promise<ServerMessage | null>;
   consent: RuntimeSessionConsent;
 };
 
@@ -75,7 +81,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitHistoricalMessage,
     emitFlowState,
     broadcastToFlow,
-    missingModelError,
+    turnBackendRefusal,
     consent,
   } = deps;
 
@@ -86,8 +92,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -194,8 +201,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' has no staged handoff to approve.` });
       return;
     }
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -402,8 +410,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -462,8 +471,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -619,7 +629,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     const roleName = resolveWorkflowRoleName(flowRun, role);
     const roleInstanceId = parseRoleIdentity(roleName).instanceRoleId;
-    if (!SettingsStore.hasUsableConfiguredModel()) {
+    // Compaction summarizes through the API, so it applies to API flows only.
+    const compactionRefusal = resolveTurnBackend(flowRun).kind === 'host'
+      ? HOST_COMPACTION_UNSUPPORTED_MESSAGE
+      : SettingsStore.hasUsableConfiguredModel() ? null : SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE;
+    if (compactionRefusal) {
       broadcastToFlow(ref, {
         type: 'operator_event',
         flowRef: ref,
@@ -627,10 +641,10 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           kind: 'session.compaction_failed',
           role: roleName,
           trigger: 'manual',
-          reason: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
+          reason: compactionRefusal
         }
       });
-      broadcastToFlow(ref, missingModelError(ref));
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: compactionRefusal });
       return;
     }
 

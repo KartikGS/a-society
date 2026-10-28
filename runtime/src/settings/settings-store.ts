@@ -3,8 +3,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { getWorkspaceRoot } from '../common/workspace.js';
 import { DISABLED_REASONING, normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
+import { DEFAULT_AGENT_MODE_SETTINGS, isHostAgentId } from '../../shared/settings.js';
 import { normalizePromptCacheTtl } from '../common/types.js';
 import type {
+  AgentModeSettings,
   AutomationSettings,
   FeedSettings,
   McpServerConfig,
@@ -17,6 +19,7 @@ import type {
 } from '../../shared/settings.js';
 
 export type {
+  AgentModeSettings,
   AutomationSettings,
   FeedSettings,
   McpServerConfig,
@@ -56,6 +59,7 @@ interface SettingsData {
   tools: StoredToolSettings;
   feed: FeedSettings;
   automation: AutomationSettings;
+  agentMode: AgentModeSettings;
 }
 
 interface PersistedModelConfig {
@@ -225,6 +229,20 @@ function normalizeAutomationSettings(automation: unknown): AutomationSettings {
   };
 }
 
+/** Only registered host ids are kept; anything malformed falls back to API mode. */
+function normalizeAgentModeSettings(agentMode: unknown): AgentModeSettings {
+  const raw = agentMode && typeof agentMode === 'object' ? agentMode as Record<string, unknown> : {};
+  const hostAgentId = isHostAgentId(raw.hostAgentId) ? raw.hostAgentId : null;
+  const executablePath = typeof raw.executablePath === 'string' && raw.executablePath.trim() !== ''
+    ? raw.executablePath.trim()
+    : null;
+  return {
+    mode: raw.mode === 'host' && hostAgentId ? 'host' : 'api',
+    hostAgentId,
+    executablePath,
+  };
+}
+
 function loadSettings(): SettingsData {
   const settingsPath = getSettingsPath();
   if (!fs.existsSync(settingsPath)) {
@@ -234,6 +252,7 @@ function loadSettings(): SettingsData {
       tools: normalizeStoredToolSettings(undefined),
       feed: normalizeFeedSettings(undefined),
       automation: normalizeAutomationSettings(undefined),
+      agentMode: { ...DEFAULT_AGENT_MODE_SETTINGS },
     };
   }
   try {
@@ -243,6 +262,7 @@ function loadSettings(): SettingsData {
       tools?: PersistedToolSettings;
       feed?: PersistedFeedSettings;
       automation?: unknown;
+      agentMode?: unknown;
     };
     return {
       models: Array.isArray(raw.models) ? raw.models.map(normalizeModelConfig) : [],
@@ -252,6 +272,7 @@ function loadSettings(): SettingsData {
       tools: normalizeStoredToolSettings(raw.tools),
       feed: normalizeFeedSettings(raw.feed),
       automation: normalizeAutomationSettings(raw.automation),
+      agentMode: normalizeAgentModeSettings(raw.agentMode),
     };
   } catch {
     return {
@@ -260,6 +281,7 @@ function loadSettings(): SettingsData {
       tools: normalizeStoredToolSettings(undefined),
       feed: normalizeFeedSettings(undefined),
       automation: normalizeAutomationSettings(undefined),
+      agentMode: { ...DEFAULT_AGENT_MODE_SETTINGS },
     };
   }
 }
@@ -602,6 +624,17 @@ export function updateAutomationSettings(params: Partial<AutomationSettings>): A
   data.automation = normalizeAutomationSettings({ ...data.automation, ...params });
   saveSettings(data);
   return data.automation;
+}
+
+export function getAgentModeSettings(): AgentModeSettings {
+  return loadSettings().agentMode;
+}
+
+export function updateAgentModeSettings(params: Partial<AgentModeSettings>): AgentModeSettings {
+  const data = loadSettings();
+  data.agentMode = normalizeAgentModeSettings({ ...data.agentMode, ...params });
+  saveSettings(data);
+  return data.agentMode;
 }
 
 export function updateFeedSettings(params: {

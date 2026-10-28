@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { FlowRef, FlowRun, RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate, RoleSession } from './types.js';
+import type { FlowRef, FlowRun, RoleTurnResult, HandoffResult, OperatorRenderSink, RuntimeMessageParam, ConsentGate, RoleSession, GatewayTurnResult } from './types.js';
 import { LLMGateway, LLMGatewayError } from '../providers/llm.js';
 import { HandoffInterpreter, HandoffParseError } from '../orchestration/handoff.js';
 import { autoCompactRoleSessionBeforeTurn } from '../orchestration/compaction.js';
@@ -8,6 +8,7 @@ import { logger } from '../observability/logger.js';
 import { getActiveModelWithKey, type ModelConfigWithKey } from '../settings/settings-store.js';
 import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
 import type { McpManager } from '../providers/mcp/manager.js';
+import { createHostTurnExecutor, type HostTurnContext } from './host-role-turn.js';
 
 function extractFileRefs(content: string): string[] {
   const refs: string[] = [];
@@ -60,21 +61,18 @@ type SessionTurnResult = {
   errorMessage?: string;
 };
 
+/**
+ * Runs one turn through `execute` (the API gateway or a host agent) and owns what both
+ * backends share: handoff parsing, turn logging, and error mapping.
+ */
 async function executeSessionTurn(
-  llm: LLMGateway,
-  systemPrompt: string,
+  execute: () => Promise<GatewayTurnResult>,
   history: RuntimeMessageParam[],
   projectNamespace: string,
   roleInstanceId: string,
   sessionId: string,
   turnIndex: number,
-  roleOutputStream: NodeJS.WritableStream | undefined,
-  externalSignal: AbortSignal | undefined,
-  operatorRenderer: OperatorRenderSink | undefined,
-  consentGate: ConsentGate | undefined,
-  nodeId: string | undefined,
-  onConversationMessages: ((messages: RuntimeMessageParam[]) => void | Promise<void>) | undefined,
-  onAssistantTextDelta: ((text: string) => void) | undefined
+  operatorRenderer: OperatorRenderSink | undefined
 ): Promise<SessionTurnResult> {
   const meter = TelemetryManager.getMeter();
   const startTime = Date.now();
@@ -104,16 +102,7 @@ async function executeSessionTurn(
       }
     }
 
-    const result = await llm.executeTurn(systemPrompt, history, {
-      signal: externalSignal,
-      outputStream: roleOutputStream,
-      operatorRenderer,
-      consentGate,
-      roleInstanceId,
-      nodeId,
-      onConversationMessages,
-      onAssistantTextDelta,
-    });
+    const result = await execute();
 
     if (process.env.A_SOCIETY_TELEMETRY_PAYLOAD_CAPTURE === 'true') {
       logger.debug('session.assistant_turn', {
@@ -222,6 +211,8 @@ interface RunRoleTurnBaseInput {
   mcpManager?: McpManager;
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
+  /** Present for flows pinned to a host agent; the turn then runs on the host instead of the API. */
+  host?: HostTurnContext;
 }
 
 type RunRoleTurnWithoutCompactionInput = {
@@ -262,6 +253,7 @@ export async function runRoleTurn({
   onAssistantTextDelta,
   nodeId,
   compaction,
+  host,
 }: RunRoleTurnInput): Promise<RoleTurnResult | null> {
 
   let turnIndex = 0;
@@ -269,7 +261,7 @@ export async function runRoleTurn({
   const projectNamespace = flowRef.projectNamespace;
   const sessionId = crypto.randomUUID();
   const systemPrompt = providedSystemPrompt;
-  const llm = new LLMGateway({
+  const llm = host ? null : new LLMGateway({
     mode: 'project',
     flowRef,
     model,
@@ -277,7 +269,8 @@ export async function runRoleTurn({
   });
   const history: RuntimeMessageParam[] = providedHistory;
 
-  if (compaction) {
+  // Host agents manage their own context, so runtime compaction applies to API turns only.
+  if (compaction && !host) {
     if (!operatorRenderer) {
       throw new Error('Role-turn compaction requires an operator renderer.');
     }
@@ -330,21 +323,39 @@ export async function runRoleTurn({
     return null;
   }
 
+  const execute = host
+    ? createHostTurnExecutor({
+      context: host,
+      roleInstanceId,
+      systemPrompt,
+      history,
+      signal: externalSignal,
+      operatorRenderer,
+      consentGate,
+      nodeId,
+      outputStream: roleOutputStream,
+      onConversationMessages,
+      onAssistantTextDelta,
+    })
+    : () => llm!.executeTurn(systemPrompt, history, {
+      signal: externalSignal,
+      outputStream: roleOutputStream,
+      operatorRenderer,
+      consentGate,
+      roleInstanceId,
+      nodeId,
+      onConversationMessages,
+      onAssistantTextDelta,
+    });
+
   const turnResult = await executeSessionTurn(
-    llm,
-    systemPrompt,
+    execute,
     history,
     projectNamespace,
     roleInstanceId,
     sessionId,
     turnIndex++,
-    roleOutputStream,
-    externalSignal,
-    operatorRenderer,
-    consentGate,
-    nodeId,
-    onConversationMessages,
-    onAssistantTextDelta
+    operatorRenderer
   );
 
   if (turnResult.abort || turnResult.error) {

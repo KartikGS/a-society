@@ -3,7 +3,12 @@ import type { PromptCacheTtl } from './prompt-cache.js';
 
 export type ProviderType = 'anthropic' | 'openai-compatible';
 /** Host coding agents that agent mode can run role turns on. */
-export type HostAgentId = 'claude-code';
+export const HOST_AGENT_IDS = ['claude-code'] as const;
+export type HostAgentId = typeof HOST_AGENT_IDS[number];
+
+export function isHostAgentId(value: unknown): value is HostAgentId {
+  return (HOST_AGENT_IDS as readonly unknown[]).includes(value);
+}
 export type InputModality = 'image' | 'audio' | 'video';
 
 export interface ModelConfig {
@@ -28,6 +33,20 @@ export interface SettingsStatus {
   hasConfiguredModel: boolean;
   modelCount: number;
 }
+
+/** Whether new flows run role turns through LLM APIs or a host coding agent. */
+export interface AgentModeSettings {
+  mode: 'api' | 'host';
+  hostAgentId: HostAgentId | null;
+  /** null looks the host's command up on PATH. */
+  executablePath: string | null;
+}
+
+export const DEFAULT_AGENT_MODE_SETTINGS: AgentModeSettings = {
+  mode: 'api',
+  hostAgentId: null,
+  executablePath: null,
+};
 
 export interface WebSearchToolSettings {
   enabled: boolean;

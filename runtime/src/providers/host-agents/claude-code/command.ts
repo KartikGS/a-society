@@ -16,8 +16,14 @@ function readRule(root: string): string {
   return `Read(/${root.replace(/\/+$/, '')}/**)`;
 }
 
+/** Edit rules cover every built-in file-editing tool. */
+function editRule(file: string): string {
+  return `Edit(/${file})`;
+}
+
 function allowedTools(permissions: HostPermissionProfile): string[] {
   const rules = permissions.readOnlyRoots.map(readRule);
+  rules.push(...permissions.allowedWritePaths.map(editRule));
   if (permissions.mode === 'edits-and-commands') {
     rules.push('Bash');
   } else {

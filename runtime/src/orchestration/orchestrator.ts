@@ -16,10 +16,12 @@ import {
 } from './role-model.js';
 import { autoResolveRoleConfiguration, type AutoSelectionResult } from './auto-capability-selection.js';
 import { getProjectRoleDefaults } from '../projects/project-settings-store.js';
-import { getModelWithKey, isUsableModelConfig } from '../settings/settings-store.js';
+import { getModelWithKey, isUsableModelConfig, type ModelConfigWithKey } from '../settings/settings-store.js';
+import { resolveTurnBackend } from '../settings/turn-backend.js';
 import { listSkills } from '../framework-services/skills.js';
 import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam, OperatorEvent } from '../common/types.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
+import type { HostTurnContext } from '../common/host-role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
 import { buildWorkflowRepairGuidance } from '../framework-services/workflow-graph-validator.js';
@@ -351,40 +353,57 @@ export class FlowOrchestrator {
         };
 
         const ref = this.requireFlowRef();
+        const turnBackend = resolveTurnBackend(flowRun);
+        // A host agent manages its own model, skills and MCP servers, so the role
+        // configuration gates and project defaults apply to API flows only.
+        let roleModel: ModelConfigWithKey | null | undefined;
+        let mcpManager: McpManager | undefined;
+        if (turnBackend.kind === 'api') {
+          // Project-level role defaults take precedence over automation and the
+          // manual gate: persist any configured dimension as this flow's selection.
+          const projectDefaults = this.applyProjectRoleDefaults(flowRun, ref, roleInstanceId);
+          // Auto-resolve any remaining dimensions whose automation mode is `auto`
+          // before the manual gate is evaluated; resolved dimensions then read as `ready`.
+          const autoSelection = await this.autoResolveRoleConfig(flowRun, ref, roleInstanceId, nodeId);
+          if (projectDefaults.skillsResolved || autoSelection.skillsResolved) {
+            // Skills are injected into the system prompt; rebuild it now that the
+            // auto-selected skills are persisted, before the role runs.
+            session.systemPrompt = ContextInjectionService.buildContextBundle(
+              flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, ref
+            ).bundleContent;
+            saveRoleSession();
+          }
 
-        // Project-level role defaults take precedence over automation and the
-        // manual gate: persist any configured dimension as this flow's selection.
-        const projectDefaults = this.applyProjectRoleDefaults(flowRun, ref, roleInstanceId);
-        // Auto-resolve any remaining dimensions whose automation mode is `auto`
-        // before the manual gate is evaluated; resolved dimensions then read as `ready`.
-        const autoSelection = await this.autoResolveRoleConfig(flowRun, ref, roleInstanceId, nodeId);
-        if (projectDefaults.skillsResolved || autoSelection.skillsResolved) {
-          // Skills are injected into the system prompt; rebuild it now that the
-          // auto-selected skills are persisted, before the role runs.
-          session.systemPrompt = ContextInjectionService.buildContextBundle(
-            flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, ref
-          ).bundleContent;
-          saveRoleSession();
+          const modelGate = resolveRoleModelGate(ref, roleInstanceId);
+          const capabilityGate = resolveCapabilityGate(ref, roleInstanceId);
+          if (modelGate.kind === 'selection-required' || capabilityGate.kind === 'selection-required') {
+            span.setAttribute('node.outcome', 'awaiting_human');
+            span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
+            this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            return;
+          }
+          roleModel = modelGate.model;
+          mcpManager = await resolveRoleMcpManager({
+            flowRef: this.requireFlowRef(),
+            roleInstanceId,
+            nodeId,
+            renderer: this.renderer,
+            mcpManagers,
+          });
         }
-
-        const modelGate = resolveRoleModelGate(ref, roleInstanceId);
-        const capabilityGate = resolveCapabilityGate(ref, roleInstanceId);
-        if (modelGate.kind === 'selection-required' || capabilityGate.kind === 'selection-required') {
-          span.setAttribute('node.outcome', 'awaiting_human');
-          span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
-          flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
-          this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
-          return;
-        }
-        const roleModel = modelGate.model;
         const bundleContent = session.systemPrompt!;
-        const mcpManager = await resolveRoleMcpManager({
-          flowRef: this.requireFlowRef(),
-          roleInstanceId,
-          nodeId,
-          renderer: this.renderer,
-          mcpManagers,
-        });
+        const hostContext: HostTurnContext | undefined = turnBackend.kind === 'host'
+          ? {
+            agentId: turnBackend.agentId,
+            session,
+            saveSession: saveRoleSession,
+            flowRef: ref,
+            workspaceRoot: flowRun.workspaceRoot,
+            projectRoot: path.join(flowRun.workspaceRoot, flowRun.projectNamespace),
+            recordFolderPath: flowRun.recordFolderPath,
+          }
+          : undefined;
 
         while (true) {
           try {
@@ -422,6 +441,7 @@ export class FlowOrchestrator {
                   saveSession: saveRoleSession,
                   nodeId,
                 },
+                host: hostContext,
               });
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);

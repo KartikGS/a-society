@@ -23,7 +23,8 @@ export function getOperatorFeedRoleKey(message: OperatorFeedMessage): string | n
     }
     if (
       event.kind === 'human.resumed' ||
-      event.kind === 'usage.turn_summary'
+      event.kind === 'usage.turn_summary' ||
+      event.kind === 'usage.host_rate_limit'
     ) {
       return null;
     }

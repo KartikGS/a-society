@@ -7,6 +7,7 @@ import type {
   FeedItem,
   FlowRef,
   FlowRun,
+  TurnBackend,
 } from '../../common/types.js';
 import { getWorkspaceRoot } from '../../common/workspace.js';
 import { ConsentGateImpl } from '../../improvement/consent-gate.js';
@@ -18,7 +19,7 @@ import { bootstrapUpdateFlow } from '../../projects/update-bootstrap.js';
 import { discoverProjects } from '../../projects/project-discovery.js';
 import { initializeDraftFlow } from '../../projects/draft-flow.js';
 import { buildSeededConsentState, loadProjectSettings } from '../../projects/project-settings-store.js';
-import * as SettingsStore from '../../settings/settings-store.js';
+import { currentTurnBackend, getTurnBackendReadiness, resolveTurnBackend } from '../../settings/turn-backend.js';
 import type { FlowScopedHistoricalMessage, HistoricalMessage, ServerMessage } from '../protocol.js';
 import { createRuntimeSessionCommands } from './commands.js';
 import { createRuntimeSessionConsent } from './consent.js';
@@ -70,12 +71,10 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     });
   }
 
-  function missingModelError(ref: FlowRef): ServerMessage {
-    return {
-      type: 'error',
-      flowRef: ref,
-      message: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
-    };
+  /** Null when the flow's pinned turn backend can run turns; otherwise the refusal to send. */
+  async function turnBackendRefusal(ref: FlowRef, flowRun: FlowRun): Promise<ServerMessage | null> {
+    const readiness = await getTurnBackendReadiness(resolveTurnBackend(flowRun));
+    return readiness.ready ? null : { type: 'error', flowRef: ref, message: readiness.message };
   }
 
   function emitHistoricalMessage(session: ActiveSession, message: HistoricalMessage): void {
@@ -194,7 +193,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         emitHistoricalMessage(session, { type: 'input_text', text: 'No improvement' });
         await ImprovementOrchestrator.skipImprovement(improvementFlow);
         session.sink.emit({ kind: 'flow.completed' });
-      } else if (SettingsStore.hasUsableConfiguredModel()) {
+      } else if ((await getTurnBackendReadiness(resolveTurnBackend(improvementFlow))).ready) {
         emitHistoricalMessage(session, {
           type: 'input_text',
           text: mode === IMPROVEMENT_CHOICE_MODE.GRAPH_BASED ? 'Graph-based improvement' : 'Parallel improvement',
@@ -218,7 +217,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         emitHistoricalMessage(session, { type: 'input_text', text: 'Skip upstream feedback' });
         await ImprovementOrchestrator.skipFeedback(feedbackFlow);
         session.sink.emit({ kind: 'flow.completed' });
-      } else if (SettingsStore.hasUsableConfiguredModel()) {
+      } else if ((await getTurnBackendReadiness(resolveTurnBackend(feedbackFlow))).ready) {
         emitHistoricalMessage(session, { type: 'input_text', text: 'Generate upstream feedback' });
         await session.improvementOrchestrator.runFeedback(
           feedbackFlow,
@@ -313,15 +312,21 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     replaySessionState(socket, ref);
   }
 
-  function assertUsableConfiguredModel(): void {
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      throw new FlowCreationError(409, SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE);
+  /** New flows are pinned to the backend current at creation, which must be ready. */
+  async function readyTurnBackendForNewFlow(): Promise<TurnBackend> {
+    const backend = currentTurnBackend();
+    const readiness = await getTurnBackendReadiness(backend);
+    if (!readiness.ready) {
+      throw new FlowCreationError(409, readiness.message);
     }
+    return backend;
   }
 
-  function launchCreatedFlow(flowRun: FlowRun): FlowRef {
+  function launchCreatedFlow(flowRun: FlowRun, turnBackend: TurnBackend): FlowRef {
     const seededConsent = buildSeededConsentState(flowRun.projectNamespace);
     if (seededConsent) flowRun.consentState = seededConsent;
+    // Flows without the field are API flows, so only host flows record it.
+    if (turnBackend.kind === 'host') flowRun.turnBackend = turnBackend;
     const flowRef = flowRefFromRun(flowRun);
     SessionStore.saveFlowRun(flowRun, flowRef);
 
@@ -333,19 +338,19 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     return flowRef;
   }
 
-  function createInitializedFlow(projectNamespace: string): FlowRef {
+  async function createInitializedFlow(projectNamespace: string): Promise<FlowRef> {
     const projectExists = discoverProjects().withADocs.some(
       (project) => project.folderName === projectNamespace
     );
     if (!projectExists) {
       throw new FlowCreationError(404, `Project "${projectNamespace}" with a-docs was not found in the workspace.`);
     }
-    assertUsableConfiguredModel();
+    const turnBackend = await readyTurnBackendForNewFlow();
 
-    return launchCreatedFlow(initializeDraftFlow(projectNamespace, 'owner'));
+    return launchCreatedFlow(initializeDraftFlow(projectNamespace, 'owner'), turnBackend);
   }
 
-  function createInitializationFlow(projectNamespace: string, mode: InitializationMode): FlowRef {
+  async function createInitializationFlow(projectNamespace: string, mode: InitializationMode): Promise<FlowRef> {
     if (mode === 'takeover') {
       const projectExists = discoverProjects().withoutADocs.some(
         (project) => project.folderName === projectNamespace
@@ -354,21 +359,21 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
         throw new FlowCreationError(404, `Project "${projectNamespace}" without a-docs was not found in the workspace.`);
       }
     }
-    assertUsableConfiguredModel();
+    const turnBackend = await readyTurnBackendForNewFlow();
 
-    return launchCreatedFlow(bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode).flowRun);
+    return launchCreatedFlow(bootstrapInitializationFlow(getWorkspaceRoot(), projectNamespace, mode).flowRun, turnBackend);
   }
 
-  function createUpdateFlow(projectNamespace: string): FlowRef {
+  async function createUpdateFlow(projectNamespace: string): Promise<FlowRef> {
     const project = discoverProjects().withADocs.find(
       (candidate) => candidate.folderName === projectNamespace
     );
     if (!project || !project.updateAvailable) {
       throw new FlowCreationError(409, `Project "${projectNamespace}" has no available update.`);
     }
-    assertUsableConfiguredModel();
+    const turnBackend = await readyTurnBackendForNewFlow();
 
-    return launchCreatedFlow(bootstrapUpdateFlow(projectNamespace).flowRun);
+    return launchCreatedFlow(bootstrapUpdateFlow(projectNamespace).flowRun, turnBackend);
   }
 
   async function resumeFlow(socket: WebSocket, ref: FlowRef): Promise<void> {
@@ -404,8 +409,9 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      sendToSocket(socket, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      sendToSocket(socket, refusal);
       return;
     }
 
@@ -448,7 +454,7 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     emitHistoricalMessage,
     emitFlowState,
     broadcastToFlow,
-    missingModelError,
+    turnBackendRefusal,
     consent,
   });
 

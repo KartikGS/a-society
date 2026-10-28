@@ -15,6 +15,9 @@ import type {
 import type {
   InitializationMode,
 } from './projects.js';
+import type {
+  HostAgentId,
+} from './settings.js';
 
 export type FlowStatus =
   | 'running'
@@ -23,6 +26,9 @@ export type FlowStatus =
   | 'completed';
 
 export const CURRENT_FLOW_STATE_VERSION = '11';
+
+/** How a flow's role turns run. Fixed when the flow is created; absent means API. */
+export type TurnBackend = { kind: 'api' } | { kind: 'host'; agentId: HostAgentId };
 
 export type ConsentMode = ProtocolConsentMode;
 export type ConsentRequestKind = 'file-write' | 'bash-command' | 'mcp-tool';
@@ -183,6 +189,7 @@ export interface FlowRun {
   improvementPhase?: ImprovementPhaseState;
   feedbackContext?: FeedbackContext;
   consentState?: ConsentState;
+  turnBackend?: TurnBackend;
 }
 
 export interface FlowRef {
@@ -214,6 +221,7 @@ export type OperatorEvent =
   | { kind: 'role.auto_selection_fell_back'; nodeId: string; role: string; dimensions: Array<'model' | 'skills' | 'mcp'>; reason: string }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
+  | { kind: 'usage.host_rate_limit'; role: string; fiveHour?: number; sevenDay?: number }
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }

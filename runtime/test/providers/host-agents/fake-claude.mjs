@@ -11,6 +11,7 @@
 //   FAKE_CLAUDE_LOGGED_IN  "0" reports logged out and fails turns with "Not logged in"
 //
 // Turn: { match?: regex on stdin, reply?: string, toolUses?: [{name, input}],
+//         writeFiles?: [{path, content}] (relative to cwd or absolute),
 //         denials?: [{tool_name, tool_input}], error?: string, rateLimited?: boolean,
 //         hang?: boolean, delayMs?: number }
 // A turn whose `match` fits stdin wins; otherwise the turn at the invocation index is used.
@@ -87,6 +88,8 @@ const turn = turns.find((candidate) => candidate.match && new RegExp(candidate.m
 
 const history = fs.existsSync(conversationFile) ? JSON.parse(fs.readFileSync(conversationFile, 'utf8')) : [];
 history.push({ role: 'user', content: stdin });
+// Like the real host, the conversation exists as soon as the turn starts, so a stopped turn can be resumed.
+fs.writeFileSync(conversationFile, JSON.stringify(history));
 
 const finish = () => {
   if (turn.rateLimited) {
@@ -97,6 +100,11 @@ const finish = () => {
   if (turn.error) {
     emit({ type: 'result', subtype: 'success', is_error: true, result: turn.error, session_id: sessionId, permission_denials: [] });
     process.exit(1);
+  }
+  for (const file of turn.writeFiles ?? []) {
+    const target = path.resolve(process.cwd(), file.path);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, file.content);
   }
   (turn.toolUses ?? []).forEach((use, index) => {
     const id = `toolu_fake_${index}`;

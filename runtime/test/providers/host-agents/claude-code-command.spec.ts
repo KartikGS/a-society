@@ -10,7 +10,7 @@ function request(overrides: Partial<HostTurnRequest> = {}): HostTurnRequest {
     message: 'Begin the node.',
     cwd: '/workspace/project',
     extraWritableDirs: ['/workspace/project/a-docs/records/r1'],
-    permissions: { mode: 'read-only', allowedCommands: [], allowedMcpTools: [], readOnlyRoots: ['/workspace'] },
+    permissions: { mode: 'read-only', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: ['/workspace'] },
     model: null,
     ...overrides,
   };
@@ -63,7 +63,7 @@ describe('buildClaudeCommand', () => {
     const { args } = buildClaudeCommand(request({
       permissions: {
         mode: 'edits',
-        allowedCommands: ['npm test', 'git status'],
+        allowedWritePaths: [], allowedCommands: ['npm test', 'git status'],
         allowedMcpTools: ['mcp__docs__search'],
         readOnlyRoots: ['/workspace/'],
       },
@@ -77,9 +77,17 @@ describe('buildClaudeCommand', () => {
     ]);
   });
 
+  it('grants single files for writing without opening all edits', () => {
+    const { args } = buildClaudeCommand(request({
+      permissions: { mode: 'read-only', allowedWritePaths: ['/workspace/project/a.md'], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: [] },
+    }));
+    expect(valuesAfter(args, '--permission-mode')).toEqual(['default']);
+    expect(valuesAfter(args, '--allowedTools')).toEqual(['Edit(//workspace/project/a.md)']);
+  });
+
   it('maps full access to edits plus all Bash, never bypassPermissions', () => {
     const { args } = buildClaudeCommand(request({
-      permissions: { mode: 'edits-and-commands', allowedCommands: ['npm test'], allowedMcpTools: [], readOnlyRoots: [] },
+      permissions: { mode: 'edits-and-commands', allowedWritePaths: [], allowedCommands: ['npm test'], allowedMcpTools: [], readOnlyRoots: [] },
     }));
     expect(valuesAfter(args, '--permission-mode')).toEqual(['acceptEdits']);
     expect(valuesAfter(args, '--allowedTools')).toEqual(['Bash']);
@@ -91,7 +99,7 @@ describe('buildClaudeCommand', () => {
     const { args } = buildClaudeCommand(request({
       model: 'sonnet',
       extraWritableDirs: [],
-      permissions: { mode: 'read-only', allowedCommands: [], allowedMcpTools: [], readOnlyRoots: [] },
+      permissions: { mode: 'read-only', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: [] },
     }));
     expect(valuesAfter(args, '--model')).toEqual(['sonnet']);
     expect(args).not.toContain('--allowedTools');
