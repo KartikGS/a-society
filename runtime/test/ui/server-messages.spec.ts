@@ -60,4 +60,20 @@ describe('ui/server-messages', () => {
     ]);
     expect(handlers.showToast).not.toHaveBeenCalled();
   });
+
+  it('records host plan usage per role and clears it on a feed replay', () => {
+    const ref: FlowRef = { projectNamespace: 'test', flowId: 'flow-1' };
+    const stateRef = { current: createFlowUiState() };
+    const handlers = createHandlers(stateRef);
+
+    handleServerMessage({
+      type: 'operator_event',
+      flowRef: ref,
+      event: { kind: 'usage.host_rate_limit', role: 'owner', fiveHour: 0.25, sevenDay: 0.1 },
+    }, handlers);
+
+    expect(stateRef.current.hostUsageByRole).toEqual({ owner: { fiveHour: 0.25, sevenDay: 0.1 } });
+    expect(stateRef.current.roleFeeds.owner).toBeUndefined();
+  });
 });
+

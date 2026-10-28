@@ -254,18 +254,21 @@ export function App() {
     composerValue,
     latestContextUsage,
     viewedRoleContextWindow,
+    isHostFlow,
+    viewedRoleHostUsage,
     projectSettingsEnabled,
   } = activeView;
 
-  const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
+  // Ready means the backend new flows use can run turns: a usable model, or a ready host agent.
+  const turnBackendReady = settingsStatus?.turnBackendReady ?? false;
   const settingsReady = settingsStatus !== null;
 
-  const ensureConfiguredModel = useCallback((): boolean => {
-    if (hasConfiguredModel) return true;
+  const ensureTurnBackendReady = useCallback((): boolean => {
+    if (turnBackendReady) return true;
     setSelectorError(SETTINGS_REQUIRED_MESSAGE);
     setSettingsOpen(true);
     return false;
-  }, [hasConfiguredModel]);
+  }, [turnBackendReady]);
 
   const appCommandInput = useMemo(() => ({
     activeView,
@@ -273,7 +276,7 @@ export function App() {
     selectedProject,
     newProjectName,
     confirm,
-    ensureConfiguredModel,
+    ensureTurnBackendReady,
     ensureTab,
     refreshProjects,
     refreshProjectFlows,
@@ -291,7 +294,7 @@ export function App() {
     activeTabKey,
     activeView,
     confirm,
-    ensureConfiguredModel,
+    ensureTurnBackendReady,
     ensureTab,
     newProjectName,
     refreshProjects,
@@ -403,14 +406,14 @@ export function App() {
   }, [roleConfigurationNodeId]);
 
   useEffect(() => {
-    if (settingsReady && !hasConfiguredModel) {
+    if (settingsReady && !turnBackendReady) {
       startTransition(() => setSettingsOpen(true));
       return;
     }
-    if (hasConfiguredModel) {
+    if (turnBackendReady) {
       startTransition(() => setSelectorError((current) => current === SETTINGS_REQUIRED_MESSAGE ? null : current));
     }
-  }, [hasConfiguredModel, settingsReady]);
+  }, [turnBackendReady, settingsReady]);
 
   useEffect(() => {
     if (socket.status !== 'open' || !activeTab) return;
@@ -501,9 +504,9 @@ export function App() {
         newProjectName={newProjectName}
         errorMessage={selectorError}
         disabled={socket.status !== 'open'}
-        canStartFlows={socket.status === 'open' && hasConfiguredModel}
+        canStartFlows={socket.status === 'open' && turnBackendReady}
         settingsReady={settingsReady}
-        settingsConfigured={hasConfiguredModel}
+        settingsConfigured={turnBackendReady}
         onSelectInitialized={handleProjectSelect}
         onInitializeExisting={handleExistingInitialization}
         onOpenFlow={handleOpenFlow}
@@ -640,8 +643,9 @@ export function App() {
                     onConsentModeChange={handleConsentModeChange}
                     onCompactContext={viewedRole ? handleCompactContext : undefined}
                     isCompactingContext={isViewedRoleCompacting}
-                    contextWindow={viewedRoleContextWindow ?? contextWindow}
+                    contextWindow={isHostFlow ? null : viewedRoleContextWindow ?? contextWindow}
                     latestContextUsage={latestContextUsage}
+                    hostUsage={isHostFlow ? viewedRoleHostUsage : null}
                   />
                 </ErrorBoundary>
               </Panel>
@@ -704,9 +708,10 @@ export function App() {
 
       {settingsOpen && (
         <SettingsModal
-          required={!hasConfiguredModel}
+          required={!turnBackendReady}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
+          onAgentModeChange={() => { void refreshSettingsStatus(); }}
           onSkillsChange={refreshConfiguredSkills}
           onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
@@ -719,6 +724,7 @@ export function App() {
           projectNamespace={projectSettingsTarget.folderName}
           displayName={projectSettingsTarget.displayName}
           deletable={projectSettingsTarget.folderName !== 'a-society'}
+          agentModeActive={settingsStatus?.turnBackend === 'host'}
           onClose={() => setProjectSettingsTarget(null)}
           onError={showToast}
           onDeleteProject={() => {

@@ -10,6 +10,7 @@ import type { ProtocolHandoffApprovalDecision } from '../../../shared/protocol-c
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, HandoffTarget } from '../../../shared/types.js';
 import type { McpServerSummary, ModelConfig } from '../../../shared/settings.js';
 import type { SkillSummary } from '../../../shared/skills.js';
+import type { HostUsage } from '../app/flow-ui';
 
 export type { FeedItem };
 
@@ -49,6 +50,8 @@ interface ChatInterfaceProps {
   handoffApproval?: HandoffApprovalPrompt | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
+  /** Plan usage reported by a host coding agent; shown instead of the context ring. */
+  hostUsage?: HostUsage | null;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
@@ -312,6 +315,23 @@ function ContextRing({
   );
 }
 
+function formatUsageShare(value: number | undefined): string | null {
+  return value === undefined ? null : `${Math.round(value * 100)}%`;
+}
+
+function HostUsageBadge({ usage }: { usage: HostUsage }) {
+  const parts = [
+    formatUsageShare(usage.fiveHour) ? `5-hour ${formatUsageShare(usage.fiveHour)}` : null,
+    formatUsageShare(usage.sevenDay) ? `7-day ${formatUsageShare(usage.sevenDay)}` : null,
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  return (
+    <span className="host-usage" title="Share of the coding agent's plan limits used, as last reported by the agent">
+      Plan usage: {parts.join(' · ')}
+    </span>
+  );
+}
+
 export function ChatInterface(props: ChatInterfaceProps) {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -518,6 +538,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
           </form>
 
           <div className="composer-footer">
+            {props.hostUsage ? <HostUsageBadge usage={props.hostUsage} /> : null}
             {props.contextWindow ? (
               <ContextRing
                 contextWindow={props.contextWindow}

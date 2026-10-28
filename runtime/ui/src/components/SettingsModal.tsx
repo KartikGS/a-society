@@ -27,6 +27,7 @@ import {
 } from '../app/runtime-api';
 import {
   AddModelForm,
+  AgentModePanel,
   AutomationToggle,
   FeedSettingsPanel,
   McpSettingsPanel,
@@ -60,6 +61,7 @@ interface SettingsModalProps {
   onModelsChange?: () => void;
   onSkillsChange?: () => void | Promise<void>;
   onMcpServersChange?: () => void | Promise<void>;
+  onAgentModeChange?: () => void;
   required?: boolean;
 }
 
@@ -112,9 +114,9 @@ function parseJsonObject(value: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
-type SettingsTab = 'models' | 'tools' | 'feed' | 'mcp' | 'skills';
+type SettingsTab = 'agent-mode' | 'models' | 'tools' | 'feed' | 'mcp' | 'skills';
 
-export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onSkillsChange, onMcpServersChange, required = false }: SettingsModalProps) {
+export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onSkillsChange, onMcpServersChange, onAgentModeChange, required = false }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
   const [view, setView] = useState<EditorView>('list');
   const [models, setModels] = useState<ModelConfig[]>([]);
@@ -587,6 +589,13 @@ export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onS
           <nav className="settings-nav">
             <button
               type="button"
+              className={`settings-nav-item${activeTab === 'agent-mode' ? ' settings-nav-item-active' : ''}`}
+              onClick={() => setActiveTab('agent-mode')}
+            >
+              Agent mode
+            </button>
+            <button
+              type="button"
               className={`settings-nav-item${activeTab === 'models' ? ' settings-nav-item-active' : ''}`}
               onClick={() => setActiveTab('models')}
             >
@@ -623,7 +632,13 @@ export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onS
           </nav>
 
           <div className="settings-content">
-            {activeTab === 'models' ? (
+            {activeTab === 'agent-mode' ? (
+              <AgentModePanel
+                onSaved={() => onAgentModeChange?.()}
+                onError={reportError}
+                onSuccess={(message) => onSuccess?.(message)}
+              />
+            ) : activeTab === 'models' ? (
               view === 'list' ? (
               <>
                 {automation ? (

@@ -1,4 +1,17 @@
-import type { FeedSettings, InputModality, McpServerSummary, ModelConfig, ProviderType, SettingsStatus, ToolSettings } from '../../shared/settings.js';
+import { DEFAULT_AGENT_MODE_SETTINGS, isHostAgentId } from '../../shared/settings.js';
+import type {
+  AgentModeResponse,
+  AgentModeSettings,
+  FeedSettings,
+  HostAgentSummary,
+  HostProbeSummary,
+  InputModality,
+  McpServerSummary,
+  ModelConfig,
+  ProviderType,
+  SettingsStatus,
+  ToolSettings,
+} from '../../shared/settings.js';
 import type { SkillLoadResult, SkillSummary } from '../../shared/skills.js';
 import { normalizeModelReasoningConfig } from '../../shared/model-reasoning.js';
 import { normalizePromptCacheTtl } from '../../shared/prompt-cache.js';
@@ -195,5 +208,59 @@ export function normalizeMcpServerConfig(value: unknown): McpServerConfig | null
     envKeys: Array.isArray(raw.envKeys) ? raw.envKeys.filter((entry): entry is string => typeof entry === 'string') : [],
     url: typeof raw.url === 'string' ? raw.url : undefined,
     headerKeys: Array.isArray(raw.headerKeys) ? raw.headerKeys.filter((entry): entry is string => typeof entry === 'string') : [],
+  };
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null;
+}
+
+function normalizeVersionRange(value: unknown): { min: string; maxExclusive: string } {
+  const raw = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  return { min: String(raw.min ?? ''), maxExclusive: String(raw.maxExclusive ?? '') };
+}
+
+export function normalizeAgentModeSettings(value: unknown): AgentModeSettings {
+  const raw = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const hostAgentId = isHostAgentId(raw.hostAgentId) ? raw.hostAgentId : null;
+  return {
+    mode: raw.mode === 'host' && hostAgentId ? 'host' : DEFAULT_AGENT_MODE_SETTINGS.mode,
+    hostAgentId,
+    executablePath: nullableString(raw.executablePath),
+  };
+}
+
+export function normalizeAgentModeResponse(value: unknown): AgentModeResponse {
+  const raw = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const hosts: HostAgentSummary[] = Array.isArray(raw.hosts)
+    ? raw.hosts.flatMap((entry) => {
+      const host = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+      if (!isHostAgentId(host.id)) return [];
+      return [{
+        id: host.id,
+        displayName: String(host.displayName ?? host.id),
+        supportedVersions: normalizeVersionRange(host.supportedVersions),
+      }];
+    })
+    : [];
+  return { settings: normalizeAgentModeSettings(raw.settings), hosts };
+}
+
+export function normalizeHostProbeSummary(value: unknown): HostProbeSummary | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  if (!isHostAgentId(raw.hostAgentId)) return null;
+  return {
+    hostAgentId: raw.hostAgentId,
+    displayName: String(raw.displayName ?? raw.hostAgentId),
+    installed: raw.installed === true,
+    executablePath: nullableString(raw.executablePath),
+    version: nullableString(raw.version),
+    supportedVersions: normalizeVersionRange(raw.supportedVersions),
+    versionSupported: raw.versionSupported === true,
+    loggedIn: typeof raw.loggedIn === 'boolean' ? raw.loggedIn : null,
+    authMethod: nullableString(raw.authMethod),
+    subscriptionType: nullableString(raw.subscriptionType),
+    checkedAt: String(raw.checkedAt ?? ''),
   };
 }

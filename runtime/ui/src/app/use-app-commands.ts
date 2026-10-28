@@ -32,7 +32,7 @@ interface UseAppCommandsInput {
   selectedProject: string | null;
   newProjectName: string;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
-  ensureConfiguredModel: () => boolean;
+  ensureTurnBackendReady: () => boolean;
   ensureTab: (ref: FlowRef, title: string) => void;
   refreshProjects: () => Promise<void>;
   refreshProjectFlows: (projectNamespace: string) => Promise<void>;
@@ -52,7 +52,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
   const {
     activeTabKey,
     confirm,
-    ensureConfiguredModel,
+    ensureTurnBackendReady,
     ensureTab,
     newProjectName,
     refreshProjects,
@@ -110,41 +110,41 @@ export function useAppCommands(input: UseAppCommandsInput) {
   }, [openFlow, refreshProjectFlows, setSelectorError]);
 
   const handleExistingInitialization = useCallback((projectNamespace: string): void => {
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
     createFlow(projectNamespace, 'takeover');
-  }, [createFlow, ensureConfiguredModel, setNewProjectName, setSelectedProject, setSelectorError]);
+  }, [createFlow, ensureTurnBackendReady, setNewProjectName, setSelectedProject, setSelectorError]);
 
   const handleUpdateProject = useCallback((project: ProjectSummary): void => {
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
     const projectNamespace = project.folderName;
     setSelectedProject(projectNamespace);
     setNewProjectName('');
     setSelectorError(null);
     createFlow(projectNamespace, 'update');
-  }, [createFlow, ensureConfiguredModel, setNewProjectName, setSelectedProject, setSelectorError]);
+  }, [createFlow, ensureTurnBackendReady, setNewProjectName, setSelectedProject, setSelectorError]);
 
   const handleCreateNewProject = useCallback((): void => {
     const projectNamespace = newProjectName.trim();
     if (!projectNamespace) return;
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
 
     setSelectedProject(projectNamespace);
     setSelectorError(null);
     createFlow(projectNamespace, 'greenfield');
-  }, [createFlow, ensureConfiguredModel, newProjectName, setSelectedProject, setSelectorError]);
+  }, [createFlow, ensureTurnBackendReady, newProjectName, setSelectedProject, setSelectorError]);
 
   const handleOpenFlow = useCallback((flow: FlowSummary): void => {
     openFlow({ projectNamespace: flow.projectNamespace, flowId: flow.flowId }, titleForFlow(flow));
   }, [openFlow]);
 
   const handleNewFlow = useCallback((projectNamespace: string): void => {
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
     setSelectorError(null);
     createFlow(projectNamespace, 'initialized');
-  }, [createFlow, ensureConfiguredModel, setSelectorError]);
+  }, [createFlow, ensureTurnBackendReady, setSelectorError]);
 
   const handleDeleteFlow = useCallback(async (flow: FlowSummary): Promise<void> => {
     const label = flow.recordName ?? flow.flowId;
@@ -272,7 +272,7 @@ export function useAppCommands(input: UseAppCommandsInput) {
 
   const handleSubmit = useCallback((): void => {
     if (!activeTab || !activeUi) return;
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
     const text = activeUi.composerValue.trim();
     if (!text) return;
     updateFlowUi(activeTab.key, (state) => ({
@@ -294,25 +294,25 @@ export function useAppCommands(input: UseAppCommandsInput) {
         role: inputTargetRole === SYSTEM_ROLE_KEY ? undefined : inputTargetRole
       });
     }
-  }, [activeTab, activeUi, ensureConfiguredModel, improvementInputTargetRole, inputTargetRole, sendMessage, updateFlowUi]);
+  }, [activeTab, activeUi, ensureTurnBackendReady, improvementInputTargetRole, inputTargetRole, sendMessage, updateFlowUi]);
 
   const handleImprovementChoice = useCallback((mode: ProtocolImprovementChoiceMode): void => {
     if (!activeTab) return;
-    if (mode !== IMPROVEMENT_CHOICE_MODE.NONE && !ensureConfiguredModel()) return;
+    if (mode !== IMPROVEMENT_CHOICE_MODE.NONE && !ensureTurnBackendReady()) return;
     if (mode !== IMPROVEMENT_CHOICE_MODE.NONE) {
       updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
     }
     sendMessage({ type: CLIENT_MESSAGE_TYPE.IMPROVEMENT_CHOICE, flowRef: activeTab.ref, mode });
-  }, [activeTab, ensureConfiguredModel, sendMessage, updateFlowUi]);
+  }, [activeTab, ensureTurnBackendReady, sendMessage, updateFlowUi]);
 
   const handleFeedbackConsentChoice = useCallback((decision: ProtocolFeedbackConsentDecision): void => {
     if (!activeTab) return;
-    if (decision === FEEDBACK_CONSENT_DECISION.GRANTED && !ensureConfiguredModel()) return;
+    if (decision === FEEDBACK_CONSENT_DECISION.GRANTED && !ensureTurnBackendReady()) return;
     if (decision === FEEDBACK_CONSENT_DECISION.GRANTED) {
       updateFlowUi(activeTab.key, (state) => ({ ...state, selectedGraph: 'improvement' }));
     }
     sendMessage({ type: CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE, flowRef: activeTab.ref, decision });
-  }, [activeTab, ensureConfiguredModel, sendMessage, updateFlowUi]);
+  }, [activeTab, ensureTurnBackendReady, sendMessage, updateFlowUi]);
 
   const handleConsentResponse = useCallback((decision: ConsentResponseDecision): void => {
     if (!activeTab || !visibleConsentRequest) return;
@@ -326,9 +326,9 @@ export function useAppCommands(input: UseAppCommandsInput) {
 
   const handleHandoffApproval = useCallback((nodeId: string, decision: ProtocolHandoffApprovalDecision): void => {
     if (!activeTab) return;
-    if (decision === HANDOFF_APPROVAL_DECISION.APPROVE && !ensureConfiguredModel()) return;
+    if (decision === HANDOFF_APPROVAL_DECISION.APPROVE && !ensureTurnBackendReady()) return;
     sendMessage({ type: CLIENT_MESSAGE_TYPE.HANDOFF_APPROVAL, flowRef: activeTab.ref, nodeId, decision });
-  }, [activeTab, ensureConfiguredModel, sendMessage]);
+  }, [activeTab, ensureTurnBackendReady, sendMessage]);
 
   const handleRoleConfigure = useCallback((nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }): void => {
     if (!activeTab) return;
@@ -358,15 +358,15 @@ export function useAppCommands(input: UseAppCommandsInput) {
 
   const handleCompactContext = useCallback((): void => {
     if (!activeTab || !viewedRole) return;
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
     sendMessage({ type: CLIENT_MESSAGE_TYPE.COMPACT_CONTEXT, flowRef: activeTab.ref, role: viewedRole });
-  }, [activeTab, ensureConfiguredModel, sendMessage, viewedRole]);
+  }, [activeTab, ensureTurnBackendReady, sendMessage, viewedRole]);
 
   const handleResumeFlow = useCallback((): void => {
     if (!activeTab) return;
-    if (!ensureConfiguredModel()) return;
+    if (!ensureTurnBackendReady()) return;
     sendMessage({ type: CLIENT_MESSAGE_TYPE.RESUME_FLOW, flowRef: activeTab.ref });
-  }, [activeTab, ensureConfiguredModel, sendMessage]);
+  }, [activeTab, ensureTurnBackendReady, sendMessage]);
 
   const handleWorkflowLoaded = useCallback((graph: WorkflowGraph): void => {
     if (!activeTabKey) return;

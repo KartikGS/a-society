@@ -605,3 +605,36 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.agent-mode-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agent-mode-status {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.agent-mode-status dt {
+  color: var(--ink-soft);
+}
+
+.agent-mode-status dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.agent-mode-check-ok {
+  color: var(--success-ink);
+  font-weight: 600;
+}
+
+.agent-mode-check-fail {
+  color: var(--danger-ink);
+  font-weight: 600;
+}

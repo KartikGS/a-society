@@ -25,6 +25,8 @@ interface ProjectSettingsModalProps {
   projectNamespace: string;
   displayName: string;
   deletable?: boolean;
+  /** New flows run on a host coding agent, which brings its own model, skills and MCP servers. */
+  agentModeActive?: boolean;
   onClose: () => void;
   onError: (message: string) => void;
   onDeleteProject: () => void;
@@ -52,6 +54,7 @@ export function ProjectSettingsModal({
   projectNamespace,
   displayName,
   deletable = true,
+  agentModeActive = false,
   onClose,
   onError,
   onDeleteProject,
@@ -191,6 +194,7 @@ export function ProjectSettingsModal({
                 models={models}
                 skills={skills}
                 mcpServers={mcpServers}
+                agentModeActive={agentModeActive}
                 onChange={(patch) => updateRole(activeRoleId, patch)}
               />
             ) : selection.kind === 'tools' ? (
@@ -252,6 +256,7 @@ function RolePanel({
   models,
   skills,
   mcpServers,
+  agentModeActive,
   onChange,
 }: {
   roleId: string;
@@ -259,6 +264,7 @@ function RolePanel({
   models: ModelConfig[];
   skills: SkillSummary[];
   mcpServers: McpServerSummary[];
+  agentModeActive: boolean;
   onChange: (patch: Partial<ProjectRoleSettings>) => void;
 }) {
   const skillsConfigured = roleSettings.skills !== undefined;
@@ -278,6 +284,18 @@ function RolePanel({
       ? [...selectedMcp, id]
       : selectedMcp.filter((entry) => entry !== id);
     onChange({ mcpServers: next.filter((entry, index) => next.indexOf(entry) === index).sort((a, b) => a.localeCompare(b)) });
+  }
+
+  if (agentModeActive) {
+    return (
+      <div className="project-role-panel">
+        <h3 className="project-settings-heading">{roleId}</h3>
+        <p className="tool-settings-note">
+          Agent mode is on, so new flows use the coding agent&apos;s own model, skills and MCP servers.
+          Role defaults for those apply to API flows only.
+        </p>
+      </div>
+    );
   }
 
   return (

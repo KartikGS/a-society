@@ -89,6 +89,15 @@ function applyOperatorEvent(
     return;
   }
 
+  if (event.kind === 'usage.host_rate_limit') {
+    const role = toRoleKey(event.role) ?? SYSTEM_ROLE_KEY;
+    handlers.updateFlowUi(key, (state) => ({
+      ...state,
+      hostUsageByRole: { ...state.hostUsageByRole, [role]: { fiveHour: event.fiveHour, sevenDay: event.sevenDay } },
+    }));
+    return;
+  }
+
   if (event.kind === 'usage.turn_summary') {
     const contextUsage = event.contextUsage;
     if (contextUsage != null) {
@@ -221,6 +230,7 @@ export function handleServerMessage(message: ServerMessage, handlers: ServerMess
         compactingRoles: {},
         latestContextUsageByRole: {},
         contextWindowByRole: {},
+        hostUsageByRole: {},
         consentRequests: {},
       }));
       return;

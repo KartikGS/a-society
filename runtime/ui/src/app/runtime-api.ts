@@ -1,5 +1,7 @@
 import {
+  normalizeAgentModeResponse,
   normalizeFeedSettings,
+  normalizeHostProbeSummary,
   normalizeMcpServerConfig,
   normalizeMcpServerSummaries,
   normalizeMcpServerSummary,
@@ -12,8 +14,12 @@ import {
 } from '../model-config';
 import type { FlowRef, FlowRun, FlowSummary } from '../../../shared/types.js';
 import type {
+  AgentModeResponse,
+  AgentModeSettings,
   AutomationSettings,
   FeedSettings,
+  HostAgentId,
+  HostProbeSummary,
   InputModality,
   McpServerSummary,
   ModelConfig,
@@ -282,6 +288,43 @@ export async function updateAutomationSettings(patch: Partial<AutomationSettings
     throw new Error(await responseText(response));
   }
   return normalizeAutomationSettings(await response.json());
+}
+
+export async function fetchAgentMode(): Promise<AgentModeResponse> {
+  const response = await fetch('/api/settings/agent-mode');
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  return normalizeAgentModeResponse(await response.json());
+}
+
+export async function saveAgentMode(patch: Partial<AgentModeSettings>): Promise<AgentModeResponse> {
+  const response = await fetch('/api/settings/agent-mode', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  return normalizeAgentModeResponse(await response.json());
+}
+
+/** Checks a host agent without saving it; a missing host is a result, not an error. */
+export async function probeHostAgent(hostAgentId: HostAgentId, executablePath: string | null): Promise<HostProbeSummary> {
+  const response = await fetch('/api/settings/agent-mode/probe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hostAgentId, executablePath }),
+  });
+  if (!response.ok) {
+    throw new Error(await responseText(response));
+  }
+  const probe = normalizeHostProbeSummary(await response.json());
+  if (!probe) {
+    throw new Error('Invalid host agent check response.');
+  }
+  return probe;
 }
 
 export interface SaveModelPayload {

@@ -190,7 +190,7 @@ function SettingsAccess(props: {
   if (!props.ready) {
     label = 'Loading runtime settings';
   } else if (!props.configured) {
-    label = 'Configure runtime model';
+    label = 'Configure a model or agent mode';
   }
 
   return (

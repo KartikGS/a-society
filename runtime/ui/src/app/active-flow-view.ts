@@ -15,6 +15,7 @@ import {
   hasImprovementGraph,
   type FlowTab,
   type FlowUiState,
+  type HostUsage,
 } from './flow-ui';
 import { isBackwardHandoffSource } from './handoff-source.js';
 import { toRoleKey } from './roles';
@@ -63,6 +64,9 @@ export interface ActiveFlowView {
   composerValue: string;
   latestContextUsage: number | null;
   viewedRoleContextWindow: number | null;
+  /** True when this flow's role turns run on a host coding agent. */
+  isHostFlow: boolean;
+  viewedRoleHostUsage: HostUsage | null;
   projectSettingsEnabled: boolean;
 }
 
@@ -185,6 +189,8 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
   const latestContextUsage = viewedRole ? (activeUi?.latestContextUsageByRole[viewedRole] ?? null) : null;
   const viewedRoleContextWindow = viewedRole ? (activeUi?.contextWindowByRole[viewedRole] ?? null) : null;
+  const isHostFlow = flowRun?.turnBackend?.kind === 'host';
+  const viewedRoleHostUsage = viewedRole ? (activeUi?.hostUsageByRole[viewedRole] ?? null) : null;
 
   return {
     activeTab,
@@ -221,6 +227,8 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     composerValue: activeUi?.composerValue ?? '',
     latestContextUsage,
     viewedRoleContextWindow,
+    isHostFlow,
+    viewedRoleHostUsage,
     projectSettingsEnabled: activeUi?.projectSettingsEnabled ?? false,
   };
 }

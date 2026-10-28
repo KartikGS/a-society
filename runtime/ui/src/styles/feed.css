@@ -412,3 +412,9 @@
   font-size: 14px;
   line-height: 1.55;
 }
+
+.host-usage {
+  font-size: 11px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}

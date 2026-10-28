@@ -13,6 +13,12 @@ export interface FlowTab {
   title: string;
 }
 
+/** Share of the host plan's usage windows consumed, from 0 to 1. */
+export interface HostUsage {
+  fiveHour?: number;
+  sevenDay?: number;
+}
+
 export interface FlowUiState {
   flowRun: FlowRun | null;
   backwardActive: string[];
@@ -28,6 +34,8 @@ export interface FlowUiState {
   consentRequests: Record<string, ConsentRequest>;
   latestContextUsageByRole: Record<string, number>;
   contextWindowByRole: Record<string, number>;
+  /** Latest plan usage a host agent reported per role (agent-mode flows only). */
+  hostUsageByRole: Record<string, HostUsage>;
   roleConfigurations: Record<string, RoleConfigurationPending>;
   hasActiveSession: boolean;
   projectSettingsEnabled: boolean;
@@ -49,6 +57,7 @@ export function createFlowUiState(flowRun: FlowRun | null = null): FlowUiState {
     consentRequests: {},
     latestContextUsageByRole: {},
     contextWindowByRole: {},
+    hostUsageByRole: {},
     roleConfigurations: {},
     hasActiveSession: false,
     projectSettingsEnabled: false,
