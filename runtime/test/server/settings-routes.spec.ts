@@ -8,6 +8,9 @@ import { validateMcpServerConfiguration } from '../../src/providers/mcp/validate
 import { registerSettingsRoutes } from '../../src/server/settings-routes.js';
 import * as SettingsStore from '../../src/settings/settings-store.js';
 import { setWorkspaceRoot } from '../../src/common/workspace.js';
+import { fileURLToPath } from 'node:url';
+
+const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../providers/host-agents/fake-claude.mjs');
 
 vi.mock('../../src/providers/model-validation.js', () => ({
   validateModelConfiguration: vi.fn(),
@@ -268,5 +271,76 @@ Run scripts/foo.py when needed.
 
     const reread = await callSettingsRoute('get', '/api/settings/automation');
     expect(reread.body).toEqual({ models: 'manual', skills: 'auto', mcpServers: 'manual' });
+  });
+
+  describe('agent mode', () => {
+    const CLAUDE_HOST = { id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } };
+
+    it('reports API mode by default and lists the supported hosts', async () => {
+      const response = await callSettingsRoute('get', '/api/settings/agent-mode');
+      expect(response.body).toEqual({
+        settings: { mode: 'api', hostAgentId: null, executablePath: null },
+        hosts: [CLAUDE_HOST],
+      });
+      const status = await callSettingsRoute('get', '/api/settings/status');
+      expect(status.body).toEqual({ hasConfiguredModel: false, modelCount: 0, turnBackend: 'api', turnBackendReady: false });
+    });
+
+    it('saves a host selection and reports its readiness in the status', async () => {
+      const updated = await callSettingsRoute('put', '/api/settings/agent-mode', { mode: 'host', hostAgentId: 'claude-code', executablePath: ` ${FAKE_CLAUDE} ` });
+      expect(updated.status).toBe(200);
+      expect((updated.body as { settings: unknown }).settings).toEqual({ mode: 'host', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE });
+
+      const status = await callSettingsRoute('get', '/api/settings/status');
+      expect(status.body).toMatchObject({ hasConfiguredModel: false, turnBackend: 'host', turnBackendReady: true });
+
+      const back = await callSettingsRoute('put', '/api/settings/agent-mode', { mode: 'api' });
+      expect((back.body as { settings: unknown }).settings).toEqual({ mode: 'api', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE });
+    });
+
+    it('rejects invalid agent mode updates without saving them', async () => {
+      const cases: Array<[Record<string, unknown>, string]> = [
+        [{ mode: 'cloud' }, 'Agent mode must be "api" or "host".'],
+        [{ hostAgentId: 'codex' }, 'Unsupported host agent: codex.'],
+        [{ executablePath: 'bin/claude' }, 'Executable path must be absolute.'],
+        [{ executablePath: 42 }, 'Executable path must be a string or null.'],
+        [{ mode: 'host' }, 'Choose a host agent before turning agent mode on.'],
+      ];
+      for (const [body, message] of cases) {
+        const response = await callSettingsRoute('put', '/api/settings/agent-mode', body);
+        expect(response).toEqual({ status: 400, body: { message } });
+      }
+      expect(SettingsStore.getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null });
+    });
+
+    it('probes a candidate host before it is saved, keeping only the allowed auth fields', async () => {
+      const response = await callSettingsRoute('post', '/api/settings/agent-mode/probe', { hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE });
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        hostAgentId: 'claude-code',
+        displayName: 'Claude Code',
+        installed: true,
+        executablePath: fs.realpathSync(FAKE_CLAUDE),
+        version: '2.1.309',
+        supportedVersions: CLAUDE_HOST.supportedVersions,
+        versionSupported: true,
+        loggedIn: true,
+        authMethod: 'claude.ai',
+        subscriptionType: 'pro',
+        checkedAt: expect.any(String),
+      });
+      expect(JSON.stringify(response.body)).not.toContain('example.com');
+      expect(SettingsStore.getAgentModeSettings().mode).toBe('api');
+    });
+
+    it('reports a missing host as not installed (200), and refuses a probe with no host', async () => {
+      const missing = path.join(workspaceRoot, 'no-claude');
+      const response = await callSettingsRoute('post', '/api/settings/agent-mode/probe', { hostAgentId: 'claude-code', executablePath: missing });
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({ installed: false, executablePath: missing, versionSupported: false, loggedIn: null });
+
+      const noHost = await callSettingsRoute('post', '/api/settings/agent-mode/probe', {});
+      expect(noHost).toEqual({ status: 400, body: { message: 'Choose a supported host agent to check.' } });
+    });
   });
 });

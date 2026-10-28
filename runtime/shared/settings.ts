@@ -32,6 +32,10 @@ export interface ModelConfigWithKey extends ModelConfig {
 export interface SettingsStatus {
   hasConfiguredModel: boolean;
   modelCount: number;
+  /** The backend new flows will be pinned to. */
+  turnBackend: 'api' | 'host';
+  /** Whether that backend can run turns now (a usable model, or a ready host agent). */
+  turnBackendReady: boolean;
 }
 
 /** Whether new flows run role turns through LLM APIs or a host coding agent. */
@@ -47,6 +51,32 @@ export const DEFAULT_AGENT_MODE_SETTINGS: AgentModeSettings = {
   hostAgentId: null,
   executablePath: null,
 };
+
+export interface HostAgentSummary {
+  id: HostAgentId;
+  displayName: string;
+  supportedVersions: { min: string; maxExclusive: string };
+}
+
+export interface AgentModeResponse {
+  settings: AgentModeSettings;
+  hosts: HostAgentSummary[];
+}
+
+/** What a probe of the host found. Account details beyond these fields are never collected. */
+export interface HostProbeSummary {
+  hostAgentId: HostAgentId;
+  displayName: string;
+  installed: boolean;
+  executablePath: string | null;
+  version: string | null;
+  supportedVersions: { min: string; maxExclusive: string };
+  versionSupported: boolean;
+  loggedIn: boolean | null;
+  authMethod: string | null;
+  subscriptionType: string | null;
+  checkedAt: string;
+}
 
 export interface WebSearchToolSettings {
   enabled: boolean;

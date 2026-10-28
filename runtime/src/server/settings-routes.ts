@@ -14,6 +14,11 @@ import { validateModelConfiguration } from '../providers/model-validation.js';
 import { formatMcpError } from '../providers/mcp/errors.js';
 import { validateMcpServerConfiguration } from '../providers/mcp/validate.js';
 import * as SettingsStore from '../settings/settings-store.js';
+import { currentTurnBackend, getTurnBackendReadiness } from '../settings/turn-backend.js';
+import { getHostAgent, listHostAgents } from '../providers/host-agents/registry.js';
+import { clearProbeCache, getCachedProbe } from '../providers/host-agents/version.js';
+import { isHostAgentId } from '../../shared/settings.js';
+import type { AgentModeResponse, AgentModeSettings, HostAgentSummary, HostProbeSummary } from '../../shared/settings.js';
 
 function isValidProviderBaseUrl(value: unknown): value is string {
   if (typeof value !== 'string' || value.trim() === '') return false;
@@ -171,6 +176,46 @@ function parseMcpServerParams(
   };
 }
 
+function agentModeResponse(): AgentModeResponse {
+  const hosts: HostAgentSummary[] = listHostAgents().map((adapter) => ({
+    id: adapter.id,
+    displayName: adapter.displayName,
+    supportedVersions: { ...adapter.supportedVersions },
+  }));
+  return { settings: SettingsStore.getAgentModeSettings(), hosts };
+}
+
+type ParsedAgentModeParams =
+  | { ok: true; params: Partial<AgentModeSettings> }
+  | { ok: false; message: string };
+
+/** Validates a partial agent-mode update against the saved settings it would merge into. */
+function parseAgentModeParams(body: Record<string, unknown>): ParsedAgentModeParams {
+  const params: Partial<AgentModeSettings> = {};
+  if ('mode' in body) {
+    if (body.mode !== 'api' && body.mode !== 'host') return { ok: false, message: 'Agent mode must be "api" or "host".' };
+    params.mode = body.mode;
+  }
+  if ('hostAgentId' in body) {
+    if (body.hostAgentId !== null && !isHostAgentId(body.hostAgentId)) {
+      return { ok: false, message: `Unsupported host agent: ${String(body.hostAgentId)}.` };
+    }
+    params.hostAgentId = body.hostAgentId;
+  }
+  if ('executablePath' in body) {
+    const value = body.executablePath;
+    if (value !== null && typeof value !== 'string') return { ok: false, message: 'Executable path must be a string or null.' };
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    if (trimmed !== '' && !path.isAbsolute(trimmed)) return { ok: false, message: 'Executable path must be absolute.' };
+    params.executablePath = trimmed === '' ? null : trimmed;
+  }
+  const merged = { ...SettingsStore.getAgentModeSettings(), ...params };
+  if (merged.mode === 'host' && !merged.hostAgentId) {
+    return { ok: false, message: 'Choose a host agent before turning agent mode on.' };
+  }
+  return { ok: true, params };
+}
+
 export function registerSettingsRoutes(app: Express): void {
   app.use(express.json());
 
@@ -178,11 +223,69 @@ export function registerSettingsRoutes(app: Express): void {
     res.json(SettingsStore.listModels());
   });
 
-  app.get('/api/settings/status', (_req: Request, res: Response) => {
+  app.get('/api/settings/status', async (_req: Request, res: Response) => {
+    const turnBackend = currentTurnBackend();
+    const readiness = await getTurnBackendReadiness(turnBackend);
     res.json({
       hasConfiguredModel: SettingsStore.hasUsableConfiguredModel(),
-      modelCount: SettingsStore.listModels().length
+      modelCount: SettingsStore.listModels().length,
+      turnBackend: turnBackend.kind,
+      turnBackendReady: readiness.ready,
     });
+  });
+
+  app.get('/api/settings/agent-mode', (_req: Request, res: Response) => {
+    res.json(agentModeResponse());
+  });
+
+  app.put('/api/settings/agent-mode', (req: Request, res: Response) => {
+    const parsed = parseAgentModeParams((req.body ?? {}) as Record<string, unknown>);
+    if (!parsed.ok) {
+      res.status(400).json({ message: parsed.message });
+      return;
+    }
+    SettingsStore.updateAgentModeSettings(parsed.params);
+    res.json(agentModeResponse());
+  });
+
+  /**
+   * Probes a host agent: the saved one, or a candidate from the body so the operator can
+   * check before saving. A missing or broken host is a probe result (200), never a 500.
+   */
+  app.post('/api/settings/agent-mode/probe', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const saved = SettingsStore.getAgentModeSettings();
+    const hostAgentId = body.hostAgentId ?? saved.hostAgentId;
+    if (!isHostAgentId(hostAgentId)) {
+      res.status(400).json({ message: 'Choose a supported host agent to check.' });
+      return;
+    }
+    const rawPath = 'executablePath' in body ? body.executablePath : saved.executablePath;
+    const executablePath = typeof rawPath === 'string' && rawPath.trim() !== '' ? rawPath.trim() : null;
+
+    const adapter = getHostAgent(hostAgentId);
+    // An explicit check always re-probes, so a fresh sign-in or update shows at once.
+    clearProbeCache();
+    let probe;
+    try {
+      probe = await getCachedProbe(adapter, executablePath);
+    } catch {
+      probe = null;
+    }
+    const summary: HostProbeSummary = {
+      hostAgentId,
+      displayName: adapter.displayName,
+      installed: probe?.installed ?? false,
+      executablePath: probe?.executablePath ?? executablePath,
+      version: probe?.version ?? null,
+      supportedVersions: { ...adapter.supportedVersions },
+      versionSupported: probe?.versionSupported ?? false,
+      loggedIn: probe?.loggedIn ?? null,
+      authMethod: probe?.authMethod ?? null,
+      subscriptionType: probe?.subscriptionType ?? null,
+      checkedAt: new Date().toISOString(),
+    };
+    res.json(summary);
   });
 
   app.get('/api/settings/active-model/context-window', (_req: Request, res: Response) => {

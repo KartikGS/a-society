@@ -68,8 +68,18 @@ export function normalizeSettingsStatus(value: unknown): SettingsStatus | null {
   return {
     hasConfiguredModel: raw.hasConfiguredModel,
     modelCount: normalizeInteger(raw.modelCount),
+    turnBackend: raw.turnBackend === 'host' ? 'host' : 'api',
+    turnBackendReady: typeof raw.turnBackendReady === 'boolean' ? raw.turnBackendReady : raw.hasConfiguredModel,
   };
 }
+
+/** Status assumed when the server cannot be reached. */
+export const UNAVAILABLE_SETTINGS_STATUS: SettingsStatus = {
+  hasConfiguredModel: false,
+  modelCount: 0,
+  turnBackend: 'api',
+  turnBackendReady: false,
+};
 
 export function normalizeToolSettings(value: unknown): ToolSettings | null {
   if (!value || typeof value !== 'object') return null;

@@ -42,6 +42,7 @@ import { areFlowRunsEqual } from './equality';
 import { useConfirm } from './hooks/useConfirm';
 import { useViewport } from './hooks/useViewport';
 import { useWebSocket } from './hooks/useWebSocket';
+import { UNAVAILABLE_SETTINGS_STATUS } from './model-config';
 import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
 import type { FlowRef, FlowSummary } from '../../shared/types.js';
 import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
@@ -137,7 +138,7 @@ export function App() {
     try {
       setSettingsStatus(await fetchSettingsStatusApi());
     } catch {
-      setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 });
+      setSettingsStatus(UNAVAILABLE_SETTINGS_STATUS);
     }
   }, []);
 
@@ -342,7 +343,7 @@ export function App() {
       .then((status) => {
         if (!cancelled) setSettingsStatus(status);
       })
-      .catch(() => { if (!cancelled) setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 }); });
+      .catch(() => { if (!cancelled) setSettingsStatus(UNAVAILABLE_SETTINGS_STATUS); });
     return () => { cancelled = true; };
   }, []);
 
