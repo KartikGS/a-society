@@ -10,6 +10,14 @@ All notable changes to A-Society will be documented here.
 
 ---
 
+## [Unreleased]
+
+### Runtime
+
+- Agent mode: role turns can run on a coding agent installed on your machine (Claude Code 2.1.304 up to 2.2.0) instead of API models. Set it in Settings → Agent mode; it applies to new flows, and existing flows keep the backend they started with. The agent uses its own model, skills, MCP servers, and context compaction; A-Society keeps the workflow, handoffs, records, and backward pass.
+
+---
+
 ## [0.3.2] — 2026-09-19
 
 ### Runtime

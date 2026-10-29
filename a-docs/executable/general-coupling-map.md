@@ -13,7 +13,7 @@ This document is the standing reference for the coupling surface between A-Socie
 |---|---|---|
 | Index table format | Yes | Path validation |
 | Runtime workflow YAML contract (`$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT`) | Yes | Workflow graph validation, node-entry injection, active-flow routing, backward-pass planning, `human-colab` operator handoff-approval gate, `await-all-inputs` AND-join scheduling |
-| Runtime records contract (`$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`) | Yes | Draft flow creation, initialization flow creation, file-tool write scoping, backward-pass artifact placement |
+| Runtime records contract (`$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`) | Yes | Draft flow creation, initialization flow creation, file-tool write scoping, host agent write scoping (agent mode), backward-pass artifact placement |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` file format and `copy` source paths | Yes | Scaffolding and runtime health checks |
 | `a-docs/roles/<role-id>/required-readings.yaml` schema | Yes | Runtime context injection |
 | `.a-society/skills/<name>/SKILL.md` frontmatter (`name`, `description`) | Yes | Skill library discovery, role configuration, context injection |
@@ -22,6 +22,7 @@ This document is the standing reference for the coupling surface between A-Socie
 | `a-docs/roles/<role-id>/` folder convention (a role is a directory containing `main.md`) | Yes | Project-settings role discovery |
 | `.a-society/state/<project>/settings.json` schema (defined in `runtime/shared/project-settings.ts`) | Yes | Project-settings role defaults, tool-permission seeding and write-back, improvement/feedback auto-apply |
 | Provider prompt-cache request and usage fields (`cache_control`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `prompt_tokens_details.cached_tokens`) | Yes | Provider gateway prompt caching and cache observability |
+| Host agent capability matrix (`$A_SOCIETY_EXECUTABLE_HOST_AGENTS`) and each adapter's supported version range (`runtime/src/providers/host-agents/`) | Yes | Host agent gateway (agent mode); a supported range changes only with matching evidence in the matrix |
 | `$A_SOCIETY_UI_DEV_STYLE_GUIDE` token rule and token vocabulary (raw colors only in `runtime/ui/src/styles/base.css`; dark theme as a `data-theme` token swap) | Yes | UI styling gate (`npm run lint:css` via `runtime/.stylelintrc.json`) and operator-UI theming; the guide's token table and the `base.css` token set must change together |
 
 Rows that depend on `a-docs/` content are still standing executable dependencies and require the same co-maintenance discipline as `general/` format changes.
@@ -40,6 +41,7 @@ Rows that depend on `a-docs/` content are still standing executable dependencies
 | `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` | Workflow graph validation / node-entry injection / backward-pass planning | Closed — authoritative runtime contract |
 | `$A_SOCIETY_RUNTIME_ADOCS_MANIFEST` | Scaffolding / runtime health checks | Closed — authoritative runtime contract for the default scaffolded a-docs file set and health baseline |
 | `$A_SOCIETY_RUNTIME_INVOCATION` | Operator-facing executable behavior | Closed — sole surviving default operator-facing reference |
+| `$A_SOCIETY_EXECUTABLE_HOST_AGENTS` | Host agent gateway (agent mode) | Closed — capability evidence behind each adapter's supported version range; operator behavior is in `$A_SOCIETY_RUNTIME_INVOCATION` |
 
 ---
 

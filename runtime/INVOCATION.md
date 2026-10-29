@@ -32,14 +32,28 @@ If the selected port is already in use, the runtime prints a clear error and exi
 
 ### Model Configuration
 
-The runtime server can start without a model, but runtime work cannot proceed until the operator configures and activates at least one model in the Settings UI.
+The runtime server can start without a model, but runtime work cannot proceed until the operator either configures and activates at least one model in the Settings UI or turns on [agent mode](#agent-mode) with a ready coding agent.
 
 - Provider, model ID, base URL, and API key are configured in Settings
 - Saving a model runs a small sample request before persisting the configuration; validation failures are shown to the operator
 - Anthropic thinking effort can be set to `none` to omit the Anthropic `output_config.effort` request parameter for models that do not support it
 - Anthropic models expose a prompt cache TTL setting: `5m` by default, or `1h` for long-lived cache entries. The setting is persisted on every model but only Anthropic requests use explicit cache controls.
-- The Settings modal stays open until a usable active model exists
+- The Settings modal stays open until a usable active model exists or agent mode has a ready coding agent
 - Environment variables in `.env` no longer select the runtime model
+
+### Agent Mode
+
+Agent mode runs each role turn on a coding agent installed on the operator's machine instead of the runtime's own API calls. It is set in Settings under `Agent mode`. Supported agents: **Claude Code**, versions `2.1.304` up to (not including) `2.2.0`.
+
+- The runtime launches the installed `claude` CLI headlessly (`claude -p`), once per turn, as the operator signed in to it. It never reads, stores, or passes credentials. Billing follows the CLI's own sign-in; if `ANTHROPIC_API_KEY` is set in the runtime's environment, Claude Code uses that key instead of a subscription sign-in.
+- `Check agent` reports whether the CLI is installed (on `PATH`, or at the optional executable path), whether its version is in the supported range, and its sign-in method and plan. The check runs again before every turn, because the CLI updates itself; a turn on an unsupported version is refused with the supported range in the message.
+- The backend is fixed per flow when the flow is created and recorded as `turnBackend` in `flow.json` (flows without it run on API models). Changing the setting affects new flows only; existing flows keep the backend they started with.
+- The agent manages its own model (its default), skills, MCP servers, web search, and context compaction. The runtime's model, skills, and MCP role configuration, automatic selection, auto-compaction, and manual compaction do not apply to agent-mode flows. Project-level role defaults for model, skills, and MCP apply to API flows only.
+- The runtime still owns the workflow, handoffs and their validation, records, closure, the backward pass, and feedback.
+- Each role instance keeps one agent conversation, resumed by id on every turn. Only messages the agent has not yet received are sent (node entry, human reply, repair, continuation); the role's context bundle is passed as a file (`roles/<roleKey>/host-system-prompt.md`) on every turn. If the agent no longer has the conversation (for example after its own session cleanup), the runtime starts a new one seeded with its transcript record, up to 60 KiB.
+- The agent works in the project folder and may write there and in the record folder; it may read anywhere in the workspace. The feedback folder (`a-society/feedback`) is writable only for the feedback step.
+- A turn that leaves `workflow.yaml` invalid gets a repair message before its handoff is applied.
+- The composer footer shows the agent's plan usage (5-hour and 7-day windows) in place of the context ring.
 
 ### Role Configuration
 
@@ -205,6 +219,8 @@ MCP tool calls prompt by default with `<server> · <tool>` and an argument previ
 
 Permission state is stored on the active `FlowRun` as `consentState` in `flow.json`.
 
+In agent mode the modes are applied as the agent's own permissions for each turn, with its permission prompts turned off: `No Access` allows reads only, `Partial Access` allows edits in the working folders plus the granted commands and MCP tools, and `Full Access` allows edits and all shell commands (file edits stay confined to the working folders). When the agent reports a denied write, command, or MCP call, the runtime shows the usual permission prompt after the turn; if the operator allows it, the turn is retried with the new permission, and if the operator denies it, the node pauses for guidance. The agent itself may run some read-only commands without asking.
+
 When project-level settings are enabled, this mode and the granted bash commands are seeded from the project at flow creation, the footer's mode dropdown writes the project default, and the consent prompt's allow button reads `Allow … for this project` and persists the grant to the project (see [Project-level settings](#project-level-settings)).
 
 ---
@@ -263,6 +279,8 @@ Manual compaction from the browser uses the same model-request lifecycle as a no
 
 Compaction archives the raw transcript in the role session, replaces active model input with a runtime-authored restoration message, resets the displayed context usage for that role, and preserves the compacted event as an audit/feed item.
 
+Agent-mode flows are not compacted by the runtime; the coding agent compacts its own context, and a manual compaction request is refused.
+
 ---
 
 ## Session Transcript Access
@@ -310,6 +328,7 @@ Per-flow layout:
 - `roles/<roleKey>/feed.json` — persisted per-role browser feed (`FeedItem[]`) for replay after reconnect or server restart
 - `roles/<roleKey>/transcript.json` — persisted role-instance-scoped session transcript for that role
 - `roles/<roleKey>/model.json` — persisted per-role model selection for that flow (present once the operator has chosen a model for the role)
+- `roles/<roleKey>/host-system-prompt.md` — agent-mode flows only: the role's context bundle, passed to the coding agent by file on every turn
 - `roles/<roleKey>/capabilities.json` — persisted per-role selected skills and MCP servers for that flow, with per-dimension `skillsDecided` / `mcpDecided` provenance so skills and MCP can be resolved independently (manual or automatic); present once either dimension has been decided, including explicit empty selections
 
 Resume behavior:

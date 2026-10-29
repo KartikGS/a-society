@@ -91,9 +91,9 @@ npm --prefix ./a-society/runtime start
 
 The runtime opens at `http://localhost:3000`.
 
-**3. Configure a model**
+**3. Configure a model or a coding agent**
 
-The Settings panel opens automatically and stays open until you activate a model. The runtime cannot start project work without one.
+The Settings panel opens automatically and stays open until you activate a model or set up a coding agent. The runtime cannot start project work without one.
 
 Fill in:
 - **Provider** — your model provider and its API base URL; use whichever provider you prefer
@@ -104,6 +104,8 @@ Fill in:
 Any OpenAI-compatible provider (Hugging Face, OpenRouter, self-hosted, and others) or Anthropic's API is supported.
 
 Save and set the model as active. The project selector appears once a model is active.
+
+*Or use a coding agent installed on this machine.* Under **Agent mode**, choose Claude Code and click **Check agent**; it must be installed and signed in. Each role turn then runs through your local `claude` CLI, which uses its own model, tools, and sign-in, while A-Society keeps the workflow, handoffs, and records. Billing follows that CLI's sign-in. See `runtime/INVOCATION.md` for details.
 
 **4. Select or create a project**
 
