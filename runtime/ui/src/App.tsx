@@ -1,4 +1,4 @@
-import { PanelLeft, X } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Panel,
@@ -38,6 +38,7 @@ import { ImprovementChoiceModal } from './components/ImprovementChoiceModal';
 import { ProjectSelector } from './components/ProjectSelector';
 import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { ToastStack, type Toast, type ToastTone } from './components/ToastStack';
 import { areFlowRunsEqual } from './equality';
 import { useConfirm } from './hooks/useConfirm';
 import { useViewport } from './hooks/useViewport';
@@ -57,14 +58,6 @@ const GraphView = lazy(async () => {
 const ERROR_TOAST_DURATION_MS = 12_000;
 const SUCCESS_TOAST_DURATION_MS = 4_000;
 const MAX_VISIBLE_TOASTS = 4;
-
-type ToastTone = 'error' | 'success';
-
-interface Toast {
-  id: number;
-  message: string;
-  tone: ToastTone;
-}
 
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -684,27 +677,7 @@ export function App() {
         />
       ) : null}
 
-      {toasts.length > 0 ? (
-        <div className="toast-stack">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`toast toast-${toast.tone}`}
-              role={toast.tone === 'error' ? 'alert' : 'status'}
-            >
-              <span className="toast-message">{toast.message}</span>
-              <button
-                type="button"
-                className="toast-dismiss"
-                aria-label="Dismiss notification"
-                onClick={() => dismissToast(toast.id)}
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {settingsOpen && (
         <SettingsModal

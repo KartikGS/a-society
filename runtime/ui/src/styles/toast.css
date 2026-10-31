@@ -1,12 +1,22 @@
 .toast-stack {
   position: fixed;
-  top: 1rem;
-  right: 1rem;
+  inset: 1rem 1rem auto auto;
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
   gap: 8px;
   max-width: 22rem;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+/* The stack is a manual popover so it can sit above open dialogs in the top layer. */
+.toast-stack:not(:popover-open) {
+  display: none;
 }
 
 .toast {
