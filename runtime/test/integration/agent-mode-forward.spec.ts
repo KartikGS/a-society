@@ -331,6 +331,35 @@ describe('agent mode forward pass', { timeout: 30_000 }, () => {
     expect(invocations()).toHaveLength(1);
   });
 
+  it('grants a compound command piece by piece, and pauses if the host still refuses it', async () => {
+    const command = 'npm test 2>&1 | tail -5';
+    const denial = { tool_name: 'Bash', tool_input: { command } };
+    writeScript([
+      { reply: 'Blocked.', denials: [denial] },
+      { match: 'granted permission', reply: 'Still blocked.', denials: [denial] },
+    ]);
+    saveFlow();
+    const gate = new RecordingConsentGate(CONSENT_CHECK_RESULT.PROCEED);
+
+    const { flow, sink } = await runUntil(awaiting('owner-intake'), { consentGate: gate });
+
+    const [, retry] = invocations();
+    expect(flagValues(retry.args, '--allowedTools')).toEqual(expect.arrayContaining([
+      `Bash(${command})`,
+      'Bash(npm test)',
+      'Bash(tail -5)',
+    ]));
+    // One prompt only: the repeat denial is reported instead of prompting again.
+    expect(gate.requests).toHaveLength(1);
+    expect(invocations()).toHaveLength(2);
+    expect(flow.awaitingHumanNodes['owner-intake'].reason).toBe(AWAITING_HUMAN_REASON.CONSENT_DENIED);
+    expect(sink.events).toContainEqual(expect.objectContaining({
+      kind: 'repair.requested',
+      code: 'host_permission_unmatched',
+      summary: expect.stringContaining(`Claude Code still refused run \`${command}\` after it was granted`),
+    }));
+  });
+
   it('never re-sends delivered messages after a stop', async () => {
     writeScript([
       { hang: true },

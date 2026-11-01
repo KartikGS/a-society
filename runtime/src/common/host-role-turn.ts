@@ -226,6 +226,11 @@ export function buildPermissionRetryMessage(labels: string[]): string {
     'Retry the actions that were denied, then continue the task.';
 }
 
+export function buildPermissionUnmatchedSummary(hostName: string, labels: string[]): string {
+  return `${hostName} still refused ${labels.join(', ')} after it was granted, so the node is paused. ` +
+    'Reply to ask the role to split the command into simpler ones, or switch to Full Access.';
+}
+
 export function buildWorkflowRepairMessage(filePath: string, errors: string[]): string {
   return `Your changes left ${filePath} invalid:\n${errors.join('\n')}\nFix the file so it passes validation before emitting your handoff.`;
 }
@@ -407,10 +412,25 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
       }
 
       if (consentGate && nodeId && result.permissionDenials.length > 0) {
+        const requests = result.permissionDenials
+          .map((denial) => mapHostDenial(denial, context.workspaceRoot, writeRoots))
+          .filter((request): request is DenialRequest => request !== null)
+          .filter((request, index, all) => all.findIndex((other) => other.key === request.key) === index);
+        // A grant the host still refused would only loop; stop and tell the operator instead.
+        const stillBlocked = requests.filter((request) => retriedDenials.has(request.key));
+        if (stillBlocked.length > 0) {
+          operatorRenderer?.emit({
+            kind: 'repair.requested',
+            scope: context.repairScope ?? 'node',
+            code: 'host_permission_unmatched',
+            summary: buildPermissionUnmatchedSummary(adapter.displayName, stillBlocked.map((request) => request.label)),
+            role: roleInstanceId,
+            nodeId,
+          });
+          throw new LLMGatewayError('CONSENT_DENIED', 'A granted permission was still denied by the host agent; awaiting human guidance.');
+        }
         const granted: string[] = [];
-        for (const denial of result.permissionDenials) {
-          const request = mapHostDenial(denial, context.workspaceRoot, writeRoots);
-          if (!request || retriedDenials.has(request.key)) continue;
+        for (const request of requests) {
           const decision = await consentGate.check({ ...request.check, nodeId, role: roleInstanceId }, signal);
           if (decision === CONSENT_CHECK_RESULT.DENY) {
             if (signal?.aborted) throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');

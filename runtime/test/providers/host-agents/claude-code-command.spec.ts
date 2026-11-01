@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildClaudeCommand } from '../../../src/providers/host-agents/claude-code/command.js';
+import { bashRulesForCommand, buildClaudeCommand, splitShellCommand } from '../../../src/providers/host-agents/claude-code/command.js';
 import type { HostTurnRequest } from '../../../src/providers/host-agents/types.js';
 
 function request(overrides: Partial<HostTurnRequest> = {}): HostTurnRequest {
@@ -114,3 +114,39 @@ describe('buildClaudeCommand', () => {
     expect(args.indexOf('--effort')).toBeLessThan(Math.min(args.indexOf('--allowedTools'), args.indexOf('--add-dir')));
   });
 });
+
+// Matching behaviour verified against Claude Code 2.1.316: each piece of a compound command
+// is matched on its own, descriptor redirects are ignored, and quoting must be kept.
+describe('bash grant rules', () => {
+  it('splits on command separators outside quotes, escapes and substitutions', () => {
+    expect(splitShellCommand('a; b && c || d | e & f\ng')).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g']);
+    expect(splitShellCommand(`echo 'a;b' "c|d" e\\|f`)).toEqual([`echo 'a;b' "c|d" e\\|f`]);
+    expect(splitShellCommand('grep x $(ls | head -1); echo `a | b`')).toEqual(['grep x $(ls | head -1)', 'echo `a | b`']);
+    expect(splitShellCommand('make >out 2>&1 && cat x &>/dev/null')).toEqual(['make >out 2>&1', 'cat x &>/dev/null']);
+  });
+
+  it('turns a granted compound command into the whole rule plus one rule per piece', () => {
+    const command = 'sed -n 25,70p a.ts; claude --version 2>&1; claude --help 2>&1 | grep -n -i "effort\\|partial"';
+    expect(bashRulesForCommand(command)).toEqual([
+      `Bash(${command})`,
+      'Bash(sed -n 25,70p a.ts)',
+      'Bash(claude --version)',
+      'Bash(claude --help)',
+      'Bash(grep -n -i "effort\\|partial")',
+    ]);
+  });
+
+  it('drops descriptor redirects but keeps file redirects and quoting', () => {
+    expect(bashRulesForCommand('touch r1.txt 2>&1')).toEqual(['Bash(touch r1.txt 2>&1)', 'Bash(touch r1.txt)']);
+    expect(bashRulesForCommand('ls 2>/dev/null')).toEqual(['Bash(ls 2>/dev/null)', 'Bash(ls)']);
+    expect(bashRulesForCommand('echo "a b" > out.txt')).toEqual(['Bash(echo "a b" > out.txt)']);
+  });
+
+  it('passes per-piece rules for granted commands, without duplicates', () => {
+    const { args } = buildClaudeCommand(request({
+      permissions: { mode: 'edits', allowedWritePaths: [], allowedCommands: ['npm test 2>&1', 'npm test'], allowedMcpTools: [], readOnlyRoots: [] },
+    }));
+    expect(valuesAfter(args, '--allowedTools')).toEqual(['Bash(npm test 2>&1)', 'Bash(npm test)']);
+  });
+});
+

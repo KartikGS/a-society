@@ -21,16 +21,79 @@ function editRule(file: string): string {
   return `Edit(/${file})`;
 }
 
+/** Descriptor redirects such as `2>&1` and `>/dev/null`, which Claude Code ignores when matching rules. */
+const DESCRIPTOR_REDIRECT = /(^|\s)(\d*>&\d+|&>\s*\/dev\/null|\d*>>?\s*\/dev\/null)(?=\s|$)/g;
+
+/**
+ * Splits a command line into the pieces Claude Code checks one by one: on `;`, `&&`,
+ * `||`, `|`, `&` and newlines outside quotes, backslash escapes, `$( … )` and backticks.
+ */
+export function splitShellCommand(command: string): string[] {
+  const pieces: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+  let substitutionDepth = 0;
+  let inBackticks = false;
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    const next = command[index + 1];
+    if (char === '\\' && quote !== "'") {
+      current += char + (next ?? '');
+      index += 1;
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = null;
+      current += char;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === '`') {
+      inBackticks = !inBackticks;
+    } else if (char === '$' && next === '(') {
+      substitutionDepth += 1;
+      current += '$(';
+      index += 1;
+      continue;
+    } else if (char === ')' && substitutionDepth > 0) {
+      substitutionDepth -= 1;
+    } else if (substitutionDepth === 0 && !inBackticks) {
+      const isRedirect = char === '&' && (command[index - 1] === '>' || next === '>');
+      if ((char === ';' || char === '|' || char === '&' || char === '\n') && !isRedirect) {
+        pieces.push(current);
+        current = '';
+        if ((char === '|' || char === '&') && next === char) index += 1;
+        continue;
+      }
+    }
+    current += char;
+  }
+  pieces.push(current);
+  return pieces.map((piece) => piece.trim()).filter((piece) => piece !== '');
+}
+
+/**
+ * Rules that let Claude Code run one granted command. Claude Code matches each piece of a
+ * compound command separately, with descriptor redirects dropped and quoting kept, so a
+ * single whole-command rule only matches simple commands. Verified on 2.1.316.
+ */
+export function bashRulesForCommand(command: string): string[] {
+  const pieces = splitShellCommand(command).map((piece) => piece.replace(DESCRIPTOR_REDIRECT, '$1').replace(/\s+/g, ' ').trim());
+  return [...new Set([command.trim(), ...pieces].filter((rule) => rule !== '').map((rule) => `Bash(${rule})`))];
+}
+
 function allowedTools(permissions: HostPermissionProfile): string[] {
   const rules = permissions.readOnlyRoots.map(readRule);
   rules.push(...permissions.allowedWritePaths.map(editRule));
   if (permissions.mode === 'edits-and-commands') {
     rules.push('Bash');
   } else {
-    rules.push(...permissions.allowedCommands.map((command) => `Bash(${command})`));
+    rules.push(...permissions.allowedCommands.flatMap(bashRulesForCommand));
   }
   rules.push(...permissions.allowedMcpTools);
-  return rules;
+  return [...new Set(rules)];
 }
 
 /**
