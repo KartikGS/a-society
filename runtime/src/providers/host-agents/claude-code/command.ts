@@ -40,11 +40,12 @@ function allowedTools(permissions: HostPermissionProfile): string[] {
  * would swallow a trailing prompt argument, so they come last.
  */
 export function buildClaudeCommand(req: HostTurnRequest): ClaudeCommand {
-  const args = ['-p', '--output-format', 'stream-json', '--verbose'];
+  const args = ['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages'];
 
   args.push(req.resume ? '--resume' : '--session-id', req.conversationId);
   if (req.systemPromptFile) args.push('--append-system-prompt-file', req.systemPromptFile);
   if (req.model) args.push('--model', req.model);
+  if (req.effort) args.push('--effort', req.effort);
   args.push('--permission-mode', PERMISSION_MODE[req.permissions.mode], '--permission-prompts', 'none');
 
   const tools = allowedTools(req.permissions);

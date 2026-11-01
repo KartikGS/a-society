@@ -62,6 +62,8 @@ interface SettingsModalProps {
   onSkillsChange?: () => void | Promise<void>;
   onMcpServersChange?: () => void | Promise<void>;
   onAgentModeChange?: () => void;
+  /** New flows run on a host coding agent (affects what automatic model selection means). */
+  agentModeActive?: boolean;
   required?: boolean;
 }
 
@@ -116,7 +118,7 @@ function parseJsonObject(value: string): Record<string, unknown> {
 
 type SettingsTab = 'agent-mode' | 'models' | 'tools' | 'feed' | 'mcp' | 'skills';
 
-export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onSkillsChange, onMcpServersChange, onAgentModeChange, required = false }: SettingsModalProps) {
+export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onSkillsChange, onMcpServersChange, onAgentModeChange, agentModeActive = false, required = false }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('models');
   const [view, setView] = useState<EditorView>('list');
   const [models, setModels] = useState<ModelConfig[]>([]);
@@ -642,7 +644,12 @@ export function SettingsModal({ onClose, onError, onSuccess, onModelsChange, onS
               view === 'list' ? (
               <>
                 {automation ? (
-                  <AutomationToggle label="Model" mode={automation.models} onChange={(mode) => { void updateAutomation('models', mode); }} />
+                  <AutomationToggle
+                    label="Model"
+                    mode={automation.models}
+                    onChange={(mode) => { void updateAutomation('models', mode); }}
+                    note={agentModeActive ? 'In agent mode, Automatic uses the host default model.' : undefined}
+                  />
                 ) : null}
                 <ModelList
                   models={models}

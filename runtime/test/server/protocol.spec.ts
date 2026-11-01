@@ -72,6 +72,23 @@ describe('protocol', () => {
     });
   });
 
+  it('accepts a host model choice on role configuration and drops a malformed one', () => {
+    const base = {
+      type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
+      flowRef: { projectNamespace: 'demo', flowId: 'flow-1' },
+      nodeId: 'owner-intake',
+      skills: [],
+      mcpServers: [],
+    };
+    expect(parseClientMessage(JSON.stringify({ ...base, hostModel: { model: 'opus', effort: null, extra: 1 } })))
+      .toEqual({ ...base, hostModel: { model: 'opus', effort: null } });
+    expect(parseClientMessage(JSON.stringify({ ...base, hostModel: { model: null, effort: null } })))
+      .toEqual({ ...base, hostModel: { model: null, effort: null } });
+    for (const hostModel of [{ model: 3, effort: null }, { model: 'opus' }, 'opus', null]) {
+      expect(parseClientMessage(JSON.stringify({ ...base, hostModel }))).toEqual(base);
+    }
+  });
+
   it('rejects role configuration without capability arrays', () => {
     const parsed = parseClientMessage(JSON.stringify({
       type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,

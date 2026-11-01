@@ -11,6 +11,7 @@ import type {
   ProtocolHandoffApprovalDecision,
   ProtocolImprovementChoiceMode,
 } from '../../../shared/protocol-constants.js';
+import type { RoleConfigurePayload } from '../components/ChatInterface';
 import type { ConfirmOptions } from '../components/ConfirmDialog';
 import type { GraphMode } from '../components/GraphView';
 import { areWorkflowGraphsEqual } from '../equality';
@@ -330,13 +331,14 @@ export function useAppCommands(input: UseAppCommandsInput) {
     sendMessage({ type: CLIENT_MESSAGE_TYPE.HANDOFF_APPROVAL, flowRef: activeTab.ref, nodeId, decision });
   }, [activeTab, ensureTurnBackendReady, sendMessage]);
 
-  const handleRoleConfigure = useCallback((nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }): void => {
+  const handleRoleConfigure = useCallback((nodeId: string, payload: RoleConfigurePayload): void => {
     if (!activeTab) return;
     sendMessage({
       type: CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION,
       flowRef: activeTab.ref,
       nodeId,
       modelConfigId: payload.modelConfigId,
+      hostModel: payload.hostModel,
       skills: payload.skills,
       mcpServers: payload.mcpServers,
     });

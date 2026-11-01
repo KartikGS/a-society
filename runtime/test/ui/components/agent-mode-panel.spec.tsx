@@ -13,7 +13,13 @@ vi.mock('../../../ui/src/app/runtime-api', () => ({
   saveAgentMode: vi.fn(),
 }));
 
-const CLAUDE = { id: 'claude-code' as const, displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } };
+const CLAUDE = {
+  id: 'claude-code' as const,
+  displayName: 'Claude Code',
+  supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' },
+  models: [{ id: 'opus', displayName: 'Opus' }, { id: 'sonnet', displayName: 'Sonnet' }],
+  effortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+};
 
 function response(settings: Partial<AgentModeResponse['settings']> = {}): AgentModeResponse {
   return { settings: { mode: 'api', hostAgentId: null, executablePath: null, ...settings }, hosts: [CLAUDE] };
@@ -63,6 +69,7 @@ describe('AgentModePanel', () => {
 
     await user.click(screen.getByRole('radio', { name: 'A coding agent installed on this machine' }));
     expect(screen.getByLabelText('Coding agent')).toHaveValue('claude-code');
+    expect(screen.getByText('Per-role model: Opus, Sonnet · effort: low…max')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Check agent' }));
     expect(probeHostAgent).toHaveBeenCalledWith('claude-code', null);

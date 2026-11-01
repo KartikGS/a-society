@@ -8,7 +8,12 @@ import {
 import { FeedMessage } from './FeedMessage';
 import type { ProtocolHandoffApprovalDecision } from '../../../shared/protocol-constants.js';
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, HandoffTarget } from '../../../shared/types.js';
-import type { McpServerSummary, ModelConfig } from '../../../shared/settings.js';
+import type {
+  HostAgentSummary,
+  HostModelChoice,
+  McpServerSummary,
+  ModelConfig,
+} from '../../../shared/settings.js';
 import type { SkillSummary } from '../../../shared/skills.js';
 import type { HostUsage } from '../app/flow-ui';
 
@@ -23,6 +28,19 @@ export interface RoleConfigurationPrompt {
   pendingModel: boolean;
   pendingSkills: boolean;
   pendingMcp: boolean;
+  /**
+   * Present only for flows running on a host coding agent: its declared models and effort
+   * levels replace the API model list. `null` while the host list is still loading.
+   */
+  hostAgent?: HostAgentSummary | null;
+}
+
+/** Role-configuration answer; `hostModel` applies to host flows, `modelConfigId` to API flows. */
+export interface RoleConfigurePayload {
+  modelConfigId?: string;
+  hostModel?: HostModelChoice;
+  skills: string[];
+  mcpServers: string[];
 }
 
 export interface HandoffApprovalPrompt {
@@ -57,7 +75,7 @@ interface ChatInterfaceProps {
   onSubmit: () => void;
   onStop?: () => void;
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
-  onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
+  onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
   onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
@@ -92,12 +110,107 @@ function consentAllowFlowLabel(request: ConsentRequest, projectSettingsEnabled: 
   return `Allow this command for ${scope}`;
 }
 
+const HOST_DEFAULT_OPTION = '';
+
+/**
+ * Host-flow variant: the operator picks one of the host's declared models (or the host
+ * default) and, when the host supports it, an effort level. Skills and MCP are host-managed.
+ */
+function HostRoleConfigurationBanner({
+  nodeId,
+  hostAgent,
+  onRoleConfigure,
+}: {
+  nodeId: string;
+  hostAgent: HostAgentSummary | null;
+  onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
+}) {
+  // undefined = nothing picked yet; HOST_DEFAULT_OPTION = host default; otherwise a model id.
+  const [model, setModel] = useState<string | undefined>(undefined);
+  const [effort, setEffort] = useState(HOST_DEFAULT_OPTION);
+  const hostName = hostAgent?.displayName ?? 'the coding agent';
+  const modelOptions = [
+    { id: HOST_DEFAULT_OPTION, displayName: 'Host default', meta: `Use ${hostName}'s default model` },
+    ...(hostAgent?.models ?? []).map((option) => ({ ...option, meta: option.id })),
+  ];
+  const effortLevels = hostAgent?.effortLevels ?? [];
+
+  return (
+    <div className="model-select-banner">
+      <div className="model-select-banner-body">
+        <span className="model-select-banner-title">Configure this role</span>
+        <span className="model-select-banner-desc">
+          The selection is used for this role&apos;s turns in this flow. {hostName} manages its own skills and MCP servers.
+        </span>
+      </div>
+
+      {hostAgent === null ? (
+        <p className="model-select-empty">Loading the coding agent&apos;s models…</p>
+      ) : (
+        <section className="role-config-section" aria-label="Model">
+          <h3 className="role-config-section-title">Model</h3>
+          <ul className="model-select-options role-config-options">
+            {modelOptions.map((option) => (
+              <li key={option.id || 'host-default'}>
+                <button
+                  type="button"
+                  className={`model-select-option${model === option.id ? ' model-select-option-selected' : ''}`}
+                  aria-pressed={model === option.id}
+                  onClick={() => setModel(option.id)}
+                >
+                  <span className="model-select-option-name">{option.displayName}</span>
+                  <span className="model-select-option-meta">{option.meta}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {hostAgent && effortLevels.length > 0 ? (
+        <div className="form-field role-config-section">
+          <label className="role-config-section-title" htmlFor={`host-effort-${nodeId}`}>Effort</label>
+          <select
+            id={`host-effort-${nodeId}`}
+            className="form-input form-select"
+            value={effort}
+            onChange={(event) => setEffort(event.target.value)}
+          >
+            <option value={HOST_DEFAULT_OPTION}>Host default</option>
+            {effortLevels.map((level) => (
+              <option key={level} value={level}>{level}</option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      <div className="role-config-actions">
+        <button
+          type="button"
+          className="form-btn-submit role-config-submit"
+          disabled={model === undefined}
+          onClick={() => {
+            if (model === undefined) return;
+            onRoleConfigure?.(nodeId, {
+              hostModel: { model: model || null, effort: effort || null },
+              skills: [],
+              mcpServers: [],
+            });
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RoleConfigurationBanner({
   roleConfiguration,
   onRoleConfigure,
 }: {
   roleConfiguration: RoleConfigurationPrompt;
-  onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
+  onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
 }) {
   const showModelSection = roleConfiguration.pendingModel && roleConfiguration.models.length > 1;
   const showSkillsSection = roleConfiguration.pendingSkills && roleConfiguration.skills.length > 0;
@@ -442,7 +555,14 @@ export function ChatInterface(props: ChatInterfaceProps) {
 
       {props.showComposer ? (
         <div className="composer-area">
-          {props.roleConfiguration ? (
+          {props.roleConfiguration && props.roleConfiguration.hostAgent !== undefined ? (
+            <HostRoleConfigurationBanner
+              key={props.roleConfiguration.nodeId}
+              nodeId={props.roleConfiguration.nodeId}
+              hostAgent={props.roleConfiguration.hostAgent}
+              onRoleConfigure={props.onRoleConfigure}
+            />
+          ) : props.roleConfiguration ? (
             <RoleConfigurationBanner
               key={props.roleConfiguration.nodeId}
               roleConfiguration={props.roleConfiguration}

@@ -8,7 +8,11 @@ export class RecordingOperatorSink implements OperatorRenderSink {
     this.events.push(event);
   }
 
-  requestSent(_role: string, _provider: string, _model: string): void {}
+  readonly requests: Array<{ role: string; provider: string; model: string }> = [];
+
+  requestSent(role: string, provider: string, model: string): void {
+    this.requests.push({ role, provider, model });
+  }
   receivingResponse(_role: string): void {}
   responseEnd(_role: string): void {}
   sendError(message: string): void {

@@ -29,7 +29,15 @@ import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { listSkills } from '../../framework-services/skills.js';
 import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
-import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
+import { buildRoleConfigurationSummary, type RoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
+import {
+  formatHostModelLabel,
+  resolveHostModelGate,
+  resolveHostRoleModel,
+  saveHostModelSelection,
+} from '../../orchestration/host-role-model.js';
+import { getHostAgent } from '../../providers/host-agents/registry.js';
+import type { HostAgentId, HostModelChoice } from '../../../shared/settings.js';
 import * as SessionStore from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
 import { resolveTurnBackend } from '../../settings/turn-backend.js';
@@ -65,7 +73,10 @@ type RuntimeSessionCommandsDeps = {
 };
 
 export interface RoleConfigurationPayload {
+  /** API flows only. */
   modelConfigId?: string;
+  /** Host flows only. */
+  hostModel?: HostModelChoice;
   skills: string[];
   mcpServers: string[];
 }
@@ -235,6 +246,12 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
+    const backend = resolveTurnBackend(flowRun);
+    if (backend.kind === 'host') {
+      handleHostRoleConfiguration(ref, flowRun, nodeId, awaitingState.role, backend.agentId, payload);
+      return;
+    }
+
     const modelGate = resolveRoleModelGate(ref, awaitingState.role);
     let modelSelection: {
       modelConfigId: string;
@@ -307,25 +324,75 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       }
     }
 
+    // The result bubble shows the role's complete effective configuration — both the
+    // dimensions just selected manually and any decided automatically beforehand.
+    resumeAfterRoleConfiguration(ref, flowRun, nodeId, awaitingState.role, buildRoleConfigurationSummary(ref, awaitingState.role));
+  }
+
+  function resumeAfterRoleConfiguration(
+    ref: FlowRef,
+    flowRun: FlowRun,
+    nodeId: string,
+    role: string,
+    summary: RoleConfigurationSummary
+  ): void {
     let session = activeSessions.get(flowKey(ref));
     if (!session || session.finished) {
       session = createSession(ref);
       startFlowRunner(session, flowRun.projectNamespace);
     }
-
-    // The result bubble shows the role's complete effective configuration — both the
-    // dimensions just selected manually and any decided automatically beforehand.
     emitHistoricalMessage(session, {
       type: 'operator_event',
-      event: {
-        kind: 'role.configured',
-        nodeId,
-        role: awaitingState.role,
-        ...buildRoleConfigurationSummary(ref, awaitingState.role),
-      },
+      event: { kind: 'role.configured', nodeId, role, ...summary },
     });
     session.orchestrator.wake();
     emitFlowState(session);
+  }
+
+  /**
+   * Host flows configure only the host model/effort; skills and MCP servers in the
+   * payload are ignored because the host manages its own.
+   */
+  function handleHostRoleConfiguration(
+    ref: FlowRef,
+    flowRun: FlowRun,
+    nodeId: string,
+    role: string,
+    agentId: HostAgentId,
+    payload: RoleConfigurationPayload
+  ): void {
+    const adapter = getHostAgent(agentId);
+    if (resolveHostModelGate(ref, role, agentId).kind === 'selection-required') {
+      const choice = payload.hostModel;
+      if (!choice) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'Select a model before submitting role configuration.' });
+        return;
+      }
+      if (choice.model !== null && !adapter.models.some((option) => option.id === choice.model)) {
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: `Unknown model "${choice.model}" for ${adapter.displayName}. Refresh Settings and try again.`,
+        });
+        return;
+      }
+      if (choice.effort !== null && !adapter.effortLevels.includes(choice.effort)) {
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: `Unknown effort level "${choice.effort}" for ${adapter.displayName}. Refresh Settings and try again.`,
+        });
+        return;
+      }
+      saveHostModelSelection(ref, role, {
+        hostAgentId: agentId,
+        model: choice.model,
+        effort: choice.effort,
+        selectedAt: new Date().toISOString(),
+      });
+    }
+    const effective = resolveHostRoleModel(ref, role, agentId);
+    resumeAfterRoleConfiguration(ref, flowRun, nodeId, role, { modelDisplayName: formatHostModelLabel(adapter, effective) });
   }
 
   function getOrCreateChoiceSession(ref: FlowRef): ActiveSession {

@@ -27,7 +27,9 @@ A host is supportable only if it can do all of the following without a TTY:
 |---|---|
 | Append to the host's system prompt | Send the bundle in the role's first message |
 | Runtime-assigned conversation id | Read the id from the first event |
-| Per-turn model flag | Host default model only; role model gate is skipped |
+| Per-turn model flag | Host default model only; the role model gate is skipped |
+| Per-turn effort control | Model-only; the role model gate offers no effort choice |
+| Token-level text deltas | Each whole assistant text block is streamed as one chunk |
 | Model listing | Adapter-declared static aliases |
 | Structured permission-denial report | Treat denials as ordinary tool failures in the reply text |
 | Extra writable directories | Work only inside the working directory |
@@ -52,8 +54,10 @@ A host is supportable only if it can do all of the following without a TTY:
 | R7 fixed permissions | `--permission-mode` (`default`, `acceptEdits`, `auto`, `bypassPermissions`, `dontAsk`, `plan`, `manual`) with `--permission-prompts none`: anything that would prompt is denied | `--sandbox read-only\|workspace-write\|danger-full-access` + `approval_policy=never` |
 | Denial report | `result.permission_denials[]` with `tool_name` and `tool_input` | Not structured (a failed command item) |
 | Extra dirs | `--add-dir <dir…>` (variadic: the prompt must go on stdin) | `--add-dir <DIR>` (writable) |
-| Model | `--model <alias\|name>` (`haiku`, `sonnet`, `opus`, `fable`, full names) | `-m <model>`; catalog via `codex debug models` |
-| Live events | `assistant`, `user` (tool results), `system` events; `--include-partial-messages` for deltas | `item.started` / `item.completed` |
+| Model | `--model <alias\|name>` (`haiku`, `sonnet`, `opus`, `fable`, full names); no listing command, so the adapter declares those four aliases; an unknown value fails on the first request, not up front | `-m <model>`; catalog via `codex debug models` |
+| Effort | `--effort <level>` (`low`, `medium`, `high`, `xhigh`, `max`; docs 2026-11-01, not yet probed live); an unsupported level falls back to the highest supported one; `CLAUDE_CODE_EFFORT_LEVEL` in the host environment overrides the flag | Not verified |
+| Live events | `assistant`, `user` (tool results), `system` events | `item.started` / `item.completed` |
+| Text deltas | `--include-partial-messages` adds `stream_event` lines wrapping raw API stream events (`content_block_start`, `content_block_delta` with `text_delta`); whole `assistant` messages are still emitted, one per completed block, after its deltas; main session only (docs 2026-11-01, envelope not yet probed live) | None (whole items only) |
 | Usage / limits | `result.usage`, `total_cost_usd`, and a `rate_limit_event` with five-hour and seven-day utilization | `turn.completed.usage` |
 | Auth source | `system/init.apiKeySource` (`none` = subscription login); `claude auth status --json` (`authMethod`, `subscriptionType`) | `codex login status` (e.g. "Logged in using ChatGPT") |
 | R8 version | `claude --version` | `codex --version` |
@@ -88,5 +92,5 @@ The project's stance on these terms is recorded in `$A_SOCIETY_ARCHITECTURE`, no
 
 ## Sources
 
-- Claude Code: [legal and compliance](https://code.claude.com/docs/en/legal-and-compliance), [run programmatically](https://code.claude.com/docs/en/headless), [settings reference](https://code.claude.com/docs/en/settings-reference), [Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview), [Pro/Max plan and `ANTHROPIC_API_KEY`](https://support.claude.com/en/articles/11145838)
+- Claude Code: [legal and compliance](https://code.claude.com/docs/en/legal-and-compliance), [run programmatically](https://code.claude.com/docs/en/headless), [settings reference](https://code.claude.com/docs/en/settings-reference), [model configuration and effort](https://code.claude.com/docs/en/model-config), [streaming output](https://code.claude.com/docs/en/agent-sdk/streaming-output), [Agent SDK overview](https://code.claude.com/docs/en/agent-sdk/overview), [Pro/Max plan and `ANTHROPIC_API_KEY`](https://support.claude.com/en/articles/11145838)
 - Codex: [non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode), [config reference](https://learn.chatgpt.com/docs/config-file/config-reference), [approvals and security](https://learn.chatgpt.com/codex/agent-approvals-security), [sign in with ChatGPT](https://learn.chatgpt.com/codex/sign-in-with-chatgpt)

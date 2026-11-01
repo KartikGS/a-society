@@ -4,12 +4,15 @@ interface AutomationToggleProps {
   label: string;
   mode: SelectionMode;
   onChange: (mode: SelectionMode) => void;
+  /** Extra context shown under the description, e.g. how agent mode treats this setting. */
+  note?: string;
 }
 
 export function AutomationToggle({
   label,
   mode,
   onChange,
+  note,
 }: AutomationToggleProps) {
   return (
     <div className="automation-toggle">
@@ -20,6 +23,7 @@ export function AutomationToggle({
             ? 'An agent selects this for each role automatically.'
             : 'You are prompted to select this for each role.'}
         </span>
+        {note ? <span className="automation-toggle-desc">{note}</span> : null}
       </div>
       <div className="automation-toggle-options" role="group" aria-label={`${label} selection mode`}>
         <button

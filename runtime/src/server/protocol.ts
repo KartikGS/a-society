@@ -9,6 +9,7 @@ import {
   IMPROVEMENT_CHOICE_MODES,
 } from '../../shared/protocol-constants.js';
 import type { ClientMessage } from '../../shared/operator-protocol.js';
+import type { HostModelChoice } from '../../shared/settings.js';
 
 export type {
   ClientMessage,
@@ -38,6 +39,14 @@ function isOneOf<T extends string>(value: unknown, allowed: readonly T[]): value
 
 function hasOptionalString(value: Record<string, unknown>, key: string): boolean {
   return value[key] === undefined || typeof value[key] === 'string';
+}
+
+function isNullableString(value: unknown): value is string | null {
+  return value === null || typeof value === 'string';
+}
+
+function isHostModelChoice(value: unknown): value is HostModelChoice {
+  return isObject(value) && isNullableString(value.model) && isNullableString(value.effort);
 }
 
 export function parseClientMessage(raw: string): ClientMessage | null {
@@ -121,7 +130,9 @@ export function parseClientMessage(raw: string): ClientMessage | null {
       Array.isArray(parsed.mcpServers) &&
       parsed.mcpServers.every((entry) => typeof entry === 'string')
     ) {
-      return parsed as ClientMessage;
+      // An optional `hostModel` that is not `{ model, effort }` (each string or null) is dropped as absent.
+      const { hostModel, ...rest } = parsed;
+      return (isHostModelChoice(hostModel) ? { ...rest, hostModel: { model: hostModel.model, effort: hostModel.effort } } : rest) as ClientMessage;
     }
 
     return null;

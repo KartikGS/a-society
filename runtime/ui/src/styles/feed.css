@@ -17,9 +17,11 @@
 }
 
 .feed-markdown {
+  min-width: 0;
   font-size: 14px;
   line-height: 1.6;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .feed-reasoning {
@@ -83,6 +85,13 @@
 .feed-markdown pre code {
   background: none;
   padding: 0;
+}
+
+/* Code blocks keep their lines and scroll horizontally instead of wrapping. */
+.feed-markdown pre,
+.feed-markdown pre code {
+  overflow-wrap: normal;
+  white-space: pre;
 }
 
 /* Syntax highlighting (rehype-highlight); colors come from --syn-* tokens. */
@@ -216,6 +225,8 @@
 }
 
 .feed-item {
+  min-width: 0;
+  max-width: 100%;
   padding: 14px 16px;
   border-radius: 18px;
   border: 1px solid var(--border);
@@ -399,6 +410,7 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
   font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
   font-size: 13px;
   line-height: 1.52;
@@ -408,6 +420,7 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
   text-align: right;
   font-size: 14px;
   line-height: 1.55;

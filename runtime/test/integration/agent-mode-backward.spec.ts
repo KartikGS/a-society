@@ -24,6 +24,7 @@ import { deterministicFindingsFilePath } from '../../src/framework-services/back
 import { ImprovementOrchestrator } from '../../src/improvement/improvement.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
+import { saveHostModelSelection } from '../../src/orchestration/host-role-model.js';
 import { clearProbeCache } from '../../src/providers/host-agents/version.js';
 import { updateAgentModeSettings } from '../../src/settings/settings-store.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
@@ -184,6 +185,20 @@ describe('agent mode backward pass', { timeout: 30_000 }, () => {
     expect(meta.stdin).not.toContain('Forward node entry.');
     expect(meta.stdin).toContain(findingsRel);
     expect(flagValues(meta.args, '--add-dir')).toEqual([path.resolve(recordDir)]);
+    expect(meta.args).not.toContain('--model');
+  });
+
+  it('runs meta-analysis with the role\'s persisted host model selection, without gating', async () => {
+    seedForwardSession(true);
+    saveHostModelSelection(ref, 'curator', { hostAgentId: 'claude-code', model: 'haiku', effort: 'low', selectedAt: new Date().toISOString() });
+    writeScript([metaAnalysisTurn()]);
+
+    const sink = await runMetaAnalysis();
+
+    const [meta] = invocations();
+    expect(flagValue(meta.args, '--model')).toBe('haiku');
+    expect(flagValue(meta.args, '--effort')).toBe('low');
+    expect(sink.requests).toContainEqual({ role: 'curator', provider: 'Claude Code', model: 'Haiku · effort low' });
   });
 
   it('falls back to a new conversation when the host lost the forward-pass one', async () => {

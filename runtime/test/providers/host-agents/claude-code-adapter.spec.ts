@@ -39,6 +39,7 @@ function request(overrides: Partial<HostTurnRequest> = {}): HostTurnRequest {
     extraWritableDirs: [],
     permissions: { mode: 'read-only', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: [] },
     model: null,
+    effort: null,
     ...overrides,
   };
 }
@@ -84,13 +85,32 @@ describe('ClaudeCodeAdapter against the fake CLI', () => {
     expect(events).toEqual([
       { kind: 'tool_call', toolName: 'Write', path: '/p/a.md' },
       { kind: 'tool_result', toolName: 'Write', isError: false },
-      { kind: 'text', text: 'first reply' },
+      { kind: 'text', text: 'first reply', newBlock: true },
       { kind: 'rate_limit', fiveHour: 0.1, sevenDay: 0.05 },
     ]);
     const [call] = invocations();
     expect(call.stdin).toBe('hello host');
     expect(call.args).not.toContain('hello host');
     expect(fs.realpathSync(call.cwd)).toBe(fs.realpathSync(tmp));
+  });
+
+  it('streams text deltas and does not repeat them when the whole block arrives', async () => {
+    writeScript([{ reply: 'Hello world', deltas: ['Hel', 'lo wor'] }]);
+    const events: HostLiveEvent[] = [];
+    const result = await adapter.runTurn(request(), (e) => events.push(e), new AbortController().signal, FAKE_CLAUDE);
+    expect(result).toMatchObject({ kind: 'completed', text: 'Hello world' });
+    expect(events.filter((event) => event.kind === 'text')).toEqual([
+      { kind: 'text', text: 'Hel', newBlock: true },
+      { kind: 'text', text: 'lo wor', newBlock: false },
+      { kind: 'text', text: 'ld', newBlock: false },
+    ]);
+  });
+
+  it('passes the model and effort flags', async () => {
+    await adapter.runTurn(request({ model: 'sonnet', effort: 'high' }), () => undefined, new AbortController().signal, FAKE_CLAUDE);
+    const [call] = invocations();
+    expect(call.args[call.args.indexOf('--model') + 1]).toBe('sonnet');
+    expect(call.args[call.args.indexOf('--effort') + 1]).toBe('high');
   });
 
   it('resumes the same conversation by id', async () => {

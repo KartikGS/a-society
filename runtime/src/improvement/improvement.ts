@@ -12,6 +12,7 @@ import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import * as SessionStore from '../orchestration/store.js';
 import { resolveRoleModel } from '../orchestration/role-model.js';
+import { resolveHostRoleModel } from '../orchestration/host-role-model.js';
 import { resolveRoleMcpManager } from '../orchestration/role-mcp-manager.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
 import type { HostTurnContext } from '../common/host-role-turn.js';
@@ -206,10 +207,14 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   const flowRef = SessionStore.flowRef(flowRun);
   const saveSession = () => SessionStore.saveRoleSession(session, flowRef);
   const turnBackend = resolveTurnBackend(flowRun);
-  // A host agent uses its own default model; the role model only applies to API flows.
+  // Non-gating: an API flow uses the role's API model, a host flow the role's host
+  // model/effort selection (host default when none was made).
   const roleModel = turnBackend.kind === 'api' ? resolveRoleModel(flowRef, roleInstanceId) : undefined;
-  const hostContext: HostTurnContext | undefined = turnBackend.kind === 'host'
+  const hostChoice = turnBackend.kind === 'host' ? resolveHostRoleModel(flowRef, roleInstanceId, turnBackend.agentId) : undefined;
+  const hostContext: HostTurnContext | undefined = turnBackend.kind === 'host' && hostChoice
     ? {
+      model: hostChoice.model,
+      effort: hostChoice.effort,
       agentId: turnBackend.agentId,
       session,
       saveSession,

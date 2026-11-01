@@ -11,6 +11,7 @@ import type {
   ProjectSettings,
 } from '../../../shared/project-settings.js';
 import {
+  fetchAgentMode,
   fetchMcpServers as fetchMcpServersApi,
   fetchModels as fetchModelsApi,
   fetchProjectRoles,
@@ -18,7 +19,12 @@ import {
   fetchSkills as fetchSkillsApi,
   saveProjectSettings,
 } from '../app/runtime-api';
-import type { McpServerSummary, ModelConfig } from '../../../shared/settings.js';
+import type {
+  HostAgentSummary,
+  HostModelChoice,
+  McpServerSummary,
+  ModelConfig,
+} from '../../../shared/settings.js';
 import type { SkillSummary } from '../../../shared/skills.js';
 
 interface ProjectSettingsModalProps {
@@ -64,6 +70,8 @@ export function ProjectSettingsModal({
   const [models, setModels] = useState<ModelConfig[]>([]);
   const [skills, setSkills] = useState<SkillSummary[]>([]);
   const [mcpServers, setMcpServers] = useState<McpServerSummary[]>([]);
+  /** The host agent new flows run on, with its declared models/effort levels. */
+  const [hostAgent, setHostAgent] = useState<HostAgentSummary | null>(null);
   const [selection, setSelection] = useState<NavSelection>({ kind: 'tools' });
   const [commandsText, setCommandsText] = useState('');
   const commandsInitialized = useRef(false);
@@ -75,15 +83,18 @@ export function ProjectSettingsModal({
 
     void (async () => {
       try {
-        const [roleList, projectSettings, modelList, skillResults, mcpList] = await Promise.all([
+        const [roleList, projectSettings, modelList, skillResults, mcpList, agentMode] = await Promise.all([
           fetchProjectRoles(projectNamespace),
           fetchProjectSettings(projectNamespace),
           fetchModelsApi(),
           fetchSkillsApi(),
           fetchMcpServersApi(),
+          // Without the host list the role panel still offers per-flow and host default.
+          fetchAgentMode().catch(() => null),
         ]);
         if (cancelled) return;
         setRoles(roleList);
+        setHostAgent(agentMode?.hosts.find((host) => host.id === agentMode.settings.hostAgentId) ?? null);
         setSettings(projectSettings);
         setModels(modelList);
         setSkills(skillResults
@@ -122,6 +133,7 @@ export function ProjectSettingsModal({
     if (merged.modelConfigId) cleaned.modelConfigId = merged.modelConfigId;
     if (merged.skills !== undefined) cleaned.skills = merged.skills;
     if (merged.mcpServers !== undefined) cleaned.mcpServers = merged.mcpServers;
+    if (merged.hostModels && Object.keys(merged.hostModels).length > 0) cleaned.hostModels = merged.hostModels;
     persist({ ...settings, roles: { ...settings.roles, [roleId]: cleaned } });
   }, [persist, settings]);
 
@@ -195,6 +207,7 @@ export function ProjectSettingsModal({
                 skills={skills}
                 mcpServers={mcpServers}
                 agentModeActive={agentModeActive}
+                hostAgent={hostAgent}
                 onChange={(patch) => updateRole(activeRoleId, patch)}
               />
             ) : selection.kind === 'tools' ? (
@@ -257,6 +270,7 @@ function RolePanel({
   skills,
   mcpServers,
   agentModeActive,
+  hostAgent,
   onChange,
 }: {
   roleId: string;
@@ -265,6 +279,7 @@ function RolePanel({
   skills: SkillSummary[];
   mcpServers: McpServerSummary[];
   agentModeActive: boolean;
+  hostAgent: HostAgentSummary | null;
   onChange: (patch: Partial<ProjectRoleSettings>) => void;
 }) {
   const skillsConfigured = roleSettings.skills !== undefined;
@@ -290,8 +305,15 @@ function RolePanel({
     return (
       <div className="project-role-panel">
         <h3 className="project-settings-heading">{roleId}</h3>
+        {hostAgent ? (
+          <HostModelSection
+            hostAgent={hostAgent}
+            roleSettings={roleSettings}
+            onChange={onChange}
+          />
+        ) : null}
         <p className="tool-settings-note">
-          Agent mode is on, so new flows use the coding agent&apos;s own model, skills and MCP servers.
+          Agent mode is on, so new flows use the coding agent&apos;s own skills and MCP servers.
           Role defaults for those apply to API flows only.
         </p>
       </div>
@@ -404,6 +426,95 @@ function RolePanel({
         )}
       </section>
     </div>
+  );
+}
+
+const HOST_DEFAULT_VALUE = '';
+
+/**
+ * Agent-mode model/effort default for one role on the active host agent. Writes only
+ * `hostModels[hostAgent.id]`; `modelConfigId` and other hosts' entries are preserved.
+ */
+function HostModelSection({
+  hostAgent,
+  roleSettings,
+  onChange,
+}: {
+  hostAgent: HostAgentSummary;
+  roleSettings: ProjectRoleSettings;
+  onChange: (patch: Partial<ProjectRoleSettings>) => void;
+}) {
+  const choice = roleSettings.hostModels?.[hostAgent.id];
+
+  function setChoice(next: HostModelChoice | undefined): void {
+    const hostModels = { ...(roleSettings.hostModels ?? {}) };
+    if (next) hostModels[hostAgent.id] = next;
+    else delete hostModels[hostAgent.id];
+    onChange({ hostModels });
+  }
+
+  const options: Array<{ key: string; name: string; meta: string; selected: boolean; choose: () => void }> = [
+    {
+      key: 'per-flow',
+      name: 'Use per-flow default',
+      meta: 'Decide model when each flow runs',
+      selected: !choice,
+      choose: () => setChoice(undefined),
+    },
+    {
+      key: 'host-default',
+      name: 'Host default',
+      meta: `Use ${hostAgent.displayName}'s default model`,
+      selected: !!choice && choice.model === null,
+      choose: () => setChoice({ model: null, effort: choice?.effort ?? null }),
+    },
+    ...hostAgent.models.map((option) => ({
+      key: option.id,
+      name: option.displayName,
+      meta: option.id,
+      selected: choice?.model === option.id,
+      choose: () => setChoice({ model: option.id, effort: choice?.effort ?? null }),
+    })),
+  ];
+
+  return (
+    <>
+      <section className="role-config-section" aria-label="Host model">
+        <h3 className="role-config-section-title">Host model &middot; {hostAgent.displayName}</h3>
+        <ul className="model-select-options role-config-options">
+          {options.map((option) => (
+            <li key={option.key}>
+              <button
+                type="button"
+                className={`model-select-option${option.selected ? ' model-select-option-selected' : ''}`}
+                aria-pressed={option.selected}
+                onClick={option.choose}
+              >
+                <span className="model-select-option-name">{option.name}</span>
+                <span className="model-select-option-meta">{option.meta}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {choice && hostAgent.effortLevels.length > 0 ? (
+        <div className="form-field">
+          <label className="form-label" htmlFor="project-host-effort">Effort</label>
+          <select
+            id="project-host-effort"
+            className="form-input form-select"
+            value={choice.effort ?? HOST_DEFAULT_VALUE}
+            onChange={(event) => setChoice({ model: choice.model, effort: event.target.value || null })}
+          >
+            <option value={HOST_DEFAULT_VALUE}>Host default</option>
+            {hostAgent.effortLevels.map((level) => (
+              <option key={level} value={level}>{level}</option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+    </>
   );
 }
 

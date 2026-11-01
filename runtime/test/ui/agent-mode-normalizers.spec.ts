@@ -19,7 +19,22 @@ describe('agent mode normalizers', () => {
       hosts: [{ id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } }, { id: 'codex' }],
     })).toEqual({
       settings: { mode: 'api', hostAgentId: null, executablePath: null },
-      hosts: [{ id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } }],
+      hosts: [{ id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' }, models: [], effortLevels: [] }],
+    });
+  });
+
+  it('reads declared host models and effort levels, dropping malformed entries', () => {
+    expect(normalizeAgentModeResponse({
+      settings: { mode: 'host', hostAgentId: 'claude-code' },
+      hosts: [{
+        id: 'claude-code',
+        displayName: 'Claude Code',
+        models: [{ id: 'opus', displayName: 'Opus' }, { id: 'haiku' }, { displayName: 'no id' }, 'sonnet'],
+        effortLevels: ['low', '', 3, 'max'],
+      }],
+    }).hosts[0]).toMatchObject({
+      models: [{ id: 'opus', displayName: 'Opus' }, { id: 'haiku', displayName: 'haiku' }],
+      effortLevels: ['low', 'max'],
     });
   });
 

@@ -103,10 +103,10 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Context injection | Required-reading resolution and turn-context assembly |
 | Session store | Durable runtime state, session persistence, and status tracking |
 | Provider gateway | Direct LLM-provider interaction and error normalization |
-| Host agent gateway | Headless role-turn execution on a supported host coding agent: adapter registry and version gate, per-turn permission flags, conversation continuity, stream-event mapping, and error normalization into the provider gateway's error types |
+| Host agent gateway | Headless role-turn execution on a supported host coding agent: adapter registry and version gate, per-turn permission flags, per-turn model/effort selection, conversation continuity, token-level text streaming, stream-event mapping, and error normalization into the provider gateway's error types |
 | Handoff interpretation | Parsing and validating machine-readable handoff blocks |
 | Observability | Telemetry, runtime metrics, and diagnostics for executable behavior |
-| Project settings | Per-project defaults for role configuration (model/skills/MCP), tool-permission seeding, and improvement/feedback gate pre-decisions; applied with precedence over the per-flow gates, with consent write-back |
+| Project settings | Per-project defaults for role configuration (API model/skills/MCP, and per-host agent-mode model/effort), tool-permission seeding, and improvement/feedback gate pre-decisions; applied with precedence over the per-flow gates, with consent write-back |
 
 ---
 

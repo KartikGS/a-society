@@ -9,7 +9,16 @@ import { ProjectSelector } from '../../../ui/src/components/ProjectSelector';
 import { AgentModePanel } from '../../../ui/src/components/settings/AgentModePanel';
 import { fetchAgentMode, probeHostAgent } from '../../../ui/src/app/runtime-api';
 import { ensureDialogSupport, ensureMatchMediaSupport } from './setup-dom';
+import type { HostAgentSummary } from '../../../shared/settings.js';
 import type { FeedItem } from '../../../shared/types.js';
+
+const CLAUDE_HOST: HostAgentSummary = {
+  id: 'claude-code',
+  displayName: 'Claude Code',
+  supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' },
+  models: [{ id: 'opus', displayName: 'Opus' }, { id: 'sonnet', displayName: 'Sonnet' }],
+  effortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+};
 
 vi.mock('../../../ui/src/app/runtime-api', () => ({
   fetchAgentMode: vi.fn(),
@@ -111,7 +120,7 @@ describe('axe smoke checks', () => {
   it('AgentModePanel (host mode, checked) has no detectable a11y violations', async () => {
     vi.mocked(fetchAgentMode).mockResolvedValue({
       settings: { mode: 'host', hostAgentId: 'claude-code', executablePath: null },
-      hosts: [{ id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } }],
+      hosts: [CLAUDE_HOST],
     });
     vi.mocked(probeHostAgent).mockResolvedValue({
       hostAgentId: 'claude-code',
@@ -128,6 +137,56 @@ describe('axe smoke checks', () => {
     });
     const { container } = render(<AgentModePanel onSaved={vi.fn()} onError={vi.fn()} onSuccess={vi.fn()} />);
     await screen.findByRole('status');
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('ChatInterface host role-configuration banner has no detectable a11y violations', async () => {
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={[]}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={true}
+        placeholder="Configure this role to continue."
+        showComposer={true}
+        roleConfiguration={{
+          nodeId: 'owner-intake',
+          models: [],
+          skills: [],
+          mcpServers: [],
+          pendingModel: true,
+          pendingSkills: false,
+          pendingMcp: false,
+          hostAgent: CLAUDE_HOST,
+        }}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('assistant inline HTML renders without new a11y violations', async () => {
+    const messages: FeedItem[] = [{
+      id: 'h1',
+      type: 'assistant',
+      label: 'Owner',
+      text: 'Press <kbd>Ctrl</kbd>, see <mark>this</mark>, H<sub>2</sub>O, x<sup>2</sup>.\n\n<details><summary>More</summary>Hidden <span style="color: red">detail</span></details>',
+    }];
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={messages}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={false}
+        placeholder="Send a message"
+        showComposer={false}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
   });
 });

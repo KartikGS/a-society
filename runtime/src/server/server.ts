@@ -111,6 +111,7 @@ function buildServer() {
       if (message.type === CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION) {
         runtimeSessions.handleRoleConfiguration(message.flowRef, message.nodeId, {
           modelConfigId: message.modelConfigId,
+          hostModel: message.hostModel,
           skills: message.skills,
           mcpServers: message.mcpServers,
         });

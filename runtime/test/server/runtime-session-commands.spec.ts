@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readHostModelSelection } from '../../src/orchestration/host-role-model.js';
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
 import { readCapabilitySelection, saveCapabilityDimension } from '../../src/orchestration/capability-selection.js';
@@ -491,5 +492,76 @@ describe('runtime session human input commands', () => {
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe('runtime session host role configuration', () => {
+  const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+  let workspaceRoot: string;
+
+  function hostFlow(): FlowRun {
+    const flow = makeFlowRun(workspaceRoot, {
+      turnBackend: { kind: 'host', agentId: 'claude-code' },
+      awaitingHumanNodes: { plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION } },
+    });
+    SessionStore.saveFlowRun(flow, ref);
+    return flow;
+  }
+
+  beforeEach(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-host-role-config-'));
+    setWorkspaceRoot(workspaceRoot);
+    SessionStore.init();
+  });
+
+  afterEach(() => {
+    clearWorkspaceRoot();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  it('requires a host model choice', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'api-model', skills: ['x'], mcpServers: [] });
+    expect(errors).toEqual(['Select a model before submitting role configuration.']);
+    expect(readHostModelSelection(ref, 'planner')).toBeNull();
+  });
+
+  it('rejects a model the host does not declare', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { hostModel: { model: 'gpt-9', effort: null }, skills: [], mcpServers: [] });
+    expect(errors).toEqual(['Unknown model "gpt-9" for Claude Code. Refresh Settings and try again.']);
+    expect(readHostModelSelection(ref, 'planner')).toBeNull();
+  });
+
+  it('rejects an effort level the host does not declare', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { hostModel: { model: 'opus', effort: 'turbo' }, skills: [], mcpServers: [] });
+    expect(errors).toEqual(['Unknown effort level "turbo" for Claude Code. Refresh Settings and try again.']);
+    expect(readHostModelSelection(ref, 'planner')).toBeNull();
+  });
+
+  it('saves the selection, ignores skills and MCP, and reports the host label', () => {
+    const flow = hostFlow();
+    const { commands, errors, historicalEvents } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', {
+      hostModel: { model: 'sonnet', effort: 'high' },
+      skills: ['ghost-skill'],
+      mcpServers: ['ghost'],
+    });
+    expect(errors).toEqual([]);
+    expect(readHostModelSelection(ref, 'planner')).toMatchObject({ hostAgentId: 'claude-code', model: 'sonnet', effort: 'high' });
+    expect(readCapabilitySelection(ref, 'planner')).toBeNull();
+    expect(historicalEvents).toContainEqual({ kind: 'role.configured', nodeId: 'plan', role: 'planner', modelDisplayName: 'Sonnet · effort high' });
+  });
+
+  it('accepts host default as a selection', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { hostModel: { model: null, effort: null }, skills: [], mcpServers: [] });
+    expect(errors).toEqual([]);
+    expect(readHostModelSelection(ref, 'planner')).toMatchObject({ model: null, effort: null });
   });
 });

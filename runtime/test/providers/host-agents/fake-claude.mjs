@@ -13,7 +13,9 @@
 // Turn: { match?: regex on stdin, reply?: string, toolUses?: [{name, input}],
 //         writeFiles?: [{path, content}] (relative to cwd or absolute),
 //         denials?: [{tool_name, tool_input}], error?: string, rateLimited?: boolean,
-//         hang?: boolean, delayMs?: number }
+//         hang?: boolean, delayMs?: number,
+//         deltas?: string[] (with --include-partial-messages: text_delta stream events before the reply block),
+//         preface?: string (a text block, streamed as one delta, emitted before the tool uses) }
 // A turn whose `match` fits stdin wins; otherwise the turn at the invocation index is used.
 /* global process, setInterval, setTimeout */
 import fs from 'node:fs';
@@ -106,6 +108,16 @@ const finish = () => {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, file.content);
   }
+  const streamText = (index, deltas) => {
+    if (!deltas || !args.includes('--include-partial-messages')) return;
+    const streamEvent = (event) => emit({ type: 'stream_event', session_id: sessionId, parent_tool_use_id: null, uuid: 'fake', event });
+    streamEvent({ type: 'content_block_start', index, content_block: { type: 'text', text: '' } });
+    for (const text of deltas) streamEvent({ type: 'content_block_delta', index, delta: { type: 'text_delta', text } });
+  };
+  if (turn.preface) {
+    streamText(0, [turn.preface]);
+    emit({ type: 'assistant', session_id: sessionId, message: { role: 'assistant', content: [{ type: 'text', text: turn.preface }] } });
+  }
   (turn.toolUses ?? []).forEach((use, index) => {
     const id = `toolu_fake_${index}`;
     emit({ type: 'assistant', session_id: sessionId, message: { role: 'assistant', content: [{ type: 'tool_use', id, name: use.name, input: use.input }] } });
@@ -113,6 +125,7 @@ const finish = () => {
   });
   const reply = turn.reply ?? 'ok';
   const usage = { input_tokens: 2, cache_read_input_tokens: 1000, cache_creation_input_tokens: 10, output_tokens: 5 };
+  streamText(0, turn.deltas);
   emit({ type: 'assistant', session_id: sessionId, message: { role: 'assistant', content: [{ type: 'text', text: reply }], usage } });
   emit({ type: 'rate_limit_event', session_id: sessionId, rate_limit_info: { status: 'allowed', unifiedWindows: { five_hour: { utilization: 0.1 }, seven_day: { utilization: 0.05 } } } });
   history.push({ role: 'assistant', content: reply });

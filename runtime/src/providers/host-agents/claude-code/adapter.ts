@@ -1,4 +1,5 @@
 import { LLMGatewayError } from '../../../common/types.js';
+import type { HostModelOption } from '../../../../shared/settings.js';
 import { HostAgentError } from '../types.js';
 import type {
   HostAgentAdapter,
@@ -26,7 +27,20 @@ export const CLAUDE_CODE_CAPABILITIES: HostCapabilities = {
   extraDirs: true,
   liveEvents: true,
   rateLimitReport: true,
+  textDeltas: true,
+  effortFlag: true,
 };
+
+/** Model aliases `--model` accepts; the CLI has no model-listing command. */
+export const CLAUDE_CODE_MODELS: readonly HostModelOption[] = [
+  { id: 'opus', displayName: 'Opus' },
+  { id: 'sonnet', displayName: 'Sonnet' },
+  { id: 'haiku', displayName: 'Haiku' },
+  { id: 'fable', displayName: 'Fable' },
+];
+
+/** Levels `--effort` accepts, per the Claude Code CLI reference (live `claude --help` check pending the real-CLI pass). */
+export const CLAUDE_CODE_EFFORT_LEVELS: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 function formatReset(resetsAt: number | undefined): string {
   return resetsAt ? ` Resets at ${new Date(resetsAt * 1000).toISOString()}.` : '';
@@ -38,6 +52,8 @@ export class ClaudeCodeAdapter implements HostAgentAdapter {
   readonly executableName = CLAUDE_EXECUTABLE_NAME;
   readonly supportedVersions = CLAUDE_CODE_SUPPORTED_VERSIONS;
   readonly capabilities = CLAUDE_CODE_CAPABILITIES;
+  readonly models = CLAUDE_CODE_MODELS;
+  readonly effortLevels = CLAUDE_CODE_EFFORT_LEVELS;
 
   probe(executablePath: string | null): Promise<HostProbe> {
     return probeClaudeCode(executablePath, this.supportedVersions);

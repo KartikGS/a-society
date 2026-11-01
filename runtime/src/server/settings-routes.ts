@@ -181,6 +181,8 @@ function agentModeResponse(): AgentModeResponse {
     id: adapter.id,
     displayName: adapter.displayName,
     supportedVersions: { ...adapter.supportedVersions },
+    models: adapter.models.map((option) => ({ ...option })),
+    effortLevels: [...adapter.effortLevels],
   }));
   return { settings: SettingsStore.getAgentModeSettings(), hosts };
 }

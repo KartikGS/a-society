@@ -274,7 +274,18 @@ Run scripts/foo.py when needed.
   });
 
   describe('agent mode', () => {
-    const CLAUDE_HOST = { id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } };
+    const CLAUDE_HOST = {
+      id: 'claude-code',
+      displayName: 'Claude Code',
+      supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' },
+      models: [
+        { id: 'opus', displayName: 'Opus' },
+        { id: 'sonnet', displayName: 'Sonnet' },
+        { id: 'haiku', displayName: 'Haiku' },
+        { id: 'fable', displayName: 'Fable' },
+      ],
+      effortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+    };
 
     it('reports API mode by default and lists the supported hosts', async () => {
       const response = await callSettingsRoute('get', '/api/settings/agent-mode');

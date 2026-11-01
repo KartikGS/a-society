@@ -14,6 +14,8 @@ import {
   resolveRoleModelGate,
   saveRoleModelSelection,
 } from './role-model.js';
+import { applyHostRoleDefaults, resolveHostModelGate } from './host-role-model.js';
+import type { HostModelChoice } from '../../shared/settings.js';
 import { autoResolveRoleConfiguration, type AutoSelectionResult } from './auto-capability-selection.js';
 import { getProjectRoleDefaults } from '../projects/project-settings-store.js';
 import { getModelWithKey, isUsableModelConfig, type ModelConfigWithKey } from '../settings/settings-store.js';
@@ -354,11 +356,23 @@ export class FlowOrchestrator {
 
         const ref = this.requireFlowRef();
         const turnBackend = resolveTurnBackend(flowRun);
-        // A host agent manages its own model, skills and MCP servers, so the role
-        // configuration gates and project defaults apply to API flows only.
+        // API flows gate on an API model plus skills and MCP servers. Host flows gate on
+        // the host model/effort only; the host manages its own skills and MCP servers.
         let roleModel: ModelConfigWithKey | null | undefined;
         let mcpManager: McpManager | undefined;
-        if (turnBackend.kind === 'api') {
+        let hostChoice: HostModelChoice = { model: null, effort: null };
+        if (turnBackend.kind === 'host') {
+          applyHostRoleDefaults(flowRun.projectNamespace, ref, roleInstanceId, turnBackend.agentId);
+          const hostGate = resolveHostModelGate(ref, roleInstanceId, turnBackend.agentId);
+          if (hostGate.kind === 'selection-required') {
+            span.setAttribute('node.outcome', 'awaiting_human');
+            span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
+            this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            return;
+          }
+          hostChoice = hostGate.choice;
+        } else {
           // Project-level role defaults take precedence over automation and the
           // manual gate: persist any configured dimension as this flow's selection.
           const projectDefaults = this.applyProjectRoleDefaults(flowRun, ref, roleInstanceId);
@@ -402,6 +416,8 @@ export class FlowOrchestrator {
             workspaceRoot: flowRun.workspaceRoot,
             projectRoot: path.join(flowRun.workspaceRoot, flowRun.projectNamespace),
             recordFolderPath: flowRun.recordFolderPath,
+            model: hostChoice.model,
+            effort: hostChoice.effort,
           }
           : undefined;
 
@@ -1044,10 +1060,14 @@ export class FlowOrchestrator {
       const wf = this.loadWorkflowDocument(flowRun);
       const resumableHumanNodeIds = Object.keys(flowRun.pendingHumanInputs)
         .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes || flowRun.awaitingHandoff.includes(nodeId));
+      const backend = resolveTurnBackend(flowRun);
       const resumableRoleConfigurationNodeIds = Object.entries(flowRun.awaitingHumanNodes)
         .filter(([, state]) => {
           if (state.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) return false;
           const ref = this.requireFlowRef();
+          if (backend.kind === 'host') {
+            return resolveHostModelGate(ref, state.role, backend.agentId).kind === 'ready';
+          }
           return (
             resolveRoleModelGate(ref, state.role).kind === 'ready' &&
             resolveCapabilityGate(ref, state.role).kind === 'ready'

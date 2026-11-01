@@ -25,6 +25,7 @@ import type {
 } from '../providers/host-agents/types.js';
 import { getAgentModeSettings } from '../settings/settings-store.js';
 import { getRoleStateFilePath } from '../orchestration/state-paths.js';
+import { formatHostModelLabel } from '../orchestration/host-role-model.js';
 import { validateWorkflowFileContent, workflowFilePaths } from '../tools/workflow-write-validation.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
@@ -55,6 +56,10 @@ export interface HostTurnContext {
   extraWritableDirs?: string[];
   /** Scope reported on repair events: forward-pass node or backward-pass improvement. */
   repairScope?: 'node' | 'improvement';
+  /** Host model alias for this role; null = host default model. */
+  model: string | null;
+  /** Host effort level for this role; null = host default effort. */
+  effort: string | null;
 }
 
 export interface HostTurnExecutorInput {
@@ -283,7 +288,7 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
       };
 
       let receiving = false;
-      let blockCount = 0;
+      let emittedAny = false;
       const onEvent = (event: HostLiveEvent): void => {
         if (!receiving) {
           receiving = true;
@@ -291,8 +296,8 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
         }
         switch (event.kind) {
           case 'text': {
-            const delta = blockCount > 0 ? `\n\n${event.text}` : event.text;
-            blockCount += 1;
+            const delta = event.newBlock && emittedAny ? `\n\n${event.text}` : event.text;
+            emittedAny ||= event.text.length > 0;
             outputStream?.write(delta);
             emitText(delta);
             break;
@@ -310,7 +315,11 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
       };
 
       const hashesBefore = workflowPaths.map(hashFile);
-      operatorRenderer?.requestSent(roleInstanceId, adapter.displayName, 'host default');
+      operatorRenderer?.requestSent(
+        roleInstanceId,
+        adapter.displayName,
+        formatHostModelLabel(adapter, { model: context.model, effort: context.effort })
+      );
 
       let result: HostTurnResult;
       try {
@@ -330,7 +339,8 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
               cwd: context.projectRoot,
               extraWritableDirs: writeRoots.filter((dir) => dir !== path.resolve(context.projectRoot)),
               permissions: buildHostPermissionProfile(consentGate, grants, context.workspaceRoot),
-              model: null,
+              model: context.model,
+              effort: context.effort,
             }, onEvent, signal ?? new AbortController().signal, executablePath);
             if (turn.kind === 'completed') span.setAttribute('host.permission_denials', turn.permissionDenials.length);
             return turn;
@@ -368,7 +378,7 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
       }
 
       recoveredFrom = null;
-      if (blockCount === 0 && result.text) {
+      if (!emittedAny && result.text) {
         outputStream?.write(result.text);
         emitText(result.text);
       }

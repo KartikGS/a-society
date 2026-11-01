@@ -13,6 +13,18 @@ function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+/** e.g. "Per-role model: Opus, Sonnet · effort: low…max". */
+function hostModelSupportLine(host: HostAgentSummary): string {
+  const models = host.models.length > 0
+    ? `Per-role model: ${host.models.map((option) => option.displayName).join(', ')}`
+    : 'Per-role model: host default only';
+  const levels = host.effortLevels;
+  const effort = levels.length === 0
+    ? 'effort: host default only'
+    : `effort: ${levels.length === 1 ? levels[0] : `${levels[0]}…${levels[levels.length - 1]}`}`;
+  return `${models} · ${effort}`;
+}
+
 function probeIsReady(probe: HostProbeSummary): boolean {
   return probe.installed && probe.versionSupported && probe.loggedIn !== false;
 }
@@ -44,7 +56,8 @@ function ProbeStatus({ probe }: { probe: HostProbeSummary }) {
 
 /**
  * Chooses whether new flows run role turns through API models or a coding agent
- * installed on this machine. The host's own sign-in, model and tools stay host-managed.
+ * installed on this machine. The host's own sign-in and tools stay host-managed; the model
+ * and effort are chosen per role from the host's declared list.
  */
 export function AgentModePanel({ onSaved, onError, onSuccess }: AgentModePanelProps) {
   const [hosts, setHosts] = useState<HostAgentSummary[]>([]);
@@ -150,8 +163,9 @@ export function AgentModePanel({ onSaved, onError, onSuccess }: AgentModePanelPr
           {form.mode === 'host' ? (
             <>
               <p className="tool-settings-copy">
-                Each role turn runs your installed agent as you signed in to it. The agent uses its own model,
-                skills, MCP servers and context compaction; A-Society keeps the workflow, handoffs, records and feedback.
+                Each role turn runs your installed agent as you signed in to it, on the model chosen for that role.
+                The agent uses its own skills, MCP servers and context compaction; A-Society keeps the workflow,
+                handoffs, records and feedback.
               </p>
 
               <div className="form-field">
@@ -166,6 +180,7 @@ export function AgentModePanel({ onSaved, onError, onSuccess }: AgentModePanelPr
                     <option key={entry.id} value={entry.id}>{entry.displayName}</option>
                   ))}
                 </select>
+                {host ? <p className="form-note">{hostModelSupportLine(host)}</p> : null}
               </div>
 
               <div className="form-field">

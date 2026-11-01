@@ -12,6 +12,7 @@ function request(overrides: Partial<HostTurnRequest> = {}): HostTurnRequest {
     extraWritableDirs: ['/workspace/project/a-docs/records/r1'],
     permissions: { mode: 'read-only', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: ['/workspace'] },
     model: null,
+    effort: null,
     ...overrides,
   };
 }
@@ -25,7 +26,7 @@ function valuesAfter(args: string[], flag: string): string[] {
 describe('buildClaudeCommand', () => {
   it('starts a new conversation with the runtime-assigned id and the prompt file', () => {
     const { args } = buildClaudeCommand(request());
-    expect(args.slice(0, 4)).toEqual(['-p', '--output-format', 'stream-json', '--verbose']);
+    expect(args.slice(0, 5)).toEqual(['-p', '--output-format', 'stream-json', '--verbose', '--include-partial-messages']);
     expect(valuesAfter(args, '--session-id')).toEqual(['11111111-1111-4111-8111-111111111111']);
     expect(args).not.toContain('--resume');
     expect(valuesAfter(args, '--append-system-prompt-file')).toEqual(['/flow/roles/owner/host-system-prompt.md']);
@@ -104,5 +105,12 @@ describe('buildClaudeCommand', () => {
     expect(valuesAfter(args, '--model')).toEqual(['sonnet']);
     expect(args).not.toContain('--allowedTools');
     expect(args).not.toContain('--add-dir');
+  });
+
+  it('passes an effort level only when one is chosen, before the variadic flags', () => {
+    expect(buildClaudeCommand(request()).args).not.toContain('--effort');
+    const { args } = buildClaudeCommand(request({ effort: 'xhigh' }));
+    expect(valuesAfter(args, '--effort')).toEqual(['xhigh']);
+    expect(args.indexOf('--effort')).toBeLessThan(Math.min(args.indexOf('--allowedTools'), args.indexOf('--add-dir')));
   });
 });

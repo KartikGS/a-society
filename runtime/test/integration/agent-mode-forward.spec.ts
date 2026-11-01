@@ -12,6 +12,9 @@
  *  6. Stop mid-turn, then resume: delivered messages are never re-sent
  *  7. Lost host conversation: a new conversation seeded with the runtime transcript
  *  8. Readiness: an unsupported host version refuses the turn
+ *  9. Host model gate: auto → host default; manual → park, then the selection's flags;
+ *     a project default wins over a per-flow selection
+ * 10. Streaming: token deltas reach the transcript once, blocks separated by a blank line
  */
 
 import fs from 'node:fs';
@@ -23,7 +26,10 @@ import { FlowOrchestrator } from '../../src/orchestration/orchestrator.js';
 import * as SessionStore from '../../src/orchestration/store.js';
 import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir, getRoleStateFilePath } from '../../src/orchestration/state-paths.js';
-import { updateAgentModeSettings } from '../../src/settings/settings-store.js';
+import { updateAgentModeSettings, updateAutomationSettings } from '../../src/settings/settings-store.js';
+import { saveHostModelSelection } from '../../src/orchestration/host-role-model.js';
+import { saveProjectSettings } from '../../src/projects/project-settings-store.js';
+import { defaultProjectSettings } from '../../shared/project-settings.js';
 import { clearProbeCache } from '../../src/providers/host-agents/version.js';
 import { HOST_RECOVERY_PREAMBLE, HOST_SYSTEM_PROMPT_FILE } from '../../src/common/host-role-turn.js';
 import { CONSENT_CHECK_RESULT, CURRENT_FLOW_STATE_VERSION, defaultConsentState } from '../../src/common/types.js';
@@ -183,6 +189,8 @@ beforeEach(() => {
   fs.rmSync(projectRoot, { recursive: true, force: true });
   seedProject();
   updateAgentModeSettings({ mode: 'host', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE });
+  // Auto model selection resolves to the host default, so the host model gate never parks.
+  updateAutomationSettings({ models: 'auto' });
   clearProbeCache();
   SessionStore.init();
   recordDir = getFlowRecordDir(ref);
@@ -391,5 +399,63 @@ describe('agent mode forward pass', { timeout: 30_000 }, () => {
     expect(invocations()).toHaveLength(0);
     expect(flow.awaitingHumanNodes['owner-intake'].reason).toBe(AWAITING_HUMAN_REASON.AUTONOMOUS_ABORT);
     expect(sink.errors.some((message) => message.includes('outside the supported range'))).toBe(true);
+  });
+
+  const awaitingFor = (nodeId: string, reason: string) => (flow: FlowRun) => flow.awaitingHumanNodes[nodeId]?.reason === reason;
+
+  it('runs with the host default when model automation is auto', async () => {
+    writeScript([{ reply: PROMPT_HUMAN }]);
+    saveFlow();
+
+    const { sink } = await runUntil(awaitingFor('owner-intake', AWAITING_HUMAN_REASON.PROMPT_HUMAN));
+
+    const [call] = invocations();
+    expect(call.args).not.toContain('--model');
+    expect(call.args).not.toContain('--effort');
+    expect(sink.requests).toContainEqual({ role: 'owner', provider: 'Claude Code', model: 'host default' });
+  });
+
+  it('parks at role configuration under manual selection, then runs with the chosen model and effort', async () => {
+    updateAutomationSettings({ models: 'manual' });
+    writeScript([{ reply: PROMPT_HUMAN }]);
+    saveFlow();
+
+    const parked = await runUntil(awaitingFor('owner-intake', AWAITING_HUMAN_REASON.ROLE_CONFIGURATION));
+    expect(invocations()).toHaveLength(0);
+    expect(parked.sink.events).toContainEqual({
+      kind: 'human.awaiting_input', nodeId: 'owner-intake', role: 'owner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION,
+    });
+
+    saveHostModelSelection(ref, 'owner', { hostAgentId: 'claude-code', model: 'sonnet', effort: 'high', selectedAt: new Date().toISOString() });
+    const { sink } = await runUntil(awaitingFor('owner-intake', AWAITING_HUMAN_REASON.PROMPT_HUMAN));
+
+    const [call] = invocations();
+    expect(flagValue(call.args, '--model')).toBe('sonnet');
+    expect(flagValue(call.args, '--effort')).toBe('high');
+    expect(sink.requests).toContainEqual({ role: 'owner', provider: 'Claude Code', model: 'Sonnet · effort high' });
+  });
+
+  it('prefers the project role default over the per-flow selection', async () => {
+    saveHostModelSelection(ref, 'owner', { hostAgentId: 'claude-code', model: 'sonnet', effort: null, selectedAt: new Date().toISOString() });
+    saveProjectSettings(projectNamespace, {
+      ...defaultProjectSettings(),
+      enabled: true,
+      roles: { owner: { hostModels: { 'claude-code': { model: 'opus', effort: null } } } },
+    });
+    writeScript([{ reply: PROMPT_HUMAN }]);
+    saveFlow();
+
+    await runUntil(awaitingFor('owner-intake', AWAITING_HUMAN_REASON.PROMPT_HUMAN));
+
+    expect(flagValue(invocations()[0].args, '--model')).toBe('opus');
+  });
+
+  it('streams token deltas into the transcript once, separating blocks with a blank line', async () => {
+    writeScript([{ preface: 'Looking.', toolUses: [{ name: 'Read', input: { file_path: '/x' } }], deltas: ['Need ', 'input.'], reply: PROMPT_HUMAN }]);
+    saveFlow();
+
+    await runUntil(awaitingFor('owner-intake', AWAITING_HUMAN_REASON.PROMPT_HUMAN));
+
+    expect(session('owner').transcriptHistory.at(-1)).toEqual({ role: 'assistant', content: `Looking.\n\n${PROMPT_HUMAN}` });
   });
 });

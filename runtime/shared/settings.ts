@@ -52,10 +52,25 @@ export const DEFAULT_AGENT_MODE_SETTINGS: AgentModeSettings = {
   executablePath: null,
 };
 
+export interface HostModelOption {
+  id: string;
+  displayName: string;
+}
+
+/** A host model choice. `model: null` = host default model; `effort: null` = host default effort. */
+export interface HostModelChoice {
+  model: string | null;
+  effort: string | null;
+}
+
 export interface HostAgentSummary {
   id: HostAgentId;
   displayName: string;
   supportedVersions: { min: string; maxExclusive: string };
+  /** Empty when the host has no per-turn model flag. */
+  models: HostModelOption[];
+  /** Empty when the host has no per-turn effort control. */
+  effortLevels: string[];
 }
 
 export interface AgentModeResponse {

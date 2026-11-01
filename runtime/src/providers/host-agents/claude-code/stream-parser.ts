@@ -56,6 +56,9 @@ export class ClaudeStreamParser {
   private unparsedLines = 0;
   private rateLimitRejection: { resetsAt?: number } | null = null;
   private text = '';
+  /** Text emitted from deltas for the open main-session text block. */
+  private currentBlockStreamed = '';
+  private pendingNewBlock = false;
 
   constructor(private readonly onEvent: (event: HostLiveEvent) => void) {}
 
@@ -77,6 +80,9 @@ export class ClaudeStreamParser {
       return;
     }
     switch (event.type) {
+      case 'stream_event':
+        this.onStreamEvent(event);
+        break;
       case 'assistant':
         this.onAssistant(event);
         break;
@@ -146,15 +152,56 @@ export class ClaudeStreamParser {
     };
   }
 
+  /** The one place text leaves the parser, so `partialText` always equals what was shown. */
+  private emitText(text: string, newBlock: boolean): void {
+    if (!text) return;
+    this.text = newBlock && this.text ? `${this.text}\n\n${text}` : this.text + text;
+    this.onEvent({ kind: 'text', text, newBlock });
+  }
+
+  /** `--include-partial-messages` deltas for the main session; everything else is ignored. */
+  private onStreamEvent(event: Json): void {
+    if (typeof event.parent_tool_use_id === 'string') return;
+    const inner = isObject(event.event) ? event.event : null;
+    if (!inner) return;
+    if (inner.type === 'content_block_start') {
+      if (isObject(inner.content_block) && inner.content_block.type === 'text') {
+        this.currentBlockStreamed = '';
+        this.pendingNewBlock = true;
+      }
+      return;
+    }
+    if (inner.type !== 'content_block_delta' || !isObject(inner.delta)) return;
+    const delta = inner.delta;
+    if (delta.type !== 'text_delta' || typeof delta.text !== 'string' || !delta.text) return;
+    // A delta with no streamed text yet opens a block even if its start event was missed.
+    this.emitText(delta.text, this.pendingNewBlock || this.currentBlockStreamed === '');
+    this.pendingNewBlock = false;
+    this.currentBlockStreamed += delta.text;
+  }
+
+  /** Emits whatever of a completed main-session text block the deltas did not already show. */
+  private reconcileTextBlock(blockText: string): void {
+    const streamed = this.currentBlockStreamed;
+    if (streamed === '') {
+      this.emitText(blockText, true);
+    } else if (blockText.startsWith(streamed) && blockText.length > streamed.length) {
+      this.emitText(blockText.slice(streamed.length), false);
+    }
+    this.currentBlockStreamed = '';
+    this.pendingNewBlock = false;
+  }
+
   private onAssistant(event: Json): void {
     const message = isObject(event.message) ? event.message : null;
     if (!message) return;
     if (message.usage !== undefined) this.lastAssistantUsage = message.usage;
+    const fromSubagent = typeof event.parent_tool_use_id === 'string';
     for (const block of Array.isArray(message.content) ? message.content : []) {
       if (!isObject(block)) continue;
       if (block.type === 'text' && typeof block.text === 'string' && block.text) {
-        this.text = this.text ? `${this.text}\n\n${block.text}` : block.text;
-        this.onEvent({ kind: 'text', text: block.text });
+        if (fromSubagent) this.emitText(block.text, true);
+        else this.reconcileTextBlock(block.text);
       } else if (block.type === 'tool_use' && typeof block.name === 'string') {
         if (typeof block.id === 'string') this.toolNames.set(block.id, block.name);
         this.onEvent({ kind: 'tool_call', toolName: block.name, ...toolTarget(block.name, block.input) });

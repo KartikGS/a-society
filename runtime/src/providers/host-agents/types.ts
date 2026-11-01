@@ -1,4 +1,4 @@
-import type { HostAgentId } from '../../../shared/settings.js';
+import type { HostAgentId, HostModelOption } from '../../../shared/settings.js';
 
 export type { HostAgentId };
 
@@ -13,6 +13,10 @@ export interface HostCapabilities {
   extraDirs: boolean;
   liveEvents: boolean;
   rateLimitReport: boolean;
+  /** Declarative: text arrives as token-level deltas rather than whole blocks. */
+  textDeltas: boolean;
+  /** The host takes a per-turn effort level. */
+  effortFlag: boolean;
 }
 
 export interface HostProbe {
@@ -49,11 +53,17 @@ export interface HostTurnRequest {
   permissions: HostPermissionProfile;
   /** null uses the host's default model. */
   model: string | null;
+  /** null uses the host's default effort. */
+  effort: string | null;
 }
 
 export type HostLiveEvent =
-  /** One new assistant text block, delivered as a delta like the API path's text deltas. */
-  | { kind: 'text'; text: string }
+  /**
+   * Assistant text as it arrives. `text` is a delta. `newBlock: true` marks the first
+   * chunk of a new assistant text block. Adapters without token deltas emit each
+   * whole block as one event with `newBlock: true`.
+   */
+  | { kind: 'text'; text: string; newBlock: boolean }
   | { kind: 'tool_call'; toolName: string; path?: string; command?: string }
   | { kind: 'tool_result'; toolName: string; isError: boolean }
   | { kind: 'rate_limit'; fiveHour?: number; sevenDay?: number };
@@ -82,6 +92,10 @@ export interface HostAgentAdapter {
   readonly executableName: string;
   readonly supportedVersions: SupportedVersionRange;
   readonly capabilities: HostCapabilities;
+  /** Models offered per role; empty when the host has no per-turn model flag. */
+  readonly models: readonly HostModelOption[];
+  /** Effort levels offered per role; empty when the host has no per-turn effort control. */
+  readonly effortLevels: readonly string[];
   probe(executablePath: string | null): Promise<HostProbe>;
   /**
    * Runs one headless turn. Auth, rate-limit and abort conditions throw

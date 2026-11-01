@@ -1,11 +1,24 @@
 import { memo } from 'react';
-import ReactMarkdown, { type Components } from 'react-markdown';
+import ReactMarkdown, { type Components, type Options as MarkdownOptions } from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import { CHAT_SANITIZE_SCHEMA, rehypeFilterStyle } from './sanitize';
 import type { FeedItem } from '../../../shared/types.js';
 
 const REMARK_PLUGINS = [remarkGfm];
-const REHYPE_PLUGINS = [rehypeHighlight];
+/**
+ * Assistant text is untrusted: raw HTML is parsed, then sanitized against the chat
+ * allowlist, then `style` is narrowed to plain colors. Highlighting runs last so its
+ * `hljs-*` classes survive and raw HTML never reaches the DOM unsanitized.
+ */
+const REHYPE_PLUGINS: MarkdownOptions['rehypePlugins'] = [
+  rehypeRaw,
+  [rehypeSanitize, CHAT_SANITIZE_SCHEMA],
+  rehypeFilterStyle,
+  rehypeHighlight,
+];
 
 /**
  * Links open in a new tab so agent output can never navigate the console away;

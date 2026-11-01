@@ -18,6 +18,7 @@ import {
 import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import {
   fetchActiveModelContextWindow,
+  fetchAgentMode,
   fetchFlowState,
   fetchMcpServers as fetchMcpServersApi,
   fetchModels as fetchModelsApi,
@@ -46,7 +47,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { UNAVAILABLE_SETTINGS_STATUS } from './model-config';
 import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
 import type { FlowRef, FlowSummary } from '../../shared/types.js';
-import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
+import type { HostAgentSummary, McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
 import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 import type { SkillSummary } from '../../shared/skills.js';
 
@@ -74,6 +75,8 @@ export function App() {
   const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
   const [configuredSkills, setConfiguredSkills] = useState<SkillSummary[]>([]);
   const [configuredMcpServers, setConfiguredMcpServers] = useState<McpServerSummary[]>([]);
+  /** Host agents the server declares (with their models/effort levels); null until fetched. */
+  const [hostAgents, setHostAgents] = useState<HostAgentSummary[] | null>(null);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -375,6 +378,23 @@ export function App() {
     return () => { cancelled = true; };
   }, [roleConfigurationNodeId]);
 
+  const hostFlowAgentId = flowRun?.turnBackend?.kind === 'host' ? flowRun.turnBackend.agentId : null;
+  const needsHostAgents = hostFlowAgentId !== null && roleConfigurationNodeId !== null;
+
+  useEffect(() => {
+    if (!needsHostAgents) return;
+    let cancelled = false;
+    fetchAgentMode()
+      .then((response) => {
+        if (!cancelled) setHostAgents(response.hosts);
+      })
+      .catch(() => {
+        // Without the host list the banner still offers the host default.
+        if (!cancelled) setHostAgents([]);
+      });
+    return () => { cancelled = true; };
+  }, [needsHostAgents, roleConfigurationNodeId]);
+
   useEffect(() => {
     let cancelled = false;
     fetchSkillsApi()
@@ -621,6 +641,18 @@ export function App() {
                       pendingModel: roleConfigurationPending?.pendingModel ?? true,
                       pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
                       pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
+                      ...(hostFlowAgentId ? {
+                        hostAgent: hostAgents === null
+                          ? null
+                          : hostAgents.find((host) => host.id === hostFlowAgentId) ?? {
+                            // Host not declared by this server: only the host default is offered.
+                            id: hostFlowAgentId,
+                            displayName: hostFlowAgentId,
+                            supportedVersions: { min: '', maxExclusive: '' },
+                            models: [],
+                            effortLevels: [],
+                          },
+                      } : {}),
                     } : null}
                     handoffApproval={handoffApprovalNodeId ? {
                       nodeId: handoffApprovalNodeId,
@@ -685,6 +717,7 @@ export function App() {
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
           onAgentModeChange={() => { void refreshSettingsStatus(); }}
+          agentModeActive={settingsStatus?.turnBackend === 'host'}
           onSkillsChange={refreshConfiguredSkills}
           onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}

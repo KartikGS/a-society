@@ -4,6 +4,7 @@ import type {
   AgentModeSettings,
   FeedSettings,
   HostAgentSummary,
+  HostModelOption,
   HostProbeSummary,
   InputModality,
   McpServerSummary,
@@ -240,10 +241,24 @@ export function normalizeAgentModeResponse(value: unknown): AgentModeResponse {
         id: host.id,
         displayName: String(host.displayName ?? host.id),
         supportedVersions: normalizeVersionRange(host.supportedVersions),
+        models: normalizeHostModelOptions(host.models),
+        effortLevels: Array.isArray(host.effortLevels)
+          ? host.effortLevels.filter((level): level is string => typeof level === 'string' && level !== '')
+          : [],
       }];
     })
     : [];
   return { settings: normalizeAgentModeSettings(raw.settings), hosts };
+}
+
+/** Older servers omit the list; an empty list means the host has no per-turn model choice. */
+function normalizeHostModelOptions(value: unknown): HostModelOption[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const option = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+    if (typeof option.id !== 'string' || option.id === '') return [];
+    return [{ id: option.id, displayName: typeof option.displayName === 'string' && option.displayName !== '' ? option.displayName : option.id }];
+  });
 }
 
 export function normalizeHostProbeSummary(value: unknown): HostProbeSummary | null {
