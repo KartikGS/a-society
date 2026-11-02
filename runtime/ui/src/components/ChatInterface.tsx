@@ -63,6 +63,8 @@ interface ChatInterfaceProps {
   activeRoles?: string[];
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
+  /** Set when the host agent decides tool permissions itself; replaces the permission dropdown. */
+  hostPermissionLabel?: string | null;
   projectSettingsEnabled?: boolean;
   roleConfiguration?: RoleConfigurationPrompt | null;
   handoffApproval?: HandoffApprovalPrompt | null;
@@ -667,6 +669,11 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 isCompactingContext={props.isCompactingContext}
               />
             ) : null}
+            {props.hostPermissionLabel ? (
+              <span className="consent-mode-label" title="Tool permissions are decided by the coding agent for this flow">
+                {props.hostPermissionLabel}
+              </span>
+            ) : (
             <select
               className="consent-mode-select"
               value={props.consentMode ?? CONSENT_MODE.NO_ACCESS}
@@ -678,6 +685,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
               <option value={CONSENT_MODE.PARTIAL_ACCESS}>Partial Access</option>
               <option value={CONSENT_MODE.FULL_ACCESS}>Full Access</option>
             </select>
+            )}
           </div>
         </div>
       ) : null}

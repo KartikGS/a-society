@@ -89,6 +89,17 @@ describe('mapHostDenial', () => {
 });
 
 describe('buildHostPermissionProfile', () => {
+  it('ignores consent state and grants when the host decides (auto mode)', () => {
+    const state: ConsentState = { ...defaultConsentState(), mode: CONSENT_MODE.FULL_ACCESS };
+    expect(buildHostPermissionProfile(gate(state), { writePaths: ['/ws/a'], commands: ['ls'], mcpTools: [] }, '/ws', 'auto')).toEqual({
+      mode: 'host-decides',
+      allowedWritePaths: [],
+      allowedCommands: [],
+      allowedMcpTools: [],
+      readOnlyRoots: ['/ws'],
+    });
+  });
+
   it('maps each consent mode', () => {
     const state = defaultConsentState();
     expect(buildHostPermissionProfile(gate(state), NO_GRANTS, '/ws').mode).toBe('read-only');

@@ -290,7 +290,7 @@ Run scripts/foo.py when needed.
     it('reports API mode by default and lists the supported hosts', async () => {
       const response = await callSettingsRoute('get', '/api/settings/agent-mode');
       expect(response.body).toEqual({
-        settings: { mode: 'api', hostAgentId: null, executablePath: null },
+        settings: { mode: 'api', hostAgentId: null, executablePath: null, permissionMode: 'consent' },
         hosts: [CLAUDE_HOST],
       });
       const status = await callSettingsRoute('get', '/api/settings/status');
@@ -300,13 +300,13 @@ Run scripts/foo.py when needed.
     it('saves a host selection and reports its readiness in the status', async () => {
       const updated = await callSettingsRoute('put', '/api/settings/agent-mode', { mode: 'host', hostAgentId: 'claude-code', executablePath: ` ${FAKE_CLAUDE} ` });
       expect(updated.status).toBe(200);
-      expect((updated.body as { settings: unknown }).settings).toEqual({ mode: 'host', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE });
+      expect((updated.body as { settings: unknown }).settings).toEqual({ mode: 'host', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE, permissionMode: 'consent' });
 
       const status = await callSettingsRoute('get', '/api/settings/status');
       expect(status.body).toMatchObject({ hasConfiguredModel: false, turnBackend: 'host', turnBackendReady: true });
 
       const back = await callSettingsRoute('put', '/api/settings/agent-mode', { mode: 'api' });
-      expect((back.body as { settings: unknown }).settings).toEqual({ mode: 'api', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE });
+      expect((back.body as { settings: unknown }).settings).toEqual({ mode: 'api', hostAgentId: 'claude-code', executablePath: FAKE_CLAUDE, permissionMode: 'consent' });
     });
 
     it('rejects invalid agent mode updates without saving them', async () => {
@@ -316,12 +316,13 @@ Run scripts/foo.py when needed.
         [{ executablePath: 'bin/claude' }, 'Executable path must be absolute.'],
         [{ executablePath: 42 }, 'Executable path must be a string or null.'],
         [{ mode: 'host' }, 'Choose a host agent before turning agent mode on.'],
+        [{ permissionMode: 'yolo' }, 'Permission handling must be "consent" or "auto".'],
       ];
       for (const [body, message] of cases) {
         const response = await callSettingsRoute('put', '/api/settings/agent-mode', body);
         expect(response).toEqual({ status: 400, body: { message } });
       }
-      expect(SettingsStore.getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null });
+      expect(SettingsStore.getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null, permissionMode: 'consent' });
     });
 
     it('probes a candidate host before it is saved, keeping only the allowed auth fields', async () => {

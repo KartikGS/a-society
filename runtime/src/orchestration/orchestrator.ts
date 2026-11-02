@@ -418,6 +418,7 @@ export class FlowOrchestrator {
             recordFolderPath: flowRun.recordFolderPath,
             model: hostChoice.model,
             effort: hostChoice.effort,
+            permissionMode: turnBackend.permissions ?? 'consent',
           }
           : undefined;
 

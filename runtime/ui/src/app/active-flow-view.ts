@@ -66,6 +66,8 @@ export interface ActiveFlowView {
   viewedRoleContextWindow: number | null;
   /** True when this flow's role turns run on a host coding agent. */
   isHostFlow: boolean;
+  /** The flow's host agent decides tool permissions (auto mode), fixed at creation. */
+  isHostAutoPermissions: boolean;
   viewedRoleHostUsage: HostUsage | null;
   projectSettingsEnabled: boolean;
 }
@@ -190,6 +192,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const latestContextUsage = viewedRole ? (activeUi?.latestContextUsageByRole[viewedRole] ?? null) : null;
   const viewedRoleContextWindow = viewedRole ? (activeUi?.contextWindowByRole[viewedRole] ?? null) : null;
   const isHostFlow = flowRun?.turnBackend?.kind === 'host';
+  const isHostAutoPermissions = flowRun?.turnBackend?.kind === 'host' && flowRun.turnBackend.permissions === 'auto';
   const viewedRoleHostUsage = viewedRole ? (activeUi?.hostUsageByRole[viewedRole] ?? null) : null;
 
   return {
@@ -228,6 +231,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     latestContextUsage,
     viewedRoleContextWindow,
     isHostFlow,
+    isHostAutoPermissions,
     viewedRoleHostUsage,
     projectSettingsEnabled: activeUi?.projectSettingsEnabled ?? false,
   };

@@ -119,7 +119,7 @@ describe('axe smoke checks', () => {
 
   it('AgentModePanel (host mode, checked) has no detectable a11y violations', async () => {
     vi.mocked(fetchAgentMode).mockResolvedValue({
-      settings: { mode: 'host', hostAgentId: 'claude-code', executablePath: null },
+      settings: { mode: 'host', hostAgentId: 'claude-code', executablePath: null, permissionMode: 'consent' },
       hosts: [CLAUDE_HOST],
     });
     vi.mocked(probeHostAgent).mockResolvedValue({

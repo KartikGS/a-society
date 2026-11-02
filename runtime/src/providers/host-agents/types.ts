@@ -31,7 +31,8 @@ export interface HostProbe {
 }
 
 export interface HostPermissionProfile {
-  mode: 'read-only' | 'edits' | 'edits-and-commands';
+  /** `host-decides`: the host's own permission judgment (Claude Code auto mode); no A2S rules apply. */
+  mode: 'read-only' | 'edits' | 'edits-and-commands' | 'host-decides';
   /** Absolute files the operator granted for writing when `mode` does not already allow edits. */
   allowedWritePaths: string[];
   /** Exact commands the operator granted. */

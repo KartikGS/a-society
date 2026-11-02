@@ -318,6 +318,23 @@ describe('agent mode forward pass', { timeout: 30_000 }, () => {
     expect(flagValues(retry.args, '--allowedTools')).toContain(`Edit(/${target})`);
   });
 
+  it('runs auto-mode flows with the host deciding, never prompting the operator for denials', async () => {
+    writeScript([
+      { reply: handoffTo('ta', artifactRel), writeFiles: [{ path: artifact, content: 'Brief.' }], denials: [{ tool_name: 'Bash', tool_input: { command: 'git push --force' } }] },
+      { reply: PROMPT_HUMAN },
+    ]);
+    saveFlow({ turnBackend: { kind: 'host', agentId: 'claude-code', permissions: 'auto' } });
+    const gate = new RecordingConsentGate(CONSENT_CHECK_RESULT.PROCEED);
+
+    const { flow } = await runUntil(awaiting('ta'), { consentGate: gate });
+
+    const [owner] = invocations();
+    expect(flagValue(owner.args, '--permission-mode')).toBe('auto');
+    expect(flagValues(owner.args, '--allowedTools')).toEqual([`Read(/${workspaceRoot}/**)`]);
+    expect(gate.requests).toEqual([]);
+    expect(flow.completedHandoffs).toContain('owner-intake=>ta');
+  });
+
   it('parks the node when the operator denies the permission', async () => {
     writeScript([
       { reply: 'Blocked.', denials: [{ tool_name: 'Bash', tool_input: { command: 'npm test' } }] },

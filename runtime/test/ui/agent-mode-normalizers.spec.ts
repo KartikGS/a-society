@@ -18,7 +18,7 @@ describe('agent mode normalizers', () => {
       settings: { mode: 'host', hostAgentId: 'codex', executablePath: '' },
       hosts: [{ id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' } }, { id: 'codex' }],
     })).toEqual({
-      settings: { mode: 'api', hostAgentId: null, executablePath: null },
+      settings: { mode: 'api', hostAgentId: null, executablePath: null, permissionMode: 'consent' },
       hosts: [{ id: 'claude-code', displayName: 'Claude Code', supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' }, models: [], effortLevels: [] }],
     });
   });

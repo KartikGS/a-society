@@ -14,7 +14,7 @@ import type {
   RoleSession,
   RuntimeMessageParam,
 } from './types.js';
-import type { HostAgentId } from '../../shared/settings.js';
+import type { HostAgentId, HostPermissionMode } from '../../shared/settings.js';
 import { INTERRUPTED_TURN_CONTINUATION_MESSAGE, upsertAssistantDelta } from './history.js';
 import { getHostAgent, assertHostReady } from '../providers/host-agents/registry.js';
 import type {
@@ -56,6 +56,8 @@ export interface HostTurnContext {
   extraWritableDirs?: string[];
   /** Scope reported on repair events: forward-pass node or backward-pass improvement. */
   repairScope?: 'node' | 'improvement';
+  /** Fixed per flow: A2S consent levels, or the host's own auto mode. Absent means consent. */
+  permissionMode?: HostPermissionMode;
   /** Host model alias for this role; null = host default model. */
   model: string | null;
   /** Host effort level for this role; null = host default effort. */
@@ -151,9 +153,13 @@ interface OneTimeGrants {
 export function buildHostPermissionProfile(
   consentGate: ConsentGate | undefined,
   grants: OneTimeGrants,
-  workspaceRoot: string
+  workspaceRoot: string,
+  permissionMode: HostPermissionMode = 'consent'
 ): HostPermissionProfile {
   const readOnlyRoots = [workspaceRoot];
+  if (permissionMode === 'auto') {
+    return { mode: 'host-decides', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots };
+  }
   // Without a consent gate the API path runs tools unchecked; mirror that.
   if (!consentGate) {
     return { mode: 'edits-and-commands', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots };
@@ -343,7 +349,7 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
               message,
               cwd: context.projectRoot,
               extraWritableDirs: writeRoots.filter((dir) => dir !== path.resolve(context.projectRoot)),
-              permissions: buildHostPermissionProfile(consentGate, grants, context.workspaceRoot),
+              permissions: buildHostPermissionProfile(consentGate, grants, context.workspaceRoot, context.permissionMode),
               model: context.model,
               effort: context.effort,
             }, onEvent, signal ?? new AbortController().signal, executablePath);
@@ -411,7 +417,8 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
         continue;
       }
 
-      if (consentGate && nodeId && result.permissionDenials.length > 0) {
+      // In auto mode the host's own judgment is final, so its refusals are not offered for grant.
+      if (consentGate && nodeId && context.permissionMode !== 'auto' && result.permissionDenials.length > 0) {
         const requests = result.permissionDenials
           .map((denial) => mapHostDenial(denial, context.workspaceRoot, writeRoots))
           .filter((request): request is DenialRequest => request !== null)

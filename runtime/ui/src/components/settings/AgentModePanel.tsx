@@ -118,6 +118,7 @@ export function AgentModePanel({ onSaved, onError, onSuccess }: AgentModePanelPr
         mode: form.mode,
         hostAgentId: form.mode === 'host' ? hostId : form.hostAgentId,
         executablePath: form.executablePath,
+        permissionMode: form.permissionMode,
       });
       setForm(response.settings);
       onSaved();
@@ -205,6 +206,35 @@ export function AgentModePanel({ onSaved, onError, onSuccess }: AgentModePanelPr
                 ) : null}
               </div>
               {probe ? <ProbeStatus probe={probe} /> : null}
+
+              <fieldset className="form-fieldset">
+                <legend className="form-label">Tool permissions</legend>
+                <label className="form-checkbox-label">
+                  <input
+                    type="radio"
+                    name="agent-permissions"
+                    checked={form.permissionMode === 'consent'}
+                    onChange={() => update({ permissionMode: 'consent' })}
+                  />
+                  A-Society permission levels (No, Partial, Full Access)
+                </label>
+                <label className="form-checkbox-label">
+                  <input
+                    type="radio"
+                    name="agent-permissions"
+                    checked={form.permissionMode === 'auto'}
+                    onChange={() => update({ permissionMode: 'auto' })}
+                  />
+                  {host?.displayName ?? 'The agent'} decides (auto mode)
+                </label>
+              </fieldset>
+              {form.permissionMode === 'auto' ? (
+                <p className="tool-settings-note agent-mode-warning" role="note">
+                  In auto mode {host?.displayName ?? 'the agent'} approves its own actions using its auto-mode rules.
+                  It may edit files outside the project, run shell and network commands, and A-Society will not ask
+                  you first. Flows keep the permission handling they were created with.
+                </p>
+              ) : null}
 
               <p className="tool-settings-note">
                 A-Society never reads or stores the agent&apos;s credentials. Billing follows the agent&apos;s own sign-in:

@@ -228,6 +228,7 @@ export function normalizeAgentModeSettings(value: unknown): AgentModeSettings {
     mode: raw.mode === 'host' && hostAgentId ? 'host' : DEFAULT_AGENT_MODE_SETTINGS.mode,
     hostAgentId,
     executablePath: nullableString(raw.executablePath),
+    permissionMode: raw.permissionMode === 'auto' ? 'auto' : 'consent',
   };
 }
 

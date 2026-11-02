@@ -29,7 +29,7 @@ vi.mock('../../../ui/src/app/runtime-api', () => ({
 }));
 
 const AGENT_MODE: AgentModeResponse = {
-  settings: { mode: 'host', hostAgentId: 'claude-code', executablePath: null },
+  settings: { mode: 'host', hostAgentId: 'claude-code', executablePath: null, permissionMode: 'consent' },
   hosts: [{
     id: 'claude-code',
     displayName: 'Claude Code',

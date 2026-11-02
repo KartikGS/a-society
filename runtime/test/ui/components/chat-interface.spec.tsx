@@ -129,3 +129,33 @@ describe('ChatInterface composer', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
+
+describe('ChatInterface permission control', () => {
+  function renderComposer(hostPermissionLabel: string | null) {
+    render(
+      <ChatInterface
+        subtitle="Owner"
+        messages={[]}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={false}
+        placeholder="Send a message"
+        showComposer={true}
+        hostPermissionLabel={hostPermissionLabel}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+  }
+
+  it('shows the permission dropdown for consent-level flows', () => {
+    renderComposer(null);
+    expect(screen.getByRole('combobox', { name: 'Tool permission mode for this flow' })).toBeInTheDocument();
+  });
+
+  it('replaces the dropdown with a label when the agent decides permissions', () => {
+    renderComposer('Auto (agent decides)');
+    expect(screen.queryByRole('combobox', { name: 'Tool permission mode for this flow' })).not.toBeInTheDocument();
+    expect(screen.getByText('Auto (agent decides)')).toBeInTheDocument();
+  });
+});

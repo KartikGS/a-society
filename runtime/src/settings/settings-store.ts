@@ -240,6 +240,7 @@ function normalizeAgentModeSettings(agentMode: unknown): AgentModeSettings {
     mode: raw.mode === 'host' && hostAgentId ? 'host' : 'api',
     hostAgentId,
     executablePath,
+    permissionMode: raw.permissionMode === 'auto' ? 'auto' : 'consent',
   };
 }
 

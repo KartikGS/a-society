@@ -211,6 +211,12 @@ function parseAgentModeParams(body: Record<string, unknown>): ParsedAgentModePar
     if (trimmed !== '' && !path.isAbsolute(trimmed)) return { ok: false, message: 'Executable path must be absolute.' };
     params.executablePath = trimmed === '' ? null : trimmed;
   }
+  if ('permissionMode' in body) {
+    if (body.permissionMode !== 'consent' && body.permissionMode !== 'auto') {
+      return { ok: false, message: 'Permission handling must be "consent" or "auto".' };
+    }
+    params.permissionMode = body.permissionMode;
+  }
   const merged = { ...SettingsStore.getAgentModeSettings(), ...params };
   if (merged.mode === 'host' && !merged.hostAgentId) {
     return { ok: false, message: 'Choose a host agent before turning agent mode on.' };

@@ -251,6 +251,7 @@ export function App() {
     latestContextUsage,
     viewedRoleContextWindow,
     isHostFlow,
+    isHostAutoPermissions,
     viewedRoleHostUsage,
     projectSettingsEnabled,
   } = activeView;
@@ -632,6 +633,7 @@ export function App() {
                     activeRoles={activeRoles}
                     consentRequest={visibleConsentRequest}
                     consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
+                    hostPermissionLabel={isHostAutoPermissions ? 'Auto (agent decides)' : null}
                     projectSettingsEnabled={projectSettingsEnabled}
                     roleConfiguration={roleConfigurationNodeId ? {
                       nodeId: roleConfigurationNodeId,

@@ -86,6 +86,15 @@ describe('buildClaudeCommand', () => {
     expect(valuesAfter(args, '--allowedTools')).toEqual(['Edit(//workspace/project/a.md)']);
   });
 
+  it('hands permissions to Claude Code auto mode without A2S rules beyond workspace reads', () => {
+    const { args } = buildClaudeCommand(request({
+      permissions: { mode: 'host-decides', allowedWritePaths: [], allowedCommands: [], allowedMcpTools: [], readOnlyRoots: ['/workspace'] },
+    }));
+    expect(valuesAfter(args, '--permission-mode')).toEqual(['auto']);
+    expect(valuesAfter(args, '--permission-prompts')).toEqual(['none']);
+    expect(valuesAfter(args, '--allowedTools')).toEqual(['Read(//workspace/**)']);
+  });
+
   it('maps full access to edits plus all Bash, never bypassPermissions', () => {
     const { args } = buildClaudeCommand(request({
       permissions: { mode: 'edits-and-commands', allowedWritePaths: [], allowedCommands: ['npm test'], allowedMcpTools: [], readOnlyRoots: [] },

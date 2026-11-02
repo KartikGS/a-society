@@ -17,6 +17,7 @@ import type {
 } from './projects.js';
 import type {
   HostAgentId,
+  HostPermissionMode,
 } from './settings.js';
 
 export type FlowStatus =
@@ -28,7 +29,10 @@ export type FlowStatus =
 export const CURRENT_FLOW_STATE_VERSION = '11';
 
 /** How a flow's role turns run. Fixed when the flow is created; absent means API. */
-export type TurnBackend = { kind: 'api' } | { kind: 'host'; agentId: HostAgentId };
+/** `permissions` is fixed with the backend; absent means A2S consent levels. */
+export type TurnBackend =
+  | { kind: 'api' }
+  | { kind: 'host'; agentId: HostAgentId; permissions?: HostPermissionMode };
 
 export type ConsentMode = ProtocolConsentMode;
 export type ConsentRequestKind = 'file-write' | 'bash-command' | 'mcp-tool';

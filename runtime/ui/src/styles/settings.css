@@ -638,3 +638,7 @@
   color: var(--danger-ink);
   font-weight: 600;
 }
+
+.agent-mode-warning {
+  color: var(--warning-ink);
+}

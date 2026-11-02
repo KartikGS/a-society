@@ -39,17 +39,25 @@ export interface SettingsStatus {
 }
 
 /** Whether new flows run role turns through LLM APIs or a host coding agent. */
+/**
+ * Who decides tool permissions on a host agent: A2S consent levels (No/Partial/Full
+ * Access with prompts), or the host's own auto mode, which judges each action itself.
+ */
+export type HostPermissionMode = 'consent' | 'auto';
+
 export interface AgentModeSettings {
   mode: 'api' | 'host';
   hostAgentId: HostAgentId | null;
   /** null looks the host's command up on PATH. */
   executablePath: string | null;
+  permissionMode: HostPermissionMode;
 }
 
 export const DEFAULT_AGENT_MODE_SETTINGS: AgentModeSettings = {
   mode: 'api',
   hostAgentId: null,
   executablePath: null,
+  permissionMode: 'consent',
 };
 
 export interface HostModelOption {

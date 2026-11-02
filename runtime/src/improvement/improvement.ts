@@ -224,6 +224,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       recordFolderPath: flowRun.recordFolderPath,
       extraWritableDirs: hostExtraWritableDirs,
       repairScope: 'improvement',
+      permissionMode: turnBackend.permissions ?? 'consent',
     }
     : undefined;
 

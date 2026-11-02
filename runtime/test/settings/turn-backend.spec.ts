@@ -27,7 +27,7 @@ afterEach(() => {
 
 describe('agent mode settings', () => {
   it('defaults to API mode and pins new flows to it', () => {
-    expect(getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null });
+    expect(getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null, permissionMode: 'consent' });
     expect(currentTurnBackend()).toEqual({ kind: 'api' });
   });
 
@@ -36,10 +36,17 @@ describe('agent mode settings', () => {
     expect(currentTurnBackend()).toEqual(HOST);
   });
 
+  it('pins auto permission handling into new host flows only when chosen', () => {
+    updateAgentModeSettings({ mode: 'host', hostAgentId: 'claude-code', permissionMode: 'auto' });
+    expect(currentTurnBackend()).toEqual({ ...HOST, permissions: 'auto' });
+    updateAgentModeSettings({ mode: 'api' });
+    expect(currentTurnBackend()).toEqual({ kind: 'api' });
+  });
+
   it('falls back to API mode for an unknown host or malformed settings', () => {
     fs.mkdirSync(path.join(tmpDir, '.a-society'), { recursive: true });
     fs.writeFileSync(path.join(tmpDir, '.a-society', 'settings.json'), JSON.stringify({ agentMode: { mode: 'host', hostAgentId: 'codex', executablePath: '  ' } }));
-    expect(getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null });
+    expect(getAgentModeSettings()).toEqual({ mode: 'api', hostAgentId: null, executablePath: null, permissionMode: 'consent' });
   });
 
   it('treats flows without a pinned backend as API flows', () => {

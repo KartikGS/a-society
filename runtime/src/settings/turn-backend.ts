@@ -8,9 +8,11 @@ export type TurnBackendReadiness = { ready: true } | { ready: false; message: st
 /** The backend new flows are pinned to, from the agent-mode setting. */
 export function currentTurnBackend(): TurnBackend {
   const settings = getAgentModeSettings();
-  return settings.mode === 'host' && settings.hostAgentId
-    ? { kind: 'host', agentId: settings.hostAgentId }
-    : { kind: 'api' };
+  if (settings.mode !== 'host' || !settings.hostAgentId) return { kind: 'api' };
+  // Only auto is recorded, so existing host flows keep reading as consent.
+  return settings.permissionMode === 'auto'
+    ? { kind: 'host', agentId: settings.hostAgentId, permissions: 'auto' }
+    : { kind: 'host', agentId: settings.hostAgentId };
 }
 
 /** Flows created before agent mode carry no backend and run on the API. */

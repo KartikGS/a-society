@@ -22,7 +22,7 @@ const CLAUDE = {
 };
 
 function response(settings: Partial<AgentModeResponse['settings']> = {}): AgentModeResponse {
-  return { settings: { mode: 'api', hostAgentId: null, executablePath: null, ...settings }, hosts: [CLAUDE] };
+  return { settings: { mode: 'api', hostAgentId: null, executablePath: null, permissionMode: 'consent', ...settings }, hosts: [CLAUDE] };
 }
 
 function probe(overrides: Partial<HostProbeSummary> = {}): HostProbeSummary {
@@ -77,7 +77,7 @@ describe('AgentModePanel', () => {
     expect(screen.getByText('claude.ai, pro plan')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save Agent Mode' }));
-    expect(saveAgentMode).toHaveBeenCalledWith({ mode: 'host', hostAgentId: 'claude-code', executablePath: null });
+    expect(saveAgentMode).toHaveBeenCalledWith({ mode: 'host', hostAgentId: 'claude-code', executablePath: null, permissionMode: 'consent' });
     await waitFor(() => expect(handlers.onSaved).toHaveBeenCalled());
     expect(handlers.onSuccess).toHaveBeenCalledWith('New flows will run on Claude Code.');
   });
@@ -107,5 +107,23 @@ describe('AgentModePanel', () => {
     await user.click(screen.getByRole('button', { name: 'Save Agent Mode' }));
     await waitFor(() => expect(handlers.onError).toHaveBeenCalledWith('Executable path must be absolute.'));
     expect(handlers.onSaved).not.toHaveBeenCalled();
+  });
+
+  it('offers the agent\'s auto mode with a warning and saves the choice', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchAgentMode).mockResolvedValue(response({ mode: 'host', hostAgentId: 'claude-code' }));
+    vi.mocked(probeHostAgent).mockResolvedValue(probe());
+    vi.mocked(saveAgentMode).mockResolvedValue(response({ mode: 'host', hostAgentId: 'claude-code', permissionMode: 'auto' }));
+    renderPanel();
+
+    const consent = await screen.findByRole('radio', { name: 'A-Society permission levels (No, Partial, Full Access)' });
+    expect(consent).toBeChecked();
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: 'Claude Code decides (auto mode)' }));
+    expect(screen.getByRole('note')).toHaveTextContent('may edit files outside the project');
+
+    await user.click(screen.getByRole('button', { name: 'Save Agent Mode' }));
+    expect(saveAgentMode).toHaveBeenCalledWith({ mode: 'host', hostAgentId: 'claude-code', executablePath: null, permissionMode: 'auto' });
   });
 });

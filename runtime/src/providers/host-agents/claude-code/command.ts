@@ -5,10 +5,11 @@ export interface ClaudeCommand {
   stdin: string;
 }
 
-const PERMISSION_MODE: Record<HostPermissionProfile['mode'], 'default' | 'acceptEdits'> = {
+const PERMISSION_MODE: Record<HostPermissionProfile['mode'], 'default' | 'acceptEdits' | 'auto'> = {
   'read-only': 'default',
   edits: 'acceptEdits',
   'edits-and-commands': 'acceptEdits',
+  'host-decides': 'auto',
 };
 
 /** Claude Code permission rules write absolute paths with a leading `//`. */
