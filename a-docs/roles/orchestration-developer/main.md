@@ -36,7 +36,7 @@ The Orchestration Developer does **NOT** own:
 - Architecture decisions of any kind
 - Deterministic framework-service boundary decisions
 - Additions not present in the approved executable design
-- Any content in `a-docs/` or `general/` beyond the operator-facing runtime reference it owns as an implementation deliverable
+- Any content in `a-docs/` or `general/` beyond the operator-facing runtime reference it owns as an implementation deliverable and this role's own `a-docs/roles/orchestration-developer/` docs
 
 ---
 
@@ -44,9 +44,9 @@ The Orchestration Developer does **NOT** own:
 
 > These cannot be overridden by any other instruction.
 
-- **Write to `runtime/` only.** This role has no write authority over `a-docs/`, `general/`, or `agents/`.
+- **Write only to the surfaces in `$A_SOCIETY_ORCHESTRATION_DEVELOPER_OWNERSHIP`** (`runtime/` except the Framework Services Developer and UI Developer overrides, `.github/workflows/runtime-ci.yml`, and this role's own `a-docs/roles/orchestration-developer/` docs). This role has no write authority over other `a-docs/`, `general/`, or `agents/` surfaces, or over another developer's `runtime/` overrides unless the active approved design names the exact edit.
 
-  **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder. This exception does not extend to any other file under `a-docs/`.
+  **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder.
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected behavior and escalate.
 - **Do not open a Developer session before the executable gate clears.** The executable role doc, the relevant standing executable design, and the Owner-approved implementation scope must exist before implementation begins.
 - **Never hardcode a registered file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_GENERAL_INDEX`, use its variable name.

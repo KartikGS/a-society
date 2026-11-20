@@ -1,4 +1,5 @@
 import { getActiveNodeIds } from '../../../shared/flow-state.js';
+import type { ClosureApprovalPrompt } from '../components/ChatInterface';
 import type { GraphMode } from '../components/GraphView';
 import type { RoleConfigurationPending } from '../../../shared/operator-protocol.js';
 import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, HandoffTarget } from '../../../shared/types.js';
@@ -9,12 +10,14 @@ import {
   collectSelectableRoles,
   getAwaitingHandoffNodeIdForRole,
   getAwaitingNodeIdForRole,
+  getClosureApprovalNodeIdForRole,
   getHandoffApprovalNodeIdForRole,
   getImprovementAwaitingRoleName,
   getRoleConfigurationNodeIdForRole,
   hasImprovementGraph,
   type FlowTab,
   type FlowUiState,
+  type HostUsage,
 } from './flow-ui';
 import { isBackwardHandoffSource } from './handoff-source.js';
 import { toRoleKey } from './roles';
@@ -48,6 +51,9 @@ export interface ActiveFlowView {
   roleConfigurationPending: RoleConfigurationPending | null;
   handoffApprovalNodeId: string | null;
   handoffApprovalTargets: HandoffTarget[] | null;
+  closureApprovalNodeId: string | null;
+  /** The staged forward-pass closure the viewed role is waiting on the operator to decide. */
+  closureApproval: ClosureApprovalPrompt | null;
   isAwaitingImprovementChoice: boolean;
   isAwaitingFeedbackConsent: boolean;
   feedbackPrompt: ReturnType<typeof feedbackConsentCopy>;
@@ -63,6 +69,11 @@ export interface ActiveFlowView {
   composerValue: string;
   latestContextUsage: number | null;
   viewedRoleContextWindow: number | null;
+  /** True when this flow's role turns run on a host coding agent. */
+  isHostFlow: boolean;
+  /** The flow's host agent decides tool permissions (auto mode), fixed at creation. */
+  isHostAutoPermissions: boolean;
+  viewedRoleHostUsage: HostUsage | null;
   projectSettingsEnabled: boolean;
 }
 
@@ -156,6 +167,15 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const handoffApprovalTargets = handoffApprovalNodeId
     ? flowRun?.pendingHandoffApprovals[handoffApprovalNodeId] ?? null
     : null;
+  const closureApprovalNodeId = getClosureApprovalNodeIdForRole(flowRun, viewedRole);
+  const closureApproval: ClosureApprovalPrompt | null = closureApprovalNodeId
+    ? {
+      nodeId: closureApprovalNodeId,
+      artifactPath: flowRun?.pendingClosureApproval?.nodeId === closureApprovalNodeId
+        ? flowRun.pendingClosureApproval.artifactPath
+        : null,
+    }
+    : null;
   const improvementInputTargetRole = getImprovementAwaitingRoleName(flowRun, viewedRole);
   const isAwaitingImprovementChoice = flowRun?.status === 'awaiting_improvement_choice';
   const isAwaitingFeedbackConsent = flowRun?.status === 'awaiting_feedback_consent';
@@ -167,7 +187,9 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     ? 'Configure this role to continue.'
     : handoffApprovalNodeId
       ? 'Approve or decline the staged handoff to continue.'
-      : !hasActiveSession
+      : closureApprovalNodeId
+        ? 'Approve or decline closing the forward pass to continue.'
+        : !hasActiveSession
         ? 'Resume the flow to reply.'
         : !inputDisabled
           ? 'Reply to the selected role.'
@@ -185,6 +207,9 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const isViewedRoleCompacting = viewedRole ? Boolean(activeUi?.compactingRoles[viewedRole]) : false;
   const latestContextUsage = viewedRole ? (activeUi?.latestContextUsageByRole[viewedRole] ?? null) : null;
   const viewedRoleContextWindow = viewedRole ? (activeUi?.contextWindowByRole[viewedRole] ?? null) : null;
+  const isHostFlow = flowRun?.turnBackend?.kind === 'host';
+  const isHostAutoPermissions = flowRun?.turnBackend?.kind === 'host' && flowRun.turnBackend.permissions === 'auto';
+  const viewedRoleHostUsage = viewedRole ? (activeUi?.hostUsageByRole[viewedRole] ?? null) : null;
 
   return {
     activeTab,
@@ -206,6 +231,8 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     roleConfigurationPending,
     handoffApprovalNodeId,
     handoffApprovalTargets,
+    closureApprovalNodeId,
+    closureApproval,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -221,6 +248,9 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     composerValue: activeUi?.composerValue ?? '',
     latestContextUsage,
     viewedRoleContextWindow,
+    isHostFlow,
+    isHostAutoPermissions,
+    viewedRoleHostUsage,
     projectSettingsEnabled: activeUi?.projectSettingsEnabled ?? false,
   };
 }

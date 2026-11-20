@@ -115,7 +115,14 @@ export class HandoffInterpreter {
         } else if (typeof payload === 'object' && payload !== null) {
           if ('type' in payload) {
             if (payload.type === 'forward-pass-closed') {
-              result = { kind: 'forward-pass-closed' };
+              const closureArtifact = payload.artifact_path;
+              if (closureArtifact === undefined || closureArtifact === null) {
+                result = { kind: 'forward-pass-closed' };
+              } else if (typeof closureArtifact === 'string' && closureArtifact.trim() !== '') {
+                result = { kind: 'forward-pass-closed', artifactPath: closureArtifact };
+              } else {
+                throw missingRequiredField('forward-pass-closed artifact_path must be a non-empty string when present.');
+              }
             } else if (payload.type === 'meta-analysis-complete') {
               if (typeof payload.findings_path !== 'string' || payload.findings_path.trim() === '') {
                 throw missingRequiredField('meta-analysis-complete block missing findings_path');

@@ -12,8 +12,11 @@ import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import * as SessionStore from '../orchestration/store.js';
 import { resolveRoleModel } from '../orchestration/role-model.js';
+import { resolveHostRoleModel } from '../orchestration/host-role-model.js';
 import { resolveRoleMcpManager } from '../orchestration/role-mcp-manager.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
+import type { HostTurnContext } from '../common/host-role-turn.js';
+import { resolveTurnBackend } from '../settings/turn-backend.js';
 import { CURRENT_FLOW_STATE_VERSION } from '../common/types.js';
 import type { ConsentGate, FlowRun, HandoffResult, ImprovementPhaseState, OperatorRenderSink, RoleSession, RuntimeMessageParam } from '../common/types.js';
 import {
@@ -196,13 +199,34 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   consentGate?: ConsentGate,
   mcpManager?: McpManager,
   validateExpectedSignal?: ExpectedSignalValidator<K>,
+  hostExtraWritableDirs: string[] = [],
 ): Promise<ExpectedImprovementSignal<K> | null> {
   let history = session.transcriptHistory as RuntimeMessageParam[];
   const stepLabel = describeExpectedStep(expectedKind);
   const nodeId = `${roleInstanceId}-${stepLabel}`;
   const flowRef = SessionStore.flowRef(flowRun);
-  const roleModel = resolveRoleModel(flowRef, roleInstanceId);
   const saveSession = () => SessionStore.saveRoleSession(session, flowRef);
+  const turnBackend = resolveTurnBackend(flowRun);
+  // Non-gating: an API flow uses the role's API model, a host flow the role's host
+  // model/effort selection (host default when none was made).
+  const roleModel = turnBackend.kind === 'api' ? resolveRoleModel(flowRef, roleInstanceId) : undefined;
+  const hostChoice = turnBackend.kind === 'host' ? resolveHostRoleModel(flowRef, roleInstanceId, turnBackend.agentId) : undefined;
+  const hostContext: HostTurnContext | undefined = turnBackend.kind === 'host' && hostChoice
+    ? {
+      model: hostChoice.model,
+      effort: hostChoice.effort,
+      agentId: turnBackend.agentId,
+      session,
+      saveSession,
+      flowRef,
+      workspaceRoot: flowRun.workspaceRoot,
+      projectRoot: path.join(flowRun.workspaceRoot, flowRun.projectNamespace),
+      recordFolderPath: flowRun.recordFolderPath,
+      extraWritableDirs: hostExtraWritableDirs,
+      repairScope: 'improvement',
+      permissionMode: turnBackend.permissions ?? 'consent',
+    }
+    : undefined;
 
   while (true) {
     try {
@@ -234,6 +258,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
           saveSession,
           nodeId,
         },
+        host: hostContext,
       });
       history = session.transcriptHistory as RuntimeMessageParam[];
 
@@ -456,13 +481,10 @@ async function runMetaAnalysisEntry(
       ).bundleContent;
     }
 
-    const mcpManager = await resolveRoleMcpManager({
-      flowRef,
-      roleInstanceId,
-      nodeId,
-      renderer,
-      mcpManagers,
-    });
+    // Host agents bring their own MCP servers.
+    const mcpManager = resolveTurnBackend(flowRun).kind === 'api'
+      ? await resolveRoleMcpManager({ flowRef, roleInstanceId, nodeId, renderer, mcpManagers })
+      : undefined;
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleInstanceId, session.systemPrompt, session, 'meta-analysis-complete',
       roleOutputStream, renderer,
@@ -612,13 +634,10 @@ async function runFeedbackEntry(
       });
     }
 
-    const mcpManager = await resolveRoleMcpManager({
-      flowRef,
-      roleInstanceId,
-      nodeId,
-      renderer,
-      mcpManagers,
-    });
+    // Host agents bring their own MCP servers.
+    const mcpManager = resolveTurnBackend(flowRun).kind === 'api'
+      ? await resolveRoleMcpManager({ flowRef, roleInstanceId, nodeId, renderer, mcpManagers })
+      : undefined;
     const completed = await runBackwardPassSessionUntilExpectedSignal(
       flowRun, roleInstanceId, RUNTIME_FEEDBACK_SYSTEM_PROMPT, session, 'backward-pass-complete',
       roleOutputStream, renderer,
@@ -648,7 +667,9 @@ async function runFeedbackEntry(
           };
         }
         return null;
-      }
+      },
+      // The feedback folder is writable only for this session, which exists only after feedback consent.
+      [path.dirname(assignedFeedbackFilePath)],
     );
 
     if (!completed) return; // role is now awaiting human input; awaitingHumanRoles already saved

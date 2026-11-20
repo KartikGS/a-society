@@ -7,6 +7,8 @@ import type {
   ProtocolConsentMode,
   ProtocolImprovementChoiceMode,
 } from './protocol-constants.js';
+import { isHostAgentId } from './settings.js';
+import type { HostAgentId, HostModelChoice } from './settings.js';
 import { normalizeStringList } from './strings.js';
 
 /**
@@ -21,6 +23,11 @@ export interface ProjectRoleSettings {
   skills?: string[];
   /** MCP server ids; absent = decide per flow. An empty array means "no MCP servers". */
   mcpServers?: string[];
+  /**
+   * Agent-mode model/effort default per host agent; a host absent = use the per-flow
+   * host model gate. Independent of `modelConfigId`, which applies to API flows only.
+   */
+  hostModels?: Partial<Record<HostAgentId, HostModelChoice>>;
 }
 
 export interface ProjectPermissionSettings {
@@ -76,7 +83,31 @@ export function normalizeProjectRoleSettings(value: unknown): ProjectRoleSetting
   if (Array.isArray(raw.mcpServers)) {
     result.mcpServers = normalizeStringList(raw.mcpServers);
   }
+  const hostModels = normalizeHostModels(raw.hostModels);
+  if (hostModels) result.hostModels = hostModels;
   return result;
+}
+
+function nullableTrimmed(value: unknown): string | null | undefined {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+/** Valid host ids only; `model`/`effort` each a trimmed non-empty string or null. */
+function normalizeHostModels(value: unknown): Partial<Record<HostAgentId, HostModelChoice>> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const result: Partial<Record<HostAgentId, HostModelChoice>> = {};
+  for (const [agentId, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!isHostAgentId(agentId) || !raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const entry = raw as Record<string, unknown>;
+    const model = nullableTrimmed(entry.model);
+    const effort = nullableTrimmed(entry.effort);
+    if (model === undefined || effort === undefined) continue;
+    result[agentId] = { model, effort };
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 export function normalizeProjectSettings(raw: unknown): ProjectSettings {

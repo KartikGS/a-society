@@ -1,3 +1,4 @@
+export { AgentModePanel } from './AgentModePanel';
 export { AddModelForm } from './AddModelForm';
 export { AutomationToggle } from './AutomationToggle';
 export { FeedSettingsPanel } from './FeedSettingsPanel';

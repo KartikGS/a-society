@@ -7,10 +7,23 @@ A-Society is a framework for making projects agentic-friendly. Its foundation is
 A-Society has three primary standing layers, each with a distinct role:
 
 - **`general/`** — the library. Distributable instructions, templates, and patterns that any adopting project can use without modification.
-- **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime calls LLM APIs directly, provides the operator-facing web server / browser UI surface, and is the surviving umbrella executable layer.
+- **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime runs each role turn through one of two turn backends — LLM APIs called directly, or a supported host coding agent the operator already uses (agent mode) — provides the operator-facing web server / browser UI surface, and is the surviving umbrella executable layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
 Detailed executable architecture, capability inventory, and implementation ownership boundaries live in `$A_SOCIETY_EXECUTABLE_ARCHITECTURE`.
+
+### Agent Mode
+
+In agent mode the runtime still orchestrates; only the execution of a role turn moves to the host agent, run headlessly once per turn and resumed by conversation id. Responsibilities split as follows:
+
+- **Host-managed:** model access and authentication, MCP servers, skills, tool permissions and consent prompts, web search, and context compaction. The host's own configuration governs these.
+- **System-managed (A-Society):** project scaffolding, flow state, context injection, handoff parsing and validation, workflow validation, scheduling, human gates, closure and health checks, backward-pass ordering, and upstream feedback.
+
+Handoffs, workflow validity, and closure stay structural in agent mode. Write scope and command permissions become host-configured rather than runtime-enforced: the runtime sets the host's permission flags for each turn, but the host applies them.
+
+Supported hosts, their capability evidence, and their restrictions live in `$A_SOCIETY_EXECUTABLE_HOST_AGENTS`; A-Society supports only the hosts and versions its adapters declare.
+
+**Terms-of-use stance.** A-Society never handles host credentials. It runs the operator's own unmodified host CLI exactly as the operator has signed in to it, and shows the authentication source it detects so billing is never a surprise. Public A-Society surfaces do not promise that agent mode runs on a subscription plan until the host vendor's terms clearly permit that use; the operator remains responsible for how they authenticate their own host.
 
 Two indexes govern path resolution:
 

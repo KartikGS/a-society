@@ -3,6 +3,7 @@ import { OpenAICompatibleProvider } from './openai-compatible.js';
 import type { FlowRef, LLMProvider, RuntimeMessageParam, ToolDefinition, ToolCall, TurnOptions, GatewayTurnResult } from '../common/types.js';
 import { CONSENT_CHECK_RESULT, LLMGatewayError } from '../common/types.js';
 import { FileToolExecutor, FILE_TOOL_DEFINITIONS } from '../tools/file-executor.js';
+import { toProposedFileChange, type FileChange } from '../tools/file-change.js';
 import { BashToolExecutor, BASH_TOOL_DEFINITIONS } from '../tools/bash-executor.js';
 import { WebSearchExecutor, WEB_SEARCH_TOOL_DEFINITIONS } from '../tools/web-search-executor.js';
 import { McpToolExecutor } from '../tools/mcp-executor.js';
@@ -193,15 +194,17 @@ export class LLMGateway {
                   continue;
                 }
               }
+              let preparedChange: FileChange | null = null;
               if (this.fileExecutor) {
-                const pathResult = this.fileExecutor.validate(call);
-                if (pathResult) {
+                const preparation = this.fileExecutor.prepare(call);
+                if (preparation?.kind === 'ready') preparedChange = preparation.change;
+                if (preparation?.kind === 'rejected') {
                   options?.operatorRenderer?.emit({ kind: 'activity.tool_call', role: options?.roleInstanceId ?? '__system__', toolName: call.name, path: call.input?.path as string | undefined });
                   await appendConversationMessages([{
                     role: 'tool_result' as const,
                     callId: call.id,
                     toolName: call.name,
-                    content: pathResult.content,
+                    content: preparation.content,
                     isError: true,
                   }]);
                   options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.roleInstanceId ?? '__system__', toolName: call.name, isError: true });
@@ -215,11 +218,13 @@ export class LLMGateway {
                     'Consent-gated tool calls require role instance id and node ownership metadata.'
                   );
                 }
+                const preview = preparedChange ? toProposedFileChange(preparedChange, 'runtime-write') : null;
                 const decision = await options.consentGate.check({
                   toolName: call.name,
                   input: call.input,
                   role: options.roleInstanceId,
                   nodeId: options.nodeId,
+                  ...(preview ? { preview } : {}),
                 }, options.signal);
                 if (decision === CONSENT_CHECK_RESULT.DENY) {
                   const pathArg = call.input?.path as string | undefined;
@@ -248,7 +253,11 @@ export class LLMGateway {
                 ? this.mcpExecutor.execute(call, options?.signal)
                 : this.webSearchExecutor?.canHandle(call.name)
                 ? this.webSearchExecutor.execute(call, options?.signal)
-                : this.fileExecutor!.execute(call, options?.signal));
+                : this.fileExecutor!.execute(
+                  call,
+                  options?.signal,
+                  preparedChange ? { expectedBaseHash: preparedChange.baseHash } : undefined
+                ));
               content = res.content;
               isError = res.isError;
               options?.operatorRenderer?.emit({ kind: 'activity.tool_result', role: options?.roleInstanceId ?? '__system__', toolName: call.name, isError: res.isError });

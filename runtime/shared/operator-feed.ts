@@ -117,6 +117,7 @@ export function operatorEventToFeedItem(event: OperatorEvent, id: string): FeedI
     case 'human.resumed':
       return null;
     case 'usage.turn_summary':
+    case 'usage.host_rate_limit':
       return null;
     case 'session.compaction_started':
       return {

@@ -1,5 +1,5 @@
 ---
-a_society_version: "0.3.2"
+a_society_version: "0.3.3"
 ---
 
 <!-- On release, bump a_society_version above to match the newest released section below; the runtime reads it as the canonical current version. -->
@@ -7,6 +7,15 @@ a_society_version: "0.3.2"
 # Changelog
 
 All notable changes to A-Society will be documented here.
+
+---
+
+## [0.3.3] — 2026-11-20
+
+### Runtime
+
+- Agent mode: role turns can run on a coding agent installed on your machine (Claude Code 2.1.304 up to 2.2.0) instead of API models. Set it in Settings → Agent mode; it applies to new flows, and existing flows keep the backend they started with. The agent uses its own skills, MCP servers, and context compaction; A-Society keeps the workflow, handoffs, records, and backward pass. Replies stream into the chat as they are written, and each role's model and effort come from project settings when enabled, otherwise from a per-flow choice (the agent's default is an option).
+- Chat: assistant messages render a sanitized subset of inline HTML (`span`, `kbd`, `sub`, `sup`, `mark`, `details`/`summary`, `br`, with color-only inline styles), and long unbroken strings wrap instead of overflowing.
 
 ---
 

@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { readHostModelSelection } from '../../src/orchestration/host-role-model.js';
 import { AWAITING_HUMAN_REASON, IMPROVEMENT_CHOICE_MODE } from '../../shared/protocol-constants.js';
 import { CURRENT_FLOW_STATE_VERSION, type FlowRef, type FlowRun } from '../../src/common/types.js';
 import { readCapabilitySelection, saveCapabilityDimension } from '../../src/orchestration/capability-selection.js';
@@ -10,6 +11,7 @@ import * as SessionStore from '../../src/orchestration/store.js';
 import { createRuntimeSessionCommands } from '../../src/server/runtime-session/commands.js';
 import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { seedTestModelSettings, seedTestMultiModelSettings } from '../integration/settings-test-utils.js';
+import { getTurnBackendReadiness, resolveTurnBackend } from '../../src/settings/turn-backend.js';
 
 function makeFlowRun(workspaceRoot: string, overrides: Partial<FlowRun> = {}): FlowRun {
   const flowId = overrides.flowId ?? 'test-flow';
@@ -65,7 +67,11 @@ function createCommands(
     broadcastToFlow: (_ref, message) => {
       if (message.type === 'error') errors.push(message.message);
     },
-    missingModelError: (ref) => ({ type: 'error', flowRef: ref, message: 'missing model' }),
+    turnBackendRefusal: async (ref, flowRun) => (
+      (await getTurnBackendReadiness(resolveTurnBackend(flowRun))).ready
+        ? null
+        : { type: 'error', flowRef: ref, message: 'missing model' }
+    ),
     consent: {} as any,
   });
 
@@ -486,5 +492,181 @@ describe('runtime session human input commands', () => {
     } finally {
       fs.rmSync(workspaceRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe('runtime session host role configuration', () => {
+  const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+  let workspaceRoot: string;
+
+  function hostFlow(): FlowRun {
+    const flow = makeFlowRun(workspaceRoot, {
+      turnBackend: { kind: 'host', agentId: 'claude-code' },
+      awaitingHumanNodes: { plan: { role: 'planner', reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION } },
+    });
+    SessionStore.saveFlowRun(flow, ref);
+    return flow;
+  }
+
+  beforeEach(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-host-role-config-'));
+    setWorkspaceRoot(workspaceRoot);
+    SessionStore.init();
+  });
+
+  afterEach(() => {
+    clearWorkspaceRoot();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  it('requires a host model choice', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { modelConfigId: 'api-model', skills: ['x'], mcpServers: [] });
+    expect(errors).toEqual(['Select a model before submitting role configuration.']);
+    expect(readHostModelSelection(ref, 'planner')).toBeNull();
+  });
+
+  it('rejects a model the host does not declare', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { hostModel: { model: 'gpt-9', effort: null }, skills: [], mcpServers: [] });
+    expect(errors).toEqual(['Unknown model "gpt-9" for Claude Code. Refresh Settings and try again.']);
+    expect(readHostModelSelection(ref, 'planner')).toBeNull();
+  });
+
+  it('rejects an effort level the host does not declare', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { hostModel: { model: 'opus', effort: 'turbo' }, skills: [], mcpServers: [] });
+    expect(errors).toEqual(['Unknown effort level "turbo" for Claude Code. Refresh Settings and try again.']);
+    expect(readHostModelSelection(ref, 'planner')).toBeNull();
+  });
+
+  it('saves the selection, ignores skills and MCP, and reports the host label', () => {
+    const flow = hostFlow();
+    const { commands, errors, historicalEvents } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', {
+      hostModel: { model: 'sonnet', effort: 'high' },
+      skills: ['ghost-skill'],
+      mcpServers: ['ghost'],
+    });
+    expect(errors).toEqual([]);
+    expect(readHostModelSelection(ref, 'planner')).toMatchObject({ hostAgentId: 'claude-code', model: 'sonnet', effort: 'high' });
+    expect(readCapabilitySelection(ref, 'planner')).toBeNull();
+    expect(historicalEvents).toContainEqual({ kind: 'role.configured', nodeId: 'plan', role: 'planner', modelDisplayName: 'Sonnet · effort high' });
+  });
+
+  it('accepts host default as a selection', () => {
+    const flow = hostFlow();
+    const { commands, errors } = createCommands(() => flow);
+    commands.handleRoleConfiguration(ref, 'plan', { hostModel: { model: null, effort: null }, skills: [], mcpServers: [] });
+    expect(errors).toEqual([]);
+    expect(readHostModelSelection(ref, 'planner')).toMatchObject({ model: null, effort: null });
+  });
+});
+
+describe('runtime session closure approval commands', () => {
+  const ref = { projectNamespace: 'test-project', flowId: 'test-flow' };
+  let workspaceRoot: string;
+
+  beforeEach(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-closure-approval-'));
+    setWorkspaceRoot(workspaceRoot);
+    SessionStore.init();
+  });
+
+  afterEach(() => {
+    clearWorkspaceRoot();
+    fs.rmSync(workspaceRoot, { recursive: true, force: true });
+  });
+
+  function stagedFlow(reason: string = AWAITING_HUMAN_REASON.CLOSURE_APPROVAL): FlowRun {
+    return makeFlowRun(workspaceRoot, {
+      awaitingHumanNodes: { 'owner-closure': { role: 'owner', reason: reason as any } },
+      pendingClosureApproval: { nodeId: 'owner-closure', artifactPath: 'record/closure.md', stagedAt: '2026-11-02T00:00:00.000Z' },
+    });
+  }
+
+  function setup(approve: (flowRun: FlowRun, nodeId: string) => Promise<void> = async () => {}) {
+    const errors: string[] = [];
+    const calls = { approve: [] as string[], wake: 0, flowState: 0, backendChecks: 0 };
+    const orchestrator = {
+      approveForwardPassClosure: async (flowRun: FlowRun, nodeId: string) => {
+        calls.approve.push(nodeId);
+        await approve(flowRun, nodeId);
+      },
+      wake: () => { calls.wake += 1; },
+    };
+    const activeSessions = new Map<string, any>([[`${ref.projectNamespace}/${ref.flowId}`, { flowRef: ref, orchestrator, finished: false }]]);
+    const commands = createRuntimeSessionCommands({
+      activeSessions,
+      readFlowRun: (flowRef: FlowRef) => SessionStore.loadFlowRun(flowRef),
+      resolveWorkflow: () => ({ nodes: [{ id: 'owner-closure', role: 'owner' }], edges: [] }),
+      emitFlowState: () => { calls.flowState += 1; },
+      broadcastToFlow: (_ref: FlowRef, message: any) => {
+        if (message.type === 'error') errors.push(message.message);
+      },
+      turnBackendRefusal: async () => { calls.backendChecks += 1; return null; },
+    } as any);
+    return { commands, errors, calls };
+  }
+
+  it('declines a staged closure by parking the node for guidance', async () => {
+    SessionStore.saveFlowRun(stagedFlow(), ref);
+    const { commands, errors, calls } = setup();
+
+    await commands.handleHandoffApproval(ref, 'owner-closure', 'decline');
+
+    const latest = SessionStore.loadFlowRun(ref)!;
+    expect(errors).toEqual([]);
+    expect(latest.pendingClosureApproval).toBeUndefined();
+    expect(latest.awaitingHumanNodes['owner-closure']).toEqual({ role: 'owner', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN });
+    expect(calls).toEqual({ approve: [], wake: 0, flowState: 1, backendChecks: 0 });
+  });
+
+  it('dispatches an approval to the orchestrator, then wakes the runner and emits flow state', async () => {
+    SessionStore.saveFlowRun(stagedFlow(), ref);
+    const { commands, errors, calls } = setup();
+
+    await commands.handleHandoffApproval(ref, 'owner-closure', 'approve');
+
+    expect(errors).toEqual([]);
+    // No role turn follows a closure approval, so the turn backend is not checked.
+    expect(calls).toEqual({ approve: ['owner-closure'], wake: 1, flowState: 1, backendChecks: 0 });
+  });
+
+  it('broadcasts an approval failure once and leaves the runner alone', async () => {
+    SessionStore.saveFlowRun(stagedFlow(), ref);
+    const { commands, errors, calls } = setup(async () => { throw new Error('The forward pass can no longer close.'); });
+
+    await commands.handleHandoffApproval(ref, 'owner-closure', 'approve');
+
+    expect(errors).toEqual(['The forward pass can no longer close.']);
+    expect(calls.wake).toBe(0);
+    expect(calls.flowState).toBe(0);
+  });
+
+  it('refuses a text reply to a node awaiting closure approval', async () => {
+    // Another node accepts replies, so the runtime is accepting input and reaches the per-node check.
+    const flowRun = stagedFlow();
+    flowRun.awaitingHumanNodes['curator'] = { role: 'curator', reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
+    SessionStore.saveFlowRun(flowRun, ref);
+    const { commands, errors } = setup();
+
+    await commands.handleHumanInput(ref, 'looks good', { nodeId: 'owner-closure' });
+
+    expect(errors).toEqual(["Node 'owner-closure' is awaiting closure approval, not a text reply."]);
+    expect(SessionStore.loadFlowRun(ref)!.pendingHumanInputs).toEqual({});
+  });
+
+  it('refuses a decision for a node that awaits neither a handoff nor a closure approval', async () => {
+    SessionStore.saveFlowRun(stagedFlow(AWAITING_HUMAN_REASON.PROMPT_HUMAN), ref);
+    const { commands, errors, calls } = setup();
+
+    await commands.handleHandoffApproval(ref, 'owner-closure', 'approve');
+
+    expect(errors).toEqual(["Node 'owner-closure' is not awaiting a handoff or closure approval."]);
+    expect(calls.approve).toEqual([]);
   });
 });

@@ -15,6 +15,11 @@ import type {
 import type {
   InitializationMode,
 } from './projects.js';
+import type {
+  HostAgentId,
+  HostPermissionMode,
+} from './settings.js';
+import type { ConsentChangePreviewRef, ProposedFileChange } from './document-view.js';
 
 export type FlowStatus =
   | 'running'
@@ -24,13 +29,19 @@ export type FlowStatus =
 
 export const CURRENT_FLOW_STATE_VERSION = '11';
 
+/** How a flow's role turns run. Fixed when the flow is created; absent means API. */
+/** `permissions` is fixed with the backend; absent means A2S consent levels. */
+export type TurnBackend =
+  | { kind: 'api' }
+  | { kind: 'host'; agentId: HostAgentId; permissions?: HostPermissionMode };
+
 export type ConsentMode = ProtocolConsentMode;
 export type ConsentRequestKind = 'file-write' | 'bash-command' | 'mcp-tool';
 export type ConsentResponseDecision = ProtocolConsentResponseDecision;
 export type AwaitingHumanReason = ProtocolAwaitingHumanReason;
 
 export type ConsentRequest =
-  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
+  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string; preview?: ConsentChangePreviewRef }
   | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string }
   | {
       kind: 'mcp-tool';
@@ -47,6 +58,8 @@ export interface ConsentCheckRequest {
   input?: Record<string, unknown>;
   nodeId: string;
   role: string;
+  /** File-write requests only: the proposed change. The gate attaches a preview ref only when it prompts. */
+  preview?: ProposedFileChange;
 }
 
 export const CONSENT_CHECK_RESULT = {
@@ -136,7 +149,7 @@ export interface HandoffTarget {
 
 export type HandoffResult =
   | { kind: 'targets'; targets: HandoffTarget[] }
-  | { kind: 'forward-pass-closed' }
+  | { kind: 'forward-pass-closed'; artifactPath?: string }
   | { kind: 'meta-analysis-complete'; findingsPath: string }
   | { kind: 'backward-pass-complete'; artifactPath: string }
   | { kind: 'awaiting_human' }
@@ -156,6 +169,14 @@ export interface ImprovementPhaseState {
   singleRole?: boolean;
 }
 
+/** A forward-pass closure staged by a `human-colab` terminal node, awaiting the operator. */
+export interface PendingClosureApproval {
+  nodeId: string;
+  /** Closure artifact named by the signal's optional artifact_path; null when none was named. */
+  artifactPath: string | null;
+  stagedAt: string;
+}
+
 export interface FlowRun {
   flowId: string;
   workspaceRoot: string;
@@ -173,6 +194,11 @@ export interface FlowRun {
    * so an approval commits without re-running the role.
    */
   pendingHandoffApprovals: Record<string, HandoffTarget[]>;
+  /**
+   * Forward-pass closure staged by a `human-colab` terminal node, held until the operator
+   * approves or declines. Optional so version-11 flow files written before it still load.
+   */
+  pendingClosureApproval?: PendingClosureApproval;
   visitedNodeIds: string[];
   completedHandoffs: string[];
   receivingHandoff: Record<string, string[]>;
@@ -183,6 +209,7 @@ export interface FlowRun {
   improvementPhase?: ImprovementPhaseState;
   feedbackContext?: FeedbackContext;
   consentState?: ConsentState;
+  turnBackend?: TurnBackend;
 }
 
 export interface FlowRef {
@@ -214,6 +241,7 @@ export type OperatorEvent =
   | { kind: 'role.auto_selection_fell_back'; nodeId: string; role: string; dimensions: Array<'model' | 'skills' | 'mcp'>; reason: string }
   | { kind: 'human.resumed'; nodeId: string; role: string }
   | { kind: 'usage.turn_summary'; role?: string; contextUsage?: number }
+  | { kind: 'usage.host_rate_limit'; role: string; fiveHour?: number; sevenDay?: number }
   | { kind: 'session.compaction_started'; role: string; trigger: 'manual' | 'auto' }
   | { kind: 'session.compaction_failed'; role: string; trigger: 'manual' | 'auto'; reason: string }
   | { kind: 'session.compacted'; role: string; nodeId: string; trigger: 'manual' | 'auto'; archiveId: string }

@@ -73,6 +73,11 @@ export function createRuntimeSessionEvents(deps: RuntimeSessionEventsDeps) {
           return;
         }
 
+        if (message.event.kind === 'usage.host_rate_limit') {
+          emitTransientMessage(session, message);
+          return;
+        }
+
         if (message.event.kind === 'usage.turn_summary') {
           const { role, contextUsage } = message.event;
           if (role && contextUsage != null) {

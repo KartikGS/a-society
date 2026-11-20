@@ -1,0 +1,227 @@
+/* Document panel: proposed-change diffs and artifact files shown in the graph pane. */
+
+.graph-pane-slot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.graph-pane-slot[hidden] {
+  display: none;
+}
+
+.document-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 18px;
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.document-heading {
+  min-width: 0;
+}
+
+.document-heading h2 {
+  margin: 0;
+  font-family: "Iowan Old Style", "Source Serif 4", "Palatino Linotype", serif;
+  line-height: 1.1;
+}
+
+.document-path {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.document-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.document-close:hover {
+  background: var(--accent-soft-strong);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.document-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.document-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.document-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.document-badge {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border-soft);
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.document-origin,
+.document-note,
+.document-summary {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.document-summary {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+}
+
+.document-text {
+  margin: 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--code-bg);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff-table td {
+  padding: 0 8px;
+  vertical-align: top;
+}
+
+.diff-num {
+  width: 1%;
+  color: var(--ink-soft);
+  text-align: right;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.diff-marker {
+  width: 1%;
+  user-select: none;
+}
+
+.diff-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diff-row-added {
+  background: var(--diff-added-bg);
+  color: var(--diff-added-fg);
+}
+
+.diff-row-removed {
+  background: var(--diff-removed-bg);
+  color: var(--diff-removed-fg);
+}
+
+.diff-row-added .diff-num,
+.diff-row-removed .diff-num {
+  color: inherit;
+}
+
+.diff-row-collapsed td {
+  padding: 2px 8px;
+  background: var(--surface-muted);
+}
+
+.diff-expand {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent-deep);
+  font: inherit;
+  cursor: pointer;
+}
+
+.diff-expand:hover {
+  background: var(--surface-hover);
+}
+
+/* Link-styled buttons inside consent and approval banners. */
+.consent-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+
+.consent-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-deep);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.consent-link:hover {
+  color: var(--accent);
+}
+
+.consent-banner-muted {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+}

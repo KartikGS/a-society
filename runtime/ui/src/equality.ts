@@ -81,6 +81,18 @@ function arePendingHumanInputMapsEqual(
   return true;
 }
 
+function arePendingClosureApprovalsEqual(
+  left: FlowRun['pendingClosureApproval'],
+  right: FlowRun['pendingClosureApproval']
+): boolean {
+  if (!left || !right) return !left && !right;
+  return (
+    left.nodeId === right.nodeId &&
+    left.artifactPath === right.artifactPath &&
+    left.stagedAt === right.stagedAt
+  );
+}
+
 function arePendingHandoffApprovalMapsEqual(
   left: FlowRun['pendingHandoffApprovals'],
   right: FlowRun['pendingHandoffApprovals']
@@ -188,6 +200,7 @@ export function areFlowRunsEqual(left: FlowRun | null, right: FlowRun | null): b
     areAwaitingHumanMapsEqual(left.awaitingHumanNodes, right.awaitingHumanNodes) &&
     arePendingHumanInputMapsEqual(left.pendingHumanInputs, right.pendingHumanInputs) &&
     arePendingHandoffApprovalMapsEqual(left.pendingHandoffApprovals, right.pendingHandoffApprovals) &&
+    arePendingClosureApprovalsEqual(left.pendingClosureApproval, right.pendingClosureApproval) &&
     areStringArraysEqual(left.visitedNodeIds, right.visitedNodeIds) &&
     areStringArraysEqual(left.completedHandoffs, right.completedHandoffs) &&
     areStringArrayMapsEqual(left.receivingHandoff, right.receivingHandoff) &&

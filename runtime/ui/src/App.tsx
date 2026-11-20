@@ -1,4 +1,4 @@
-import { PanelLeft, X } from 'lucide-react';
+import { PanelLeft } from 'lucide-react';
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Panel,
@@ -18,6 +18,7 @@ import {
 import { parseUrlFlowRef, writeUrlFlowRef } from './app/routing';
 import {
   fetchActiveModelContextWindow,
+  fetchAgentMode,
   fetchFlowState,
   fetchMcpServers as fetchMcpServersApi,
   fetchModels as fetchModelsApi,
@@ -30,6 +31,7 @@ import {
 import { handleServerMessage } from './app/server-messages';
 import { useAppCommands } from './app/use-app-commands';
 import { ChatInterface } from './components/ChatInterface';
+import { DocumentView } from './components/DocumentView';
 import { EmptyGraphPanel } from './components/EmptyGraphPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FeedbackConsentModal } from './components/FeedbackConsentModal';
@@ -38,13 +40,16 @@ import { ImprovementChoiceModal } from './components/ImprovementChoiceModal';
 import { ProjectSelector } from './components/ProjectSelector';
 import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { SettingsModal } from './components/SettingsModal';
+import { ToastStack, type Toast, type ToastTone } from './components/ToastStack';
 import { areFlowRunsEqual } from './equality';
 import { useConfirm } from './hooks/useConfirm';
 import { useViewport } from './hooks/useViewport';
 import { useWebSocket } from './hooks/useWebSocket';
+import { UNAVAILABLE_SETTINGS_STATUS } from './model-config';
 import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
 import type { FlowRef, FlowSummary } from '../../shared/types.js';
-import type { McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
+import type { DocumentRequest } from '../../shared/document-view.js';
+import type { HostAgentSummary, McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
 import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 import type { SkillSummary } from '../../shared/skills.js';
 
@@ -56,14 +61,6 @@ const GraphView = lazy(async () => {
 const ERROR_TOAST_DURATION_MS = 12_000;
 const SUCCESS_TOAST_DURATION_MS = 4_000;
 const MAX_VISIBLE_TOASTS = 4;
-
-type ToastTone = 'error' | 'success';
-
-interface Toast {
-  id: number;
-  message: string;
-  tone: ToastTone;
-}
 
 export function App() {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -80,6 +77,8 @@ export function App() {
   const [configuredModels, setConfiguredModels] = useState<ModelConfig[]>([]);
   const [configuredSkills, setConfiguredSkills] = useState<SkillSummary[]>([]);
   const [configuredMcpServers, setConfiguredMcpServers] = useState<McpServerSummary[]>([]);
+  /** Host agents the server declares (with their models/effort levels); null until fetched. */
+  const [hostAgents, setHostAgents] = useState<HostAgentSummary[] | null>(null);
   const [projects, setProjects] = useState<ProjectDiscovery>({ withADocs: [], withoutADocs: [] });
   const [selectedProject, setSelectedProject] = useState<string | null>(initialFlowRef?.projectNamespace ?? null);
   const [projectFlowsByProject, setProjectFlowsByProject] = useState<Record<string, FlowSummary[]>>({});
@@ -90,6 +89,8 @@ export function App() {
   const [flowUiByKey, setFlowUiByKey] = useState<Record<string, FlowUiState>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /** The document open in each flow tab's graph pane, keyed by flow key. */
+  const [openDocuments, setOpenDocuments] = useState<Record<string, DocumentRequest>>({});
   const toastIdRef = useRef(0);
 
   const viewport = useViewport();
@@ -137,7 +138,7 @@ export function App() {
     try {
       setSettingsStatus(await fetchSettingsStatusApi());
     } catch {
-      setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 });
+      setSettingsStatus(UNAVAILABLE_SETTINGS_STATUS);
     }
   }, []);
 
@@ -240,6 +241,7 @@ export function App() {
     roleConfigurationPending,
     handoffApprovalNodeId,
     handoffApprovalTargets,
+    closureApproval,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -253,18 +255,22 @@ export function App() {
     composerValue,
     latestContextUsage,
     viewedRoleContextWindow,
+    isHostFlow,
+    isHostAutoPermissions,
+    viewedRoleHostUsage,
     projectSettingsEnabled,
   } = activeView;
 
-  const hasConfiguredModel = settingsStatus?.hasConfiguredModel ?? false;
+  // Ready means the backend new flows use can run turns: a usable model, or a ready host agent.
+  const turnBackendReady = settingsStatus?.turnBackendReady ?? false;
   const settingsReady = settingsStatus !== null;
 
-  const ensureConfiguredModel = useCallback((): boolean => {
-    if (hasConfiguredModel) return true;
+  const ensureTurnBackendReady = useCallback((): boolean => {
+    if (turnBackendReady) return true;
     setSelectorError(SETTINGS_REQUIRED_MESSAGE);
     setSettingsOpen(true);
     return false;
-  }, [hasConfiguredModel]);
+  }, [turnBackendReady]);
 
   const appCommandInput = useMemo(() => ({
     activeView,
@@ -272,7 +278,7 @@ export function App() {
     selectedProject,
     newProjectName,
     confirm,
-    ensureConfiguredModel,
+    ensureTurnBackendReady,
     ensureTab,
     refreshProjects,
     refreshProjectFlows,
@@ -290,7 +296,7 @@ export function App() {
     activeTabKey,
     activeView,
     confirm,
-    ensureConfiguredModel,
+    ensureTurnBackendReady,
     ensureTab,
     newProjectName,
     refreshProjects,
@@ -311,7 +317,7 @@ export function App() {
     handleDeleteProject,
     handleUpdateProject,
     handleTabSelect,
-    handleCloseTab,
+    handleCloseTab: closeFlowTab,
     handleSubmit,
     handleImprovementChoice,
     handleFeedbackConsentChoice,
@@ -329,6 +335,33 @@ export function App() {
     handleComposerChange,
   } = useAppCommands(appCommandInput);
 
+  const handleCloseTab = useCallback((tab: FlowTab): void => {
+    closeFlowTab(tab);
+    setOpenDocuments((current) => {
+      if (!(tab.key in current)) return current;
+      const next = { ...current };
+      delete next[tab.key];
+      return next;
+    });
+  }, [closeFlowTab]);
+
+  const handleOpenDocument = useCallback((request: DocumentRequest): void => {
+    if (!activeTabKey) return;
+    setOpenDocuments((current) => ({ ...current, [activeTabKey]: request }));
+  }, [activeTabKey]);
+
+  const handleCloseDocument = useCallback((): void => {
+    if (!activeTabKey) return;
+    setOpenDocuments((current) => {
+      if (!(activeTabKey in current)) return current;
+      const next = { ...current };
+      delete next[activeTabKey];
+      return next;
+    });
+  }, [activeTabKey]);
+
+  const openDocument = activeTabKey ? openDocuments[activeTabKey] ?? null : null;
+
   useEffect(() => {
     const ref = initialUrlFlowRef.current;
     if (socket.status !== 'open' || openedInitialFlow.current || !ref) return;
@@ -342,7 +375,7 @@ export function App() {
       .then((status) => {
         if (!cancelled) setSettingsStatus(status);
       })
-      .catch(() => { if (!cancelled) setSettingsStatus({ hasConfiguredModel: false, modelCount: 0 }); });
+      .catch(() => { if (!cancelled) setSettingsStatus(UNAVAILABLE_SETTINGS_STATUS); });
     return () => { cancelled = true; };
   }, []);
 
@@ -378,6 +411,23 @@ export function App() {
     return () => { cancelled = true; };
   }, [roleConfigurationNodeId]);
 
+  const hostFlowAgentId = flowRun?.turnBackend?.kind === 'host' ? flowRun.turnBackend.agentId : null;
+  const needsHostAgents = hostFlowAgentId !== null && roleConfigurationNodeId !== null;
+
+  useEffect(() => {
+    if (!needsHostAgents) return;
+    let cancelled = false;
+    fetchAgentMode()
+      .then((response) => {
+        if (!cancelled) setHostAgents(response.hosts);
+      })
+      .catch(() => {
+        // Without the host list the banner still offers the host default.
+        if (!cancelled) setHostAgents([]);
+      });
+    return () => { cancelled = true; };
+  }, [needsHostAgents, roleConfigurationNodeId]);
+
   useEffect(() => {
     let cancelled = false;
     fetchSkillsApi()
@@ -402,14 +452,14 @@ export function App() {
   }, [roleConfigurationNodeId]);
 
   useEffect(() => {
-    if (settingsReady && !hasConfiguredModel) {
+    if (settingsReady && !turnBackendReady) {
       startTransition(() => setSettingsOpen(true));
       return;
     }
-    if (hasConfiguredModel) {
+    if (turnBackendReady) {
       startTransition(() => setSelectorError((current) => current === SETTINGS_REQUIRED_MESSAGE ? null : current));
     }
-  }, [hasConfiguredModel, settingsReady]);
+  }, [turnBackendReady, settingsReady]);
 
   useEffect(() => {
     if (socket.status !== 'open' || !activeTab) return;
@@ -500,9 +550,9 @@ export function App() {
         newProjectName={newProjectName}
         errorMessage={selectorError}
         disabled={socket.status !== 'open'}
-        canStartFlows={socket.status === 'open' && hasConfiguredModel}
+        canStartFlows={socket.status === 'open' && turnBackendReady}
         settingsReady={settingsReady}
-        settingsConfigured={hasConfiguredModel}
+        settingsConfigured={turnBackendReady}
         onSelectInitialized={handleProjectSelect}
         onInitializeExisting={handleExistingInitialization}
         onOpenFlow={handleOpenFlow}
@@ -571,7 +621,15 @@ export function App() {
             >
               <Panel id="graph" className="workspace-pane" defaultSize="60%" minSize={200}>
                 <ErrorBoundary label="workflow graph">
+                  {flowRun && activeTab && openDocument ? (
+                    <DocumentView
+                      flowRef={activeTab.ref}
+                      request={openDocument}
+                      onClose={handleCloseDocument}
+                    />
+                  ) : null}
                   {flowRun && activeTab ? (
+                    <div className="graph-pane-slot" hidden={openDocument !== null}>
                     <Suspense fallback={<section className="panel graph-panel"><div className="graph-empty">Loading graph...</div></section>}>
                       <GraphView
                         flowRun={flowRun}
@@ -588,6 +646,7 @@ export function App() {
                         onWorkflowLoaded={handleWorkflowLoaded}
                       />
                     </Suspense>
+                    </div>
                   ) : <EmptyGraphPanel selectedProject={selectedProject} />}
                 </ErrorBoundary>
               </Panel>
@@ -615,6 +674,7 @@ export function App() {
                     activeRoles={activeRoles}
                     consentRequest={visibleConsentRequest}
                     consentMode={flowRun?.consentState?.mode ?? CONSENT_MODE.NO_ACCESS}
+                    hostPermissionLabel={isHostAutoPermissions ? 'Auto (agent decides)' : null}
                     projectSettingsEnabled={projectSettingsEnabled}
                     roleConfiguration={roleConfigurationNodeId ? {
                       nodeId: roleConfigurationNodeId,
@@ -624,11 +684,25 @@ export function App() {
                       pendingModel: roleConfigurationPending?.pendingModel ?? true,
                       pendingSkills: roleConfigurationPending?.pendingSkills ?? true,
                       pendingMcp: roleConfigurationPending?.pendingMcp ?? true,
+                      ...(hostFlowAgentId ? {
+                        hostAgent: hostAgents === null
+                          ? null
+                          : hostAgents.find((host) => host.id === hostFlowAgentId) ?? {
+                            // Host not declared by this server: only the host default is offered.
+                            id: hostFlowAgentId,
+                            displayName: hostFlowAgentId,
+                            supportedVersions: { min: '', maxExclusive: '' },
+                            models: [],
+                            effortLevels: [],
+                          },
+                      } : {}),
                     } : null}
                     handoffApproval={handoffApprovalNodeId ? {
                       nodeId: handoffApprovalNodeId,
                       targets: handoffApprovalTargets ?? [],
                     } : null}
+                    closureApproval={closureApproval}
+                    onOpenDocument={handleOpenDocument}
                     onRoleSelect={handleRoleSelect}
                     onInputChange={handleComposerChange}
                     onSubmit={handleSubmit}
@@ -639,8 +713,9 @@ export function App() {
                     onConsentModeChange={handleConsentModeChange}
                     onCompactContext={viewedRole ? handleCompactContext : undefined}
                     isCompactingContext={isViewedRoleCompacting}
-                    contextWindow={viewedRoleContextWindow ?? contextWindow}
+                    contextWindow={isHostFlow ? null : viewedRoleContextWindow ?? contextWindow}
                     latestContextUsage={latestContextUsage}
+                    hostUsage={isHostFlow ? viewedRoleHostUsage : null}
                   />
                 </ErrorBoundary>
               </Panel>
@@ -679,33 +754,15 @@ export function App() {
         />
       ) : null}
 
-      {toasts.length > 0 ? (
-        <div className="toast-stack">
-          {toasts.map((toast) => (
-            <div
-              key={toast.id}
-              className={`toast toast-${toast.tone}`}
-              role={toast.tone === 'error' ? 'alert' : 'status'}
-            >
-              <span className="toast-message">{toast.message}</span>
-              <button
-                type="button"
-                className="toast-dismiss"
-                aria-label="Dismiss notification"
-                onClick={() => dismissToast(toast.id)}
-              >
-                <X size={14} aria-hidden="true" />
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       {settingsOpen && (
         <SettingsModal
-          required={!hasConfiguredModel}
+          required={!turnBackendReady}
           onClose={() => setSettingsOpen(false)}
           onModelsChange={handleModelsChange}
+          onAgentModeChange={() => { void refreshSettingsStatus(); }}
+          agentModeActive={settingsStatus?.turnBackend === 'host'}
           onSkillsChange={refreshConfiguredSkills}
           onMcpServersChange={refreshConfiguredMcpServers}
           onError={showToast}
@@ -718,6 +775,7 @@ export function App() {
           projectNamespace={projectSettingsTarget.folderName}
           displayName={projectSettingsTarget.displayName}
           deletable={projectSettingsTarget.folderName !== 'a-society'}
+          agentModeActive={settingsStatus?.turnBackend === 'host'}
           onClose={() => setProjectSettingsTarget(null)}
           onError={showToast}
           onDeleteProject={() => {

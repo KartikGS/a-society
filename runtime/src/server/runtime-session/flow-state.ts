@@ -6,7 +6,9 @@ import type {
 } from '../../common/types.js';
 import { resolveCapabilityGate } from '../../orchestration/capability-selection.js';
 import { resolveRoleModel, resolveRoleModelGate } from '../../orchestration/role-model.js';
+import { resolveHostModelGate } from '../../orchestration/host-role-model.js';
 import * as SessionStore from '../../orchestration/store.js';
+import { resolveTurnBackend } from '../../settings/turn-backend.js';
 import { isProjectSettingsEnabled } from '../../projects/project-settings-store.js';
 import type { FlowStateMessage, RoleConfigurationPending } from '../protocol.js';
 import { latestContextUsageFromSession } from './feed.js';
@@ -48,8 +50,18 @@ export function buildFlowStateMessage(
   // Pending configuration dimensions per node awaiting role configuration, so the
   // UI prompts only for dimensions left manual (auto-resolved ones read as decided).
   const roleConfigurations: Record<string, RoleConfigurationPending> = {};
+  const backend = resolveTurnBackend(flowRun);
   for (const [awaitingNodeId, awaitingState] of Object.entries(flowRun.awaitingHumanNodes)) {
     if (awaitingState.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) continue;
+    if (backend.kind === 'host') {
+      // Host flows configure only the host model/effort; skills and MCP are host-managed.
+      roleConfigurations[awaitingNodeId] = {
+        pendingModel: resolveHostModelGate(ref, awaitingState.role, backend.agentId).kind === 'selection-required',
+        pendingSkills: false,
+        pendingMcp: false,
+      };
+      continue;
+    }
     const modelGate = resolveRoleModelGate(ref, awaitingState.role);
     const capabilityGate = resolveCapabilityGate(ref, awaitingState.role);
     roleConfigurations[awaitingNodeId] = {

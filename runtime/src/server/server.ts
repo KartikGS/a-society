@@ -8,6 +8,7 @@ import { CLIENT_MESSAGE_TYPE } from '../../shared/protocol-constants.js';
 import { setWorkspaceRoot } from '../common/workspace.js';
 import { createFlowReadModel } from './flow-read-model.js';
 import { registerFlowRoutes } from './flow-routes.js';
+import { registerDocumentRoutes } from './document-routes.js';
 import { parseClientMessage } from './protocol.js';
 import { createRuntimeSessionManager } from './runtime-session/manager.js';
 import { registerProjectSettingsRoutes } from './project-settings-routes.js';
@@ -39,6 +40,7 @@ function buildServer() {
       runtimeSessions.refreshProjectFlows(projectNamespace);
     }
   });
+  registerDocumentRoutes(app, { flowReadModel, getChangePreview: runtimeSessions.getConsentChangePreview });
   registerSettingsRoutes(app);
   registerProjectSettingsRoutes(app);
   registerStaticUi(app);
@@ -111,6 +113,7 @@ function buildServer() {
       if (message.type === CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION) {
         runtimeSessions.handleRoleConfiguration(message.flowRef, message.nodeId, {
           modelConfigId: message.modelConfigId,
+          hostModel: message.hostModel,
           skills: message.skills,
           mcpServers: message.mcpServers,
         });

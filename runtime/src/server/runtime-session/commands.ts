@@ -29,9 +29,19 @@ import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { listSkills } from '../../framework-services/skills.js';
 import { listMcpServers, resolveCapabilityGate, saveCapabilityDimension } from '../../orchestration/capability-selection.js';
 import { resolveRoleModelGate, saveRoleModelSelection } from '../../orchestration/role-model.js';
-import { buildRoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
+import { buildRoleConfigurationSummary, type RoleConfigurationSummary } from '../../orchestration/role-configuration-summary.js';
+import {
+  formatHostModelLabel,
+  resolveHostModelGate,
+  resolveHostRoleModel,
+  saveHostModelSelection,
+} from '../../orchestration/host-role-model.js';
+import { getHostAgent } from '../../providers/host-agents/registry.js';
+import type { HostAgentId, HostModelChoice } from '../../../shared/settings.js';
 import * as SessionStore from '../../orchestration/store.js';
 import * as SettingsStore from '../../settings/settings-store.js';
+import { resolveTurnBackend } from '../../settings/turn-backend.js';
+
 import type { FlowReadModel } from '../flow-read-model.js';
 import type { HistoricalMessage, ServerMessage } from '../protocol.js';
 import type { RuntimeSessionConsent } from './consent.js';
@@ -44,6 +54,9 @@ import {
 import { compactPersistedRoleContext } from './manual-compaction.js';
 import type { ActiveSession } from './types.js';
 
+export const HOST_COMPACTION_UNSUPPORTED_MESSAGE =
+  'This role runs on a host agent, which manages its own context compaction.';
+
 type RuntimeSessionCommandsDeps = {
   activeSessions: Map<string, ActiveSession>;
   readFlowRun: (ref: FlowRef) => FlowRun | null;
@@ -54,12 +67,16 @@ type RuntimeSessionCommandsDeps = {
   emitHistoricalMessage: (session: ActiveSession, message: HistoricalMessage) => void;
   emitFlowState: (session: ActiveSession) => void;
   broadcastToFlow: (ref: FlowRef, message: ServerMessage) => void;
-  missingModelError: (ref: FlowRef) => ServerMessage;
+  /** Null when the flow's pinned turn backend is ready; otherwise the refusal to broadcast. */
+  turnBackendRefusal: (ref: FlowRef, flowRun: FlowRun) => Promise<ServerMessage | null>;
   consent: RuntimeSessionConsent;
 };
 
 export interface RoleConfigurationPayload {
+  /** API flows only. */
   modelConfigId?: string;
+  /** Host flows only. */
+  hostModel?: HostModelChoice;
   skills: string[];
   mcpServers: string[];
 }
@@ -75,7 +92,7 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitHistoricalMessage,
     emitFlowState,
     broadcastToFlow,
-    missingModelError,
+    turnBackendRefusal,
     consent,
   } = deps;
 
@@ -86,8 +103,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -136,6 +154,45 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitFlowState(session);
   }
 
+  /**
+   * A staged human-colab closure: decline parks the node for guidance; approve commits the
+   * closure through the orchestrator, which re-checks it first. No role turn follows either.
+   */
+  async function handleClosureApproval(
+    ref: FlowRef,
+    nodeId: string,
+    decision: ProtocolHandoffApprovalDecision,
+    flowRun: FlowRun,
+    session: ActiveSession,
+  ): Promise<void> {
+    if (decision === HANDOFF_APPROVAL_DECISION.DECLINE) {
+      try {
+        await SessionStore.updateFlowRun((latest) => {
+          const state = latest.awaitingHumanNodes[nodeId];
+          if (!state || state.reason !== AWAITING_HUMAN_REASON.CLOSURE_APPROVAL) {
+            throw new Error(`Node '${nodeId}' is no longer awaiting closure approval.`);
+          }
+          delete latest.pendingClosureApproval;
+          latest.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
+        }, ref);
+      } catch (error: any) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      emitFlowState(session);
+      return;
+    }
+
+    try {
+      await session.orchestrator.approveForwardPassClosure(flowRun, nodeId);
+    } catch (error: any) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+    session.orchestrator.wake();
+    emitFlowState(session);
+  }
+
   async function handleHandoffApproval(
     ref: FlowRef,
     nodeId: string,
@@ -148,8 +205,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const awaitingState = flowRun.awaitingHumanNodes[nodeId];
-    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting handoff approval.` });
+    const isClosureApproval = awaitingState?.reason === AWAITING_HUMAN_REASON.CLOSURE_APPROVAL;
+    if (!awaitingState || (awaitingState.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL && !isClosureApproval)) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting a handoff or closure approval.` });
       return;
     }
 
@@ -164,6 +222,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         flowRef: ref,
         message: 'This flow has no active session. Resume the flow before approving or declining the handoff.',
       });
+      return;
+    }
+
+    if (isClosureApproval) {
+      await handleClosureApproval(ref, nodeId, decision, flowRun, session);
       return;
     }
 
@@ -194,8 +257,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' has no staged handoff to approve.` });
       return;
     }
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -224,6 +288,12 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     const awaitingState = flowRun.awaitingHumanNodes[nodeId];
     if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) {
       broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting role configuration.` });
+      return;
+    }
+
+    const backend = resolveTurnBackend(flowRun);
+    if (backend.kind === 'host') {
+      handleHostRoleConfiguration(ref, flowRun, nodeId, awaitingState.role, backend.agentId, payload);
       return;
     }
 
@@ -299,25 +369,75 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       }
     }
 
+    // The result bubble shows the role's complete effective configuration — both the
+    // dimensions just selected manually and any decided automatically beforehand.
+    resumeAfterRoleConfiguration(ref, flowRun, nodeId, awaitingState.role, buildRoleConfigurationSummary(ref, awaitingState.role));
+  }
+
+  function resumeAfterRoleConfiguration(
+    ref: FlowRef,
+    flowRun: FlowRun,
+    nodeId: string,
+    role: string,
+    summary: RoleConfigurationSummary
+  ): void {
     let session = activeSessions.get(flowKey(ref));
     if (!session || session.finished) {
       session = createSession(ref);
       startFlowRunner(session, flowRun.projectNamespace);
     }
-
-    // The result bubble shows the role's complete effective configuration — both the
-    // dimensions just selected manually and any decided automatically beforehand.
     emitHistoricalMessage(session, {
       type: 'operator_event',
-      event: {
-        kind: 'role.configured',
-        nodeId,
-        role: awaitingState.role,
-        ...buildRoleConfigurationSummary(ref, awaitingState.role),
-      },
+      event: { kind: 'role.configured', nodeId, role, ...summary },
     });
     session.orchestrator.wake();
     emitFlowState(session);
+  }
+
+  /**
+   * Host flows configure only the host model/effort; skills and MCP servers in the
+   * payload are ignored because the host manages its own.
+   */
+  function handleHostRoleConfiguration(
+    ref: FlowRef,
+    flowRun: FlowRun,
+    nodeId: string,
+    role: string,
+    agentId: HostAgentId,
+    payload: RoleConfigurationPayload
+  ): void {
+    const adapter = getHostAgent(agentId);
+    if (resolveHostModelGate(ref, role, agentId).kind === 'selection-required') {
+      const choice = payload.hostModel;
+      if (!choice) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: 'Select a model before submitting role configuration.' });
+        return;
+      }
+      if (choice.model !== null && !adapter.models.some((option) => option.id === choice.model)) {
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: `Unknown model "${choice.model}" for ${adapter.displayName}. Refresh Settings and try again.`,
+        });
+        return;
+      }
+      if (choice.effort !== null && !adapter.effortLevels.includes(choice.effort)) {
+        broadcastToFlow(ref, {
+          type: 'error',
+          flowRef: ref,
+          message: `Unknown effort level "${choice.effort}" for ${adapter.displayName}. Refresh Settings and try again.`,
+        });
+        return;
+      }
+      saveHostModelSelection(ref, role, {
+        hostAgentId: agentId,
+        model: choice.model,
+        effort: choice.effort,
+        selectedAt: new Date().toISOString(),
+      });
+    }
+    const effective = resolveHostRoleModel(ref, role, agentId);
+    resumeAfterRoleConfiguration(ref, flowRun, nodeId, role, { modelDisplayName: formatHostModelLabel(adapter, effective) });
   }
 
   function getOrCreateChoiceSession(ref: FlowRef): ActiveSession {
@@ -402,8 +522,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -462,8 +583,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
       return;
     }
 
-    if (!SettingsStore.hasUsableConfiguredModel()) {
-      broadcastToFlow(ref, missingModelError(ref));
+    const refusal = await turnBackendRefusal(ref, flowRun);
+    if (refusal) {
+      broadcastToFlow(ref, refusal);
       return;
     }
 
@@ -619,7 +741,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
 
     const roleName = resolveWorkflowRoleName(flowRun, role);
     const roleInstanceId = parseRoleIdentity(roleName).instanceRoleId;
-    if (!SettingsStore.hasUsableConfiguredModel()) {
+    // Compaction summarizes through the API, so it applies to API flows only.
+    const compactionRefusal = resolveTurnBackend(flowRun).kind === 'host'
+      ? HOST_COMPACTION_UNSUPPORTED_MESSAGE
+      : SettingsStore.hasUsableConfiguredModel() ? null : SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE;
+    if (compactionRefusal) {
       broadcastToFlow(ref, {
         type: 'operator_event',
         flowRef: ref,
@@ -627,10 +753,10 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
           kind: 'session.compaction_failed',
           role: roleName,
           trigger: 'manual',
-          reason: SettingsStore.MODEL_CONFIGURATION_REQUIRED_MESSAGE
+          reason: compactionRefusal
         }
       });
-      broadcastToFlow(ref, missingModelError(ref));
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: compactionRefusal });
       return;
     }
 
