@@ -1,13 +1,33 @@
 // @vitest-environment jsdom
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
 import * as matchers from 'vitest-axe/matchers';
 import { ChatInterface } from '../../../ui/src/components/ChatInterface';
 import { ConfirmDialog } from '../../../ui/src/components/ConfirmDialog';
+import { DocumentView } from '../../../ui/src/components/DocumentView';
 import { ProjectSelector } from '../../../ui/src/components/ProjectSelector';
+import { AgentModePanel } from '../../../ui/src/components/settings/AgentModePanel';
+import { fetchAgentMode, fetchDocument, probeHostAgent } from '../../../ui/src/app/runtime-api';
 import { ensureDialogSupport, ensureMatchMediaSupport } from './setup-dom';
+import type { HostAgentSummary } from '../../../shared/settings.js';
 import type { FeedItem } from '../../../shared/types.js';
+
+const CLAUDE_HOST: HostAgentSummary = {
+  id: 'claude-code',
+  displayName: 'Claude Code',
+  supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' },
+  models: [{ id: 'opus', displayName: 'Opus' }, { id: 'sonnet', displayName: 'Sonnet' }],
+  effortLevels: ['low', 'medium', 'high', 'xhigh', 'max'],
+};
+
+vi.mock('../../../ui/src/app/runtime-api', () => ({
+  fetchAgentMode: vi.fn(),
+  fetchDocument: vi.fn(),
+  probeHostAgent: vi.fn(),
+  UnreadableDocumentError: class UnreadableDocumentError extends Error {},
+  saveAgentMode: vi.fn(),
+}));
 
 expect.extend(matchers);
 
@@ -98,5 +118,116 @@ describe('axe smoke checks', () => {
       />,
     );
     expect(await axe(baseElement, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('AgentModePanel (host mode, checked) has no detectable a11y violations', async () => {
+    vi.mocked(fetchAgentMode).mockResolvedValue({
+      settings: { mode: 'host', hostAgentId: 'claude-code', executablePath: null, permissionMode: 'consent' },
+      hosts: [CLAUDE_HOST],
+    });
+    vi.mocked(probeHostAgent).mockResolvedValue({
+      hostAgentId: 'claude-code',
+      displayName: 'Claude Code',
+      installed: true,
+      executablePath: '/usr/local/bin/claude',
+      version: '2.1.309',
+      supportedVersions: { min: '2.1.304', maxExclusive: '2.2.0' },
+      versionSupported: true,
+      loggedIn: true,
+      authMethod: 'claude.ai',
+      subscriptionType: 'pro',
+      checkedAt: '2026-10-28T00:00:00.000Z',
+    });
+    const { container } = render(<AgentModePanel onSaved={vi.fn()} onError={vi.fn()} onSuccess={vi.fn()} />);
+    await screen.findByRole('status');
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('ChatInterface host role-configuration banner has no detectable a11y violations', async () => {
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={[]}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={true}
+        placeholder="Configure this role to continue."
+        showComposer={true}
+        roleConfiguration={{
+          nodeId: 'owner-intake',
+          models: [],
+          skills: [],
+          mcpServers: [],
+          pendingModel: true,
+          pendingSkills: false,
+          pendingMcp: false,
+          hostAgent: CLAUDE_HOST,
+        }}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('assistant inline HTML renders without new a11y violations', async () => {
+    const messages: FeedItem[] = [{
+      id: 'h1',
+      type: 'assistant',
+      label: 'Owner',
+      text: 'Press <kbd>Ctrl</kbd>, see <mark>this</mark>, H<sub>2</sub>O, x<sup>2</sup>.\n\n<details><summary>More</summary>Hidden <span style="color: red">detail</span></details>',
+    }];
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={messages}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={false}
+        placeholder="Send a message"
+        showComposer={false}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('ChatInterface closure approval banner has no detectable a11y violations', async () => {
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={[]}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={true}
+        placeholder="Approve or decline closing the forward pass to continue."
+        showComposer={true}
+        closureApproval={{ nodeId: 'owner-closure', artifactPath: 'record/closure.md' }}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('DocumentView (change diff) has no detectable a11y violations', async () => {
+    vi.mocked(fetchDocument).mockResolvedValue({
+      kind: 'change',
+      path: 'notes.md',
+      changeKind: 'create',
+      origin: 'host-attempt',
+      before: null,
+      after: 'one\ntwo\n',
+    });
+    const { container } = render(
+      <DocumentView
+        flowRef={{ projectNamespace: 'demo', flowId: 'f1' }}
+        request={{ kind: 'change-preview', previewId: 'p1', path: 'notes.md' }}
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText('New file');
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
   });
 });

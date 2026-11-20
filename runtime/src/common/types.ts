@@ -28,6 +28,7 @@ export type {
   OperatorEvent,
   OperatorFeedMessage,
   PromptCacheTtl,
+  TurnBackend,
 } from '../../shared/types.js';
 import type {
   AwaitingHumanReason,
@@ -43,6 +44,7 @@ import type {
 import type {
   ProviderReasoningReplayPolicy,
 } from '../../shared/model-reasoning.js';
+import type { HostAgentId } from '../../shared/settings.js';
 
 export interface ConsentGate {
   check(request: ConsentCheckRequest, signal?: AbortSignal): Promise<ConsentCheckResult>;
@@ -72,6 +74,21 @@ export interface RoleSession {
   currentNodeId?: string;
   systemPrompt?: string;
   latestContextUsage?: number;
+  hostSession?: HostConversationState;
+}
+
+/** The host agent conversation that backs a role session in agent mode. */
+export interface HostConversationState {
+  agentId: HostAgentId;
+  conversationId: string;
+  /** transcriptHistory entries the host has already received. */
+  deliveredCount: number;
+  /**
+   * Length of the last delivered entry's content. The orchestrator merges consecutive
+   * user messages, so text appended to an already-delivered entry is still pending.
+   */
+  deliveredTailLength: number;
+  startedAt: string;
 }
 
 export interface ToolDefinition {

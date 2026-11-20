@@ -89,11 +89,11 @@ Do not use node-specific `required_readings` for files already loaded at role st
 A node with `human-colab: true` is one where the human must stay in the decision. The runtime applies two behaviors:
 
 1. **Entry directive.** On first node entry the runtime injects a standing instruction that this is a human-collaborative node: keep the human in the decision loop, surface the proposed decision before proceeding, and do not treat the node's work as final without explicit human direction or approval.
-2. **Handoff approval gate.** When the node emits a forward handoff, the runtime does not commit it immediately. It stages the forward target(s) and the artifact path(s), suspends the node awaiting an operator decision, and asks the operator to approve or decline the handoff.
-   - **Approve:** the staged handoff is committed exactly as emitted, without re-running the role.
-   - **Decline:** the staged handoff is discarded and the node is parked awaiting plain human input; the operator drives the next step (typically by sending guidance, which resumes the role to produce a revised handoff).
+2. **Approval gate.** When the node emits a forward handoff, or, as the last owner node, `forward-pass-closed`, the runtime does not commit it immediately. It stages the emitted target(s) and artifact path(s), or the closure and its optional `artifact_path`. It suspends the node awaiting an operator decision and asks the operator to approve or decline. A closure is staged only after the closure checks pass (last owner node, no open work, runtime health checks). An invalid closure is still sent back to the role without asking the operator.
+   - **Approve:** the staged handoff is committed exactly as emitted, without re-running the role. A staged closure closes the forward pass exactly as an ungated closure does, including the backward-pass handover. The closure checks run again first; if they now fail, the approval is refused and the closure stays staged.
+   - **Decline:** the staged handoff or closure is discarded and the node is parked awaiting plain human input; the operator drives the next step (typically by sending guidance, which resumes the role to produce a revised handoff or closure).
 
-The gate applies only to forward handoffs. Backward correction handoffs, `await-handoff`, `prompt-human`, and `forward-pass-closed` are never gated. A single approval decision covers the whole emitted handoff set, including parallel fan-out.
+The gate applies only to forward handoffs and `forward-pass-closed`. Backward correction handoffs, `await-handoff`, and `prompt-human` are never gated. A single approval decision covers the whole emitted handoff set, including parallel fan-out. Staged approvals are persisted and survive a runtime restart.
 
 ---
 
@@ -136,4 +136,4 @@ When exactly one node should receive control, emit a single handoff object. When
 
 When the workflow snapshot changes mid-flow, the workflow-authority node must update `workflow.yaml` before emitting handoffs that depend on the new path.
 
-When updating `workflow.yaml` after a flow has already started, preserve every node and active handoff edge that runtime state still references. The new snapshot must include nodes referenced by `runningNodes`, `awaitingHumanNodes`, `pendingHumanInputs`, `pendingHandoffApprovals`, `visitedNodeIds`, `awaitingHandoff`, `completedHandoffs`, and `receivingHandoff`. Completed handoff keys must still exist as forward edges. Active receiving handoff keys must still connect adjacent nodes in either direction, so backward correction handoffs remain valid. Nodes waiting for human input or for handoff approval must keep the same role instance id.
+When updating `workflow.yaml` after a flow has already started, preserve every node and active handoff edge that runtime state still references. The new snapshot must include nodes referenced by `runningNodes`, `awaitingHumanNodes`, `pendingHumanInputs`, `pendingHandoffApprovals`, `pendingClosureApproval`, `visitedNodeIds`, `awaitingHandoff`, `completedHandoffs`, and `receivingHandoff`. Completed handoff keys must still exist as forward edges. Active receiving handoff keys must still connect adjacent nodes in either direction, so backward correction handoffs remain valid. Nodes waiting for human input or for handoff or closure approval must keep the same role instance id.

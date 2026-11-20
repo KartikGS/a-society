@@ -3,7 +3,8 @@ import {
   CONSENT_CHECK_RESULT,
   normalizeConsentState,
 } from '../../src/common/types.js';
-import type { ConsentCheckRequest, OperatorEvent } from '../../src/common/types.js';
+import type { ConsentCheckRequest, ConsentRequest, OperatorEvent } from '../../src/common/types.js';
+import type { ProposedFileChange } from '../../shared/document-view.js';
 import {
   CONSENT_MODE,
   CONSENT_RESPONSE_DECISION,
@@ -274,5 +275,82 @@ describe('consent-gate', () => {
       bash: { allowedCommands: {} },
       mcp: { allowedTools: {} },
     });
+  });
+});
+
+describe('consent-gate change previews', () => {
+  const modify: ProposedFileChange = { path: 'a.txt', before: 'old', after: 'new', origin: 'host-attempt' };
+  const create: ProposedFileChange = { path: 'b.txt', before: null, after: 'fresh', origin: 'runtime-write' };
+
+  function requestedPreview(events: OperatorEvent[], index = 0) {
+    const event = events.filter((e) => e.kind === 'consent.requested')[index] as { request: ConsentRequest } | undefined;
+    return event?.request.kind === 'file-write' ? event.request.preview : undefined;
+  }
+
+  it('attaches a preview ref to a prompted file write and serves its change while pending', async () => {
+    const { gate, events } = createGate();
+    const pending = gate.check(request({ input: { path: 'a.txt' }, preview: modify }));
+    const ref = requestedPreview(events);
+    expect(ref).toMatchObject({ changeKind: 'modify', origin: 'host-attempt' });
+    expect(typeof ref?.id).toBe('string');
+    expect(gate.getChangePreview(ref!.id)).toEqual({ ref, change: modify });
+    expect(gate.getInFlightRequests()[0]).toMatchObject({ preview: ref });
+
+    gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_ONCE, 'tester');
+    await pending;
+    expect(gate.getChangePreview(ref!.id)).toBeNull();
+  });
+
+  it('marks a change to a missing file as create and passes the origin through', () => {
+    const { gate, events } = createGate();
+    void gate.check(request({ input: { path: 'b.txt' }, preview: create }));
+    expect(requestedPreview(events)).toMatchObject({ changeKind: 'create', origin: 'runtime-write' });
+  });
+
+  it('drops the preview on abortInFlight, signal abort, and Full Access', async () => {
+    const aborted = createGate();
+    void aborted.gate.check(request({ preview: modify }));
+    const abortedId = requestedPreview(aborted.events)!.id;
+    aborted.gate.abortInFlight();
+    expect(aborted.gate.getChangePreview(abortedId)).toBeNull();
+
+    const signalled = createGate();
+    const controller = new AbortController();
+    const pending = signalled.gate.check(request({ preview: modify }), controller.signal);
+    const signalledId = requestedPreview(signalled.events)!.id;
+    controller.abort();
+    expect(await pending).toBe(CONSENT_CHECK_RESULT.DENY);
+    expect(signalled.gate.getChangePreview(signalledId)).toBeNull();
+
+    const full = createGate();
+    void full.gate.check(request({ preview: modify }));
+    const fullId = requestedPreview(full.events)!.id;
+    full.gate.setMode(CONSENT_MODE.FULL_ACCESS);
+    expect(full.gate.getChangePreview(fullId)).toBeNull();
+  });
+
+  it('drops the preview of another in-flight write resolved by an Allow-for-flow', async () => {
+    const { gate, events } = createGate();
+    const bash = gate.check(request({ toolName: 'run_command', input: { command: 'npm test' }, role: 'other' }));
+    const write = gate.check(request({ preview: modify }));
+    const id = requestedPreview(events, 1)!.id;
+    expect(gate.getChangePreview(id)).not.toBeNull();
+
+    gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_FLOW, 'other');
+    expect(await bash).toBe(CONSENT_CHECK_RESULT.PROCEED);
+    expect(await write).toBe(CONSENT_CHECK_RESULT.PROCEED);
+    expect(gate.getChangePreview(id)).toBeNull();
+  });
+
+  it('gives no preview ref when the write is granted or the request is not a file write', async () => {
+    const partial = new ConsentGateImpl(normalizeConsentState({ mode: CONSENT_MODE.PARTIAL_ACCESS }));
+    expect(await partial.check(request({ preview: modify }))).toBe(CONSENT_CHECK_RESULT.PROCEED);
+    expect(partial.getInFlightRequests()).toEqual([]);
+
+    const { gate, events } = createGate();
+    void gate.check(request({ toolName: 'run_command', input: { command: 'npm test' }, preview: modify }));
+    const event = events.find((e) => e.kind === 'consent.requested') as { request: ConsentRequest };
+    expect(event.request.kind).toBe('bash-command');
+    expect('preview' in event.request).toBe(false);
   });
 });

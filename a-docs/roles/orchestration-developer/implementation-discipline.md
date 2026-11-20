@@ -8,6 +8,8 @@
 
 **Operator-surface co-maintenance is mandatory.** When orchestration changes commands, parameters, environment variables, or documented runtime behaviors, update `$A_SOCIETY_RUNTIME_INVOCATION` in the same implementation pass. This file is authored by the Orchestration Developer and later registered/verified by the Curator; do not leave the operator reference knowingly stale.
 
+**Operator-reference edits own their section.** When you change a paragraph or bullet in `$A_SOCIETY_RUNTIME_INVOCATION`, re-verify every claim in that section against the code, including UI labels in `runtime/ui/` and resolution orders in `runtime/src/`, and remove any sentence the new text supersedes. Do not check only the lines you added.
+
 **Server composition must stay thin.** `runtime/src/server/server.ts` should remain the HTTP/WebSocket composition layer. Keep runtime session lifecycle, operator commands, runtime event routing, consent transitions, feed replay, flow-state projection, and similar session behavior in the `runtime/src/server/runtime-session/` subdomain or another cohesive server subdomain.
 
 **Provider adapters must preserve already-classified gateway errors.** If a provider-level catch block receives an `LLMGatewayError` produced earlier in the call path, re-throw it unchanged before applying SDK-specific remapping.

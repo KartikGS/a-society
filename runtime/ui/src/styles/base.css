@@ -56,6 +56,10 @@
   --danger-soft: rgba(220, 38, 38, 0.1);
   --danger-ink: #991b1b;
   --danger-border: rgba(220, 38, 38, 0.35);
+  --diff-added-bg: #e6f4ea;
+  --diff-added-fg: #14532d;
+  --diff-removed-bg: #fdecec;
+  --diff-removed-fg: #7f1d1d;
   --on-danger: #ffffff;
 
   /* Status: warning (errors, pending tools, stop affordances) */
@@ -163,6 +167,10 @@
   --danger-soft: rgba(248, 113, 113, 0.12);
   --danger-ink: #fecaca;
   --danger-border: rgba(248, 113, 113, 0.35);
+  --diff-added-bg: #12301e;
+  --diff-added-fg: #bbf7d0;
+  --diff-removed-bg: #3a1517;
+  --diff-removed-fg: #fecaca;
   --on-danger: #1c2128;
 
   --warning: #fb923c;

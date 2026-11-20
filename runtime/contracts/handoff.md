@@ -62,9 +62,12 @@ Use typed signals when the output is not routing to another workflow node but tr
 **`forward-pass-closed`**
 ```yaml
 type: forward-pass-closed
+artifact_path: <string>   # optional
 ```
 
 Only the last owner node may emit `forward-pass-closed`. The last owner node is the owner node with no outgoing edges in the workflow graph. In a workflow with a single owner node, that node is the last owner node. No other role and no other owner node may emit this signal. If the forward pass is not yet complete, emit a handoff to the next node instead.
+
+`artifact_path` is optional: the closure artifact for the forward pass, if you wrote one. When the closing node has `human-colab: true`, the runtime does not close the forward pass right away: it asks the operator to approve the closure and links this artifact in that prompt.
 
 **`meta-analysis-complete`**
 ```yaml

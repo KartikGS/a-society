@@ -14,12 +14,16 @@ import {
   resolveRoleModelGate,
   saveRoleModelSelection,
 } from './role-model.js';
+import { applyHostRoleDefaults, resolveHostModelGate } from './host-role-model.js';
+import type { HostModelChoice } from '../../shared/settings.js';
 import { autoResolveRoleConfiguration, type AutoSelectionResult } from './auto-capability-selection.js';
 import { getProjectRoleDefaults } from '../projects/project-settings-store.js';
-import { getModelWithKey, isUsableModelConfig } from '../settings/settings-store.js';
+import { getModelWithKey, isUsableModelConfig, type ModelConfigWithKey } from '../settings/settings-store.js';
+import { resolveTurnBackend } from '../settings/turn-backend.js';
 import { listSkills } from '../framework-services/skills.js';
 import type { AwaitingHumanReason, FlowRef, FlowRun, HandoffTarget, RoleTurnResult, OperatorRenderSink, ConsentGate, RoleSession, RuntimeMessageParam, OperatorEvent } from '../common/types.js';
 import { recordRoleTurnUsage, runRoleTurn } from '../common/role-turn.js';
+import type { HostTurnContext } from '../common/host-role-turn.js';
 import { buildForwardNodeEntryMessage } from '../context/session-entry.js';
 import { ImprovementOrchestrator } from '../improvement/improvement.js';
 import { buildWorkflowRepairGuidance } from '../framework-services/workflow-graph-validator.js';
@@ -351,40 +355,72 @@ export class FlowOrchestrator {
         };
 
         const ref = this.requireFlowRef();
+        const turnBackend = resolveTurnBackend(flowRun);
+        // API flows gate on an API model plus skills and MCP servers. Host flows gate on
+        // the host model/effort only; the host manages its own skills and MCP servers.
+        let roleModel: ModelConfigWithKey | null | undefined;
+        let mcpManager: McpManager | undefined;
+        let hostChoice: HostModelChoice = { model: null, effort: null };
+        if (turnBackend.kind === 'host') {
+          applyHostRoleDefaults(flowRun.projectNamespace, ref, roleInstanceId, turnBackend.agentId);
+          const hostGate = resolveHostModelGate(ref, roleInstanceId, turnBackend.agentId);
+          if (hostGate.kind === 'selection-required') {
+            span.setAttribute('node.outcome', 'awaiting_human');
+            span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
+            this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            return;
+          }
+          hostChoice = hostGate.choice;
+        } else {
+          // Project-level role defaults take precedence over automation and the
+          // manual gate: persist any configured dimension as this flow's selection.
+          const projectDefaults = this.applyProjectRoleDefaults(flowRun, ref, roleInstanceId);
+          // Auto-resolve any remaining dimensions whose automation mode is `auto`
+          // before the manual gate is evaluated; resolved dimensions then read as `ready`.
+          const autoSelection = await this.autoResolveRoleConfig(flowRun, ref, roleInstanceId, nodeId);
+          if (projectDefaults.skillsResolved || autoSelection.skillsResolved) {
+            // Skills are injected into the system prompt; rebuild it now that the
+            // auto-selected skills are persisted, before the role runs.
+            session.systemPrompt = ContextInjectionService.buildContextBundle(
+              flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, ref
+            ).bundleContent;
+            saveRoleSession();
+          }
 
-        // Project-level role defaults take precedence over automation and the
-        // manual gate: persist any configured dimension as this flow's selection.
-        const projectDefaults = this.applyProjectRoleDefaults(flowRun, ref, roleInstanceId);
-        // Auto-resolve any remaining dimensions whose automation mode is `auto`
-        // before the manual gate is evaluated; resolved dimensions then read as `ready`.
-        const autoSelection = await this.autoResolveRoleConfig(flowRun, ref, roleInstanceId, nodeId);
-        if (projectDefaults.skillsResolved || autoSelection.skillsResolved) {
-          // Skills are injected into the system prompt; rebuild it now that the
-          // auto-selected skills are persisted, before the role runs.
-          session.systemPrompt = ContextInjectionService.buildContextBundle(
-            flowRun.projectNamespace, roleInstanceId, flowRun.recordFolderPath, ref
-          ).bundleContent;
-          saveRoleSession();
+          const modelGate = resolveRoleModelGate(ref, roleInstanceId);
+          const capabilityGate = resolveCapabilityGate(ref, roleInstanceId);
+          if (modelGate.kind === 'selection-required' || capabilityGate.kind === 'selection-required') {
+            span.setAttribute('node.outcome', 'awaiting_human');
+            span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
+            this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
+            return;
+          }
+          roleModel = modelGate.model;
+          mcpManager = await resolveRoleMcpManager({
+            flowRef: this.requireFlowRef(),
+            roleInstanceId,
+            nodeId,
+            renderer: this.renderer,
+            mcpManagers,
+          });
         }
-
-        const modelGate = resolveRoleModelGate(ref, roleInstanceId);
-        const capabilityGate = resolveCapabilityGate(ref, roleInstanceId);
-        if (modelGate.kind === 'selection-required' || capabilityGate.kind === 'selection-required') {
-          span.setAttribute('node.outcome', 'awaiting_human');
-          span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
-          flowRun = await this.markNodeAwaitingHuman(nodeId, roleInstanceId, AWAITING_HUMAN_REASON.ROLE_CONFIGURATION);
-          this.renderer.emit({ kind: 'human.awaiting_input', nodeId, role: roleInstanceId, reason: AWAITING_HUMAN_REASON.ROLE_CONFIGURATION });
-          return;
-        }
-        const roleModel = modelGate.model;
         const bundleContent = session.systemPrompt!;
-        const mcpManager = await resolveRoleMcpManager({
-          flowRef: this.requireFlowRef(),
-          roleInstanceId,
-          nodeId,
-          renderer: this.renderer,
-          mcpManagers,
-        });
+        const hostContext: HostTurnContext | undefined = turnBackend.kind === 'host'
+          ? {
+            agentId: turnBackend.agentId,
+            session,
+            saveSession: saveRoleSession,
+            flowRef: ref,
+            workspaceRoot: flowRun.workspaceRoot,
+            projectRoot: path.join(flowRun.workspaceRoot, flowRun.projectNamespace),
+            recordFolderPath: flowRun.recordFolderPath,
+            model: hostChoice.model,
+            effort: hostChoice.effort,
+            permissionMode: turnBackend.permissions ?? 'consent',
+          }
+          : undefined;
 
         while (true) {
           try {
@@ -422,6 +458,7 @@ export class FlowOrchestrator {
                   saveSession: saveRoleSession,
                   nodeId,
                 },
+                host: hostContext,
               });
             } finally {
               const activeController = this.activeTurnControllers.get(nodeId);
@@ -452,16 +489,7 @@ export class FlowOrchestrator {
                 const fpcOutgoing = fpcWf.getOutgoingEdges(nodeId);
                 const outstandingInbound = getOutstandingInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
                 const completedInbound = getCompletedInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
-                const isLastOwner = roleInstanceId === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
-                const hasBlockers =
-                  latestForFpc.runningNodes.some(id => id !== nodeId) ||
-                  Object.keys(latestForFpc.awaitingHumanNodes).length > 0 ||
-                  Object.keys(latestForFpc.pendingHumanInputs).length > 0 ||
-                  !allEdgesCovered(fpcWf, latestForFpc.completedHandoffs) ||
-                  Object.keys(latestForFpc.receivingHandoff).length > 0 ||
-                  latestForFpc.awaitingHandoff.length > 0;
-
-                if (!isLastOwner || hasBlockers) {
+                if (this.isForwardPassClosureBlocked(latestForFpc, fpcWf, nodeId, roleInstanceId, 'turn')) {
                   const lines: string[] = ['Only the last owner node may emit forward-pass-closed.'];
                   if (outstandingInbound.length > 0) {
                     lines.push(`You are yet to receive a handoff from: ${outstandingInbound.join(', ')}. You can emit await-handoff to suspend and wait.`);
@@ -505,14 +533,36 @@ export class FlowOrchestrator {
                   continue;
                 }
 
+                // human-colab gate: the closure is valid, but the operator approves it before
+                // it commits. Stage it and suspend; approveForwardPassClosure commits it later.
+                if (fpcWf.findNodeById(nodeId)['human-colab']) {
+                  flowRun = await SessionStore.updateFlowRun((latest) => {
+                    latest.runningNodes = latest.runningNodes.filter((id) => id !== nodeId);
+                    latest.awaitingHumanNodes[nodeId] = { role: roleInstanceId, reason: AWAITING_HUMAN_REASON.CLOSURE_APPROVAL };
+                    latest.pendingClosureApproval = {
+                      nodeId,
+                      artifactPath: handoffResult.artifactPath ?? null,
+                      stagedAt: new Date().toISOString(),
+                    };
+                    latest.status = 'running';
+                  }, this.requireFlowRef());
+                  span.setAttribute('node.outcome', 'awaiting_human');
+                  span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.CLOSURE_APPROVAL });
+                  session.transcriptHistory = injectedHistory;
+                  session.isActive = false;
+                  SessionStore.saveRoleSession(session, this.requireFlowRef());
+                  this.renderer.emit({
+                    kind: 'human.awaiting_input',
+                    nodeId,
+                    role: roleInstanceId,
+                    reason: AWAITING_HUMAN_REASON.CLOSURE_APPROVAL,
+                  });
+                  return;
+                }
+
                 span.setAttribute('node.outcome', 'forward_pass_closed');
-                const uniqueBaseRoles = new Set(
-                  (fpcWf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
-                );
-                const singleRole = uniqueBaseRoles.size <= 1;
                 flowRun = await SessionStore.updateFlowRun((latest) => {
-                  this.removeOpenNode(latest, nodeId);
-                  ImprovementOrchestrator.markAwaitingChoice(latest, singleRole);
+                  this.applyForwardPassClosure(latest, fpcWf, nodeId);
                 }, this.requireFlowRef());
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;
@@ -635,6 +685,30 @@ export class FlowOrchestrator {
     });
   }
 
+
+  /** Commits a staged human-colab closure. Throws (operator-facing message) and leaves the closure staged when it can no longer close. */
+  public async approveForwardPassClosure(flowRun: FlowRun, nodeId: string): Promise<void> {
+    this.setFlowContext(flowRun);
+    const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
+    if (!healthCheck.ok) {
+      throw new Error(
+        `The forward pass can no longer close because runtime health checks fail: ${healthCheck.errors.join('; ')}. ` +
+        'Fix the project and approve again, or decline the closure and send the Owner guidance.'
+      );
+    }
+    await SessionStore.updateFlowRun((latest) => {
+      const awaiting = latest.awaitingHumanNodes[nodeId];
+      if (latest.pendingClosureApproval?.nodeId !== nodeId || awaiting?.reason !== AWAITING_HUMAN_REASON.CLOSURE_APPROVAL) {
+        throw new Error(`Node '${nodeId}' has no staged closure to approve.`);
+      }
+      const wf = this.loadWorkflowDocument(latest);
+      if (this.isForwardPassClosureBlocked(latest, wf, nodeId, awaiting.role, 'approval')) {
+        throw new Error('The forward pass can no longer close because the flow has other open work. Decline the closure and send the Owner guidance.');
+      }
+      this.applyForwardPassClosure(latest, wf, nodeId);
+    }, this.requireFlowRef());
+    this.renderer.emit({ kind: 'flow.forward_pass_closed' });
+  }
 
   public async applyHandoffAndAdvance(
     flowRun: FlowRun,
@@ -1024,10 +1098,14 @@ export class FlowOrchestrator {
       const wf = this.loadWorkflowDocument(flowRun);
       const resumableHumanNodeIds = Object.keys(flowRun.pendingHumanInputs)
         .filter((nodeId) => nodeId in flowRun.awaitingHumanNodes || flowRun.awaitingHandoff.includes(nodeId));
+      const backend = resolveTurnBackend(flowRun);
       const resumableRoleConfigurationNodeIds = Object.entries(flowRun.awaitingHumanNodes)
         .filter(([, state]) => {
           if (state.reason !== AWAITING_HUMAN_REASON.ROLE_CONFIGURATION) return false;
           const ref = this.requireFlowRef();
+          if (backend.kind === 'host') {
+            return resolveHostModelGate(ref, state.role, backend.agentId).kind === 'ready';
+          }
           return (
             resolveRoleModelGate(ref, state.role).kind === 'ready' &&
             resolveCapabilityGate(ref, state.role).kind === 'ready'
@@ -1226,6 +1304,42 @@ export class FlowOrchestrator {
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
     delete flowRun.pendingHandoffApprovals[nodeId];
+    if (flowRun.pendingClosureApproval?.nodeId === nodeId) delete flowRun.pendingClosureApproval;
+  }
+
+  /**
+   * True when this node may not close the forward pass: it is not the last owner node, or
+   * the flow has other open work. In approval mode the node's own staged-closure wait is
+   * not counted as open work.
+   */
+  private isForwardPassClosureBlocked(
+    latest: FlowRun,
+    wf: WorkflowGraph,
+    nodeId: string,
+    roleInstanceId: string,
+    mode: 'turn' | 'approval'
+  ): boolean {
+    const isLastOwner = roleInstanceId === OWNER_BASE_ROLE_ID && wf.getOutgoingEdges(nodeId).length === 0;
+    const awaitingOthers = Object.entries(latest.awaitingHumanNodes).filter(([id, entry]) =>
+      !(mode === 'approval' && id === nodeId && entry.reason === AWAITING_HUMAN_REASON.CLOSURE_APPROVAL)
+    );
+    const hasBlockers =
+      latest.runningNodes.some(id => id !== nodeId) ||
+      awaitingOthers.length > 0 ||
+      Object.keys(latest.pendingHumanInputs).length > 0 ||
+      !allEdgesCovered(wf, latest.completedHandoffs) ||
+      Object.keys(latest.receivingHandoff).length > 0 ||
+      latest.awaitingHandoff.length > 0;
+    return !isLastOwner || hasBlockers;
+  }
+
+  /** Closes the forward pass in state: the node leaves the open set and the improvement choice opens. */
+  private applyForwardPassClosure(latest: FlowRun, wf: WorkflowGraph, nodeId: string): void {
+    this.removeOpenNode(latest, nodeId);
+    const uniqueBaseRoles = new Set(
+      (wf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
+    );
+    ImprovementOrchestrator.markAwaitingChoice(latest, uniqueBaseRoles.size <= 1);
   }
 
   private setFlowContext(flowRun: FlowRun): void {

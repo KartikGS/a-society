@@ -8,9 +8,9 @@ import { FlowCreationError } from './runtime-session/manager.js';
 import type { FlowReadModel } from './flow-read-model.js';
 
 type FlowCreationHandlers = {
-  createInitializedFlow(projectNamespace: string): FlowRef;
-  createInitializationFlow(projectNamespace: string, mode: InitializationMode): FlowRef;
-  createUpdateFlow(projectNamespace: string): FlowRef;
+  createInitializedFlow(projectNamespace: string): Promise<FlowRef>;
+  createInitializationFlow(projectNamespace: string, mode: InitializationMode): Promise<FlowRef>;
+  createUpdateFlow(projectNamespace: string): Promise<FlowRef>;
 };
 
 type RegisterFlowRoutesOptions = {
@@ -30,7 +30,7 @@ function createFlowForMode(
   flowCreation: FlowCreationHandlers,
   projectNamespace: string,
   mode: FlowCreationMode,
-): FlowRef {
+): Promise<FlowRef> {
   switch (mode) {
     case FLOW_CREATION_MODE.INITIALIZED:
       return flowCreation.createInitializedFlow(projectNamespace);
@@ -86,7 +86,7 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
     res.json(SessionStore.listFlowSummaries(projectNamespace));
   });
 
-  app.post('/api/projects/:projectNamespace/flows', express.json(), (req: Request, res: Response) => {
+  app.post('/api/projects/:projectNamespace/flows', express.json(), async (req: Request, res: Response) => {
     const projectNamespace = routeParam(req.params.projectNamespace);
     const body = (req.body ?? {}) as Record<string, unknown>;
     const mode = parseFlowCreationMode(body.mode);
@@ -96,7 +96,7 @@ export function registerFlowRoutes(app: Express, options: RegisterFlowRoutesOpti
     }
 
     try {
-      const flowRef = createFlowForMode(flowCreation, projectNamespace, mode);
+      const flowRef = await createFlowForMode(flowCreation, projectNamespace, mode);
       res.status(201).json({ flowRef });
     } catch (error: any) {
       const statusCode = error instanceof FlowCreationError ? error.statusCode : 500;

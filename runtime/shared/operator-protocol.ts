@@ -14,6 +14,7 @@ import type {
   OperatorEvent,
   OperatorFeedMessage,
 } from './types.js';
+import type { HostModelChoice } from './settings.js';
 
 export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.OPEN_FLOW; flowRef: FlowRef }
@@ -27,7 +28,7 @@ export type ClientMessage =
   | { type: typeof CLIENT_MESSAGE_TYPE.FEEDBACK_CONSENT_CHOICE; flowRef: FlowRef; decision: ProtocolFeedbackConsentDecision }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_RESPONSE; flowRef: FlowRef; decision: ConsentResponseDecision; role: string }
   | { type: typeof CLIENT_MESSAGE_TYPE.CONSENT_MODE; flowRef: FlowRef; mode: ConsentMode }
-  | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; skills: string[]; mcpServers: string[] };
+  | { type: typeof CLIENT_MESSAGE_TYPE.ROLE_CONFIGURATION; flowRef: FlowRef; nodeId: string; modelConfigId?: string; hostModel?: HostModelChoice; skills: string[]; mcpServers: string[] };
 
 /** Which configuration dimensions a role-configuration node still needs the operator to pick. */
 export interface RoleConfigurationPending {

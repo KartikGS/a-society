@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   CONSENT_CHECK_RESULT,
   defaultConsentState,
@@ -8,6 +9,7 @@ import {
   CONSENT_RESPONSE_DECISION,
 } from '../../shared/protocol-constants.js';
 import { parseRoleIdentity } from '../../shared/role-id.js';
+import type { ConsentChangePreviewRef, ProposedFileChange } from '../../shared/document-view.js';
 import type {
   ConsentCheckRequest,
   ConsentCheckResult,
@@ -21,9 +23,16 @@ import type {
 const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
 const GLOBAL_CONSENT_ROLE_KEY = '__global__';
 
+export interface ConsentChangePreview {
+  ref: ConsentChangePreviewRef;
+  change: ProposedFileChange;
+}
+
 interface InFlightEntry {
   request: ConsentRequest;
   resolve: (result: ConsentCheckResult) => void;
+  /** Present only while a prompted file-write with a previewable change is pending. */
+  preview?: ConsentChangePreview;
 }
 
 function normalizeCommand(command: string): string {
@@ -143,6 +152,14 @@ export class ConsentGateImpl {
     return Array.from(this.inFlightByRole.values()).map((entry) => entry.request);
   }
 
+  /** The pending change behind a prompted file-write; null once that request leaves the in-flight set. */
+  getChangePreview(previewId: string): ConsentChangePreview | null {
+    for (const entry of this.inFlightByRole.values()) {
+      if (entry.preview?.ref.id === previewId) return entry.preview;
+    }
+    return null;
+  }
+
   setOperatorRenderer(renderer: OperatorRenderSink): void {
     this.operatorRenderer = renderer;
   }
@@ -160,6 +177,16 @@ export class ConsentGateImpl {
       }
 
       const entry: InFlightEntry = { request, resolve };
+      // Previews exist only for prompts: granted writes never reach here.
+      if (request.kind === 'file-write' && rawRequest.preview) {
+        const ref: ConsentChangePreviewRef = {
+          id: crypto.randomUUID(),
+          changeKind: rawRequest.preview.before === null ? 'create' : 'modify',
+          origin: rawRequest.preview.origin,
+        };
+        request.preview = ref;
+        entry.preview = { ref, change: rawRequest.preview };
+      }
       const roleKey = requestRoleKey(request);
       this.inFlightByRole.set(roleKey, entry);
       this.operatorRenderer?.emit({ kind: 'consent.requested', request: entry.request });

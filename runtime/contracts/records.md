@@ -22,7 +22,7 @@ The runtime-managed record folder has this shape:
           findings/
 ```
 
-The active record folder is the `record/` directory shown above. It is the agent-writable flow artifact area.
+The active record folder is the `record/` directory shown above. It is the agent-writable flow artifact area. When the runtime runs your turns on a coding agent, the agent's permissions enforce the same scope; the rules below do not change.
 
 Do:
 

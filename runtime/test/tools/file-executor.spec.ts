@@ -7,7 +7,8 @@ import type { FlowRef, FlowRun } from '../../src/common/types.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
 import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
-import { FileToolExecutor } from '../../src/tools/file-executor.js';
+import { FileToolExecutor, staleWriteMessage } from '../../src/tools/file-executor.js';
+import { sha256Hex } from '../../src/common/file-content.js';
 
 const PROJECT_NAMESPACE = 'project';
 const tempDirs = new Set<string>();
@@ -486,6 +487,122 @@ describe('file-executor', () => {
 
       expect(result.isError).toBe(true);
       expect(result.content).toContain('unknown tool');
+    });
+  });
+
+  describe('prepare and approval binding', () => {
+    const NOT_FOUND = 'Error: old_string not found in file. Read the relevant section again to get the current content before retrying.';
+    const AMBIGUOUS = 'Error: old_string appears more than once in the file — read the relevant section again and include more surrounding context to make it unique.';
+
+    it('prepares a create with a null base', () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      const preparation = executor.prepare({ id: 'p1', name: 'write_file', input: { path: projectPath('new.md'), content: 'hello' } });
+      expect(preparation).toMatchObject({ kind: 'ready', change: { path: projectPath('new.md'), baseBytes: null, baseHash: null, after: 'hello' } });
+    });
+
+    it('prepares an overwrite and an edit with the base hash of the file read', () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      const filePath = path.join(workspace, projectPath('doc.md'));
+      fs.writeFileSync(filePath, 'alpha\nbeta\n');
+      const hash = sha256Hex(fs.readFileSync(filePath));
+
+      const overwrite = executor.prepare({ id: 'p2', name: 'write_file', input: { path: projectPath('doc.md'), content: 'gamma' } });
+      expect(overwrite).toMatchObject({ kind: 'ready', change: { baseHash: hash, after: 'gamma' } });
+
+      const edit = executor.prepare({ id: 'p3', name: 'edit_file', input: { path: projectPath('doc.md'), old_string: 'beta', new_string: 'delta' } });
+      expect(edit).toMatchObject({ kind: 'ready', change: { baseHash: hash, after: 'alpha\ndelta\n' } });
+      if (edit?.kind !== 'ready' || !edit.change) throw new Error('expected a change');
+      expect(edit.change.baseBytes?.toString('utf8')).toBe('alpha\nbeta\n');
+    });
+
+    it('returns null where validate does not check, and ready without a change for reads', () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      expect(executor.prepare({ id: 'n1', name: 'run_command', input: { command: 'ls' } })).toBeNull();
+      expect(executor.prepare({ id: 'n2', name: 'write_file', input: { content: 'x' } })).toBeNull();
+      expect(executor.prepare({ id: 'n3', name: 'read_file', input: { path: 'anything.txt' } })).toEqual({ kind: 'ready', change: null });
+    });
+
+    it('keeps every validate error string unchanged through validate and prepare', () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      fs.writeFileSync(path.join(workspace, projectPath('dup.md')), 'x x');
+      const missing = path.join(workspace, projectPath('missing.md'));
+      const cases: Array<[Record<string, unknown>, string, string]> = [
+        [{ path: '../outside.md', content: 'x' }, 'write_file', `Error: path '../outside.md' is outside the workspace root and cannot be accessed.`],
+        [{ path: 'root.md', content: 'x' }, 'write_file', `Error: path 'root.md' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and A-Society feedback.`],
+        [{ path: projectPath('dup.md'), old_string: 'y', new_string: 'z' }, 'edit_file', NOT_FOUND],
+        [{ path: projectPath('dup.md'), old_string: 'x', new_string: 'z' }, 'edit_file', AMBIGUOUS],
+        [{ path: projectPath('missing.md'), old_string: 'x', new_string: 'z' }, 'edit_file', `Error: no such file: ${missing}`],
+      ];
+      for (const [input, name, message] of cases) {
+        const call = { id: 'v', name, input };
+        expect(executor.validate(call)).toEqual({ content: message, isError: true });
+        expect(executor.prepare(call)).toEqual({ kind: 'rejected', content: message });
+      }
+    });
+
+    it('writes when the binding still matches', async () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      const filePath = path.join(workspace, projectPath('doc.md'));
+      fs.writeFileSync(filePath, 'one\ntwo\n');
+      const call = { id: 'b1', name: 'edit_file', input: { path: projectPath('doc.md'), old_string: 'two', new_string: 'TWO' } };
+      const preparation = executor.prepare(call);
+      if (preparation?.kind !== 'ready' || !preparation.change) throw new Error('expected a change');
+
+      const result = await executor.execute(call, undefined, { expectedBaseHash: preparation.change.baseHash });
+      expect(result.isError).toBe(false);
+      expect(fs.readFileSync(filePath, 'utf8')).toBe('one\nTWO\n');
+    });
+
+    it('refuses a bound edit when another line changed after prepare, though the edit itself still applies', async () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      const filePath = path.join(workspace, projectPath('doc.md'));
+      fs.writeFileSync(filePath, 'one\ntwo\nthree\n');
+      const call = { id: 'b2', name: 'edit_file', input: { path: projectPath('doc.md'), old_string: 'two', new_string: 'TWO' } };
+      const preparation = executor.prepare(call);
+      if (preparation?.kind !== 'ready' || !preparation.change) throw new Error('expected a change');
+
+      // A different line changes: old_string is still unique, so only the hash can reject this.
+      fs.writeFileSync(filePath, 'one\ntwo\nTHREE\n');
+      expect(executor.validate(call)).toBeNull();
+
+      const result = await executor.execute(call, undefined, { expectedBaseHash: preparation.change.baseHash });
+      expect(result).toEqual({ content: staleWriteMessage(projectPath('doc.md')), isError: true });
+      expect(fs.readFileSync(filePath, 'utf8')).toBe('one\ntwo\nTHREE\n');
+
+      // Without the binding the same call applies.
+      const unbound = await executor.execute(call);
+      expect(unbound.isError).toBe(false);
+      expect(fs.readFileSync(filePath, 'utf8')).toBe('one\nTWO\nTHREE\n');
+    });
+
+    it('refuses a bound create when the file appeared after prepare', async () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      const filePath = path.join(workspace, projectPath('late.md'));
+      const call = { id: 'b3', name: 'write_file', input: { path: projectPath('late.md'), content: 'mine' } };
+      expect(executor.prepare(call)).toMatchObject({ kind: 'ready', change: { baseHash: null } });
+      fs.writeFileSync(filePath, 'theirs');
+
+      const result = await executor.execute(call, undefined, { expectedBaseHash: null });
+      expect(result).toEqual({ content: staleWriteMessage(projectPath('late.md')), isError: true });
+      expect(fs.readFileSync(filePath, 'utf8')).toBe('theirs');
+    });
+
+    it('prepares no change for write_file to a directory, and execute fails as before', async () => {
+      const workspace = makeTempWorkspace();
+      const executor = makeExecutor(workspace);
+      fs.mkdirSync(path.join(workspace, projectPath('folder')), { recursive: true });
+      const call = { id: 'b4', name: 'write_file', input: { path: projectPath('folder'), content: 'x' } };
+      expect(executor.prepare(call)).toEqual({ kind: 'ready', change: null });
+      const result = await executor.execute(call);
+      expect(result.isError).toBe(true);
+      expect(result.content).toMatch(/^Error: could not write file:/);
     });
   });
 });

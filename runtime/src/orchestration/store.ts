@@ -35,6 +35,11 @@ function validateAndHydrateFlow(flow: FlowRun, ref?: FlowRef): FlowRun {
   if (!flow.receivingHandoff) flow.receivingHandoff = {};
   if (!flow.historyHandoff) flow.historyHandoff = {};
   if (!flow.awaitingHandoff) flow.awaitingHandoff = [];
+  // Optional field (no version bump): a malformed staged closure is dropped; the node stays
+  // awaiting closure approval, where declining recovers it.
+  if (flow.pendingClosureApproval !== undefined && typeof (flow.pendingClosureApproval as any)?.nodeId !== 'string') {
+    delete flow.pendingClosureApproval;
+  }
 
   if (!flow.workspaceRoot || !flow.recordFolderPath) {
     throw new Error('Persisted flow state is missing required workspaceRoot or recordFolderPath fields.');

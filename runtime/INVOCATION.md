@@ -32,14 +32,30 @@ If the selected port is already in use, the runtime prints a clear error and exi
 
 ### Model Configuration
 
-The runtime server can start without a model, but runtime work cannot proceed until the operator configures and activates at least one model in the Settings UI.
+The runtime server can start without a model, but runtime work cannot proceed until the operator either configures and activates at least one model in the Settings UI or turns on [agent mode](#agent-mode) with a ready coding agent.
 
 - Provider, model ID, base URL, and API key are configured in Settings
 - Saving a model runs a small sample request before persisting the configuration; validation failures are shown to the operator
 - Anthropic thinking effort can be set to `none` to omit the Anthropic `output_config.effort` request parameter for models that do not support it
 - Anthropic models expose a prompt cache TTL setting: `5m` by default, or `1h` for long-lived cache entries. The setting is persisted on every model but only Anthropic requests use explicit cache controls.
-- The Settings modal stays open until a usable active model exists
+- The Settings modal stays open until a usable active model exists or agent mode has a ready coding agent
 - Environment variables in `.env` no longer select the runtime model
+
+### Agent Mode
+
+Agent mode runs each role turn on a coding agent installed on the operator's machine instead of the runtime's own API calls. It is set in Settings under `Agent mode`. Supported agents: **Claude Code**, versions `2.1.304` up to (not including) `2.2.0`.
+
+- The runtime launches the installed `claude` CLI headlessly (`claude -p`), once per turn, as the operator signed in to it. It never reads, stores, or passes credentials. Billing follows the CLI's own sign-in; if `ANTHROPIC_API_KEY` is set in the runtime's environment, Claude Code uses that key instead of a subscription sign-in.
+- `Check agent` reports whether the CLI is installed (on `PATH`, or at the optional executable path), whether its version is in the supported range, and its sign-in method and plan. The check runs again before every turn, because the CLI updates itself; a turn on an unsupported version is refused with the supported range in the message.
+- The backend is fixed per flow when the flow is created and recorded as `turnBackend` in `flow.json` (flows without it run on API models). Changing the setting affects new flows only; existing flows keep the backend they started with.
+- Each role instance runs on a host model and effort chosen per role: Claude Code offers `Opus`, `Sonnet`, `Haiku`, `Fable` (passed as `--model`) and effort `low`, `medium`, `high`, `xhigh`, `max` (passed as `--effort`), or `Host default` for either. The choice resolves in this order: the flow's saved selection → the project-level role default for the active agent (see [Project-level settings](#project-level-settings)), saved as the flow's selection → when automation for models is `Auto`, the host default → otherwise the role configuration prompt asks for it. As in API mode, a project default applies only to role instances that have no valid saved selection yet; a saved selection naming a model or effort the agent no longer offers, or a different agent, counts as none. The selection is saved as `roles/<roleKey>/host-model.json`. Backward-pass and feedback turns use the saved selection, or the host default when there is none. If `CLAUDE_CODE_EFFORT_LEVEL` is set in the runtime's environment, it overrides the selected effort.
+- The agent manages its own skills, MCP servers, web search, and context compaction. The runtime's skills and MCP role configuration, auto-compaction, and manual compaction do not apply to agent-mode flows. Project-level role defaults for API model, skills, and MCP apply to API flows only.
+- The agent's reply streams into the feed as it is written (`--include-partial-messages`), like API turns.
+- The runtime still owns the workflow, handoffs and their validation, records, closure, the backward pass, and feedback.
+- Each role instance keeps one agent conversation, resumed by id on every turn. Only messages the agent has not yet received are sent (node entry, human reply, repair, continuation); the role's context bundle is passed as a file (`roles/<roleKey>/host-system-prompt.md`) on every turn. If the agent no longer has the conversation (for example after its own session cleanup), the runtime starts a new one seeded with its transcript record, up to 60 KiB.
+- The agent works in the project folder and may write there and in the record folder; it may read anywhere in the workspace. The feedback folder (`a-society/feedback`) is writable only for the feedback step.
+- A turn that leaves `workflow.yaml` invalid gets a repair message before its handoff is applied.
+- The composer footer shows the agent's plan usage (5-hour and 7-day windows) in place of the context ring.
 
 ### Role Configuration
 
@@ -52,6 +68,7 @@ Each role instance can be configured once per flow:
 - Model selection is persisted as `roles/<roleKey>/model.json`; selected optional capabilities are persisted as `roles/<roleKey>/capabilities.json`
 - A node awaiting `role-configuration` does not accept a text reply
 - With exactly one configured model and no skills or MCP servers, no role configuration is requested and the active model is used
+- In agent-mode flows the banner offers the agent's models and effort levels (with `Host default`) instead of API models, and no skills or MCP servers
 - If a selected model is later deleted or becomes unusable while multiple models remain configured, the role re-prompts at its next activation; if a selected skill or MCP server is later removed, it is dropped at use time without re-prompting
 - When project-level settings configure a role's model, skills, or MCP servers, those are written as the flow's selection before this prompt is evaluated, suppressing the prompt for the configured dimensions (see [Project-level settings](#project-level-settings))
 
@@ -149,7 +166,7 @@ When a project has existing flow state, the client lists the project's saved flo
 
 Each initialized project in the selector has a settings (⋮) control that opens a **project settings** modal (titled with the project name). A master **Enable project settings** toggle gates everything below; when off, the project behaves exactly as the per-flow defaults. Settings persist to `{workspace}/.a-society/state/<project>/settings.json`.
 
-- **Roles** — per role, choose a default Model and optionally fix Skills and MCP servers. A configured dimension is written as each flow's selection for that role before the activation gate, so the per-flow role-configuration prompt is suppressed for it; dimensions left unset fall back to the manual/automatic gate. Model/skill/MCP references are re-validated at use time and dropped if the underlying entry is removed.
+- **Roles** — per role, choose a default Model and optionally fix Skills and MCP servers. A configured dimension is written as the flow's selection for that role, when the flow has no selection for that role yet, before the activation gate, so the per-flow role-configuration prompt is suppressed for it; dimensions left unset fall back to the manual/automatic gate. Model/skill/MCP references are re-validated at use time and dropped if the underlying entry is removed. While agent mode is on, the role panel instead sets a **Host model** (and **Effort**) default for the selected agent, stored as `hostModels` per agent; `Use per-flow default` leaves it to the flow's role configuration. An unknown model or effort is ignored at use time.
 - **Permission → Tools** — choose the project permission level (No / Partial / Full access) and edit the allowed bash commands. These seed each new flow's `consentState` at creation. While enabled, the chat-footer mode dropdown and the consent prompt's `Allow … for this project` button also write back to the project, so future flows inherit the change.
 - **Permission → Improvement · Feedback** — preset the improvement mode (No improvement / Graph-based / Parallel) and feedback (Yes / No). When set, the matching end-of-flow gate is applied automatically and its modal is skipped; `Ask each flow` keeps the prompt. Graph/parallel improvement and feedback generation still require a usable model and fall back to the prompt when none is configured.
 - **Delete project** lives at the bottom of this modal; the per-row delete (×) is removed for initialized projects (uninitialized projects keep it). Deletion asks the operator to type the project folder name in the confirmation dialog before it proceeds.
@@ -187,6 +204,10 @@ A node awaiting a `prompt-human` reply can also be woken by a deliverable inboun
 
 A node suspended with `await-handoff` can also receive targeted human input. Queued human input has priority over received handoffs: the runtime resumes the node with the human reply, removes the `awaitingHandoff` suspension, and does not inject inbound handoff artifacts into that human-input turn.
 
+**Approvals.** A node with `human-colab: true` asks the operator before its forward handoff commits, with one artifact link per target, and, when it is the last owner node, before it closes the forward pass, with a link to the closure artifact when the signal names an `artifact_path`. A closure is only offered for approval after the closure checks pass; approving runs them again and is refused, leaving the closure staged, if they now fail. `Approve` commits the handoff or closure as emitted without re-running the role; `Decline` discards it and parks the node for guidance, which resumes the role to produce a revised handoff or closure. Staged approvals are persisted in `flow.json` (`pendingHandoffApprovals`, `pendingClosureApproval`) and survive a restart; the flow must be resumed before deciding. A node awaiting an approval does not accept a text reply.
+
+Artifact links open in the document panel, which shows text files only from the flow's record folder and the project folder (symlinks are resolved before that check), up to 512 KiB; markdown files are rendered, other text is shown as plain text, and anything else shows the reason it cannot be shown. The panel reads `GET /api/flows/<project>/<flowId>/file?path=<path>` and `GET /api/flows/<project>/<flowId>/change-previews/<id>`; both are read-only and always answer with a document body that carries either the content or the reason it is unavailable.
+
 When the forward pass closes, the runtime persists `status: awaiting_improvement_choice` in `flow.json`. The browser shows the improvement-mode modal from that persisted state and sends a dedicated improvement-choice message. This is runtime-level input, not a role/node `prompt-human` reply.
 
 ### Tool permission modes
@@ -197,13 +218,17 @@ The chat footer exposes three per-flow tool permission modes:
 - `Partial Access` — stored flow grants are honored: all edits if previously granted, and exact bash commands previously granted for this flow
 - `Full Access` — permission-required tools run without prompting
 
-File writes (`edit_file`, `write_file`) prompt with the target path and offer `Allow`, `Allow all edits this flow`, or `Deny`.
+File writes (`edit_file`, `write_file`) prompt with the target path and offer `Allow`, `Allow all edits for this flow` (`Allow all edits for this project` when project-level settings are enabled), or `Deny`. When the change can be shown, the prompt also has a **View change** link, which opens the document panel in place of the graph with a line diff of the file's current content against the new content. Viewing is optional; `Allow` and `Deny` behave the same either way. In API mode the runtime applies exactly the previewed change: if the file changed after the prompt was prepared, the write is not applied and the role is told to read the file again and retry. In agent mode the preview is the agent's denied `Write`/`Edit` rebuilt against the file on disk (several denials for one file are applied in order); allowing still grants the file for the rest of the turn, and the agent redoes the write itself. `MultiEdit`, `NotebookEdit`, binary files, and files or changes over 512 KiB show the path only. Previews are held in memory only while the prompt is pending.
 
-Bash commands prompt with the exact command and offer `Allow`, `Allow <command> this flow`, or `Deny`. Simple safe read-only commands such as `ls` do not prompt.
+Bash commands prompt with the exact command and offer `Allow this command`, `Allow this command for this flow` (`Allow this command for this project` when project-level settings are enabled), or `Deny`. Simple safe read-only commands such as `ls` do not prompt.
 
 MCP tool calls prompt by default with `<server> · <tool>` and an argument preview. `Allow this tool for this flow` stores a per-tool grant under `consentState.mcp.allowedTools`; MCP read-only hints are not auto-allowed.
 
 Permission state is stored on the active `FlowRun` as `consentState` in `flow.json`.
+
+In agent mode the modes are applied as the agent's own permissions for each turn, with its permission prompts turned off: `No Access` allows reads only, `Partial Access` allows edits in the working folders plus the granted commands and MCP tools, and `Full Access` allows edits and all shell commands (file edits stay confined to the working folders). When the agent reports a denied write, command, or MCP call, the runtime shows the usual permission prompt after the turn; if the operator allows it, the turn is retried with the new permission, and if the operator denies it, the node pauses for guidance. A granted shell command is passed to the agent as a rule for the whole command plus one for each piece of a compound command (split on `;`, `&&`, `||`, `|`), because the agent checks pieces one by one. If the agent still refuses a granted request on the retry, the node pauses with a repair notice instead of retrying again. The agent itself may run some read-only commands without asking.
+
+Agent mode can instead hand tool permissions to the agent: under Settings → Agent mode → Tool permissions, choose "Claude Code decides (auto mode)". Flows created with it run Claude Code with `--permission-mode auto`; Claude Code approves or refuses each action with its own auto-mode rules (see `claude auto-mode config`), may edit outside the working folders and run shell and network commands, and the runtime never prompts. The composer shows `Auto (agent decides)` instead of the permission dropdown. The choice is fixed per flow at creation (recorded as `turnBackend.permissions: "auto"` in `flow.json`); flows without it use the permission levels above.
 
 When project-level settings are enabled, this mode and the granted bash commands are seeded from the project at flow creation, the footer's mode dropdown writes the project default, and the consent prompt's allow button reads `Allow … for this project` and persists the grant to the project (see [Project-level settings](#project-level-settings)).
 
@@ -263,6 +288,8 @@ Manual compaction from the browser uses the same model-request lifecycle as a no
 
 Compaction archives the raw transcript in the role session, replaces active model input with a runtime-authored restoration message, resets the displayed context usage for that role, and preserves the compacted event as an audit/feed item.
 
+Agent-mode flows are not compacted by the runtime; the coding agent compacts its own context, and a manual compaction request is refused.
+
 ---
 
 ## Session Transcript Access
@@ -285,7 +312,7 @@ If no session exists for the selected node, the UI reports that the transcript i
 The runtime injects and consumes the machine-readable handoff contract from `$A_SOCIETY_RUNTIME_HANDOFF_CONTRACT`.
 
 - `type: prompt-human` pauses the emitting node for targeted browser-entered human input
-- `type: forward-pass-closed` ends the forward pass and pauses the flow at `awaiting_improvement_choice`
+- `type: forward-pass-closed` ends the forward pass and pauses the flow at `awaiting_improvement_choice`; its optional `artifact_path` names the closure artifact. On a `human-colab` node the closure is first staged for operator approval (see [Human input behavior](#human-input-behavior))
 - `type: meta-analysis-complete` is consumed during backward-pass orchestration
 - `type: backward-pass-complete` closes the backward pass after the final feedback step
 
@@ -310,6 +337,7 @@ Per-flow layout:
 - `roles/<roleKey>/feed.json` — persisted per-role browser feed (`FeedItem[]`) for replay after reconnect or server restart
 - `roles/<roleKey>/transcript.json` — persisted role-instance-scoped session transcript for that role
 - `roles/<roleKey>/model.json` — persisted per-role model selection for that flow (present once the operator has chosen a model for the role)
+- `roles/<roleKey>/host-system-prompt.md` — agent-mode flows only: the role's context bundle, passed to the coding agent by file on every turn
 - `roles/<roleKey>/capabilities.json` — persisted per-role selected skills and MCP servers for that flow, with per-dimension `skillsDecided` / `mcpDecided` provenance so skills and MCP can be resolved independently (manual or automatic); present once either dimension has been decided, including explicit empty selections
 
 Resume behavior:

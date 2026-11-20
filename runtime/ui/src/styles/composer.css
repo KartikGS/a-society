@@ -36,8 +36,14 @@
   align-items: center;
 }
 
-.composer-footer .consent-mode-select {
+.composer-footer .consent-mode-select,
+.composer-footer .consent-mode-label {
   margin-left: auto;
+}
+
+.consent-mode-label {
+  font-size: 11px;
+  color: var(--ink-soft);
 }
 
 .composer-action {

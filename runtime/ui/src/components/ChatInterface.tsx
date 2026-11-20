@@ -7,9 +7,16 @@ import {
 } from '../../../shared/protocol-constants.js';
 import { FeedMessage } from './FeedMessage';
 import type { ProtocolHandoffApprovalDecision } from '../../../shared/protocol-constants.js';
+import type { DocumentRequest } from '../../../shared/document-view.js';
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, HandoffTarget } from '../../../shared/types.js';
-import type { McpServerSummary, ModelConfig } from '../../../shared/settings.js';
+import type {
+  HostAgentSummary,
+  HostModelChoice,
+  McpServerSummary,
+  ModelConfig,
+} from '../../../shared/settings.js';
 import type { SkillSummary } from '../../../shared/skills.js';
+import type { HostUsage } from '../app/flow-ui';
 
 export type { FeedItem };
 
@@ -22,11 +29,30 @@ export interface RoleConfigurationPrompt {
   pendingModel: boolean;
   pendingSkills: boolean;
   pendingMcp: boolean;
+  /**
+   * Present only for flows running on a host coding agent: its declared models and effort
+   * levels replace the API model list. `null` while the host list is still loading.
+   */
+  hostAgent?: HostAgentSummary | null;
+}
+
+/** Role-configuration answer; `hostModel` applies to host flows, `modelConfigId` to API flows. */
+export interface RoleConfigurePayload {
+  modelConfigId?: string;
+  hostModel?: HostModelChoice;
+  skills: string[];
+  mcpServers: string[];
 }
 
 export interface HandoffApprovalPrompt {
   nodeId: string;
   targets: HandoffTarget[];
+}
+
+/** A forward-pass closure staged by a human-collaborative node, awaiting the operator. */
+export interface ClosureApprovalPrompt {
+  nodeId: string;
+  artifactPath: string | null;
 }
 
 interface ChatInterfaceProps {
@@ -44,18 +70,25 @@ interface ChatInterfaceProps {
   activeRoles?: string[];
   consentRequest?: ConsentRequest | null;
   consentMode?: ConsentMode;
+  /** Set when the host agent decides tool permissions itself; replaces the permission dropdown. */
+  hostPermissionLabel?: string | null;
   projectSettingsEnabled?: boolean;
   roleConfiguration?: RoleConfigurationPrompt | null;
   handoffApproval?: HandoffApprovalPrompt | null;
+  closureApproval?: ClosureApprovalPrompt | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
+  /** Plan usage reported by a host coding agent; shown instead of the context ring. */
+  hostUsage?: HostUsage | null;
   onRoleSelect?: (role: string) => void;
   onInputChange: (value: string) => void;
   onSubmit: () => void;
   onStop?: () => void;
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
-  onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
+  onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
   onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+  /** Opens a proposed change or an artifact in the document panel. */
+  onOpenDocument?: (request: DocumentRequest) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
   isCompactingContext?: boolean;
@@ -89,12 +122,113 @@ function consentAllowFlowLabel(request: ConsentRequest, projectSettingsEnabled: 
   return `Allow this command for ${scope}`;
 }
 
+/** Last path segment, for either separator; the UI cannot use `node:path`. */
+function basename(filePath: string): string {
+  const segments = filePath.split(/[/\\]/).filter((segment) => segment.length > 0);
+  return segments[segments.length - 1] ?? filePath;
+}
+
+const HOST_DEFAULT_OPTION = '';
+
+/**
+ * Host-flow variant: the operator picks one of the host's declared models (or the host
+ * default) and, when the host supports it, an effort level. Skills and MCP are host-managed.
+ */
+function HostRoleConfigurationBanner({
+  nodeId,
+  hostAgent,
+  onRoleConfigure,
+}: {
+  nodeId: string;
+  hostAgent: HostAgentSummary | null;
+  onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
+}) {
+  // undefined = nothing picked yet; HOST_DEFAULT_OPTION = host default; otherwise a model id.
+  const [model, setModel] = useState<string | undefined>(undefined);
+  const [effort, setEffort] = useState(HOST_DEFAULT_OPTION);
+  const hostName = hostAgent?.displayName ?? 'the coding agent';
+  const modelOptions = [
+    { id: HOST_DEFAULT_OPTION, displayName: 'Host default', meta: `Use ${hostName}'s default model` },
+    ...(hostAgent?.models ?? []).map((option) => ({ ...option, meta: option.id })),
+  ];
+  const effortLevels = hostAgent?.effortLevels ?? [];
+
+  return (
+    <div className="model-select-banner">
+      <div className="model-select-banner-body">
+        <span className="model-select-banner-title">Configure this role</span>
+        <span className="model-select-banner-desc">
+          The selection is used for this role&apos;s turns in this flow. {hostName} manages its own skills and MCP servers.
+        </span>
+      </div>
+
+      {hostAgent === null ? (
+        <p className="model-select-empty">Loading the coding agent&apos;s models…</p>
+      ) : (
+        <section className="role-config-section" aria-label="Model">
+          <h3 className="role-config-section-title">Model</h3>
+          <ul className="model-select-options role-config-options">
+            {modelOptions.map((option) => (
+              <li key={option.id || 'host-default'}>
+                <button
+                  type="button"
+                  className={`model-select-option${model === option.id ? ' model-select-option-selected' : ''}`}
+                  aria-pressed={model === option.id}
+                  onClick={() => setModel(option.id)}
+                >
+                  <span className="model-select-option-name">{option.displayName}</span>
+                  <span className="model-select-option-meta">{option.meta}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {hostAgent && effortLevels.length > 0 ? (
+        <div className="form-field role-config-section">
+          <label className="role-config-section-title" htmlFor={`host-effort-${nodeId}`}>Effort</label>
+          <select
+            id={`host-effort-${nodeId}`}
+            className="form-input form-select"
+            value={effort}
+            onChange={(event) => setEffort(event.target.value)}
+          >
+            <option value={HOST_DEFAULT_OPTION}>Host default</option>
+            {effortLevels.map((level) => (
+              <option key={level} value={level}>{level}</option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      <div className="role-config-actions">
+        <button
+          type="button"
+          className="form-btn-submit role-config-submit"
+          disabled={model === undefined}
+          onClick={() => {
+            if (model === undefined) return;
+            onRoleConfigure?.(nodeId, {
+              hostModel: { model: model || null, effort: effort || null },
+              skills: [],
+              mcpServers: [],
+            });
+          }}
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RoleConfigurationBanner({
   roleConfiguration,
   onRoleConfigure,
 }: {
   roleConfiguration: RoleConfigurationPrompt;
-  onRoleConfigure?: (nodeId: string, payload: { modelConfigId?: string; skills: string[]; mcpServers: string[] }) => void;
+  onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
 }) {
   const showModelSection = roleConfiguration.pendingModel && roleConfiguration.models.length > 1;
   const showSkillsSection = roleConfiguration.pendingSkills && roleConfiguration.skills.length > 0;
@@ -231,10 +365,15 @@ function RoleConfigurationBanner({
 function HandoffApprovalBanner({
   handoffApproval,
   onHandoffApproval,
+  onOpenDocument,
 }: {
   handoffApproval: HandoffApprovalPrompt;
   onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+  onOpenDocument?: (request: DocumentRequest) => void;
 }) {
+  const linkedTargets = handoffApproval.targets.filter(
+    (target): target is HandoffTarget & { artifact_path: string } => target.artifact_path !== null
+  );
   const targetLabel = handoffApproval.targets.map((target) => target.target_node_id).join(', ');
   return (
     <div className="consent-banner">
@@ -243,6 +382,25 @@ function HandoffApprovalBanner({
         <span className="consent-banner-desc">
           This is a human-collaborative node. Approve to commit the handoff, or decline to keep working with the role.
         </span>
+        {linkedTargets.length > 0 ? (
+          <span className="consent-links">
+            {linkedTargets.map((target) => (
+              <button
+                key={target.target_node_id}
+                type="button"
+                className="consent-link"
+                aria-label={`Open artifact for ${target.target_node_id}`}
+                onClick={() => onOpenDocument?.({
+                  kind: 'file',
+                  path: target.artifact_path,
+                  label: `Handoff to ${target.target_node_id}`,
+                })}
+              >
+                {`${target.target_node_id}: ${basename(target.artifact_path)}`}
+              </button>
+            ))}
+          </span>
+        ) : null}
       </div>
       <div className="consent-banner-actions">
         <button
@@ -261,6 +419,81 @@ function HandoffApprovalBanner({
         </button>
       </div>
     </div>
+  );
+}
+
+function ClosureApprovalBanner({
+  closureApproval,
+  onHandoffApproval,
+  onOpenDocument,
+}: {
+  closureApproval: ClosureApprovalPrompt;
+  onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+  onOpenDocument?: (request: DocumentRequest) => void;
+}) {
+  const { nodeId, artifactPath } = closureApproval;
+  return (
+    <div className="consent-banner">
+      <div className="consent-banner-body">
+        <span className="consent-banner-tool">Close the forward pass?</span>
+        <span className="consent-banner-desc">
+          This is a human-collaborative node. Approve to close the forward pass, or decline to keep working with the Owner.
+        </span>
+        {artifactPath ? (
+          <span className="consent-links">
+            <button
+              type="button"
+              className="consent-link"
+              aria-label="Open closure artifact"
+              onClick={() => onOpenDocument?.({ kind: 'file', path: artifactPath, label: 'Closure artifact' })}
+            >
+              {`Closure artifact: ${basename(artifactPath)}`}
+            </button>
+          </span>
+        ) : (
+          <span className="consent-banner-muted">The Owner did not name a closure artifact.</span>
+        )}
+      </div>
+      <div className="consent-banner-actions">
+        <button
+          type="button"
+          className="consent-btn consent-btn-allow"
+          onClick={() => onHandoffApproval?.(nodeId, HANDOFF_APPROVAL_DECISION.APPROVE)}
+        >
+          Approve closure
+        </button>
+        <button
+          type="button"
+          className="consent-btn consent-btn-deny"
+          onClick={() => onHandoffApproval?.(nodeId, HANDOFF_APPROVAL_DECISION.DECLINE)}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ConsentChangeLink({
+  path,
+  previewId,
+  onOpenDocument,
+}: {
+  path: string;
+  previewId: string;
+  onOpenDocument?: (request: DocumentRequest) => void;
+}) {
+  return (
+    <span className="consent-links">
+      <button
+        type="button"
+        className="consent-link"
+        aria-label={`View proposed change to ${path}`}
+        onClick={() => onOpenDocument?.({ kind: 'change-preview', previewId, path })}
+      >
+        View change
+      </button>
+    </span>
   );
 }
 
@@ -309,6 +542,23 @@ function ContextRing({
         <span className="context-ring-tooltip-hint">Usage updated at end of LLM turn</span>
       </div>
     </button>
+  );
+}
+
+function formatUsageShare(value: number | undefined): string | null {
+  return value === undefined ? null : `${Math.round(value * 100)}%`;
+}
+
+function HostUsageBadge({ usage }: { usage: HostUsage }) {
+  const parts = [
+    formatUsageShare(usage.fiveHour) ? `5-hour ${formatUsageShare(usage.fiveHour)}` : null,
+    formatUsageShare(usage.sevenDay) ? `7-day ${formatUsageShare(usage.sevenDay)}` : null,
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  return (
+    <span className="host-usage" title="Share of the coding agent's plan limits used, as last reported by the agent">
+      Plan usage: {parts.join(' · ')}
+    </span>
   );
 }
 
@@ -422,7 +672,14 @@ export function ChatInterface(props: ChatInterfaceProps) {
 
       {props.showComposer ? (
         <div className="composer-area">
-          {props.roleConfiguration ? (
+          {props.roleConfiguration && props.roleConfiguration.hostAgent !== undefined ? (
+            <HostRoleConfigurationBanner
+              key={props.roleConfiguration.nodeId}
+              nodeId={props.roleConfiguration.nodeId}
+              hostAgent={props.roleConfiguration.hostAgent}
+              onRoleConfigure={props.onRoleConfigure}
+            />
+          ) : props.roleConfiguration ? (
             <RoleConfigurationBanner
               key={props.roleConfiguration.nodeId}
               roleConfiguration={props.roleConfiguration}
@@ -435,6 +692,16 @@ export function ChatInterface(props: ChatInterfaceProps) {
               key={props.handoffApproval.nodeId}
               handoffApproval={props.handoffApproval}
               onHandoffApproval={props.onHandoffApproval}
+              onOpenDocument={props.onOpenDocument}
+            />
+          ) : null}
+
+          {props.closureApproval ? (
+            <ClosureApprovalBanner
+              key={props.closureApproval.nodeId}
+              closureApproval={props.closureApproval}
+              onHandoffApproval={props.onHandoffApproval}
+              onOpenDocument={props.onOpenDocument}
             />
           ) : null}
 
@@ -443,6 +710,13 @@ export function ChatInterface(props: ChatInterfaceProps) {
               <div className="consent-banner-body">
                 <span className="consent-banner-tool">{consentToolLabel(props.consentRequest)}</span>
                 <span className="consent-banner-desc">{consentPromptTitle(props.consentRequest)}</span>
+                {props.consentRequest.kind === 'file-write' && props.consentRequest.preview ? (
+                  <ConsentChangeLink
+                    path={props.consentRequest.path}
+                    previewId={props.consentRequest.preview.id}
+                    onOpenDocument={props.onOpenDocument}
+                  />
+                ) : null}
               </div>
               <div className="consent-banner-actions">
                 <button
@@ -518,6 +792,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
           </form>
 
           <div className="composer-footer">
+            {props.hostUsage ? <HostUsageBadge usage={props.hostUsage} /> : null}
             {props.contextWindow ? (
               <ContextRing
                 contextWindow={props.contextWindow}
@@ -526,6 +801,11 @@ export function ChatInterface(props: ChatInterfaceProps) {
                 isCompactingContext={props.isCompactingContext}
               />
             ) : null}
+            {props.hostPermissionLabel ? (
+              <span className="consent-mode-label" title="Tool permissions are decided by the coding agent for this flow">
+                {props.hostPermissionLabel}
+              </span>
+            ) : (
             <select
               className="consent-mode-select"
               value={props.consentMode ?? CONSENT_MODE.NO_ACCESS}
@@ -537,6 +817,7 @@ export function ChatInterface(props: ChatInterfaceProps) {
               <option value={CONSENT_MODE.PARTIAL_ACCESS}>Partial Access</option>
               <option value={CONSENT_MODE.FULL_ACCESS}>Full Access</option>
             </select>
+            )}
           </div>
         </div>
       ) : null}

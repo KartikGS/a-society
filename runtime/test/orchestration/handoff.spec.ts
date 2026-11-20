@@ -51,7 +51,22 @@ describe('handoff-interpreter', () => {
   it('parses forward-pass-closed signal', () => {
     const result = HandoffInterpreter.parse('```handoff\ntype: forward-pass-closed\n```');
 
-    expect(result.kind).toBe('forward-pass-closed');
+    expect(result).toEqual({ kind: 'forward-pass-closed' });
+  });
+
+  it('parses an optional closure artifact_path, treating null as absent', () => {
+    expect(HandoffInterpreter.parse('```handoff\ntype: forward-pass-closed\nartifact_path: record/closure.md\n```'))
+      .toEqual({ kind: 'forward-pass-closed', artifactPath: 'record/closure.md' });
+    expect(HandoffInterpreter.parse('```handoff\ntype: forward-pass-closed\nartifact_path: null\n```'))
+      .toEqual({ kind: 'forward-pass-closed' });
+  });
+
+  it('rejects a closure artifact_path that is not a non-empty string', () => {
+    for (const value of ['42', '""', '"  "']) {
+      const error = expectHandoffError(() => HandoffInterpreter.parse(`\`\`\`handoff\ntype: forward-pass-closed\nartifact_path: ${value}\n\`\`\``));
+      expect(error.details.code).toBe('missing_required_field');
+      expect(error.details.modelRepairMessage).toContain('forward-pass-closed artifact_path must be a non-empty string when present.');
+    }
   });
 
   it('parses meta-analysis-complete signal', () => {
