@@ -103,10 +103,11 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Context injection | Required-reading resolution and turn-context assembly |
 | Session store | Durable runtime state, session persistence, and status tracking |
 | Provider gateway | Direct LLM-provider interaction and error normalization |
-| Host agent gateway | Headless role-turn execution on a supported host coding agent: adapter registry and version gate, per-turn permission flags, per-turn model/effort selection, conversation continuity, token-level text streaming, stream-event mapping, and error normalization into the provider gateway's error types |
+| Host agent gateway | Headless role-turn execution on a supported host coding agent: adapter registry and version gate, per-turn permission flags, per-turn model/effort selection, conversation continuity, token-level text streaming, stream-event mapping, rebuilding denied `Write`/`Edit` calls against the file on disk for consent previews, and error normalization into the provider gateway's error types |
+| Operator document view | Read-only documents for the operator's in-app document panel: file-write consent change previews, held only on the pending in-flight consent request, and text-file reads confined to the flow's record folder and project folder, with path and realpath containment, a 512 KiB limit, and binary rejection. API-mode writes apply only against the file content the preview was computed from |
 | Handoff interpretation | Parsing and validating machine-readable handoff blocks |
 | Observability | Telemetry, runtime metrics, and diagnostics for executable behavior |
-| Project settings | Per-project defaults for role configuration (API model/skills/MCP, and per-host agent-mode model/effort), tool-permission seeding, and improvement/feedback gate pre-decisions; applied with precedence over the per-flow gates, with consent write-back |
+| Project settings | Per-project defaults for role configuration (API model/skills/MCP, and per-host agent-mode model/effort), tool-permission seeding, and improvement/feedback gate pre-decisions; role defaults fill role selections the flow has not made yet, before the per-flow gates, in both API and agent mode; consent write-back |
 
 ---
 
@@ -122,7 +123,7 @@ The browser backend lives under `runtime/src/server/`.
 
 ## 8. Styling Model
 
-- UI styles live under `runtime/ui/src/styles/` as **area files** — `base.css` (design tokens + shared UI chrome) plus per-area files such as `chat.css`, `feed.css`, `composer.css`, `role-config.css`, `workspace.css`, `graph.css`, `settings.css`, `project-settings.css`, `toast.css`, and `responsive.css` — combined through a single `@import` entry. One cascade is preserved, specificity stays predictable, and an agent working a UI feature reads only the relevant area file rather than the full stylesheet.
+- UI styles live under `runtime/ui/src/styles/` as **area files** — `base.css` (design tokens + shared UI chrome) plus per-area files such as `chat.css`, `feed.css`, `composer.css`, `role-config.css`, `workspace.css`, `graph.css`, `settings.css`, `project-settings.css`, `toast.css`, `document.css`, and `responsive.css` — combined through a single `@import` entry. One cascade is preserved, specificity stays predictable, and an agent working a UI feature reads only the relevant area file rather than the full stylesheet.
 - **Raw color values exist only in `base.css`.** All other stylesheets consume semantic tokens via `var(--token)`; the rule is enforced by the stylelint gate (§3). The dark theme is a single `:root[data-theme="dark"]` token-redefinition block in `base.css` — per-selector dark overrides in area files are a structural mistake.
 - **Theme resolution is JS-owned.** A pre-paint script in `ui/index.html` stamps `data-theme` on `<html>` (localStorage preference falling back to `prefers-color-scheme`); the `useTheme` hook and the sidebar `ThemeToggle` (Light/Dark/System) keep it in sync. Stylesheets never branch on `prefers-color-scheme` directly.
 - **Fonts are bundled**, not fetched: `@fontsource` packages imported in `ui/src/main.tsx` and emitted by Vite, so the UI renders identically offline and across platforms. No font/asset CDNs.

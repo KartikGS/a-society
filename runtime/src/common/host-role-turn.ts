@@ -29,6 +29,8 @@ import { formatHostModelLabel } from '../orchestration/host-role-model.js';
 import { validateWorkflowFileContent, workflowFilePaths } from '../tools/workflow-write-validation.js';
 import { TelemetryManager } from '../observability/observability.js';
 import { logger } from '../observability/logger.js';
+import { buildHostWritePreview } from './host-write-preview.js';
+import { isPathWithin } from './file-content.js';
 
 export const HOST_SYSTEM_PROMPT_FILE = 'host-system-prompt.md';
 export const RECOVERY_TRANSCRIPT_LIMIT_BYTES = 60 * 1024;
@@ -130,11 +132,6 @@ export function renderRecoveryTranscript(
   return kept.join('\n\n');
 }
 
-function isWithin(root: string, target: string): boolean {
-  const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
 function hashFile(filePath: string): string | null {
   try {
     return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
@@ -184,6 +181,8 @@ interface DenialRequest {
   check: Omit<ConsentCheckRequest, 'nodeId' | 'role'>;
   label: string;
   grant: (grants: OneTimeGrants) => void;
+  /** File-write denials only: the absolute file the host tried to write. */
+  writeTarget?: string;
 }
 
 /**
@@ -196,13 +195,14 @@ export function mapHostDenial(denial: HostPermissionDenial, workspaceRoot: strin
     const target = input.file_path ?? input.notebook_path;
     if (typeof target !== 'string') return null;
     const absolute = path.resolve(workspaceRoot, target);
-    if (!writeRoots.some((root) => isWithin(root, absolute))) return null;
+    if (!writeRoots.some((root) => isPathWithin(root, absolute))) return null;
     const relative = path.relative(workspaceRoot, absolute);
     return {
       key: `write:${absolute}`,
       check: { toolName: 'write_file', input: { path: relative } },
       label: `write ${relative}`,
       grant: (grants) => grants.writePaths.push(absolute),
+      writeTarget: absolute,
     };
   }
   if (toolName === 'Bash') {
@@ -438,7 +438,13 @@ export function createHostTurnExecutor(input: HostTurnExecutorInput): () => Prom
         }
         const granted: string[] = [];
         for (const request of requests) {
-          const decision = await consentGate.check({ ...request.check, nodeId, role: roleInstanceId }, signal);
+          const preview = request.writeTarget
+            ? buildHostWritePreview(result.permissionDenials, request.writeTarget, context.workspaceRoot)
+            : null;
+          const decision = await consentGate.check(
+            { ...request.check, ...(preview ? { preview } : {}), nodeId, role: roleInstanceId },
+            signal
+          );
           if (decision === CONSENT_CHECK_RESULT.DENY) {
             if (signal?.aborted) throw new LLMGatewayError('ABORTED', 'Turn aborted by operator');
             throw new LLMGatewayError('CONSENT_DENIED', 'Tool call denied by operator; awaiting human guidance.');

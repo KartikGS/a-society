@@ -115,6 +115,8 @@ workflow:
         - Determine backward-pass routing per $A_SOCIETY_IMPROVEMENT.
         - The Owner is the terminal node of the forward pass; when multiple implementation tracks ran, closure waits for all active terminal artifacts, and if any touched-surface obligation is still missing, do not close the flow — route the missing work explicitly.
         - Emit the forward-pass closure signal and hand control to the improvement protocol when closure is confirmed.
+        - This node defaults to human-colab so the human reviews the flow's changes before closure; set human-colab false on this node in the record workflow.yaml only when the flow needs no human review.
+      human-colab: true
       await-all-inputs: true
   edges:
     - from: owner-intake

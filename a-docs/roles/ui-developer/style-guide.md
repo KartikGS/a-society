@@ -131,6 +131,7 @@ This distinction is structural: `handleX` is an implementation; `onX` is a contr
 | Lines & text | `--border`, `--border-soft`, `--border-strong`, `--edge`, `--ink`, `--ink-soft` |
 | Accent | `--accent`, `--accent-deep`, `--on-accent`, `--accent-faint`, `--accent-soft`, `--accent-soft-strong`, `--accent-border`, `--accent-border-soft`, `--accent-focus`, `--accent-surface` |
 | Status | `--success(-soft/-ink)`, `--danger(-soft/-ink/-border)`, `--on-danger`, `--warning(-soft/-faint/-ink/-border)`, `--info`, `--info-deep`, `--on-info(-soft)`, `--info-border` |
+| Diff | `--diff-added-bg`, `--diff-added-fg`, `--diff-removed-bg`, `--diff-removed-fg` (document-panel line diffs; each fg/bg pair meets WCAG AA) |
 | Code | `--code-bg`, `--syn-keyword`, `--syn-title`, `--syn-string`, `--syn-comment`, `--syn-constant`, `--syn-attr` |
 | Nodes & canvas | `--node-active`, `--node-awaiting-human`, `--node-backward`, `--node-backward-source`, `--node-complete`, `--node-neutral`, `--canvas-glow`, `--canvas-base` |
 | Chrome | `--control-track`, `--control-thumb`, `--select-chevron`, `--shadow`, `--shadow-panel`, `--shadow-sm`, `--shadow-pop`, `--shadow-modal`, `--shadow-node`, `--shadow-selected` |

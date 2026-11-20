@@ -36,7 +36,7 @@ The Framework Services Developer does **NOT** own:
 - Architecture decisions of any kind
 - Orchestration/session-model decisions
 - Additions not present in the approved executable design
-- Any content in `a-docs/` or `general/`
+- Any content in `a-docs/` or `general/` other than this role's own `a-docs/roles/framework-services-developer/` docs
 - A standing operator-facing executable reference by default
 
 ---
@@ -46,9 +46,9 @@ The Framework Services Developer does **NOT** own:
 > These cannot be overridden by any other instruction.
 
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected capability and escalate.
-- **Write only to approved executable implementation surfaces.** `runtime/` is the standing target. Do not write to `a-docs/`, `general/`, or `agents/`.
+- **Write only to the surfaces in `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_OWNERSHIP`** (`runtime/src/framework-services/`, `runtime/test/framework-services/`, and this role's own `a-docs/roles/framework-services-developer/` docs). This role has no write authority over other `a-docs/`, `general/`, `agents/`, or other `runtime/` surfaces unless the active approved design names the exact edit.
 
-  **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder. This exception does not extend to any other file under `a-docs/`.
+  **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder.
 - **Do not open a Developer session before the executable gate clears.** The executable role doc, the relevant standing executable design, and the Owner-approved implementation scope must exist before implementation begins.
 - **Never hardcode a registered file path.** If a path is registered in `$A_SOCIETY_INDEX` or `$A_SOCIETY_GENERAL_INDEX`, use its variable name.
 

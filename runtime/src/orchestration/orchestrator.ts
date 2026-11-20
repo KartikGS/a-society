@@ -489,16 +489,7 @@ export class FlowOrchestrator {
                 const fpcOutgoing = fpcWf.getOutgoingEdges(nodeId);
                 const outstandingInbound = getOutstandingInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
                 const completedInbound = getCompletedInboundSources(fpcWf, latestForFpc.completedHandoffs, nodeId);
-                const isLastOwner = roleInstanceId === OWNER_BASE_ROLE_ID && fpcOutgoing.length === 0;
-                const hasBlockers =
-                  latestForFpc.runningNodes.some(id => id !== nodeId) ||
-                  Object.keys(latestForFpc.awaitingHumanNodes).length > 0 ||
-                  Object.keys(latestForFpc.pendingHumanInputs).length > 0 ||
-                  !allEdgesCovered(fpcWf, latestForFpc.completedHandoffs) ||
-                  Object.keys(latestForFpc.receivingHandoff).length > 0 ||
-                  latestForFpc.awaitingHandoff.length > 0;
-
-                if (!isLastOwner || hasBlockers) {
+                if (this.isForwardPassClosureBlocked(latestForFpc, fpcWf, nodeId, roleInstanceId, 'turn')) {
                   const lines: string[] = ['Only the last owner node may emit forward-pass-closed.'];
                   if (outstandingInbound.length > 0) {
                     lines.push(`You are yet to receive a handoff from: ${outstandingInbound.join(', ')}. You can emit await-handoff to suspend and wait.`);
@@ -542,14 +533,36 @@ export class FlowOrchestrator {
                   continue;
                 }
 
+                // human-colab gate: the closure is valid, but the operator approves it before
+                // it commits. Stage it and suspend; approveForwardPassClosure commits it later.
+                if (fpcWf.findNodeById(nodeId)['human-colab']) {
+                  flowRun = await SessionStore.updateFlowRun((latest) => {
+                    latest.runningNodes = latest.runningNodes.filter((id) => id !== nodeId);
+                    latest.awaitingHumanNodes[nodeId] = { role: roleInstanceId, reason: AWAITING_HUMAN_REASON.CLOSURE_APPROVAL };
+                    latest.pendingClosureApproval = {
+                      nodeId,
+                      artifactPath: handoffResult.artifactPath ?? null,
+                      stagedAt: new Date().toISOString(),
+                    };
+                    latest.status = 'running';
+                  }, this.requireFlowRef());
+                  span.setAttribute('node.outcome', 'awaiting_human');
+                  span.addEvent('node.awaiting_human_suspended', { suspension_reason: AWAITING_HUMAN_REASON.CLOSURE_APPROVAL });
+                  session.transcriptHistory = injectedHistory;
+                  session.isActive = false;
+                  SessionStore.saveRoleSession(session, this.requireFlowRef());
+                  this.renderer.emit({
+                    kind: 'human.awaiting_input',
+                    nodeId,
+                    role: roleInstanceId,
+                    reason: AWAITING_HUMAN_REASON.CLOSURE_APPROVAL,
+                  });
+                  return;
+                }
+
                 span.setAttribute('node.outcome', 'forward_pass_closed');
-                const uniqueBaseRoles = new Set(
-                  (fpcWf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
-                );
-                const singleRole = uniqueBaseRoles.size <= 1;
                 flowRun = await SessionStore.updateFlowRun((latest) => {
-                  this.removeOpenNode(latest, nodeId);
-                  ImprovementOrchestrator.markAwaitingChoice(latest, singleRole);
+                  this.applyForwardPassClosure(latest, fpcWf, nodeId);
                 }, this.requireFlowRef());
                 session.transcriptHistory = injectedHistory;
                 session.isActive = false;
@@ -672,6 +685,30 @@ export class FlowOrchestrator {
     });
   }
 
+
+  /** Commits a staged human-colab closure. Throws (operator-facing message) and leaves the closure staged when it can no longer close. */
+  public async approveForwardPassClosure(flowRun: FlowRun, nodeId: string): Promise<void> {
+    this.setFlowContext(flowRun);
+    const healthCheck = runRuntimeHealthChecks(flowRun.workspaceRoot, flowRun.projectNamespace);
+    if (!healthCheck.ok) {
+      throw new Error(
+        `The forward pass can no longer close because runtime health checks fail: ${healthCheck.errors.join('; ')}. ` +
+        'Fix the project and approve again, or decline the closure and send the Owner guidance.'
+      );
+    }
+    await SessionStore.updateFlowRun((latest) => {
+      const awaiting = latest.awaitingHumanNodes[nodeId];
+      if (latest.pendingClosureApproval?.nodeId !== nodeId || awaiting?.reason !== AWAITING_HUMAN_REASON.CLOSURE_APPROVAL) {
+        throw new Error(`Node '${nodeId}' has no staged closure to approve.`);
+      }
+      const wf = this.loadWorkflowDocument(latest);
+      if (this.isForwardPassClosureBlocked(latest, wf, nodeId, awaiting.role, 'approval')) {
+        throw new Error('The forward pass can no longer close because the flow has other open work. Decline the closure and send the Owner guidance.');
+      }
+      this.applyForwardPassClosure(latest, wf, nodeId);
+    }, this.requireFlowRef());
+    this.renderer.emit({ kind: 'flow.forward_pass_closed' });
+  }
 
   public async applyHandoffAndAdvance(
     flowRun: FlowRun,
@@ -1267,6 +1304,42 @@ export class FlowOrchestrator {
     flowRun.awaitingHandoff = flowRun.awaitingHandoff.filter(id => id !== nodeId);
     delete flowRun.awaitingHumanNodes[nodeId];
     delete flowRun.pendingHandoffApprovals[nodeId];
+    if (flowRun.pendingClosureApproval?.nodeId === nodeId) delete flowRun.pendingClosureApproval;
+  }
+
+  /**
+   * True when this node may not close the forward pass: it is not the last owner node, or
+   * the flow has other open work. In approval mode the node's own staged-closure wait is
+   * not counted as open work.
+   */
+  private isForwardPassClosureBlocked(
+    latest: FlowRun,
+    wf: WorkflowGraph,
+    nodeId: string,
+    roleInstanceId: string,
+    mode: 'turn' | 'approval'
+  ): boolean {
+    const isLastOwner = roleInstanceId === OWNER_BASE_ROLE_ID && wf.getOutgoingEdges(nodeId).length === 0;
+    const awaitingOthers = Object.entries(latest.awaitingHumanNodes).filter(([id, entry]) =>
+      !(mode === 'approval' && id === nodeId && entry.reason === AWAITING_HUMAN_REASON.CLOSURE_APPROVAL)
+    );
+    const hasBlockers =
+      latest.runningNodes.some(id => id !== nodeId) ||
+      awaitingOthers.length > 0 ||
+      Object.keys(latest.pendingHumanInputs).length > 0 ||
+      !allEdgesCovered(wf, latest.completedHandoffs) ||
+      Object.keys(latest.receivingHandoff).length > 0 ||
+      latest.awaitingHandoff.length > 0;
+    return !isLastOwner || hasBlockers;
+  }
+
+  /** Closes the forward pass in state: the node leaves the open set and the improvement choice opens. */
+  private applyForwardPassClosure(latest: FlowRun, wf: WorkflowGraph, nodeId: string): void {
+    this.removeOpenNode(latest, nodeId);
+    const uniqueBaseRoles = new Set(
+      (wf.nodes as any[]).map((n) => parseRoleIdentity(n.role).baseRoleId)
+    );
+    ImprovementOrchestrator.markAwaitingChoice(latest, uniqueBaseRoles.size <= 1);
   }
 
   private setFlowContext(flowRun: FlowRun): void {

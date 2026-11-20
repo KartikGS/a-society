@@ -31,6 +31,7 @@ import {
 import { handleServerMessage } from './app/server-messages';
 import { useAppCommands } from './app/use-app-commands';
 import { ChatInterface } from './components/ChatInterface';
+import { DocumentView } from './components/DocumentView';
 import { EmptyGraphPanel } from './components/EmptyGraphPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FeedbackConsentModal } from './components/FeedbackConsentModal';
@@ -47,6 +48,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { UNAVAILABLE_SETTINGS_STATUS } from './model-config';
 import type { ClientMessage, ServerMessage } from '../../shared/operator-protocol.js';
 import type { FlowRef, FlowSummary } from '../../shared/types.js';
+import type { DocumentRequest } from '../../shared/document-view.js';
 import type { HostAgentSummary, McpServerSummary, ModelConfig, SettingsStatus } from '../../shared/settings.js';
 import type { ProjectDiscovery, ProjectSummary } from '../../shared/projects.js';
 import type { SkillSummary } from '../../shared/skills.js';
@@ -87,6 +89,8 @@ export function App() {
   const [flowUiByKey, setFlowUiByKey] = useState<Record<string, FlowUiState>>({});
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  /** The document open in each flow tab's graph pane, keyed by flow key. */
+  const [openDocuments, setOpenDocuments] = useState<Record<string, DocumentRequest>>({});
   const toastIdRef = useRef(0);
 
   const viewport = useViewport();
@@ -237,6 +241,7 @@ export function App() {
     roleConfigurationPending,
     handoffApprovalNodeId,
     handoffApprovalTargets,
+    closureApproval,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -312,7 +317,7 @@ export function App() {
     handleDeleteProject,
     handleUpdateProject,
     handleTabSelect,
-    handleCloseTab,
+    handleCloseTab: closeFlowTab,
     handleSubmit,
     handleImprovementChoice,
     handleFeedbackConsentChoice,
@@ -329,6 +334,33 @@ export function App() {
     handleRoleSelect,
     handleComposerChange,
   } = useAppCommands(appCommandInput);
+
+  const handleCloseTab = useCallback((tab: FlowTab): void => {
+    closeFlowTab(tab);
+    setOpenDocuments((current) => {
+      if (!(tab.key in current)) return current;
+      const next = { ...current };
+      delete next[tab.key];
+      return next;
+    });
+  }, [closeFlowTab]);
+
+  const handleOpenDocument = useCallback((request: DocumentRequest): void => {
+    if (!activeTabKey) return;
+    setOpenDocuments((current) => ({ ...current, [activeTabKey]: request }));
+  }, [activeTabKey]);
+
+  const handleCloseDocument = useCallback((): void => {
+    if (!activeTabKey) return;
+    setOpenDocuments((current) => {
+      if (!(activeTabKey in current)) return current;
+      const next = { ...current };
+      delete next[activeTabKey];
+      return next;
+    });
+  }, [activeTabKey]);
+
+  const openDocument = activeTabKey ? openDocuments[activeTabKey] ?? null : null;
 
   useEffect(() => {
     const ref = initialUrlFlowRef.current;
@@ -589,7 +621,15 @@ export function App() {
             >
               <Panel id="graph" className="workspace-pane" defaultSize="60%" minSize={200}>
                 <ErrorBoundary label="workflow graph">
+                  {flowRun && activeTab && openDocument ? (
+                    <DocumentView
+                      flowRef={activeTab.ref}
+                      request={openDocument}
+                      onClose={handleCloseDocument}
+                    />
+                  ) : null}
                   {flowRun && activeTab ? (
+                    <div className="graph-pane-slot" hidden={openDocument !== null}>
                     <Suspense fallback={<section className="panel graph-panel"><div className="graph-empty">Loading graph...</div></section>}>
                       <GraphView
                         flowRun={flowRun}
@@ -606,6 +646,7 @@ export function App() {
                         onWorkflowLoaded={handleWorkflowLoaded}
                       />
                     </Suspense>
+                    </div>
                   ) : <EmptyGraphPanel selectedProject={selectedProject} />}
                 </ErrorBoundary>
               </Panel>
@@ -660,6 +701,8 @@ export function App() {
                       nodeId: handoffApprovalNodeId,
                       targets: handoffApprovalTargets ?? [],
                     } : null}
+                    closureApproval={closureApproval}
+                    onOpenDocument={handleOpenDocument}
                     onRoleSelect={handleRoleSelect}
                     onInputChange={handleComposerChange}
                     onSubmit={handleSubmit}

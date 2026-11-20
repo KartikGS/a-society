@@ -19,6 +19,7 @@ import type {
   HostAgentId,
   HostPermissionMode,
 } from './settings.js';
+import type { ConsentChangePreviewRef, ProposedFileChange } from './document-view.js';
 
 export type FlowStatus =
   | 'running'
@@ -40,7 +41,7 @@ export type ConsentResponseDecision = ProtocolConsentResponseDecision;
 export type AwaitingHumanReason = ProtocolAwaitingHumanReason;
 
 export type ConsentRequest =
-  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string }
+  | { kind: 'file-write'; toolName: string; path: string; nodeId: string; role: string; preview?: ConsentChangePreviewRef }
   | { kind: 'bash-command'; toolName: 'run_command'; command: string; nodeId: string; role: string }
   | {
       kind: 'mcp-tool';
@@ -57,6 +58,8 @@ export interface ConsentCheckRequest {
   input?: Record<string, unknown>;
   nodeId: string;
   role: string;
+  /** File-write requests only: the proposed change. The gate attaches a preview ref only when it prompts. */
+  preview?: ProposedFileChange;
 }
 
 export const CONSENT_CHECK_RESULT = {
@@ -146,7 +149,7 @@ export interface HandoffTarget {
 
 export type HandoffResult =
   | { kind: 'targets'; targets: HandoffTarget[] }
-  | { kind: 'forward-pass-closed' }
+  | { kind: 'forward-pass-closed'; artifactPath?: string }
   | { kind: 'meta-analysis-complete'; findingsPath: string }
   | { kind: 'backward-pass-complete'; artifactPath: string }
   | { kind: 'awaiting_human' }
@@ -166,6 +169,14 @@ export interface ImprovementPhaseState {
   singleRole?: boolean;
 }
 
+/** A forward-pass closure staged by a `human-colab` terminal node, awaiting the operator. */
+export interface PendingClosureApproval {
+  nodeId: string;
+  /** Closure artifact named by the signal's optional artifact_path; null when none was named. */
+  artifactPath: string | null;
+  stagedAt: string;
+}
+
 export interface FlowRun {
   flowId: string;
   workspaceRoot: string;
@@ -183,6 +194,11 @@ export interface FlowRun {
    * so an approval commits without re-running the role.
    */
   pendingHandoffApprovals: Record<string, HandoffTarget[]>;
+  /**
+   * Forward-pass closure staged by a `human-colab` terminal node, held until the operator
+   * approves or declines. Optional so version-11 flow files written before it still load.
+   */
+  pendingClosureApproval?: PendingClosureApproval;
   visitedNodeIds: string[];
   completedHandoffs: string[];
   receivingHandoff: Record<string, string[]>;

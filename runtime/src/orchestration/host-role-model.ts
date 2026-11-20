@@ -11,7 +11,7 @@ import { getRoleStateFilePath } from './state-paths.js';
 
 /**
  * Agent-mode model/effort per role instance. The single home of the resolution rule:
- * project role default → per-flow selection → (automation auto ⇒ host default) → operator gate.
+ * per-flow selection → project role default → (automation auto ⇒ host default) → operator gate.
  */
 
 export interface HostModelSelection extends HostModelChoice {
@@ -96,10 +96,11 @@ export function resolveHostRoleModel(ref: FlowRef, roleInstanceId: string, agent
 
 /**
  * Applies the resolution order before the gate runs:
- *   1. a valid project role default wins and is persisted, even over an earlier per-flow selection;
- *   2. otherwise a valid per-flow selection stands;
+ *   1. a valid per-flow selection stands, and nothing is written;
+ *   2. otherwise a valid project role default is persisted as the selection;
  *   3. otherwise model automation `auto` persists the host default;
  *   4. otherwise nothing is persisted, so the gate prompts.
+ * A stale selection (another host, or a model/effort the adapter no longer declares) counts as no selection.
  * An invalid project value (unknown model or effort) is ignored and resolution falls through.
  */
 export function applyHostRoleDefaults(
@@ -113,16 +114,14 @@ export function applyHostRoleDefaults(
     saveHostModelSelection(ref, roleInstanceId, { hostAgentId: agentId, ...choice, selectedAt: new Date().toISOString() });
   };
 
+  if (validSelection(ref, roleInstanceId, adapter)) return;
+
   const baseRoleId = parseRoleIdentity(roleInstanceId).baseRoleId;
   const projectChoice = getProjectRoleDefaults(projectNamespace, baseRoleId)?.hostModels?.[agentId];
-  const existing = validSelection(ref, roleInstanceId, adapter);
   if (projectChoice && isValidHostChoice(adapter, projectChoice)) {
-    if (existing?.model !== projectChoice.model || existing?.effort !== projectChoice.effort) {
-      save({ model: projectChoice.model, effort: projectChoice.effort });
-    }
+    save({ model: projectChoice.model, effort: projectChoice.effort });
     return;
   }
-  if (existing) return;
 
   // The API auto-selection turn needs an API model, which agent mode does not require,
   // so `auto` resolves deterministically to the host default.

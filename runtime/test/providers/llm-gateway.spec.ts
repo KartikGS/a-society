@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { LLMGateway, LLMGatewayError } from '../../src/providers/llm.js';
 import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { CONSENT_CHECK_RESULT, defaultConsentState } from '../../src/common/types.js';
+import { CONSENT_RESPONSE_DECISION } from '../../shared/protocol-constants.js';
+import { ConsentGateImpl } from '../../src/improvement/consent-gate.js';
+import { staleWriteMessage } from '../../src/tools/file-executor.js';
 import type {
   ConsentCheckRequest,
   ConsentCheckResult,
@@ -249,6 +252,7 @@ describe('LLMGateway', () => {
       input: { path: 'demo-project/plan.md', content: 'draft' },
       role: 'curator',
       nodeId: 'curator-registration',
+      preview: { path: 'demo-project/plan.md', before: null, after: 'draft', origin: 'runtime-write' },
     });
     expect(history).toHaveLength(2);
     expect(history[1]).toMatchObject({
@@ -268,6 +272,68 @@ describe('LLMGateway', () => {
     expect(persistedBatches).toHaveLength(2);
     expect(persistedBatches[1][0]).toMatchObject({ role: 'tool_result' });
     expect(provider.secondCallMessages).toEqual([]);
+  });
+
+  it('prompts a write with a runtime-write preview and applies exactly the previewed content', async () => {
+    const tmpDir = createTempWorkspace();
+    fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, 'demo-project', 'plan.md'), 'old plan\n');
+    const gateway = new LLMGateway({
+      mode: 'project',
+      flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+      provider: new ToolCallThenTextProvider('demo-project/plan.md', 'new plan\n'),
+    });
+    const requested: ConsentRequest[] = [];
+    const served: unknown[] = [];
+    const gate: ConsentGateImpl = new ConsentGateImpl(defaultConsentState(), {
+      emit(event) {
+        if (event.kind !== 'consent.requested') return;
+        requested.push(event.request);
+        if (event.request.kind === 'file-write' && event.request.preview) {
+          served.push(gate.getChangePreview(event.request.preview.id)?.change);
+        }
+        queueMicrotask(() => gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_ONCE, event.request.role));
+      },
+      requestSent() {},
+      receivingResponse() {},
+      responseEnd() {},
+      sendError() {},
+    });
+    const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Update the plan.' }];
+
+    await gateway.executeTurn('System prompt', history, { consentGate: gate, roleInstanceId: 'owner', nodeId: 'owner-intake' });
+
+    expect(requested[0]).toMatchObject({ kind: 'file-write', preview: { changeKind: 'modify', origin: 'runtime-write' } });
+    expect(served).toEqual([{ path: 'demo-project/plan.md', before: 'old plan\n', after: 'new plan\n', origin: 'runtime-write' }]);
+    expect(fs.readFileSync(path.join(tmpDir, 'demo-project', 'plan.md'), 'utf8')).toBe('new plan\n');
+  });
+
+  it('does not apply an approved write when the file changed while the prompt was pending', async () => {
+    const tmpDir = createTempWorkspace();
+    fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
+    const target = path.join(tmpDir, 'demo-project', 'plan.md');
+    fs.writeFileSync(target, 'old plan\n');
+    const provider = new ToolCallThenTextProvider('demo-project/plan.md', 'new plan\n');
+    const gateway = new LLMGateway({
+      mode: 'project',
+      flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
+      provider,
+    });
+    const gate = new BlockingConsentGate();
+    const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Update the plan.' }];
+    const pendingTurn = gateway.executeTurn('System prompt', history, { consentGate: gate, roleInstanceId: 'owner', nodeId: 'owner-intake' });
+
+    await gate.checked;
+    fs.writeFileSync(target, 'someone else\n');
+    gate.resolve(CONSENT_CHECK_RESULT.PROCEED);
+    await pendingTurn;
+
+    expect(fs.readFileSync(target, 'utf8')).toBe('someone else\n');
+    expect(provider.secondCallMessages.at(-1)).toMatchObject({
+      role: 'tool_result',
+      content: staleWriteMessage('demo-project/plan.md'),
+      isError: true,
+    });
   });
 
   it('keeps the attempted tool call in history after a late abort from streamed tool-call text', async () => {

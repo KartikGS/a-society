@@ -13,6 +13,7 @@ import {
   type McpServerConfig,
 } from '../model-config';
 import type { FlowRef, FlowRun, FlowSummary } from '../../../shared/types.js';
+import { parseDocumentView, type DocumentRequest, type DocumentView } from '../../../shared/document-view.js';
 import type {
   AgentModeResponse,
   AgentModeSettings,
@@ -153,6 +154,34 @@ export async function fetchFlowState(ref: FlowRef): Promise<FlowRun | null> {
   }
 
   return await response.json() as FlowRun | null;
+}
+
+/** The document endpoint answered with a body that is not a DocumentView. */
+export class UnreadableDocumentError extends Error {
+  constructor() {
+    super('The server returned an unreadable document response.');
+    this.name = 'UnreadableDocumentError';
+  }
+}
+
+/**
+ * Loads a document for the in-app document view. Every status carries a DocumentView body
+ * (unavailable documents included), so the body decides what is shown, not the status code.
+ */
+export async function fetchDocument(ref: FlowRef, request: DocumentRequest, signal?: AbortSignal): Promise<DocumentView> {
+  const base = `/api/flows/${encodeURIComponent(ref.projectNamespace)}/${encodeURIComponent(ref.flowId)}`;
+  const url = request.kind === 'change-preview'
+    ? `${base}/change-previews/${encodeURIComponent(request.previewId)}`
+    : `${base}/file?path=${encodeURIComponent(request.path)}`;
+  const response = await fetch(url, { signal });
+  const body: unknown = await response.json().catch((error: unknown) => {
+    // An abort while reading the body must still reach the caller as an abort.
+    if (signal?.aborted) throw error;
+    return null;
+  });
+  const view = parseDocumentView(body);
+  if (!view) throw new UnreadableDocumentError();
+  return view;
 }
 
 export async function fetchWorkflowGraph(ref: FlowRef, mode: 'flow' | 'improvement'): Promise<WorkflowDefinition> {

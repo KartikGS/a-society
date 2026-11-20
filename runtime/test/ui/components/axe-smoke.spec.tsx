@@ -5,9 +5,10 @@ import { axe } from 'vitest-axe';
 import * as matchers from 'vitest-axe/matchers';
 import { ChatInterface } from '../../../ui/src/components/ChatInterface';
 import { ConfirmDialog } from '../../../ui/src/components/ConfirmDialog';
+import { DocumentView } from '../../../ui/src/components/DocumentView';
 import { ProjectSelector } from '../../../ui/src/components/ProjectSelector';
 import { AgentModePanel } from '../../../ui/src/components/settings/AgentModePanel';
-import { fetchAgentMode, probeHostAgent } from '../../../ui/src/app/runtime-api';
+import { fetchAgentMode, fetchDocument, probeHostAgent } from '../../../ui/src/app/runtime-api';
 import { ensureDialogSupport, ensureMatchMediaSupport } from './setup-dom';
 import type { HostAgentSummary } from '../../../shared/settings.js';
 import type { FeedItem } from '../../../shared/types.js';
@@ -22,7 +23,9 @@ const CLAUDE_HOST: HostAgentSummary = {
 
 vi.mock('../../../ui/src/app/runtime-api', () => ({
   fetchAgentMode: vi.fn(),
+  fetchDocument: vi.fn(),
   probeHostAgent: vi.fn(),
+  UnreadableDocumentError: class UnreadableDocumentError extends Error {},
   saveAgentMode: vi.fn(),
 }));
 
@@ -187,6 +190,44 @@ describe('axe smoke checks', () => {
         onSubmit={vi.fn()}
       />,
     );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('ChatInterface closure approval banner has no detectable a11y violations', async () => {
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={[]}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={true}
+        placeholder="Approve or decline closing the forward pass to continue."
+        showComposer={true}
+        closureApproval={{ nodeId: 'owner-closure', artifactPath: 'record/closure.md' }}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('DocumentView (change diff) has no detectable a11y violations', async () => {
+    vi.mocked(fetchDocument).mockResolvedValue({
+      kind: 'change',
+      path: 'notes.md',
+      changeKind: 'create',
+      origin: 'host-attempt',
+      before: null,
+      after: 'one\ntwo\n',
+    });
+    const { container } = render(
+      <DocumentView
+        flowRef={{ projectNamespace: 'demo', flowId: 'f1' }}
+        request={{ kind: 'change-preview', previewId: 'p1', path: 'notes.md' }}
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText('New file');
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
   });
 });

@@ -71,4 +71,19 @@ describe('ui/equality', () => {
 
     expect(areFlowRunsEqual(left, right)).toBe(false);
   });
+
+  it('detects staged closure approval changes', () => {
+    const left = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
+    const right = flowWithConsent(CONSENT_MODE.PARTIAL_ACCESS);
+    expect(areFlowRunsEqual(left, right)).toBe(true);
+
+    right.pendingClosureApproval = { nodeId: 'owner-closure', artifactPath: null, stagedAt: '2026-11-02T00:00:00.000Z' };
+    expect(areFlowRunsEqual(left, right)).toBe(false);
+
+    left.pendingClosureApproval = { ...right.pendingClosureApproval };
+    expect(areFlowRunsEqual(left, right)).toBe(true);
+
+    left.pendingClosureApproval = { ...right.pendingClosureApproval, artifactPath: 'record/closure.md' };
+    expect(areFlowRunsEqual(left, right)).toBe(false);
+  });
 });

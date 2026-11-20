@@ -81,8 +81,15 @@ describe('resolveHostModelGate', () => {
 });
 
 describe('applyHostRoleDefaults resolution order', () => {
-  it('a project default wins over a per-flow selection', () => {
+  it('a valid per-flow selection wins over the project default', () => {
     select('owner', { model: 'sonnet', effort: null });
+    projectDefault('owner', { model: 'opus', effort: 'max' });
+    applyHostRoleDefaults(REF.projectNamespace, REF, 'owner', AGENT);
+    expect(resolveHostModelGate(REF, 'owner', AGENT)).toEqual({ kind: 'ready', choice: { model: 'sonnet', effort: null } });
+  });
+
+  it('a project default replaces a stale per-flow selection', () => {
+    select('owner', { model: 'gpt-9', effort: null });
     projectDefault('owner', { model: 'opus', effort: 'max' });
     applyHostRoleDefaults(REF.projectNamespace, REF, 'owner', AGENT);
     expect(resolveHostModelGate(REF, 'owner', AGENT)).toEqual({ kind: 'ready', choice: { model: 'opus', effort: 'max' } });

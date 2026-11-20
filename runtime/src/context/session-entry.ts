@@ -21,7 +21,7 @@ export interface ForwardNodeEntryOptions {
 }
 
 export const HUMAN_COLLABORATIVE_DIRECTIVE =
-  'This is a human-collaborative node. Keep the human in the decision loop: surface the proposed decision before proceeding, ask for explicit human direction or approval, and do not treat this node\'s work as final until that direction or approval is received. When you emit a forward handoff, the runtime will ask the operator to approve it before it proceeds, so make sure the human has had a real chance to confirm or redirect before you hand off.';
+  'This is a human-collaborative node. Keep the human in the decision loop: surface the proposed decision before proceeding, ask for explicit human direction or approval, and do not treat this node\'s work as final until that direction or approval is received. When you emit a forward handoff or forward-pass-closed, the runtime will ask the operator to approve it before it proceeds, so make sure the human has had a real chance to confirm or redirect before you hand off or close.';
 
 function nodeContractMentionsWorkflowAuthority(nodeDef: WorkflowNode | null): boolean {
   const work = nodeDef?.work;

@@ -6,7 +6,7 @@
 
 **Exact-path discipline.** In completion reports and backward-pass findings, use the exact repo-relative path for every cited file as it exists on disk. Do not abbreviate parent directories, use absolute paths, or use `file://` URLs.
 
-**Server/WebSocket contract boundary is a hard stop.** The server API and WebSocket protocol are owned by the Orchestration Developer and governed by TA design. If a UI change requires a modification to the event types, message formats, or endpoint contracts in `runtime/src/server.ts` or `runtime/src/ws-operator-sink.ts`, surface the dependency to the TA before implementation. Do not implement the backend change; coordinate the cross-role dependency explicitly.
+**Server/WebSocket contract boundary is a hard stop.** The server API and WebSocket protocol are owned by the Orchestration Developer and governed by TA design. If a UI change requires a modification to the event types, message formats, or endpoint contracts defined in `runtime/shared/` (for example `operator-protocol.ts`, `types.ts`) or served from `runtime/src/server/`, surface the dependency to the TA before implementation. Do not implement the backend change; coordinate the cross-role dependency explicitly.
 
 **UI state must not duplicate server-authoritative state.** Operator state that the server controls (session status, workflow node activation, handoff routing) should be reflected in the UI, not re-derived. If the UI needs state the server does not currently expose, surface this as a server-contract gap to the TA rather than computing it locally from side-channel evidence.
 

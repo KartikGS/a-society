@@ -47,6 +47,7 @@ export const AWAITING_HUMAN_REASON = {
   CONSENT_DENIED: 'consent-denied',
   ROLE_CONFIGURATION: 'role-configuration',
   HANDOFF_APPROVAL: 'handoff-approval',
+  CLOSURE_APPROVAL: 'closure-approval',
 } as const;
 
 export type ProtocolAwaitingHumanReason = ValueOf<typeof AWAITING_HUMAN_REASON>;

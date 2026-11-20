@@ -7,6 +7,7 @@ import {
 } from '../../../shared/protocol-constants.js';
 import { FeedMessage } from './FeedMessage';
 import type { ProtocolHandoffApprovalDecision } from '../../../shared/protocol-constants.js';
+import type { DocumentRequest } from '../../../shared/document-view.js';
 import type { ConsentMode, ConsentRequest, ConsentResponseDecision, FeedItem, HandoffTarget } from '../../../shared/types.js';
 import type {
   HostAgentSummary,
@@ -48,6 +49,12 @@ export interface HandoffApprovalPrompt {
   targets: HandoffTarget[];
 }
 
+/** A forward-pass closure staged by a human-collaborative node, awaiting the operator. */
+export interface ClosureApprovalPrompt {
+  nodeId: string;
+  artifactPath: string | null;
+}
+
 interface ChatInterfaceProps {
   subtitle: string;
   messages: FeedItem[];
@@ -68,6 +75,7 @@ interface ChatInterfaceProps {
   projectSettingsEnabled?: boolean;
   roleConfiguration?: RoleConfigurationPrompt | null;
   handoffApproval?: HandoffApprovalPrompt | null;
+  closureApproval?: ClosureApprovalPrompt | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
   /** Plan usage reported by a host coding agent; shown instead of the context ring. */
@@ -79,6 +87,8 @@ interface ChatInterfaceProps {
   onConsentResponse?: (decision: ConsentResponseDecision) => void;
   onRoleConfigure?: (nodeId: string, payload: RoleConfigurePayload) => void;
   onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+  /** Opens a proposed change or an artifact in the document panel. */
+  onOpenDocument?: (request: DocumentRequest) => void;
   onConsentModeChange?: (mode: ConsentMode) => void;
   onCompactContext?: () => void;
   isCompactingContext?: boolean;
@@ -110,6 +120,12 @@ function consentAllowFlowLabel(request: ConsentRequest, projectSettingsEnabled: 
     return `Allow this tool for ${scope}`;
   }
   return `Allow this command for ${scope}`;
+}
+
+/** Last path segment, for either separator; the UI cannot use `node:path`. */
+function basename(filePath: string): string {
+  const segments = filePath.split(/[/\\]/).filter((segment) => segment.length > 0);
+  return segments[segments.length - 1] ?? filePath;
 }
 
 const HOST_DEFAULT_OPTION = '';
@@ -349,10 +365,15 @@ function RoleConfigurationBanner({
 function HandoffApprovalBanner({
   handoffApproval,
   onHandoffApproval,
+  onOpenDocument,
 }: {
   handoffApproval: HandoffApprovalPrompt;
   onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+  onOpenDocument?: (request: DocumentRequest) => void;
 }) {
+  const linkedTargets = handoffApproval.targets.filter(
+    (target): target is HandoffTarget & { artifact_path: string } => target.artifact_path !== null
+  );
   const targetLabel = handoffApproval.targets.map((target) => target.target_node_id).join(', ');
   return (
     <div className="consent-banner">
@@ -361,6 +382,25 @@ function HandoffApprovalBanner({
         <span className="consent-banner-desc">
           This is a human-collaborative node. Approve to commit the handoff, or decline to keep working with the role.
         </span>
+        {linkedTargets.length > 0 ? (
+          <span className="consent-links">
+            {linkedTargets.map((target) => (
+              <button
+                key={target.target_node_id}
+                type="button"
+                className="consent-link"
+                aria-label={`Open artifact for ${target.target_node_id}`}
+                onClick={() => onOpenDocument?.({
+                  kind: 'file',
+                  path: target.artifact_path,
+                  label: `Handoff to ${target.target_node_id}`,
+                })}
+              >
+                {`${target.target_node_id}: ${basename(target.artifact_path)}`}
+              </button>
+            ))}
+          </span>
+        ) : null}
       </div>
       <div className="consent-banner-actions">
         <button
@@ -379,6 +419,81 @@ function HandoffApprovalBanner({
         </button>
       </div>
     </div>
+  );
+}
+
+function ClosureApprovalBanner({
+  closureApproval,
+  onHandoffApproval,
+  onOpenDocument,
+}: {
+  closureApproval: ClosureApprovalPrompt;
+  onHandoffApproval?: (nodeId: string, decision: ProtocolHandoffApprovalDecision) => void;
+  onOpenDocument?: (request: DocumentRequest) => void;
+}) {
+  const { nodeId, artifactPath } = closureApproval;
+  return (
+    <div className="consent-banner">
+      <div className="consent-banner-body">
+        <span className="consent-banner-tool">Close the forward pass?</span>
+        <span className="consent-banner-desc">
+          This is a human-collaborative node. Approve to close the forward pass, or decline to keep working with the Owner.
+        </span>
+        {artifactPath ? (
+          <span className="consent-links">
+            <button
+              type="button"
+              className="consent-link"
+              aria-label="Open closure artifact"
+              onClick={() => onOpenDocument?.({ kind: 'file', path: artifactPath, label: 'Closure artifact' })}
+            >
+              {`Closure artifact: ${basename(artifactPath)}`}
+            </button>
+          </span>
+        ) : (
+          <span className="consent-banner-muted">The Owner did not name a closure artifact.</span>
+        )}
+      </div>
+      <div className="consent-banner-actions">
+        <button
+          type="button"
+          className="consent-btn consent-btn-allow"
+          onClick={() => onHandoffApproval?.(nodeId, HANDOFF_APPROVAL_DECISION.APPROVE)}
+        >
+          Approve closure
+        </button>
+        <button
+          type="button"
+          className="consent-btn consent-btn-deny"
+          onClick={() => onHandoffApproval?.(nodeId, HANDOFF_APPROVAL_DECISION.DECLINE)}
+        >
+          Decline
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ConsentChangeLink({
+  path,
+  previewId,
+  onOpenDocument,
+}: {
+  path: string;
+  previewId: string;
+  onOpenDocument?: (request: DocumentRequest) => void;
+}) {
+  return (
+    <span className="consent-links">
+      <button
+        type="button"
+        className="consent-link"
+        aria-label={`View proposed change to ${path}`}
+        onClick={() => onOpenDocument?.({ kind: 'change-preview', previewId, path })}
+      >
+        View change
+      </button>
+    </span>
   );
 }
 
@@ -577,6 +692,16 @@ export function ChatInterface(props: ChatInterfaceProps) {
               key={props.handoffApproval.nodeId}
               handoffApproval={props.handoffApproval}
               onHandoffApproval={props.onHandoffApproval}
+              onOpenDocument={props.onOpenDocument}
+            />
+          ) : null}
+
+          {props.closureApproval ? (
+            <ClosureApprovalBanner
+              key={props.closureApproval.nodeId}
+              closureApproval={props.closureApproval}
+              onHandoffApproval={props.onHandoffApproval}
+              onOpenDocument={props.onOpenDocument}
             />
           ) : null}
 
@@ -585,6 +710,13 @@ export function ChatInterface(props: ChatInterfaceProps) {
               <div className="consent-banner-body">
                 <span className="consent-banner-tool">{consentToolLabel(props.consentRequest)}</span>
                 <span className="consent-banner-desc">{consentPromptTitle(props.consentRequest)}</span>
+                {props.consentRequest.kind === 'file-write' && props.consentRequest.preview ? (
+                  <ConsentChangeLink
+                    path={props.consentRequest.path}
+                    previewId={props.consentRequest.preview.id}
+                    onOpenDocument={props.onOpenDocument}
+                  />
+                ) : null}
               </div>
               <div className="consent-banner-actions">
                 <button

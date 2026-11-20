@@ -33,8 +33,9 @@ import { defaultProjectSettings } from '../../shared/project-settings.js';
 import { clearProbeCache } from '../../src/providers/host-agents/version.js';
 import { HOST_RECOVERY_PREAMBLE, HOST_SYSTEM_PROMPT_FILE } from '../../src/common/host-role-turn.js';
 import { CONSENT_CHECK_RESULT, CURRENT_FLOW_STATE_VERSION, defaultConsentState } from '../../src/common/types.js';
-import type { ConsentCheckRequest, ConsentCheckResult, ConsentGate, FlowRun } from '../../src/common/types.js';
-import { AWAITING_HUMAN_REASON } from '../../shared/protocol-constants.js';
+import type { ConsentCheckRequest, ConsentCheckResult, ConsentGate, ConsentRequest, FlowRun } from '../../src/common/types.js';
+import { AWAITING_HUMAN_REASON, CONSENT_RESPONSE_DECISION } from '../../shared/protocol-constants.js';
+import { ConsentGateImpl } from '../../src/improvement/consent-gate.js';
 import { RecordingOperatorSink } from '../recording-operator-sink.js';
 
 const FAKE_CLAUDE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../providers/host-agents/fake-claude.mjs');
@@ -311,7 +312,13 @@ describe('agent mode forward pass', { timeout: 30_000 }, () => {
 
     await runUntil(awaiting('ta'), { consentGate: gate });
 
-    expect(gate.requests).toEqual([{ toolName: 'write_file', input: { path: path.relative(workspaceRoot, target) }, nodeId: 'owner-intake', role: 'owner' }]);
+    expect(gate.requests).toEqual([{
+      toolName: 'write_file',
+      input: { path: path.relative(workspaceRoot, target) },
+      preview: { path: path.relative(workspaceRoot, target), before: null, after: 'x', origin: 'host-attempt' },
+      nodeId: 'owner-intake',
+      role: 'owner',
+    }]);
     const [, retry] = invocations();
     expect(retry.stdin).toContain(`The operator granted permission for: write ${path.relative(workspaceRoot, target)}.`);
     expect(retry.stdin).toContain('updated permissions');
@@ -481,7 +488,7 @@ describe('agent mode forward pass', { timeout: 30_000 }, () => {
     expect(sink.requests).toContainEqual({ role: 'owner', provider: 'Claude Code', model: 'Sonnet · effort high' });
   });
 
-  it('prefers the project role default over the per-flow selection', async () => {
+  it('keeps a valid per-flow selection over the project role default', async () => {
     saveHostModelSelection(ref, 'owner', { hostAgentId: 'claude-code', model: 'sonnet', effort: null, selectedAt: new Date().toISOString() });
     saveProjectSettings(projectNamespace, {
       ...defaultProjectSettings(),
@@ -493,7 +500,47 @@ describe('agent mode forward pass', { timeout: 30_000 }, () => {
 
     await runUntil(awaitingFor('owner-intake', AWAITING_HUMAN_REASON.PROMPT_HUMAN));
 
-    expect(flagValue(invocations()[0].args, '--model')).toBe('opus');
+    expect(flagValue(invocations()[0].args, '--model')).toBe('sonnet');
+  });
+
+  it('shows the denied Write rebuilt against the file as the consent prompt preview', async () => {
+    const target = path.join(projectRoot, 'notes.md');
+    fs.writeFileSync(target, 'old notes\n');
+    writeScript([
+      { reply: 'Could not write.', denials: [{ tool_name: 'Edit', tool_input: { file_path: target, old_string: 'old', new_string: 'new', replace_all: false } }] },
+      { match: 'granted permission', reply: handoffTo('ta', artifactRel), writeFiles: [{ path: artifact, content: 'Brief.' }] },
+      { reply: PROMPT_HUMAN },
+    ]);
+    saveFlow();
+    const requested: ConsentRequest[] = [];
+    const served: unknown[] = [];
+    const gate: ConsentGateImpl = new ConsentGateImpl(defaultConsentState(), {
+      emit(event) {
+        if (event.kind !== 'consent.requested') return;
+        requested.push(event.request);
+        if (event.request.kind === 'file-write' && event.request.preview) {
+          served.push(gate.getChangePreview(event.request.preview.id));
+        }
+        queueMicrotask(() => gate.respond(CONSENT_RESPONSE_DECISION.ALLOW_ONCE, event.request.role));
+      },
+      requestSent() {},
+      receivingResponse() {},
+      responseEnd() {},
+      sendError() {},
+    });
+
+    await runUntil(awaiting('ta'), { consentGate: gate });
+
+    expect(requested).toHaveLength(1);
+    const request = requested[0];
+    expect(request).toMatchObject({ kind: 'file-write', preview: { changeKind: 'modify', origin: 'host-attempt' } });
+    expect(served).toEqual([{
+      ref: request.kind === 'file-write' ? request.preview : undefined,
+      change: { path: path.relative(workspaceRoot, target), before: 'old notes\n', after: 'new notes\n', origin: 'host-attempt' },
+    }]);
+    if (request.kind === 'file-write' && request.preview) {
+      expect(gate.getChangePreview(request.preview.id)).toBeNull();
+    }
   });
 
   it('streams token deltas into the transcript once, separating blocks with a blank line', async () => {

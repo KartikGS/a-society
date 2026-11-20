@@ -154,6 +154,45 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     emitFlowState(session);
   }
 
+  /**
+   * A staged human-colab closure: decline parks the node for guidance; approve commits the
+   * closure through the orchestrator, which re-checks it first. No role turn follows either.
+   */
+  async function handleClosureApproval(
+    ref: FlowRef,
+    nodeId: string,
+    decision: ProtocolHandoffApprovalDecision,
+    flowRun: FlowRun,
+    session: ActiveSession,
+  ): Promise<void> {
+    if (decision === HANDOFF_APPROVAL_DECISION.DECLINE) {
+      try {
+        await SessionStore.updateFlowRun((latest) => {
+          const state = latest.awaitingHumanNodes[nodeId];
+          if (!state || state.reason !== AWAITING_HUMAN_REASON.CLOSURE_APPROVAL) {
+            throw new Error(`Node '${nodeId}' is no longer awaiting closure approval.`);
+          }
+          delete latest.pendingClosureApproval;
+          latest.awaitingHumanNodes[nodeId] = { role: state.role, reason: AWAITING_HUMAN_REASON.PROMPT_HUMAN };
+        }, ref);
+      } catch (error: any) {
+        broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      emitFlowState(session);
+      return;
+    }
+
+    try {
+      await session.orchestrator.approveForwardPassClosure(flowRun, nodeId);
+    } catch (error: any) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: error instanceof Error ? error.message : String(error) });
+      return;
+    }
+    session.orchestrator.wake();
+    emitFlowState(session);
+  }
+
   async function handleHandoffApproval(
     ref: FlowRef,
     nodeId: string,
@@ -166,8 +205,9 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
     }
 
     const awaitingState = flowRun.awaitingHumanNodes[nodeId];
-    if (!awaitingState || awaitingState.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL) {
-      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting handoff approval.` });
+    const isClosureApproval = awaitingState?.reason === AWAITING_HUMAN_REASON.CLOSURE_APPROVAL;
+    if (!awaitingState || (awaitingState.reason !== AWAITING_HUMAN_REASON.HANDOFF_APPROVAL && !isClosureApproval)) {
+      broadcastToFlow(ref, { type: 'error', flowRef: ref, message: `Node '${nodeId}' is not awaiting a handoff or closure approval.` });
       return;
     }
 
@@ -182,6 +222,11 @@ export function createRuntimeSessionCommands(deps: RuntimeSessionCommandsDeps) {
         flowRef: ref,
         message: 'This flow has no active session. Resume the flow before approving or declining the handoff.',
       });
+      return;
+    }
+
+    if (isClosureApproval) {
+      await handleClosureApproval(ref, nodeId, decision, flowRun, session);
       return;
     }
 

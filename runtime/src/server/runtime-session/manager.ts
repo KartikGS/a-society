@@ -10,7 +10,7 @@ import type {
   TurnBackend,
 } from '../../common/types.js';
 import { getWorkspaceRoot } from '../../common/workspace.js';
-import { ConsentGateImpl } from '../../improvement/consent-gate.js';
+import { ConsentGateImpl, type ConsentChangePreview } from '../../improvement/consent-gate.js';
 import { ImprovementOrchestrator } from '../../improvement/improvement.js';
 import { FlowOrchestrator } from '../../orchestration/orchestrator.js';
 import * as SessionStore from '../../orchestration/store.js';
@@ -458,8 +458,14 @@ export function createRuntimeSessionManager(options: RuntimeSessionManagerOption
     consent,
   });
 
+  /** The pending change behind a prompted file-write in the flow's active session; null otherwise. */
+  function getConsentChangePreview(ref: FlowRef, previewId: string): ConsentChangePreview | null {
+    return activeSessions.get(flowKey(ref))?.consentGate.getChangePreview(previewId) ?? null;
+  }
+
   return {
     sendToSocket,
+    getConsentChangePreview,
     refreshProjectFlows,
     openFlow,
     createInitializedFlow,

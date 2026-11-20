@@ -3,7 +3,7 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ChatInterface } from '../../../ui/src/components/ChatInterface';
-import { CONSENT_RESPONSE_DECISION } from '../../../shared/protocol-constants.js';
+import { CONSENT_RESPONSE_DECISION, HANDOFF_APPROVAL_DECISION } from '../../../shared/protocol-constants.js';
 import type { ConsentRequest, FeedItem } from '../../../shared/types.js';
 
 function baseProps() {
@@ -157,5 +157,115 @@ describe('ChatInterface permission control', () => {
     renderComposer('Auto (agent decides)');
     expect(screen.queryByRole('combobox', { name: 'Tool permission mode for this flow' })).not.toBeInTheDocument();
     expect(screen.getByText('Auto (agent decides)')).toBeInTheDocument();
+  });
+});
+
+describe('ChatInterface document links', () => {
+  const fileWrite: ConsentRequest = {
+    kind: 'file-write',
+    toolName: 'write_file',
+    path: 'a-docs/notes.md',
+    nodeId: 'node-1',
+    role: 'owner',
+    preview: { id: 'preview-1', changeKind: 'modify', origin: 'runtime-write' },
+  };
+
+  it('shows View change only for file writes with a preview, and opens the change', () => {
+    const onOpenDocument = vi.fn();
+    const { rerender } = render(
+      <ChatInterface {...baseProps()} consentRequest={fileWrite} onOpenDocument={onOpenDocument} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'View proposed change to a-docs/notes.md' }));
+    expect(onOpenDocument).toHaveBeenCalledWith({ kind: 'change-preview', previewId: 'preview-1', path: 'a-docs/notes.md' });
+
+    const { preview: _preview, ...withoutPreview } = fileWrite as Extract<ConsentRequest, { kind: 'file-write' }>;
+    rerender(<ChatInterface {...baseProps()} consentRequest={withoutPreview} onOpenDocument={onOpenDocument} />);
+    expect(screen.queryByRole('button', { name: /View proposed change/ })).not.toBeInTheDocument();
+
+    rerender(
+      <ChatInterface
+        {...baseProps()}
+        consentRequest={{ kind: 'bash-command', toolName: 'run_command', command: 'ls', nodeId: 'n', role: 'owner' }}
+        onOpenDocument={onOpenDocument}
+      />,
+    );
+    expect(screen.queryByText('View change')).not.toBeInTheDocument();
+  });
+
+  it('answers the consent prompt without opening the view', () => {
+    const onConsentResponse = vi.fn();
+    const onOpenDocument = vi.fn();
+    render(
+      <ChatInterface
+        {...baseProps()}
+        consentRequest={fileWrite}
+        onConsentResponse={onConsentResponse}
+        onOpenDocument={onOpenDocument}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }));
+    expect(onConsentResponse).toHaveBeenLastCalledWith(CONSENT_RESPONSE_DECISION.ALLOW_ONCE);
+    fireEvent.click(screen.getByRole('button', { name: 'Deny' }));
+    expect(onConsentResponse).toHaveBeenLastCalledWith(CONSENT_RESPONSE_DECISION.DENY);
+    expect(onOpenDocument).not.toHaveBeenCalled();
+  });
+
+  it('renders one artifact link per handoff target with a path', () => {
+    const onOpenDocument = vi.fn();
+    render(
+      <ChatInterface
+        {...baseProps()}
+        handoffApproval={{
+          nodeId: 'owner-intake',
+          targets: [
+            { target_node_id: 'ta-design', artifact_path: '.a-society/state/p/f/record/brief.md' },
+            { target_node_id: 'curator', artifact_path: null },
+          ],
+        }}
+        onOpenDocument={onOpenDocument}
+      />,
+    );
+    const link = screen.getByRole('button', { name: 'Open artifact for ta-design' });
+    expect(link).toHaveTextContent('ta-design: brief.md');
+    expect(screen.queryByRole('button', { name: 'Open artifact for curator' })).not.toBeInTheDocument();
+    fireEvent.click(link);
+    expect(onOpenDocument).toHaveBeenCalledWith({
+      kind: 'file',
+      path: '.a-society/state/p/f/record/brief.md',
+      label: 'Handoff to ta-design',
+    });
+  });
+
+  it('renders the closure approval banner and sends decisions for the closure node', () => {
+    const onHandoffApproval = vi.fn();
+    const onOpenDocument = vi.fn();
+    const { rerender } = render(
+      <ChatInterface
+        {...baseProps()}
+        closureApproval={{ nodeId: 'owner-closure', artifactPath: 'record\\closure.md' }}
+        onHandoffApproval={onHandoffApproval}
+        onOpenDocument={onOpenDocument}
+      />,
+    );
+    expect(screen.getByText('Close the forward pass?')).toBeInTheDocument();
+    const link = screen.getByRole('button', { name: 'Open closure artifact' });
+    expect(link).toHaveTextContent('Closure artifact: closure.md');
+    fireEvent.click(link);
+    expect(onOpenDocument).toHaveBeenCalledWith({ kind: 'file', path: 'record\\closure.md', label: 'Closure artifact' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Approve closure' }));
+    expect(onHandoffApproval).toHaveBeenLastCalledWith('owner-closure', HANDOFF_APPROVAL_DECISION.APPROVE);
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    expect(onHandoffApproval).toHaveBeenLastCalledWith('owner-closure', HANDOFF_APPROVAL_DECISION.DECLINE);
+
+    rerender(
+      <ChatInterface
+        {...baseProps()}
+        closureApproval={{ nodeId: 'owner-closure', artifactPath: null }}
+        onHandoffApproval={onHandoffApproval}
+      />,
+    );
+    expect(screen.getByText('The Owner did not name a closure artifact.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open closure artifact' })).not.toBeInTheDocument();
   });
 });

@@ -19,6 +19,10 @@ Verify whether the following standing surfaces need updates to match the new voc
 
 Flag these likely log-surface edits during intake when they are visible, and do not limit the closure sweep to overlapping Next Priorities entries when the framework's own terms have changed.
 
+## Out-of-Band Work
+
+When the Owner records work performed outside a runtime-managed flow (for example a direct-human-directed change with `Record: none`), run the same closure overlap sweep over Next Priorities before writing the log entry. Out-of-band work that skips the sweep leaves stale items behind.
+
 ## Closure Coordination
 
 When closing a flow, read `$A_SOCIETY_OWNER_CLOSURE` and complete its overlap sweep before filing the closure artifact. The closure artifact should reflect the already-updated Next Priorities state; it is not the step that defers log cleanup.
