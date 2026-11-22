@@ -6,18 +6,21 @@ After forming an intake scope assessment — the likely files, design areas, or 
 
 ## Next Priorities Merge Assessment
 
-The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, and Next Priorities). The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When adding any Next Priorities item (at intake or when resolving backward-pass findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, (2) compatible authority level, and (3) same workflow type and role path, or routable as parallel tracks in a single multi-domain flow. Items that would route through different workflow types (e.g., one Framework Dev, one Tooling Dev) may still merge if they share a design area and are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Items are removed when their flows close.
+The project log `$A_SOCIETY_LOG` — all sections (Current State, Recent Focus, and Next Priorities). The log entry recording a closed flow is written by the Owner at Forward Pass Closure. When adding any Next Priorities item (at intake or when resolving backward-pass findings), apply the **merge assessment** before filing: scan existing items for (1) same target files or same design area, (2) compatible authority level, and (3) same role path through `$A_SOCIETY_WORKFLOW`, or routable as parallel tracks in a single multi-domain flow. Items that would route through different role paths (e.g., one Curator track, one executable developer track) may still merge if they share a design area and are cohesive enough to run as independent parallel tracks in a single flow without sequencing conflict. When a merge is identified, replace the existing item(s) with a merged item retaining all source citations. Items are removed when their flows close.
 
-## Structural Rewrite Log Sweep
+## Standing-Log Sweep
 
-When intake or closure work renames or retires a standing role family, workflow, layer, executable surface, or other framework taxonomy, treat `$A_SOCIETY_LOG` as an affected standing document rather than only a queue of Next Priorities items.
+Treat `$A_SOCIETY_LOG` as a standing document, not only a queue of Next Priorities items. Run this sweep whenever intake or closure work changes project vocabulary:
+- a role, role family, workflow, layer, or executable surface is added, renamed, or retired
+- a count the log states changes, such as the number of roles
+- the version scheme changes
+- a scope tag is needed, renamed, or retired
 
-Verify whether the following standing surfaces need updates to match the new vocabulary:
-- `## Scope Tags`
-- `## Entry Lifecycle`
-- `## Current State`
+Verify the log's standing text against the sources that define it, not against memory:
+- `## Scope Tags`: every tag the flow's entries need exists, and no tag names retired vocabulary
+- `## Current State`: every name, count, list, and version identifier matches its source, such as the roles folder, `$A_SOCIETY_WORKFLOW`, or the version in `CHANGELOG.md`
 
-Flag these likely log-surface edits during intake when they are visible, and do not limit the closure sweep to overlapping Next Priorities entries when the framework's own terms have changed.
+Flag these likely log-surface edits during intake when they are visible, and do not limit the closure sweep to overlapping Next Priorities entries when the project's vocabulary has changed.
 
 ## Out-of-Band Work
 
@@ -25,4 +28,4 @@ When the Owner records work performed outside a runtime-managed flow (for exampl
 
 ## Closure Coordination
 
-When closing a flow, read `$A_SOCIETY_OWNER_CLOSURE` and complete its overlap sweep before filing the closure artifact. The closure artifact should reflect the already-updated Next Priorities state; it is not the step that defers log cleanup.
+When closing a flow, read `$A_SOCIETY_OWNER_CLOSURE` and complete its overlap sweep, plus the Standing-Log Sweep when vocabulary changed, before filing the closure artifact. The closure artifact should reflect the already-updated Next Priorities state; it is not the step that defers log cleanup.

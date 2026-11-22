@@ -5,7 +5,7 @@ import type { RoleConfigurationPending } from '../../../shared/operator-protocol
 import type { ConsentRequest, FeedItem, FlowRun, FlowSummary, HandoffTarget } from '../../../shared/types.js';
 import type { WorkflowDefinition as WorkflowGraph } from '../../../shared/workflow-graph.js';
 import { DEFAULT_SELECTED_ROLE_KEY, EMPTY_STRINGS, SYSTEM_ROLE_KEY } from './constants';
-import { feedbackConsentCopy } from './feedback-copy';
+import { feedbackConsentCopy, feedbackReportNotice, type FeedbackReportNotice } from './feedback-copy';
 import {
   collectSelectableRoles,
   getAwaitingHandoffNodeIdForRole,
@@ -54,6 +54,8 @@ export interface ActiveFlowView {
   closureApprovalNodeId: string | null;
   /** The staged forward-pass closure the viewed role is waiting on the operator to decide. */
   closureApproval: ClosureApprovalPrompt | null;
+  /** Set once the feedback report has been written; shown for every role of the flow. */
+  feedbackReport: FeedbackReportNotice | null;
   isAwaitingImprovementChoice: boolean;
   isAwaitingFeedbackConsent: boolean;
   feedbackPrompt: ReturnType<typeof feedbackConsentCopy>;
@@ -167,6 +169,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
   const handoffApprovalTargets = handoffApprovalNodeId
     ? flowRun?.pendingHandoffApprovals[handoffApprovalNodeId] ?? null
     : null;
+  const feedbackReport = feedbackReportNotice(flowRun);
   const closureApprovalNodeId = getClosureApprovalNodeIdForRole(flowRun, viewedRole);
   const closureApproval: ClosureApprovalPrompt | null = closureApprovalNodeId
     ? {
@@ -233,6 +236,7 @@ export function createActiveFlowView(input: ActiveFlowViewInput): ActiveFlowView
     handoffApprovalTargets,
     closureApprovalNodeId,
     closureApproval,
+    feedbackReport,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,

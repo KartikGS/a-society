@@ -111,9 +111,11 @@ Copy these rules into the project's log at initialization. They govern how the l
 - **Write only what is actually true.** No aspirational state, no in-progress items that have not started.
 - **One `Recent Focus` entry only.** When a flow closes, replace the previous entry. History belongs in flow records, not in the log.
 - **Keep Next Priorities short.** If the list cannot be attempted in the next few sessions, it has become a backlog. Trim it.
+
 **Validity sweeps — run at every flow:**
 - **Intake sweep:** Before producing the workflow plan, check existing Next Priorities for invalidation (Addressed, Contradicted, Restructured, or Partially Addressed). Where an overlapping entry is a natural complement to the current request rather than fully invalidated, propose including it in the same flow — pending user approval.
 - **Closure sweep:** At forward pass closure, check again. Resolve any entries the completed flow has addressed or made obsolete before marking the flow closed.
+- **Standing-text check:** When the flow changed the project's vocabulary (names, counts, the version scheme, or tags), verify this log's scope-tag definitions and every name, count, list, and version in Current State against their defining sources. Fix stale wording before marking the flow closed.
 
 **Merge assessment — run before adding any Next Priorities item:**
 - **Pattern A (deep merge):** Combine into one task when all three are true: same target files or design area; same implementing role or approval path; same workflow type and role sequence.

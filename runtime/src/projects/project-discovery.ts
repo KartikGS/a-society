@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  A_SOCIETY_CHANGELOG_RELATIVE_PATH,
   A_DOCS_VERSION_RECORD_RELATIVE_PATH,
+  frameworkFilePath,
 } from '../common/runtime-contracts.js';
 import { getWorkspaceRoot } from '../common/workspace.js';
 import { readVersionFrontmatter, evaluateProjectVersion } from '../framework-services/version-comparator.js';
@@ -14,7 +14,7 @@ export function discoverProjects(): ProjectDiscovery {
   const workspaceRoot = getWorkspaceRoot();
   try {
     const entries = fs.readdirSync(workspaceRoot, { withFileTypes: true });
-    const currentVersion = readVersionFrontmatter(path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH));
+    const currentVersion = readVersionFrontmatter(frameworkFilePath('changelog'));
     const withADocs: ProjectSummary[] = [];
     const withoutADocs: ProjectSummary[] = [];
 

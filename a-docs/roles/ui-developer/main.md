@@ -44,7 +44,7 @@ The UI Developer does **NOT** own:
 
 > These cannot be overridden by any other instruction.
 
-- **Write only to the surfaces in `$A_SOCIETY_UI_DEVELOPER_OWNERSHIP`** (`runtime/ui/`, `runtime/test/ui/`, `runtime/.stylelintrc.json`, and this role's own `a-docs/roles/ui-developer/` docs). This role has no write authority over other `a-docs/`, `general/`, `agents/`, or other `runtime/` surfaces, including `runtime/src/`, `runtime/shared/`, and OD-owned root files such as `runtime/package.json`, unless the active approved design names the exact edit.
+- **Write only to the surfaces in `$A_SOCIETY_UI_DEVELOPER_OWNERSHIP`** (`runtime/ui/`, `runtime/test/ui/`, `runtime/.stylelintrc.json`, and this role's own `a-docs/roles/ui-developer/` docs). This role has no write authority over other `a-docs/`, `general/`, or other `runtime/` surfaces, including `runtime/src/`, `runtime/shared/`, and OD-owned root files such as `runtime/package.json`, unless the active approved design names the exact edit.
 
   **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder.
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected behavior and escalate.

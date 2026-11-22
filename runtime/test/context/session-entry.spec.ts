@@ -275,7 +275,7 @@ describe('session-entry', () => {
       });
 
       expect(message).toContain('Runtime workflow contract:');
-      expect(message).toContain('[FILE: a-society/runtime/contracts/workflow.md]');
+      expect(message).toContain('[FILE: runtime/contracts/workflow.md]');
       expect(message).toContain('A-Society Runtime Workflow Contract');
     });
 

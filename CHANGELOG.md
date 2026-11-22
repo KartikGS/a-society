@@ -8,6 +8,28 @@ a_society_version: "0.3.3"
 
 All notable changes to A-Society will be documented here.
 
+**Versioning.** Versions are `0.MINOR.PATCH` until 1.0. A minor release may change the `a-docs/` structure, templates, or contracts that initialized projects migrate to; the runtime offers **Update** when a project is behind by a minor version (from 1.0 on, by a major version). Patch releases need no `a-docs/` migration and never prompt an update.
+
+---
+
+## [Unreleased]
+
+### Runtime
+
+- **Update** is offered only when a project is behind by a release line (the minor version while on 0.x, the major version from 1.0 on); patch releases no longer prompt.
+- Feedback reports are now saved in the workspace's `.a-society/feedback/` folder instead of inside the checkout, and the chat shows where each report was saved, with a link to the submission steps. If you have reports in `a-society/feedback/` from an earlier version, move them out before your next `git pull`; see "Submitting a feedback report" in `runtime/INVOCATION.md`.
+- `A_SOCIETY_WORKSPACE` sets the workspace folder explicitly, so a second checkout's runtime can run on another port against a separate workspace. `A_SOCIETY_OPEN_BROWSER=false` skips opening a browser tab at startup.
+
+### Library
+
+- Owner log-management and closure templates, and the log instruction: verify the log's own taxonomy and current-state wording whenever project vocabulary changes, and fix small residuals in the flow instead of queuing them.
+- The version-record instruction states the release-line update rule and is now listed in the general index.
+
+### Project
+
+- The documentation site (a-society.dev) now lives in this repository under `site/`.
+- `CONTRIBUTING.md` accepts pull requests that add a feedback report.
+
 ---
 
 ## [0.3.3] — 2026-11-20

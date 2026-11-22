@@ -1,0 +1,8 @@
+role: technical-writer
+surfaces:
+  - path: a-docs/roles/technical-writer/
+    scope: "Technical Writer role truth, support-doc truth, startup-context file, and ownership file"
+  - path: site/
+    scope: "Public documentation site at a-society.dev — page content, information architecture, site configuration, dependencies, build, and in-repo deployment configuration; site/public/install.sh is overridden by the Orchestration Developer"
+  - path: .github/workflows/site-ci.yml
+    scope: "Site build-check automation surface"

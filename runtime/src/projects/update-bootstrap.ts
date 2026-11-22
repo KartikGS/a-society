@@ -6,8 +6,8 @@ import { getWorkspaceRoot } from '../common/workspace.js';
 import { resolveProjectRoot } from './draft-flow.js';
 import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 import {
-  A_SOCIETY_CHANGELOG_RELATIVE_PATH,
   A_DOCS_VERSION_RECORD_RELATIVE_PATH,
+  frameworkFilePath,
 } from '../common/runtime-contracts.js';
 import { readVersionFrontmatter, evaluateProjectVersion } from '../framework-services/version-comparator.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
@@ -16,8 +16,6 @@ export interface UpdateBootstrapResult {
   flowRun: FlowRun;
 }
 
-const RUNTIME_UPDATE_RELATIVE_PATH = path.join('a-society', 'runtime', 'contracts', 'update.md');
-const A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH = path.join('a-society', 'index.md');
 
 function buildUpdateBrief(
   projectNamespace: string,
@@ -98,9 +96,9 @@ export function bootstrapUpdateFlow(
     throw new Error(`Project "${namespace}" has no a-docs/ to update.`);
   }
 
-  const changelogPath = path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH);
-  const updateGuidePath = path.join(workspaceRoot, RUNTIME_UPDATE_RELATIVE_PATH);
-  const generalIndexPath = path.join(workspaceRoot, A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH);
+  const changelogPath = frameworkFilePath('changelog');
+  const updateGuidePath = frameworkFilePath('updateContract');
+  const generalIndexPath = frameworkFilePath('generalIndex');
 
   if (!fs.existsSync(updateGuidePath)) {
     throw new Error(`Runtime update guide not found at ${updateGuidePath}.`);

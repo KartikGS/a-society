@@ -38,7 +38,7 @@ const FORWARD_CONVERSATION = '44444444-4444-4444-8444-444444444444';
 const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-agent-mode-backward-'));
 const fakeState = path.join(workspaceRoot, 'fake-claude-state');
 const scriptFile = path.join(workspaceRoot, 'fake-claude-script.json');
-const feedbackDir = path.join(workspaceRoot, 'a-society', 'feedback');
+const feedbackDir = path.join(workspaceRoot, '.a-society', 'feedback');
 const savedEnv = { ...process.env };
 
 let recordDir: string;
@@ -218,7 +218,7 @@ describe('agent mode backward pass', { timeout: 30_000 }, () => {
   it('runs feedback in a fresh conversation that alone can write the feedback folder', async () => {
     fs.mkdirSync(path.dirname(findingsFile), { recursive: true });
     fs.writeFileSync(findingsFile, 'Curator findings.');
-    const feedbackRel = `a-society/feedback/${projectNamespace}-flow-${flowId}.md`;
+    const feedbackRel = `.a-society/feedback/${projectNamespace}-flow-${flowId}.md`;
     const flow = baseFlow({ status: 'awaiting_feedback_consent' });
     flow.improvementPhase = {
       status: 'awaiting_feedback_consent',

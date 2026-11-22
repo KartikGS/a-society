@@ -7,8 +7,8 @@ Run this as the final A-Society feedback agent pass over the findings produced i
 - Review the findings files supplied in the entry message.
 - Treat findings as the primary source of truth for this feedback step.
 - If more context is needed, inspect the active record folder yourself.
-- Produce one final feedback artifact at the exact runtime-assigned path under `a-society/feedback/`.
-- Assume the human may later review, redact, and optionally submit that file in a manual GitHub PR.
+- Produce one final feedback artifact at the exact runtime-assigned path given in the entry message. The runtime keeps reports in the workspace's `.a-society/feedback/` folder, outside the A-Society checkout.
+- Assume the human will review and redact that file, and may then submit it as a pull request that adds it to the A-Society repository's `feedback/` folder. Nothing is sent automatically.
 - Do not modify project files, framework files, role instructions, indexes, or runtime code from this step.
 
 ---

@@ -22,7 +22,7 @@ A-Society collects feedback signal from adopting projects to improve the framewo
 
 - The runtime asks whether to generate upstream feedback only after backward-pass meta-analysis is complete
 - If the operator declines, the feedback agent does not run
-- If the operator approves, the feedback agent writes one runtime-assigned artifact under `a-society/feedback/`
+- If the operator approves, the feedback agent writes one runtime-assigned report to the workspace's `.a-society/feedback/` folder; submitting it upstream is a separate pull request the operator opens
 - Consent for one flow does not imply blanket consent for future flows
 
 **Consequence:** Any new feedback mechanism that ships without a clear per-flow consent point is incomplete. Define the prompt timing, operator meaning, and agent behavior before publishing the feature.
@@ -39,7 +39,7 @@ The questions to ask when designing a new feature:
 2. If yes: where does the signal go, what format does it take, and which agent produces it?
 3. What does the operator need to understand before deciding whether to generate/share that signal?
 4. What flow context must be carried into the final feedback step?
-5. What is the runtime-assigned storage location under `a-society/feedback/`?
+5. What is the runtime-assigned storage location in the workspace's `.a-society/feedback/` folder?
 
 If the answer to question 1 is no, no feedback mechanism is needed. Do not add feedback for its own sake.
 

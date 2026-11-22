@@ -8,6 +8,8 @@ import {
   locateFindingsFiles,
   locateAllFindingsFiles,
 } from '../framework-services/backward-pass-orderer.js';
+import { frameworkFilePath } from '../common/runtime-contracts.js';
+import { FEEDBACK_REPORTS_DIR } from '../../shared/protocol-constants.js';
 import { ContextInjectionService } from '../context/injection.js';
 import { buildImprovementEntryMessage } from '../context/session-entry.js';
 import * as SessionStore from '../orchestration/store.js';
@@ -125,8 +127,8 @@ function normalizeRepoRelativePath(filePath: string, workspaceRoot: string): str
   return path.normalize(relativePath).replace(/^\.\//, '').split(path.sep).join('/');
 }
 
-function runtimeFeedbackInstructionPath(flowRun: FlowRun): string {
-  return path.join(flowRun.workspaceRoot, 'a-society', 'runtime', 'contracts', 'feedback.md');
+function runtimeFeedbackInstructionPath(): string {
+  return frameworkFilePath('feedbackContract');
 }
 
 function sanitizeFeedbackFileSegment(value: string): string {
@@ -152,11 +154,17 @@ function feedbackKindFileSegment(flowRun: FlowRun): string {
 
 function assignedFeedbackArtifactRelativePath(flowRun: FlowRun): string {
   const existing = flowRun.improvementPhase?.feedbackArtifactPath;
-  if (existing) return existing;
+  // Keep a path already in the new folder, or a legacy report that already exists on disk.
+  // A legacy `a-society/feedback/…` path for a report not yet written moves to the new folder.
+  if (
+    existing &&
+    (existing.startsWith(`${FEEDBACK_REPORTS_DIR}/`) || fs.existsSync(path.resolve(flowRun.workspaceRoot, existing)))
+  ) {
+    return existing;
+  }
 
   return path.posix.join(
-    'a-society',
-    'feedback',
+    FEEDBACK_REPORTS_DIR,
     `${sanitizeFeedbackFileSegment(flowRun.projectNamespace)}-${feedbackKindFileSegment(flowRun)}-${flowRun.flowId}.md`
   );
 }
@@ -199,7 +207,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
   consentGate?: ConsentGate,
   mcpManager?: McpManager,
   validateExpectedSignal?: ExpectedSignalValidator<K>,
-  hostExtraWritableDirs: string[] = [],
+  extraWritableDirs: string[] = [],
 ): Promise<ExpectedImprovementSignal<K> | null> {
   let history = session.transcriptHistory as RuntimeMessageParam[];
   const stepLabel = describeExpectedStep(expectedKind);
@@ -222,7 +230,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
       workspaceRoot: flowRun.workspaceRoot,
       projectRoot: path.join(flowRun.workspaceRoot, flowRun.projectNamespace),
       recordFolderPath: flowRun.recordFolderPath,
-      extraWritableDirs: hostExtraWritableDirs,
+      extraWritableDirs,
       repairScope: 'improvement',
       permissionMode: turnBackend.permissions ?? 'consent',
     }
@@ -241,6 +249,7 @@ async function runBackwardPassSessionUntilExpectedSignal<K extends ExpectedImpro
         consentGate,
         model: roleModel,
         mcpManager,
+        extraWriteRoots: extraWritableDirs,
         onConversationMessages: async (messages) => {
           removeAssistantDraftBeforeToolCalls(history, messages);
           appendConversationMessagesToCurrentNode(session, nodeId, messages);
@@ -602,7 +611,7 @@ async function runFeedbackEntry(
         appendConversationMessagesToCurrentNode(session, nodeId, [lastMsg]);
       } else {
         const allFindingsFiles = locateAllFindingsFiles(recordFolderPath);
-        const feedbackInstructionPath = runtimeFeedbackInstructionPath(flowRun);
+        const feedbackInstructionPath = runtimeFeedbackInstructionPath();
         const userMessage = buildImprovementEntryMessage({
           stepLabel: 'feedback',
           recordFolderPath,
@@ -749,7 +758,7 @@ async function runMetaAnalysisGraph(
       flowRun.status = 'awaiting_feedback_consent';
       await saveImprovementPhase(flowRun, (phase) => {
         phase.status = 'awaiting_feedback_consent';
-        phase.feedbackArtifactPath = phase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
+        phase.feedbackArtifactPath = assignedFeedbackArtifactRelativePath(flowRun);
         phase.feedbackConsent = FEEDBACK_CONSENT_STATUS.PENDING;
       });
       return false;
@@ -836,7 +845,7 @@ export class ImprovementOrchestrator {
     await saveImprovementPhase(flowRun, (phase) => {
       phase.status = 'skipped';
       phase.mode = IMPROVEMENT_CHOICE_MODE.NONE;
-      phase.feedbackArtifactPath = phase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
+      phase.feedbackArtifactPath = assignedFeedbackArtifactRelativePath(flowRun);
     });
   }
 
@@ -849,7 +858,7 @@ export class ImprovementOrchestrator {
     flowRun.status = 'completed';
     await saveImprovementPhase(flowRun, (phase) => {
       phase.status = 'completed';
-      phase.feedbackArtifactPath = phase.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
+      phase.feedbackArtifactPath = assignedFeedbackArtifactRelativePath(flowRun);
       phase.feedbackConsent = FEEDBACK_CONSENT_STATUS.DENIED;
     });
   }
@@ -953,7 +962,7 @@ export class ImprovementOrchestrator {
         const workflowRelPath = path.relative(flowRun.workspaceRoot, improvementWorkflowFilePath);
         const entry = feedbackEntry(plan);
 
-        const assignedFeedbackRepoPath = flowRun.improvementPhase?.feedbackArtifactPath ?? assignedFeedbackArtifactRelativePath(flowRun);
+        const assignedFeedbackRepoPath = assignedFeedbackArtifactRelativePath(flowRun);
         const assignedFeedbackFilePath = path.resolve(flowRun.workspaceRoot, assignedFeedbackRepoPath);
         fs.mkdirSync(path.dirname(assignedFeedbackFilePath), { recursive: true });
 

@@ -8,6 +8,8 @@ import {
   parseVersion,
   compareVersions,
   evaluateProjectVersion,
+  releaseLine,
+  isBehindReleaseLine,
 } from '../../src/framework-services/version-comparator.js';
 
 const tempDirs = new Set<string>();
@@ -101,5 +103,35 @@ describe('evaluateProjectVersion', () => {
     expect(evaluateProjectVersion(null, '0.2.0').updateAvailable).toBe(false);
     expect(evaluateProjectVersion('0.1.0', null).updateAvailable).toBe(false);
     expect(evaluateProjectVersion('v37.0', '0.2.0').updateAvailable).toBe(false);
+  });
+});
+
+describe('release-line update rule', () => {
+  function v(raw: string) {
+    const parsed = parseVersion(raw);
+    if (!parsed) throw new Error(`bad version ${raw}`);
+    return parsed;
+  }
+
+  it('computes release lines', () => {
+    expect(releaseLine(v('0.3.3'))).toEqual([0, 3]);
+    expect(releaseLine(v('0'))).toEqual([0, 0]);
+    expect(releaseLine(v('1.9.4'))).toEqual([1]);
+    expect(releaseLine(v('2'))).toEqual([2]);
+  });
+
+  it.each([
+    ['0.3.0', '0.3.3', false],
+    ['0.3.3', '0.4.0', true],
+    ['0.9.5', '1.0.0', true],
+    ['1.2.0', '1.9.0', false],
+    ['1.9.0', '2.0.0', true],
+    ['0.4.0', '0.3.3', false],
+    ['0.3', '0.3.3', false],
+    ['1', '1.2', false],
+    ['2.0.0', '1.9.0', false],
+  ])('recorded %s vs current %s -> update %s', (recorded, current, expected) => {
+    expect(isBehindReleaseLine(v(recorded), v(current))).toBe(expected);
+    expect(evaluateProjectVersion(recorded, current).updateAvailable).toBe(expected);
   });
 });

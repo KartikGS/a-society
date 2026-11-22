@@ -27,6 +27,7 @@ When a file moves, update **only the relevant row here**. All docs referencing a
 | `$INSTRUCTION_ARCHITECTURE` | `general/project-types/executable/instructions/project-information/architecture.md` | How to create an architecture document for projects with an executable layer |
 | `$INSTRUCTION_LOG` | `general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `general/instructions/project-information/principles.md` | How to create a project principles document for any project |
+| `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `general/instructions/a-society-version-record.md` | How to create and maintain a project's A-Society version record — frontmatter format, who bumps it, and the release-line update rule |
 | `$INSTRUCTION_WORKFLOW` | `general/instructions/workflow/main.md` | How to create a workflow document for any project |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | `general/instructions/workflow/graph.md` | How to create and maintain a machine-readable workflow graph representation (YAML frontmatter) — enables programmatic backward pass ordering |
 | `$INSTRUCTION_WORKFLOW_MODIFY` | `general/instructions/workflow/modify.md` | How to modify an existing workflow — single-graph model, evaluative principles, hard rules, and six-step modification procedure |

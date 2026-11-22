@@ -242,6 +242,7 @@ export function App() {
     handoffApprovalNodeId,
     handoffApprovalTargets,
     closureApproval,
+    feedbackReport,
     isAwaitingImprovementChoice,
     isAwaitingFeedbackConsent,
     feedbackPrompt,
@@ -702,6 +703,7 @@ export function App() {
                       targets: handoffApprovalTargets ?? [],
                     } : null}
                     closureApproval={closureApproval}
+                    feedbackReport={feedbackReport}
                     onOpenDocument={handleOpenDocument}
                     onRoleSelect={handleRoleSelect}
                     onInputChange={handleComposerChange}

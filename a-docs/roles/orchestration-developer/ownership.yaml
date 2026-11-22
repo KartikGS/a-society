@@ -6,3 +6,5 @@ surfaces:
     scope: "Default ownership for runtime implementation surfaces; runtime/src/framework-services/ and runtime/test/framework-services/ are overridden by the Framework Services Developer; runtime/ui/, runtime/test/ui/, and runtime/.stylelintrc.json are overridden by the UI Developer"
   - path: .github/workflows/runtime-ci.yml
     scope: "Runtime CI automation surface"
+  - path: site/public/install.sh
+    scope: "Runtime install script served at a-society.dev/install.sh — prerequisite checks, clone, and dependency install must match the runtime"

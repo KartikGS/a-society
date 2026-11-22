@@ -7,10 +7,10 @@ import { resolveProjectRoot } from './draft-flow.js';
 import { scaffoldFromManifestFile, type ScaffoldResult } from '../framework-services/scaffolding-system.js';
 import { buildFlowId, syncRecordMetadataFromWorkflow } from './record-metadata.js';
 import {
-  RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH,
-  A_SOCIETY_CHANGELOG_RELATIVE_PATH,
   A_DOCS_VERSION_RECORD_RELATIVE_PATH,
+  frameworkFilePath,
 } from '../common/runtime-contracts.js';
+import { getFrameworkRoot } from '../common/workspace.js';
 import { readVersionFrontmatter } from '../framework-services/version-comparator.js';
 import { getFlowRecordDir } from '../orchestration/state-paths.js';
 
@@ -19,8 +19,6 @@ export interface InitializationBootstrapResult {
   scaffoldResult: ScaffoldResult;
 }
 
-const RUNTIME_INITIALIZATION_RELATIVE_PATH = path.join('a-society', 'runtime', 'contracts', 'initialization.md');
-const A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH = path.join('a-society', 'index.md');
 
 function sanitizeProjectVariablePrefix(projectNamespace: string): string {
   const normalized = projectNamespace
@@ -259,14 +257,14 @@ export function bootstrapInitializationFlow(
     }
   }
 
-  const aSocietyRoot = path.join(workspaceRoot, 'a-society');
-  const manifestPath = path.join(workspaceRoot, RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH);
-  const runtimeInitializationPath = path.join(workspaceRoot, RUNTIME_INITIALIZATION_RELATIVE_PATH);
-  const aSocietyGeneralIndexPath = path.join(workspaceRoot, A_SOCIETY_GENERAL_INDEX_RELATIVE_PATH);
-  const changelogPath = path.join(workspaceRoot, A_SOCIETY_CHANGELOG_RELATIVE_PATH);
+  const aSocietyRoot = getFrameworkRoot();
+  const manifestPath = frameworkFilePath('adocsManifest');
+  const runtimeInitializationPath = frameworkFilePath('initializationContract');
+  const aSocietyGeneralIndexPath = frameworkFilePath('generalIndex');
+  const changelogPath = frameworkFilePath('changelog');
 
   if (!fs.existsSync(aSocietyRoot)) {
-    throw new Error(`A-Society root not found at ${aSocietyRoot}.`);
+    throw new Error(`A-Society checkout not found at ${aSocietyRoot}.`);
   }
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`Runtime a-docs manifest not found at ${manifestPath}.`);
