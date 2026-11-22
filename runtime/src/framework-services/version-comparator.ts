@@ -7,8 +7,9 @@ import yaml from 'js-yaml';
  * The canonical current framework version lives in the changelog's YAML
  * frontmatter (`a_society_version`). Each initialized project records the
  * version its a-docs conform to in its own version record's frontmatter
- * (same key). An update is available when the changelog version is strictly
- * newer than the project's recorded version.
+ * (same key). An update is available when the project is behind by a release
+ * line: the minor version while the major version is 0 ([0, minor]), the major
+ * version from 1.0 on ([major]). Patch differences never offer an update.
  *
  * Versions use dotted numeric components (e.g. "0.2.0"). Trailing components
  * default to 0, so "0.2" and "0.2.0" compare equal.
@@ -86,18 +87,33 @@ export function parseVersion(value: string): ParsedVersion | null {
  * equal, and a positive number when a > b. Missing trailing components are 0.
  */
 export function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
-  const length = Math.max(a.components.length, b.components.length);
+  return compareComponents(a.components, b.components);
+}
+
+function compareComponents(a: number[], b: number[]): number {
+  const length = Math.max(a.length, b.length);
   for (let i = 0; i < length; i += 1) {
-    const diff = (a.components[i] ?? 0) - (b.components[i] ?? 0);
+    const diff = (a[i] ?? 0) - (b[i] ?? 0);
     if (diff !== 0) return diff;
   }
   return 0;
 }
 
+/** The release line a version belongs to: [0, minor] while the major version is 0, otherwise [major]. */
+export function releaseLine(version: ParsedVersion): number[] {
+  const major = version.components[0] ?? 0;
+  return major === 0 ? [0, version.components[1] ?? 0] : [major];
+}
+
+/** True when `current` is on a newer release line than `recorded`. Patch differences never count. */
+export function isBehindReleaseLine(recorded: ParsedVersion, current: ParsedVersion): boolean {
+  return compareComponents(releaseLine(current), releaseLine(recorded)) > 0;
+}
+
 /**
  * Computes a project's version status against the canonical current version.
- * An update is available only when both versions parse and the current version
- * is strictly newer than the project's recorded version.
+ * An update is available only when both versions parse and the project is
+ * behind by a release line (see `isBehindReleaseLine`).
  */
 export function evaluateProjectVersion(
   aDocsVersion: string | null,
@@ -108,7 +124,7 @@ export function evaluateProjectVersion(
     const recorded = parseVersion(aDocsVersion);
     const current = parseVersion(currentVersion);
     if (recorded && current) {
-      updateAvailable = compareVersions(current, recorded) > 0;
+      updateAvailable = isBehindReleaseLine(recorded, current);
     }
   }
   return { aDocsVersion, currentVersion, updateAvailable };

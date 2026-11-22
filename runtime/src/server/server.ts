@@ -1,11 +1,11 @@
 import express from 'express';
-import path from 'node:path';
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
 import { TelemetryManager } from '../observability/observability.js';
 import * as SessionStore from '../orchestration/store.js';
 import { CLIENT_MESSAGE_TYPE } from '../../shared/protocol-constants.js';
-import { setWorkspaceRoot } from '../common/workspace.js';
+import { setFrameworkRoot, setWorkspaceRoot } from '../common/workspace.js';
+import type { RuntimeRoots } from './runtime-roots.js';
 import { createFlowReadModel } from './flow-read-model.js';
 import { registerFlowRoutes } from './flow-routes.js';
 import { registerDocumentRoutes } from './document-routes.js';
@@ -153,9 +153,10 @@ function buildServer() {
   return { app, httpServer, wss };
 }
 
-export async function startServer(workspaceRoot: string, port: number): Promise<void> {
+export async function startServer(roots: RuntimeRoots, port: number): Promise<void> {
   TelemetryManager.init();
-  setWorkspaceRoot(path.resolve(workspaceRoot));
+  setWorkspaceRoot(roots.workspaceRoot);
+  setFrameworkRoot(roots.frameworkRoot);
   const { httpServer } = buildServer();
 
   await new Promise<void>((resolve, reject) => {

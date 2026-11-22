@@ -30,7 +30,7 @@ Each candidate framework improvement in the artifact must be labeled with one of
 
 Use the placement tests in `$A_SOCIETY_STRUCTURE` to apply the classification. When uncertain, prefer the strongest claim you can defend with confidence — over-claiming universality is harder to walk back than under-claiming it. The artifact is malformed if any framework-improvement candidate is missing its classification.
 
-This step runs only after the runtime/operator approves upstream feedback generation. When approved, write the artifact at the exact runtime-assigned path under `a-society/feedback/`. The file is meant for later human review, redaction if needed, and optional manual PR sharing.
+This step runs only after the runtime/operator approves upstream feedback generation. When approved, write the artifact at the exact runtime-assigned path in the workspace's `.a-society/feedback/` folder, outside the A-Society checkout. The file is meant for later human review, redaction if needed, and optional submission as a pull request that adds it to `$A_SOCIETY_FEEDBACK_DIR`.
 
 **Step 4.** Close the backward pass.
 

@@ -20,6 +20,7 @@
 </p>
 
 <p align="center">
+  <a href="https://a-society.dev">Docs</a> |
   <a href="#getting-started">Getting Started</a> |
   <a href="runtime/INVOCATION.md">Runtime Guide</a>
 </p>
@@ -103,7 +104,7 @@ Fill in:
 
 Any OpenAI-compatible provider (Hugging Face, OpenRouter, self-hosted, and others) or Anthropic's API is supported.
 
-Save and set the model as active. The project selector appears once a model is active.
+Click **Add Model**. The first model you add becomes active automatically; use **Set Active** to switch to another. The project selector appears once a model is active.
 
 *Or use a coding agent installed on this machine.* Under **Agent mode**, choose Claude Code and click **Check agent**; it must be installed and signed in. Each role turn then runs through your local `claude` CLI, which uses its own model, tools, and sign-in, while A-Society keeps the workflow, handoffs, and records. Billing follows that CLI's sign-in. See `runtime/INVOCATION.md` for details.
 
@@ -117,7 +118,7 @@ Approve the result and your project has a structured agent harness.
 
 **5. Start your first flow**
 
-Click **New Record**. The runtime opens a draft flow and routes it to the Owner node. You're in.
+Click **New** next to **Records**. The runtime opens a draft flow and routes it to the Owner node. You're in.
 
 ---
 
@@ -137,4 +138,4 @@ The runtime runs as a local web app, driven from the browser. Here is what it do
 
 **Self-improvement.** When a flow's forward work closes, the runtime can run a backward pass: each role that took part reflects on what it actually did and writes findings, ordered so later roles' lessons reach the roles that set their work up. Those findings feed back into the project's own docs and standing surfaces — so the project gets better from the work it just did.
 
-**Cross-project feedback.** After the backward pass, the runtime asks whether to share an upstream feedback report. Only if you say yes does a final pass distill the findings into one report under `a-society/feedback/`, labeling each suggestion by how broadly it applies — universal, category-specific, or project-only. Nothing is sent anywhere automatically: you review and redact before any of it leaves your machine, and consent is asked per flow.
+**Cross-project feedback.** After the backward pass, the runtime asks whether to share an upstream feedback report. Only if you say yes does a final pass distill the findings into one report saved in your workspace's `.a-society/feedback/` folder, labeling each suggestion by how broadly it applies — universal, category-specific, or project-only. Nothing is sent anywhere automatically: you review and redact the report, and if you choose to share it, you open a pull request that adds it to this repository's `feedback/` folder ([steps](runtime/INVOCATION.md#submitting-a-feedback-report)). Consent is asked per flow.

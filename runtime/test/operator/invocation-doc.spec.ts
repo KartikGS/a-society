@@ -56,4 +56,19 @@ describe('invocation-doc', () => {
     expect(doc).toContain('browser feed');
     expect(doc).toContain('replayed');
   });
+  it('documents runtime roots, the dev runtime, feedback submission, and the release-line rule', () => {
+    for (const term of [
+      'A_SOCIETY_WORKSPACE',
+      'A_SOCIETY_OPEN_BROWSER',
+      '### Running a development runtime',
+      '### Submitting a feedback report',
+      '.a-society/feedback/',
+      'release line',
+    ]) {
+      expect(doc).toContain(term);
+    }
+    for (const stale of ['it is not operator-configurable', 'strictly newer', '(`a-society/feedback`)', 'behind the current framework version']) {
+      expect(doc).not.toContain(stale);
+    }
+  });
 });

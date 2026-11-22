@@ -22,6 +22,7 @@ export type LLMGatewayOptions =
       provider?: LLMProvider;
       model?: ModelConfigWithKey | null;
       mcpManager?: McpManager;
+      extraWriteRoots?: string[];
     }
   | {
       mode: 'system';
@@ -84,7 +85,7 @@ export class LLMGateway {
     }
 
     if (options.mode === 'project') {
-      this.fileExecutor = new FileToolExecutor(options.flowRef);
+      this.fileExecutor = new FileToolExecutor(options.flowRef, { extraWriteRoots: options.extraWriteRoots });
       this.bashExecutor = new BashToolExecutor();
       this.tools = [...FILE_TOOL_DEFINITIONS, ...BASH_TOOL_DEFINITIONS];
       const tavilyKey = getEnabledWebSearchApiKey();

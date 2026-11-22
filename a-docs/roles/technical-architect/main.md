@@ -78,7 +78,7 @@ Phase-specific support documents for this role are surfaced from the active work
 ## Escalate to Owner When
 
 - An executable boundary decision implies a change to what A-Society is or does
-- An executable component design requires structural changes to `general/` or `agents/`
+- An executable component design requires structural changes to `general/`
 - An executable dependency surfaces a gap or conflict in the current documentation layer
 - An open question cannot be resolved without a framework direction decision
 - A proposed executable capability would require adopting projects to change how they use the framework

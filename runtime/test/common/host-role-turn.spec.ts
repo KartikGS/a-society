@@ -88,6 +88,21 @@ describe('mapHostDenial', () => {
   });
 });
 
+describe('mapHostDenial for a dev-checkout project', () => {
+  // The roots createHostTurnExecutor builds for a forward turn on `a-society-dev`: project + record folder only.
+  const roots = ['/ws/a-society-dev', '/ws/.a-society/state/a-society-dev/flow/record'];
+
+  it('scopes writes to the dev checkout and its record folder, never the running a-society checkout', () => {
+    expect(mapHostDenial({ toolName: 'Write', input: { file_path: '/ws/a-society-dev/x.md' } }, '/ws', roots)?.check)
+      .toEqual({ toolName: 'write_file', input: { path: 'a-society-dev/x.md' } });
+    expect(mapHostDenial({ toolName: 'Write', input: { file_path: '/ws/.a-society/state/a-society-dev/flow/record/x.md' } }, '/ws', roots))
+      .not.toBeNull();
+    expect(mapHostDenial({ toolName: 'Write', input: { file_path: '/ws/a-society/x.md' } }, '/ws', roots)).toBeNull();
+    expect(mapHostDenial({ toolName: 'Write', input: { file_path: '/ws/a-society/feedback/x.md' } }, '/ws', roots)).toBeNull();
+    expect(mapHostDenial({ toolName: 'Write', input: { file_path: '/ws/.a-society/feedback/x.md' } }, '/ws', roots)).toBeNull();
+  });
+});
+
 describe('buildHostPermissionProfile', () => {
   it('ignores consent state and grants when the host decides (auto mode)', () => {
     const state: ConsentState = { ...defaultConsentState(), mode: CONSENT_MODE.FULL_ACCESS };

@@ -8,7 +8,7 @@ import {
   runRuntimeHealthChecks
 } from '../../src/framework-services/runtime-health-checks.js';
 import { scaffoldFromManifestFile } from '../../src/framework-services/scaffolding-system.js';
-import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setFrameworkRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const frameworkRoot = path.resolve(__dirname, '../../..');
@@ -223,4 +223,34 @@ it('repair guidance names the completion signal that must be retried', () => {
   );
   expect(guidance.operatorSummary).toBe('A-docs runtime health checks failed');
   expect(guidance.modelRepairMessage.includes('type: meta-analysis-complete')).toBeTruthy();
+});
+
+it('reads the a-docs manifest from the framework root, not <workspace>/a-society', () => {
+  const fixture = makeProjectFixture();
+  const fwParent = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-health-fw-'));
+  try {
+    // Remove the workspace's a-society link so only the framework root can supply the manifest.
+    fs.unlinkSync(path.join(fixture.workspaceRoot, 'a-society'));
+    const fw = path.join(fwParent, 'fw');
+    const fwContracts = path.join(fw, 'runtime', 'contracts');
+    fs.mkdirSync(fwContracts, { recursive: true });
+    fs.copyFileSync(
+      path.join(frameworkRoot, 'runtime', 'contracts', 'a-docs-manifest.yaml'),
+      path.join(fwContracts, 'a-docs-manifest.yaml')
+    );
+    setFrameworkRoot(fw);
+
+    const result = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
+    expect(result.errors.join('\n')).not.toContain('Runtime a-docs manifest');
+
+    fs.rmSync(path.join(fwContracts, 'a-docs-manifest.yaml'));
+    const missing = runRuntimeHealthChecks(fixture.workspaceRoot, fixture.projectNamespace);
+    expect(missing.ok).toBe(false);
+    expect(missing.errors).toContain(
+      `Runtime a-docs manifest is missing at ${path.join(fwContracts, 'a-docs-manifest.yaml')}`
+    );
+  } finally {
+    fs.rmSync(fwParent, { recursive: true, force: true });
+    cleanup(fixture.tmpRoot);
+  }
 });

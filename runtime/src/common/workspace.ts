@@ -13,6 +13,7 @@ import path from 'node:path';
  * re-seeding an ambient global before each use.
  */
 let workspaceRoot: string | null = null;
+let frameworkRoot: string | null = null;
 
 export function setWorkspaceRoot(root: string): void {
   workspaceRoot = path.resolve(root);
@@ -28,11 +29,30 @@ export function getWorkspaceRoot(): string {
 }
 
 /**
+ * Process-wide framework root: the A-Society checkout the runtime runs from.
+ * Set at process entry (`startServer`). When not set, defaults to
+ * `<workspace>/a-society` (the default-install layout); tests rely on this.
+ */
+export function setFrameworkRoot(root: string): void {
+  frameworkRoot = path.resolve(root);
+}
+
+export function getFrameworkRoot(): string {
+  return frameworkRoot ?? path.join(getWorkspaceRoot(), 'a-society');
+}
+
+export function clearFrameworkRoot(): void {
+  frameworkRoot = null;
+}
+
+/**
  * Reset to the unconfigured state so a subsequent `getWorkspaceRoot()` throws.
+ * Also clears the framework root so a test cannot leak it into the next test.
  * Intended for test teardown: a test that then touches workspace-scoped state
  * without establishing its own root fails loudly instead of silently inheriting
  * a stale root (e.g. the repo's cwd, which would pollute the working tree).
  */
 export function clearWorkspaceRoot(): void {
   workspaceRoot = null;
+  frameworkRoot = null;
 }

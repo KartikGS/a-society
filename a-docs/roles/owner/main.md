@@ -76,10 +76,12 @@ The Owner delegates to domain leads based on the distributed role ownership file
 |---|---|---|
 | **Curator** | Documentation surfaces — `general/`, `a-docs/` maintenance, indexes, guides, records, improvement, communication, feedback, updates | Design authority for documentation organization, content structure, and registration |
 | **Technical Architect** | Executable design — `runtime/` design authority, standing executable references | Design authority for executable boundaries, component architecture, and implementation structure |
+| **Technical Writer** | Public documentation site — `site/`, the site build check, keeping `a-society.dev/install.sh` served | Design authority for the site's information architecture, pages, and in-repo build and deployment configuration |
+| **Marketing Lead** | Outreach — positioning and voice, the channel registry, the outreach log, launch plans and drafts | Design authority for positioning, channel selection, and drafts; no publishing authority — every external action needs the human's approval of the exact content |
 
 Domain leads receive requirement-level directives and have authority to design solutions within their scope. They do not need step-by-step approval for implementation decisions within their domain.
 
-**Specialists** (Framework Services Developer, Orchestration Developer) work under the TA's direction within the executable domain. They are not directly delegated to by the Owner for design decisions.
+**Specialists** (Framework Services Developer, Orchestration Developer, UI Developer) work under the TA's direction within the executable domain. They are not directly delegated to by the Owner for design decisions.
 
 ---
 

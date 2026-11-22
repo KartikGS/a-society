@@ -10,6 +10,8 @@ A-Society has three primary standing layers, each with a distinct role:
 - **`runtime/`** — the standing executable root. It owns operator-facing executable behavior and the permanent home for A-Society's executable capabilities: deterministic framework services plus orchestration/session management. The runtime runs each role turn through one of two turn backends — LLM APIs called directly, or a supported host coding agent the operator already uses (agent mode) — provides the operator-facing web server / browser UI surface, and is the surviving umbrella executable layer.
 - **`a-docs/`** — the documentation layer. Agent documentation for agents working on A-Society itself. Sits alongside the work product, just as `a-docs/` sits alongside project work in any other project using this framework.
 
+Outside the three layers sit the public presentation surfaces: `README.md`, `assets/`, and the public documentation site under `site/` (a-society.dev). They present A-Society to people outside it; they are neither work product nor agent documentation. Each fact they present has one authoritative home, which they link to or derive from.
+
 Detailed executable architecture, capability inventory, and implementation ownership boundaries live in `$A_SOCIETY_EXECUTABLE_ARCHITECTURE`.
 
 ### Agent Mode
@@ -34,7 +36,7 @@ Two indexes govern path resolution:
 
 ## Feedback Signal Architecture
 
-A-Society grows from real-world usage. All inbound feedback signal is collected under `$A_SOCIETY_FEEDBACK_DIR`. New runtime-generated feedback is a single optional upstream-sharing step that happens only after a flow's forward pass is closed and its backward-pass meta-analysis is complete.
+A-Society grows from real-world usage. Submitted feedback reports are collected under `$A_SOCIETY_FEEDBACK_DIR` through pull requests. New runtime-generated feedback is a single optional upstream-sharing step that happens only after a flow's forward pass is closed and its backward-pass meta-analysis is complete.
 
 **Single feedback path — optional upstream sharing after backward pass**
 Every initialized project flow can end in the same shape:
@@ -42,13 +44,13 @@ Every initialized project flow can end in the same shape:
 1. forward pass closes
 2. backward-pass meta-analysis runs locally
 3. the runtime asks the human whether to generate upstream A-Society feedback for that flow
-4. if the human says Yes, the feedback agent writes one report directly to a runtime-assigned path under `$A_SOCIETY_FEEDBACK_DIR`
+4. if the human says Yes, the feedback agent writes one report to a runtime-assigned path in the workspace's `.a-society/feedback/` folder, outside the A-Society checkout
 5. if the human says No, the flow closes without running the feedback agent
 
 The feedback prompt is flow-aware. Initialization flows should focus on what the runtime inferred, what required human input, and where scaffolding or initialization guidance caused friction. Update-application flows should focus on which update guidance applied, what was unclear, and what future migration reports should improve. Standard flows should focus on reusable framework gaps, workflow friction, runtime issues, and cross-project patterns.
 
 **Collection model — local generation, human-reviewed sharing**
-The current collection model is intentionally simple: the feedback agent writes a markdown artifact into `$A_SOCIETY_FEEDBACK_DIR`, then the human reviews, redacts if needed, and may share it upstream in a manual GitHub PR. This keeps submission explicit, avoids automatic ingestion from personal machines, and leaves moderation at the PR-review layer. Privacy review is the immediate concern, so the runtime should always make clear that generated feedback may contain project-specific details and should be reviewed before sharing.
+The current collection model is intentionally simple: the feedback agent writes a markdown report to the workspace's `.a-society/feedback/` folder. The human reviews and redacts it and may submit it as a pull request that adds it to `$A_SOCIETY_FEEDBACK_DIR`, following the procedure in `$A_SOCIETY_RUNTIME_INVOCATION`. Reports stay out of the checkout so it remains clean and pullable. This keeps submission explicit, avoids automatic ingestion from personal machines, and leaves moderation at the PR-review layer. Privacy review is the immediate concern, so the runtime should always make clear that generated feedback may contain project-specific details and should be reviewed before sharing.
 
 ---
 
@@ -63,6 +65,7 @@ The following constraints are non-negotiable. An agent that violates one has mad
 - Content that is part of A-Society's deliverable (instructions, templates, executable capabilities, operator-facing runtime surfaces) belongs in `general/` or `runtime/`, never in `a-docs/`
 - Documentation for agents working on A-Society belongs in `a-docs/`, never in `general/` or `runtime/`
 - The test: "Is this describing A-Society, or is this something A-Society produces?" Descriptions → `a-docs/`. Products → `general/` or `runtime/`
+- Descriptions written for people outside the project, rather than for agents working on it, belong on a presentation surface (`README.md`, `assets/`, `site/`), not in `a-docs/`
 - The secondary test for work product placement: instructions and templates → `general/`; executable capabilities and operator-facing runtime behavior → `runtime/`
 
 Violation: Placing executable implementation code in `a-docs/` or `general/`.
@@ -124,6 +127,6 @@ A-Society never writes upstream feedback from a project without an explicit oper
 - Local backward-pass meta-analysis may still run without upstream-sharing consent
 - The final upstream feedback agent runs only after the runtime asks whether to generate feedback for the just-completed flow
 - If the answer is No, the flow closes without creating an upstream feedback artifact
-- If the answer is Yes, the feedback agent writes exactly one runtime-assigned artifact under `$A_SOCIETY_FEEDBACK_DIR`
+- If the answer is Yes, the feedback agent writes exactly one runtime-assigned report in the workspace's `.a-society/feedback/` folder
 
-Violation: The runtime running the upstream feedback step, or writing to `a-society/feedback/`, without an explicit per-flow operator decision.
+Violation: The runtime running the upstream feedback step, or writing a feedback report, without an explicit per-flow operator decision.

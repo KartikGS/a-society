@@ -1,0 +1,6 @@
+role: marketing-lead
+surfaces:
+  - path: a-docs/roles/marketing-lead/
+    scope: "Marketing Lead role truth, support-doc truth, startup-context file, and ownership file"
+  - path: a-docs/marketing/
+    scope: "Outreach memory — positioning and voice, channel registry with each venue's stance on agent-authored content, and outreach log"

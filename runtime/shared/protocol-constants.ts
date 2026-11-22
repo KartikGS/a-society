@@ -109,3 +109,6 @@ export const CONSENT_MODE = {
 export type ProtocolConsentMode = ValueOf<typeof CONSENT_MODE>;
 
 export const CONSENT_MODES = protocolValues(CONSENT_MODE);
+
+/** Workspace-relative folder where runtime-generated feedback reports are saved. */
+export const FEEDBACK_REPORTS_DIR = '.a-society/feedback';

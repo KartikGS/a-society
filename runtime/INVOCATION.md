@@ -4,7 +4,7 @@
 
 ### `npm --prefix ./a-society/runtime start`
 
-Starts the local runtime UI server, attempts to open the browser, and prints the local URL to `stderr`.
+Starts the local runtime UI server, prints the resolved workspace and A-Society checkout, attempts to open the browser (unless `A_SOCIETY_OPEN_BROWSER=false`), and prints the local URL to `stderr`.
 
 Run from the workspace root:
 
@@ -26,9 +26,42 @@ Example:
 A_SOCIETY_UI_PORT=4010 npm --prefix ./a-society/runtime start
 ```
 
-The runtime resolves the workspace from its fixed location at `{workspace}/a-society/runtime`. The workspace root is the parent of the cloned `a-society/` folder; it is not operator-configurable.
+The runtime has two roots:
+
+- The **A-Society checkout** is the folder its `runtime/` sits in. The runtime contracts, the a-docs manifest, the current framework version (`CHANGELOG.md`), and the general index come from there.
+- The **workspace** holds your projects and the runtime's `.a-society/` folder: flow state, settings, secrets, skills, and feedback reports.
+
+By default the workspace is the parent of the checkout, which must then be named `a-society`. That is the layout `install.sh` creates.
+
+`A_SOCIETY_WORKSPACE` sets the workspace explicitly. It must be an absolute path to an existing folder.
+
+The runtime refuses to start in two cases: the workspace contains an `a-society` folder that is not this checkout, or this checkout sits inside the workspace under any other name. Two runtimes therefore never share one workspace's state.
+
+At startup the runtime prints `[runtime/server] Workspace: <path>` and `[runtime/server] A-Society checkout: <path>` to `stderr`.
+
+`A_SOCIETY_OPEN_BROWSER=false` stops the browser tab from opening.
 
 If the selected port is already in use, the runtime prints a clear error and exits non-zero.
+
+### Running a development runtime
+
+1. Develop A-Society in a second checkout, never in the `a-society/` checkout your runtime runs from. Keep that checkout on `main`: update it with `git -C a-society pull`, then restart the main runtime.
+2. Create the dev checkout next to `a-society/`, either as a clone (`git clone https://github.com/KartikGS/a-society.git a-society-dev`) or as a worktree (`git -C a-society worktree add ../a-society-dev -b <branch>`).
+3. Work on it from your main runtime like any project. Its flows write to `a-society-dev/`, and their records go under `.a-society/state/a-society-dev/`. They run on the main runtime's contracts, which match the code executing them. The dev checkout's own contracts take effect only in a dev runtime.
+4. To try the dev checkout's runtime, run from the workspace root:
+   ```bash
+   npm --prefix ./a-society-dev/runtime install
+   npm --prefix ./a-society-dev/runtime run build:ui
+   mkdir -p "$HOME/a-society-scratch"
+   A_SOCIETY_WORKSPACE="$HOME/a-society-scratch" A_SOCIETY_UI_PORT=3100 npm --prefix ./a-society-dev/runtime start
+   ```
+   - Keep the scratch folder outside your main workspace; otherwise the main runtime lists it as a project.
+   - For a throwaway run, use `A_SOCIETY_WORKSPACE="$(mktemp -d)"`.
+   - Both variables may instead go in `a-society-dev/runtime/.env`, with an absolute path.
+5. The dev runtime reads and writes only the scratch workspace's `.a-society/`. It never touches your main workspace's state, settings, or secrets.
+   - The scratch workspace starts empty. Add a project folder (`mkdir "$HOME/a-society-scratch/demo"`), and configure a model in Settings or turn on agent mode.
+   - To reuse your models, copy `settings.json` and `secrets.json` from your main workspace's `.a-society/` into the scratch workspace's `.a-society/` yourself.
+6. A dev checkout started without `A_SOCIETY_WORKSPACE` refuses to start, because its folder is not named `a-society`. One pointed at your main workspace also refuses, because that workspace belongs to `a-society/`.
 
 ### Model Configuration
 
@@ -53,7 +86,7 @@ Agent mode runs each role turn on a coding agent installed on the operator's mac
 - The agent's reply streams into the feed as it is written (`--include-partial-messages`), like API turns.
 - The runtime still owns the workflow, handoffs and their validation, records, closure, the backward pass, and feedback.
 - Each role instance keeps one agent conversation, resumed by id on every turn. Only messages the agent has not yet received are sent (node entry, human reply, repair, continuation); the role's context bundle is passed as a file (`roles/<roleKey>/host-system-prompt.md`) on every turn. If the agent no longer has the conversation (for example after its own session cleanup), the runtime starts a new one seeded with its transcript record, up to 60 KiB.
-- The agent works in the project folder and may write there and in the record folder; it may read anywhere in the workspace. The feedback folder (`a-society/feedback`) is writable only for the feedback step.
+- The agent works in the project folder and may write there and in the record folder; it may read anywhere in the workspace. The workspace's feedback folder (`.a-society/feedback/`) is writable only for the feedback step.
 - A turn that leaves `workflow.yaml` invalid gets a repair message before its handoff is applied.
 - The composer footer shows the agent's plan usage (5-hour and 7-day windows) in place of the context ring.
 
@@ -129,7 +162,7 @@ Fresh starts open in the project selector. The selector has these startup paths:
 - Existing projects with `a-docs/`
 - Existing projects without `a-docs/`
 - Create a new project
-- Update an initialized project whose `a-docs/` are behind the current framework version
+- Update an initialized project whose `a-docs/` are behind the current framework's release line (see [Framework version and the update flow](#framework-version-and-the-update-flow))
 
 Selecting a project with `a-docs/` starts the normal stored Owner draft flow.
 
@@ -139,7 +172,7 @@ Selecting a project without `a-docs/` or creating a new project runs scaffold fi
 
 The canonical current framework version is declared in `CHANGELOG.md` YAML frontmatter (`a_society_version`). Each initialized project records the version its `a-docs/` conform to in `a-docs/a-society-version.md` frontmatter (same key). The version is stamped automatically at initialization and is a compulsory, parseable surface validated by runtime health checks.
 
-`GET /api/projects` reports, per initialized project, its recorded `aDocsVersion`, the `currentVersion`, and `updateAvailable` (true when the current version is strictly newer than the recorded version). When an update is available, the project selector shows an **Update** button next to the project's settings (⋮) control.
+`GET /api/projects` reports, per initialized project, its recorded `aDocsVersion`, the `currentVersion`, and `updateAvailable`. An update is available only when the project is behind by a **release line**: the minor version while the major version is 0, and the major version from 1.0 on. Patch differences never offer an update. For example, 0.3.0 is current with 0.3.3 but behind 0.4.0; 1.2.0 is current with 1.9.0 but behind 2.0.0. Starting an update flow is refused under the same rule. When an update is available, the project selector shows an **Update** button next to the project's settings (⋮) control.
 
 Choosing Update starts an Owner-only update flow. Like initialization, it creates a runtime-owned record folder with a single-node Owner workflow, but it does **not** scaffold or modify the project's `a-docs/`. It injects the runtime update guide, an update brief (recording from/to versions and the changelog), and the A-Society general index. The Owner migrates the `a-docs/` to the target version and bumps `a_society_version` in `a-docs/a-society-version.md`. On forward-pass closure the `a-docs/` are validated like any other flow, and the optional feedback step runs with an `update`-kind feedback context.
 
@@ -322,10 +355,50 @@ When the runtime is waiting for human input, the UI keeps the current flow state
 
 ---
 
+## Feedback Reports
+
+### Where reports are saved
+
+- If you approve feedback after the backward pass (or the project preset approves it), the feedback agent writes one report to `{workspace}/.a-society/feedback/<project>-<kind>-<flow-id>.md`. `<kind>` is `flow`, `update`, `initialization-greenfield`, or `initialization-takeover`.
+- Reports stay outside the A-Society checkout, so the checkout stays clean and `git pull` keeps working.
+- In both API and agent mode, only the feedback step can write to this folder.
+- Nothing is sent anywhere. Submitting a report is a separate step you take yourself.
+- When the report is saved, the flow's chat shows its full path, a **Copy path** button, and a link to the steps below.
+
+### Submitting a feedback report
+
+Reports are submitted as a pull request that adds the file to the `feedback/` folder of `KartikGS/a-society`. A-Society never uses your GitHub credentials; you run these steps yourself.
+
+1. **Review the report.** Remove anything you don't want public: project names, paths, code, and customer or personal details. The pull request is public. The report's *Suggested PR Share Text* section gives a title and body you can use.
+2. **Get a clone you can push from.** Do not use the `a-society/` checkout your runtime runs from; it stays on `main`.
+   - *Without push access:* fork `KartikGS/a-society` on GitHub, then clone your fork outside your workspace:
+     ```bash
+     git clone https://github.com/<you>/a-society.git a-society-fork
+     cd a-society-fork
+     git remote add upstream https://github.com/KartikGS/a-society.git
+     ```
+     For later reports: `git fetch upstream`.
+   - *Maintainers:* use a dev checkout (commit or stash your work first), then `git fetch origin`.
+3. **Add the report on a new branch:**
+   ```bash
+   git switch -c feedback/<report-name> upstream/main   # maintainers: origin/main
+   cp <workspace>/.a-society/feedback/<report-name>.md feedback/
+   git add feedback/<report-name>.md
+   git commit -m "feedback: add <report-name>"
+   git push -u origin feedback/<report-name>
+   ```
+4. **Open the pull request** against `main` of `KartikGS/a-society`. GitHub shows a *Compare & pull request* button for the pushed branch; alternatively run `gh pr create --repo KartikGS/a-society --fill`. Use the share text from step 1.
+5. **After it is merged,** your next `git pull` in `a-society/` brings the report in as a tracked file. You may then delete your local copy from `.a-society/feedback/`.
+
+**Reports from earlier versions** were saved inside the checkout at `a-society/feedback/`. Before you pull again, move your own untracked reports out of it; `git -C a-society status --short -- feedback/` lists them with `??`. From the workspace root, run `mkdir -p .a-society/feedback && mv a-society/feedback/<report-name>.md .a-society/feedback/`, then submit them as above.
+
+---
+
 ## State Location and Resume
 
 - State directory: `{workspace}/.a-society/state`
 - Settings directory: `{workspace}/.a-society`
+- Feedback reports: `{workspace}/.a-society/feedback/`
 
 The runtime persists flow state and role sessions under `{workspace}/.a-society/state/{projectNamespace}/{flowId}/`.
 

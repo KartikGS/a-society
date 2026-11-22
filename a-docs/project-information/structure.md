@@ -15,12 +15,15 @@ A-Society's standing work product occupies two folders:
 
 A-Society's agent documentation occupies one folder:
 
-- **`a-docs/`** — operational documentation for agents working on A-Society itself
+- **`a-docs/`** — operational documentation for agents working on A-Society itself. A domain lead's role folder holds how the role behaves; domain truth that other roles also read gets its own `a-docs/` folder (for example `a-docs/executable/` for the Technical Architect and `a-docs/marketing/` for the Marketing Lead).
+
+Outside these layers sit the public presentation surfaces — `README.md`, `assets/`, and the documentation site under `site/`. They present A-Society to people outside it; they are neither work product nor agent documentation.
 
 The key placement question is: what kind of thing is this?
 - Content any project can take and use directly → `general/`
 - A standing executable capability or operator-facing executable surface → `runtime/`
 - Documentation for agents working on A-Society itself → `a-docs/`
+- Presentation for people outside the project — the public documentation site or brand visuals → `site/` or `assets/`
 
 When you are unsure whether something belongs in `general/` vs another project's folder, ask: "Is this true only of A-Society, or would it be true of a legal project, a writing project, and a software project equally?" If the latter — it belongs in `general/`.
 
@@ -104,6 +107,25 @@ When you are unsure whether something belongs in `general/` vs another project's
 - One-off working files that are not used by a standing public surface
 
 **Principle:** `assets/` supports how A-Society presents itself; it is not a fourth work-product layer. Add sub-folders only when a real reusable asset category exists.
+
+---
+
+### `site/`
+
+**Purpose:** The public documentation site at a-society.dev — documentation for a human operator meeting A-Society for the first time. It is its own package, built and deployed separately from `runtime/`. The Technical Writer owns it.
+
+**What belongs here:**
+- Site pages, navigation, and site configuration
+- The site's build and in-repo deployment configuration, and its README describing how it builds and deploys
+- Assets used only by the site
+- The install script served at `a-society.dev/install.sh` (the Orchestration Developer owns its content; the Technical Writer keeps it served)
+
+**What does not belong here:**
+- Documentation for agents working on A-Society — that belongs in `a-docs/`
+- Reusable instructions and templates — those belong in `general/`
+- Runtime code and the operator reference — those belong in `runtime/`
+
+**Principle:** Like `assets/`, `site/` presents A-Society; it is not a fourth work-product layer. Each fact on the site has one authoritative home: a standing reference the page links to or derives from, or the page itself when no standing reference covers the fact.
 
 ---
 

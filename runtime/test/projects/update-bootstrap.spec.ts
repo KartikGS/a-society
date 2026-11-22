@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
-import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setFrameworkRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { bootstrapUpdateFlow } from '../../src/projects/update-bootstrap.js';
 import { readVersionFrontmatter } from '../../src/framework-services/version-comparator.js';
@@ -93,5 +93,44 @@ describe('update-bootstrap', () => {
     fs.mkdirSync(path.join(workspaceRoot, 'bare-project'), { recursive: true });
 
     expect(() => bootstrapUpdateFlow('bare-project')).toThrow(/no a-docs/);
+  });
+  describe('with a framework root outside the workspace', () => {
+    /** Fixture framework (own changelog version 0.4.2), outside the workspace, with no `<ws>/a-society`. */
+    function createSeparateFramework(): string {
+      const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-update-ws-'));
+      const fw = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-update-fw-'));
+      tempDirs.add(workspaceRoot);
+      tempDirs.add(fw);
+      fs.mkdirSync(path.join(fw, 'runtime', 'contracts'), { recursive: true });
+      fs.writeFileSync(path.join(fw, 'CHANGELOG.md'), '---\na_society_version: "0.4.2"\n---\n# Changelog\n');
+      fs.writeFileSync(path.join(fw, 'index.md'), '# FIXTURE general index\n');
+      fs.writeFileSync(path.join(fw, 'runtime', 'contracts', 'update.md'), '# FIXTURE update contract\n');
+      setWorkspaceRoot(workspaceRoot);
+      setFrameworkRoot(fw);
+      return workspaceRoot;
+    }
+
+    it('refuses a patch-only difference on the same release line', () => {
+      const workspaceRoot = createSeparateFramework();
+      createInitializedProject(workspaceRoot, 'patch-behind', '0.4.0');
+      expect(() => bootstrapUpdateFlow('patch-behind')).toThrow(/already up to date/);
+    });
+
+    it('creates the flow from the framework root files when a release line behind', () => {
+      const workspaceRoot = createSeparateFramework();
+      createInitializedProject(workspaceRoot, 'line-behind', '0.3.9');
+
+      const result = bootstrapUpdateFlow('line-behind');
+
+      expect(fs.existsSync(path.join(workspaceRoot, 'a-society'))).toBe(false);
+      expect(result.flowRun.feedbackContext).toMatchObject({
+        kind: 'update',
+        updateFromVersion: '0.3.9',
+        updateToVersion: '0.4.2',
+      });
+      const workflowDoc = parseWorkflowFile(path.join(result.flowRun.recordFolderPath, 'workflow.yaml')) as any;
+      const work = workflowDoc.workflow.nodes[0].work.join('\n');
+      expect(work).toContain('FIXTURE update contract');
+    });
   });
 });

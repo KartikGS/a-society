@@ -19,6 +19,9 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_STRUCTURE` | `a-docs/project-information/structure.md` | A-Society folder structure — governing principle and placement rules for each folder |
 | `$A_SOCIETY_ARCHITECTURE` | `a-docs/project-information/architecture.md` | A-Society architecture — system overview and non-negotiable structural invariants |
 | `$A_SOCIETY_LOG` | `a-docs/project-information/log.md` | A-Society project log — current state and next priorities for agents orienting at session start |
+| `$A_SOCIETY_README` | `README.md` | A-Society public README — external project framing, getting started, and the one-line install command (Owner) |
+| `$A_SOCIETY_SITE_GUIDE` | `site/README.md` | Public documentation site guide — layout, overlap decisions, local build, CI, deployment, cutover, and deployment verification (Technical Writer) |
+| `$A_SOCIETY_INSTALL_SCRIPT` | `site/public/install.sh` | Runtime install script served at a-society.dev/install.sh — prerequisite checks, clone, and dependency install (Orchestration Developer) |
 | `$A_SOCIETY_INDEX` | `a-docs/indexes/main.md` | This file — the A-Society file path index |
 | `$INSTRUCTION_TOOLING` | `general/instructions/tooling.md` | How to create a tooling document for any project |
 | `$INSTRUCTION_VISION` | `general/instructions/project-information/vision.md` | How to create a vision document for any project |
@@ -56,6 +59,17 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_UI_DEVELOPER_OWNERSHIP` | `a-docs/roles/ui-developer/ownership.yaml` | A-Society UI Developer ownership file — surfaces the UI Developer is accountable for |
 | `$A_SOCIETY_UI_DEV_IMPL_DISCIPLINE` | `a-docs/roles/ui-developer/implementation-discipline.md` | A-Society UI Developer implementation discipline — UI implementation and server-contract boundary guidance |
 | `$A_SOCIETY_UI_DEV_STYLE_GUIDE` | `a-docs/roles/ui-developer/style-guide.md` | A-Society UI Developer style guide — TypeScript, component, state, CSS, and ReactFlow conventions for runtime/ui/ |
+| `$A_SOCIETY_TECHNICAL_WRITER_ROLE` | `a-docs/roles/technical-writer/main.md` | A-Society Technical Writer role — public documentation site ownership, one-home-per-fact boundary, and escalation |
+| `$A_SOCIETY_TECHNICAL_WRITER_REQUIRED_READINGS` | `a-docs/roles/technical-writer/required-readings.yaml` | A-Society Technical Writer startup-context authority — machine-readable required readings for the Technical Writer role |
+| `$A_SOCIETY_TECHNICAL_WRITER_OWNERSHIP` | `a-docs/roles/technical-writer/ownership.yaml` | A-Society Technical Writer ownership file — surfaces the Technical Writer is accountable for |
+| `$A_SOCIETY_TECHNICAL_WRITER_PRACTICES` | `a-docs/roles/technical-writer/writing-practices.md` | A-Society Technical Writer practices — reader, source verification, overlap decisions, links, build and deployment, and completion report; loaded at docs-work |
+| `$A_SOCIETY_MARKETING_LEAD_ROLE` | `a-docs/roles/marketing-lead/main.md` | A-Society Marketing Lead role — outreach planning and drafting, the human's red-line hard rules, and escalation |
+| `$A_SOCIETY_MARKETING_LEAD_REQUIRED_READINGS` | `a-docs/roles/marketing-lead/required-readings.yaml` | A-Society Marketing Lead startup-context authority — machine-readable required readings for the Marketing Lead role |
+| `$A_SOCIETY_MARKETING_LEAD_OWNERSHIP` | `a-docs/roles/marketing-lead/ownership.yaml` | A-Society Marketing Lead ownership file — surfaces the Marketing Lead is accountable for |
+| `$A_SOCIETY_MARKETING_LEAD_PRACTICES` | `a-docs/roles/marketing-lead/outreach-practices.md` | A-Society Marketing Lead outreach practices — venue research, past-outreach review, approval packages, logging, and positioning upkeep; loaded at marketing-work |
+| `$A_SOCIETY_MARKETING_POSITIONING` | `a-docs/marketing/positioning.md` | A-Society positioning and voice — how A-Society describes itself in outreach, claims ruled out, and the approved disclosure wording (Marketing Lead) |
+| `$A_SOCIETY_MARKETING_CHANNELS` | `a-docs/marketing/channels.md` | A-Society channel registry — each venue's stance on agent-authored content, with cited source, status, and account (Marketing Lead) |
+| `$A_SOCIETY_MARKETING_OUTREACH_LOG` | `a-docs/marketing/outreach-log.md` | A-Society outreach log — what was published where, outcome, and lessons; newest first (Marketing Lead) |
 | `$A_SOCIETY_EXECUTABLE_ARCHITECTURE` | `a-docs/executable/architecture.md` | Single standing executable architecture reference — runtime topology, TypeScript surfaces, capability inventory, governance, and role boundaries |
 | `$A_SOCIETY_EXECUTABLE_COUPLING_MAP` | `a-docs/executable/general-coupling-map.md` | Standing reference for executable/general coupling — format dependencies per capability and maintained-guidance status |
 | `$A_SOCIETY_EXECUTABLE_HOST_AGENTS` | `a-docs/executable/host-agents.md` | Host coding agent capability matrix for agent mode — required core, declared capabilities, restrictions, and terms-of-use facts per supported host |
@@ -81,6 +95,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$INSTRUCTION_ARCHITECTURE` | `general/project-types/executable/instructions/project-information/architecture.md` | How to create an architecture document for projects with an executable layer |
 | `$INSTRUCTION_LOG` | `general/instructions/project-information/log.md` | How to create a project log for any project |
 | `$INSTRUCTION_PRINCIPLES` | `general/instructions/project-information/principles.md` | How to create a project principles document for any project |
+| `$INSTRUCTION_A_SOCIETY_VERSION_RECORD` | `general/instructions/a-society-version-record.md` | How to create and maintain a project's A-Society version record — frontmatter format, who bumps it, and the release-line update rule |
 | `$INSTRUCTION_WORKFLOW` | `general/instructions/workflow/main.md` | How to create a workflow document for any project |
 | `$INSTRUCTION_WORKFLOW_GRAPH` | `general/instructions/workflow/graph.md` | How to create and maintain a machine-readable workflow graph representation (YAML frontmatter) — enables programmatic backward pass ordering |
 | `$INSTRUCTION_WORKFLOW_MODIFY` | `general/instructions/workflow/modify.md` | How to modify an existing workflow — single-graph model, evaluative principles, hard rules, and six-step modification procedure |
@@ -101,7 +116,7 @@ To relocate a file: update the **Path** cell below, then grep for the variable n
 | `$A_SOCIETY_WORKFLOW` | `a-docs/workflow/main.yaml` | A-Society canonical workflow definition — the single permanent graph for framework, executable, and coordinated multi-role work |
 | `$A_SOCIETY_WORKFLOW_COMPLEXITY` | `a-docs/workflow/complexity.md` | A-Society workflow complexity guidance — internal intake sizing rules, tier-selection boundaries, and project-specific routing constraints |
 | `$A_SOCIETY_IMPROVEMENT` | `a-docs/improvement/main.md` | A-Society improvement philosophy and backward pass protocol — principles and process for documentation improvement |
-| `$A_SOCIETY_FEEDBACK_DIR` | `feedback/` | All inbound feedback signal from adopting projects — new runtime-generated reports land directly here |
+| `$A_SOCIETY_FEEDBACK_DIR` | `feedback/` | Submitted feedback reports from adopting projects, added through pull requests; runtime-generated reports are written locally to `{workspace}/.a-society/feedback/` and submitted per `$A_SOCIETY_RUNTIME_INVOCATION` |
 | `$A_SOCIETY_COMM_CONVERSATION` | `a-docs/communication/conversation/main.md` | A-Society conversation templates — permanent format references for all inter-agent handoff artifacts |
 | `$A_SOCIETY_COMM_TEMPLATE_BRIEF` | `a-docs/communication/conversation/TEMPLATE-owner-to-curator-brief.md` | Template: Owner → Curator briefing format |
 | `$A_SOCIETY_COMM_TEMPLATE_CURATOR_TO_OWNER` | `a-docs/communication/conversation/TEMPLATE-curator-to-owner.md` | Template: Curator → Owner proposal / submission format |

@@ -12,7 +12,7 @@ This document owns:
 
 - the five intake axes as they are applied inside A-Society
 - the tier-selection rules for direct, targeted, and coordinated paths through A-Society's single canonical workflow
-- the A-Society-specific gate triggers that determine when Curator and Technical Architect nodes are required
+- the A-Society-specific gate triggers that determine when Curator, Technical Architect, Technical Writer, and Marketing Lead nodes are required
 - the relationship between workflow sizing, `$A_SOCIETY_RUNTIME_RECORDS_CONTRACT`, and `$A_SOCIETY_COMM_TEMPLATE_PLAN`
 
 It does not replace `$INSTRUCTION_WORKFLOW_COMPLEXITY`. The general instruction remains the reusable library source; this file is the internal project instantiation.
@@ -23,7 +23,7 @@ It does not replace `$INSTRUCTION_WORKFLOW_COMPLEXITY`. The general instruction 
 
 Assess each triggered work item against these five axes:
 
-1. **Domain spread** — how many A-Society domains the work touches (`general/`, `agents/`, `a-docs/`, `runtime/`, or multi-domain combinations)
+1. **Domain spread** — how many A-Society domains the work touches (`general/`, `a-docs/`, `runtime/`, `site/`, or multi-domain combinations)
 2. **Shared artifact impact** — whether the work changes standing shared artifacts, reusable library surfaces, operator-facing executable references, or role-routing policy
 3. **Step dependency** — whether later steps depend on design or approval decisions made earlier in the flow
 4. **Reversibility** — how safely the work can be undone if the approach proves wrong
@@ -37,10 +37,12 @@ The plan template at `$A_SOCIETY_COMM_TEMPLATE_PLAN` provides the required field
 
 Before choosing a tier, map the touched permanent surfaces and their truth owners from the role ownership files.
 
-At A-Society intake, these two trigger checks matter most:
+At A-Society intake, these trigger checks matter most:
 
 - **Curator required:** when the flow touches Curator-owned stewardship surfaces such as indexes, ownership files, feedback registries, or conversation-template surfaces
 - **Technical Architect required:** when the flow changes executable boundaries, standing executable capabilities, stable executable contracts, executable workflow topology, or otherwise needs shared executable design before implementation
+- **Technical Writer required:** when the flow changes anything a first-time operator sees or does — install, upgrade, and startup; commands and runtime signals operators act on; settings and UI behavior; supported agents and providers; any concept a site page explains — or touches `site/` or the install path. Not required for internal refactors, test-only changes, or `a-docs/` and `general/` maintenance that no site page describes.
+- **Marketing Lead required:** only when the human asks for outreach work — venue research, a launch or announcement plan, drafts, account setup, or publishing approved content — or when a flow changes `$A_SOCIETY_VISION` or the README's framing after positioning has been established. Never engaged in ordinary flows. When the same flow changes user-visible behavior, docs-work runs before marketing-work, so nothing is announced before its docs are current.
 
 Owner review is required when the work changes project direction, modifies shared framework promises, adds to `general/`, or otherwise creates a high-impact case where the same role should not both authorize and verify its own change.
 
@@ -82,6 +84,8 @@ Examples:
 - Owner -> Curator -> Owner for stewardship or registration work
 - Owner -> Curator -> Owner review -> Curator -> Owner for `general/` additions
 - Owner -> TA -> Developer -> Owner when executable design is required but no registration node is touched
+- Owner -> Technical Writer -> Owner for changes to the public documentation site alone
+- Owner -> Marketing Lead -> Owner for outreach work
 
 ### Tier 3 — Coordinated Flow
 
@@ -103,12 +107,12 @@ Expected path: activate a coordinated subset of nodes inside `$A_SOCIETY_WORKFLO
 These constraints narrow the tier options inside this project:
 
 - **Touched-surface routing comes first:** Use the role ownership files to identify which truth owners are implicated before selecting the tier.
-- **Curator is not the default documentation hop:** Engage the Curator only when Curator-owned stewardship surfaces are touched or when the flow explicitly routes a proposal/registration node through Curator authority.
+- **Curator is not the default documentation hop:** Engage the Curator only when Curator-owned stewardship surfaces are touched or when the flow explicitly routes a proposal/registration node through Curator authority. Public documentation site work goes to the Technical Writer.
 - **Executable scope is not framework-only scope:** If the work changes executable design, implementation, operator-facing executable behavior, or stable executable contracts, activate the TA and/or executable developer nodes inside `$A_SOCIETY_WORKFLOW` as appropriate.
 - **`general/` additions still require Owner decision:** Work that adds to `general/` cannot go straight from Curator proposal to implementation without an explicit Owner decision node.
 - **Record artifacts are mandatory at intake:** `owner-workflow-plan.md` and `workflow.yaml` are always required at A-Society intake. Tier changes alter the downstream path; they do not waive the intake artifacts.
 - **Parallel same-base-role tracks require runtime role instances:** If two nodes with the same base role may be active at the same time, follow `$A_SOCIETY_RUNTIME_WORKFLOW_CONTRACT` for role-instance naming in `workflow.yaml`. Descriptive node notes do not create separate runtime sessions.
-- **OD and UI Developer have separate runtime sub-domains:** The Orchestration Developer owns the orchestration core and server/WebSocket layer (`src/orchestrator.ts`, `src/server.ts`, `src/ws-operator-sink.ts`, providers, observability); the UI Developer owns `runtime/ui/`. At intake, when a flow touches both sub-domains, activate them as independent parallel tracks with a join at ta-review or owner-closure. When a flow touches only one sub-domain, activate only that developer track. Server/WebSocket contract changes that affect both roles require TA design resolution before either track begins implementation.
+- **OD and UI Developer have separate runtime sub-domains:** The Orchestration Developer owns the orchestration core and the server/WebSocket layer, and the UI Developer owns the browser UI; their exact surfaces are in `$A_SOCIETY_ORCHESTRATION_DEVELOPER_OWNERSHIP` and `$A_SOCIETY_UI_DEVELOPER_OWNERSHIP`. At intake, when a flow touches both sub-domains, activate them as independent parallel tracks with a join at ta-review or owner-closure. When a flow touches only one sub-domain, activate only that developer track. Server/WebSocket contract changes that affect both roles require TA design resolution before either track begins implementation.
 
 ---
 

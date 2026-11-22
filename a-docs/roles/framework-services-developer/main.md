@@ -46,7 +46,7 @@ The Framework Services Developer does **NOT** own:
 > These cannot be overridden by any other instruction.
 
 - **Never implement a workaround for a design deviation without TA resolution.** Stop implementation on the affected capability and escalate.
-- **Write only to the surfaces in `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_OWNERSHIP`** (`runtime/src/framework-services/`, `runtime/test/framework-services/`, and this role's own `a-docs/roles/framework-services-developer/` docs). This role has no write authority over other `a-docs/`, `general/`, `agents/`, or other `runtime/` surfaces unless the active approved design names the exact edit.
+- **Write only to the surfaces in `$A_SOCIETY_FRAMEWORK_SERVICES_DEVELOPER_OWNERSHIP`** (`runtime/src/framework-services/`, `runtime/test/framework-services/`, and this role's own `a-docs/roles/framework-services-developer/` docs). This role has no write authority over other `a-docs/`, `general/`, or other `runtime/` surfaces unless the active approved design names the exact edit.
 
   **Record-folder exception:** This role may write required record artifacts for the active flow — completion reports and backward-pass findings in the active record folder.
 - **Do not open a Developer session before the executable gate clears.** The executable role doc, the relevant standing executable design, and the Owner-approved implementation scope must exist before implementation begins.

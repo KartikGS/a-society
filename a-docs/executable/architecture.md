@@ -12,6 +12,12 @@ This document is the single standing design reference for A-Society's executable
   - **API** — the runtime calls LLM APIs directly and runs its own tool loop (provider gateway).
   - **Host agent** (agent mode) — a supported host coding agent the operator already uses runs the turn headlessly, with its own tools, model, permissions, and compaction, resumed by conversation id (host agent gateway).
 - A flow's backend is fixed when the flow is created. Everything above a role turn — context injection, handoff interpretation, scheduling, human gates, closure, backward-pass planning — is shared by both backends.
+- A runtime process has two **roots**, both fixed at startup:
+  - The **framework root** is the A-Society checkout the runtime runs from (the parent of its `runtime/` folder). It supplies every runtime contract, the a-docs manifest, the current framework version (`CHANGELOG.md`), and the general index.
+  - The **workspace root** holds the projects and the workspace's `.a-society/` folder: flow state, settings, secrets, skills, and generated feedback reports.
+  - The workspace defaults to the parent of a checkout named `a-society`. `A_SOCIETY_WORKSPACE` sets it explicitly.
+  - The runtime refuses to start in two cases: the workspace contains an `a-society` folder other than its own checkout, or its checkout sits inside the workspace under any other name. Two checkouts therefore never share one workspace's state, and a framework checkout inside a workspace is always that workspace's `a-society` project.
+  - A second checkout used for development is an ordinary project of the main runtime's workspace. Flows on it run on the main runtime's contracts, which match the code executing them.
 - The executable layer has two standing capability families:
   - deterministic framework services
   - orchestration and operator-facing runtime behavior
@@ -92,12 +98,13 @@ Server-contract and domain types shared with the UI are defined in `runtime/shar
 | Workflow graph validation | Validate workflow graph structure and schema constraints |
 | Backward-pass planning | Compute backward-pass traversal order and findings-location data from `workflow.yaml` |
 | Path validation | Check that indexed paths resolve to existing files |
+| Version comparison | Compare a project's recorded A-Society version with the framework's current version. An update is offered only when the project is behind by a release line: the minor version while the major version is 0, the major version from 1.0 on |
 
 ### Orchestration Capabilities
 
 | Capability | Responsibility |
 |---|---|
-| Operator interface | Local runtime server startup, browser UI serving, WebSocket protocol, and operator-facing flow controls |
+| Operator interface | Local runtime server startup (including framework-root and workspace-root resolution), browser UI serving, WebSocket protocol, and operator-facing flow controls |
 | Runtime session backend | Stored-flow lifecycle, WebSocket-backed session replay, operator commands, runtime event routing, consent transitions, and flow-state projection |
 | Flow orchestration | Forward-pass routing, pause handling, trigger execution, and terminal-state handling |
 | Context injection | Required-reading resolution and turn-context assembly |
@@ -149,6 +156,7 @@ The executable layer depends on stable contracts in both `general/` and `a-docs/
 - the runtime workflow YAML contract used by workflow graph validation, node-entry injection, active-flow routing, and backward-pass planning
 - the per-role `required-readings.yaml` schema used by runtime context injection
 - the `a-docs/roles/<role-id>/` folder convention (a role is a directory containing `main.md`) used by project-settings role discovery
+- the `a_society_version` frontmatter key in `CHANGELOG.md` and in each project's `a-docs/a-society-version.md`, used by version comparison and initialization version stamping
 
 These dependencies and their guidance status are tracked in `$A_SOCIETY_EXECUTABLE_COUPLING_MAP`.
 
