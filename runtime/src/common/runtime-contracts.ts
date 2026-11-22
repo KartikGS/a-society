@@ -1,18 +1,23 @@
 import path from 'node:path';
+import { getFrameworkRoot } from './workspace.js';
 
-export const RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH = path.join(
-  'a-society',
-  'runtime',
-  'contracts',
-  'a-docs-manifest.yaml'
-);
+/** Framework files the runtime reads, relative to the framework root. */
+export const FRAMEWORK_FILES = {
+  adocsManifest: 'runtime/contracts/a-docs-manifest.yaml',
+  initializationContract: 'runtime/contracts/initialization.md',
+  updateContract: 'runtime/contracts/update.md',
+  feedbackContract: 'runtime/contracts/feedback.md',
+  /** Canonical source of the current framework version (`a_society_version` frontmatter). */
+  changelog: 'CHANGELOG.md',
+  generalIndex: 'index.md',
+} as const;
 
-/**
- * Canonical source of truth for the current A-Society framework version. The
- * version is declared in YAML frontmatter (`a_society_version`) at the top of
- * the changelog. Workspace-relative.
- */
-export const A_SOCIETY_CHANGELOG_RELATIVE_PATH = path.join('a-society', 'CHANGELOG.md');
+export type FrameworkFile = keyof typeof FRAMEWORK_FILES;
+
+/** Absolute path of a framework file under the framework root. */
+export function frameworkFilePath(file: FrameworkFile): string {
+  return path.join(getFrameworkRoot(), ...FRAMEWORK_FILES[file].split('/'));
+}
 
 /**
  * Per-project version record, relative to the project's a-docs/ root. Records

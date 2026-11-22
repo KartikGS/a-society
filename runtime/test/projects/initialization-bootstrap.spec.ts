@@ -4,10 +4,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { parseWorkflowFile } from '../../src/context/workflow-file.js';
-import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setFrameworkRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import { bootstrapInitializationFlow } from '../../src/projects/initialization-bootstrap.js';
 import { readRecordMetadata } from '../../src/projects/record-metadata.js';
+import { readVersionFrontmatter } from '../../src/framework-services/version-comparator.js';
 
 const tempDirs = new Set<string>();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -142,5 +143,20 @@ describe('initialization-bootstrap', () => {
 
     expect(() => bootstrapInitializationFlow(workspaceRoot, projectName, 'greenfield'))
       .toThrow(/already exists in the workspace/);
+  });
+  it('scaffolds from a framework root outside the workspace and stamps its changelog version', () => {
+    const workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-init-separate-'));
+    tempDirs.add(workspaceRoot);
+    setWorkspaceRoot(workspaceRoot);
+    setFrameworkRoot(frameworkRoot);
+    expect(fs.existsSync(path.join(workspaceRoot, 'a-society'))).toBe(false);
+
+    const result = bootstrapInitializationFlow(workspaceRoot, 'separate-project', 'greenfield');
+
+    expect(result.scaffoldResult.failed).toEqual([]);
+    expect(fs.existsSync(path.join(workspaceRoot, 'separate-project', 'a-docs', 'agents.md'))).toBe(true);
+    expect(readVersionFrontmatter(path.join(workspaceRoot, 'separate-project', 'a-docs', 'a-society-version.md')))
+      .toBe(readVersionFrontmatter(path.join(frameworkRoot, 'CHANGELOG.md')));
+    expect(fs.existsSync(path.join(workspaceRoot, 'a-society'))).toBe(false);
   });
 });

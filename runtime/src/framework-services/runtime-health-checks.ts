@@ -7,7 +7,7 @@ import { parseRoleIdentity, toKebabCaseRoleId, REQUIRED_ROLE_FILES } from '../..
 import { validatePaths } from './path-validator.js';
 import { canonicalWorkflowDefinitionPath, parseWorkflowFile } from '../context/workflow-file.js';
 import { RUNTIME_MANAGED_REQUIRED_READING_VARIABLES } from '../context/required-reading.js';
-import { RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH, A_DOCS_VERSION_RECORD_RELATIVE_PATH } from '../common/runtime-contracts.js';
+import { frameworkFilePath, A_DOCS_VERSION_RECORD_RELATIVE_PATH } from '../common/runtime-contracts.js';
 import { readVersionFrontmatter, parseVersion } from './version-comparator.js';
 
 export interface RuntimeHealthCheckResult {
@@ -32,10 +32,10 @@ interface OwnershipSurface {
   surfacePath: string;
 }
 
-function collectRuntimeAdocsManifestPaths(workspaceRoot: string, errors: string[]): string[] {
-  const manifestPath = path.join(workspaceRoot, RUNTIME_ADOCS_MANIFEST_RELATIVE_PATH);
+function collectRuntimeAdocsManifestPaths(errors: string[]): string[] {
+  const manifestPath = frameworkFilePath('adocsManifest');
   if (!isFile(manifestPath)) {
-    errors.push(`Runtime a-docs manifest is missing at ${path.relative(workspaceRoot, manifestPath)}`);
+    errors.push(`Runtime a-docs manifest is missing at ${manifestPath}`);
     return [];
   }
 
@@ -43,12 +43,12 @@ function collectRuntimeAdocsManifestPaths(workspaceRoot: string, errors: string[
   try {
     parsed = readYamlFile(manifestPath);
   } catch (error: any) {
-    errors.push(`Cannot parse runtime a-docs manifest at ${path.relative(workspaceRoot, manifestPath)}: ${error.message}`);
+    errors.push(`Cannot parse runtime a-docs manifest at ${manifestPath}: ${error.message}`);
     return [];
   }
 
   if (!parsed || typeof parsed !== 'object' || !Array.isArray((parsed as Record<string, unknown>).files)) {
-    errors.push(`Runtime a-docs manifest at ${path.relative(workspaceRoot, manifestPath)} must contain a "files" array`);
+    errors.push(`Runtime a-docs manifest at ${manifestPath} must contain a "files" array`);
     return [];
   }
 
@@ -376,7 +376,7 @@ export function runRuntimeHealthChecks(
     return { ok: false, errors };
   }
 
-  for (const manifestRelativePath of collectRuntimeAdocsManifestPaths(workspaceRoot, errors)) {
+  for (const manifestRelativePath of collectRuntimeAdocsManifestPaths(errors)) {
     const expectedPath = path.join(aDocsRoot, manifestRelativePath);
     if (!isFile(expectedPath)) {
       addMissingFileError(errors, `Runtime manifest entry ${manifestRelativePath}`, expectedPath, workspaceRoot);

@@ -49,7 +49,7 @@ describe('improvement-streams', () => {
     const projectNamespace = 'demo-project';
     const flowId = 'repair-flow';
     const recordFolderPath = getFlowRecordDir({ projectNamespace, flowId });
-    const feedbackArtifactPath = 'a-society/feedback/demo-project-flow-repair-flow.md';
+    const feedbackArtifactPath = '.a-society/feedback/demo-project-flow-repair-flow.md';
     const feedbackArtifactFilePath = path.join(workspaceRoot, feedbackArtifactPath);
 
     fs.mkdirSync(path.join(workspaceRoot, 'a-society', 'runtime', 'contracts'), { recursive: true });

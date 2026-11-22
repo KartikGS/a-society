@@ -209,6 +209,8 @@ interface RunRoleTurnBaseInput {
   consentGate?: ConsentGate;
   model?: ModelConfigWithKey | null;
   mcpManager?: McpManager;
+  /** Additional API-mode write roots (the feedback folder, for the feedback session only). Host turns use `host.extraWritableDirs`. */
+  extraWriteRoots?: string[];
   onConversationMessages?: (messages: RuntimeMessageParam[]) => void | Promise<void>;
   onAssistantTextDelta?: (text: string) => void;
   /** Present for flows pinned to a host agent; the turn then runs on the host instead of the API. */
@@ -249,6 +251,7 @@ export async function runRoleTurn({
   consentGate,
   model,
   mcpManager,
+  extraWriteRoots,
   onConversationMessages,
   onAssistantTextDelta,
   nodeId,
@@ -266,6 +269,7 @@ export async function runRoleTurn({
     flowRef,
     model,
     mcpManager,
+    extraWriteRoots,
   });
   const history: RuntimeMessageParam[] = providedHistory;
 

@@ -1,7 +1,5 @@
 role: owner
 surfaces:
-  - path: agents/
-    scope: "A-Society outward-facing agent products"
   - path: a-docs/agents.md
     scope: "Agent orientation and entry-point truth"
   - path: a-docs/a-docs-design.md

@@ -347,7 +347,7 @@ describe('file-executor', () => {
       const workspace = makeTempWorkspace();
       const ref = flowRef('flow-1', 'my-project');
       const projectDir = path.join(workspace, ref.projectNamespace);
-      const feedbackDir = path.join(workspace, 'a-society', 'feedback');
+      const feedbackDir = path.join(workspace, '.a-society', 'feedback');
       const recordFolderPath = getFlowRecordDir(ref);
       fs.mkdirSync(projectDir, { recursive: true });
       fs.mkdirSync(feedbackDir, { recursive: true });
@@ -364,12 +364,47 @@ describe('file-executor', () => {
       expect(result.isError).toBe(false);
     });
 
-    it('allows write_file inside A-Society feedback directory', async () => {
+    it('rejects writes to the legacy and new feedback folders by default', async () => {
       const { executor } = setupRestrictedWorkspace();
 
-      const result = await executor.execute({ id: '2', name: 'write_file', input: { path: 'a-society/feedback/doc.md', content: 'ok' } });
+      for (const target of ['a-society/feedback/doc.md', '.a-society/feedback/doc.md']) {
+        const result = await executor.execute({ id: '2', name: 'write_file', input: { path: target, content: 'ok' } });
+        expect(result.isError).toBe(true);
+        expect(result.content).toBe(
+          `Error: path '${target}' is outside the permitted write area — writes are restricted to the project directory and the active record folder.`
+        );
+      }
+    });
 
-      expect(result.isError).toBe(false);
+    it('allows the feedback folder only when passed as an extra write root, and names it in rejections', async () => {
+      const { workspace } = setupRestrictedWorkspace();
+      const executor = new FileToolExecutor(flowRef('flow-1', 'my-project'), {
+        extraWriteRoots: [path.join(workspace, '.a-society', 'feedback')],
+      });
+
+      const ok = await executor.execute({ id: '2', name: 'write_file', input: { path: '.a-society/feedback/doc.md', content: 'ok' } });
+      expect(ok.isError).toBe(false);
+
+      const rejected = await executor.execute({ id: '3', name: 'write_file', input: { path: 'root.md', content: 'x' } });
+      expect(rejected.content).toBe(
+        `Error: path 'root.md' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and .a-society/feedback.`
+      );
+    });
+
+    it('scopes a dev-checkout project to its own folder and record folder', async () => {
+      const workspace = makeTempWorkspace();
+      const ref = flowRef('flow-dev', 'a-society-dev');
+      fs.mkdirSync(path.join(workspace, 'a-society', 'feedback'), { recursive: true });
+      fs.mkdirSync(path.join(workspace, 'a-society-dev'), { recursive: true });
+      const recordFolderPath = getFlowRecordDir(ref);
+      fs.mkdirSync(recordFolderPath, { recursive: true });
+      const executor = new FileToolExecutor(ref);
+
+      const write = (p: string) => executor.execute({ id: p, name: 'write_file', input: { path: p, content: 'ok' } });
+      expect((await write('a-society-dev/x.md')).isError).toBe(false);
+      expect((await write(path.relative(workspace, path.join(recordFolderPath, 'x.md')))).isError).toBe(false);
+      expect((await write('a-society/x.md')).isError).toBe(true);
+      expect((await write('a-society/feedback/x.md')).isError).toBe(true);
     });
 
     it('allows write_file inside active record folder', async () => {
@@ -532,7 +567,7 @@ describe('file-executor', () => {
       const missing = path.join(workspace, projectPath('missing.md'));
       const cases: Array<[Record<string, unknown>, string, string]> = [
         [{ path: '../outside.md', content: 'x' }, 'write_file', `Error: path '../outside.md' is outside the workspace root and cannot be accessed.`],
-        [{ path: 'root.md', content: 'x' }, 'write_file', `Error: path 'root.md' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and A-Society feedback.`],
+        [{ path: 'root.md', content: 'x' }, 'write_file', `Error: path 'root.md' is outside the permitted write area — writes are restricted to the project directory and the active record folder.`],
         [{ path: projectPath('dup.md'), old_string: 'y', new_string: 'z' }, 'edit_file', NOT_FOUND],
         [{ path: projectPath('dup.md'), old_string: 'x', new_string: 'z' }, 'edit_file', AMBIGUOUS],
         [{ path: projectPath('missing.md'), old_string: 'x', new_string: 'z' }, 'edit_file', `Error: no such file: ${missing}`],

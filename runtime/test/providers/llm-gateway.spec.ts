@@ -362,20 +362,21 @@ describe('LLMGateway', () => {
     });
   });
 
-  it('allows feedback writes outside the active project directory', async () => {
+  it('allows feedback writes when the feedback folder is passed as an extra write root', async () => {
     const tmpDir = createTempWorkspace();
     fs.mkdirSync(path.join(tmpDir, 'demo-project'), { recursive: true });
-    const provider = new ToolCallThenTextProvider('a-society/feedback/demo-flow.md', '# Feedback\n');
+    const provider = new ToolCallThenTextProvider('.a-society/feedback/demo-flow.md', '# Feedback\n');
     const gateway = new LLMGateway({
       mode: 'project',
       flowRef: { projectNamespace: 'demo-project', flowId: 'flow-1' },
       provider,
+      extraWriteRoots: [path.join(tmpDir, '.a-society', 'feedback')],
     });
     const history: RuntimeMessageParam[] = [{ role: 'user', content: 'Please write feedback.' }];
 
     await gateway.executeTurn('System prompt', history);
 
-    expect(fs.readFileSync(path.join(tmpDir, 'a-society', 'feedback', 'demo-flow.md'), 'utf8')).toBe('# Feedback\n');
+    expect(fs.readFileSync(path.join(tmpDir, '.a-society', 'feedback', 'demo-flow.md'), 'utf8')).toBe('# Feedback\n');
     expect(history.at(-1)).toMatchObject({
       role: 'tool_result',
       content: expect.stringMatching(/OK: wrote/),

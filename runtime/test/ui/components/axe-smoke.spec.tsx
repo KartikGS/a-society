@@ -5,6 +5,7 @@ import { axe } from 'vitest-axe';
 import * as matchers from 'vitest-axe/matchers';
 import { ChatInterface } from '../../../ui/src/components/ChatInterface';
 import { ConfirmDialog } from '../../../ui/src/components/ConfirmDialog';
+import { FeedbackConsentModal } from '../../../ui/src/components/FeedbackConsentModal';
 import { DocumentView } from '../../../ui/src/components/DocumentView';
 import { ProjectSelector } from '../../../ui/src/components/ProjectSelector';
 import { AgentModePanel } from '../../../ui/src/components/settings/AgentModePanel';
@@ -209,6 +210,29 @@ describe('axe smoke checks', () => {
       />,
     );
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('ChatInterface feedback report banner has no detectable a11y violations', async () => {
+    const { container } = render(
+      <ChatInterface
+        subtitle="Select a role."
+        messages={[]}
+        waitingLabel={null}
+        inputValue=""
+        inputDisabled={true}
+        placeholder="Flow complete."
+        showComposer={true}
+        feedbackReport={{ path: '.a-society/feedback/x.md', absolutePath: '/ws/.a-society/feedback/x.md' }}
+        onInputChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations();
+  });
+
+  it('FeedbackConsentModal has no detectable a11y violations', async () => {
+    render(<FeedbackConsentModal title="Generate upstream feedback?" body="b" details="d" onChoice={vi.fn()} />);
+    expect(await axe(document.body, AXE_OPTIONS)).toHaveNoViolations();
   });
 
   it('DocumentView (change diff) has no detectable a11y violations', async () => {

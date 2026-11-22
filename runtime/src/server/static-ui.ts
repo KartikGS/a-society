@@ -14,7 +14,7 @@ export function registerStaticUi(app: Express): void {
   app.use(expressStatic(UI_DIST));
   app.get('*', (_req: Request, res: Response) => {
     if (!fs.existsSync(UI_INDEX)) {
-      res.status(503).send('UI assets are not built. Run `npm run build:ui` in a-society/runtime/.');
+      res.status(503).send('UI assets are not built. Run `npm run build:ui` in the runtime folder of this A-Society checkout.');
       return;
     }
     res.sendFile(UI_INDEX);

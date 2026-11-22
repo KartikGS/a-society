@@ -1,4 +1,6 @@
 import { ArrowDown, Send, Square } from 'lucide-react';
+import { FeedbackReportBanner } from './FeedbackReportBanner';
+import type { FeedbackReportNotice } from '../app/feedback-copy';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import {
   CONSENT_MODE,
@@ -76,6 +78,8 @@ interface ChatInterfaceProps {
   roleConfiguration?: RoleConfigurationPrompt | null;
   handoffApproval?: HandoffApprovalPrompt | null;
   closureApproval?: ClosureApprovalPrompt | null;
+  /** Flow-level notice that the upstream feedback report was written. */
+  feedbackReport?: FeedbackReportNotice | null;
   contextWindow?: number | null;
   latestContextUsage?: number | null;
   /** Plan usage reported by a host coding agent; shown instead of the context ring. */
@@ -704,6 +708,8 @@ export function ChatInterface(props: ChatInterfaceProps) {
               onOpenDocument={props.onOpenDocument}
             />
           ) : null}
+
+          {props.feedbackReport ? <FeedbackReportBanner report={props.feedbackReport} /> : null}
 
           {props.consentRequest ? (
             <div className="consent-banner">

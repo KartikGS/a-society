@@ -4,7 +4,7 @@
 
 The A-Society version record (`a-docs/a-society-version.md`) declares **which version of the A-Society framework this project's `a-docs/` currently conform to**.
 
-It exists so the runtime can tell, without inspecting file contents, whether an initialized project is up to date with the framework it was built on. The runtime reads the version recorded here, compares it against the canonical current version (the `a_society_version` in A-Society's own `CHANGELOG.md` frontmatter), and offers an update flow when the project is behind.
+It exists so the runtime can tell, without inspecting file contents, whether an initialized project is up to date with the framework it was built on. The runtime reads the version recorded here, compares it against the canonical current version (the `a_society_version` in A-Society's own `CHANGELOG.md` frontmatter), and offers an update flow when the project is behind by a **release line**: the minor version while the major version is 0, and the major version from 1.0 on. Patch differences never offer an update. For example, 0.3.0 is current with 0.3.3 but behind 0.4.0; 1.2.0 is current with 1.9.0 but behind 2.0.0.
 
 This file is **compulsory**. Every initialized project must have it, and it must carry a readable version in its YAML frontmatter.
 

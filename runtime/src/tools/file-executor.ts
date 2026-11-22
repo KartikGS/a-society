@@ -110,23 +110,40 @@ export const FILE_TOOL_DEFINITIONS: ToolDefinition[] = [
 const WRITE_TOOLS = new Set(['edit_file', 'write_file']);
 const FILE_TOOL_NAMES = new Set(FILE_TOOL_DEFINITIONS.map((definition) => definition.name));
 
+export interface FileToolExecutorOptions {
+  /** Additional write roots (absolute). Granted only to the feedback session. */
+  extraWriteRoots?: string[];
+}
+
 export class FileToolExecutor {
   private readonly workspaceRoot: string;
   private readonly flowRef: FlowRef;
   private readonly writeRoots: string[];
+  private readonly extraWriteRoots: string[];
   private readonly workflowFilePaths: Set<string>;
 
-  constructor(flowRef: FlowRef) {
+  constructor(flowRef: FlowRef, options: FileToolExecutorOptions = {}) {
     this.workspaceRoot = path.resolve(getWorkspaceRoot());
     this.flowRef = flowRef;
     const recordFolderPath = getFlowRecordDir(flowRef);
+    this.extraWriteRoots = (options.extraWriteRoots ?? []).map(r => path.resolve(r));
     this.writeRoots = [
       path.join(this.workspaceRoot, flowRef.projectNamespace),
-      path.join(this.workspaceRoot, 'a-society', 'feedback'),
       recordFolderPath,
+      ...this.extraWriteRoots,
     ].map(r => path.resolve(r));
     const workflowPaths = workflowFilePaths(flowRef);
     this.workflowFilePaths = new Set([workflowPaths.recordWorkflowPath, workflowPaths.canonicalWorkflowPath]);
+  }
+
+  private writeAreaRejection(reqPath: string): string {
+    if (this.extraWriteRoots.length === 0) {
+      return `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory and the active record folder.`;
+    }
+    const list = this.extraWriteRoots
+      .map(root => path.relative(this.workspaceRoot, root).split(path.sep).join('/'))
+      .join(', ');
+    return `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and ${list}.`;
   }
 
   canHandle(name: string): boolean {
@@ -153,7 +170,7 @@ export class FileToolExecutor {
 
     const allowed = this.writeRoots.some(root => resolved === root || resolved.startsWith(root + path.sep));
     if (!allowed) {
-      return { kind: 'rejected', content: `Error: path '${reqPath}' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and A-Society feedback.` };
+      return { kind: 'rejected', content: this.writeAreaRejection(reqPath) };
     }
 
     // Pre-compute the resulting file content before consent is requested so that

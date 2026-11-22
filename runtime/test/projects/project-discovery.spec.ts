@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setFrameworkRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
 import { discoverProjects } from '../../src/projects/project-discovery.js';
 
 const tempDirs = new Set<string>();
@@ -84,5 +84,27 @@ describe('project-discovery', () => {
     const alpha = discovery.withADocs.find((p) => p.folderName === 'alpha');
 
     expect(alpha).toMatchObject({ aDocsVersion: null, currentVersion: '0.2.0', updateAvailable: false });
+  });
+  it('reads the current version from a framework root outside the workspace', () => {
+    const workspaceRoot = createWorkspace();
+    const fw = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-discovery-fw-'));
+    tempDirs.add(fw);
+    fs.writeFileSync(path.join(fw, 'CHANGELOG.md'), '---\na_society_version: "0.5.1"\n---\n# Changelog\n');
+    setWorkspaceRoot(workspaceRoot);
+    setFrameworkRoot(fw);
+
+    const alpha = discoverProjects().withADocs.find((project) => project.folderName === 'alpha');
+    expect(alpha?.currentVersion).toBe('0.5.1');
+  });
+
+  it('does not offer an update for a patch-only difference', () => {
+    const workspaceRoot = createWorkspace();
+    setWorkspaceRoot(workspaceRoot);
+    fs.mkdirSync(path.join(workspaceRoot, 'a-society'), { recursive: true });
+    fs.writeFileSync(path.join(workspaceRoot, 'a-society', 'CHANGELOG.md'), '---\na_society_version: "0.2.3"\n---\n# Changelog\n');
+    fs.writeFileSync(path.join(workspaceRoot, 'alpha', 'a-docs', 'a-society-version.md'), '---\na_society_version: "0.2.0"\n---\n# Version\n');
+
+    const alpha = discoverProjects().withADocs.find((project) => project.folderName === 'alpha');
+    expect(alpha).toMatchObject({ aDocsVersion: '0.2.0', currentVersion: '0.2.3', updateAvailable: false });
   });
 });

@@ -82,10 +82,10 @@ export function buildForwardNodeEntryMessage(opts: ForwardNodeEntryOptions): str
     lines.push('Runtime workflow contract:');
     lines.push('Use this contract when creating, updating, or repairing workflow.yaml for this active flow.');
     if (fs.existsSync(RUNTIME_WORKFLOW_CONTRACT_PATH)) {
-      lines.push('[FILE: a-society/runtime/contracts/workflow.md]');
+      lines.push('[FILE: runtime/contracts/workflow.md]');
       lines.push(fs.readFileSync(RUNTIME_WORKFLOW_CONTRACT_PATH, 'utf8'));
     } else {
-      lines.push('[FILE ERROR: Could not read a-society/runtime/contracts/workflow.md]');
+      lines.push('[FILE ERROR: Could not read runtime/contracts/workflow.md]');
     }
     lines.push('');
   }

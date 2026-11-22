@@ -21,7 +21,8 @@ import { getFlowRecordDir } from '../../src/orchestration/state-paths.js';
 import * as SessionStore from '../../src/orchestration/store.js';
 import { LLMGateway } from '../../src/providers/llm.js';
 import { seedTestModelSettings } from '../integration/settings-test-utils.js';
-import { clearWorkspaceRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
+import { clearWorkspaceRoot, setFrameworkRoot, setWorkspaceRoot } from '../../src/common/workspace.js';
+import type { FileToolExecutor } from '../../src/tools/file-executor.js';
 
 const tempDirs = new Set<string>();
 
@@ -112,7 +113,7 @@ describe('improvement lifecycle', () => {
     const projectNamespace = 'demo-project';
     const flowId = 'feedback-human-flow';
     const flowRun = createBaseFlowRun(workspaceRoot, projectNamespace, flowId);
-    const feedbackArtifactPath = 'a-society/feedback/demo-project-flow-feedback-human-flow.md';
+    const feedbackArtifactPath = '.a-society/feedback/demo-project-flow-feedback-human-flow.md';
     const feedbackArtifactFilePath = path.join(workspaceRoot, feedbackArtifactPath);
 
     fs.mkdirSync(path.join(workspaceRoot, 'a-society', 'runtime', 'contracts'), { recursive: true });
@@ -219,5 +220,91 @@ describe('improvement lifecycle', () => {
         content: expect.stringContaining('Please continue with the feedback artifact.'),
       }),
     ]));
+  });
+  describe('feedback report location', () => {
+    /**
+     * Sets up a flow paused at the feedback consent gate with the given persisted path and a
+     * framework root OUTSIDE the workspace (no `<ws>/a-society/`), then runs feedback once. The
+     * mocked turn writes the report through the gateway's real FileToolExecutor, so the write
+     * scope threaded through runRoleTurn → LLMGateway → FileToolExecutor is exercised.
+     */
+    async function runFeedbackFrom(persistedPath: string, options: { createLegacyFile?: boolean } = {}) {
+      const workspaceRoot = createWorkspace();
+      const frameworkRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'a-society-fw-'));
+      tempDirs.add(frameworkRoot);
+      fs.mkdirSync(path.join(frameworkRoot, 'runtime', 'contracts'), { recursive: true });
+      fs.writeFileSync(path.join(frameworkRoot, 'runtime', 'contracts', 'feedback.md'), 'FRAMEWORK-ROOT feedback instructions');
+      setFrameworkRoot(frameworkRoot);
+
+      const flowRun = createBaseFlowRun(workspaceRoot, 'demo-project', 'loc-flow');
+      fs.mkdirSync(flowRun.recordFolderPath, { recursive: true });
+      fs.writeFileSync(
+        path.join(flowRun.recordFolderPath, 'workflow.yaml'),
+        'workflow:\n  name: Test Workflow\n  nodes:\n    - id: curator\n      role: curator\n  edges: []\n'
+      );
+      const findingsFilePath = deterministicFindingsFilePath(flowRun.recordFolderPath, 'curator');
+      fs.mkdirSync(path.dirname(findingsFilePath), { recursive: true });
+      fs.writeFileSync(findingsFilePath, 'Curator findings');
+      if (options.createLegacyFile) {
+        fs.mkdirSync(path.dirname(path.join(workspaceRoot, persistedPath)), { recursive: true });
+        fs.writeFileSync(path.join(workspaceRoot, persistedPath), 'Existing legacy report');
+      }
+
+      flowRun.status = 'awaiting_feedback_consent';
+      flowRun.improvementPhase = {
+        status: 'awaiting_feedback_consent',
+        mode: IMPROVEMENT_CHOICE_MODE.GRAPH_BASED,
+        completedRoles: ['curator'],
+        runningRoles: [],
+        awaitingHumanRoles: {},
+        pendingHumanInputs: {},
+        findingsProduced: { curator: path.relative(workspaceRoot, findingsFilePath) },
+        feedbackArtifactPath: persistedPath,
+        feedbackConsent: FEEDBACK_CONSENT_STATUS.PENDING,
+      };
+      const flowRef = SessionStore.flowRef(flowRun);
+      SessionStore.saveFlowRun(flowRun, flowRef);
+
+      const entryMessages: string[] = [];
+      const writeResults: Array<{ isError: boolean; content: string }> = [];
+      vi.spyOn(LLMGateway.prototype, 'executeTurn').mockImplementation(async function (
+        this: LLMGateway,
+        _systemPrompt: string,
+        messageHistory: RuntimeMessageParam[],
+      ): Promise<GatewayTurnResult> {
+        for (const m of messageHistory) if (m.role === 'user' && typeof m.content === 'string') entryMessages.push(m.content);
+        const assigned = /\.?a-society\/feedback\/[A-Za-z0-9.-]+\.md/.exec(entryMessages.join('\n'))?.[0];
+        const executor = (this as unknown as { fileExecutor: FileToolExecutor }).fileExecutor;
+        if (!assigned || !options.createLegacyFile) {
+          writeResults.push(await executor.execute({ id: 'w1', name: 'write_file', input: { path: assigned ?? 'missing', content: 'Generated feedback' } }));
+        }
+        writeResults.push(await executor.execute({ id: 'w2', name: 'write_file', input: { path: 'demo-project/../root.md', content: 'x' } }));
+        return { text: `Done. \`\`\`handoff\ntype: backward-pass-complete\nartifact_path: ${assigned}\n\`\`\`` };
+      });
+
+      await new ImprovementOrchestrator().runFeedback(flowRun, createRenderer().renderer);
+      return { workspaceRoot, flowRef, entryMessages, writeResults };
+    }
+
+    it('reassigns a legacy path whose report was never written, reads the contract from the framework root, and lets the feedback turn write only there', async () => {
+      const { workspaceRoot, flowRef, entryMessages, writeResults } = await runFeedbackFrom('a-society/feedback/x.md');
+      const expected = '.a-society/feedback/demo-project-flow-loc-flow.md';
+
+      const finalFlow = SessionStore.loadFlowRun(flowRef);
+      expect(finalFlow?.improvementPhase?.feedbackArtifactPath).toBe(expected);
+      expect(finalFlow?.improvementPhase?.status).toBe('completed');
+      expect(fs.readFileSync(path.join(workspaceRoot, expected), 'utf8')).toBe('Generated feedback');
+      expect(fs.existsSync(path.join(workspaceRoot, 'a-society'))).toBe(false);
+      expect(entryMessages.join('\n')).toContain('FRAMEWORK-ROOT feedback instructions');
+      expect(writeResults[0].isError).toBe(false);
+      expect(writeResults[1].content).toBe(
+        `Error: path 'demo-project/../root.md' is outside the permitted write area — writes are restricted to the project directory, the active record folder, and .a-society/feedback.`
+      );
+    });
+
+    it('keeps a legacy path whose report already exists', async () => {
+      const { flowRef } = await runFeedbackFrom('a-society/feedback/x.md', { createLegacyFile: true });
+      expect(SessionStore.loadFlowRun(flowRef)?.improvementPhase?.feedbackArtifactPath).toBe('a-society/feedback/x.md');
+    });
   });
 });
